@@ -14,6 +14,20 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  touchMode: false,
+};
+
+const detectTouchMode = () => {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.touchMode;
+  try {
+    return (
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia('(pointer: coarse)').matches
+    );
+  } catch {
+    return DEFAULT_SETTINGS.touchMode;
+  }
 };
 
 export async function getAccent() {
@@ -113,6 +127,20 @@ export async function setPongSpin(value) {
   window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
 }
 
+export async function getTouchMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.touchMode;
+  const stored = window.localStorage.getItem('touch-mode');
+  if (stored !== null) {
+    return stored === 'true';
+  }
+  return detectTouchMode();
+}
+
+export async function setTouchMode(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('touch-mode', value ? 'true' : 'false');
+}
+
 export async function getAllowNetwork() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
   return window.localStorage.getItem('allow-network') === 'true';
@@ -137,6 +165,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('touch-mode');
 }
 
 export async function exportSettings() {
@@ -151,6 +180,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    touchMode,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +192,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTouchMode(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +206,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    touchMode,
     theme,
   });
 }
@@ -199,6 +231,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    touchMode,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +244,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (touchMode !== undefined) await setTouchMode(touchMode);
   if (theme !== undefined) setTheme(theme);
 }
 

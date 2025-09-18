@@ -124,6 +124,13 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 - Client-side only **simulations** of security tools (no real exploitation)
 - A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 
+### Touch mode & input accessibility
+
+- Automatically detects coarse-pointer devices and exposes a Quick Settings toggle so visitors can opt into touch mode manually.
+- Touch mode updates the CSS spacing scale and hit-area tokens so every interactive element meets or exceeds the 44&nbsp;px minimum target recommended by WCAG for comfortable tapping.
+- A simulated on-screen keyboard (`components/ui/TouchKeyboard.tsx`) listens for focus events and provides touch entry for inputs and textareas across the desktop UI.
+- End-to-end coverage (`playwright/tests/touch.spec.ts`) verifies the toggle, the HTML class flag, and keyboard input against a focused search field.
+
 ### Gamepad Input & Remapping
 
 Games can listen for normalized gamepad events via `utils/gamepad.ts`. The manager polls
