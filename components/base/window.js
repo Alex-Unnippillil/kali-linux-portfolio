@@ -2,10 +2,12 @@
 
 import React, { Component } from 'react';
 import NextImage from 'next/image';
+import dynamic from 'next/dynamic';
 import Draggable from 'react-draggable';
-import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { getAppMetadata } from '../../src/appRegistry';
+import AppFrame from './AppFrame';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -659,11 +661,15 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
                         />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                        <WindowMainScreen
+                            screen={this.props.screen}
+                            appId={this.props.id}
+                            title={this.props.title}
+                            icon={this.props.icon}
+                            importer={this.props.importer}
+                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                            openApp={this.props.openApp}
+                        />
                     </div>
                 </Draggable >
             </>
@@ -825,21 +831,66 @@ export function WindowEditButtons(props) {
 
 // Window's Main Screen
 export class WindowMainScreen extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             setDarkBg: false,
         }
+        this._LazyComponent = null;
+        this._lastImporter = null;
     }
     componentDidMount() {
         setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
     }
+    componentDidUpdate(prevProps) {
+        if (this.props.importer !== prevProps.importer || this.props.appId !== prevProps.appId) {
+            this._LazyComponent = null;
+            this._lastImporter = null;
+        }
+    }
+    getImporter = () => {
+        if (this.props.importer) {
+            return this.props.importer;
+        }
+        if (this.props.appId) {
+            const meta = getAppMetadata(this.props.appId);
+            return meta?.importer;
+        }
+        return undefined;
+    }
+    getLazyComponent = () => {
+        const importer = this.getImporter();
+        if (!importer) return null;
+        if (this._LazyComponent && importer === this._lastImporter) {
+            return this._LazyComponent;
+        }
+        this._lastImporter = importer;
+        this._LazyComponent = dynamic(
+            () =>
+                importer().then((mod) => mod.default || mod),
+            {
+                ssr: false,
+                loading: () => (
+                    <AppFrame icon={this.props.icon} title={this.props.title} />
+                ),
+            }
+        );
+        return this._LazyComponent;
+    }
     render() {
+        const LazyComponent = this.getLazyComponent();
+        const fallback = <AppFrame icon={this.props.icon} title={this.props.title} />;
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
+                {LazyComponent
+                    ? (
+                        <React.Suspense fallback={fallback}>
+                            <LazyComponent addFolder={this.props.addFolder} openApp={this.props.openApp} />
+                        </React.Suspense>
+                    )
+                    : this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
     }

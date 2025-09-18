@@ -13,6 +13,26 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
+const attachImporter = (display, path) => {
+  if (!display.importer) {
+    display.importer = () => import(path);
+  }
+  return display;
+};
+
+attachImporter(displayX, './components/apps/x');
+attachImporter(displaySpotify, './components/apps/spotify');
+attachImporter(displaySettings, './components/apps/settings');
+attachImporter(displayChrome, './components/apps/chrome');
+attachImporter(displayGedit, './components/apps/gedit');
+attachImporter(displayTodoist, './components/apps/todoist');
+attachImporter(displayWeather, './components/apps/weather');
+attachImporter(displayClipboardManager, './components/apps/ClipboardManager');
+attachImporter(displayFiglet, './components/apps/figlet');
+attachImporter(displayResourceMonitor, './components/apps/resource_monitor');
+attachImporter(displayScreenRecorder, './components/apps/screen-recorder');
+attachImporter(displayNikto, './components/apps/nikto');
+
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
   { title: 'Wikipedia', url: 'https://en.wikipedia.org' },
@@ -1056,5 +1076,18 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+apps.forEach((app) => {
+  if (!app.importer) {
+    if (app.screen?.importer) {
+      app.importer = app.screen.importer;
+    } else {
+      app.importer = () =>
+        import(
+          /* webpackPrefetch: true */ `./components/apps/${app.id}`
+        );
+    }
+  }
+});
 
 export default apps;
