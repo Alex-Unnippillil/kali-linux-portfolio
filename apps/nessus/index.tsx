@@ -1,12 +1,24 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
 import FindingCard from './components/FindingCard';
 import FiltersDrawer from './components/FiltersDrawer';
 import { Plugin, Severity, Scan, Finding, severities } from './types';
+
+const makeEmptySummary = () =>
+  severities.reduce(
+    (acc, sev) => ({ ...acc, [sev]: 0 }),
+    {} as Record<Severity, number>,
+  );
+
+const DEFAULT_REQUEST_TARGET = 120;
+const REQUEST_INCREMENT = 8;
+const DEFAULT_ETA_SECONDS = 180;
+const ETA_DECREMENT = 5;
+const isSimEnvironment = process.env.NODE_ENV !== 'production';
 
 const Nessus: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
@@ -37,6 +49,19 @@ const Nessus: React.FC = () => {
   const listRef = useRef<HTMLUListElement>(null);
   const PAGE_SIZE = 50;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [requestsSent, setRequestsSent] = useState(0);
+  const [etaSeconds, setEtaSeconds] = useState<number | null>(
+    isSimEnvironment ? DEFAULT_ETA_SECONDS : null,
+  );
+  const [simSummary, setSimSummary] = useState<Record<Severity, number>>(makeEmptySummary);
+  const [simulationActive, setSimulationActive] = useState(isSimEnvironment);
+  const summaryTargetRef = useRef<Record<Severity, number>>(makeEmptySummary());
+  const requestsTargetRef = useRef(DEFAULT_REQUEST_TARGET);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const simSummaryRef = useRef(simSummary);
+  const requestsRef = useRef(requestsSent);
+  const etaRef = useRef(etaSeconds);
+  const userPausedRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
@@ -120,6 +145,136 @@ const Nessus: React.FC = () => {
     ]);
   };
 
+  useEffect(() => {
+    summaryTargetRef.current = summary;
+    const total = Object.values(summary).reduce((acc, val) => acc + val, 0);
+    requestsTargetRef.current = Math.max(DEFAULT_REQUEST_TARGET, total * 4);
+    if (isSimEnvironment && !userPausedRef.current) {
+      setSimSummary(makeEmptySummary());
+      setRequestsSent(0);
+      setEtaSeconds(DEFAULT_ETA_SECONDS);
+      setSimulationActive(true);
+    }
+  }, [summary]);
+
+  useEffect(() => {
+    simSummaryRef.current = simSummary;
+  }, [simSummary]);
+
+  useEffect(() => {
+    requestsRef.current = requestsSent;
+  }, [requestsSent]);
+
+  useEffect(() => {
+    etaRef.current = etaSeconds;
+  }, [etaSeconds]);
+
+  useEffect(() => {
+    if (!isSimEnvironment || !simulationActive) {
+      if (tickRef.current) {
+        clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
+      return;
+    }
+
+    tickRef.current = setInterval(() => {
+      let updatedSummary = simSummaryRef.current;
+      setSimSummary((prev) => {
+        const target = summaryTargetRef.current;
+        const next = { ...prev };
+        let changed = false;
+        for (const sev of severities) {
+          const current = prev[sev] ?? 0;
+          const goal = target[sev] ?? 0;
+          if (current < goal) {
+            next[sev] = Math.min(goal, current + 1);
+            changed = true;
+            break;
+          }
+        }
+        updatedSummary = changed ? next : prev;
+        return changed ? next : prev;
+      });
+
+      let updatedRequests = requestsRef.current;
+      setRequestsSent((prev) => {
+        const next = Math.min(requestsTargetRef.current, prev + REQUEST_INCREMENT);
+        updatedRequests = next;
+        return next;
+      });
+
+      let updatedEta = etaRef.current;
+      setEtaSeconds((prev) => {
+        if (prev == null) return null;
+        const next = prev > 0 ? Math.max(0, prev - ETA_DECREMENT) : 0;
+        updatedEta = next;
+        return next;
+      });
+
+      const target = summaryTargetRef.current;
+      const summaryReached = severities.every(
+        (sev) => (updatedSummary[sev] ?? 0) >= (target[sev] ?? 0),
+      );
+      const requestsReached = updatedRequests >= requestsTargetRef.current;
+      const etaElapsed = updatedEta !== null && updatedEta <= 0;
+
+      if (summaryReached && requestsReached && etaElapsed) {
+        userPausedRef.current = true;
+        setSimulationActive(false);
+      }
+    }, 1000);
+
+    return () => {
+      if (tickRef.current) {
+        clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
+    };
+  }, [simulationActive]);
+
+  useEffect(() => () => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+  }, []);
+
+  const pauseSimulation = () => {
+    userPausedRef.current = true;
+    setSimulationActive(false);
+  };
+
+  const resumeSimulation = () => {
+    const target = summaryTargetRef.current;
+    const summaryReached = severities.every(
+      (sev) => (simSummaryRef.current[sev] ?? 0) >= (target[sev] ?? 0),
+    );
+    const requestsReached = requestsRef.current >= requestsTargetRef.current;
+    const etaElapsed = etaRef.current !== null && etaRef.current <= 0;
+
+    if (summaryReached && requestsReached && etaElapsed) {
+      setSimSummary(makeEmptySummary());
+      setRequestsSent(0);
+      setEtaSeconds(DEFAULT_ETA_SECONDS);
+    } else if (etaRef.current == null) {
+      setEtaSeconds(DEFAULT_ETA_SECONDS);
+    }
+
+    userPausedRef.current = false;
+    setSimulationActive(true);
+  };
+
+  const formatEta = (seconds: number | null) => {
+    if (seconds == null) return '—';
+    if (seconds <= 0) return 'Complete';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const displayedSummary = isSimEnvironment ? simSummary : summary;
+
   const toggleSeverity = (sev: Severity) =>
     setSeverityFilters((f) => ({ ...f, [sev]: !f[sev] }));
 
@@ -167,6 +322,64 @@ const Nessus: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
       <h1 className="text-2xl">Nessus Demo</h1>
+
+      <section className="bg-gray-800 rounded-lg p-4">
+        <div className="flex flex-wrap items-center gap-6">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-gray-400">
+              Requests Sent
+            </div>
+            <div
+              data-testid="nessus-requests-value"
+              className="text-3xl font-mono"
+            >
+              {isSimEnvironment ? requestsSent : '—'}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-gray-400">ETA</div>
+            <div className="text-3xl font-mono">{formatEta(etaSeconds)}</div>
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <div className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+              Findings by Severity
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {severities.map((sev) => (
+                <span
+                  key={sev}
+                  className="px-3 py-1 rounded-full bg-gray-700 text-sm font-mono"
+                >
+                  {sev}: {displayedSummary[sev]}
+                </span>
+              ))}
+            </div>
+          </div>
+          {isSimEnvironment && (
+            <div className="flex gap-2 ml-auto">
+              {simulationActive ? (
+                <button
+                  type="button"
+                  data-testid="nessus-pause"
+                  onClick={pauseSimulation}
+                  className="px-3 py-1 rounded bg-yellow-500 text-black"
+                >
+                  Pause
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  data-testid="nessus-resume"
+                  onClick={resumeSimulation}
+                  className="px-3 py-1 rounded bg-green-500 text-black"
+                >
+                  Resume
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
       <section>
         <h2 className="text-xl mb-2">Plugin Feed</h2>
