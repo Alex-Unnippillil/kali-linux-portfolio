@@ -1,56 +1,97 @@
 "use client";
 
+import { useMemo } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useSettings } from '../../hooks/useSettings';
+import { isDarkTheme } from '../../utils/theme';
 
 interface Props {
   open: boolean;
 }
 
 const QuickSettings = ({ open }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
-  const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const {
+    theme,
+    setTheme,
+    reducedMotion,
+    setReducedMotion,
+    touchMode,
+    setTouchMode,
+  } = useSettings();
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+  const containerClasses = useMemo(
+    () =>
+      [
+        'absolute right-3 top-9 z-50 w-64 rounded-lg border border-black/20 bg-ub-cool-grey shadow-lg transition-all duration-200',
+        'px-[var(--space-4)] py-[var(--space-4)]',
+        open
+          ? 'pointer-events-auto opacity-100 translate-y-0'
+          : 'pointer-events-none opacity-0 -translate-y-2',
+      ].join(' '),
+    [open],
+  );
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('reduce-motion', reduceMotion);
-  }, [reduceMotion]);
+  const toggleThemeLabel = isDarkTheme(theme) ? 'Dark' : 'Default';
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
-        open ? '' : 'hidden'
-      }`}
+      className={containerClasses}
+      data-state={open ? 'open' : 'closed'}
+      aria-hidden={!open}
     >
-      <div className="px-4 pb-2">
+      <div className="flex flex-col gap-[var(--space-3)] text-sm text-white">
         <button
-          className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          type="button"
+          className="hit-area flex items-center justify-between gap-[var(--space-3)] rounded-md bg-white/5 px-[var(--space-3)] text-left font-medium tracking-wide transition-colors hover:bg-white/10"
+          onClick={() => setTheme(isDarkTheme(theme) ? 'default' : 'dark')}
         >
           <span>Theme</span>
-          <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+          <span>{toggleThemeLabel}</span>
         </button>
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
-      </div>
-      <div className="px-4 flex justify-between">
-        <span>Reduced motion</span>
-        <input
-          type="checkbox"
-          checked={reduceMotion}
-          onChange={() => setReduceMotion(!reduceMotion)}
-        />
+        <label className="hit-area flex items-center justify-between gap-[var(--space-3)] rounded-md bg-white/5 px-[var(--space-3)] font-medium text-white transition-colors hover:bg-white/10">
+          <span>Sound</span>
+          <input
+            type="checkbox"
+            className="h-[calc(var(--hit-area)/2)] w-[calc(var(--hit-area)/2)]"
+            checked={sound}
+            onChange={() => setSound(!sound)}
+          />
+        </label>
+        <label className="hit-area flex items-center justify-between gap-[var(--space-3)] rounded-md bg-white/5 px-[var(--space-3)] font-medium text-white transition-colors hover:bg-white/10">
+          <span>Network</span>
+          <input
+            type="checkbox"
+            className="h-[calc(var(--hit-area)/2)] w-[calc(var(--hit-area)/2)]"
+            checked={online}
+            onChange={() => setOnline(!online)}
+          />
+        </label>
+        <label
+          className="hit-area flex items-center justify-between gap-[var(--space-3)] rounded-md bg-white/5 px-[var(--space-3)] font-medium text-white transition-colors hover:bg-white/10"
+          data-testid="quick-settings-reduced-motion"
+        >
+          <span>Reduced motion</span>
+          <input
+            type="checkbox"
+            className="h-[calc(var(--hit-area)/2)] w-[calc(var(--hit-area)/2)]"
+            checked={reducedMotion}
+            onChange={() => setReducedMotion(!reducedMotion)}
+          />
+        </label>
+        <label
+          className="hit-area flex items-center justify-between gap-[var(--space-3)] rounded-md bg-white/5 px-[var(--space-3)] font-medium text-white transition-colors hover:bg-white/10"
+          data-testid="quick-settings-touch"
+        >
+          <span>Touch mode</span>
+          <input
+            type="checkbox"
+            className="h-[calc(var(--hit-area)/2)] w-[calc(var(--hit-area)/2)]"
+            checked={touchMode}
+            onChange={() => setTouchMode(!touchMode)}
+          />
+        </label>
       </div>
     </div>
   );

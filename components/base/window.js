@@ -677,7 +677,9 @@ export default Window
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={
+                'relative flex w-full select-none items-center rounded-b-none border-t-2 border-white border-opacity-5 bg-ub-window-title px-[var(--space-4)] text-white min-h-[var(--hit-area)]'
+            }
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -734,12 +736,12 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div className="absolute right-0 top-0 flex min-h-[var(--hit-area)] min-w-[8.25rem] items-center justify-center gap-[var(--space-2)] pr-[var(--space-2)] pt-[var(--space-1)] mr-[var(--space-1)] mt-[var(--space-1)] select-none">
             {pipSupported && props.pip && (
                 <button
                     type="button"
                     aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    className="hit-area mx-[var(--space-1)] flex items-center justify-center rounded-full bg-white/0 px-[var(--space-2)] text-white transition-colors hover:bg-white/10"
                     onClick={togglePin}
                 >
                     <NextImage
@@ -755,7 +757,7 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                className="hit-area mx-[var(--space-1)] flex items-center justify-center rounded-full bg-white/0 px-[var(--space-2)] text-white transition-colors hover:bg-white/10"
                 onClick={props.minimize}
             >
                 <NextImage
@@ -773,7 +775,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="hit-area mx-[var(--space-1)] flex items-center justify-center rounded-full bg-white/0 px-[var(--space-2)] text-white transition-colors hover:bg-white/10"
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -789,7 +791,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="hit-area mx-[var(--space-1)] flex items-center justify-center rounded-full bg-white/0 px-[var(--space-2)] text-white transition-colors hover:bg-white/10"
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -807,7 +809,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className="hit-area mx-[var(--space-1)] flex cursor-default items-center justify-center rounded-full bg-ub-cool-grey/90 px-[var(--space-2)] text-white transition-colors hover:bg-ub-cool-grey"
                 onClick={props.close}
             >
                 <NextImage

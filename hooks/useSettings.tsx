@@ -20,6 +20,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTouchMode as loadTouchMode,
+  setTouchMode as saveTouchMode,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +65,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  touchMode: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +77,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setTouchMode: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  touchMode: defaults.touchMode,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +104,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setTouchMode: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +119,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [touchMode, setTouchModeState] = useState<boolean>(defaults.touchMode);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +135,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setTouchModeState(await loadTouchMode());
     })();
   }, []);
 
@@ -175,12 +183,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-6': '1.5rem',
       },
     };
-    const vars = spacing[density];
+    const touchSpacing: Record<Density, Record<string, string>> = {
+      regular: {
+        '--space-1': '0.5rem',
+        '--space-2': '0.875rem',
+        '--space-3': '1.25rem',
+        '--space-4': '1.75rem',
+        '--space-5': '2.25rem',
+        '--space-6': '3rem',
+      },
+      compact: {
+        '--space-1': '0.375rem',
+        '--space-2': '0.75rem',
+        '--space-3': '1rem',
+        '--space-4': '1.5rem',
+        '--space-5': '2rem',
+        '--space-6': '2.5rem',
+      },
+    };
+    const vars = (touchMode ? touchSpacing : spacing)[density];
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
     saveDensity(density);
-  }, [density]);
+  }, [density, touchMode]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
@@ -198,9 +224,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [highContrast]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
+    const root = document.documentElement;
+    root.classList.toggle('touch-mode', touchMode);
+    root.classList.toggle('large-hit-area', largeHitAreas || touchMode);
     saveLargeHitAreas(largeHitAreas);
-  }, [largeHitAreas]);
+    saveTouchMode(touchMode);
+  }, [largeHitAreas, touchMode]);
 
   useEffect(() => {
     savePongSpin(pongSpin);
@@ -247,22 +276,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         highContrast,
         largeHitAreas,
         pongSpin,
-        allowNetwork,
-        haptics,
-        theme,
-        setAccent,
-        setWallpaper,
-        setDensity,
-        setReducedMotion,
-        setFontScale,
-        setHighContrast,
-        setLargeHitAreas,
-        setPongSpin,
-        setAllowNetwork,
-        setHaptics,
-        setTheme,
-      }}
-    >
+      allowNetwork,
+      haptics,
+      theme,
+      touchMode,
+      setAccent,
+      setWallpaper,
+      setDensity,
+      setReducedMotion,
+      setFontScale,
+      setHighContrast,
+      setLargeHitAreas,
+      setPongSpin,
+      setAllowNetwork,
+      setHaptics,
+      setTheme,
+      setTouchMode: setTouchModeState,
+    }}
+  >
       {children}
     </SettingsContext.Provider>
   );

@@ -89,6 +89,10 @@
   --hit-area: 48px;
 }
 
+.touch-mode {
+  --hit-area: 56px;
+}
+
 /* Reduced motion */
 .reduced-motion {
   --motion-fast: 0ms;
