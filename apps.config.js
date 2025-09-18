@@ -100,6 +100,7 @@ const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
+const ArpSpoofLabApp = createDynamicApp('arp-spoof', 'ARP Spoof Lab');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
 const HydraApp = createDynamicApp('hydra', 'Hydra');
 const JohnApp = createDynamicApp('john', 'John the Ripper');
@@ -185,6 +186,7 @@ const displayEvidenceVault = createDisplay(EvidenceVaultApp);
 const displayMimikatz = createDisplay(MimikatzApp);
 const displayMimikatzOffline = createDisplay(MimikatzOfflineApp);
 const displayEttercap = createDisplay(EttercapApp);
+const displayArpSpoofLab = createDisplay(ArpSpoofLabApp);
 const displayReaver = createDisplay(ReaverApp);
 const displayHydra = createDisplay(HydraApp);
 const displayJohn = createDisplay(JohnApp);
@@ -727,6 +729,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayEttercap,
+  },
+  {
+    id: 'arp-spoof',
+    title: 'ARP Spoof Lab',
+    icon: '/themes/Yaru/apps/ettercap.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayArpSpoofLab,
   },
   {
     id: 'ble-sensor',
