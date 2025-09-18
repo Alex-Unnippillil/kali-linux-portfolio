@@ -13,8 +13,15 @@ export default class Navbar extends Component {
 		};
 	}
 
-	render() {
-		return (
+        render() {
+                const { onOpenUserSwitcher, userSwitcherEnabled } = this.props;
+                const handleOpenUserSwitcher = () => {
+                        this.setState({ status_card: false });
+                        if (typeof onOpenUserSwitcher === 'function') {
+                                onOpenUserSwitcher();
+                        }
+                };
+                return (
                         <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
                                 <div className="pl-3 pr-1">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
@@ -39,9 +46,13 @@ export default class Navbar extends Component {
                                         }
                                 >
                                         <Status />
-                                        <QuickSettings open={this.state.status_card} />
+                                        <QuickSettings
+                                                open={this.state.status_card}
+                                                onOpenUserSwitcher={handleOpenUserSwitcher}
+                                                userSwitcherEnabled={userSwitcherEnabled}
+                                        />
                                 </button>
-			</div>
-		);
-	}
+                        </div>
+                );
+        }
 }
