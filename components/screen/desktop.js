@@ -14,7 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
-import DesktopMenu from '../context-menus/desktop-menu';
+import DesktopContextMenu from '../context-menus/DesktopContextMenu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import logger from '../../utils/logger';
 
 export class Desktop extends Component {
     constructor() {
@@ -47,11 +48,13 @@ export class Desktop extends Component {
                 app: false,
                 taskbar: false,
             },
+            desktopMenuPosition: { x: 0, y: 0 },
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            isFullScreen: false,
         }
     }
 
@@ -86,6 +89,8 @@ export class Desktop extends Component {
         this.checkForNewFolders();
         this.checkForAppShortcuts();
         this.updateTrashIcon();
+        document.addEventListener('fullscreenchange', this.updateFullScreenStatus);
+        this.updateFullScreenStatus();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
@@ -96,6 +101,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        document.removeEventListener('fullscreenchange', this.updateFullScreenStatus);
     }
 
     checkForNewFolders = () => {
@@ -133,7 +139,6 @@ export class Desktop extends Component {
     }
 
     setContextListeners = () => {
-        document.addEventListener('contextmenu', this.checkContextMenu);
         // on click, anywhere, hide all menus
         document.addEventListener('click', this.hideAllContextMenu);
         // allow keyboard activation of context menus
@@ -141,9 +146,44 @@ export class Desktop extends Component {
     }
 
     removeContextListeners = () => {
-        document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    updateFullScreenStatus = () => {
+        const isFullScreen = Boolean(document.fullscreenElement);
+        if (this.state.isFullScreen !== isFullScreen) {
+            this.setState({ isFullScreen });
+        }
+    }
+
+    toggleFullScreen = async () => {
+        try {
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+            } else {
+                await document.documentElement.requestFullscreen();
+            }
+        } catch (error) {
+            logger.error(error);
+        }
+    }
+
+    arrangeDesktopIcons = () => {
+        const sorted = [...this.state.desktop_apps].sort((a, b) => {
+            const appA = apps.find(app => app.id === a);
+            const appB = apps.find(app => app.id === b);
+            if (!appA || !appB) return 0;
+            return appA.title.localeCompare(appB.title);
+        });
+        const hasChanged = sorted.some((id, index) => id !== this.state.desktop_apps[index]);
+        if (!hasChanged) return;
+        this.setState({ desktop_apps: sorted }, () => {
+            ReactGA.event({
+                category: 'Desktop',
+                action: 'Arrange Desktop Icons',
+            });
+        });
     }
 
     handleGlobalShortcut = (e) => {
@@ -297,29 +337,41 @@ export class Desktop extends Component {
     }
 
     showContextMenu = (e, menuName /* context menu name */) => {
-        let { posx, posy } = this.getMenuPosition(e);
-        let contextMenu = document.getElementById(`${menuName}-menu`);
+        const { posx, posy } = this.getMenuPosition(e);
+        if (menuName === 'desktop') {
+            this.setState((prev) => ({
+                desktopMenuPosition: { x: posx, y: posy },
+                context_menus: { ...prev.context_menus, desktop: true },
+            }));
+            return;
+        }
 
+        let contextMenu = document.getElementById(`${menuName}-menu`);
+        if (!contextMenu) return;
+
+        let adjustedX = posx;
+        let adjustedY = posy;
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
-        if (posx + menuWidth > window.innerWidth) posx -= menuWidth;
-        if (posy + menuHeight > window.innerHeight) posy -= menuHeight;
+        if (adjustedX + menuWidth > window.innerWidth) adjustedX -= menuWidth;
+        if (adjustedY + menuHeight > window.innerHeight) adjustedY -= menuHeight;
 
-        posx = posx.toString() + "px";
-        posy = posy.toString() + "px";
+        contextMenu.style.left = `${adjustedX}px`;
+        contextMenu.style.top = `${adjustedY}px`;
 
-        contextMenu.style.left = posx;
-        contextMenu.style.top = posy;
-
-        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+        this.setState((prev) => ({
+            context_menus: { ...prev.context_menus, [menuName]: true },
+        }));
     }
 
     hideAllContextMenu = () => {
-        const menus = { ...this.state.context_menus };
-        Object.keys(menus).forEach(key => {
-            menus[key] = false;
+        this.setState((prev) => {
+            const menus = { ...prev.context_menus };
+            Object.keys(menus).forEach(key => {
+                menus[key] = false;
+            });
+            return { context_menus: menus, context_app: null, desktopMenuPosition: { x: 0, y: 0 } };
         });
-        this.setState({ context_menus: menus, context_app: null });
     }
 
     getMenuPosition = (e) => {
@@ -432,26 +484,20 @@ export class Desktop extends Component {
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
-
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+        if (!this.state.desktop_apps.length) return null;
+        return this.state.desktop_apps.map((appId) => {
+            const app = apps.find(app => app.id === appId);
+            if (!app) return null;
+            const props = {
+                name: app.title,
+                id: app.id,
+                icon: app.icon,
+                openApp: this.openApp,
+                disabled: this.state.disabled_apps[app.id],
+                prefetch: app.screen?.prefetch,
+            };
+            return <UbuntuApp key={app.id} {...props} />;
+        }).filter(Boolean);
     }
 
     renderWindows = () => {
@@ -865,7 +911,12 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                onContextMenu={this.checkContextMenu}
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+            >
 
                 {/* Window Area */}
                 <div
@@ -906,12 +957,19 @@ export class Desktop extends Component {
                 {this.renderDesktopApps()}
 
                 {/* Context Menus */}
-                <DesktopMenu
+                <DesktopContextMenu
                     active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    position={this.state.desktopMenuPosition}
+                    isFullScreen={this.state.isFullScreen}
+                    onArrange={this.arrangeDesktopIcons}
+                    onNewFolder={this.addNewFolder}
+                    onCreateShortcut={this.openShortcutSelector}
+                    onChangeBackground={() => this.openApp('settings')}
+                    onOpenTerminal={() => this.openApp('terminal')}
+                    onOpenSettings={() => this.openApp('settings')}
+                    onToggleFullScreen={this.toggleFullScreen}
+                    onClearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    onClose={this.hideAllContextMenu}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
