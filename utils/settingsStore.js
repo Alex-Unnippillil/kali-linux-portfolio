@@ -2,6 +2,10 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import {
+  APP_SUGGESTIONS_STORAGE_KEY,
+  clearHistory as clearOpenHistory,
+} from './analytics/openHistory';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -14,6 +18,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  suggestionsEnabled: true,
 };
 
 export async function getAccent() {
@@ -123,6 +128,21 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getSuggestionsEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.suggestionsEnabled;
+  const stored = window.localStorage.getItem(APP_SUGGESTIONS_STORAGE_KEY);
+  if (stored === null) return DEFAULT_SETTINGS.suggestionsEnabled;
+  return stored !== 'false';
+}
+
+export async function setSuggestionsEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(
+    APP_SUGGESTIONS_STORAGE_KEY,
+    value ? 'true' : 'false',
+  );
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +157,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(APP_SUGGESTIONS_STORAGE_KEY);
+  clearOpenHistory();
 }
 
 export async function exportSettings() {
@@ -151,6 +173,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    suggestionsEnabled,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +185,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getSuggestionsEnabled(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +200,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    suggestionsEnabled,
   });
 }
 
@@ -200,6 +225,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    suggestionsEnabled,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +238,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (suggestionsEnabled !== undefined)
+    await setSuggestionsEnabled(suggestionsEnabled);
 }
 
 export const defaults = DEFAULT_SETTINGS;
