@@ -465,6 +465,13 @@ play/pause and track controls include keyboard hotkeys.
 - **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
 
+## UI Scaling & Theming
+
+- Global preferences now expose a **UI scale** slider (100–200%) via `useSettings`. The provider persists the value and publishes it through the `--ui-scale` CSS variable so that typography, spacing tokens, hit targets, and window chrome expand together.
+- Theme accents and high-contrast modes continue to flow through CSS custom properties. Because scaling is handled with the same variables, switching themes or toggling high contrast automatically recalculates the larger layout without color clashes.
+- Canvas-based apps listen for UI scale changes through a custom `ui-scale-change` event, ensuring their drawing surfaces resize crisply alongside the rest of the desktop.
+- Text-specific adjustments still use the `fontScale` preference. Combine both controls to balance dense themes with larger typography while keeping wallpapers and accent colors intact.
+
 ---
 
 ## Adding a New App

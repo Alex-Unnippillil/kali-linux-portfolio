@@ -1,0 +1,7 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Folder icon</title>
+  <desc id="desc">Stylised teal folder used in the desktop</desc>
+  <rect x="12" y="28" width="104" height="80" rx="20" fill="#0f172a" />
+  <path d="M28 44h26l10 12h36a10 10 0 0 1 10 10v30a10 10 0 0 1-10 10H28a10 10 0 0 1-10-10V54a10 10 0 0 1 10-10z" fill="#0ea5e9" />
+  <path d="M28 44h26l10 12h36c5.5 0 10 4.5 10 10v4H18v-6a20 20 0 0 1 10-20z" fill="#38bdf8" opacity="0.6" />
+</svg>

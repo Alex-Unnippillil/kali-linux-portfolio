@@ -1,0 +1,13 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Home folder icon</title>
+  <desc id="desc">Blue house silhouette representing the user's home directory</desc>
+  <defs>
+    <linearGradient id="home-bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#1d4ed8" />
+      <stop offset="1" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect x="10" y="22" width="108" height="92" rx="24" fill="#0b1120" />
+  <path d="M32 76v28h64V76h12L64 32 20 76z" fill="url(#home-bg)" stroke="#38bdf8" stroke-width="4" stroke-linejoin="round" />
+  <rect x="56" y="84" width="16" height="20" rx="4" fill="#f8fafc" opacity="0.85" />
+</svg>

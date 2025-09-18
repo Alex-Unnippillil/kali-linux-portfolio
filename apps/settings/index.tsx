@@ -25,6 +25,8 @@ export default function Settings() {
     setReducedMotion,
     fontScale,
     setFontScale,
+    uiScale,
+    setUiScale,
     highContrast,
     setHighContrast,
     haptics,
@@ -77,6 +79,7 @@ export default function Settings() {
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
+      if (parsed.uiScale !== undefined) setUiScale(parsed.uiScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
@@ -99,6 +102,7 @@ export default function Settings() {
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
+    setUiScale(defaults.uiScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
@@ -211,6 +215,26 @@ export default function Settings() {
       )}
       {activeTab === "accessibility" && (
         <>
+          <div className="flex justify-center my-4 items-center">
+            <label htmlFor="ui-scale" className="mr-2 text-ubt-grey">
+              UI Scale:
+            </label>
+            <input
+              id="ui-scale"
+              type="range"
+              min="100"
+              max="200"
+              step="10"
+              value={Math.round(uiScale * 100)}
+              onChange={(e) => setUiScale(parseInt(e.target.value, 10) / 100)}
+              className="ubuntu-slider"
+              aria-valuemin={100}
+              aria-valuemax={200}
+              aria-valuenow={Math.round(uiScale * 100)}
+              aria-valuetext={`${Math.round(uiScale * 100)} percent`}
+            />
+            <span className="ml-2 text-ubt-grey">{Math.round(uiScale * 100)}%</span>
+          </div>
           <div className="flex justify-center my-4">
             <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
             <input

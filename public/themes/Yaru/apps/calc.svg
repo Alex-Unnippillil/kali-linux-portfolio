@@ -1,0 +1,24 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Calculator icon</title>
+  <desc id="desc">Dark calculator keypad with highlighted operation buttons</desc>
+  <rect x="12" y="12" width="104" height="104" rx="20" fill="#111827" />
+  <rect x="26" y="22" width="76" height="28" rx="8" fill="#1f2937" stroke="#0ea5e9" stroke-width="4" />
+  <g fill="#0ea5e9">
+    <rect x="26" y="58" width="20" height="20" rx="5" />
+    <rect x="52" y="58" width="20" height="20" rx="5" />
+    <rect x="78" y="58" width="20" height="20" rx="5" />
+  </g>
+  <g fill="#334155">
+    <rect x="26" y="84" width="20" height="20" rx="5" />
+    <rect x="52" y="84" width="20" height="20" rx="5" />
+    <rect x="78" y="84" width="20" height="20" rx="5" />
+  </g>
+  <rect x="78" y="58" width="20" height="46" rx="5" fill="#f97316" />
+  <path d="M36 68h10" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
+  <path d="M36 94h10" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
+  <path d="M62 68h10" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
+  <path d="M62 94h10" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
+  <path d="M88 68v34" stroke="#111827" stroke-width="6" stroke-linecap="round" opacity="0.4" />
+  <path d="M88 68h0" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
+  <path d="M88 92h0" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
+</svg>

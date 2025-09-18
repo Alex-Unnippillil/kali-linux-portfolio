@@ -1,0 +1,22 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">System settings icon</title>
+  <desc id="desc">Circular gear symbol representing system controls</desc>
+  <defs>
+    <radialGradient id="gear-bg" cx="0.5" cy="0.4" r="0.75">
+      <stop offset="0" stop-color="#38bdf8" />
+      <stop offset="1" stop-color="#0f172a" />
+    </radialGradient>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="url(#gear-bg)" />
+  <g fill="none" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="64" cy="64" r="20" />
+    <path d="M64 32v10" />
+    <path d="M64 86v10" />
+    <path d="M96 64h-10" />
+    <path d="M32 64h10" />
+    <path d="M88 40l-7 7" />
+    <path d="M40 88l7-7" />
+    <path d="M88 88l-7-7" />
+    <path d="M40 40l7 7" />
+  </g>
+</svg>
