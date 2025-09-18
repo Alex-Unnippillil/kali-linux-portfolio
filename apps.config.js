@@ -87,6 +87,7 @@ const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
+const SandboxRunnerApp = createDynamicApp('sandbox-runner', 'Sandbox Runner');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
@@ -170,6 +171,7 @@ const displayGhidra = createDisplay(GhidraApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
+const displaySandboxRunner = createDisplay(SandboxRunnerApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
@@ -257,6 +259,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'sandbox-runner',
+    title: 'Sandbox Runner',
+    icon: '/themes/Yaru/apps/terminal.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySandboxRunner,
   },
   {
     id: 'input-lab',

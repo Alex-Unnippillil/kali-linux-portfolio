@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { isWindowSandboxed } from '../../utils/sandboxManager';
 
 export class Window extends Component {
     constructor(props) {
@@ -33,6 +34,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            sandboxed: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -53,6 +55,8 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        this.updateSandboxBadge();
+        window.addEventListener('sandbox-windows-changed', this.updateSandboxBadge);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,8 +70,17 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        window.removeEventListener('sandbox-windows-changed', this.updateSandboxBadge);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    updateSandboxBadge = () => {
+        if (!this.id) return;
+        const sandboxed = isWindowSandboxed(this.id);
+        if (sandboxed !== this.state.sandboxed) {
+            this.setState({ sandboxed });
         }
     }
 
@@ -479,8 +492,7 @@ export class Window extends Component {
 
     handleTitleBarKeyDown = (e) => {
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
+            this.safePrevent(e);
             if (this.state.grabbed) {
                 this.handleStop();
             } else {
@@ -494,8 +506,7 @@ export class Window extends Component {
             else if (e.key === 'ArrowUp') dy = -step;
             else if (e.key === 'ArrowDown') dy = step;
             if (dx !== 0 || dy !== 0) {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 const node = document.getElementById(this.id);
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
@@ -512,6 +523,15 @@ export class Window extends Component {
         }
     }
 
+    safePrevent = (e) => {
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
+        if (e && typeof e.stopPropagation === 'function') {
+            e.stopPropagation();
+        }
+    }
+
     releaseGrab = () => {
         if (this.state.grabbed) {
             this.handleStop();
@@ -525,40 +545,32 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safePrevent(e);
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -649,6 +661,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            sandboxed={this.state.sandboxed}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,17 +687,25 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, sandboxed }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center justify-center gap-2 h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            {sandboxed && (
+                <span
+                    className="px-2 py-0.5 rounded-full bg-ub-orange text-black text-[0.65rem] uppercase tracking-wide"
+                    aria-label="Sandboxed window"
+                >
+                    Sandbox
+                </span>
+            )}
+            <span className="truncate text-sm font-bold text-center" title={title}>{title}</span>
         </div>
     )
 }

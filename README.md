@@ -375,6 +375,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Settings | /apps/settings | Utility / Media |
 | Trash | /apps/trash | Utility / Media |
 | Project Gallery | /apps/project-gallery | Utility / Media |
+| Sandbox Runner | /apps/sandbox-runner | Utility / Security |
 | Quote | /apps/quote | Utility / Media |
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
