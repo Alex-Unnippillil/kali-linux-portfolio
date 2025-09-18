@@ -41,9 +41,15 @@ const registry: Record<string, CommandHandler> = {
   man,
   history,
   alias,
-  cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
-  grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
-  jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
+  cat: async (args, ctx) => {
+    await ctx.runWorker(`cat ${args}`);
+  },
+  grep: async (args, ctx) => {
+    await ctx.runWorker(`grep ${args}`);
+  },
+  jq: async (args, ctx) => {
+    await ctx.runWorker(`jq ${args}`);
+  },
 };
 
 export default registry;

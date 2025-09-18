@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exit code 1 &mdash; General error</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 2rem;
+        background: #0f1317;
+        color: #f8fafc;
+      }
+      h1 {
+        color: #38bdf8;
+      }
+      code {
+        background: rgba(148, 163, 184, 0.15);
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+      }
+      a {
+        color: #60a5fa;
+      }
+      section {
+        margin-top: 1.5rem;
+      }
+      ul {
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Exit code 1 &mdash; General error or missing resource</h1>
+      <p>
+        Exit status <code>1</code> is the shell's catch-all for commands that ended with a
+        recoverable problem. Missing files, invalid arguments, or permission issues are
+        the usual suspects.
+      </p>
+    </header>
+    <section>
+      <h2>Checklist</h2>
+      <ul>
+        <li>Double-check the spelling and capitalization of files, directories, and flags.</li>
+        <li>Run <code>ls -lah</code> to verify the target exists and you can access it.</li>
+        <li>Inspect recent commands with <code>history</code> to reuse a known-good invocation.</li>
+        <li>Use <code>man &lt;command&gt;</code> or <code>--help</code> to confirm the correct options.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why this happens</h2>
+      <p>
+        Unlike specific error codes, exit <code>1</code> is generic. Tools return it when the
+        error doesn't map to a dedicated status. Because of that, reviewing the text of the
+        error message is crucial to narrow things down.
+      </p>
+    </section>
+    <section>
+      <h2>Next steps</h2>
+      <ul>
+        <li>Re-run the command with <code>-v</code> or <code>--verbose</code> if available.</li>
+        <li>Confirm permissions with <code>stat &lt;file&gt;</code> when working on shared directories.</li>
+        <li>Use <code>strace</code> or <code>script</code> to capture a failing run for later review.</li>
+      </ul>
+    </section>
+  </body>
+</html>

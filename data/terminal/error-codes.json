@@ -1,0 +1,98 @@
+{
+  "codes": [
+    {
+      "code": 1,
+      "title": "General error or missing resource",
+      "summary": "A command reported a generic failure, often because an expected file or argument was missing.",
+      "tips": [
+        "Verify the path or arguments passed to the command.",
+        "List files with `ls` to confirm the resource exists and that you have read access."
+      ],
+      "patterns": [
+        "no such file or directory",
+        "not such file",
+        "failed"
+      ],
+      "docs": [
+        {
+          "label": "Troubleshooting missing files (offline)",
+          "path": "/docs/terminal/exit-code-1.html"
+        }
+      ]
+    },
+    {
+      "code": 4,
+      "title": "JSON parsing failed",
+      "summary": "jq could not parse the provided JSON input.",
+      "tips": [
+        "Validate the JSON with an online or offline validator before piping it to jq.",
+        "Use `jq . file.json` to confirm the file is valid JSON before applying filters."
+      ],
+      "patterns": [
+        "jq: error"
+      ],
+      "docs": [
+        {
+          "label": "Fix jq parse errors (offline)",
+          "path": "/docs/terminal/exit-code-4.html"
+        }
+      ]
+    },
+    {
+      "code": 126,
+      "title": "Command invoked cannot execute",
+      "summary": "The shell found the command but could not execute it, usually because the file is not marked executable.",
+      "tips": [
+        "Check permissions with `ls -l` and ensure the execute bit is set.",
+        "Run `chmod +x <file>` to mark scripts as executable if you trust them."
+      ],
+      "patterns": [
+        "permission denied",
+        "cannot execute"
+      ],
+      "docs": [
+        {
+          "label": "Make scripts executable (offline)",
+          "path": "/docs/terminal/exit-code-126.html"
+        }
+      ]
+    },
+    {
+      "code": 127,
+      "title": "Command not found",
+      "summary": "The shell could not locate the command name you entered.",
+      "tips": [
+        "Check for typos in the command name.",
+        "Run `which <command>` or `apt search` to confirm the tool is installed."
+      ],
+      "patterns": [
+        "command not found",
+        "not recognized as a command"
+      ],
+      "docs": [
+        {
+          "label": "Resolve missing commands (offline)",
+          "path": "/docs/terminal/exit-code-127.html"
+        }
+      ]
+    },
+    {
+      "code": 130,
+      "title": "Process terminated by user",
+      "summary": "The command ended after receiving an interrupt signal (Ctrl+C).",
+      "tips": [
+        "Re-run the command when you are ready for it to finish.",
+        "Use `nohup` or `tmux` if you need long-running commands to survive interrupts."
+      ],
+      "patterns": [
+        "^C"
+      ],
+      "docs": [
+        {
+          "label": "Working with interrupts (offline)",
+          "path": "/docs/terminal/exit-code-130.html"
+        }
+      ]
+    }
+  ]
+}
