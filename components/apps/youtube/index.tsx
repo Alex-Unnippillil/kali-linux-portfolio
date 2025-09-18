@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import useQueueStore from '../../../apps/youtube/state/queueStore';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -92,41 +93,131 @@ function Sidebar({
   queue,
   watchLater,
   onPlay,
-  onReorder,
+  onQueueReorder,
+  onQueueRemove,
+  onWatchLaterReorder,
+  onWatchLaterRemove,
+  onQueueFromWatchLater,
 }: {
   queue: Video[];
   watchLater: Video[];
   onPlay: (v: Video) => void;
-  onReorder: (from: number, to: number) => void;
+  onQueueReorder: (from: number, to: number) => void;
+  onQueueRemove: (index: number) => void;
+  onWatchLaterReorder: (from: number, to: number) => void;
+  onWatchLaterRemove: (index: number) => void;
+  onQueueFromWatchLater: (video: Video) => void;
 }) {
-  const handleKey = (index: number, e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleQueueKey = (
+    index: number,
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
     if (e.key === 'ArrowUp' && index > 0) {
       e.preventDefault();
-      onReorder(index, index - 1);
-    } else if (e.key === 'ArrowDown' && index < watchLater.length - 1) {
+      onQueueReorder(index, index - 1);
+    } else if (e.key === 'ArrowDown' && index < queue.length - 1) {
       e.preventDefault();
-      onReorder(index, index + 1);
+      onQueueReorder(index, index + 1);
     }
   };
 
-  const handleDrop = (index: number, e: React.DragEvent<HTMLDivElement>) => {
+  const handleQueueDrop = (
+    index: number,
+    e: React.DragEvent<HTMLDivElement>,
+  ) => {
     e.preventDefault();
     const from = Number(e.dataTransfer.getData('text/plain'));
-    if (!Number.isNaN(from)) onReorder(from, index);
+    if (!Number.isNaN(from)) onQueueReorder(from, index);
   };
+
+  const handleWatchLaterKey = (
+    index: number,
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (e.key === 'ArrowUp' && index > 0) {
+      e.preventDefault();
+      onWatchLaterReorder(index, index - 1);
+    } else if (e.key === 'ArrowDown' && index < watchLater.length - 1) {
+      e.preventDefault();
+      onWatchLaterReorder(index, index + 1);
+    }
+  };
+
+  const handleWatchLaterDrop = (
+    index: number,
+    e: React.DragEvent<HTMLDivElement>,
+  ) => {
+    e.preventDefault();
+    const from = Number(e.dataTransfer.getData('text/plain'));
+    if (!Number.isNaN(from)) onWatchLaterReorder(from, index);
+  };
+
+  const renderMoveButtons = (
+    index: number,
+    length: number,
+    onReorder: (from: number, to: number) => void,
+    label: string,
+  ) => (
+    <div className="space-x-[6px]">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onReorder(index, index - 1);
+        }}
+        disabled={index === 0}
+        aria-label={`Move ${label} up`}
+        className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onReorder(index, index + 1);
+        }}
+        disabled={index === length - 1}
+        aria-label={`Move ${label} down`}
+        className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+      >
+        ↓
+      </button>
+    </div>
+  );
 
   return (
     <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
-      <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
+      <h2 className="mb-[6px] text-lg font-semibold">Up Next</h2>
       <div data-testid="queue-list">
-        {queue.map((v) => (
+        {queue.map((v, i) => (
           <div
-            key={v.id}
-            className="mb-[6px] cursor-pointer"
+            key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}-${i}`}
+            className="mb-[6px] cursor-pointer rounded p-[6px] transition hover:bg-ub-dark-grey/30 focus:outline-none focus:ring"
             onClick={() => onPlay(v)}
+            draggable
+            onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleQueueDrop(i, e)}
+            tabIndex={0}
+            onKeyDown={(e) => handleQueueKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.title}</div>
+            <div className="mt-[4px] font-medium">{v.name || v.title}</div>
+            <div className="mt-[6px] flex flex-wrap items-center justify-between gap-[6px] text-[12px]">
+              <button
+                type="button"
+                className="text-ubt-grey hover:text-ubt-red"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQueueRemove(i);
+                }}
+                aria-label={`Remove ${v.name || v.title} from Up Next`}
+              >
+                Remove
+              </button>
+              {renderMoveButtons(i, queue.length, onQueueReorder, `${v.name || v.title} in Up Next`)}
+            </div>
           </div>
         ))}
         {!queue.length && <div className="text-ubt-grey">Empty</div>}
@@ -136,17 +227,49 @@ function Sidebar({
         {watchLater.map((v, i) => (
           <div
             key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
-            className="mb-[6px] cursor-pointer"
+            className="mb-[6px] cursor-pointer rounded p-[6px] transition hover:bg-ub-dark-grey/30 focus:outline-none focus:ring"
             onClick={() => onPlay(v)}
             draggable
             onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(i, e)}
+            onDrop={(e) => handleWatchLaterDrop(i, e)}
             tabIndex={0}
-            onKeyDown={(e) => handleKey(i, e)}
+            onKeyDown={(e) => handleWatchLaterKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.name || v.title}</div>
+            <div className="mt-[4px] font-medium">{v.name || v.title}</div>
+            <div className="mt-[6px] flex flex-wrap items-center justify-between gap-[6px] text-[12px]">
+              <div className="space-x-[6px]">
+                <button
+                  type="button"
+                  className="text-ubt-cool-grey hover:text-ubt-green"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQueueFromWatchLater(v);
+                  }}
+                  aria-label={`Add ${v.name || v.title} to Up Next`}
+                >
+                  Queue
+                </button>
+                <button
+                  type="button"
+                  className="text-ubt-grey hover:text-ubt-red"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onWatchLaterRemove(i);
+                  }}
+                  aria-label={`Remove ${v.name || v.title} from Watch Later`}
+                >
+                  Remove
+                </button>
+              </div>
+              {renderMoveButtons(
+                i,
+                watchLater.length,
+                onWatchLaterReorder,
+                `${v.name || v.title} in Watch Later`,
+              )}
+            </div>
           </div>
         ))}
         {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
@@ -258,7 +381,9 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Video[]>(initialResults);
   const [current, setCurrent] = useState<Video | null>(null);
-  const [queue, setQueue] = useState<Video[]>([]);
+  const [queue, queueActions] = useQueueStore();
+  const { add: enqueue, remove: removeQueueItem, reorder: reorderQueue, shift: shiftQueue } =
+    queueActions;
   const [watchLater, setWatchLater] = useWatchLater();
   const searchRef = useRef<HTMLInputElement>(null);
   const playerRef = useRef<any>(null);
@@ -437,7 +562,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     void search();
   };
 
-  const addQueue = useCallback((v: Video) => setQueue((q) => [...q, v]), []);
+  const addQueue = useCallback((v: Video) => enqueue(v), [enqueue]);
   const addWatchLater = useCallback(
     (v: Video) =>
       setWatchLater((w) =>
@@ -474,13 +599,34 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const moveWatchLater = useCallback(
     (from: number, to: number) => {
       setWatchLater((list) => {
+        if (from === to || from < 0 || from >= list.length) return list;
+        const maxIndex = list.length - 1;
+        const target = Math.min(Math.max(to, 0), maxIndex);
+        if (target === from) return list;
         const next = [...list];
         const [item] = next.splice(from, 1);
-        next.splice(to, 0, item);
+        next.splice(target, 0, item);
         return next;
       });
     },
     [setWatchLater],
+  );
+  const removeWatchLater = useCallback(
+    (index: number) => {
+      setWatchLater((list) => {
+        if (index < 0 || index >= list.length) return list;
+        const next = [...list];
+        next.splice(index, 1);
+        return next;
+      });
+    },
+    [setWatchLater],
+  );
+  const queueFromWatchLater = useCallback(
+    (video: Video) => {
+      enqueue(video);
+    },
+    [enqueue],
   );
   const playVideo = useCallback((v: Video) => {
     setCurrent(v);
@@ -489,15 +635,11 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     setLooping(false);
   }, []);
   const playNext = useCallback(() => {
-    setQueue((q) => {
-      if (q.length) {
-        const [next, ...rest] = q;
-        playVideo(next);
-        return rest;
-      }
-      return q;
-    });
-  }, [playVideo]);
+    const next = shiftQueue();
+    if (next) {
+      playVideo(next);
+    }
+  }, [shiftQueue, playVideo]);
 
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
@@ -666,7 +808,11 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         queue={queue}
         watchLater={watchLater}
         onPlay={playVideo}
-        onReorder={moveWatchLater}
+        onQueueReorder={reorderQueue}
+        onQueueRemove={removeQueueItem}
+        onWatchLaterReorder={moveWatchLater}
+        onWatchLaterRemove={removeWatchLater}
+        onQueueFromWatchLater={queueFromWatchLater}
       />
     </div>
   );
