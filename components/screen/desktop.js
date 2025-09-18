@@ -733,7 +733,7 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -745,6 +745,9 @@ export class Desktop extends Component {
             }
         }
         this.setState({ focused_windows });
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('kali:window-focus', { detail: { appId: objId } }));
+        }
     }
 
     addNewFolder = () => {
