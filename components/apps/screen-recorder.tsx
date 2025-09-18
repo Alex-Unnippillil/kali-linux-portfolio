@@ -1,8 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
+import ProgressBar, {
+    computeEtaSeconds,
+    type ProgressMetadata,
+} from '../base/ProgressBar';
+
+const formatBytes = (bytes: number) => {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let value = bytes;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+    const precision = value >= 10 || unitIndex === 0 ? 0 : 1;
+    return `${value.toFixed(precision)} ${units[unitIndex]}`;
+};
+
+interface OperationProgress {
+    progress: number;
+    metadata: ProgressMetadata;
+}
 
 function ScreenRecorder() {
     const [recording, setRecording] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [saveProgress, setSaveProgress] = useState<OperationProgress | null>(null);
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
@@ -53,10 +76,55 @@ function ScreenRecorder() {
                     ],
                 });
                 const writable = await handle.createWritable();
-                await writable.write(blob);
+                const total = blob.size;
+                const chunkSize = 512 * 1024;
+                let written = 0;
+                const startedAt =
+                    typeof performance !== 'undefined' && typeof performance.now === 'function'
+                        ? performance.now()
+                        : Date.now();
+
+                setSaveProgress({
+                    progress: total === 0 ? 100 : 5,
+                    metadata: {
+                        step: { current: 1, total: 2, label: 'Preparing recording' },
+                        detail: `${formatBytes(total)} ready for export`,
+                        etaSeconds: null,
+                    },
+                });
+
+                if (total === 0) {
+                    await writable.write(blob);
+                } else {
+                    for (let offset = 0; offset < total; offset += chunkSize) {
+                        const chunk = blob.slice(offset, offset + chunkSize);
+                        await writable.write(chunk);
+                        written += chunk.size;
+                        const percent = Math.min(100, (written / total) * 100);
+                        setSaveProgress({
+                            progress: percent,
+                            metadata: {
+                                step: { current: 2, total: 2, label: 'Copying to disk' },
+                                detail: `${formatBytes(written)} of ${formatBytes(total)}`,
+                                etaSeconds: computeEtaSeconds(written, total, startedAt),
+                            },
+                        });
+                    }
+                }
+
                 await writable.close();
+                setSaveProgress({
+                    progress: 100,
+                    metadata: {
+                        step: { current: 2, total: 2, label: 'Copying to disk' },
+                        detail: `${formatBytes(total)} copied`,
+                        etaSeconds: 0,
+                    },
+                });
+                setTimeout(() => setSaveProgress(null), 1200);
             } catch {
                 // ignore
+                setSaveProgress(null);
             }
         } else {
             const a = document.createElement('a');
@@ -65,6 +133,7 @@ function ScreenRecorder() {
             document.body.appendChild(a);
             a.click();
             a.remove();
+            setSaveProgress(null);
         }
     };
 
@@ -105,6 +174,15 @@ function ScreenRecorder() {
                     >
                         Save Recording
                     </button>
+                    {saveProgress && (
+                        <div className="w-full max-w-sm">
+                            <ProgressBar
+                                progress={saveProgress.progress}
+                                label="Saving recording"
+                                metadata={saveProgress.metadata}
+                            />
+                        </div>
+                    )}
                 </>
             )}
         </div>
