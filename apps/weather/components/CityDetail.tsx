@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { City } from '../state';
+import { City, useWeatherUnits } from '../state';
+import { convertTemperature } from '../utils';
 
 interface Props {
   city: City;
@@ -9,7 +10,7 @@ interface Props {
 }
 
 export default function CityDetail({ city, onClose }: Props) {
-  const [unit, setUnit] = useState<'C' | 'F'>('C');
+  const [units, setUnits] = useWeatherUnits();
   const [hourly, setHourly] = useState<number[]>([]);
   const [precip, setPrecip] = useState<number | null>(null);
 
@@ -25,7 +26,7 @@ export default function CityDetail({ city, onClose }: Props) {
       .catch(() => {});
   }, [city]);
 
-  const temps = unit === 'C' ? hourly : hourly.map((t) => t * 1.8 + 32);
+  const temps = hourly.map((t) => convertTemperature(t, units));
   const slice = temps.slice(0, 24);
   const min = Math.min(...slice);
   const max = Math.max(...slice);
@@ -48,14 +49,18 @@ export default function CityDetail({ city, onClose }: Props) {
         </div>
         <div className="flex gap-1.5 mb-4">
           <button
-            className={`px-1.5 rounded ${unit === 'C' ? 'bg-blue-600' : 'bg-white/20'}`}
-            onClick={() => setUnit('C')}
+            className={`px-1.5 rounded ${
+              units === 'metric' ? 'bg-blue-600' : 'bg-white/20'
+            }`}
+            onClick={() => setUnits('metric')}
           >
             °C
           </button>
           <button
-            className={`px-1.5 rounded ${unit === 'F' ? 'bg-blue-600' : 'bg-white/20'}`}
-            onClick={() => setUnit('F')}
+            className={`px-1.5 rounded ${
+              units === 'imperial' ? 'bg-blue-600' : 'bg-white/20'
+            }`}
+            onClick={() => setUnits('imperial')}
           >
             °F
           </button>

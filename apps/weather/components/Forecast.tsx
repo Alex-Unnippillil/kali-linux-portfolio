@@ -1,9 +1,15 @@
 'use client';
 
 import WeatherIcon from './WeatherIcon';
-import { ForecastDay } from '../state';
+import { ForecastDay, WeatherUnits } from '../state';
+import { formatTemperature } from '../utils';
 
-export default function Forecast({ days }: { days: ForecastDay[] }) {
+interface ForecastProps {
+  days: ForecastDay[];
+  units: WeatherUnits;
+}
+
+export default function Forecast({ days, units }: ForecastProps) {
   return (
     <div className="flex gap-1.5">
       {days.map((d) => (
@@ -12,7 +18,9 @@ export default function Forecast({ days }: { days: ForecastDay[] }) {
           className="flex flex-col items-center p-1.5 bg-white/10 rounded"
         >
           <WeatherIcon code={d.condition} />
-          <div className="text-sm mt-1">{Math.round(d.temp)}°</div>
+          <div className="text-sm mt-1">
+            {formatTemperature(d.temp, units)}
+          </div>
         </div>
       ))}
     </div>
