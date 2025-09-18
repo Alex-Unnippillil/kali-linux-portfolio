@@ -8,6 +8,7 @@ export interface Plugin {
   cwe?: string[];
   cve?: string[];
   tags?: string[];
+  category: string;
 }
 
 export interface Finding {
