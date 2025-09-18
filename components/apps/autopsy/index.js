@@ -5,6 +5,11 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import {
+  buildTimelineMetrics,
+  filterEventsByType,
+  getTypeOptions,
+} from './timelineUtils';
 
 const escapeFilename = (str = '') =>
   str
@@ -21,6 +26,8 @@ function Timeline({ events, onSelect }) {
   const containerRef = useRef(null);
   const workerRef = useRef(null);
   const positionsRef = useRef([]);
+  const metricsRef = useRef(buildTimelineMetrics([]));
+  const animationFrameRef = useRef(null);
   const [sorted, setSorted] = useState([]);
   const MIN_ZOOM = 1 / (24 * 60); // 1 pixel per day
   const MAX_ZOOM = 60; // 60 pixels per minute
@@ -28,6 +35,12 @@ function Timeline({ events, onSelect }) {
   const [zoomAnnouncement, setZoomAnnouncement] = useState('');
   const [sliderIndex, setSliderIndex] = useState(0);
   const [hoverIndex, setHoverIndex] = useState(null);
+  const [typeSelection, setTypeSelection] = useState('All');
+  const typeOptions = useMemo(() => getTypeOptions(events), [events]);
+  const filteredEvents = useMemo(
+    () => filterEventsByType(events, typeSelection),
+    [events, typeSelection]
+  );
   const dayMarkers = useMemo(() => {
     const days = [];
     const seen = new Set();
@@ -42,22 +55,53 @@ function Timeline({ events, onSelect }) {
   }, [sorted]);
 
   useEffect(() => {
+    if (typeSelection !== 'All' && !typeOptions.includes(typeSelection)) {
+      setTypeSelection('All');
+    }
+  }, [typeOptions, typeSelection]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./timelineWorker.js', import.meta.url)
       );
-      workerRef.current.onmessage = (e) => setSorted(e.data);
-      return () => workerRef.current?.terminate();
+      workerRef.current.onmessage = (e) => {
+        const { sorted: nextSorted = [], metrics } = e.data || {};
+        setSorted(nextSorted);
+        if (metrics) {
+          metricsRef.current = {
+            min: metrics.min || 0,
+            max: metrics.max || 0,
+            rangeMinutes: metrics.rangeMinutes || 1,
+            times:
+              metrics.length && metrics.timesBuffer
+                ? new Float64Array(metrics.timesBuffer)
+                : new Float64Array(),
+          };
+        }
+      };
+      return () => {
+        workerRef.current?.terminate();
+      };
     }
     return undefined;
   }, []);
 
   useEffect(() => {
-    if (workerRef.current) workerRef.current.postMessage({ events });
-  }, [events]);
+    if (workerRef.current) {
+      workerRef.current.postMessage({ events: filteredEvents });
+    } else {
+      const nextSorted = filteredEvents
+        .slice()
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      setSorted(nextSorted);
+      metricsRef.current = buildTimelineMetrics(nextSorted);
+    }
+  }, [filteredEvents]);
 
   useEffect(() => {
     setSliderIndex(0);
+    setHoverIndex(null);
   }, [sorted]);
 
   useEffect(() => {
@@ -94,21 +138,47 @@ function Timeline({ events, onSelect }) {
     return () => canvas.removeEventListener('wheel', handleWheel);
   }, [MAX_ZOOM, MIN_ZOOM]);
 
+  useEffect(() => () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+  }, []);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || sorted.length === 0) return;
+    const overview = overviewRef.current;
+    const container = containerRef.current;
+    if (!canvas) return;
+    const metrics = metricsRef.current;
     const ctx = canvas.getContext('2d');
-    const times = sorted.map((e) => new Date(e.timestamp).getTime());
-    const min = Math.min(...times);
-    const max = Math.max(...times);
-    const rangeMin = (max - min) / 60000 || 1;
-    const width = Math.max(rangeMin * zoom, 600);
+    if (!ctx) return;
+
+    if (!sorted.length || !metrics.times.length) {
+      positionsRef.current = [];
+      const width = container ? container.clientWidth : 600;
+      canvas.width = width;
+      canvas.height = 80;
+      ctx.clearRect(0, 0, width, canvas.height);
+      if (overview) {
+        const octx = overview.getContext('2d');
+        if (octx) {
+          const owidth = width;
+          overview.width = owidth;
+          overview.height = 20;
+          octx.clearRect(0, 0, owidth, 20);
+        }
+      }
+      return;
+    }
+
+    const width = Math.max(metrics.rangeMinutes * zoom, 600);
     canvas.width = width;
     canvas.height = 80;
     const height = canvas.height;
-    const prefersReduced = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const render = () => {
       const gradient = ctx.createLinearGradient(0, 0, width, 0);
       gradient.addColorStop(0, '#1f1f1f');
@@ -130,9 +200,9 @@ function Timeline({ events, onSelect }) {
       const tickMinutes =
         tickOptions.find((t) => t >= approxTickMinutes) || 1440;
       const tickMs = tickMinutes * 60000;
-      const firstTick = Math.ceil(min / tickMs) * tickMs;
-      for (let t = firstTick; t <= max; t += tickMs) {
-        const x = ((t - min) / 60000) * zoom;
+      const firstTick = Math.ceil(metrics.min / tickMs) * tickMs;
+      for (let t = firstTick; t <= metrics.max; t += tickMs) {
+        const x = ((t - metrics.min) / 60000) * zoom;
         ctx.fillRect(x, height / 2 + 10, 1, 10);
         const date = new Date(t);
         let label;
@@ -151,47 +221,50 @@ function Timeline({ events, onSelect }) {
 
       ctx.fillStyle = '#ffa500';
       positionsRef.current = [];
-      sorted.forEach((ev) => {
-        const t = new Date(ev.timestamp).getTime();
-        const x = ((t - min) / 60000) * zoom;
+      const times = metrics.times;
+      for (let i = 0; i < sorted.length; i += 1) {
+        const x = ((times[i] - metrics.min) / 60000) * zoom;
         ctx.fillRect(x, height / 2 - 10, 2, 20);
-        positionsRef.current.push({ x, event: ev });
-      });
+        positionsRef.current.push({ x, event: sorted[i] });
+      }
 
-      const overview = overviewRef.current;
-      const container = containerRef.current;
       if (overview) {
         const octx = overview.getContext('2d');
-        const owidth = container ? container.clientWidth : 600;
-        overview.width = owidth;
-        overview.height = 20;
-        const ogradient = octx.createLinearGradient(0, 0, owidth, 0);
-        ogradient.addColorStop(0, '#1f1f1f');
-        ogradient.addColorStop(1, '#2a2a2a');
-        octx.fillStyle = ogradient;
-        octx.fillRect(0, 0, owidth, 20);
-        octx.fillStyle = '#ffa500';
-        const total = max - min || 1;
-        sorted.forEach((ev) => {
-          const t = new Date(ev.timestamp).getTime();
-          const x = ((t - min) / total) * owidth;
-          octx.fillRect(x, 5, 1, 10);
-        });
-        if (container) {
-          const startRatio = container.scrollLeft / width;
-          const endRatio =
-            (container.scrollLeft + container.clientWidth) / width;
-          const rectX = startRatio * owidth;
-          const rectWidth = Math.max((endRatio - startRatio) * owidth, 10);
-          octx.strokeStyle = '#ffffff';
-          octx.strokeRect(rectX, 0, rectWidth, 20);
+        if (octx) {
+          const owidth = container ? container.clientWidth : 600;
+          overview.width = owidth;
+          overview.height = 20;
+          const ogradient = octx.createLinearGradient(0, 0, owidth, 0);
+          ogradient.addColorStop(0, '#1f1f1f');
+          ogradient.addColorStop(1, '#2a2a2a');
+          octx.fillStyle = ogradient;
+          octx.fillRect(0, 0, owidth, 20);
+          octx.fillStyle = '#ffa500';
+          const total = metrics.max - metrics.min || 1;
+          for (let i = 0; i < sorted.length; i += 1) {
+            const x = ((metrics.times[i] - metrics.min) / total) * owidth;
+            octx.fillRect(x, 5, 1, 10);
+          }
+          if (container) {
+            const startRatio = container.scrollLeft / width;
+            const endRatio =
+              (container.scrollLeft + container.clientWidth) / width;
+            const rectX = startRatio * owidth;
+            const rectWidth = Math.max((endRatio - startRatio) * owidth, 10);
+            octx.strokeStyle = '#ffffff';
+            octx.strokeRect(rectX, 0, rectWidth, 20);
+          }
         }
       }
     };
+
     if (prefersReduced) {
       render();
     } else {
-      requestAnimationFrame(render);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      animationFrameRef.current = requestAnimationFrame(render);
     }
   }, [sorted, zoom]);
 
@@ -242,7 +315,7 @@ function Timeline({ events, onSelect }) {
       <div aria-live="polite" className="sr-only">
         {zoomAnnouncement}
       </div>
-      <div className="flex space-x-2 mb-1">
+      <div className="flex flex-wrap items-center gap-2 mb-1">
         <button
           onClick={() => setZoom((z) => Math.min(z * 2, MAX_ZOOM))}
           className="bg-ub-orange text-black px-2 py-1 rounded"
@@ -257,6 +330,21 @@ function Timeline({ events, onSelect }) {
         >
           -
         </button>
+        <label className="flex items-center text-xs text-white space-x-1">
+          <span className="text-ubt-grey">Type</span>
+          <select
+            aria-label="Filter timeline by type"
+            value={typeSelection}
+            onChange={(e) => setTypeSelection(e.target.value)}
+            className="bg-ub-grey text-white px-2 py-1 rounded"
+          >
+            {typeOptions.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       {sorted.length > 0 && (
         <div className="relative mb-2">
@@ -292,7 +380,7 @@ function Timeline({ events, onSelect }) {
           </datalist>
           {hoverIndex !== null && sorted[hoverIndex] && (
             <div
-              className="absolute -top-10 bg-ub-grey text-xs p-1 rounded"
+              className="absolute -top-12 bg-ub-grey text-xs p-1 rounded"
               style={{
                 left: `${
                   sorted.length > 1
@@ -306,6 +394,11 @@ function Timeline({ events, onSelect }) {
                 {new Date(sorted[hoverIndex].timestamp).toLocaleString()}
               </div>
               <div>{sorted[hoverIndex].name}</div>
+              {sorted[hoverIndex].type && (
+                <div className="text-[10px] text-ubt-grey">
+                  Type: {sorted[hoverIndex].type}
+                </div>
+              )}
               {sorted[hoverIndex].description && (
                 <div className="text-[10px]">
                   {sorted[hoverIndex].description}
@@ -344,7 +437,7 @@ function Autopsy({ initialArtifacts = null }) {
   const [plugins, setPlugins] = useState([]);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
-  const [typeFilter, setTypeFilter] = useState('All');
+  const [artifactTypeFilter, setArtifactTypeFilter] = useState('All');
   const [userFilter, setUserFilter] = useState('All');
   const [pluginFilter, setPluginFilter] = useState('All');
   const [startTime, setStartTime] = useState('');
@@ -355,8 +448,14 @@ function Autopsy({ initialArtifacts = null }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [previewTab, setPreviewTab] = useState('hex');
-  const [timelineEvents] = useState(
-    demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
+  const [timelineEvents] = useState(() =>
+    demoCase.timeline.map((t) => ({
+      name: t.event,
+      timestamp: t.timestamp,
+      type: t.type || 'Uncategorized',
+      description: t.description || '',
+      thumbnail: t.thumbnail,
+    }))
   );
   const parseWorkerRef = useRef(null);
 
@@ -416,37 +515,79 @@ function Autopsy({ initialArtifacts = null }) {
       .catch(() => setHashDB({}));
   }, [currentCase, initialArtifacts]);
 
-  const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))];
-  const users = [
-    'All',
-    ...Array.from(new Set(artifacts.map((a) => a.user).filter(Boolean))),
-  ];
-  const pluginOptions = [
-    'All',
-    ...Array.from(new Set(artifacts.map((a) => a.plugin).filter(Boolean))),
-  ];
-  const filteredArtifacts = artifacts.filter(
-    (a) =>
-      (typeFilter === 'All' || a.type === typeFilter) &&
-      (userFilter === 'All' || a.user === userFilter) &&
-      (pluginFilter === 'All' || a.plugin === pluginFilter) &&
-      (!startTime || new Date(a.timestamp) >= new Date(startTime)) &&
-      (!endTime || new Date(a.timestamp) <= new Date(endTime))
+  const artifactTypes = useMemo(
+    () => [
+      'All',
+      ...Array.from(
+        new Set(artifacts.map((a) => a.type).filter((type) => !!type))
+      ),
+    ],
+    [artifacts]
   );
-  const searchLower = keyword.toLowerCase();
-  const visibleArtifacts = filteredArtifacts.filter(
-    (a) =>
-      a.name.toLowerCase().includes(searchLower) ||
-      a.description.toLowerCase().includes(searchLower) ||
-      (a.user && a.user.toLowerCase().includes(searchLower))
+  const users = useMemo(
+    () => [
+      'All',
+      ...Array.from(new Set(artifacts.map((a) => a.user).filter(Boolean))),
+    ],
+    [artifacts]
   );
-  const filteredTimeline = timelineEvents.filter(
-    (t) =>
-      (!startTime || new Date(t.timestamp) >= new Date(startTime)) &&
-      (!endTime || new Date(t.timestamp) <= new Date(endTime))
+  const pluginOptions = useMemo(
+    () => [
+      'All',
+      ...Array.from(new Set(artifacts.map((a) => a.plugin).filter(Boolean))),
+    ],
+    [artifacts]
   );
-  const visibleTimeline = filteredTimeline.filter((t) =>
-    t.name.toLowerCase().includes(searchLower)
+  const filteredArtifacts = useMemo(
+    () =>
+      artifacts.filter(
+        (a) =>
+          (artifactTypeFilter === 'All' || a.type === artifactTypeFilter) &&
+          (userFilter === 'All' || a.user === userFilter) &&
+          (pluginFilter === 'All' || a.plugin === pluginFilter) &&
+          (!startTime || new Date(a.timestamp) >= new Date(startTime)) &&
+          (!endTime || new Date(a.timestamp) <= new Date(endTime))
+      ),
+    [
+      artifacts,
+      artifactTypeFilter,
+      userFilter,
+      pluginFilter,
+      startTime,
+      endTime,
+    ]
+  );
+  const searchLower = useMemo(() => keyword.toLowerCase(), [keyword]);
+  const visibleArtifacts = useMemo(
+    () =>
+      filteredArtifacts.filter((a) => {
+        const nameMatch = a.name.toLowerCase().includes(searchLower);
+        const descriptionMatch = (a.description || '')
+          .toLowerCase()
+          .includes(searchLower);
+        const userMatch = (a.user || '').toLowerCase().includes(searchLower);
+        return nameMatch || descriptionMatch || userMatch;
+      }),
+    [filteredArtifacts, searchLower]
+  );
+  const filteredTimeline = useMemo(
+    () =>
+      timelineEvents.filter(
+        (t) =>
+          (!startTime || new Date(t.timestamp) >= new Date(startTime)) &&
+          (!endTime || new Date(t.timestamp) <= new Date(endTime))
+      ),
+    [timelineEvents, startTime, endTime]
+  );
+  const visibleTimeline = useMemo(
+    () =>
+      filteredTimeline.filter((t) => {
+        if (!searchLower) return true;
+        const nameMatch = t.name.toLowerCase().includes(searchLower);
+        const typeMatch = (t.type || '').toLowerCase().includes(searchLower);
+        return nameMatch || typeMatch;
+      }),
+    [filteredTimeline, searchLower]
   );
 
   const createCase = () => {
@@ -620,6 +761,7 @@ function Autopsy({ initialArtifacts = null }) {
           <div className="text-sm">Current case: {currentCase}</div>
           <div className="flex space-x-2 items-center">
             <select
+              aria-label="Select plugin"
               value={selectedPlugin}
               onChange={(e) => setSelectedPlugin(e.target.value)}
               className="bg-ub-grey text-white px-2 py-1 rounded"
@@ -651,12 +793,12 @@ function Autopsy({ initialArtifacts = null }) {
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
             <select
-              aria-label="Filter by type"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label="Filter artifacts by type"
+              value={artifactTypeFilter}
+              onChange={(e) => setArtifactTypeFilter(e.target.value)}
               className="bg-ub-grey text-white px-2 py-1 rounded"
             >
-              {types.map((t) => (
+              {artifactTypes.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>

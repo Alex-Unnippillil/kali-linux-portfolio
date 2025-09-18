@@ -3,27 +3,32 @@
     {
       "timestamp": "2023-08-01T10:00:00Z",
       "event": "resume.docx created on desktop",
-      "thumbnail": "/themes/Yaru/apps/gedit.png"
+      "thumbnail": "/themes/Yaru/apps/gedit.png",
+      "type": "Document"
     },
     {
       "timestamp": "2023-08-01T12:30:00Z",
       "event": "photo.jpg taken on phone",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+      "type": "Media"
     },
     {
       "timestamp": "2023-08-01T14:45:00Z",
       "event": "system.log updated",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+      "type": "Log"
     },
     {
       "timestamp": "2023-08-01T16:15:00Z",
       "event": "run.exe executed",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+      "type": "Executable"
     },
     {
       "timestamp": "2023-08-01T18:20:00Z",
       "event": "Registry key modified",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+      "type": "Registry"
     }
   ],
   "fileTree": {
