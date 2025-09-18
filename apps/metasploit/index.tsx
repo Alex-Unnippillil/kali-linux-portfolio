@@ -1,21 +1,25 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import modulesData from '../../components/apps/metasploit/modules.json';
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from 'react';
 import MetasploitApp from '../../components/apps/metasploit';
 import Toast from '../../components/ui/Toast';
-
-interface Module {
-  name: string;
-  description: string;
-  type: string;
-  severity: string;
-  [key: string]: any;
-}
+import modules from './moduleData';
+import type { NormalizedModule } from './moduleData';
+import {
+  createFilterCacheKey,
+  filterModules,
+  type ModuleFilters,
+} from './filterModules';
 
 interface TreeNode {
-  [key: string]: TreeNode | Module[] | undefined;
-  __modules?: Module[];
+  [key: string]: TreeNode | NormalizedModule[] | undefined;
+  __modules?: NormalizedModule[];
 }
 
 const typeColors: Record<string, string> = {
@@ -24,7 +28,12 @@ const typeColors: Record<string, string> = {
   post: 'bg-green-600',
 };
 
-function buildTree(mods: Module[]): TreeNode {
+const formatLabel = (value: string) =>
+  value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+function buildTree(mods: NormalizedModule[]): TreeNode {
   const root: TreeNode = {};
   mods.forEach((mod) => {
     const parts = mod.name.split('/');
@@ -43,43 +52,112 @@ function buildTree(mods: Module[]): TreeNode {
 }
 
 const MetasploitPage: React.FC = () => {
-  const [selected, setSelected] = useState<Module | null>(null);
+  const [selected, setSelected] = useState<NormalizedModule | null>(null);
   const [split, setSplit] = useState(60);
   const splitRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const [toast, setToast] = useState('');
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState('');
+  const [platform, setPlatform] = useState('');
+  const [rank, setRank] = useState('');
+  const [filteredModules, setFilteredModules] = useState<
+    NormalizedModule[]
+  >(modules);
+
+  const workerRef = useRef<Worker | null>(null);
+  const filterStateRef = useRef<ModuleFilters>({
+    query: '',
+    tag: '',
+    platform: '',
+    rank: '',
+  });
+  const filterKeyRef = useRef<string>(
+    createFilterCacheKey(filterStateRef.current),
+  );
+  const modulesRef = useRef(modules);
 
   const allTags = useMemo(
     () =>
+      Array.from(new Set(modules.flatMap((m) => m.tags || []))).sort(),
+    [],
+  );
+
+  const allPlatforms = useMemo(
+    () =>
       Array.from(
-        new Set((modulesData as Module[]).flatMap((m) => m.tags || [])),
+        new Set(
+          modules
+            .map((m) => m.platform)
+            .filter((value): value is string => Boolean(value)),
+        ),
       ).sort(),
     [],
   );
 
-  const filteredModules = useMemo(
-    () =>
-      (modulesData as Module[]).filter((m) => {
-        if (tag && !(m.tags || []).includes(tag)) return false;
-        if (query) {
-          const q = query.toLowerCase();
-          return (
-            m.name.toLowerCase().includes(q) ||
-            m.description.toLowerCase().includes(q)
-          );
-        }
-        return true;
-      }),
-    [tag, query],
+  const allRanks = useMemo(
+    () => Array.from(new Set(modules.map((m) => m.rank))).sort(),
+    [],
   );
+
+  const sendFilters = useCallback(
+    (filters: ModuleFilters) => {
+      filterStateRef.current = filters;
+      const key = createFilterCacheKey(filters);
+      filterKeyRef.current = key;
+      const worker = workerRef.current;
+      if (worker) {
+        worker.postMessage({ type: 'filter', payload: { filters, key } });
+      } else {
+        setFilteredModules(filterModules(modulesRef.current, filters));
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+      setFilteredModules(filterModules(modulesRef.current, filterStateRef.current));
+      return;
+    }
+
+    const worker = new Worker(new URL('./filter.worker.ts', import.meta.url));
+    workerRef.current = worker;
+
+    const handleMessage = (
+      event: MessageEvent<{
+        type: string;
+        payload: { modules: NormalizedModule[]; key: string };
+      }>,
+    ) => {
+      const { data } = event;
+      if (!data || data.type !== 'result') return;
+      if (data.payload.key !== filterKeyRef.current) return;
+      setFilteredModules(data.payload.modules);
+    };
+
+    worker.addEventListener('message', handleMessage);
+    worker.postMessage({
+      type: 'filter',
+      payload: { filters: filterStateRef.current, key: filterKeyRef.current },
+    });
+
+    return () => {
+      worker.removeEventListener('message', handleMessage);
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    sendFilters({ query, tag, platform, rank });
+  }, [query, tag, platform, rank, sendFilters]);
 
   const tree = useMemo(() => buildTree(filteredModules), [filteredModules]);
 
   useEffect(() => {
     setSelected(null);
-  }, [query, tag]);
+  }, [query, tag, platform, rank]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -139,8 +217,45 @@ const MetasploitPage: React.FC = () => {
           placeholder="Search modules"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search modules"
           className="w-full p-1 mb-2 border rounded"
         />
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-700">
+          <label className="flex items-center gap-1">
+            <span className="uppercase tracking-wide text-[10px] text-gray-500">
+              Platform
+            </span>
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+              className="border rounded px-2 py-1 text-xs"
+            >
+              <option value="">All</option>
+              {allPlatforms.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1">
+            <span className="uppercase tracking-wide text-[10px] text-gray-500">
+              Rank
+            </span>
+            <select
+              value={rank}
+              onChange={(e) => setRank(e.target.value)}
+              className="border rounded px-2 py-1 text-xs"
+            >
+              <option value="">All</option>
+              {allRanks.map((value) => (
+                <option key={value} value={value}>
+                  {formatLabel(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <div className="flex flex-wrap gap-1 mb-2">
           <button
             onClick={() => setTag('')}
@@ -176,6 +291,16 @@ const MetasploitPage: React.FC = () => {
                   {selected.type}
                 </span>
               </h2>
+              <div className="flex flex-wrap gap-4 text-xs text-gray-600 mb-2">
+                <span>
+                  <span className="font-semibold">Platform:</span>{' '}
+                  {selected.platform || 'Unknown'}
+                </span>
+                <span>
+                  <span className="font-semibold">Rank:</span>{' '}
+                  {formatLabel(selected.rank)}
+                </span>
+              </div>
               <p className="whitespace-pre-wrap">{selected.description}</p>
             </div>
           ) : (
@@ -198,6 +323,7 @@ const MetasploitPage: React.FC = () => {
             <input
               type="text"
               placeholder="Payload options..."
+              aria-label="Payload options"
               className="border p-1 w-full"
             />
             <button
