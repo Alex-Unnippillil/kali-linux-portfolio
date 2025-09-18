@@ -1,18 +1,38 @@
 import modules from '../../components/apps/metasploit/modules.json';
 
-export default function handler(req, res) {
+export const runtime = 'edge';
+
+function jsonResponse(body, status = 200, headers = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  });
+}
+
+export default async function handler(req) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
-    res.status(501).json({ error: 'Not implemented' });
-    return;
+    return jsonResponse({ error: 'Not implemented' }, 501);
   }
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end('Method Not Allowed');
+    return new Response('Method Not Allowed', {
+      status: 405,
+      headers: { Allow: 'POST' },
+    });
   }
 
-  const { command } = req.body || {};
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+
+  const { command } = body || {};
   if (!command || typeof command !== 'string') {
-    return res.status(400).json({ error: 'No command provided' });
+    return jsonResponse({ error: 'No command provided' }, 400);
   }
 
   const trimmed = command.trim();
@@ -41,7 +61,7 @@ export default function handler(req, res) {
         m.description.toLowerCase().includes(q)
       );
     });
-    let output = 'Matching Modules\n================\n\n   #  Name                                         Description\n   -  ----                                         -----------\n';
+    let output = 'Matching Modules\n================\n\n   #  Name                                         Description\n   -  --                                         -----------\n';
     results.forEach((m, idx) => {
       const name = m.name.padEnd(44, ' ');
       output += `   ${idx}  ${name}${m.description}\n`;
@@ -49,8 +69,8 @@ export default function handler(req, res) {
     if (results.length === 0) {
       output += '\nNo results found.';
     }
-    return res.status(200).json({ output });
+    return jsonResponse({ output });
   }
 
-  return res.status(200).json({ output: 'Command not supported in mock environment.' });
+  return jsonResponse({ output: 'Command not supported in mock environment.' });
 }

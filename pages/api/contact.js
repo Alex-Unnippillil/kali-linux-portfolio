@@ -4,6 +4,7 @@ import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
+export const runtime = 'nodejs';
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 

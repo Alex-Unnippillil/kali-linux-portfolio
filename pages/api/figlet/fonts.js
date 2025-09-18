@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 export default function handler(req, res) {
   const fontsDir = path.join(process.cwd(), 'figlet', 'fonts');
   let fonts = [];

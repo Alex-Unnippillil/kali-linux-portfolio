@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 export default function handler(_req, res) {
   const catalogDir = path.join(process.cwd(), 'plugins', 'catalog');
   try {

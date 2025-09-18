@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 export default function handler(req, res) {
   const { name } = req.query;
   const filename = Array.isArray(name) ? name.join('/') : name;

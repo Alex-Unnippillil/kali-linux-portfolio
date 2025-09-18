@@ -1,26 +1,47 @@
 import modules from '../../components/apps/mimikatz/modules.json';
 
-export default async function handler(req, res) {
+export const runtime = 'edge';
+
+function jsonResponse(body, status = 200, headers = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  });
+}
+
+export default async function handler(req) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
-    res.status(501).json({ error: 'Not implemented' });
-    return;
+    return jsonResponse({ error: 'Not implemented' }, 501);
   }
+
   if (req.method === 'GET') {
-    const { command } = req.query || {};
+    const url = new URL(req.url);
+    const command = url.searchParams.get('command');
     if (command) {
-      return res.status(200).json({ output: `Executed ${command}` });
+      return jsonResponse({ output: `Executed ${command}` });
     }
-    return res.status(200).json({ modules });
+    return jsonResponse({ modules });
   }
 
   if (req.method === 'POST') {
-    const { script } = req.body || {};
-    if (!script) {
-      return res.status(400).json({ error: 'No script provided' });
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
     }
-    return res.status(200).json({ output: `Executed script: ${script}` });
+    const { script } = body || {};
+    if (!script) {
+      return jsonResponse({ error: 'No script provided' }, 400);
+    }
+    return jsonResponse({ output: `Executed script: ${script}` });
   }
 
-  res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).end('Method Not Allowed');
+  return new Response('Method Not Allowed', {
+    status: 405,
+    headers: { Allow: 'GET, POST' },
+  });
 }

@@ -1,6 +1,8 @@
 import { getServiceClient } from '../../../lib/service-client';
 import { createLogger } from '../../../lib/logger';
 
+export const runtime = 'nodejs';
+
 export default async function handler(
   req,
   res

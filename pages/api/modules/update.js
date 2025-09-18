@@ -13,14 +13,11 @@ function compareSemver(a, b) {
   return 0;
 }
 
-export default async function handler(
-  req,
-  res,
-) {
-  const currentParam = req.query.version;
-  const current = Array.isArray(currentParam)
-    ? currentParam[0]
-    : currentParam || '0.0.0';
+export const runtime = 'edge';
+
+export default async function handler(req) {
+  const requestUrl = new URL(req.url);
+  const current = requestUrl.searchParams.get('version') || '0.0.0';
 
   let latest = versionData.version;
   try {
@@ -38,5 +35,11 @@ export default async function handler(
   }
 
   const needsUpdate = compareSemver(current, latest) < 0;
-  res.status(200).json({ current, latest, needsUpdate });
+  return new Response(
+    JSON.stringify({ current, latest, needsUpdate }),
+    {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
 }

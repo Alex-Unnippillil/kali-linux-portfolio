@@ -1,14 +1,28 @@
-export default function handler(req, res) {
+export const runtime = 'edge';
+
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    res.status(405).end();
-    return;
+    return new Response(null, {
+      status: 405,
+      headers: { Allow: 'POST' },
+    });
   }
 
-  const { text, url, title } = req.body || {};
+  let payload = null;
+  try {
+    payload = await req.json();
+  } catch {
+    payload = null;
+  }
+
+  const { text, url, title } = payload || {};
   const content = text || url || title || '';
   const params = new URLSearchParams();
   if (content) {
     params.set('text', content);
   }
-  res.redirect(307, `/apps/sticky_notes/?${params.toString()}`);
+
+  const requestUrl = new URL(req.url);
+  const redirectUrl = new URL(`/apps/sticky_notes/?${params.toString()}`, requestUrl.origin);
+  return Response.redirect(redirectUrl.toString(), 307);
 }

@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 const filePath = path.join(process.cwd(), 'data', 'pacman-leaderboard.json');
 const MAX_ENTRIES = 10;
 
