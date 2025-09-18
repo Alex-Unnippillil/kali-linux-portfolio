@@ -35,3 +35,9 @@ test('My App launches', async ({ page }) => {
   await expect(page.locator('[data-testid="my-app"]')).toBeVisible();
 });
 ```
+
+## Performance gate
+
+- Run `npx playwright test playwright/beef.spec.ts` after touching the BeEF demo or shared hook lifecycle code.
+- The spec connects the hook, runs five payload demos, performs a disconnect/reconnect cycle, and fails if console warnings appear.
+- It also tracks JS heap usage and global event listeners, flagging any growth over **+7 MB** or leaked listeners between sessions.
