@@ -70,6 +70,7 @@ const ReaverPanel: React.FC = () => {
   const [routers, setRouters] = useState<RouterMeta[]>([]);
   const [routerIdx, setRouterIdx] = useState(0);
   const [rate, setRate] = useState(1);
+  const [scanInterval, setScanInterval] = useState(1000);
   const [profile, setProfile] = useState<RouterProfile>(ROUTER_PROFILES[0]);
   const [attempts, setAttempts] = useState(0);
   const [running, setRunning] = useState(false);
@@ -209,8 +210,27 @@ const ReaverPanel: React.FC = () => {
       </p>
 
       <div className="mb-6">
-        <h2 className="text-lg mb-2">Access Points</h2>
-        <APList />
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <h2 className="text-lg">Access Points</h2>
+          <label
+            htmlFor="ap-refresh-interval"
+            className="text-xs uppercase tracking-wider text-gray-300 flex items-center gap-2"
+          >
+            Refresh every
+            <select
+              id="ap-refresh-interval"
+              className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs"
+              value={scanInterval}
+              onChange={(event) => setScanInterval(Number(event.target.value))}
+            >
+              <option value={500}>0.5s</option>
+              <option value={1000}>1s</option>
+              <option value={2000}>2s</option>
+              <option value={5000}>5s</option>
+            </select>
+          </label>
+        </div>
+        <APList intervalMs={scanInterval} />
       </div>
 
       <div className="mb-6">
