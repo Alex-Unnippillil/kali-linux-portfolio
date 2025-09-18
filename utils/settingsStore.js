@@ -4,7 +4,7 @@ import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
 const DEFAULT_SETTINGS = {
-  accent: '#1793d1',
+  accent: '#367bf0',
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,

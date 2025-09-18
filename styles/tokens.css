@@ -1,30 +1,77 @@
 /* Design tokens */
 
 :root {
-  /* Theme colors */
-  --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
-  --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
-  --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
-  --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
-  --color-text: #F5F5F5;
+  /* Kali Linux brand palette */
+  --color-kali-primary-50: #ECF4FF;
+  --color-kali-primary-100: #D7E7FF;
+  --color-kali-primary-200: #B6D1FF;
+  --color-kali-primary-300: #8EB7FF;
+  --color-kali-primary-400: #5E97F6;
+  --color-kali-primary-500: #367BF0;
+  --color-kali-primary-600: #255FC8;
+  --color-kali-primary-700: #1D4BA0;
+  --color-kali-primary-800: #16397A;
+  --color-kali-primary-900: #102A5A;
+  --color-kali-primary-950: #0B1D3D;
+
+  --color-kali-secondary-50: #FAF0FA;
+  --color-kali-secondary-100: #F2DBF2;
+  --color-kali-secondary-200: #E6B8E6;
+  --color-kali-secondary-300: #D994D9;
+  --color-kali-secondary-400: #C866C8;
+  --color-kali-secondary-500: #A400A4;
+  --color-kali-secondary-600: #860086;
+  --color-kali-secondary-700: #700070;
+  --color-kali-secondary-800: #550055;
+  --color-kali-secondary-900: #3D003D;
+  --color-kali-secondary-950: #240024;
+
+  --color-kali-neutral-50: #F5F7FA;
+  --color-kali-neutral-100: #E1E6EF;
+  --color-kali-neutral-200: #CAD1DC;
+  --color-kali-neutral-300: #AEB7C5;
+  --color-kali-neutral-400: #9099A7;
+  --color-kali-neutral-500: #6F7885;
+  --color-kali-neutral-600: #2A2E36;
+  --color-kali-neutral-700: #22262C;
+  --color-kali-neutral-800: #1B1F24;
+  --color-kali-neutral-900: #0F1317;
+  --color-kali-neutral-950: #07090C;
+
+  /* Accent aliases */
+  --color-primary: var(--color-kali-primary-500);
+  --color-primary-strong: var(--color-kali-primary-600);
+  --color-primary-muted: var(--color-kali-primary-300);
+  --color-accent: var(--color-primary);
+  --color-secondary: var(--color-kali-neutral-700);
+  --color-secondary-strong: var(--color-kali-neutral-800);
+  --color-accent-secondary: var(--color-kali-secondary-500);
+  --color-accent-secondary-strong: var(--color-kali-secondary-600);
+  --color-neutral-light: #F6F6F5;
+  --color-neutral-warm: #7D7F83;
+  --color-neutral-cool: #333333;
+  --color-status-success: #73D216;
+  --color-status-warning: #F39A21;
+  --color-status-info: #50B6C6;
+  --color-status-danger: #E34561;
+  --color-gedit-dark: #003B70;
+  --color-gedit-darker: #010D1A;
+  --color-gedit-base: #021B33;
+  --color-bg: var(--color-kali-neutral-900);
+  --color-surface: var(--color-kali-neutral-800);
+  --color-surface-alt: var(--color-kali-neutral-700);
+  --color-muted: var(--color-kali-neutral-600);
+  --color-border: var(--color-kali-neutral-600);
+  --color-border-strong: var(--color-kali-neutral-700);
+  --color-window-title: #0C0F12;
+  --color-dark: var(--color-window-title);
+  --color-text: var(--color-kali-neutral-50);
+  --color-text-muted: var(--color-kali-neutral-300);
+  --color-inverse: #000000;
+  --color-terminal: #00ff00;
+  --color-focus-ring: var(--color-primary);
+  --color-selection: var(--color-primary-muted);
+  --color-control-accent: var(--color-primary);
   --kali-bg: rgba(15, 19, 23, 0.85);
 
   /* Game palette tokens */
@@ -58,21 +105,36 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--color-focus-ring);
   --focus-outline-width: 2px;
 }
 
 /* High contrast theme */
 .high-contrast {
+  --color-kali-neutral-900: #000000;
+  --color-kali-neutral-800: #000000;
+  --color-kali-neutral-700: #0a0a0a;
+  --color-kali-neutral-50: #ffffff;
+  --color-kali-primary-500: #ffff00;
+  --color-kali-primary-400: #ffff99;
+  --color-kali-primary-600: #d4c400;
+  --color-kali-secondary-500: #00ffff;
   --color-bg: #000000;
+  --color-surface: #000000;
+  --color-muted: #0a0a0a;
+  --color-border: #ffff00;
+  --color-border-strong: #ffff00;
   --color-text: #ffffff;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
+  --color-text-muted: #d1d1d1;
+  --color-primary: var(--color-kali-primary-500);
+  --color-primary-muted: var(--color-kali-primary-400);
+  --color-primary-strong: var(--color-kali-primary-600);
+  --color-secondary: #0a0a0a;
+  --color-accent-secondary: var(--color-kali-secondary-500);
+  --color-accent-secondary-strong: var(--color-kali-secondary-500);
+  --color-focus-ring: var(--color-kali-primary-500);
+  --color-selection: var(--color-kali-primary-500);
+  --color-control-accent: var(--color-kali-primary-500);
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -108,13 +170,22 @@
 @media (prefers-contrast: more) {
   :root {
     --color-bg: #000000;
+    --color-surface: #000000;
+    --color-muted: #0a0a0a;
     --color-text: #ffffff;
-    --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-text-muted: #d1d1d1;
+    --color-kali-primary-500: #ffff00;
+    --color-kali-primary-400: #ffff99;
+    --color-kali-primary-600: #d4c400;
+    --color-kali-secondary-500: #00ffff;
+    --color-accent-secondary: var(--color-kali-secondary-500);
+    --color-accent-secondary-strong: var(--color-kali-secondary-500);
+    --color-primary: var(--color-kali-primary-500);
+    --color-primary-muted: var(--color-kali-primary-400);
+    --color-primary-strong: var(--color-kali-primary-600);
+    --color-secondary: #0a0a0a;
+    --color-focus-ring: var(--color-kali-primary-500);
+    --color-selection: var(--color-kali-primary-500);
+    --color-control-accent: var(--color-kali-primary-500);
   }
 }

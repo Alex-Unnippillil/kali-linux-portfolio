@@ -5,7 +5,7 @@
   "offline_page": "/offline.html",
   "display": "standalone",
   "background_color": "#0f1317",
-  "theme_color": "#0f1317",
+  "theme_color": "#367bf0",
   "icons": [
     {
       "src": "/images/logos/fevicon.png",
