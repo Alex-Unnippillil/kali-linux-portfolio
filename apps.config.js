@@ -72,6 +72,7 @@ const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
+const SameSiteLabApp = createDynamicApp('samesite-lab', 'SameSite Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displaySameSiteLab = createDisplay(SameSiteLabApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -897,6 +899,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHTTP,
+  },
+  {
+    id: 'samesite-lab',
+    title: 'SameSite Lab',
+    icon: '/themes/Yaru/apps/http.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySameSiteLab,
   },
   {
     id: 'html-rewriter',
