@@ -126,6 +126,13 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Flappy Bird
 - Pinball
 
+## Troubleshooting
+
+### USB problem triage
+- Flag any adapter that reports driver or firmware faults in the peripherals app and link back to this section for next steps.
+- Suggest reseating the device, reapplying the last known good profile, or falling back to the simulated output when the fault persists.
+- Capture screenshots of the problem badge and include them with lab notes so regressions are easy to compare.
+
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
