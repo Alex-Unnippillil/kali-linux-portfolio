@@ -1,13 +1,17 @@
 "use client";
 
-import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import type { RefObject } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
+import Popover from '../base/Popover';
 
 interface Props {
   open: boolean;
+  anchorRef: RefObject<HTMLElement> | null;
+  onClose: () => void;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, anchorRef, onClose }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -21,38 +25,43 @@ const QuickSettings = ({ open }: Props) => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
 
+  if (!open) {
+    return null;
+  }
+
   return (
-    <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
-        open ? '' : 'hidden'
-      }`}
+    <Popover
+      open={open}
+      anchorRef={anchorRef}
+      onClose={onClose}
+      ariaLabel="Quick settings"
+      className="absolute top-9 right-3 w-60 space-y-3 p-4 text-sm text-ubt-grey"
     >
-      <div className="px-4 pb-2">
-        <button
-          className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-        >
-          <span>Theme</span>
-          <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
-        </button>
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
+      <button
+        className="flex w-full items-center justify-between"
+        onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+        type="button"
+      >
+        <span>Theme</span>
+        <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+      </button>
+      <label className="flex w-full items-center justify-between">
         <span>Sound</span>
         <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
+      </label>
+      <label className="flex w-full items-center justify-between">
         <span>Network</span>
         <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
-      </div>
-      <div className="px-4 flex justify-between">
+      </label>
+      <label className="flex w-full items-center justify-between">
         <span>Reduced motion</span>
         <input
           type="checkbox"
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
         />
-      </div>
-    </div>
+      </label>
+    </Popover>
   );
 };
 

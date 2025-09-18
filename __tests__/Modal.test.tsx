@@ -29,6 +29,7 @@ test('modal traps focus, disables background, and restores opener focus', async 
   const first = await screen.findByText('first');
   const second = await screen.findByText('second');
   expect(first).toHaveFocus();
+  expect(first.closest('[role="dialog"]')).toHaveClass('shadow-elevation-6');
   expect(root).toHaveAttribute('inert');
 
   second.focus();

@@ -6,16 +6,17 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
-		this.state = {
-			status_card: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        status_card: false
+                };
+                this.statusButtonRef = React.createRef();
+        }
 
-	render() {
-		return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+        render() {
+                return (
+                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-elevation-2 flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
                                 <div className="pl-3 pr-1">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
@@ -37,11 +38,16 @@ export default class Navbar extends Component {
                                         className={
                                                 'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
                                         }
+                                        ref={this.statusButtonRef}
                                 >
                                         <Status />
-                                        <QuickSettings open={this.state.status_card} />
+                                        <QuickSettings
+                                                open={this.state.status_card}
+                                                anchorRef={this.statusButtonRef}
+                                                onClose={() => this.setState({ status_card: false })}
+                                        />
                                 </button>
-			</div>
-		);
-	}
+                        </div>
+                );
+        }
 }
