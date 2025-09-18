@@ -53,6 +53,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('window-transform', this.handleWindowTransform);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +67,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('window-transform', this.handleWindowTransform);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -379,6 +381,18 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
+    focusActiveWindow = () => {
+        this.focusWindow();
+        const node = document.getElementById(this.id);
+        if (node && typeof node.focus === 'function') {
+            try {
+                node.focus({ preventScroll: true });
+            } catch (err) {
+                node.focus();
+            }
+        }
+    }
+
     minimizeWindow = () => {
         let posx = -310;
         if (this.state.maximized) {
@@ -518,30 +532,115 @@ export class Window extends Component {
         }
     }
 
+    handleWindowTransform = (event) => {
+        const detail = event?.detail || {};
+        const { intent, dx = 0, dy = 0 } = detail;
+        if (!intent) {
+            this.focusActiveWindow();
+            return;
+        }
+        this.applyKeyboardTransform({ intent, dx, dy });
+    }
+
+    applyKeyboardTransform = ({ intent, dx = 0, dy = 0 }) => {
+        const arrowMove = intent === 'move';
+        const arrowResize = intent === 'resize';
+        if (!arrowMove && !arrowResize) {
+            this.focusActiveWindow();
+            return;
+        }
+
+        const deltas = { dx, dy };
+        if (deltas.dx === 0 && deltas.dy === 0) {
+            this.focusActiveWindow();
+            return;
+        }
+
+        if (arrowMove) {
+            const node = document.getElementById(this.id);
+            if (!node) {
+                this.focusActiveWindow();
+                return;
+            }
+            if (this.state.snapped) {
+                this.unsnapWindow();
+            }
+            const match = /translate\(([-\d.]+)(?:px|pt),\s*([-\d.]+)(?:px|pt)\)/.exec(node.style.transform);
+            let x = match ? parseFloat(match[1]) : 0;
+            let y = match ? parseFloat(match[2]) : 0;
+            x += deltas.dx;
+            y += deltas.dy;
+            node.style.transform = `translate(${x}px, ${y}px)`;
+            this.checkOverlap();
+            this.checkSnapPreview();
+            this.setWinowsPosition();
+            this.focusActiveWindow();
+            return;
+        }
+
+        if (arrowResize) {
+            if (this.props.resizable === false) {
+                this.focusActiveWindow();
+                return;
+            }
+            const baseWidthPercent = this.state.snapped && this.state.lastSize
+                ? this.state.lastSize.width
+                : this.state.width;
+            const baseHeightPercent = this.state.snapped && this.state.lastSize
+                ? this.state.lastSize.height
+                : this.state.height;
+
+            if (this.state.snapped) {
+                this.unsnapWindow();
+            }
+
+            const widthPx = (baseWidthPercent / 100) * window.innerWidth;
+            const heightPx = (baseHeightPercent / 100) * window.innerHeight;
+            let nextWidth = baseWidthPercent;
+            let nextHeight = baseHeightPercent;
+
+            if (deltas.dx !== 0) {
+                const minWidthPx = window.innerWidth * 0.2;
+                const maxWidthPx = window.innerWidth;
+                const newWidthPx = Math.min(maxWidthPx, Math.max(widthPx + deltas.dx, minWidthPx));
+                nextWidth = (newWidthPx / window.innerWidth) * 100;
+            }
+
+            if (deltas.dy !== 0) {
+                const minHeightPx = window.innerHeight * 0.2;
+                const maxHeightPx = window.innerHeight;
+                const newHeightPx = Math.min(maxHeightPx, Math.max(heightPx + deltas.dy, minHeightPx));
+                nextHeight = (newHeightPx / window.innerHeight) * 100;
+            }
+
+            this.setState(
+                { width: nextWidth, height: nextHeight, snapped: null },
+                () => {
+                    this.resizeBoundries();
+                    this.focusActiveWindow();
+                }
+            );
+        }
+    }
+
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
-        } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
-            }
-            this.focusWindow();
+        } else if (e.altKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+            e.stopPropagation();
+            const delta = {
+                ArrowLeft: { dx: -10, dy: 0 },
+                ArrowRight: { dx: 10, dy: 0 },
+                ArrowUp: { dx: 0, dy: -10 },
+                ArrowDown: { dx: 0, dy: 10 },
+            }[e.key] || { dx: 0, dy: 0 };
+            this.applyKeyboardTransform({
+                intent: e.shiftKey ? 'resize' : 'move',
+                ...delta,
+            });
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
