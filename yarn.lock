@@ -13856,6 +13856,7 @@ __metadata:
     "@axe-core/playwright": "npm:^4.10.2"
     "@ducanh2912/next-pwa": "npm:^10.2.9"
     "@emailjs/browser": "npm:^3.10.0"
+    "@eslint-community/regexpp": "npm:^4.12.1"
     "@eslint/eslintrc": "npm:^3.3.1"
     "@monaco-editor/react": "npm:^4.7.0"
     "@mozilla/readability": "npm:^0.6.0"

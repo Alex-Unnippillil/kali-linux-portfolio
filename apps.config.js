@@ -110,6 +110,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
+const RegexTesterApp = createDynamicApp('regex-tester', 'Regex Tester');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
@@ -195,6 +196,7 @@ const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
+const displayRegexTester = createDisplay(RegexTesterApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
 
@@ -266,6 +268,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'regex-tester',
+    title: 'Regex Tester',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRegexTester,
   },
 ];
 
@@ -897,6 +908,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHTTP,
+  },
+  {
+    id: 'regex-tester',
+    title: 'Regex Tester',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRegexTester,
   },
   {
     id: 'html-rewriter',
