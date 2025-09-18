@@ -30,6 +30,30 @@ export class UbuntuApp extends Component {
         }
     }
 
+    setNodeRef = (node) => {
+        this.node = node;
+        if (this.props.buttonRef) {
+            if (typeof this.props.buttonRef === 'function') {
+                this.props.buttonRef(node);
+            } else if (typeof this.props.buttonRef === 'object') {
+                this.props.buttonRef.current = node;
+            }
+        }
+    }
+
+    handleKeyDown = (e) => {
+        if (typeof this.props.onKeyDown === 'function') {
+            this.props.onKeyDown(e);
+            if (e.defaultPrevented) {
+                return;
+            }
+        }
+        if ((e.key === 'Enter' || e.key === ' ') && !this.props.disabled) {
+            e.preventDefault();
+            this.openApp();
+        }
+    }
+
     render() {
         return (
             <div
@@ -45,10 +69,11 @@ export class UbuntuApp extends Component {
                     " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                onKeyDown={this.handleKeyDown}
+                tabIndex={this.props.disabled ? -1 : (typeof this.props.tabIndex === 'number' ? this.props.tabIndex : 0)}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
+                ref={this.setNodeRef}
             >
                 <Image
                     width={40}
