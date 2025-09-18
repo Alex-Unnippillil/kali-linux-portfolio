@@ -1,0 +1,1056 @@
+{
+  "generatedAt": "2025-02-14",
+  "categories": [
+    {
+      "id": "system",
+      "label": "System & Desktop",
+      "description": "Core desktop apps that mirror the Kali environment and manage the workspace."
+    },
+    {
+      "id": "media",
+      "label": "Media & Social",
+      "description": "Streaming and social clients used to demo everyday browsing scenarios."
+    },
+    {
+      "id": "productivity",
+      "label": "Productivity",
+      "description": "Planning, calculation, and contact utilities for daily organization."
+    },
+    {
+      "id": "utilities",
+      "label": "Utilities",
+      "description": "Lightweight helper tools, generators, and quick-reference widgets."
+    },
+    {
+      "id": "development",
+      "label": "Developer",
+      "description": "Coding, scripting, and protocol helpers for building or debugging tooling."
+    },
+    {
+      "id": "security",
+      "label": "Security Lab",
+      "description": "Simulated offensive, defensive, and forensic tooling used across the portfolio."
+    },
+    {
+      "id": "portfolio",
+      "label": "Portfolio",
+      "description": "Apps that showcase portfolio content, background, and case studies."
+    },
+    {
+      "id": "games",
+      "label": "Games",
+      "description": "Retro and casual games bundled with the desktop experience."
+    }
+  ],
+  "apps": [
+    {
+      "id": "qr",
+      "title": "QR Tool",
+      "category": "utilities",
+      "tags": [
+        "codes",
+        "generator",
+        "qr",
+        "tool",
+        "utilities"
+      ]
+    },
+    {
+      "id": "ascii-art",
+      "title": "ASCII Art",
+      "category": "utilities",
+      "tags": [
+        "art",
+        "ascii",
+        "banner",
+        "text",
+        "utilities"
+      ]
+    },
+    {
+      "id": "clipboard-manager",
+      "title": "Clipboard Manager",
+      "category": "utilities",
+      "tags": [
+        "clipboard",
+        "history",
+        "manager",
+        "utilities"
+      ]
+    },
+    {
+      "id": "figlet",
+      "title": "Figlet",
+      "category": "utilities",
+      "tags": [
+        "ascii",
+        "banner",
+        "figlet",
+        "utilities"
+      ]
+    },
+    {
+      "id": "quote",
+      "title": "Quote",
+      "category": "utilities",
+      "tags": [
+        "inspiration",
+        "quote",
+        "quotes",
+        "utilities"
+      ]
+    },
+    {
+      "id": "project-gallery",
+      "title": "Project Gallery",
+      "category": "portfolio",
+      "tags": [
+        "gallery",
+        "portfolio",
+        "project",
+        "projects"
+      ]
+    },
+    {
+      "id": "input-lab",
+      "title": "Input Lab",
+      "category": "utilities",
+      "tags": [
+        "input",
+        "keyboard",
+        "lab",
+        "testing",
+        "utilities"
+      ]
+    },
+    {
+      "id": "2048",
+      "title": "2048",
+      "category": "games",
+      "tags": [
+        "2048",
+        "games"
+      ]
+    },
+    {
+      "id": "asteroids",
+      "title": "Asteroids",
+      "category": "games",
+      "tags": [
+        "asteroids",
+        "games"
+      ]
+    },
+    {
+      "id": "battleship",
+      "title": "Battleship",
+      "category": "games",
+      "tags": [
+        "battleship",
+        "games"
+      ]
+    },
+    {
+      "id": "blackjack",
+      "title": "Blackjack",
+      "category": "games",
+      "tags": [
+        "blackjack",
+        "games"
+      ]
+    },
+    {
+      "id": "breakout",
+      "title": "Breakout",
+      "category": "games",
+      "tags": [
+        "breakout",
+        "games"
+      ]
+    },
+    {
+      "id": "car-racer",
+      "title": "Car Racer",
+      "category": "games",
+      "tags": [
+        "car",
+        "games",
+        "racer"
+      ]
+    },
+    {
+      "id": "lane-runner",
+      "title": "Lane Runner",
+      "category": "games",
+      "tags": [
+        "games",
+        "lane",
+        "runner"
+      ]
+    },
+    {
+      "id": "checkers",
+      "title": "Checkers",
+      "category": "games",
+      "tags": [
+        "checkers",
+        "games"
+      ]
+    },
+    {
+      "id": "chess",
+      "title": "Chess",
+      "category": "games",
+      "tags": [
+        "chess",
+        "games"
+      ]
+    },
+    {
+      "id": "connect-four",
+      "title": "Connect Four",
+      "category": "games",
+      "tags": [
+        "connect",
+        "four",
+        "games"
+      ]
+    },
+    {
+      "id": "frogger",
+      "title": "Frogger",
+      "category": "games",
+      "tags": [
+        "frogger",
+        "games"
+      ]
+    },
+    {
+      "id": "hangman",
+      "title": "Hangman",
+      "category": "games",
+      "tags": [
+        "games",
+        "hangman"
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Memory",
+      "category": "games",
+      "tags": [
+        "games",
+        "memory"
+      ]
+    },
+    {
+      "id": "minesweeper",
+      "title": "Minesweeper",
+      "category": "games",
+      "tags": [
+        "games",
+        "minesweeper"
+      ]
+    },
+    {
+      "id": "pacman",
+      "title": "Pacman",
+      "category": "games",
+      "tags": [
+        "games",
+        "pacman"
+      ]
+    },
+    {
+      "id": "platformer",
+      "title": "Platformer",
+      "category": "games",
+      "tags": [
+        "games",
+        "platformer"
+      ]
+    },
+    {
+      "id": "pong",
+      "title": "Pong",
+      "category": "games",
+      "tags": [
+        "games",
+        "pong"
+      ]
+    },
+    {
+      "id": "reversi",
+      "title": "Reversi",
+      "category": "games",
+      "tags": [
+        "games",
+        "reversi"
+      ]
+    },
+    {
+      "id": "simon",
+      "title": "Simon",
+      "category": "games",
+      "tags": [
+        "games",
+        "simon"
+      ]
+    },
+    {
+      "id": "snake",
+      "title": "Snake",
+      "category": "games",
+      "tags": [
+        "games",
+        "snake"
+      ]
+    },
+    {
+      "id": "sokoban",
+      "title": "Sokoban",
+      "category": "games",
+      "tags": [
+        "games",
+        "sokoban"
+      ]
+    },
+    {
+      "id": "solitaire",
+      "title": "Solitaire",
+      "category": "games",
+      "tags": [
+        "games",
+        "solitaire"
+      ]
+    },
+    {
+      "id": "tictactoe",
+      "title": "Tic Tac Toe",
+      "category": "games",
+      "tags": [
+        "games",
+        "tac",
+        "tic",
+        "toe"
+      ]
+    },
+    {
+      "id": "tetris",
+      "title": "Tetris",
+      "category": "games",
+      "tags": [
+        "games",
+        "tetris"
+      ]
+    },
+    {
+      "id": "tower-defense",
+      "title": "Tower Defense",
+      "category": "games",
+      "tags": [
+        "defense",
+        "games",
+        "tower"
+      ]
+    },
+    {
+      "id": "word-search",
+      "title": "Word Search",
+      "category": "games",
+      "tags": [
+        "games",
+        "search",
+        "word"
+      ]
+    },
+    {
+      "id": "wordle",
+      "title": "Wordle",
+      "category": "games",
+      "tags": [
+        "games",
+        "wordle"
+      ]
+    },
+    {
+      "id": "nonogram",
+      "title": "Nonogram",
+      "category": "games",
+      "tags": [
+        "games",
+        "nonogram"
+      ]
+    },
+    {
+      "id": "space-invaders",
+      "title": "Space Invaders",
+      "category": "games",
+      "tags": [
+        "games",
+        "invaders",
+        "space"
+      ]
+    },
+    {
+      "id": "sudoku",
+      "title": "Sudoku",
+      "category": "games",
+      "tags": [
+        "games",
+        "sudoku"
+      ]
+    },
+    {
+      "id": "flappy-bird",
+      "title": "Flappy Bird",
+      "category": "games",
+      "tags": [
+        "bird",
+        "flappy",
+        "games"
+      ]
+    },
+    {
+      "id": "candy-crush",
+      "title": "Candy Crush",
+      "category": "games",
+      "tags": [
+        "candy",
+        "crush",
+        "games"
+      ]
+    },
+    {
+      "id": "gomoku",
+      "title": "Gomoku",
+      "category": "games",
+      "tags": [
+        "games",
+        "gomoku"
+      ]
+    },
+    {
+      "id": "pinball",
+      "title": "Pinball",
+      "category": "games",
+      "tags": [
+        "games",
+        "pinball"
+      ]
+    },
+    {
+      "id": "chrome",
+      "title": "Google Chrome",
+      "category": "system",
+      "tags": [
+        "browser",
+        "chrome",
+        "google",
+        "internet",
+        "system",
+        "system & desktop"
+      ]
+    },
+    {
+      "id": "calculator",
+      "title": "Calculator",
+      "category": "productivity",
+      "tags": [
+        "arithmetic",
+        "calculator",
+        "math",
+        "productivity"
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Terminal",
+      "category": "system",
+      "tags": [
+        "bash",
+        "cli",
+        "shell",
+        "system",
+        "system & desktop",
+        "terminal"
+      ]
+    },
+    {
+      "id": "x",
+      "title": "X",
+      "category": "media",
+      "tags": [
+        "media",
+        "media & social",
+        "microblog",
+        "social",
+        "twitter",
+        "x"
+      ]
+    },
+    {
+      "id": "spotify",
+      "title": "Spotify",
+      "category": "media",
+      "tags": [
+        "audio",
+        "media",
+        "media & social",
+        "music",
+        "spotify",
+        "streaming"
+      ]
+    },
+    {
+      "id": "youtube",
+      "title": "YouTube",
+      "category": "media",
+      "tags": [
+        "media",
+        "media & social",
+        "streaming",
+        "video",
+        "youtube"
+      ]
+    },
+    {
+      "id": "beef",
+      "title": "BeEF",
+      "category": "security",
+      "tags": [
+        "beef",
+        "browser",
+        "exploit",
+        "hooking",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "about",
+      "title": "About Alex",
+      "category": "portfolio",
+      "tags": [
+        "about",
+        "alex",
+        "bio",
+        "portfolio"
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Settings",
+      "category": "system",
+      "tags": [
+        "settings",
+        "system",
+        "system & desktop"
+      ]
+    },
+    {
+      "id": "files",
+      "title": "Files",
+      "category": "system",
+      "tags": [
+        "explorer",
+        "file-manager",
+        "files",
+        "system",
+        "system & desktop"
+      ]
+    },
+    {
+      "id": "resource-monitor",
+      "title": "Resource Monitor",
+      "category": "system",
+      "tags": [
+        "cpu",
+        "memory",
+        "monitor",
+        "performance",
+        "resource",
+        "system",
+        "system & desktop"
+      ]
+    },
+    {
+      "id": "screen-recorder",
+      "title": "Screen Recorder",
+      "category": "system",
+      "tags": [
+        "capture",
+        "recorder",
+        "recording",
+        "screen",
+        "system",
+        "system & desktop"
+      ]
+    },
+    {
+      "id": "ettercap",
+      "title": "Ettercap",
+      "category": "security",
+      "tags": [
+        "ettercap",
+        "man-in-the-middle",
+        "network",
+        "security",
+        "security lab",
+        "sniffing"
+      ]
+    },
+    {
+      "id": "ble-sensor",
+      "title": "BLE Sensor",
+      "category": "security",
+      "tags": [
+        "ble",
+        "bluetooth",
+        "scan",
+        "security",
+        "security lab",
+        "sensor"
+      ]
+    },
+    {
+      "id": "metasploit",
+      "title": "Metasploit",
+      "category": "security",
+      "tags": [
+        "exploitation",
+        "framework",
+        "metasploit",
+        "modules",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "wireshark",
+      "title": "Wireshark",
+      "category": "security",
+      "tags": [
+        "analysis",
+        "network",
+        "packet",
+        "security",
+        "security lab",
+        "wireshark"
+      ]
+    },
+    {
+      "id": "todoist",
+      "title": "Todoist",
+      "category": "productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "tasks",
+        "todo",
+        "todoist"
+      ]
+    },
+    {
+      "id": "sticky_notes",
+      "title": "Sticky Notes",
+      "category": "productivity",
+      "tags": [
+        "notes",
+        "productivity",
+        "reminders",
+        "sticky"
+      ]
+    },
+    {
+      "id": "trash",
+      "title": "Trash",
+      "category": "system",
+      "tags": [
+        "delete",
+        "recycle",
+        "system",
+        "system & desktop",
+        "trash"
+      ]
+    },
+    {
+      "id": "gedit",
+      "title": "Contact Me",
+      "category": "productivity",
+      "tags": [
+        "contact",
+        "email",
+        "form",
+        "me",
+        "productivity"
+      ]
+    },
+    {
+      "id": "converter",
+      "title": "Converter",
+      "category": "productivity",
+      "tags": [
+        "converter",
+        "measurement",
+        "productivity",
+        "units"
+      ]
+    },
+    {
+      "id": "kismet",
+      "title": "Kismet",
+      "category": "security",
+      "tags": [
+        "kismet",
+        "monitor",
+        "security",
+        "security lab",
+        "wardriving",
+        "wifi",
+        "wireless"
+      ]
+    },
+    {
+      "id": "nikto",
+      "title": "Nikto",
+      "category": "security",
+      "tags": [
+        "http",
+        "nikto",
+        "scanner",
+        "security",
+        "security lab",
+        "web"
+      ]
+    },
+    {
+      "id": "autopsy",
+      "title": "Autopsy",
+      "category": "security",
+      "tags": [
+        "analysis",
+        "autopsy",
+        "evidence",
+        "forensics",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "plugin-manager",
+      "title": "Plugin Manager",
+      "category": "development",
+      "tags": [
+        "developer",
+        "development",
+        "extensions",
+        "manage",
+        "manager",
+        "plugin"
+      ]
+    },
+    {
+      "id": "reaver",
+      "title": "Reaver",
+      "category": "security",
+      "tags": [
+        "attack",
+        "reaver",
+        "security",
+        "security lab",
+        "wifi",
+        "wps"
+      ]
+    },
+    {
+      "id": "nessus",
+      "title": "Nessus",
+      "category": "security",
+      "tags": [
+        "nessus",
+        "scanner",
+        "security",
+        "security lab",
+        "vulnerability"
+      ]
+    },
+    {
+      "id": "ghidra",
+      "title": "Ghidra",
+      "category": "security",
+      "tags": [
+        "decompiler",
+        "engineering",
+        "ghidra",
+        "reverse",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "mimikatz",
+      "title": "Mimikatz",
+      "category": "security",
+      "tags": [
+        "credentials",
+        "lsass",
+        "mimikatz",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "mimikatz/offline",
+      "title": "Mimikatz Offline",
+      "category": "security",
+      "tags": [
+        "credentials",
+        "mimikatz",
+        "offline",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "ssh",
+      "title": "SSH Builder",
+      "category": "development",
+      "tags": [
+        "builder",
+        "developer",
+        "development",
+        "remote",
+        "secure-shell",
+        "ssh"
+      ]
+    },
+    {
+      "id": "http",
+      "title": "HTTP Builder",
+      "category": "development",
+      "tags": [
+        "api",
+        "builder",
+        "client",
+        "developer",
+        "development",
+        "http",
+        "requests"
+      ]
+    },
+    {
+      "id": "html-rewriter",
+      "title": "HTML Rewriter",
+      "category": "development",
+      "tags": [
+        "developer",
+        "development",
+        "dom",
+        "html",
+        "markup",
+        "rewriter",
+        "transform"
+      ]
+    },
+    {
+      "id": "contact",
+      "title": "Contact",
+      "category": "productivity",
+      "tags": [
+        "contact",
+        "email",
+        "productivity",
+        "reach-out"
+      ]
+    },
+    {
+      "id": "hydra",
+      "title": "Hydra",
+      "category": "security",
+      "tags": [
+        "bruteforce",
+        "hydra",
+        "password",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "nmap-nse",
+      "title": "Nmap NSE",
+      "category": "security",
+      "tags": [
+        "enumeration",
+        "nmap",
+        "nse",
+        "scripting",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "weather",
+      "title": "Weather",
+      "category": "system",
+      "tags": [
+        "climate",
+        "forecast",
+        "system",
+        "system & desktop",
+        "weather"
+      ]
+    },
+    {
+      "id": "weather-widget",
+      "title": "Weather Widget",
+      "category": "system",
+      "tags": [
+        "dashboard",
+        "forecast",
+        "system",
+        "system & desktop",
+        "weather",
+        "widget"
+      ]
+    },
+    {
+      "id": "serial-terminal",
+      "title": "Serial Terminal",
+      "category": "development",
+      "tags": [
+        "console",
+        "developer",
+        "development",
+        "hardware",
+        "serial",
+        "terminal",
+        "uart"
+      ]
+    },
+    {
+      "id": "radare2",
+      "title": "Radare2",
+      "category": "security",
+      "tags": [
+        "analysis",
+        "radare2",
+        "reverse",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "volatility",
+      "title": "Volatility",
+      "category": "security",
+      "tags": [
+        "forensics",
+        "memory",
+        "security",
+        "security lab",
+        "volatility"
+      ]
+    },
+    {
+      "id": "hashcat",
+      "title": "Hashcat",
+      "category": "security",
+      "tags": [
+        "cracking",
+        "hashcat",
+        "password",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "msf-post",
+      "title": "Metasploit Post",
+      "category": "security",
+      "tags": [
+        "automation",
+        "metasploit",
+        "post",
+        "post-exploitation",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "evidence-vault",
+      "title": "Evidence Vault",
+      "category": "security",
+      "tags": [
+        "casefile",
+        "evidence",
+        "security",
+        "security lab",
+        "storage",
+        "vault"
+      ]
+    },
+    {
+      "id": "dsniff",
+      "title": "dsniff",
+      "category": "security",
+      "tags": [
+        "dsniff",
+        "network",
+        "security",
+        "security lab",
+        "sniffing"
+      ]
+    },
+    {
+      "id": "john",
+      "title": "John the Ripper",
+      "category": "security",
+      "tags": [
+        "cracker",
+        "john",
+        "password",
+        "ripper",
+        "security",
+        "security lab",
+        "the"
+      ]
+    },
+    {
+      "id": "openvas",
+      "title": "OpenVAS",
+      "category": "security",
+      "tags": [
+        "openvas",
+        "scanner",
+        "security",
+        "security lab",
+        "vulnerability"
+      ]
+    },
+    {
+      "id": "recon-ng",
+      "title": "Recon-ng",
+      "category": "security",
+      "tags": [
+        "ng",
+        "osint",
+        "recon",
+        "security",
+        "security lab"
+      ]
+    },
+    {
+      "id": "security-tools",
+      "title": "Security Tools",
+      "category": "security",
+      "tags": [
+        "collection",
+        "security",
+        "security lab",
+        "suite",
+        "tools"
+      ]
+    }
+  ]
+}
