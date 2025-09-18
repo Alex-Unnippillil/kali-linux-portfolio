@@ -1,7 +1,6 @@
 "use client";
 
 import React, { Component } from 'react';
-import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
@@ -731,96 +730,134 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
-    const { togglePin } = useDocPiP(props.pip || (() => null));
+    const { togglePin, isPinned } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const pinLabel = isPinned ? 'Unpin window' : 'Pin window';
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div className={styles.windowControls} role="group" aria-label="Window controls">
             {pipSupported && props.pip && (
                 <button
                     type="button"
-                    aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    aria-label={pinLabel}
+                    aria-pressed={isPinned}
+                    className={`${styles.controlButton} ${styles.controlButtonSecondary}`}
                     onClick={togglePin}
                 >
-                    <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-4 w-4 inline"
-                        width={16}
-                        height={16}
-                        sizes="16px"
-                    />
+                    <PinIcon pinned={isPinned} />
                 </button>
             )}
             <button
                 type="button"
-                aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                aria-label="Minimize window"
+                className={`${styles.controlButton} ${styles.controlButtonNeutral}`}
                 onClick={props.minimize}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+                <MinimizeIcon />
             </button>
             {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
+                <button
+                    type="button"
+                    aria-label={props.isMaximised ? 'Restore window' : 'Maximize window'}
+                    className={`${styles.controlButton} ${styles.controlButtonNeutral}`}
+                    onClick={props.maximize}
+                >
+                    {props.isMaximised ? <RestoreIcon /> : <MaximizeIcon />}
+                </button>
             )}
             <button
                 type="button"
                 id={`close-${props.id}`}
-                aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                aria-label="Close window"
+                className={`${styles.controlButton} ${styles.controlButtonClose}`}
                 onClick={props.close}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+                <CloseIcon />
             </button>
         </div>
     )
+}
+
+function MinimizeIcon() {
+    return (
+        <svg
+            className={styles.controlButtonIcon}
+            viewBox="0 0 12 12"
+            role="presentation"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <rect x="2" y="6.25" width="8" height="1.5" rx="0.75" fill="currentColor" />
+        </svg>
+    );
+}
+
+function MaximizeIcon() {
+    return (
+        <svg
+            className={styles.controlButtonIcon}
+            viewBox="0 0 12 12"
+            role="presentation"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <rect x="2.25" y="2.25" width="7.5" height="7.5" rx="1" fill="none" stroke="currentColor" strokeWidth="1.35" />
+        </svg>
+    );
+}
+
+function RestoreIcon() {
+    return (
+        <svg
+            className={styles.controlButtonIcon}
+            viewBox="0 0 12 12"
+            role="presentation"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <rect x="3.25" y="3.75" width="5.5" height="5.5" rx="0.9" fill="none" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M4.25 3.25h4.5a.75.75 0 0 1 .75.75v4.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function CloseIcon() {
+    return (
+        <svg
+            className={styles.controlButtonIcon}
+            viewBox="0 0 12 12"
+            role="presentation"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <path d="M3.2 3.2L8.8 8.8M8.8 3.2L3.2 8.8" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function PinIcon({ pinned }) {
+    return (
+        <svg
+            className={styles.controlButtonIcon}
+            viewBox="0 0 12 12"
+            role="presentation"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <path
+                d="M4.5 2.5h3l.35 2.2a1 1 0 0 1-.35.9l-.9.75.9 1.95-1.1.5-.8-2-.8 2-1.1-.5.9-1.95-.9-.75a1 1 0 0 1-.35-.9z"
+                fill="currentColor"
+            />
+            {pinned && (
+                <path
+                    d="M5.4 9.5l.6 1.8"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                    strokeLinecap="round"
+                />
+            )}
+        </svg>
+    );
 }
 
 // Window's Main Screen
