@@ -2,14 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import HeaderLab from './components/HeaderLab';
-
-interface NiktoFinding {
-  path: string;
-  finding: string;
-  references: string[];
-  severity: string;
-  details: string;
-}
+import ProgressBoard from './components/ProgressBoard';
+import type { NiktoFinding } from './types';
 
 const NiktoPage: React.FC = () => {
   const [host, setHost] = useState('');
@@ -158,6 +152,7 @@ const NiktoPage: React.FC = () => {
         <h2 className="text-lg mb-2">Command Preview</h2>
         <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{command}</pre>
       </div>
+      <ProgressBoard findings={findings} />
       <div className="relative bg-gray-800 p-4 rounded shadow space-y-4">
         <div className="absolute top-2 right-2 bg-gray-700 text-xs px-2 py-1 rounded-full">
           Phase 3 • {findings.length} results
