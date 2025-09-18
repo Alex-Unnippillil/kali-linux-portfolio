@@ -23,6 +23,11 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import {
+    TASKBAR_ATTENTION_EVENT,
+    hydrateAttentionState,
+    taskbarAttentionReducer,
+} from '../../modules/taskbarAttention';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +35,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        const attention_states = hydrateAttentionState(apps.map((app) => app.id));
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +58,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            attention_states,
         }
     }
 
@@ -89,6 +96,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener(TASKBAR_ATTENTION_EVENT, this.handleTaskbarAttentionEvent);
     }
 
     componentWillUnmount() {
@@ -96,6 +104,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener(TASKBAR_ATTENTION_EVENT, this.handleTaskbarAttentionEvent);
     }
 
     checkForNewFolders = () => {
@@ -380,6 +389,10 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        const attention_states = taskbarAttentionReducer(this.state.attention_states, {
+            type: 'sync',
+            ids: apps.map((app) => app.id),
+        });
         this.setState({
             focused_windows,
             closed_windows,
@@ -387,7 +400,8 @@ export class Desktop extends Component {
             favourite_apps,
             overlapped_windows,
             minimized_windows,
-            desktop_apps
+            desktop_apps,
+            attention_states,
         }, () => {
             if (typeof callback === 'function') callback();
         });
@@ -420,13 +434,18 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        const attention_states = taskbarAttentionReducer(this.state.attention_states, {
+            type: 'sync',
+            ids: apps.map((app) => app.id),
+        });
         this.setState({
             focused_windows,
             closed_windows,
             disabled_apps,
             minimized_windows,
             favourite_apps,
-            desktop_apps
+            desktop_apps,
+            attention_states,
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -583,6 +602,25 @@ export class Desktop extends Component {
         }
     }
 
+    handleTaskbarAttentionEvent = (event) => {
+        const detail = event && event.detail ? event.detail : null;
+        if (!detail || !detail.id) return;
+        const ids = apps.map((app) => app.id);
+        if (!ids.includes(detail.id)) {
+            ids.push(detail.id);
+        }
+        this.setState((prev) => {
+            const synced = taskbarAttentionReducer(prev.attention_states, { type: 'sync', ids });
+            return {
+                attention_states: taskbarAttentionReducer(synced, {
+                    type: 'update',
+                    id: detail.id,
+                    detail,
+                }),
+            };
+        });
+    }
+
     openApp = (objId) => {
 
         // google analytics
@@ -695,13 +733,21 @@ export class Desktop extends Component {
         this.hideSideBar(null, false);
 
         // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
+        const closed_windows = { ...this.state.closed_windows };
+        const favourite_apps = { ...this.state.favourite_apps };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState((prev) => ({
+            closed_windows,
+            favourite_apps,
+            attention_states: taskbarAttentionReducer(prev.attention_states, {
+                type: 'update',
+                id: objId,
+                detail: { clear: true },
+            }),
+        }), this.saveSession);
     }
 
     pinApp = (id) => {
@@ -733,18 +779,21 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
-            }
-        }
-        this.setState({ focused_windows });
+        if (!objId) return;
+        this.setState((prev) => {
+            const focused_windows = { ...prev.focused_windows };
+            Object.keys(focused_windows).forEach((key) => {
+                focused_windows[key] = key === objId;
+            });
+            return {
+                focused_windows,
+                attention_states: taskbarAttentionReducer(prev.attention_states, {
+                    type: 'update',
+                    id: objId,
+                    detail: { pulse: false },
+                }),
+            };
+        });
     }
 
     addNewFolder = () => {
@@ -900,6 +949,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    attention_states={this.state.attention_states}
                 />
 
                 {/* Desktop Apps */}

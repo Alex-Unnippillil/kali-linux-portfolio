@@ -87,11 +87,33 @@ module.exports = {
           },
           '100%': { transform: 'translate(0,0) scale(1)', backgroundColor: 'theme("colors.red.500")' },
         },
+        'taskbar-pulse': {
+          '0%, 100%': {
+            transform: 'translateY(0)',
+            boxShadow: '0 0 0 0 rgba(253, 230, 138, 0.35)',
+          },
+          '50%': {
+            transform: 'translateY(-1px)',
+            boxShadow: '0 0 12px 2px rgba(253, 230, 138, 0.2)',
+          },
+        },
+        'taskbar-icon': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.08)' },
+        },
+        'badge-pop': {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '60%': { transform: 'scale(1.1)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       },
       animation: {
         glow: 'glow 1s ease-in-out infinite',
         flourish: 'flourish 0.6s ease-out',
         mine: 'mine 0.4s ease-in-out',
+        'taskbar-pulse': 'taskbar-pulse 1.5s ease-in-out infinite',
+        'taskbar-icon': 'taskbar-icon 1.5s ease-in-out infinite',
+        'badge-pop': 'badge-pop 180ms ease-out',
       },
     },
   },
