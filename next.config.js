@@ -59,6 +59,15 @@ const securityHeaders = [
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+  analyzerMode: 'static',
+  analyzeServer: false,
+  reportFilename: 'analyze/client.html',
+  generateStatsFile: true,
+  statsFilename: 'analyze/client-stats.json',
+  statsOptions: {
+    source: false,
+  },
 });
 
 const withPWA = require('@ducanh2912/next-pwa').default({
@@ -86,9 +95,10 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
+const shouldAnalyzeBundles = process.env.ANALYZE === 'true';
 
 // Merge experiment settings and production optimizations into a single function.
-function configureWebpack(config, { isServer }) {
+function configureWebpack(config, { isServer, nextRuntime }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
   config.experiments = {
     ...(config.experiments || {}),
@@ -110,6 +120,48 @@ function configureWebpack(config, { isServer }) {
       ...(config.optimization || {}),
       mangleExports: false,
     };
+  }
+  if (shouldAnalyzeBundles) {
+    const analyzerPlugins = (config.plugins || []).filter(
+      (plugin) => plugin?.constructor?.name === 'BundleAnalyzerPlugin'
+    );
+    if (analyzerPlugins.length > 0) {
+      analyzerPlugins.forEach((plugin) => {
+        if (isServer || nextRuntime) {
+          Object.assign(plugin.opts, {
+            analyzerMode: 'disabled',
+            openAnalyzer: false,
+            generateStatsFile: false,
+          });
+          return;
+        }
+        Object.assign(plugin.opts, {
+          analyzerMode: 'static',
+          openAnalyzer: false,
+          reportFilename: './analyze/client.html',
+          generateStatsFile: true,
+          statsFilename: './analyze/client-stats.json',
+          statsOptions: {
+            source: false,
+          },
+        });
+      });
+    } else if (!isServer) {
+      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'static',
+          openAnalyzer: false,
+          reportFilename: './analyze/client.html',
+          generateStatsFile: true,
+          statsFilename: './analyze/client-stats.json',
+          statsOptions: {
+            source: false,
+          },
+        })
+      );
+    }
   }
   return config;
 }
