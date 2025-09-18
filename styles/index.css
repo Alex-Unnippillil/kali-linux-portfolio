@@ -8,6 +8,9 @@ body{
     font-family: var(--font-family-base);
     font-display: swap;
     background-color: var(--color-bg);
+    background-image: var(--color-bg-gradient);
+    background-repeat: no-repeat;
+    background-size: cover;
     color: var(--color-text);
 }
 
