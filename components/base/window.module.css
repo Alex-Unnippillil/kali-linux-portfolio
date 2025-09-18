@@ -1,9 +1,95 @@
-.windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+.windowResizeHandle {
+  position: absolute;
+  z-index: 40;
+  touch-action: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
-.windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+.windowResizeHandleCorner {
+  border-radius: 0.75rem;
+}
+
+.windowResizeHandle:hover,
+.windowResizeHandle:active {
+  background: rgba(148, 163, 184, 0.35);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.35), 0 6px 14px rgba(15, 23, 42, 0.35);
+}
+
+.windowResizeHandleTop,
+.windowResizeHandleBottom {
+  width: 72px;
+  height: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+}
+
+.windowResizeHandleTop {
+  top: 6px;
+  cursor: ns-resize;
+}
+
+.windowResizeHandleBottom {
+  bottom: 6px;
+  cursor: ns-resize;
+}
+
+.windowResizeHandleLeft,
+.windowResizeHandleRight {
+  width: 18px;
+  height: 72px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 9999px;
+}
+
+.windowResizeHandleLeft {
+  left: 6px;
+  cursor: ew-resize;
+}
+
+.windowResizeHandleRight {
+  right: 6px;
+  cursor: ew-resize;
+}
+
+.windowResizeHandleTopLeft {
+  top: 10px;
+  left: 10px;
+  cursor: nwse-resize;
+}
+
+.windowResizeHandleTopRight {
+  top: 38px;
+  right: 10px;
+  cursor: nesw-resize;
+}
+
+.windowResizeHandleBottomLeft {
+  bottom: 10px;
+  left: 10px;
+  cursor: nesw-resize;
+}
+
+.windowResizeHandleBottomRight {
+  bottom: 10px;
+  right: 10px;
+  cursor: nwse-resize;
+}
+
+@media (hover: none) {
+  .windowResizeHandle {
+    opacity: 0.9;
+  }
 }
