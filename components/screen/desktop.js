@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useGlobalShortcuts } from '../../hooks/useGlobalShortcuts';
 
 export class Desktop extends Component {
     constructor() {
@@ -87,13 +88,11 @@ export class Desktop extends Component {
         this.checkForAppShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
-        document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
-        document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
@@ -146,34 +145,6 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
-    handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
-            }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
-            e.preventDefault();
-            this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
-            }
-        }
-    }
-
     getFocusedWindowId = () => {
         for (const key in this.state.focused_windows) {
             if (this.state.focused_windows[key]) {
@@ -184,31 +155,33 @@ export class Desktop extends Component {
     }
 
     cycleApps = (direction) => {
-        if (!this.app_stack.length) return;
+        if (!this.app_stack.length) return null;
         const currentId = this.getFocusedWindowId();
         let index = this.app_stack.indexOf(currentId);
         if (index === -1) index = 0;
         let next = (index + direction + this.app_stack.length) % this.app_stack.length;
         // Skip minimized windows
+        let selected = null;
         for (let i = 0; i < this.app_stack.length; i++) {
             const id = this.app_stack[next];
             if (!this.state.minimized_windows[id]) {
-                this.focus(id);
+                selected = this.focus(id);
                 break;
             }
             next = (next + direction + this.app_stack.length) % this.app_stack.length;
         }
+        return selected;
     }
 
     cycleAppWindows = (direction) => {
         const currentId = this.getFocusedWindowId();
-        if (!currentId) return;
+        if (!currentId) return null;
         const base = currentId.split('#')[0];
         const windows = this.app_stack.filter(id => id.startsWith(base));
-        if (windows.length <= 1) return;
+        if (windows.length <= 1) return null;
         let index = windows.indexOf(currentId);
         let next = (index + direction + windows.length) % windows.length;
-        this.focus(windows[next]);
+        return this.focus(windows[next]);
     }
 
     openWindowSwitcher = () => {
@@ -732,19 +705,30 @@ export class Desktop extends Component {
         this.hideAllContextMenu()
     }
 
-    focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
+    focus = (objId, options = {}) => {
+        const { focusWindow = true } = options;
+        const focused_windows = { ...this.state.focused_windows };
         focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
+        Object.keys(focused_windows).forEach(key => {
+            if (key !== objId) {
+                focused_windows[key] = false;
             }
-        }
-        this.setState({ focused_windows });
+        });
+        this.setState({ focused_windows }, () => {
+            if (!focusWindow) return;
+            if (typeof window === 'undefined') return;
+            window.requestAnimationFrame(() => {
+                const node = document.getElementById(objId);
+                if (node && typeof node.focus === 'function') {
+                    try {
+                        node.focus({ preventScroll: true });
+                    } catch (e) {
+                        node.focus();
+                    }
+                }
+            });
+        });
+        return objId;
     }
 
     addNewFolder = () => {
@@ -900,6 +884,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    onFocusRequest={(id) => this.focus(id, { focusWindow: false })}
                 />
 
                 {/* Desktop Apps */}
@@ -974,5 +959,41 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const desktopRef = React.useRef(null);
+
+    useGlobalShortcuts({
+        onAltTab: () => {
+            const desktop = desktopRef.current;
+            if (!desktop) return;
+            if (!desktop.state.showWindowSwitcher) {
+                desktop.openWindowSwitcher();
+            }
+        },
+        onCtrlBacktick: ({ direction }) => {
+            const desktop = desktopRef.current;
+            if (!desktop) return;
+            const step = direction && direction < 0 ? -1 : 1;
+            desktop.cycleApps(step);
+        },
+        onMetaKey: () => {
+            const desktop = desktopRef.current;
+            if (!desktop) return;
+            desktop.showAllApps();
+        },
+        onMetaArrow: ({ key }) => {
+            const desktop = desktopRef.current;
+            if (!desktop) return;
+            const id = desktop.getFocusedWindowId();
+            if (!id) return;
+            const event = new CustomEvent('super-arrow', { detail: key });
+            document.getElementById(id)?.dispatchEvent(event);
+        },
+        onClipboard: () => {
+            const desktop = desktopRef.current;
+            if (!desktop) return;
+            desktop.openApp('clipboard-manager');
+        }
+    });
+
+    return <Desktop ref={desktopRef} {...props} snapEnabled={snapEnabled} />;
 }
