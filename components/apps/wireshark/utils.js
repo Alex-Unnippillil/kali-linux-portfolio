@@ -67,16 +67,20 @@ export const matchesDisplayFilter = (packet, filter) => {
 
 // Determine the colour class for a packet based on user rules
 export const getRowColor = (packet, rules) => {
-  const rule = rules.find((r) => {
-    const cached = rulePredicateCache.get(r);
-    if (!cached || cached.expr !== r.expression) {
-      const entry = { expr: r.expression, fn: compileFilter(r.expression) };
-      rulePredicateCache.set(r, entry);
-      return entry.fn(packet);
+  for (const rule of rules) {
+    if (!rule || !rule.expression || !rule.expression.trim()) continue;
+
+    const cached = rulePredicateCache.get(rule);
+    let matcher = cached?.fn;
+    if (!matcher || cached.expr !== rule.expression) {
+      matcher = compileFilter(rule.expression);
+      rulePredicateCache.set(rule, { expr: rule.expression, fn: matcher });
     }
-    return cached.fn(packet);
-  });
-  if (!rule) return '';
-  const key = rule.color ? rule.color.toLowerCase() : '';
-  return colorMap[key] || rule.color || '';
+
+    if (matcher(packet)) {
+      const key = rule.color ? rule.color.toLowerCase() : '';
+      return colorMap[key] || rule.color || '';
+    }
+  }
+  return '';
 };
