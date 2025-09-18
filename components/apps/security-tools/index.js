@@ -1,9 +1,46 @@
 import React, { useState, useEffect } from 'react';
+import { z } from 'zod';
 import LabMode from '../../LabMode';
 import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
+import LogStreamViewer from './LogStreamViewer';
+import { registerLogSchema } from './logSchemaRegistry';
+
+registerLogSchema('suricata', {
+  schema: z.object({
+    timestamp: z.string(),
+    src_ip: z.string(),
+    dest_ip: z.string(),
+    alert: z.string(),
+  }),
+  timestampKey: 'timestamp',
+  fields: [
+    { key: 'timestamp', label: 'Timestamp' },
+    { key: 'src_ip', label: 'Source IP' },
+    { key: 'dest_ip', label: 'Destination IP' },
+    { key: 'alert', label: 'Alert' },
+  ],
+});
+
+registerLogSchema('zeek', {
+  schema: z.object({
+    ts: z.string(),
+    uid: z.string(),
+    id_orig_h: z.string(),
+    id_resp_h: z.string(),
+    note: z.string(),
+  }),
+  timestampKey: 'ts',
+  fields: [
+    { key: 'ts', label: 'Timestamp' },
+    { key: 'uid', label: 'UID' },
+    { key: 'id_orig_h', label: 'Origin Host' },
+    { key: 'id_resp_h', label: 'Responder Host' },
+    { key: 'note', label: 'Note' },
+  ],
+});
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -206,22 +243,18 @@ export default function SecurityTools() {
             )}
 
             {active === 'suricata' && (
-            <div>
-              <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
-              {suricata.map((log, i) => (
-                <pre key={i} className="text-xs bg-black p-1 mb-1 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
-              ))}
-            </div>
-          )}
+              <div className="space-y-2">
+                <p className="text-xs">Simulated Suricata alerts stream derived from local fixtures.</p>
+                <LogStreamViewer schemaName="suricata" fixtures={suricata} />
+              </div>
+            )}
 
             {active === 'zeek' && (
-            <div>
-              <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
-              {zeek.map((log, i) => (
-                <pre key={i} className="text-xs bg-black p-1 mb-1 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
-              ))}
-            </div>
-          )}
+              <div className="space-y-2">
+                <p className="text-xs">Zeek connection logs rendered via the streaming virtualized viewer.</p>
+                <LogStreamViewer schemaName="zeek" fixtures={zeek} />
+              </div>
+            )}
 
             {active === 'sigma' && (
             <div>
