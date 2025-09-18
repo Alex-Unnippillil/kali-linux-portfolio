@@ -10,8 +10,13 @@ import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
+class AboutAlex extends Component<
+  unknown,
+  { screen: React.ReactNode; active_screen: string; navbar: boolean; printMode: boolean }
+> {
   screens: Record<string, React.ReactNode> = {};
+  private printMediaQuery?: MediaQueryList;
+  private printMediaQueryListener?: (event: MediaQueryListEvent) => void;
 
   constructor(props: unknown) {
     super(props);
@@ -19,6 +24,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       screen: <></>,
       active_screen: 'about',
       navbar: false,
+      printMode: false,
     };
   }
 
@@ -38,6 +44,30 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     }
 
     this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
+
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      const mediaQuery = window.matchMedia('print');
+      this.printMediaQuery = mediaQuery;
+      this.updatePrintMode(mediaQuery);
+      this.printMediaQueryListener = (event: MediaQueryListEvent) => {
+        this.updatePrintMode(event);
+      };
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', this.printMediaQueryListener);
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener(this.printMediaQueryListener);
+      }
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.printMediaQuery && this.printMediaQueryListener) {
+      if (typeof this.printMediaQuery.removeEventListener === 'function') {
+        this.printMediaQuery.removeEventListener('change', this.printMediaQueryListener);
+      } else if (typeof this.printMediaQuery.removeListener === 'function') {
+        this.printMediaQuery.removeListener(this.printMediaQueryListener);
+      }
+    }
   }
 
   changeScreen = (e: any) => {
@@ -100,6 +130,12 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     tabs[index].focus();
   };
 
+  updatePrintMode = (event: MediaQueryList | MediaQueryListEvent) => {
+    if (typeof event.matches === 'boolean') {
+      this.setState({ printMode: event.matches });
+    }
+  };
+
   render() {
     const structured = {
       '@context': 'https://schema.org',
@@ -108,9 +144,19 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       url: 'https://unnippillil.com',
     };
     const nonce = getCspNonce();
+    const rootClassName = [
+      'w-full h-full flex bg-ub-cool-grey text-white select-none relative about-app',
+      this.state.printMode ? 'about-app--print' : '',
+    ]
+      .join(' ')
+      .trim();
 
     return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+      <main
+        className={rootClassName}
+        data-testid="about-app-root"
+        data-print-active={this.state.printMode}
+      >
         <Head>
           <title>About</title>
           <script
@@ -120,7 +166,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           />
         </Head>
         <div
-          className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+          className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black about-app__nav"
           role="tablist"
           aria-orientation="vertical"
           onKeyDown={this.handleNavKeyDown}
@@ -129,7 +175,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
         </div>
         <div
           onClick={this.showNavBar}
-          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
+          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1 about-app__toggle"
         >
           <div className=" w-3.5 border-t border-white" />
           <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
@@ -137,7 +183,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <div
             className={
               (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
+              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20 about-app__nav'
             }
             role="tablist"
             aria-orientation="vertical"
@@ -146,7 +192,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             {this.renderNavLinks()}
           </div>
         </div>
-        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen about-app__content">
           {this.state.screen}
         </div>
       </main>
