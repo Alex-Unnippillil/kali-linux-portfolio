@@ -42,20 +42,27 @@ const getPort = () =>
     const port = await getPort();
     const server = spawn('yarn', ['start', '-p', String(port)], { stdio: 'inherit' });
     process.on('exit', () => server.kill());
-    await waitOn({ resources: [`http://localhost:${port}`], timeout: 60000 });
+    try {
+      await waitOn({ resources: [`http://localhost:${port}`], timeout: 60000 });
 
-    const routes = ['/', '/dummy-form', '/video-gallery', '/profile'];
-    for (const route of routes) {
-      const res = await fetch(`http://localhost:${port}${route}`);
-      const header = res.headers.get('x-powered-by');
-      if (res.status !== 200 || header !== 'Next.js') {
-        throw new Error(`Route ${route} failed: status ${res.status}, header ${header}`);
+      const routes = ['/', '/dummy-form', '/video-gallery', '/profile'];
+      for (const route of routes) {
+        const res = await fetch(`http://localhost:${port}${route}`);
+        const header = res.headers.get('x-powered-by');
+        if (res.status !== 200 || header !== 'Next.js') {
+          throw new Error(`Route ${route} failed: status ${res.status}, header ${header}`);
+        }
+        console.log(`✓ ${route}`);
       }
-      console.log(`✓ ${route}`);
-    }
 
-    console.log('verify: PASS');
-    server.kill();
+      await run('npx', ['playwright', 'test'], {
+        env: { ...process.env, BASE_URL: `http://localhost:${port}` },
+      });
+
+      console.log('verify: PASS');
+    } finally {
+      server.kill();
+    }
   } catch (err) {
     console.error('verify: FAIL');
     console.error(err);
