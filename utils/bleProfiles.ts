@@ -12,6 +12,7 @@ export interface SavedProfile {
   deviceId: string;
   name: string;
   services: ServiceData[];
+  batteryLevel?: number | null;
 }
 
 const getDir = async (): Promise<any> => {
@@ -74,6 +75,7 @@ export const renameProfile = async (
     await saveProfile(deviceId, {
       name: newName,
       services: existing.services,
+      batteryLevel: existing.batteryLevel,
     });
   }
 };
