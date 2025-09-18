@@ -13963,6 +13963,7 @@ __metadata:
     three: "npm:^0.179.1"
     turndown: "npm:^7.2.1"
     typescript: "npm:5.8.2"
+    vosk-browser: "npm:^0.0.8"
     wait-on: "npm:^8.0.4"
     webpack: "npm:^5.92.0"
     workbox-build: "npm:7.1.1"
@@ -14102,6 +14103,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"uuid@npm:9.0.0":
+  version: 9.0.0
+  resolution: "uuid@npm:9.0.0"
+  bin:
+    uuid: dist/bin/uuid
+  checksum: 10c0/8867e438990d1d33ac61093e2e4e3477a2148b844e4fa9e3c2360fa4399292429c4b6ec64537eb1659c97b2d10db349c673ad58b50e2824a11e0d3630de3c056
+  languageName: node
+  linkType: hard
+
 "v8-to-istanbul@npm:^9.0.1":
   version: 9.3.0
   resolution: "v8-to-istanbul@npm:9.3.0"
@@ -14110,6 +14120,15 @@ __metadata:
     "@types/istanbul-lib-coverage": "npm:^2.0.1"
     convert-source-map: "npm:^2.0.0"
   checksum: 10c0/968bcf1c7c88c04df1ffb463c179558a2ec17aa49e49376120504958239d9e9dad5281aa05f2a78542b8557f2be0b0b4c325710262f3b838b40d703d5ed30c23
+  languageName: node
+  linkType: hard
+
+"vosk-browser@npm:^0.0.8":
+  version: 0.0.8
+  resolution: "vosk-browser@npm:0.0.8"
+  dependencies:
+    uuid: "npm:9.0.0"
+  checksum: 10c0/1a434643e5070ef537caa607097276f0d2c9d924cc3180d37a2b4236216d2a3befc539e612aa827fcd3ac93fab161aabb18647a7a24c48be0975cc3909b3c62e
   languageName: node
   linkType: hard
 

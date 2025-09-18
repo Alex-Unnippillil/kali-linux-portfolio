@@ -14,6 +14,9 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  voiceControlEnabled: false,
+  voiceControlHotkey: 'Ctrl+Shift+Space',
+  voiceConfirmation: true,
 };
 
 export async function getAccent() {
@@ -123,6 +126,37 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getVoiceControlEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.voiceControlEnabled;
+  return window.localStorage.getItem('voice-control-enabled') === 'true';
+}
+
+export async function setVoiceControlEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('voice-control-enabled', value ? 'true' : 'false');
+}
+
+export async function getVoiceControlHotkey() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.voiceControlHotkey;
+  return window.localStorage.getItem('voice-control-hotkey') || DEFAULT_SETTINGS.voiceControlHotkey;
+}
+
+export async function setVoiceControlHotkey(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('voice-control-hotkey', value);
+}
+
+export async function getVoiceConfirmation() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.voiceConfirmation;
+  const stored = window.localStorage.getItem('voice-control-confirmation');
+  return stored === null ? DEFAULT_SETTINGS.voiceConfirmation : stored === 'true';
+}
+
+export async function setVoiceConfirmation(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('voice-control-confirmation', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +171,9 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('voice-control-enabled');
+  window.localStorage.removeItem('voice-control-hotkey');
+  window.localStorage.removeItem('voice-control-confirmation');
 }
 
 export async function exportSettings() {
@@ -151,6 +188,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    voiceControlEnabled,
+    voiceControlHotkey,
+    voiceConfirmation,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +202,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getVoiceControlEnabled(),
+    getVoiceControlHotkey(),
+    getVoiceConfirmation(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +218,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    voiceControlEnabled,
+    voiceControlHotkey,
+    voiceConfirmation,
     theme,
   });
 }
@@ -199,6 +245,9 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    voiceControlEnabled,
+    voiceControlHotkey,
+    voiceConfirmation,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +260,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (voiceControlEnabled !== undefined) await setVoiceControlEnabled(voiceControlEnabled);
+  if (voiceControlHotkey !== undefined) await setVoiceControlHotkey(voiceControlHotkey);
+  if (voiceConfirmation !== undefined) await setVoiceConfirmation(voiceConfirmation);
   if (theme !== undefined) setTheme(theme);
 }
 

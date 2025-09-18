@@ -554,6 +554,26 @@ export class Desktop extends Component {
         this.giveFocusToLastApp();
     }
 
+    minimizeAllWindows = () => {
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+        let changed = false;
+        for (const key in this.state.closed_windows) {
+            if (!this.state.closed_windows[key]) {
+                minimized_windows[key] = true;
+                if (focused_windows[key]) {
+                    focused_windows[key] = false;
+                }
+                changed = true;
+            }
+        }
+        if (changed) {
+            this.setState({ minimized_windows, focused_windows }, () => {
+                this.hideSideBar(null, false);
+            });
+        }
+    }
+
     giveFocusToLastApp = () => {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
