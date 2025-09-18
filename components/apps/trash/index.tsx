@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import Image from 'next/image';
+import TitleBar from '../../base/TitleBar';
 
 interface TrashItem {
   id: string;
@@ -24,6 +26,17 @@ const formatAge = (closedAt: number): string => {
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+
+  const actionButtonStyle = useMemo(
+    () => ({
+      background: 'color-mix(in srgb, var(--color-surface), transparent 45%)',
+      borderColor: 'color-mix(in srgb, var(--color-border), transparent 20%)',
+    }),
+    [],
+  );
+
+  const actionButtonClass =
+    'rounded border px-3 py-1 text-xs font-medium transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)] disabled:opacity-50';
 
   useEffect(() => {
     const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
@@ -100,39 +113,60 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
-      <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
-        <span className="font-bold ml-2">Trash</span>
-        <div className="flex">
-          <button
-            onClick={restore}
-            disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
-          >
-            Restore
-          </button>
-          <button
-            onClick={restoreAll}
-            disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
-          >
-            Restore All
-          </button>
-          <button
-            onClick={remove}
-            disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
-          >
-            Delete
-          </button>
-          <button
-            onClick={empty}
-            disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
-          >
-            Empty
-          </button>
-        </div>
-      </div>
+      <TitleBar
+        headingLevel={1}
+        icon={
+          <Image
+            src="/themes/Yaru/status/user-trash-symbolic.svg"
+            alt="Trash icon"
+            width={28}
+            height={28}
+            sizes="28px"
+            priority
+          />
+        }
+        title="Trash"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={restore}
+              disabled={selected === null}
+              className={actionButtonClass}
+              style={actionButtonStyle}
+            >
+              Restore
+            </button>
+            <button
+              type="button"
+              onClick={restoreAll}
+              disabled={items.length === 0}
+              className={actionButtonClass}
+              style={actionButtonStyle}
+            >
+              Restore All
+            </button>
+            <button
+              type="button"
+              onClick={remove}
+              disabled={selected === null}
+              className={actionButtonClass}
+              style={actionButtonStyle}
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              onClick={empty}
+              disabled={items.length === 0}
+              className={actionButtonClass}
+              style={actionButtonStyle}
+            >
+              Empty
+            </button>
+          </>
+        }
+      />
       <div className="flex flex-wrap content-start p-2 overflow-auto">
         {items.length === 0 && <div className="w-full text-center mt-10">Trash is empty</div>}
         {items.map((item, idx) => (

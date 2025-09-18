@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import TitleBar from '../base/TitleBar';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -295,24 +296,61 @@ export default function FileExplorer() {
     );
   }
 
+  const headerButtonStyle = useMemo(
+    () => ({
+      background: 'color-mix(in srgb, var(--color-surface), transparent 45%)',
+      borderColor: 'color-mix(in srgb, var(--color-border), transparent 20%)',
+    }),
+    [],
+  );
+
+  const headerButtonClass =
+    'rounded border px-2 py-1 text-xs font-medium transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)] disabled:opacity-50';
+
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
-        </button>
-        {path.length > 1 && (
-          <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Back
-          </button>
-        )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
-        {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
-        )}
-      </div>
+      <TitleBar
+        headingLevel={1}
+        title="File Explorer"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={openFolder}
+              className={headerButtonClass}
+              style={headerButtonStyle}
+            >
+              Open Folder
+            </button>
+            {path.length > 1 && (
+              <button
+                type="button"
+                onClick={goBack}
+                className={headerButtonClass}
+                style={headerButtonStyle}
+              >
+                Back
+              </button>
+            )}
+            <div
+              className="flex flex-wrap items-center gap-2"
+              style={{ flex: '1 1 12rem' }}
+            >
+              <Breadcrumbs path={path} onNavigate={navigateTo} />
+              {currentFile && (
+                <button
+                  type="button"
+                  onClick={saveFile}
+                  className={headerButtonClass}
+                  style={headerButtonStyle}
+                >
+                  Save
+                </button>
+              )}
+            </div>
+          </>
+        }
+      />
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
