@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import SessionSimulator from './SessionSimulator';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -12,8 +13,6 @@ const severityStyles = {
 };
 
 const moduleTypes = ['auxiliary', 'exploit', 'post'];
-
-const timelineSteps = 5;
 
 const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
 
@@ -40,17 +39,11 @@ const MetasploitApp = ({
 
   const [sessions, setSessions] = useState([]);
 
-  const [timeline, setTimeline] = useState([]);
-  const [replaying, setReplaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-
   useEffect(() => {
     onLoadingChange(loading);
   }, [loading, onLoadingChange]);
 
-  const workerRef = useRef();
   const moduleRaf = useRef();
-  const progressRaf = useRef();
 
   const allTags = useMemo(
     () => Array.from(new Set(modules.flatMap((m) => m.tags || []))).sort(),
@@ -195,68 +188,6 @@ const MetasploitApp = ({
     setSelectedModule(mod);
     setOutput((prev) => `${prev}\nmsf6 > use ${mod.name}\n${mod.transcript || ''}`);
   };
-
-  const startReplay = () => {
-    if (workerRef.current) workerRef.current.terminate();
-    setTimeline([]);
-    setProgress(0);
-    setReplaying(true);
-    const steps = [
-      'Initializing exploit...',
-      'Checking target...',
-      'Sending payload...',
-      'Gaining access...',
-      'Session established.'
-    ];
-    const lootItem = { host: '10.0.0.3', data: 'ssh-creds.txt' };
-    if (typeof Worker === 'function') {
-      const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
-      worker.onmessage = (e) => {
-        if (e.data.step) {
-          setTimeline((t) => [...t, e.data.step]);
-        } else if (e.data.loot) {
-          setLoot((l) => [...l, e.data.loot]);
-          setShowLoot(true);
-        } else if (e.data.done) {
-          setReplaying(false);
-          worker.terminate();
-        }
-      };
-      worker.postMessage('start');
-      workerRef.current = worker;
-    } else {
-      let i = 0;
-      const sendStep = () => {
-        if (i < steps.length) {
-          const step = steps[i];
-          setTimeline((t) => [...t, step]);
-          if (i === 2) {
-            setLoot((l) => [...l, lootItem]);
-            setShowLoot(true);
-          }
-          i += 1;
-          setTimeout(sendStep, 1000);
-        } else {
-          setReplaying(false);
-        }
-      };
-      sendStep();
-    }
-  };
-
-  useEffect(() => {
-    if (!replaying || reduceMotion) return;
-    let start;
-    const total = timelineSteps * 1000;
-    const step = (ts) => {
-      if (!start) start = ts;
-      const pct = Math.min(((ts - start) / total) * 100, 100);
-      setProgress(pct);
-      if (pct < 100) progressRaf.current = requestAnimationFrame(step);
-    };
-    progressRaf.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(progressRaf.current);
-  }, [replaying, reduceMotion]);
 
   useEffect(() => {
     const regex = /Session\s+(\d+)\s+opened/g;
@@ -458,37 +389,7 @@ const MetasploitApp = ({
               </div>
             ))}
           </div>
-          <div className="mt-4">
-            <button
-              onClick={startReplay}
-              className="px-2 py-1 bg-ub-orange rounded text-black"
-            >
-              Replay Mock Exploit
-            </button>
-            {timeline.length > 0 && (
-              <>
-                <ul
-                  className="mt-2 text-xs max-h-32 overflow-auto"
-                  role="log"
-                  aria-live="polite"
-                  aria-relevant="additions"
-                >
-                  {timeline.map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                </ul>
-                <div
-                  className="w-full bg-ub-grey h-2 mt-2"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(progress)}
-                >
-                  <div className="h-full bg-ub-orange" style={{ width: `${progress}%` }} />
-                </div>
-              </>
-            )}
-          </div>
+          <SessionSimulator onOutputChange={setOutput} />
           <div className="mt-4">
             <button
               onClick={() => setShowLoot((s) => !s)}
