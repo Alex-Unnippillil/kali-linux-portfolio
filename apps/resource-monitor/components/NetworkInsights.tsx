@@ -32,7 +32,7 @@ export default function NetworkInsights() {
   }, [setHistory]);
 
   return (
-    <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
+    <div className="rounded-xl border border-[#123647] bg-[var(--kali-bg)]/95 p-2 text-xs text-white shadow-[0_0_18px_rgba(9,23,33,0.45)]">
       <h2 className="font-bold mb-1">Active Fetches</h2>
       <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
