@@ -28,3 +28,33 @@ export const logGameEnd = (game: string, label?: string): void => {
 export const logGameError = (game: string, message?: string): void => {
   logEvent({ category: game, action: 'error', label: message });
 };
+
+export const logPackageInstallCompleted = (
+  packageId: string,
+  durationMs: number,
+): void => {
+  logEvent({
+    category: 'package_manager',
+    action: 'install_complete',
+    label: packageId,
+    value: Math.round(durationMs),
+  });
+};
+
+export const logPackageInstallAborted = (
+  packageId: string,
+  reason: string,
+  durationMs?: number,
+): void => {
+  const event: EventInput = {
+    category: 'package_manager',
+    action: 'install_aborted',
+    label: `${packageId}:${reason}`,
+  };
+
+  if (typeof durationMs === 'number' && Number.isFinite(durationMs)) {
+    event.value = Math.round(durationMs);
+  }
+
+  logEvent(event);
+};

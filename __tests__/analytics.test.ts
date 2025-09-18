@@ -1,5 +1,12 @@
 import ReactGA from 'react-ga4';
-import { logEvent, logGameStart, logGameEnd, logGameError } from '../utils/analytics';
+import {
+  logEvent,
+  logGameStart,
+  logGameEnd,
+  logGameError,
+  logPackageInstallAborted,
+  logPackageInstallCompleted,
+} from '../utils/analytics';
 
 jest.mock('react-ga4', () => ({
   event: jest.fn(),
@@ -36,6 +43,35 @@ describe('analytics utilities', () => {
   it('handles errors from ReactGA.event without throwing', () => {
     mockEvent.mockImplementationOnce(() => { throw new Error('fail'); });
     expect(() => logEvent({ category: 't', action: 'a' } as any)).not.toThrow();
+  });
+
+  it('logs package install completion metrics', () => {
+    logPackageInstallCompleted('pkg-alpha', 123.6);
+    expect(mockEvent).toHaveBeenCalledWith({
+      category: 'package_manager',
+      action: 'install_complete',
+      label: 'pkg-alpha',
+      value: 124,
+    });
+  });
+
+  it('logs aborted package installs with optional duration', () => {
+    logPackageInstallAborted('pkg-beta', 'network', 42.2);
+    expect(mockEvent).toHaveBeenCalledWith({
+      category: 'package_manager',
+      action: 'install_aborted',
+      label: 'pkg-beta:network',
+      value: 42,
+    });
+
+    mockEvent.mockClear();
+
+    logPackageInstallAborted('pkg-gamma', 'user_cancelled');
+    expect(mockEvent).toHaveBeenCalledWith({
+      category: 'package_manager',
+      action: 'install_aborted',
+      label: 'pkg-gamma:user_cancelled',
+    });
   });
 });
 

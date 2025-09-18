@@ -23,11 +23,13 @@ describe('PluginManager', () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve([{ id: 'demo', file: 'demo.json' }]),
         });
       }
       if (url === '/api/plugins/demo.json') {
         return Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve({
               id: 'demo',

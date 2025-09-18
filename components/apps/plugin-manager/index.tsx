@@ -1,5 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import {
+  logPackageInstallAborted,
+  logPackageInstallCompleted,
+} from '../../../utils/analytics';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -47,12 +51,35 @@ export default function PluginManager() {
       .catch(() => setPlugins([]));
   }, []);
 
+  const now = () =>
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+
   const install = async (plugin: PluginInfo) => {
-    const res = await fetch(`/api/plugins/${plugin.file}`);
-    const manifest: PluginManifest = await res.json();
-    const updated = { ...installed, [plugin.id]: manifest };
-    setInstalled(updated);
-    localStorage.setItem('installedPlugins', JSON.stringify(updated));
+    const startedAt = now();
+
+    try {
+      const res = await fetch(`/api/plugins/${plugin.file}`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const manifest: PluginManifest = await res.json();
+      const updated = { ...installed, [plugin.id]: manifest };
+      setInstalled(updated);
+      localStorage.setItem('installedPlugins', JSON.stringify(updated));
+      logPackageInstallCompleted(plugin.id, now() - startedAt);
+    } catch (error) {
+      const duration = now() - startedAt;
+      const reason =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'unknown_error';
+      logPackageInstallAborted(plugin.id, reason, duration);
+    }
   };
 
   const run = (plugin: PluginInfo) => {
