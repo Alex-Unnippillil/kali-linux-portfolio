@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { lookupBatch } from './kismet/ouiLookup';
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -145,7 +146,16 @@ const KismetApp = ({ onNetworkDiscovered }) => {
       buffer,
       onNetworkDiscovered,
     );
-    setNetworks(networks);
+    const vendorNames = lookupBatch(
+      networks.map((network) => network.bssid),
+      'Unknown',
+    );
+    setNetworks(
+      networks.map((network, idx) => ({
+        ...network,
+        vendor: vendorNames[idx],
+      })),
+    );
     setChannels(channelCounts);
     setTimes(timeCounts);
   };
@@ -167,6 +177,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
               <tr className="text-left">
                 <th className="pr-2">SSID</th>
                 <th className="pr-2">BSSID</th>
+                <th className="pr-2">Vendor</th>
                 <th className="pr-2">Channel</th>
                 <th>Frames</th>
               </tr>
@@ -176,6 +187,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                 <tr key={n.bssid} className="odd:bg-gray-800">
                   <td className="pr-2">{n.ssid || '(hidden)'}</td>
                   <td className="pr-2">{n.bssid}</td>
+                  <td className="pr-2">{n.vendor}</td>
                   <td className="pr-2">{n.channel ?? '-'}</td>
                   <td>{n.frames}</td>
                 </tr>
