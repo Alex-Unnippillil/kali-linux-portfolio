@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import Breadcrumb from "../../components/base/Breadcrumb";
 
 export default function Settings() {
   const {
@@ -54,6 +55,15 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "";
+  const breadcrumbSegments = useMemo(() => {
+    const segments = [{ id: "settings-root", label: "Settings" }];
+    if (activeTabLabel) {
+      segments.push({ id: `settings-${activeTab}`, label: activeTabLabel });
+    }
+    return segments;
+  }, [activeTab, activeTabLabel]);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -107,8 +117,17 @@ export default function Settings() {
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
-      <div className="flex justify-center border-b border-gray-900">
-        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+      <div className="border-b border-gray-900 px-3 py-2 space-y-2">
+        <Breadcrumb
+          segments={breadcrumbSegments}
+          onNavigate={(index) => {
+            if (index === 0) setActiveTab("appearance");
+          }}
+          ariaLabel="Settings sections"
+        />
+        <div className="flex justify-center">
+          <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+        </div>
       </div>
       {activeTab === "appearance" && (
         <>
