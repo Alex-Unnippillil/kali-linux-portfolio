@@ -61,6 +61,11 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Display `performance.memory` data and FPS from `performance.now()` deltas.
 - Show CPU synthetic load graph using `requestAnimationFrame` buckets.
 
+### Networking
+- Surface simulated adapters with connection details sourced from `utils/networkState.ts`.
+- Provide editable routing table and DNS search domain controls that persist via `safeLocalStorage`.
+- Trigger in-app apply flow that reconfigures the simulation and shows success or failure toasts without reloading.
+
 ### Project Gallery
 - Load projects from `projects.json`; add filters and buttons for repo and live demo.
 
