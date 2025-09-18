@@ -1,6 +1,8 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 export default async function handler(_req, res) {
   try {
     const versionPath = path.join(process.cwd(), 'public', 'demo-data', 'nmap', 'script-db-version.json');

@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 export default function handler(req, res) {
   const dir = path.join(process.cwd(), 'public', 'images', 'wallpapers');
   try {

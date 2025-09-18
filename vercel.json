@@ -2,7 +2,75 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "functions": {
-    "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
-    "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
+    "pages/api/figlet/fonts.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/radare2.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/john.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/track.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/pacman/leaderboard.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/plugins/index.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/plugins/[name].js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/wallpapers.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/admin/messages.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/hydra.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/nse/update.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/contact.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/leaderboard/top.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "pages/api/leaderboard/submit.js": {
+      "runtime": "@vercel/node@5.3.20",
+      "memory": 1024,
+      "maxDuration": 60
+    }
   }
 }

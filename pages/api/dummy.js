@@ -1,7 +1,18 @@
-export default function handler(req, res) {
+export const runtime = 'edge';
+
+export default async function handler(req) {
   if (req.method === 'POST') {
-    res.status(200).json({ message: 'Received' });
-  } else {
-    res.status(405).json({ message: 'Method not allowed' });
+    return new Response(JSON.stringify({ message: 'Received' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
+
+  return new Response(JSON.stringify({ message: 'Method not allowed' }), {
+    status: 405,
+    headers: {
+      'Content-Type': 'application/json',
+      Allow: 'POST',
+    },
+  });
 }
