@@ -21,6 +21,12 @@ function AppMenu(props) {
         }
     }
 
+    const handleRename = () => {
+        if (props.onRename) {
+            props.onRename()
+        }
+    }
+
     return (
         <div
             id="app-menu"
@@ -30,6 +36,15 @@ function AppMenu(props) {
             onKeyDown={handleKeyDown}
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
         >
+            <button
+                type="button"
+                onClick={handleRename}
+                role="menuitem"
+                aria-label="Rename"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Rename</span>
+            </button>
             <button
                 type="button"
                 onClick={handlePin}
