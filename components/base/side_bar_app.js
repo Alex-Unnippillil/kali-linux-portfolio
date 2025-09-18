@@ -86,12 +86,16 @@ export class SideBarApp extends Component {
     };
 
     render() {
+        const isActive = this.props.isClose[this.id] === false && this.props.isFocus[this.id];
+        const isRunning = this.props.isClose[this.id] === false;
+
         return (
             <button
                 type="button"
                 aria-label={this.props.title}
                 data-context="app"
                 data-app-id={this.props.id}
+                aria-pressed={isActive}
                 onClick={this.openApp}
                 onMouseEnter={() => {
                     this.captureThumbnail();
@@ -100,8 +104,8 @@ export class SideBarApp extends Component {
                 onMouseLeave={() => {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                data-state={isActive ? 'active' : undefined}
+                className="w-auto p-2 relative rounded m-1 interactive-surface"
                 id={"sidebar-" + this.props.id}
             >
                 <Image
@@ -120,13 +124,12 @@ export class SideBarApp extends Component {
                     alt=""
                     sizes="28px"
                 />
-                {
-                    (
-                        this.props.isClose[this.id] === false
-                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
-                            : null
-                    )
-                }
+                {isRunning && (
+                    <div
+                        className="w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 rounded-md"
+                        style={{ backgroundColor: 'var(--color-active)' }}
+                    ></div>
+                )}
                 {this.state.thumbnail && (
                     <div
                         className={

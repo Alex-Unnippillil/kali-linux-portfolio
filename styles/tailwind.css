@@ -4,16 +4,85 @@
 
 @layer utilities {
   .transition-hover {
-    @apply transition ease-out duration-150;
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
   }
+
   .transition-active {
-    @apply transition ease-out duration-100;
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+  }
+}
+
+@layer components {
+  .interactive-surface {
+    background-color: transparent;
+    border-color: transparent;
+    color: inherit;
+    outline: none;
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+  }
+
+  .interactive-surface:hover,
+  .interactive-surface:focus-visible {
+    background-color: var(--color-hover);
+  }
+
+  .interactive-surface:active,
+  .interactive-surface[data-state='active'] {
+    background-color: var(--color-active);
+  }
+
+  .interactive-surface:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 2px;
+  }
+
+  .context-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    cursor: default;
+    color: inherit;
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+  }
+
+  .context-menu-item:hover,
+  .context-menu-item:focus-visible {
+    background-color: var(--color-hover);
+  }
+
+  .context-menu-item:active {
+    background-color: var(--color-active);
+  }
+
+  .context-menu-item:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 1px;
+  }
+
+  .context-menu-item[aria-disabled='true'],
+  .context-menu-item[aria-disabled='true']:hover,
+  .context-menu-item[aria-disabled='true']:focus-visible,
+  .context-menu-item[aria-disabled='true']:active {
+    background-color: transparent;
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
   }
 }
 
 @layer base {
   button {
-    @apply transition-hover transition-active;
+    @apply transition-hover;
   }
 }
 
