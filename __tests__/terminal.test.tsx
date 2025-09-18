@@ -36,13 +36,19 @@ import React, { createRef, act } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import Terminal from '../apps/terminal';
 import TerminalTabs from '../apps/terminal/tabs';
+import { createSessionId, resetSessions } from '../apps/terminal/state';
 
 describe('Terminal component', () => {
   const openApp = jest.fn();
 
+  beforeEach(() => {
+    resetSessions();
+    openApp.mockReset();
+  });
+
   it('renders container and exposes runCommand', async () => {
     const ref = createRef<any>();
-    render(<Terminal ref={ref} openApp={openApp} />);
+    render(<Terminal ref={ref} openApp={openApp} sessionId={createSessionId()} />);
     await act(async () => {});
     expect(ref.current).toBeTruthy();
     act(() => {
@@ -53,7 +59,7 @@ describe('Terminal component', () => {
 
   it('invokes openApp for open command', async () => {
     const ref = createRef<any>();
-    render(<Terminal ref={ref} openApp={openApp} />);
+    render(<Terminal ref={ref} openApp={openApp} sessionId={createSessionId()} />);
     await act(async () => {});
     act(() => {
       ref.current.runCommand('open calculator');
@@ -64,16 +70,22 @@ describe('Terminal component', () => {
   it('supports tab management shortcuts', async () => {
     const { container } = render(<TerminalTabs openApp={openApp} />);
     await act(async () => {});
-    const root = container.firstChild as HTMLElement;
-    root.focus();
-    fireEvent.keyDown(root, { ctrlKey: true, key: 't' });
+    const tabWindow = container.querySelector('[tabindex="0"]') as HTMLElement;
+    tabWindow.focus();
+    await act(async () => {
+      fireEvent.keyDown(tabWindow, { ctrlKey: true, key: 't' });
+    });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(2);
 
-    fireEvent.keyDown(root, { ctrlKey: true, key: 'Tab' });
+    await act(async () => {
+      fireEvent.keyDown(tabWindow, { ctrlKey: true, key: 'Tab' });
+    });
     const headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
     expect((headers[0] as HTMLElement).className).toContain('bg-gray-700');
 
-    fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
+    await act(async () => {
+      fireEvent.keyDown(tabWindow, { ctrlKey: true, key: 'w' });
+    });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
   });
 });

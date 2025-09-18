@@ -44,6 +44,24 @@ const registry: Record<string, CommandHandler> = {
   cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
   grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
   jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
+  split: (args, ctx) => {
+    const input = args.trim().toLowerCase();
+    const direction = input === 'vertical' || input === 'down' ? 'vertical' : 'horizontal';
+    if (ctx.splitPane) ctx.splitPane(direction);
+    else ctx.writeLine('splitting not supported in this context');
+  },
+  detach: (_args, ctx) => {
+    if (ctx.detachPane) ctx.detachPane();
+    else ctx.writeLine('detaching not supported in this context');
+  },
+  rename: (args, ctx) => {
+    const title = args.trim();
+    if (!title) {
+      ctx.writeLine('usage: rename <title>');
+      return;
+    }
+    if (ctx.renameSession) ctx.renameSession(title);
+  },
 };
 
 export default registry;
