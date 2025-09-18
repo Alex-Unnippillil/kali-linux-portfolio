@@ -1,12 +1,33 @@
 'use client';
 
+import type { ComponentPropsWithoutRef, Ref } from 'react';
 import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
-export default function VsCode() {
+type MessagingConfig = {
+  allowedOrigins: string[];
+  nonce: string;
+  onMessage?: (payload: Record<string, unknown>, rawEvent: MessageEvent) => void;
+};
+
+export type ExternalFrameHandle = {
+  postMessage: (message: Record<string, unknown>, targetOrigin: string) => void;
+  reload: () => void;
+  getIframe: () => HTMLIFrameElement | null;
+};
+
+type FrameLoadHandler = ComponentPropsWithoutRef<'iframe'>['onLoad'];
+
+export type VsCodeProps = {
+  frameRef?: Ref<ExternalFrameHandle>;
+  messaging?: MessagingConfig;
+  onFrameLoad?: FrameLoadHandler;
+};
+
+export default function VsCode({ frameRef, messaging, onFrameLoad }: VsCodeProps = {}) {
   return (
     <div
       className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
@@ -50,10 +71,12 @@ export default function VsCode() {
         </div>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
           <ExternalFrame
+            ref={frameRef}
             src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
             title="VsCode"
             className="w-full h-full"
-            onLoad={() => {}}
+            onLoad={onFrameLoad}
+            messaging={messaging}
           />
           <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
             <Image

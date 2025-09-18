@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Head from 'next/head';
 
 const ALLOWLIST = ['https://vscode.dev', 'https://stackblitz.com'];
@@ -16,10 +16,74 @@ const isAllowed = (src) => {
  * Iframe wrapper for allowed external sources.
  * Optionally prefetches the iframe source.
  */
-export default function ExternalFrame({ src, title, prefetch = false, onLoad: onLoadProp, ...props }) {
+const ExternalFrame = React.forwardRef(function ExternalFrame(
+  { src, title, prefetch = false, onLoad: onLoadProp, messaging, ...props },
+  forwardedRef,
+) {
   const [cookiesBlocked, setCookiesBlocked] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const iframeRef = useRef(null);
+
+  const allowedOrigins = messaging?.allowedOrigins ?? [];
+  const nonce = messaging?.nonce;
+  const onMessage = messaging?.onMessage;
+
+  useEffect(() => {
+    if (!messaging || !iframeRef.current || !nonce || allowedOrigins.length === 0) {
+      return undefined;
+    }
+
+    const allowedSet = new Set(allowedOrigins);
+    const targetOrigin = typeof window !== 'undefined' && window.location ? window.location.origin : '*';
+
+    const handler = (event) => {
+      if (!iframeRef.current) return;
+      if (event.source !== iframeRef.current.contentWindow) return;
+      if (event.data && event.data.__externalFrameForwarded) return;
+      if (!allowedSet.has(event.origin)) return;
+      if (!event.data || typeof event.data !== 'object') return;
+      if (event.data.nonce !== nonce) return;
+
+      onMessage?.(event.data, event);
+
+      try {
+        window.postMessage(
+          {
+            __externalFrameForwarded: true,
+            origin: event.origin,
+            payload: event.data,
+          },
+          targetOrigin,
+        );
+      } catch {
+        // Swallow errors to avoid breaking the app when postMessage is unavailable.
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [allowedOrigins, nonce, onMessage, messaging]);
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      postMessage: (message, targetOrigin) => {
+        if (!messaging || !iframeRef.current || !iframeRef.current.contentWindow) return;
+        if (!nonce) return;
+        if (!allowedOrigins.some((origin) => targetOrigin === origin)) return;
+
+        const payload = { ...message, nonce };
+        iframeRef.current.contentWindow.postMessage(payload, targetOrigin);
+      },
+      reload: () => {
+        if (!iframeRef.current) return;
+        iframeRef.current.src = iframeRef.current.src;
+      },
+      getIframe: () => iframeRef.current,
+    }),
+    [allowedOrigins, nonce, messaging],
+  );
 
   useEffect(() => {
     try {
@@ -61,6 +125,7 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
             Open Externally
           </a>
           <iframe
+            ref={iframeRef}
             src={src}
             title={title}
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
@@ -88,4 +153,6 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
       </div>
     </>
   );
-}
+});
+
+export default ExternalFrame;
