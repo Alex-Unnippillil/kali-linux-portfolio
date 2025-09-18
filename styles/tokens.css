@@ -1,31 +1,129 @@
-/* Design tokens */
+/*
+  Design tokens are defined as CSS custom properties so they can be consumed
+  by CSS Modules, Tailwind utilities, vanilla CSS, and JavaScript helpers. The
+  map below follows a "foundation" → "semantic" structure and includes
+  aliases for legacy variable names to keep existing styles working while we
+  migrate the codebase.
+*/
 
 :root {
-  /* Theme colors */
-  --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
-  --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
-  --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
-  --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
-  --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  /* Base palette — dark Kali desktop neutrals */
+  --color-neutral-950: #050608;
+  --color-neutral-900: #0f1317;
+  --color-neutral-850: #13171b;
+  --color-neutral-800: #1b1f24;
+  --color-neutral-750: #22262c;
+  --color-neutral-700: #2a2e36;
+  --color-neutral-600: #353b47;
+  --color-neutral-500: #4a5261;
+  --color-neutral-200: #aeb4c2;
+  --color-neutral-100: #f6f6f5;
+
+  /* Brand + accent palette */
+  --color-brand-primary: #1793d1;
+  --color-brand-secondary: #62a0ea;
+  --color-brand-tertiary: #50b6c6;
+  --color-brand-highlight: #f39a21;
+
+  /* Status colors */
+  --color-status-info: #1793d1;
+  --color-status-success: #73d216;
+  --color-status-warning: #d97706;
+  --color-status-danger: #b91c1c;
+  --color-status-critical: #991b1b;
+  --color-status-neutral: #7d7f83;
+
+  /* Semantic surfaces */
+  --color-surface-ground: var(--color-neutral-900);
+  --color-surface-panel: var(--color-neutral-850);
+  --color-surface-elevated: var(--color-neutral-800);
+  --color-surface-muted: var(--color-neutral-750);
+  --color-surface-backdrop: rgba(6, 10, 14, 0.92);
+  --color-surface-overlay: rgba(15, 19, 23, 0.85);
+  --color-surface-inverse: var(--color-neutral-100);
+
+  /* Semantic text */
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #d0d3d8;
+  --color-text-muted: #aea79f;
+  --color-text-subtle: #7d7f83;
+  --color-text-inverse: var(--color-neutral-950);
+  --color-text-accent: var(--color-brand-secondary);
+
+  /* Borders & outlines */
+  --color-border-subtle: var(--color-neutral-750);
+  --color-border-strong: #3f4654;
+  --color-border-focus: var(--color-brand-secondary);
+  --color-border-emphasis: var(--color-brand-primary);
+
+  /* Overlay helpers */
+  --color-overlay-scrim: rgba(15, 19, 23, 0.85);
+  --color-overlay-highlight: rgba(23, 147, 209, 0.28);
+
+  /* Shadow colors */
+  --color-shadow-umbra: rgba(0, 0, 0, 0.65);
+  --color-shadow-penumbra: rgba(12, 16, 24, 0.55);
+  --color-shadow-focus: rgba(23, 147, 209, 0.45);
+
+  /* Spacing scale */
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.375rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+  --space-3xl: 3rem;
+  --space-4xl: 4rem;
+
+  /* Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+  --radius-full: 9999px;
+
+  /* Elevation */
+  --shadow-none: none;
+  --shadow-xs: 0 1px 2px 0 var(--color-shadow-umbra);
+  --shadow-sm: 0 2px 6px -1px var(--color-shadow-penumbra);
+  --shadow-md: 0 6px 16px -4px var(--color-shadow-penumbra),
+    0 4px 8px -4px var(--color-shadow-umbra);
+  --shadow-lg: 0 16px 32px -8px var(--color-shadow-penumbra),
+    0 10px 20px -8px var(--color-shadow-umbra);
+  --shadow-glow: 0 0 0 3px var(--color-shadow-focus);
+  --shadow-focus: 0 0 0 2px color-mix(in srgb, var(--color-surface-inverse), transparent 85%),
+    0 0 0 4px var(--color-border-focus);
+  --shadow-terminal: 0 0 10px color-mix(in srgb, var(--color-terminal), transparent 50%);
+
+  /* Motion */
+  --motion-duration-instant: 0ms;
+  --motion-duration-fast: 120ms;
+  --motion-duration-medium: 220ms;
+  --motion-duration-slow: 360ms;
+  --motion-duration-entrance: 420ms;
+  --motion-duration-emphasis: 560ms;
+  --motion-delay-short: 50ms;
+  --motion-delay-medium: 150ms;
+  --motion-delay-long: 300ms;
+  --motion-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --motion-easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --motion-distance-sm: 4px;
+  --motion-distance-md: 12px;
+  --motion-distance-lg: 24px;
+
+  /* Typography, inputs, misc */
+  --font-family-base: 'Ubuntu', sans-serif;
+  --font-multiplier: 1;
+  --hit-area: 32px;
+  --focus-outline-color: var(--color-border-focus);
+  --focus-outline-width: 2px;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -33,50 +131,82 @@
   --game-color-warning: #d97706;
   --game-color-danger: #b91c1c;
 
-  /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
+  /* Legacy aliases (to be removed once all call-sites migrate) */
+  --color-bg: var(--color-surface-ground);
+  --color-text: var(--color-text-primary);
+  --color-primary: var(--color-brand-primary);
+  --color-secondary: var(--color-surface-elevated);
+  --color-accent: var(--color-brand-primary);
+  --color-muted: var(--color-surface-muted);
+  --color-surface: var(--color-surface-panel);
+  --color-inverse: var(--color-surface-inverse);
+  --color-border: var(--color-border-subtle);
+  --color-terminal: #00ff00;
+  --color-dark: var(--color-neutral-850);
+  --color-focus-ring: var(--color-border-focus);
+  --color-selection: var(--color-brand-secondary);
+  --color-control-accent: var(--color-brand-primary);
+  --color-ub-grey: var(--color-surface-ground);
+  --color-ub-warm-grey: var(--color-text-muted);
+  --color-ub-cool-grey: var(--color-surface-panel);
+  --color-ub-orange: var(--color-brand-primary);
+  --color-ub-lite-abrgn: var(--color-surface-muted);
+  --color-ub-med-abrgn: var(--color-surface-elevated);
+  --color-ub-drk-abrgn: var(--color-neutral-850);
+  --color-ub-window-title: #0c0f12;
+  --color-ub-gedit-dark: #021b33;
+  --color-ub-gedit-light: #003b70;
+  --color-ub-gedit-darker: #010d1a;
+  --color-ubt-grey: var(--color-neutral-100);
+  --color-ubt-warm-grey: var(--color-text-muted);
+  --color-ubt-cool-grey: #333333;
+  --color-ubt-blue: var(--color-brand-secondary);
+  --color-ubt-green: var(--color-status-success);
+  --color-ubt-gedit-orange: var(--color-brand-highlight);
+  --color-ubt-gedit-blue: var(--color-brand-tertiary);
+  --color-ubt-gedit-dark: #003b70;
+  --color-ub-border-orange: var(--color-border-emphasis);
+  --color-ub-dark-grey: var(--color-neutral-700);
+  --kali-bg: var(--color-surface-overlay);
 
-  /* Radius */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
-  --radius-round: 9999px;
+  --space-1: var(--space-2xs);
+  --space-2: var(--space-sm);
+  --space-3: var(--space-md);
+  --space-4: var(--space-lg);
+  --space-5: var(--space-xl);
+  --space-6: var(--space-2xl);
 
-  /* Motion durations */
-  --motion-fast: 150ms;
-  --motion-medium: 300ms;
-  --motion-slow: 500ms;
+  --radius-sm: var(--radius-xs);
+  --radius-md: var(--radius-sm);
+  --radius-lg: var(--radius-lg);
+  --radius-round: var(--radius-full);
 
-  /* Fonts */
-  --font-family-base: 'Ubuntu', sans-serif;
-  --font-multiplier: 1;
-  /* Minimum interactive target size */
-  --hit-area: 32px;
-  /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
-  --focus-outline-width: 2px;
+  --motion-fast: var(--motion-duration-fast);
+  --motion-medium: var(--motion-duration-medium);
+  --motion-slow: var(--motion-duration-slow);
 }
 
 /* High contrast theme */
 .high-contrast {
-  --color-bg: #000000;
-  --color-text: #ffffff;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
-  --game-color-secondary: #ffff00;
-  --game-color-success: #00ffff;
-  --game-color-warning: #ff00ff;
-  --game-color-danger: #ff0000;
+  --color-surface-ground: #000000;
+  --color-surface-panel: #000000;
+  --color-surface-elevated: #161616;
+  --color-surface-muted: #1f1f1f;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #f5f5f5;
+  --color-text-muted: #e0e0e0;
+  --color-text-subtle: #c7c7c7;
+  --color-text-inverse: #000000;
+  --color-brand-primary: #ffff00;
+  --color-brand-secondary: #00ffff;
+  --color-status-success: #00ffff;
+  --color-status-warning: #ff00ff;
+  --color-status-danger: #ff0000;
+  --color-border-subtle: #f5f5f5;
+  --color-border-strong: #ffffff;
+  --color-overlay-highlight: rgba(255, 255, 0, 0.4);
+  --color-shadow-umbra: rgba(0, 0, 0, 0.8);
+  --color-shadow-penumbra: rgba(0, 0, 0, 0.6);
 }
 
 /* Dyslexia-friendly fonts */
@@ -91,30 +221,30 @@
 
 /* Reduced motion */
 .reduced-motion {
-  --motion-fast: 0ms;
-  --motion-medium: 0ms;
-  --motion-slow: 0ms;
+  --motion-duration-fast: 0ms;
+  --motion-duration-medium: 0ms;
+  --motion-duration-slow: 0ms;
+  --motion-duration-entrance: 0ms;
+  --motion-duration-emphasis: 0ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --motion-fast: 0ms;
-    --motion-medium: 0ms;
-    --motion-slow: 0ms;
+    --motion-duration-fast: 0ms;
+    --motion-duration-medium: 0ms;
+    --motion-duration-slow: 0ms;
+    --motion-duration-entrance: 0ms;
+    --motion-duration-emphasis: 0ms;
   }
 }
 
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {
-    --color-bg: #000000;
-    --color-text: #ffffff;
-    --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-surface-ground: #000000;
+    --color-surface-panel: #000000;
+    --color-text-primary: #ffffff;
+    --color-brand-primary: #ffff00;
+    --color-brand-secondary: #00ffff;
   }
 }

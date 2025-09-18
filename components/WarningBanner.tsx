@@ -6,11 +6,11 @@ interface WarningBannerProps {
 
 export default function WarningBanner({ children }: WarningBannerProps) {
   return (
-    <div className="flex items-center bg-amber-100 text-amber-900 p-2" role="alert">
-      <span className="mr-2" role="img" aria-label="warning">
+    <div className="flex items-center gap-xs bg-surface-muted text-status-warning border-l-4 border-status-warning border-opacity-80 p-sm rounded-md" role="alert">
+      <span className="text-lg" role="img" aria-label="warning">
         ⚠️
       </span>
-      <span>{children}</span>
+      <span className="text-sm text-text-primary">{children}</span>
     </div>
   );
 }
