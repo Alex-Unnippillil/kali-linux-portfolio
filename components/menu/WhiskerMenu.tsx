@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useSearchPalette } from '../search/SearchPalette';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { toggleSearchPalette } = useSearchPalette();
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -78,6 +80,19 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isEditable = !!target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+      const isSpaceKey = e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar';
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && isSpaceKey) {
+        if (isEditable) return;
+        e.preventDefault();
+        toggleSearchPalette();
+        return;
+      }
       if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         setOpen(o => !o);
@@ -100,7 +115,7 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, currentApps, highlight]);
+  }, [open, currentApps, highlight, toggleSearchPalette]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
