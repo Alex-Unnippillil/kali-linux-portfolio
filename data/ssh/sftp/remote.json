@@ -1,0 +1,31 @@
+[
+  {
+    "name": "reports",
+    "type": "directory",
+    "children": [
+      {
+        "name": "audit.log",
+        "type": "file",
+        "size": 4096,
+        "modified": "2024-02-01T09:00:00Z"
+      },
+      {
+        "name": "findings.txt",
+        "type": "file",
+        "size": 3072,
+        "modified": "2024-01-29T18:30:00Z"
+      }
+    ]
+  },
+  {
+    "name": "motd.txt",
+    "type": "file",
+    "size": 512,
+    "modified": "2024-01-10T12:00:00Z"
+  },
+  {
+    "name": "uploads",
+    "type": "directory",
+    "children": []
+  }
+]

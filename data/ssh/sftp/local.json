@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Documents",
+    "type": "directory",
+    "children": [
+      {
+        "name": "ssh_cheatsheet.txt",
+        "type": "file",
+        "size": 2048,
+        "modified": "2024-02-15T10:30:00Z"
+      },
+      {
+        "name": "payloads",
+        "type": "directory",
+        "children": [
+          {
+            "name": "passwords.lst",
+            "type": "file",
+            "size": 512,
+            "modified": "2024-01-18T15:10:00Z"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "notes.txt",
+    "type": "file",
+    "size": 1024,
+    "modified": "2024-01-20T08:15:00Z"
+  },
+  {
+    "name": "inventory.csv",
+    "type": "file",
+    "size": 1536,
+    "modified": "2023-12-28T20:45:00Z"
+  }
+]
