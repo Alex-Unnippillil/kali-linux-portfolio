@@ -1,4 +1,5 @@
 import { TextEncoder, TextDecoder } from 'util';
+import { toHaveNoViolations } from 'jest-axe';
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
 if (typeof global.structuredClone !== 'function') {
@@ -7,6 +8,8 @@ if (typeof global.structuredClone !== 'function') {
 }
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
+
+expect.extend(toHaveNoViolations);
 
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore

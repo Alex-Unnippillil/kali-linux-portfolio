@@ -47,6 +47,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
   }, []);
 
   const toggle = () => setOpen((o) => !o);
+  const panelId = `help-panel-${appId}`;
 
   return (
     <>
@@ -54,8 +55,10 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
         type="button"
         aria-label="Help"
         aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-controls={open ? panelId : undefined}
         onClick={toggle}
-        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center"
       >
         ?
       </button>
@@ -65,9 +68,22 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
           onClick={toggle}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Help panel"
+            id={panelId}
             className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={toggle}
+                className="rounded px-2 py-1 text-sm text-gray-700 hover:text-black"
+              >
+                Close
+              </button>
+            </div>
             <div dangerouslySetInnerHTML={{ __html: html }} />
           </div>
         </div>

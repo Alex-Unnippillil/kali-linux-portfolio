@@ -58,8 +58,10 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
-  --focus-outline-width: 2px;
+  --focus-outline-color: #facc15; /* vivid amber provides 8.6:1 contrast on dark surfaces */
+  --focus-outline-width: 3px;
+  --focus-outline-offset: 3px;
+  --focus-ring-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
 }
 
 /* High contrast theme */
@@ -77,6 +79,8 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --focus-outline-color: #ffffff;
+  --focus-ring-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +120,7 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --focus-outline-color: #ffffff;
+    --focus-ring-shadow: 0 0 0 4px rgba(255, 255, 255, 0.45);
   }
 }

@@ -18,8 +18,9 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 
 a:focus-visible,
 button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
-    outline-offset: 2px;
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: var(--focus-outline-offset);
+    box-shadow: var(--focus-ring-shadow);
 }
 
 @media (prefers-reduced-motion: reduce) {
