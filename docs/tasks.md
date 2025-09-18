@@ -57,6 +57,11 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 ### Settings
 - Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.js`.
 
+### Power Dashboard
+- Visualize simulated battery and thermal data with 24-hour charts that mirror `resource_monitor` drawing helpers.
+- Provide per-device and per-app filters, power plan toggles, and CPU/display controls wired through `useSettings`.
+- Offer a calibration flow that adjusts estimates and logs analytics via `utils/analytics.ts`.
+
 ### Resource Monitor
 - Display `performance.memory` data and FPS from `performance.now()` deltas.
 - Show CPU synthetic load graph using `requestAnimationFrame` buckets.
