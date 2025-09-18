@@ -1,5 +1,15 @@
 const plugin = require('tailwindcss/plugin');
 
+const monospaceStack = [
+  'Hack',
+  'DejaVu Sans Mono',
+  'SFMono-Regular',
+  'Menlo',
+  'Consolas',
+  'Liberation Mono',
+  'monospace',
+];
+
 module.exports = {
   darkMode: 'class',
   mode: 'jit',
@@ -38,7 +48,9 @@ module.exports = {
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
       },
       fontFamily: {
-        ubuntu: ['Ubuntu', 'sans-serif'],
+        ubuntu: monospaceStack,
+        sans: monospaceStack,
+        mono: monospaceStack,
       },
       minWidth: {
         '0': '0',

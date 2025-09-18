@@ -1,5 +1,37 @@
 @import './tokens.css';
 
+@font-face {
+  font-family: 'Hack';
+  src: local('Hack'), local('Hack-Regular'), url('/fonts/kali/Hack-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Hack';
+  src: local('Hack Bold'), local('Hack-Bold'), url('/fonts/kali/Hack-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DejaVu Sans Mono';
+  src: local('DejaVu Sans Mono'), local('DejaVuSansMono'), url('/fonts/kali/DejaVuSansMono.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DejaVu Sans Mono';
+  src: local('DejaVu Sans Mono Bold'), local('DejaVuSansMono-Bold'), url('/fonts/kali/DejaVuSansMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
   /* Base colors */
