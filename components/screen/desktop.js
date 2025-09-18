@@ -23,6 +23,8 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { usePrefetchApps, DESKTOP_APP_LAUNCH_EVENT } from '../../hooks/usePrefetchApps';
+import { markAppLaunchStart } from '../../utils/performanceMetrics';
 
 export class Desktop extends Component {
     constructor() {
@@ -610,6 +612,7 @@ export class Desktop extends Component {
             }
             return;
         } else {
+            markAppLaunchStart(objId);
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
@@ -643,6 +646,10 @@ export class Desktop extends Component {
             recentApps.unshift(objId);
             recentApps = recentApps.slice(0, 10);
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(DESKTOP_APP_LAUNCH_EVENT, { detail: { id: objId } }));
+            }
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
@@ -974,5 +981,7 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
+    const registry = React.useMemo(() => [...apps, ...games], []);
+    usePrefetchApps(registry, { limit: 3 });
     return <Desktop {...props} snapEnabled={snapEnabled} />;
 }
