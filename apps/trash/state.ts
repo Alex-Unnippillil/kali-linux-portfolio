@@ -1,12 +1,18 @@
 import { useEffect, useCallback } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 
+export interface TrashPayload {
+  type: string;
+  [key: string]: unknown;
+}
+
 export interface TrashItem {
   id: string;
   title: string;
   icon?: string;
   image?: string;
   closedAt: number;
+  payload?: TrashPayload;
 }
 
 const ITEMS_KEY = 'window-trash';

@@ -8,6 +8,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
+import { displayDuplicateFinder } from './components/apps/files/DuplicateFinder';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
@@ -772,6 +773,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayStickyNotes,
+  },
+  {
+    id: 'duplicate-finder',
+    title: 'Duplicate Finder',
+    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDuplicateFinder,
   },
   {
     id: 'trash',
