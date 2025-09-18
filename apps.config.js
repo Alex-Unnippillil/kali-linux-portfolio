@@ -13,6 +13,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
+const contactEnabled = Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
   { title: 'Wikipedia', url: 'https://en.wikipedia.org' },
@@ -911,7 +913,7 @@ const apps = [
     id: 'contact',
     title: 'Contact',
     icon: '/themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
+    disabled: !contactEnabled,
     favourite: false,
     desktop_shortcut: false,
     screen: displayContact,
