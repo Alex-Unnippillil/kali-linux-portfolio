@@ -147,24 +147,51 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        const arrowKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+        if (e.altKey && !e.metaKey && !e.ctrlKey && arrowKeys.includes(e.key)) {
+            const id = this.getFocusedWindowId();
+            if (id) {
+                e.preventDefault();
+                const delta = {
+                    ArrowLeft: { dx: -10, dy: 0 },
+                    ArrowRight: { dx: 10, dy: 0 },
+                    ArrowUp: { dx: 0, dy: -10 },
+                    ArrowDown: { dx: 0, dy: 10 },
+                }[e.key] || { dx: 0, dy: 0 };
+                const event = new CustomEvent('window-transform', {
+                    detail: {
+                        intent: e.shiftKey ? 'resize' : 'move',
+                        ...delta,
+                    },
+                });
+                document.getElementById(id)?.dispatchEvent(event);
+            }
+            return;
+        }
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+            this.cycleApps(e.shiftKey ? -1 : 1);
+            return;
+        }
+
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
+            return;
         }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
+
+        if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
+            return;
         }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+
+        if (e.metaKey && arrowKeys.includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {

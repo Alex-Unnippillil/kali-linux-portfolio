@@ -160,7 +160,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.height).toBe(96.3);
   });
 
-  it('releases snap with Alt+ArrowDown restoring size', () => {
+  it('releases snap with super-arrow ArrowDown restoring size', () => {
     const ref = React.createRef<Window>();
     render(
       <Window
@@ -199,7 +199,8 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      const event = new CustomEvent('super-arrow', { detail: 'ArrowDown' });
+      document.getElementById('test-window')!.dispatchEvent(event);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -281,6 +282,99 @@ describe('Window keyboard dragging', () => {
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
+  });
+});
+
+describe('Window keyboard transforms', () => {
+  it('moves window 10px with Alt+ArrowRight and keeps focus', () => {
+    const focus = jest.fn();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={focus}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.style.transform = 'translate(0px, 0px)';
+    winEl.focus();
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowRight', altKey: true });
+    });
+
+    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    expect(focus).toHaveBeenLastCalledWith('test-window');
+    expect(document.activeElement).toBe(winEl);
+  });
+
+  it('resizes window height by 10px with Alt+Shift+ArrowDown', () => {
+    const focus = jest.fn();
+    const ref = React.createRef<Window>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={focus}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.focus();
+    const startHeight = ref.current!.state.height;
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowDown', altKey: true, shiftKey: true });
+    });
+
+    const expectedHeight = startHeight + (10 / window.innerHeight) * 100;
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 2);
+    expect(focus).toHaveBeenLastCalledWith('test-window');
+    expect(document.activeElement).toBe(winEl);
+  });
+
+  it('handles window-transform custom events for moves', () => {
+    const focus = jest.fn();
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={focus}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.style.transform = 'translate(0px, 0px)';
+
+    act(() => {
+      ref.current!.handleWindowTransform({
+        detail: { intent: 'move', dx: -10, dy: 10 },
+      } as any);
+    });
+
+    expect(winEl.style.transform).toBe('translate(-10px, 10px)');
+    expect(focus).toHaveBeenLastCalledWith('test-window');
+    expect(document.activeElement).toBe(winEl);
   });
 });
 
