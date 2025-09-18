@@ -2,17 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
-import CrossfadePlayer from "./utils/crossfade";
+import WebAudioManager, { AudioTrack } from "./utils/audioEngine";
 import Visualizer from "./Visualizer";
 import Lyrics from "./Lyrics";
 
-interface Track {
-  title: string;
-  url: string;
-  cover?: string;
-}
-
-const DEFAULT_PLAYLIST = [
+const DEFAULT_PLAYLIST: AudioTrack[] = [
   {
     title: "Song 1",
     url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
@@ -27,9 +21,9 @@ const DEFAULT_PLAYLIST = [
   },
 ];
 
-const serialize = (tracks: Track[]) => JSON.stringify(tracks, null, 2);
+const serialize = (tracks: AudioTrack[]) => JSON.stringify(tracks, null, 2);
 
-const isTrackArray = (v: unknown): v is Track[] =>
+const isTrackArray = (v: unknown): v is AudioTrack[] =>
   Array.isArray(v) && v.every((t) => t && typeof t.url === "string");
 
 const SpotifyApp = () => {
@@ -37,12 +31,12 @@ const SpotifyApp = () => {
     "spotify-playlist-text",
     () => serialize(DEFAULT_PLAYLIST),
   );
-  const [queue, setQueue] = usePersistentState<Track[]>(
+  const [queue, setQueue] = usePersistentState<AudioTrack[]>(
     "spotify-queue",
     () => DEFAULT_PLAYLIST,
     isTrackArray,
   );
-  const [recent, setRecent] = usePersistentState<Track[]>(
+  const [recent, setRecent] = usePersistentState<AudioTrack[]>(
     "spotify-recent",
     [],
     isTrackArray,
@@ -59,7 +53,7 @@ const SpotifyApp = () => {
   );
   const [crossfade, setCrossfade] = usePersistentState<number>(
     "spotify-crossfade",
-    0,
+    3,
     (v): v is number => typeof v === "number",
   );
   const [gapless, setGapless] = usePersistentState(
@@ -67,7 +61,7 @@ const SpotifyApp = () => {
     false,
     (v): v is boolean => typeof v === "boolean",
   );
-  const playerRef = useRef<CrossfadePlayer | null>(null);
+  const playerRef = useRef<WebAudioManager | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -87,7 +81,9 @@ const SpotifyApp = () => {
 
   useEffect(() => {
     if (!queue.length) loadPlaylist();
-    const player = new CrossfadePlayer();
+    const player = new WebAudioManager({
+      onAdvance: (nextIndex) => setCurrent(nextIndex),
+    });
     playerRef.current = player;
     setAnalyser(player.getAnalyser());
     return () => player.dispose();
@@ -95,18 +91,39 @@ const SpotifyApp = () => {
   }, []);
 
   useEffect(() => {
+    playerRef.current?.setAdvanceHandler((nextIndex) => setCurrent(nextIndex));
+  }, [setCurrent]);
+
+  useEffect(() => {
+    playerRef.current?.setQueue(queue);
+  }, [queue]);
+
+  useEffect(() => {
+    playerRef.current?.setCrossfade(crossfade);
+  }, [crossfade]);
+
+  useEffect(() => {
+    playerRef.current?.setGapless(gapless);
+  }, [gapless]);
+
+  useEffect(() => {
     const track = queue[current];
     if (!track) return;
     setRecent((r) =>
       [track, ...r.filter((t) => t.url !== track.url)].slice(0, 10),
     );
-    playerRef.current
-      ?.play(track.url, crossfade)
-      .then(() => {
-        setDuration(playerRef.current?.getDuration() ?? 0);
+    const player = playerRef.current;
+    if (!player) return;
+    if (player.getCurrentIndex() !== current) {
+      player.play(current).then(() => {
+        setDuration(player.getDuration());
         setProgress(0);
+        setAnalyser(player.getAnalyser());
       });
-  }, [current, queue, setRecent, crossfade]);
+    } else {
+      setDuration(player.getDuration());
+    }
+  }, [current, queue, setRecent]);
 
   useEffect(() => {
     let raf: number;
