@@ -33,6 +33,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            resizing: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -198,6 +199,24 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    handleResizeStart = (axis) => {
+        if (this.props.resizable === false) return;
+        this.focusWindow();
+        if (this.state.maximized) {
+            this.restoreWindow();
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        const cursor = axis === 'horizontal' ? 'cursor-[ew-resize]' : 'cursor-[ns-resize]';
+        this.setState({ cursorType: cursor, resizing: axis });
+    }
+
+    handleResizeEnd = () => {
+        if (!this.state.resizing) return;
+        this.setState({ cursorType: "cursor-default", resizing: null });
     }
 
     snapToGrid = (value) => {
@@ -612,6 +631,19 @@ export class Window extends Component {
     }
 
     render() {
+        const { cursorType, closed, maximized, grabbed, snapPreview, resizing } = this.state;
+        const { minimized, isFocused } = this.props;
+        const frameClasses = [
+            cursorType,
+            closed ? "closed-window" : "",
+            maximized ? "duration-300 rounded-none" : "rounded-lg rounded-b-none",
+            minimized ? "opacity-0 invisible duration-200" : "",
+            grabbed ? "opacity-70" : "",
+            snapPreview ? "ring-2 ring-blue-400" : "",
+            !snapPreview && resizing ? "ring-2 ring-sky-400/60 shadow-[0_0_0_1.5px_rgba(125,211,252,0.55)]" : "",
+            isFocused ? "z-30" : "z-20 notFocused",
+            "opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col transition-shadow"
+        ].filter(Boolean).join(' ');
         return (
             <>
                 {this.state.snapPreview && (
@@ -635,15 +667,27 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={frameClasses}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                onResizeStart={() => this.handleResizeStart('horizontal')}
+                                onResizeEnd={this.handleResizeEnd}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                onResizeStart={() => this.handleResizeStart('vertical')}
+                                onResizeEnd={this.handleResizeEnd}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -699,16 +743,38 @@ export class WindowYBorder extends Component {
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+
+    handlePointerDown = (event) => {
+        if (typeof event.button === 'number' && event.button !== 0) {
+            return;
         }
+        this.props.onResizeStart?.();
     }
+
+    handlePointerUp = () => {
+        this.props.onResizeEnd?.();
+    }
+
+    render() {
+        return (
+            <div
+                aria-hidden="true"
+                className={`${styles.windowYBorder} cursor-[ew-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                draggable
+                onPointerDown={this.handlePointerDown}
+                onPointerUp={this.handlePointerUp}
+                onPointerCancel={this.handlePointerUp}
+                onDragStart={(e) => {
+                    e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                    this.props.onResizeStart?.();
+                }}
+                onDrag={this.props.resize}
+                onDragEnd={this.handlePointerUp}
+            ></div>
+        )
+    }
+}
+
 
 export class WindowXBorder extends Component {
     componentDidMount() {
@@ -718,16 +784,38 @@ export class WindowXBorder extends Component {
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+
+    handlePointerDown = (event) => {
+        if (typeof event.button === 'number' && event.button !== 0) {
+            return;
         }
+        this.props.onResizeStart?.();
     }
+
+    handlePointerUp = () => {
+        this.props.onResizeEnd?.();
+    }
+
+    render() {
+        return (
+            <div
+                aria-hidden="true"
+                className={`${styles.windowXBorder} cursor-[ns-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                draggable
+                onPointerDown={this.handlePointerDown}
+                onPointerUp={this.handlePointerUp}
+                onPointerCancel={this.handlePointerUp}
+                onDragStart={(e) => {
+                    e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                    this.props.onResizeStart?.();
+                }}
+                onDrag={this.props.resize}
+                onDragEnd={this.handlePointerUp}
+            ></div>
+        )
+    }
+}
+
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {

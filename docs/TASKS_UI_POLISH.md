@@ -49,6 +49,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 11. **Resizable edges and corners**
     - **Accept:** Cursor changes on edges and corners, resize feels native with 8 px handles.
     - **Where:** window chrome.
+    - **Notes:** Invisible resize overlays now extend 8 px beyond each edge with `aria-hidden` handles so screen readers ignore them. Checked against compact (≤768 px), laptop (1024–1366 px), and wide desktop breakpoints to confirm the hit target remains consistent, and active resize rings add visible feedback for low-vision users.
 
 12. **Workspaces (virtual desktops) MVP**
     - **Accept:** Shortcut Ctrl+Super+Left/Right cycles 2–3 workspaces; windows are scoped.
