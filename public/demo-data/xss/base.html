@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>XSS Playground Demo Site</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; font-src 'none'; script-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', 'Ubuntu', system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header,
+    footer {
+      background: rgba(15, 23, 42, 0.9);
+      padding: 1.25rem 1.5rem;
+    }
+
+    header {
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 0.75rem;
+      color: rgba(148, 163, 184, 0.8);
+      text-align: center;
+    }
+
+    main {
+      flex: 1;
+      padding: 1.5rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      display: grid;
+      gap: 1rem;
+      box-shadow: 0 18px 35px rgba(8, 15, 31, 0.45);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+    }
+
+    .badge.warning {
+      background: rgba(248, 113, 113, 0.15);
+      color: #fca5a5;
+    }
+
+    .warning-text {
+      color: #fca5a5;
+      font-size: 0.9rem;
+    }
+
+    .note {
+      font-size: 0.85rem;
+      color: rgba(148, 163, 184, 0.95);
+    }
+
+    .feed-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(148, 163, 184, 0.9);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .feed {
+      list-style: none;
+      padding: 0.75rem 0.85rem;
+      margin: 0;
+      border-radius: 0.6rem;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px dashed rgba(148, 163, 184, 0.25);
+      display: grid;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .feed.feed--vulnerable {
+      background: rgba(67, 20, 7, 0.6);
+      border-color: rgba(248, 113, 113, 0.4);
+    }
+
+    .feed li {
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.45rem;
+      background: rgba(148, 163, 184, 0.1);
+    }
+
+    .feed li.placeholder {
+      font-style: italic;
+      color: rgba(148, 163, 184, 0.7);
+      background: transparent;
+    }
+
+    .dom-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .dom-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .panel {
+      border-radius: 0.75rem;
+      padding: 1rem;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .panel.warning {
+      background: rgba(67, 20, 7, 0.5);
+      border-color: rgba(248, 113, 113, 0.4);
+    }
+
+    .canvas {
+      min-height: 4.5rem;
+      border-radius: 0.6rem;
+      border: 1px dashed rgba(148, 163, 184, 0.35);
+      padding: 0.75rem;
+      background: rgba(15, 23, 42, 0.5);
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>XSS Playground Demo Portal</h1>
+    <p class="note">This page lives in an isolated iframe. Every payload you submit is reflected here for educational purposes only.</p>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Reflected Search Results</h2>
+      <p class="note">Safe template escaping renders attacker data as plain text.</p>
+      <p>
+        <span class="badge" aria-label="sanitized payload badge">Sanitized</span>
+        <span data-slot="reflected-safe">No payload submitted.</span>
+      </p>
+      <p class="warning-text">
+        <span class="badge warning" aria-label="vulnerable payload badge">Vulnerable</span>
+        <span data-slot="reflected-raw">No payload submitted.</span>
+      </p>
+      <p class="note">The vulnerable path injects the payload via <code>innerHTML</code> without any escaping logic.</p>
+    </section>
+
+    <section class="card">
+      <h2>Stored Comment Feed</h2>
+      <p class="note">Persisted content appears on every render. The sanitized feed escapes user messages while the vulnerable feed trusts raw HTML.</p>
+      <p class="feed-title">Sanitized timeline</p>
+      <ul class="feed" data-feed="safe" aria-label="Sanitized comments">
+        <li class="placeholder" data-placeholder="safe">No entries stored yet.</li>
+      </ul>
+      <p class="feed-title warning-text">Vulnerable timeline</p>
+      <ul class="feed feed--vulnerable" data-feed="raw" aria-label="Unsafe comments">
+        <li class="placeholder" data-placeholder="raw">No entries stored yet.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>DOM-Based Widget</h2>
+      <p class="note">Client-side scripts often stitch together fragments. When the fragment is trusted HTML, it executes within the widget.</p>
+      <div class="dom-grid">
+        <div class="panel">
+          <h3>Safe widget</h3>
+          <div class="canvas" data-slot="dom-safe">Template is waiting for DOM content.</div>
+        </div>
+        <div class="panel warning">
+          <h3>Vulnerable widget</h3>
+          <div
+            class="canvas"
+            data-slot="dom-raw"
+            data-user-fragment="Template is waiting for DOM content."
+          >
+            Template is waiting for DOM content.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    Cross-site scripting payloads entered here stay inside this sandbox. Practice safe injection testing.
+  </footer>
+</body>
+</html>
