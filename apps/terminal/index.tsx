@@ -63,6 +63,85 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const ANSI_THEME_KEYS = [
+  'black',
+  'red',
+  'green',
+  'yellow',
+  'blue',
+  'magenta',
+  'cyan',
+  'white',
+  'brightBlack',
+  'brightRed',
+  'brightGreen',
+  'brightYellow',
+  'brightBlue',
+  'brightMagenta',
+  'brightCyan',
+  'brightWhite',
+] as const;
+
+const ANSI_COLOR_LABELS = [
+  'Black',
+  'Red',
+  'Green',
+  'Yellow',
+  'Blue',
+  'Magenta',
+  'Cyan',
+  'White',
+  'Bright Black',
+  'Bright Red',
+  'Bright Green',
+  'Bright Yellow',
+  'Bright Blue',
+  'Bright Magenta',
+  'Bright Cyan',
+  'Bright White',
+] as const;
+
+const DEFAULT_ANSI_COLORS = Object.freeze([
+  '#000000',
+  '#AA0000',
+  '#00AA00',
+  '#AA5500',
+  '#0000AA',
+  '#AA00AA',
+  '#00AAAA',
+  '#AAAAAA',
+  '#555555',
+  '#FF5555',
+  '#55FF55',
+  '#FFFF55',
+  '#5555FF',
+  '#FF55FF',
+  '#55FFFF',
+  '#FFFFFF',
+]);
+
+const createDefaultPalette = () => [...DEFAULT_ANSI_COLORS];
+
+const ANSI_ESCAPE_PATTERN = new RegExp(
+  '(?:\\u001B\\][\\s\\S]*?(?:\\u0007|\\u001B\\u005C|\\u009C))|[\\u001B\\u009B][[\\]()#;?]*(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]',
+  'g',
+);
+
+const buildThemeFromColors = (colors: string[]) => {
+  const theme: Record<string, string> = {
+    background: '#0f1317',
+    foreground: '#f5f5f5',
+    cursor: '#1793d1',
+    selection: 'rgba(23, 147, 209, 0.4)',
+  };
+
+  ANSI_THEME_KEYS.forEach((key, index) => {
+    theme[key] = colors[index] ?? (DEFAULT_ANSI_COLORS[index] as string);
+  });
+
+  return theme;
+};
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -70,6 +149,7 @@ export interface TerminalProps {
 export interface TerminalHandle {
   runCommand: (cmd: string) => void;
   getContent: () => string;
+  handleInput: (data: string) => void;
 }
 
 const files: Record<string, string> = {
@@ -82,7 +162,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const fitRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
   const commandRef = useRef('');
-  const contentRef = useRef('');
+  const promptLineRef = useRef('\x1b[1;34m└─\x1b[0m$ ');
+  const contentRawRef = useRef('');
+  const contentPlainRef = useRef('');
   const registryRef = useRef(commandRegistry);
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
@@ -101,28 +183,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [ansiColors, setAnsiColors] = useState<string[]>(() => createDefaultPalette());
+  const [themeReady, setThemeReady] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
+  const sanitizeAnsi = useCallback(
+    (value: string) =>
+      value
+        .replace(ANSI_ESCAPE_PATTERN, '')
+        .replace(/\r/g, '')
+        .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]/g, ''),
+    [],
+  );
+
+  const appendTranscript = useCallback(
+    (value: string) => {
+      const normalized = value.endsWith('\n') ? value : `${value}\n`;
+      contentRawRef.current += normalized;
+      contentPlainRef.current += sanitizeAnsi(normalized);
+      if (opfsSupported && dirRef.current) {
+        writeFile('history.txt', contentRawRef.current, dirRef.current);
+      }
+    },
+    [opfsSupported, sanitizeAnsi, writeFile],
+  );
+
+  const applyTheme = useCallback((colors: string[]) => {
+    const term = termRef.current;
+    if (!term) return;
+    const theme = buildThemeFromColors(colors);
+    term.options = term.options || {};
+    term.options.theme = { ...(term.options.theme || {}), ...theme };
+    if (typeof term.setOption === 'function') {
+      term.setOption('theme', theme);
+    }
+  }, []);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -134,27 +231,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const writeLine = useCallback(
     (text: string) => {
       if (termRef.current) termRef.current.writeln(text);
-      contentRef.current += `${text}\n`;
-      if (opfsSupported && dirRef.current) {
-        writeFile('history.txt', contentRef.current, dirRef.current);
-      }
+      appendTranscript(text);
       updateOverflow();
     },
-    [opfsSupported, updateOverflow, writeFile],
+    [appendTranscript, updateOverflow],
   );
 
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
-    termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
-    );
-    termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
-  }, []);
+    const topLine =
+      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m';
+    const bottomLine = '\x1b[1;34m└─\x1b[0m$ ';
+    termRef.current.writeln(topLine);
+    appendTranscript(topLine);
+    termRef.current.write(bottomLine);
+    promptLineRef.current = bottomLine;
+    updateOverflow();
+  }, [appendTranscript, updateOverflow]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
+    navigator.clipboard.writeText(contentPlainRef.current).catch(() => {});
   };
 
   const handlePaste = async () => {
@@ -193,6 +291,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.runWorker = runWorker;
 
+  const handlePaletteChange = useCallback((index: number, value: string) => {
+    setAnsiColors((prev) => {
+      const next = [...prev];
+      const trimmed = value.trim();
+      const normalized = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+      if (/^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+        next[index] = normalized.toUpperCase();
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     registryRef.current = {
       ...commandRegistry,
@@ -207,7 +317,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
       clear: () => {
         termRef.current?.clear();
-        contentRef.current = '';
+        contentRawRef.current = '';
+        contentPlainRef.current = '';
         if (opfsSupported && dirRef.current) {
           deleteFile('history.txt', dirRef.current);
         }
@@ -268,10 +379,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
     const handleInput = useCallback(
       (data: string) => {
+        let lastWasCarriageReturn = false;
         for (const ch of data) {
-          if (ch === '\r') {
+          if (ch === '\r' || ch === '\n') {
+            if (ch === '\n' && lastWasCarriageReturn) {
+              lastWasCarriageReturn = false;
+              continue;
+            }
+            lastWasCarriageReturn = ch === '\r';
+            const command = commandRef.current;
+            if (promptLineRef.current) {
+              appendTranscript(`${promptLineRef.current}${command}`);
+            } else if (command) {
+              appendTranscript(command);
+            }
             termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
+            runCommand(command.trim());
             commandRef.current = '';
             prompt();
           } else if (ch === '\u007F') {
@@ -279,19 +402,33 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               termRef.current?.write('\b \b');
               commandRef.current = commandRef.current.slice(0, -1);
             }
+            lastWasCarriageReturn = false;
           } else {
             commandRef.current += ch;
             termRef.current?.write(ch);
+            lastWasCarriageReturn = false;
           }
         }
       },
-      [runCommand, prompt],
+      [appendTranscript, prompt, runCommand],
     );
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
-    getContent: () => contentRef.current,
+    getContent: () => contentPlainRef.current,
+    handleInput: (data: string) => handleInput(data),
   }));
+
+  useEffect(() => {
+    applyTheme(ansiColors);
+  }, [ansiColors, applyTheme]);
+
+  useEffect(() => {
+    if (!themeReady) return;
+    if (!opfsSupported || !dirRef.current) return;
+    const payload = JSON.stringify({ colors: ansiColors });
+    writeFile('theme.json', payload, dirRef.current);
+  }, [ansiColors, opfsSupported, themeReady, writeFile]);
 
   useEffect(() => {
     let disposed = false;
@@ -303,42 +440,86 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
+      let initialColors = createDefaultPalette();
+      let existingHistory = '';
+
+      if (opfsSupported) {
+        try {
+          const directory = await getDir('terminal');
+          dirRef.current = directory;
+          const [history, themeFile] = await Promise.all([
+            readFile('history.txt', directory || undefined),
+            readFile('theme.json', directory || undefined),
+          ]);
+
+          if (history) {
+            existingHistory = history;
+          }
+
+          if (themeFile) {
+            try {
+              const parsed = JSON.parse(themeFile);
+              if (parsed && Array.isArray(parsed.colors)) {
+                const normalized = createDefaultPalette();
+                (parsed.colors as unknown[]).forEach((color, index) => {
+                  if (index < ANSI_THEME_KEYS.length && typeof color === 'string') {
+                    normalized[index] = color;
+                  }
+                });
+                initialColors = normalized;
+              }
+            } catch (error) {
+              console.warn('Failed to parse terminal theme configuration', error);
+            }
+          }
+        } catch (error) {
+          console.warn('Unable to load terminal settings from OPFS', error);
+        }
+      }
+
+      const theme = buildThemeFromColors(initialColors);
       const term = new XTerm({
         cursorBlink: true,
         scrollback: 1000,
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
-        theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
-        },
+        theme,
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
       termRef.current = term;
       fitRef.current = fit;
       searchRef.current = search;
+      term.options = term.options || {};
+      term.options.theme = { ...(term.options.theme || {}), ...theme };
+      if (typeof term.setOption === 'function') {
+        term.setOption('theme', theme);
+      }
       term.loadAddon(fit);
       term.loadAddon(search);
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
-      if (opfsSupported) {
-        dirRef.current = await getDir('terminal');
-        const existing = await readFile('history.txt', dirRef.current || undefined);
-        if (existing) {
-          existing
-            .split('\n')
-            .filter(Boolean)
-            .forEach((l) => {
-              if (termRef.current) termRef.current.writeln(l);
-            });
-          contentRef.current = existing.endsWith('\n')
-            ? existing
-            : `${existing}\n`;
-        }
+      if (existingHistory) {
+        const normalizedHistory = existingHistory.endsWith('\n')
+          ? existingHistory
+          : `${existingHistory}\n`;
+        contentRawRef.current = normalizedHistory;
+        contentPlainRef.current = sanitizeAnsi(normalizedHistory);
+        existingHistory
+          .split('\n')
+          .filter((line) => line.length)
+          .forEach((line) => {
+            term.writeln(line);
+          });
+      } else {
+        contentRawRef.current = '';
+        contentPlainRef.current = '';
+      }
+      if (!disposed) {
+        setAnsiColors(initialColors);
+        setThemeReady(true);
       }
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
@@ -378,7 +559,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow, sanitizeAnsi]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -446,35 +627,68 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
+          <div className="bg-gray-900 p-4 rounded space-y-4 w-full max-w-2xl">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-white">Terminal theme</h2>
+              <p className="text-sm text-gray-400">
+                Tweak the 16-color ANSI palette used by the terminal. Updates apply immediately to
+                the xterm.js session.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {ansiColors.map((color, index) => (
+                <label
+                  key={ANSI_COLOR_LABELS[index]}
+                  className="flex flex-col gap-2 rounded border border-gray-700/60 bg-gray-800/60 p-2 text-xs text-gray-200"
+                >
+                  <span className="flex items-center justify-between font-semibold">
+                    {ANSI_COLOR_LABELS[index]}
+                    <span className="font-mono text-gray-400">{color}</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-6 w-6 rounded border border-gray-700"
+                      style={{ backgroundColor: color }}
+                    />
+                    <input
+                      type="color"
+                      aria-label={`${ANSI_COLOR_LABELS[index]} swatch`}
+                      className="h-8 w-12 cursor-pointer border-none bg-transparent p-0"
+                      value={color}
+                      onChange={(event) => handlePaletteChange(index, event.target.value)}
+                    />
+                  </div>
+                </label>
               ))}
             </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
-            <div className="flex justify-end gap-2">
+            <div className="rounded border border-gray-700/60 bg-black/40 p-3 font-mono text-sm leading-snug text-gray-200 space-y-1">
+              <div>
+                <span style={{ color: ansiColors[4] }}>ls</span>{' '}
+                <span style={{ color: ansiColors[2] }}>scripts</span>{' '}
+                <span style={{ color: ansiColors[7] }}>README.md</span>
+              </div>
+              <div>
+                <span style={{ color: ansiColors[1] }}>cat</span>{' '}
+                <span style={{ color: ansiColors[5] }}>error.log</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
-                className="px-2 py-1 bg-gray-700 rounded"
+                className="rounded bg-gray-700 px-3 py-1 text-sm text-white transition hover:bg-gray-600"
                 onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
+                  setAnsiColors(createDefaultPalette());
                 }}
               >
-                Cancel
+                Reset palette
               </button>
               <button
-                className="px-2 py-1 bg-blue-600 rounded"
+                className="rounded bg-blue-600 px-3 py-1 text-sm text-white transition hover:bg-blue-500"
                 onClick={() => {
                   setSettingsOpen(false);
                   termRef.current?.focus();
                 }}
               >
-                Apply
+                Close
               </button>
             </div>
           </div>

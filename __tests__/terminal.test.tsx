@@ -12,6 +12,8 @@ jest.mock(
       onPaste: jest.fn(),
       dispose: jest.fn(),
       clear: jest.fn(),
+      setOption: jest.fn(),
+      options: {},
     })),
   }),
   { virtual: true }
