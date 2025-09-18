@@ -392,28 +392,28 @@ const FigletApp = () => {
         />
         <button
           onClick={() => setWrap((w) => !w)}
-          className="px-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          className="px-2 bg-gray-700 interactive-surface rounded text-white"
           aria-label="Toggle wrap"
         >
           {wrap ? 'No Wrap' : 'Wrap'}
         </button>
         <button
           onClick={copyAll}
-          className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
+          className="px-2 bg-blue-700 text-white rounded interactive-surface"
           aria-label="Copy all"
         >
           Copy All
         </button>
         <button
           onClick={exportPNG}
-          className="px-2 bg-green-700 hover:bg-green-600 rounded text-white"
+          className="px-2 bg-green-700 text-white rounded interactive-surface"
           aria-label="Export PNG"
         >
           PNG
         </button>
         <button
           onClick={exportText}
-          className="px-2 bg-purple-700 hover:bg-purple-600 rounded text-white"
+          className="px-2 bg-purple-700 text-white rounded interactive-surface"
           aria-label="Export text file"
         >
           TXT

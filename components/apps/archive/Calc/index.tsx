@@ -214,7 +214,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
           <button
             aria-label="copy"
             onClick={() => handleCopy(display)}
-            className="ml-2 px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
+            className="ml-2 px-2 py-1 bg-gray-800 interactive-surface rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Copy
           </button>
@@ -223,35 +223,35 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
           <button
             aria-label="memory add"
             onClick={handleMemoryAdd}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
+            className="px-2 py-1 bg-gray-800 interactive-surface rounded text-sm min-w-[24px] min-h-[24px]"
           >
             M+
           </button>
           <button
             aria-label="memory subtract"
             onClick={handleMemorySubtract}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
+            className="px-2 py-1 bg-gray-800 interactive-surface rounded text-sm min-w-[24px] min-h-[24px]"
           >
             M-
           </button>
           <button
             aria-label="memory recall"
             onClick={handleMemoryRecall}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
+            className="px-2 py-1 bg-gray-800 interactive-surface rounded text-sm min-w-[24px] min-h-[24px]"
           >
             MR
           </button>
           <button
             aria-label="toggle scientific"
             onClick={() => setShowSci((s) => !s)}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
+            className="px-2 py-1 bg-gray-800 interactive-surface rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Sci
           </button>
           <button
             aria-label="toggle date diff"
             onClick={() => setShowDateDiff((s) => !s)}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
+            className="px-2 py-1 bg-gray-800 interactive-surface rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Date
           </button>
@@ -262,7 +262,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
               <button
                 key={idx}
                 aria-label={btn.ariaLabel}
-                className="bg-gray-800 hover:bg-gray-700 rounded text-xl flex items-center justify-center min-w-[24px] min-h-[24px]"
+                className="bg-gray-800 interactive-surface rounded text-xl flex items-center justify-center min-w-[24px] min-h-[24px]"
                 onClick={btn.onClick}
               >
                 {btn.label}
@@ -275,7 +275,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
             <button
               key={idx}
               aria-label={btn.ariaLabel || btn.label}
-              className={`bg-gray-800 hover:bg-gray-700 rounded text-xl flex items-center justify-center min-w-[24px] min-h-[24px] ${
+              className={`bg-gray-800 interactive-surface rounded text-xl flex items-center justify-center min-w-[24px] min-h-[24px] ${
                 btn.colSpan ? `col-span-${btn.colSpan}` : ''
               }`}
               onClick={() => handleButton(btn)}
@@ -310,7 +310,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
           <button
             aria-label="clear history"
             onClick={() => setHistory([])}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
+            className="px-2 py-1 bg-gray-800 interactive-surface rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Clear
           </button>
@@ -322,7 +322,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
               <button
                 aria-label={`copy history ${idx}`}
                 onClick={() => handleCopy(`${expr} = ${result}`)}
-                className="ml-2 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs min-w-[24px] min-h-[24px]"
+                className="ml-2 px-1 bg-gray-700 interactive-surface rounded text-xs min-w-[24px] min-h-[24px]"
               >
                 Copy
               </button>

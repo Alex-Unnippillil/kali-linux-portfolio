@@ -184,13 +184,13 @@ const TicTacToe = () => {
         <div className="mb-4">Choose X or O</div>
         <div className="flex space-x-4">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={() => startGame('X')}
           >
             {currentSkin.X}
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={() => startGame('O')}
           >
             {currentSkin.O}
@@ -256,7 +256,7 @@ const TicTacToe = () => {
       </div>
       <div className="flex space-x-4 mt-4">
         <button
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded"
+          className="px-4 py-2 bg-blue-600 text-white rounded interactive-surface"
           onClick={() => {
             setBoard(createBoard(size));
             setStatus(`${currentSkin[player]}'s turn`);
@@ -266,7 +266,7 @@ const TicTacToe = () => {
           Restart
         </button>
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-gray-700 interactive-surface rounded"
           onClick={() => {
             setPlayer(null);
             setAi(null);

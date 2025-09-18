@@ -25,8 +25,7 @@ export default function Taskbar(props) {
                     data-context="taskbar"
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}
-                    className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
-                        'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
+                    className={`${props.focused_windows[app.id] && !props.minimized_windows[app.id] ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center mx-1 px-2 py-1 rounded interactive-surface`}
                 >
                     <Image
                         width={24}

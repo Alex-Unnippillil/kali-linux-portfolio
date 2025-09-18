@@ -777,19 +777,19 @@ const PongInner = () => {
 
       <div className="mt-2 space-x-2">
         <button
-          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setPaused((p) => !p)}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
-          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setSound((s) => !s)}
         >
           Sound: {sound ? 'On' : 'Off'}
         </button>
         <button
-          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-1 bg-gray-700 interactive-surface rounded"
           onClick={reset}
         >
           Reset

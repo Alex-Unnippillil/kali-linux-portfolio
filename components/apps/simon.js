@@ -391,7 +391,7 @@ const Simon = () => {
         </div>
         <div className="flex flex-wrap gap-4 items-center">
           <select
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 interactive-surface rounded"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
@@ -411,7 +411,7 @@ const Simon = () => {
             <span>{tempo} BPM</span>
           </div>
           <input
-            className="px-2 py-1 w-24 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 w-24 bg-gray-700 interactive-surface rounded"
             placeholder="Seed"
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
@@ -421,10 +421,8 @@ const Simon = () => {
               <button
                 key={m}
                 onClick={() => setPlayMode(m)}
-                className={`px-2 py-1 rounded-full border ${
-                  playMode === m
-                    ? "bg-gray-600 border-white"
-                    : "bg-gray-700 border-gray-500 hover:bg-gray-600"
+                className={`px-2 py-1 rounded-full border interactive-surface ${
+                  playMode === m ? "bg-gray-600 border-white" : "bg-gray-700 border-gray-500"
                 }`}
               >
                 {m === "strict" ? "Strict" : "Normal"}
@@ -432,7 +430,7 @@ const Simon = () => {
             ))}
           </div>
           <select
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 interactive-surface rounded"
             value={timing}
             onChange={(e) => setTiming(e.target.value)}
           >
@@ -480,7 +478,7 @@ const Simon = () => {
             Audio only
           </label>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={startGame}
           >
             Start

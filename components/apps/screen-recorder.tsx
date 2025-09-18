@@ -81,7 +81,7 @@ function ScreenRecorder() {
                 <button
                     type="button"
                     onClick={startRecording}
-                    className="px-4 py-2 rounded bg-ub-dracula hover:bg-ub-dracula-dark"
+                    className="px-4 py-2 rounded bg-ub-dracula text-white interactive-surface"
                 >
                     Start Recording
                 </button>
@@ -90,7 +90,7 @@ function ScreenRecorder() {
                 <button
                     type="button"
                     onClick={stopRecording}
-                    className="px-4 py-2 rounded bg-red-600 hover:bg-red-700"
+                    className="px-4 py-2 rounded bg-red-600 text-white interactive-surface"
                 >
                     Stop Recording
                 </button>
@@ -101,7 +101,7 @@ function ScreenRecorder() {
                     <button
                         type="button"
                         onClick={saveRecording}
-                        className="px-4 py-2 rounded bg-ub-dracula hover:bg-ub-dracula-dark"
+                        className="px-4 py-2 rounded bg-ub-dracula text-white interactive-surface"
                     >
                         Save Recording
                     </button>

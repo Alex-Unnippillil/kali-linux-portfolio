@@ -525,7 +525,7 @@ const ReconNG = () => {
             <button
               type="button"
               onClick={runModule}
-              className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
+              className="bg-blue-600 text-white px-3 py-1 rounded interactive-surface"
             >
               Run
             </button>
@@ -566,10 +566,10 @@ const ReconNG = () => {
           ))}
           {currentWorkspace.graph.length > 0 && (
             <div className="flex gap-2 mt-2">
-              <button type="button" onClick={exportCSV} className="bg-gray-800 px-2 py-1">
+              <button type="button" onClick={exportCSV} className="bg-gray-800 px-2 py-1 interactive-surface">
                 Export CSV
               </button>
-              <button type="button" onClick={exportJSON} className="bg-gray-800 px-2 py-1">
+              <button type="button" onClick={exportJSON} className="bg-gray-800 px-2 py-1 interactive-surface">
                 Export JSON
               </button>
             </div>
@@ -584,7 +584,7 @@ const ReconNG = () => {
           <button
             type="button"
             onClick={runChain}
-            className="mb-2 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
+            className="mb-2 bg-blue-600 text-white px-3 py-1 rounded interactive-surface"
           >
             Run Chain
           </button>
@@ -616,7 +616,7 @@ const ReconNG = () => {
                   onClick={() =>
                     setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
                   }
-                  className="ml-2 px-2 py-1 bg-gray-700"
+                  className="ml-2 px-2 py-1 bg-gray-700 interactive-surface"
                 >
                   {showApiKeys[m] ? 'Hide' : 'Show'}
                 </button>

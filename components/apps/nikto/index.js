@@ -232,7 +232,7 @@ const NiktoApp = () => {
                 {list.map((f) => (
                   <tr
                     key={f.path}
-                    className="odd:bg-gray-900 cursor-pointer hover:bg-gray-700"
+                    className="odd:bg-gray-900 cursor-pointer interactive-surface"
                     onClick={() => setSelected(f)}
                   >
                     <td className="p-2">{f.path}</td>

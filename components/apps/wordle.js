@@ -464,14 +464,14 @@ const Wordle = () => {
           />
           <button
             type="submit"
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-3 py-2 bg-gray-700 interactive-surface rounded"
           >
             Submit
           </button>
           <button
             type="button"
             onClick={handleAnalyze}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-3 py-2 bg-gray-700 interactive-surface rounded"
           >
             Analyze
           </button>
@@ -482,7 +482,7 @@ const Wordle = () => {
         <div className="flex flex-col items-center space-y-2">
           <button
             onClick={share}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
           >
             Share
           </button>

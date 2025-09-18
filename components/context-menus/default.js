@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import useFocusTrap from '../../hooks/useFocusTrap'
 import useRovingTabIndex from '../../hooks/useRovingTabIndex'
+import ContextMenuItem from '../menu/context-menu-item'
 
 function DefaultMenu(props) {
     const menuRef = useRef(null)
@@ -30,7 +31,7 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Linkedin"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="interactive-surface w-full block cursor-default px-3 py-1 rounded mb-1.5"
             >
                 <span className="ml-5">🙋‍♂️</span> <span className="ml-2">Follow on <strong>Linkedin</strong></span>
             </a>
@@ -40,7 +41,7 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Github"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="interactive-surface w-full block cursor-default px-3 py-1 rounded mb-1.5"
             >
                 <span className="ml-5">🤝</span> <span className="ml-2">Follow on <strong>Github</strong></span>
             </a>
@@ -50,20 +51,17 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Contact Me"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="interactive-surface w-full block cursor-default px-3 py-1 rounded mb-1.5"
             >
                 <span className="ml-5">📥</span> <span className="ml-2">Contact Me</span>
             </a>
             <Devider />
-            <button
-                type="button"
+            <ContextMenuItem
                 onClick={() => { localStorage.clear(); window.location.reload() }}
-                role="menuitem"
                 aria-label="Reset Kali Linux"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">🧹</span> <span className="ml-2">Reset Kali Linux</span>
-            </button>
+            </ContextMenuItem>
         </div>
     )
 }

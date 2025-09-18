@@ -505,32 +505,32 @@ const Nonogram = () => {
       />
       <div className="mt-2 space-x-2">
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setMode(mode === "paint" ? "mark" : "paint")}
         >
           Mode: {mode === "paint" ? "Paint" : "Mark"}
         </button>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={reset}
         >
           Reset
         </button>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={handleHint}
         >
           Hint
         </button>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setPaused((p) => !p)}
         >
           {paused ? "Resume" : "Pause"}
         </button>
         <button
           className={`px-3 py-1 rounded ${
-            sound ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-500"
+            sound ? "bg-gray-700 interactive-surface" : "bg-gray-500"
           }`}
           onClick={() => setSound((s) => !s)}
         >
@@ -538,7 +538,7 @@ const Nonogram = () => {
         </button>
         <button
           className={`px-3 py-1 rounded ${
-            preventIllegal ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-500"
+            preventIllegal ? "bg-gray-700 interactive-surface" : "bg-gray-500"
           }`}
           onClick={() => setPreventIllegal((p) => !p)}
         >

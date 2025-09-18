@@ -493,7 +493,7 @@ const Checkers = () => {
       <div className="mt-4 space-x-2">
         {winner || draw ? (
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={reset}
           >
             Reset
@@ -513,25 +513,25 @@ const Checkers = () => {
               </select>
             </label>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 bg-gray-700 interactive-surface rounded"
               onClick={undo}
             >
               Undo
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 bg-gray-700 interactive-surface rounded"
               onClick={redo}
             >
               Redo
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 bg-gray-700 interactive-surface rounded"
               onClick={hintMove}
             >
               Hint
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 bg-gray-700 interactive-surface rounded"
               onClick={toggleShowLegal}
               aria-pressed={showLegal}
             >
@@ -540,7 +540,7 @@ const Checkers = () => {
           </>
         )}
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={exportMoves}
         >
           Export Moves

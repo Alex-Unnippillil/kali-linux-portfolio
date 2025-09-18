@@ -421,7 +421,7 @@ const JohnApp = () => {
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded self-start"
+            className="px-4 py-1 bg-gray-700 interactive-surface rounded self-start"
             disabled={loading}
           >
             {loading ? 'Running...' : 'Crack'}
@@ -430,7 +430,7 @@ const JohnApp = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-1 bg-red-700 hover:bg-red-600 rounded"
+              className="px-4 py-1 bg-red-700 text-white rounded interactive-surface"
             >
               Cancel
             </button>
@@ -496,7 +496,7 @@ const JohnApp = () => {
             <button
               type="button"
               onClick={handleExport}
-              className="self-start px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              className="self-start px-3 py-1 bg-gray-700 interactive-surface rounded text-sm"
             >
               Export
             </button>

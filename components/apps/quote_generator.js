@@ -285,31 +285,31 @@ const QuoteGenerator = () => {
         </div>
         <div className="flex flex-wrap justify-center gap-2 mt-4">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={prevQuote}
           >
             Prev
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={nextQuote}
           >
             Next
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={copyQuote}
           >
             Copy
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={tweetQuote}
           >
             Tweet
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={shareCard}
           >
             Share as Card

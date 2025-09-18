@@ -68,7 +68,7 @@ const GameApp = () => {
       score={<div className="text-xl">{status}</div>}
       controls={
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-gray-700 interactive-surface rounded"
           onClick={reset}
         >
           Reset
@@ -79,7 +79,7 @@ const GameApp = () => {
         {squares.map((value, idx) => (
           <button
             key={idx}
-            className="w-16 h-16 bg-gray-700 hover:bg-gray-600 text-2xl flex items-center justify-center"
+            className="w-16 h-16 bg-gray-700 interactive-surface text-2xl flex items-center justify-center"
             onClick={() => handleClick(idx)}
           >
             {value}

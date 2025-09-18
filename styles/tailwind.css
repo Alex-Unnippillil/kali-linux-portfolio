@@ -4,16 +4,67 @@
 
 @layer utilities {
   .transition-hover {
-    @apply transition ease-out duration-150;
+    transition-property: background-color, color, border-color, box-shadow, opacity;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
   }
   .transition-active {
-    @apply transition ease-out duration-100;
+    transition-property: transform;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+  }
+}
+
+@layer components {
+  .interactive-surface {
+    --interactive-hover-color: var(--color-hover);
+    --interactive-active-color: var(--color-active);
+    transition: background-color var(--motion-fast) ease-out,
+      color var(--motion-fast) ease-out,
+      border-color var(--motion-fast) ease-out,
+      box-shadow var(--motion-fast) ease-out,
+      transform var(--motion-fast) ease-out;
+  }
+
+  .interactive-surface:hover,
+  .interactive-surface:focus-visible {
+    background-color: var(--interactive-hover-color);
+  }
+
+  .interactive-surface:active {
+    background-color: var(--interactive-active-color);
+  }
+
+  .interactive-surface:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 2px;
+  }
+
+  .interactive-surface:disabled,
+  .interactive-surface[aria-disabled='true'],
+  .interactive-surface[data-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 }
 
 @layer base {
   button {
     @apply transition-hover transition-active;
+  }
+
+  button:hover,
+  button:focus-visible {
+    background-color: var(--color-hover);
+  }
+
+  button:active {
+    background-color: var(--color-active);
+  }
+
+  button:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 2px;
   }
 }
 

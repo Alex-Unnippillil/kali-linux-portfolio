@@ -534,13 +534,13 @@ const Game2048 = () => {
       <>
         <div className="mb-2 flex flex-wrap gap-2 items-center">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={reset}
           >
             Reset
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded disabled:opacity-50"
             onClick={undo}
             disabled={history.length === 0 || undosLeft === 0}
           >
@@ -577,13 +577,13 @@ const Game2048 = () => {
             </select>
           </label>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={() => setDemo((d) => !d)}
           >
             {demo ? 'Stop' : 'Demo'}
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={close}
           >
             Close
