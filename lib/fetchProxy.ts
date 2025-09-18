@@ -1,3 +1,11 @@
+export interface ProxySnapshot {
+  id: string;
+  label: string;
+  enabled: boolean;
+  type?: string;
+  description?: string;
+}
+
 export interface FetchLog {
   id: number;
   url: string;
@@ -10,12 +18,20 @@ export interface FetchLog {
   responseSize?: number;
   fromServiceWorkerCache?: boolean;
   error?: unknown;
+  proxy?: ProxySnapshot;
 }
 
 export type FetchEntry = FetchLog;
 
 const active = new Map<number, FetchLog>();
 let counter = 0;
+
+let activeProxy: ProxySnapshot = {
+  id: 'direct',
+  label: 'Direct Connection',
+  enabled: false,
+  type: 'direct',
+};
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
@@ -50,6 +66,17 @@ function notify(type: 'start' | 'end', record: FetchLog) {
   }
 }
 
+export function setActiveProxySnapshot(snapshot: ProxySnapshot) {
+  activeProxy = { ...snapshot };
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('fetchproxy-profile', { detail: activeProxy }));
+  }
+}
+
+export function getActiveProxySnapshot(): ProxySnapshot {
+  return { ...activeProxy };
+}
+
 if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyInstalled) {
   const originalFetch = globalThis.fetch.bind(globalThis);
   (globalThis as any).__fetchProxyInstalled = true;
@@ -75,6 +102,7 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
       method,
       startTime: now(),
       requestSize: init?.body ? bodySize(init.body) : undefined,
+      proxy: { ...activeProxy },
     };
     active.set(id, record);
     notify('start', record);

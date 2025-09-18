@@ -14,7 +14,13 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  proxyProfile: 'direct',
+  proxyEnabled: false,
 };
+
+const PROXY_PROFILE_KEY = 'proxy-profile';
+const PROXY_ENABLED_KEY = 'proxy-enabled';
+const PROXY_LAST_GOOD_KEY = 'proxy-last-good';
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -123,6 +129,59 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getProxyProfile() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.proxyProfile;
+  return window.localStorage.getItem(PROXY_PROFILE_KEY) || DEFAULT_SETTINGS.proxyProfile;
+}
+
+export async function setProxyProfile(profile) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PROXY_PROFILE_KEY, profile);
+}
+
+export async function getProxyEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.proxyEnabled;
+  return window.localStorage.getItem(PROXY_ENABLED_KEY) === 'true';
+}
+
+export async function setProxyEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PROXY_ENABLED_KEY, value ? 'true' : 'false');
+}
+
+export async function getLastKnownProxyState() {
+  const fallback = {
+    profile: await getProxyProfile(),
+    enabled: await getProxyEnabled(),
+  };
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(PROXY_LAST_GOOD_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      typeof parsed.profile === 'string' &&
+      typeof parsed.enabled === 'boolean'
+    ) {
+      return parsed;
+    }
+  } catch (err) {
+    console.warn('Failed to read proxy last good state', err);
+  }
+  return fallback;
+}
+
+export async function setLastKnownProxyState(state) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PROXY_LAST_GOOD_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.warn('Failed to persist proxy last good state', err);
+  }
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +196,9 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(PROXY_PROFILE_KEY);
+  window.localStorage.removeItem(PROXY_ENABLED_KEY);
+  window.localStorage.removeItem(PROXY_LAST_GOOD_KEY);
 }
 
 export async function exportSettings() {
@@ -151,6 +213,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    proxyProfile,
+    proxyEnabled,
+    lastGoodProxy,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +227,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getProxyProfile(),
+    getProxyEnabled(),
+    getLastKnownProxyState(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +243,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    proxyProfile,
+    proxyEnabled,
+    lastGoodProxy,
     theme,
   });
 }
@@ -199,6 +270,9 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    proxyProfile,
+    proxyEnabled,
+    lastGoodProxy,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +285,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (proxyProfile !== undefined) await setProxyProfile(proxyProfile);
+  if (proxyEnabled !== undefined) await setProxyEnabled(proxyEnabled);
+  if (lastGoodProxy && typeof lastGoodProxy === 'object') await setLastKnownProxyState(lastGoodProxy);
   if (theme !== undefined) setTheme(theme);
 }
 

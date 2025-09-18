@@ -1,7 +1,8 @@
 "use client";
 
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface Props {
   open: boolean;
@@ -10,8 +11,14 @@ interface Props {
 const QuickSettings = ({ open }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
-  const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const {
+    proxyEnabled,
+    proxyCheckInProgress,
+    proxyError,
+    activeProxy,
+    setProxyEnabled,
+  } = useSettings();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -20,6 +27,19 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  const toggleProxy = useCallback(() => {
+    const next = !proxyEnabled;
+    const confirmationMessage = next
+      ? `Enable ${activeProxy.label}?
+All simulated network requests will route through this proxy profile.`
+      : 'Disable the system proxy and return to a direct connection?';
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(confirmationMessage);
+      if (!confirmed) return;
+    }
+    setProxyEnabled(next);
+  }, [activeProxy.label, proxyEnabled, setProxyEnabled]);
 
   return (
     <div
@@ -41,8 +61,21 @@ const QuickSettings = ({ open }: Props) => {
         <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
       </div>
       <div className="px-4 pb-2 flex justify-between">
-        <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+        <span>System Proxy</span>
+        <input
+          type="checkbox"
+          checked={proxyEnabled}
+          onChange={toggleProxy}
+          disabled={proxyCheckInProgress}
+        />
+      </div>
+      <div className="px-4 pb-2 text-xs text-ubt-grey">
+        {proxyCheckInProgress
+          ? 'Checking connectivity…'
+          : proxyEnabled
+          ? `${activeProxy.label} active`
+          : 'Direct connection'}
+        {proxyError && <div className="text-red-400 mt-1">{proxyError}</div>}
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
