@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -91,6 +91,162 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+export async function renameFileInDirectory(dirHandle, fileHandle, oldName, newName) {
+  let targetHandle;
+  try {
+    const file = await fileHandle.getFile();
+    targetHandle = await dirHandle.getFileHandle(newName, { create: true });
+    const writable = await targetHandle.createWritable();
+    await writable.write(file);
+    await writable.close();
+    await dirHandle.removeEntry(oldName);
+    return targetHandle;
+  } catch (err) {
+    if (targetHandle) {
+      try {
+        await dirHandle.removeEntry(newName);
+      } catch {}
+    }
+    throw err;
+  }
+}
+
+export function FileListItem({ file, onOpen, onRename, takenNames }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(file.name);
+  const [error, setError] = useState('');
+  const inputRef = useRef(null);
+  const buttonRef = useRef(null);
+  const restoreFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (!editing) setValue(file.name);
+  }, [file.name, editing]);
+
+  useEffect(() => {
+    if (!editing) return undefined;
+    const id = requestAnimationFrame(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [editing]);
+
+  useEffect(() => {
+    if (!editing && restoreFocusRef.current && buttonRef.current) {
+      buttonRef.current.focus();
+      restoreFocusRef.current = false;
+    }
+  }, [editing]);
+
+  const startRename = (event) => {
+    event.stopPropagation();
+    if (editing) return;
+    setValue(file.name);
+    setError('');
+    setEditing(true);
+  };
+
+  const finishRename = async () => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setError('Name cannot be empty.');
+      return;
+    }
+    if (/[\\/]/.test(trimmed)) {
+      setError('Name cannot contain slashes.');
+      return;
+    }
+    if (
+      takenNames &&
+      typeof takenNames.has === 'function' &&
+      takenNames.has(trimmed) &&
+      trimmed !== file.name
+    ) {
+      setError('A file with that name already exists.');
+      return;
+    }
+    if (trimmed === file.name) {
+      restoreFocusRef.current = true;
+      setEditing(false);
+      setError('');
+      return;
+    }
+    try {
+      restoreFocusRef.current = true;
+      await onRename(trimmed);
+      setEditing(false);
+      setError('');
+    } catch (err) {
+      const message =
+        (err && err.message) || (typeof err === 'string' ? err : 'Rename failed.');
+      setError(message);
+    }
+  };
+
+  const cancelRename = () => {
+    restoreFocusRef.current = true;
+    setEditing(false);
+    setValue(file.name);
+    setError('');
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      finishRename();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelRename();
+    }
+  };
+
+  const handleOpen = () => {
+    if (!editing) onOpen(file);
+  };
+
+  return (
+    <div
+      className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 ${
+        editing ? 'bg-black bg-opacity-20' : ''
+      }`}
+      onClick={handleOpen}
+    >
+      <div className="flex items-center h-9 space-x-2">
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              if (error) setError('');
+            }}
+            onKeyDown={handleKeyDown}
+            aria-label={`Rename ${file.name}`}
+            className="flex-1 bg-gray-800 px-1 text-white"
+          />
+        ) : (
+          <span className="truncate font-mono" title={file.name}>
+            {file.name}
+          </span>
+        )}
+        <button
+          type="button"
+          ref={buttonRef}
+          onClick={startRename}
+          className="px-2 py-0.5 bg-black bg-opacity-40 rounded text-xs"
+          disabled={editing}
+        >
+          Rename
+        </button>
+      </div>
+      {error && <div className="text-xs text-red-400 mt-1">{error}</div>}
+    </div>
+  );
+}
+
 export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -115,6 +271,8 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const fileNameSet = useMemo(() => new Set(files.map((f) => f.name)), [files]);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -197,6 +355,51 @@ export default function FileExplorer() {
     }
     setDirs(ds);
     setFiles(fs);
+  };
+
+  const renameFile = async (file, newName) => {
+    if (!dirHandle) {
+      throw new Error('No directory selected.');
+    }
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === file.name) return;
+    if (fileNameSet.has(trimmed)) {
+      throw new Error('A file with that name already exists.');
+    }
+
+    let newHandle;
+    try {
+      newHandle = await renameFileInDirectory(dirHandle, file.handle, file.name, trimmed);
+    } catch (err) {
+      throw new Error((err && err.message) || 'Failed to rename file.');
+    }
+
+    if (opfsSupported) {
+      const unsaved = await loadBuffer(file.name);
+      if (unsaved !== null) {
+        await saveBuffer(trimmed, unsaved);
+        await removeBuffer(file.name);
+      }
+    }
+
+    setFiles((prev) =>
+      prev.map((item) =>
+        item.handle === file.handle ? { name: trimmed, handle: newHandle } : item
+      )
+    );
+
+    setResults((prev) =>
+      prev.map((result) =>
+        result.file === file.name ? { ...result, file: trimmed } : result
+      )
+    );
+
+    setCurrentFile((prev) => {
+      if (prev && prev.name === file.name) {
+        return { name: trimmed, handle: newHandle };
+      }
+      return prev;
+    });
   };
 
   const openDir = async (dir) => {
@@ -337,13 +540,13 @@ export default function FileExplorer() {
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
+            <FileListItem
+              key={`${f.name}-${i}`}
+              file={f}
+              onOpen={openFile}
+              onRename={(name) => renameFile(f, name)}
+              takenNames={fileNameSet}
+            />
           ))}
         </div>
         <div className="flex-1 flex flex-col">
