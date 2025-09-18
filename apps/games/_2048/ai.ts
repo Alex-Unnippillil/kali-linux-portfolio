@@ -18,66 +18,62 @@ const MOVES: { dir: Direction; fn: (b: Board) => MoveResult }[] = [
   { dir: 'ArrowDown', fn: moveDown },
 ];
 
-const emptyCells = (board: Board): Array<[number, number]> => {
-  const cells: Array<[number, number]> = [];
-  board.forEach((row, r) =>
-    row.forEach((cell, c) => {
-      if (cell === 0) cells.push([r, c]);
-    })
-  );
-  return cells;
-};
+const EMPTY_WEIGHT = 16;
+const MONOTONICITY_WEIGHT = 4;
 
-const evaluate = (board: Board) => {
+const createLogBoard = (board: Board): number[][] =>
+  board.map((row) => row.map((cell) => (cell > 0 ? Math.log2(cell) : 0)));
+
+const monotonicityScore = (logBoard: number[][]): number => {
+  const size = logBoard.length;
   let score = 0;
-  let empty = 0;
-  let maxTile = 0;
-  board.forEach((row) =>
-    row.forEach((cell) => {
-      score += cell;
-      if (cell === 0) empty += 1;
-      if (cell > maxTile) maxTile = cell;
-    })
-  );
-  return score + empty * 10 + maxTile * 1;
-};
 
-const expectimax = (board: Board, depth: number, isPlayer: boolean): number => {
-  if (depth === 0) return evaluate(board);
-
-  if (isPlayer) {
-    let best = -Infinity;
-    for (const { fn } of MOVES) {
-      const { board: next } = fn(cloneBoard(board));
-      if (boardsEqual(board, next)) continue;
-      const val = expectimax(next, depth - 1, false);
-      if (val > best) best = val;
+  for (const row of logBoard) {
+    let inc = 0;
+    let dec = 0;
+    for (let c = 0; c < size - 1; c += 1) {
+      const diff = row[c + 1] - row[c];
+      if (diff > 0) inc += diff;
+      else dec -= diff;
     }
-    return best === -Infinity ? evaluate(board) : best;
+    score += Math.max(inc, dec);
   }
 
-  const cells = emptyCells(board);
-  if (cells.length === 0) return evaluate(board);
-  let total = 0;
-  const prob2 = 0.9 / cells.length;
-  const prob4 = 0.1 / cells.length;
-  for (const [r, c] of cells) {
-    board[r][c] = 2;
-    total += prob2 * expectimax(board, depth - 1, true);
-    board[r][c] = 4;
-    total += prob4 * expectimax(board, depth - 1, true);
-    board[r][c] = 0;
+  for (let c = 0; c < size; c += 1) {
+    let inc = 0;
+    let dec = 0;
+    for (let r = 0; r < size - 1; r += 1) {
+      const diff = logBoard[r + 1][c] - logBoard[r][c];
+      if (diff > 0) inc += diff;
+      else dec -= diff;
+    }
+    score += Math.max(inc, dec);
   }
-  return total;
+
+  return score;
 };
 
-export const findBestMove = (board: Board, depth = 2): Direction | null => {
+const evaluateBoard = (board: Board): number => {
+  const logBoard = createLogBoard(board);
+  let empty = 0;
+  for (const row of board) {
+    for (const cell of row) {
+      if (cell === 0) empty += 1;
+    }
+  }
+  const monotonicity = monotonicityScore(logBoard);
+  return monotonicity * MONOTONICITY_WEIGHT + empty * EMPTY_WEIGHT;
+};
+
+const evaluateMove = (result: MoveResult): number => evaluateBoard(result.board);
+
+export const findHint = (board: Board): Direction | null => {
   let bestDir: Direction | null = null;
   let bestScore = -Infinity;
   for (const { dir, fn } of MOVES) {
-    const { board: next } = fn(cloneBoard(board));
-    if (boardsEqual(board, next)) continue;
-    const score = expectimax(next, depth - 1, false);
+    const result = fn(cloneBoard(board));
+    if (boardsEqual(board, result.board)) continue;
+    const score = evaluateMove(result);
     if (score > bestScore) {
       bestScore = score;
       bestDir = dir;
@@ -86,17 +82,14 @@ export const findBestMove = (board: Board, depth = 2): Direction | null => {
   return bestDir;
 };
 
-export const findHint = findBestMove;
-
-export const scoreMoves = (
-  board: Board,
-  depth = 2,
-): Partial<Record<Direction, number>> => {
+export const scoreMoves = (board: Board): Partial<Record<Direction, number>> => {
   const scores: Partial<Record<Direction, number>> = {};
   for (const { dir, fn } of MOVES) {
-    const { board: next } = fn(cloneBoard(board));
-    if (boardsEqual(board, next)) continue;
-    scores[dir] = expectimax(next, depth - 1, false);
+    const result = fn(cloneBoard(board));
+    if (boardsEqual(board, result.board)) continue;
+    scores[dir] = evaluateMove(result);
   }
   return scores;
 };
+
+export const findBestMove = findHint;
