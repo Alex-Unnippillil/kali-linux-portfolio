@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Autopsy from '../components/apps/autopsy';
+import fileTree from '../public/demo-data/autopsy/filetree.json';
 
 describe('Autopsy plugins and timeline', () => {
   beforeEach(() => {
@@ -35,6 +36,14 @@ describe('Autopsy plugins and timeline', () => {
               ],
             }),
         });
+      }
+      if (url === '/demo-data/autopsy/filetree.json') {
+        return Promise.resolve({
+          json: () => Promise.resolve(JSON.parse(JSON.stringify(fileTree))),
+        });
+      }
+      if (url === '/demo-data/autopsy/hashes.json') {
+        return Promise.resolve({ json: () => Promise.resolve({}) });
       }
       return Promise.resolve({ json: () => Promise.resolve([]) });
     });
@@ -76,5 +85,34 @@ describe('Autopsy plugins and timeline', () => {
     });
     expect(screen.queryByText('resume.docx')).toBeNull();
     expect(screen.getByText('system.log')).toBeInTheDocument();
+  });
+
+  it('displays EXIF metadata for JPEG selections', async () => {
+    render(<Autopsy />);
+    fireEvent.change(screen.getByPlaceholderText('Case name'), {
+      target: { value: 'Demo Case' },
+    });
+    fireEvent.click(screen.getByText('Create Case'));
+    await screen.findByText('File Explorer');
+    fireEvent.click(screen.getByText('investigation-photo.jpg'));
+    await waitFor(() => expect(screen.getByText('Metadata')).toBeInTheDocument());
+    expect(screen.getByText('Canon')).toBeInTheDocument();
+    expect(screen.getByText('EOS80D')).toBeInTheDocument();
+    expect(screen.getByText('37.775000')).toBeInTheDocument();
+    expect(screen.getByText('-122.416667')).toBeInTheDocument();
+  });
+
+  it('parses PDF metadata when selecting case notes', async () => {
+    render(<Autopsy />);
+    fireEvent.change(screen.getByPlaceholderText('Case name'), {
+      target: { value: 'Demo Case' },
+    });
+    fireEvent.click(screen.getByText('Create Case'));
+    await screen.findByText('File Explorer');
+    fireEvent.click(screen.getByText('case-notes.pdf'));
+    await waitFor(() =>
+      expect(screen.getByText('Incident Report')).toBeInTheDocument()
+    );
+    expect(screen.getByText('Forensic Analyst')).toBeInTheDocument();
   });
 });
