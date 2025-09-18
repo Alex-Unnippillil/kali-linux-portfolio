@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import HexEditor from "./HexEditor";
 import {
   loadNotes,
@@ -29,7 +29,18 @@ const Radare2 = ({ initialData = {} }) => {
   const [showGuide, setShowGuide] = useState(false);
   const [strings, setStrings] = useState([]);
   const disasmRef = useRef(null);
-  const { theme } = useTheme();
+  const { theme, tokens } = useTheme();
+
+  const palette = useMemo(
+    () => ({
+      bg: tokens.background,
+      surface: tokens.surface,
+      text: tokens.text,
+      accent: tokens.accent,
+      border: tokens.border,
+    }),
+    [tokens],
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -178,10 +189,10 @@ const Radare2 = ({ initialData = {} }) => {
       </div>
 
       {mode === "graph" ? (
-        <GraphView blocks={blocks} theme={theme} />
+        <GraphView blocks={blocks} palette={palette} />
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          <HexEditor hex={hex} theme={theme} />
+          <HexEditor hex={hex} palette={palette} />
           <div
             ref={disasmRef}
             className="overflow-auto rounded max-h-64 p-1.5 font-mono"
