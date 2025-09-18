@@ -4,6 +4,7 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
+import StatusBadge from '../../common/StatusBadge';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -357,9 +358,10 @@ const Nessus = () => {
       <ul className="space-y-1">
         {scans.map((scan) => (
           <li key={scan.id} className="border-b border-gray-700 pb-1">
-            <div className="flex justify-between items-center">
-              <span>
-                {scan.name} - {scan.status}
+            <div className="flex justify-between items-center gap-2">
+              <span className="flex items-center gap-2">
+                {scan.name}
+                <StatusBadge status={scan.status} />
               </span>
               <button
                 className="text-xs bg-yellow-600 px-2 py-1 rounded"

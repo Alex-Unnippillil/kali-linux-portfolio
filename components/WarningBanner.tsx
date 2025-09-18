@@ -1,16 +1,15 @@
 import React from 'react';
+import AlertBanner from './common/AlertBanner';
 
 interface WarningBannerProps {
   children: React.ReactNode;
+  title?: string;
 }
 
-export default function WarningBanner({ children }: WarningBannerProps) {
+export default function WarningBanner({ children, title }: WarningBannerProps) {
   return (
-    <div className="flex items-center bg-amber-100 text-amber-900 p-2" role="alert">
-      <span className="mr-2" role="img" aria-label="warning">
-        ⚠️
-      </span>
-      <span>{children}</span>
-    </div>
+    <AlertBanner tone="warning" title={title}>
+      {children}
+    </AlertBanner>
   );
 }

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
 import { hasOffscreenCanvas } from '../../utils/feature';
+import AlertBanner from '../common/AlertBanner';
 
 // Canvas dimensions
 const WIDTH = 300;
@@ -659,12 +660,15 @@ const CarRacer = () => {
       {!runningRef.current && (
         <div
           className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-20"
-          role="alert"
+          role="presentation"
         >
-          <div className="text-center">
-            <div className="text-2xl mb-2">Crash!</div>
-            <div className="text-sm">Press Reset to play again</div>
-          </div>
+          <AlertBanner
+            tone="danger"
+            title="Crash!"
+            className="max-w-xs text-center flex-col items-center"
+          >
+            Press Reset to play again
+          </AlertBanner>
         </div>
       )}
     </div>

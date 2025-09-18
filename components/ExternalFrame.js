@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
+import AlertBanner from './common/AlertBanner';
 
 const ALLOWLIST = ['https://vscode.dev', 'https://stackblitz.com'];
 
@@ -44,12 +45,18 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
       )}
       <div className="h-full w-full flex flex-col">
         {cookiesBlocked && (
-          <div role="alert" className="bg-red-600 text-white text-sm p-2 text-center">
-            Third-party cookies are blocked{' '}
-            <button onClick={() => setShowDialog(true)} className="underline">
-              Instructions
-            </button>
-          </div>
+          <AlertBanner
+            tone="danger"
+            title="Third-party cookies blocked"
+            className="text-sm justify-center text-center"
+          >
+            <span>
+              Enable third-party cookies or open instructions{' '}
+              <button onClick={() => setShowDialog(true)} className="underline">
+                Instructions
+              </button>
+            </span>
+          </AlertBanner>
         )}
         <div className="relative flex-1">
           <a

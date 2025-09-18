@@ -1,6 +1,7 @@
 import React from 'react';
 import FeedStatusCard from './feed-status-card';
 import TaskRunChart from './task-run-chart';
+import StatusBadge from '../../common/StatusBadge';
 
 const TaskOverview = () => {
   const tasks = [
@@ -18,9 +19,9 @@ const TaskOverview = () => {
         <TaskRunChart />
         <ul className="text-sm space-y-1 mt-2">
           {tasks.map((t) => (
-            <li key={t.name} className="flex justify-between">
+            <li key={t.name} className="flex items-center justify-between gap-2">
               <span>{t.name}</span>
-              <span>{t.status}</span>
+              <StatusBadge status={t.status} />
             </li>
           ))}
         </ul>

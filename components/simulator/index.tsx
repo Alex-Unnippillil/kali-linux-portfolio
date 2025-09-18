@@ -5,6 +5,7 @@ import type {
   SimulatorParserResponse,
   ParsedLine,
 } from '../../workers/simulatorParser.worker';
+import AlertBanner from '../common/AlertBanner';
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
@@ -164,9 +165,9 @@ const Simulator: React.FC = () => {
         <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
       </div>
       {!labMode && (
-        <div className="bg-yellow-100 text-yellow-800 p-2" role="alert">
+        <AlertBanner tone="warning" title="Lab mode recommended">
           {LAB_BANNER}
-        </div>
+        </AlertBanner>
       )}
       <div className="space-y-2" aria-label="Command builder">
         <input aria-label="Command input" className="border p-1 w-full" value={command} onChange={e=>setCommand(e.target.value)} />

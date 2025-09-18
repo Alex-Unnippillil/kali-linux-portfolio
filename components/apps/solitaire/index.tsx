@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import AlertBanner from '../../common/AlertBanner';
 import {
   initializeGame,
   drawFromStock,
@@ -702,12 +703,18 @@ const Solitaire = () => {
         ))}
       {won && (
         <div
-          className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-2xl ${
+          className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 ${
             !prefersReducedMotion ? 'animate-pulse' : ''
           }`}
-          role="alert"
+          role="presentation"
         >
-          You win!
+          <AlertBanner
+            tone="success"
+            title="You win!"
+            className="max-w-sm text-center flex-col items-center text-lg"
+          >
+            Redeal to play again or explore another variant from the menu.
+          </AlertBanner>
         </div>
       )}
       <div className="flex justify-between mb-2 flex-wrap gap-2">

@@ -16,11 +16,11 @@
   --color-ubt-grey: #F6F6F5;
   --color-ubt-warm-grey: #AEA79F;
   --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
+  --color-ubt-blue: #56b4e9;
+  --color-ubt-green: #007f5f;
+  --color-ubt-gedit-orange: #e69f00;
+  --color-ubt-gedit-blue: #56b4e9;
+  --color-ubt-gedit-dark: #004c7f;
   --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
@@ -28,10 +28,27 @@
   --kali-bg: rgba(15, 19, 23, 0.85);
 
   /* Game palette tokens */
-  --game-color-secondary: #1d4ed8;
-  --game-color-success: #15803d;
-  --game-color-warning: #d97706;
-  --game-color-danger: #b91c1c;
+  --game-color-secondary: #0072b2;
+  --game-color-success: #007f5f;
+  --game-color-warning: #e69f00;
+  --game-color-danger: #d55e00;
+
+  /* Status palette */
+  --status-info: #0072b2;
+  --status-info-strong: #004b7c;
+  --status-info-contrast: #f2f8ff;
+  --status-success: #007f5f;
+  --status-success-strong: #005d44;
+  --status-success-contrast: #f5fdf8;
+  --status-warning: #e69f00;
+  --status-warning-strong: #b87400;
+  --status-warning-contrast: #1a1200;
+  --status-danger: #d55e00;
+  --status-danger-strong: #953f00;
+  --status-danger-contrast: #1a0a00;
+  --status-neutral: #7f7f7f;
+  --status-neutral-strong: #5a5a5a;
+  --status-neutral-contrast: #111111;
 
   /* Spacing scale */
   --space-1: 0.25rem;
