@@ -197,8 +197,61 @@ dialog {
     100% { opacity: 1; }
 }
 
+.drop-overlay-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 70;
+    display: block;
+}
+
+.drop-overlay {
+    position: absolute;
+    pointer-events: auto;
+    border: 2px dashed color-mix(in srgb, var(--color-ubt-grey), transparent 45%);
+    background: color-mix(in srgb, var(--color-ub-grey), transparent 55%);
+    color: var(--color-ubt-grey);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition: transform var(--motion-fast) ease, opacity var(--motion-fast) ease;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-ubt-grey), transparent 60%);
+}
+
+.drop-overlay--active {
+    background: color-mix(in srgb, var(--color-ubt-blue), transparent 60%);
+    border-color: color-mix(in srgb, var(--color-ubt-blue), transparent 25%);
+    color: var(--color-text);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-ubt-blue), transparent 45%);
+}
+
+.drop-overlay__label {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-ub-lite-abrgn), transparent 35%);
+    backdrop-filter: blur(8px);
+}
+
+.drop-overlay-layer--invalid .drop-overlay {
+    animation: drop-invalid-shake var(--motion-fast) ease;
+}
+
+@keyframes drop-invalid-shake {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    25% { transform: translate3d(-6px, 0, 0); }
+    75% { transform: translate3d(6px, 0, 0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .xterm .xterm-cursor {
+        animation: none;
+    }
+    .drop-overlay-layer--invalid .drop-overlay {
         animation: none;
     }
 }

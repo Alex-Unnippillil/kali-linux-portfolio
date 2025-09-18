@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { resolveDropZones } from '../../modules/dragContext';
 
 export class Desktop extends Component {
     constructor() {
@@ -52,7 +53,16 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            dragItem: null,
+            dropVisuals: [],
+            hoveredDropZone: null,
+            invalidDrop: false,
         }
+        this._dragSource = null;
+        this._dropHandled = false;
+        this._pendingInvalidAnimation = false;
+        this._invalidDropTimeout = null;
+        this._zoneKeyMap = new Map();
     }
 
     componentDidMount() {
@@ -89,6 +99,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('resize', this.syncDropZoneRects);
     }
 
     componentWillUnmount() {
@@ -96,6 +107,13 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('resize', this.syncDropZoneRects);
+        if (this._invalidDropTimeout) {
+            clearTimeout(this._invalidDropTimeout);
+            this._invalidDropTimeout = null;
+        }
+        this._zoneKeyMap.clear();
+        this._dragSource = null;
     }
 
     checkForNewFolders = () => {
@@ -144,6 +162,249 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    handleAppDragStart = (event, app) => {
+        if (!event || !app) return;
+        if (event.dataTransfer) {
+            try {
+                event.dataTransfer.setData('application/x-portfolio-app', app.id);
+                event.dataTransfer.setData('text/plain', app.id);
+            } catch (e) {
+                // Ignore DOMException from unsupported MIME types
+            }
+            event.dataTransfer.effectAllowed = 'copyMove';
+        }
+        this.beginDrag({ type: 'app-shortcut', id: app.id }, event.currentTarget);
+    }
+
+    handleDragEnd = () => {
+        if (!this.state.dragItem) return;
+        if (this._pendingInvalidAnimation) return;
+        if (!this._dropHandled) {
+            this.triggerInvalidDrop();
+            return;
+        }
+        this.clearDragState();
+    }
+
+    beginDrag = (item, sourceElement) => {
+        this._dragSource = sourceElement || null;
+        this._dropHandled = false;
+        this._pendingInvalidAnimation = false;
+        if (this._invalidDropTimeout) {
+            clearTimeout(this._invalidDropTimeout);
+            this._invalidDropTimeout = null;
+        }
+        const targets = resolveDropZones(item.type);
+        this._zoneKeyMap = new Map();
+        const visuals = [];
+        targets.forEach((target, index) => {
+            if (!target || !target.element) return;
+            const rect = target.element.getBoundingClientRect();
+            if (!rect || rect.width === 0 || rect.height === 0) return;
+            const key = this.createZoneKey(target, index);
+            this._zoneKeyMap.set(key, target);
+            visuals.push({
+                key,
+                zoneId: target.zone.id,
+                label: target.zone.label,
+                effect: target.zone.effect,
+                rect: this.getRectSnapshot(rect),
+            });
+        });
+        this.setState({
+            dragItem: item,
+            dropVisuals: visuals,
+            hoveredDropZone: null,
+            invalidDrop: false,
+        });
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => this.syncDropZoneRects());
+        }
+    }
+
+    createZoneKey = (target, index) => {
+        if (!target) return `zone-${index}`;
+        const elementId = (target.data && target.data.targetId) || target.element.id;
+        const suffix = elementId || index;
+        return `${target.zone.id}:${suffix}`;
+    }
+
+    getRectSnapshot = (rect) => ({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+    })
+
+    syncDropZoneRects = () => {
+        if (!this.state.dragItem || !this._zoneKeyMap.size) return;
+        const visuals = [];
+        Array.from(this._zoneKeyMap.entries()).forEach(([key, target]) => {
+            if (!target || !target.element) return;
+            const rect = target.element.getBoundingClientRect();
+            if (!rect || rect.width === 0 || rect.height === 0) return;
+            visuals.push({
+                key,
+                zoneId: target.zone.id,
+                label: target.zone.label,
+                effect: target.zone.effect,
+                rect: this.getRectSnapshot(rect),
+            });
+        });
+        this.setState({ dropVisuals: visuals });
+    }
+
+    handleDesktopDragOver = (event) => {
+        if (!this.state.dragItem) return;
+        event.preventDefault();
+    }
+
+    handleDesktopDrop = (event) => {
+        if (!this.state.dragItem) return;
+        event.preventDefault();
+        this.triggerInvalidDrop();
+    }
+
+    handleZoneEnter = (event, key) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!this.state.dragItem) return;
+        if (this.state.hoveredDropZone !== key) {
+            this.setState({ hoveredDropZone: key });
+        }
+    }
+
+    handleZoneLeave = (event, key) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!this.state.dragItem) return;
+        if (this.state.hoveredDropZone === key) {
+            this.setState({ hoveredDropZone: null });
+        }
+    }
+
+    handleZoneOver = (event, key) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const target = this._zoneKeyMap.get(key);
+        if (target && event.dataTransfer) {
+            event.dataTransfer.dropEffect = target.zone.effect;
+        }
+    }
+
+    handleZoneDrop = (event, key) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const target = this._zoneKeyMap.get(key);
+        const { dragItem } = this.state;
+        if (!target || !dragItem) {
+            this.triggerInvalidDrop();
+            return;
+        }
+        const success = this.performDropAction(target, dragItem);
+        if (success) {
+            this.completeDrop();
+        } else {
+            this.triggerInvalidDrop();
+        }
+    }
+
+    performDropAction = (target, dragItem) => {
+        if (!target || !target.zone) return false;
+        if (target.zone.id === 'desktop') {
+            return true;
+        }
+        if (target.zone.id === 'taskbar') {
+            this.pinApp(dragItem.id);
+            return true;
+        }
+        if (target.zone.id === 'window') {
+            if (target.data && target.data.targetId) {
+                this.focus(target.data.targetId);
+            }
+            this.openApp(dragItem.id);
+            return true;
+        }
+        return false;
+    }
+
+    completeDrop = () => {
+        this._dropHandled = true;
+        this.restoreDragFocus();
+        this.clearDragState();
+    }
+
+    triggerInvalidDrop = () => {
+        if (!this.state.dragItem) return;
+        this._dropHandled = true;
+        this.restoreDragFocus();
+        if (this._pendingInvalidAnimation) return;
+        this.setState({ invalidDrop: true, hoveredDropZone: null });
+        const duration = this.getInvalidAnimationDuration();
+        if (duration <= 0) {
+            this.clearDragState();
+            return;
+        }
+        this._pendingInvalidAnimation = true;
+        if (this._invalidDropTimeout) {
+            clearTimeout(this._invalidDropTimeout);
+        }
+        this._invalidDropTimeout = window.setTimeout(() => {
+            this._pendingInvalidAnimation = false;
+            this.clearDragState();
+        }, duration);
+    }
+
+    clearDragState = () => {
+        if (this._invalidDropTimeout) {
+            clearTimeout(this._invalidDropTimeout);
+            this._invalidDropTimeout = null;
+        }
+        this._pendingInvalidAnimation = false;
+        this._dropHandled = false;
+        this._zoneKeyMap = new Map();
+        this.setState({
+            dragItem: null,
+            dropVisuals: [],
+            hoveredDropZone: null,
+            invalidDrop: false,
+        });
+        this._dragSource = null;
+    }
+
+    restoreDragFocus = () => {
+        if (this._dragSource && typeof this._dragSource.focus === 'function') {
+            this._dragSource.focus();
+        }
+    }
+
+    getInvalidAnimationDuration = () => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') return 0;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return 0;
+        }
+        const root = document.documentElement;
+        if (!root) return 200;
+        const computed = window.getComputedStyle(root).getPropertyValue('--motion-fast');
+        const parsed = this.parseDuration(computed);
+        return parsed > 0 ? parsed : 200;
+    }
+
+    parseDuration = (value) => {
+        if (!value) return 0;
+        const trimmed = ('' + value).trim();
+        if (trimmed.endsWith('ms')) {
+            const num = parseFloat(trimmed.slice(0, -2));
+            return Number.isNaN(num) ? 0 : num;
+        }
+        if (trimmed.endsWith('s')) {
+            const num = parseFloat(trimmed.slice(0, -1));
+            return Number.isNaN(num) ? 0 : num * 1000;
+        }
+        const num = parseFloat(trimmed);
+        return Number.isNaN(num) ? 0 : num;
     }
 
     handleGlobalShortcut = (e) => {
@@ -444,6 +705,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    onDragStart: (event) => this.handleAppDragStart(event, app),
+                    onDragEnd: this.handleDragEnd,
                 }
 
                 appsJsx.push(
@@ -452,6 +715,38 @@ export class Desktop extends Component {
             }
         });
         return appsJsx;
+    }
+
+    renderDropOverlays = () => {
+        if (!this.state.dragItem || this.state.dropVisuals.length === 0) return null;
+        const layerClass = `drop-overlay-layer${this.state.invalidDrop ? ' drop-overlay-layer--invalid' : ''}`;
+        return (
+            <div
+                className={layerClass}
+                aria-hidden="true"
+                data-testid="drop-overlay-layer"
+            >
+                {this.state.dropVisuals.map((zone) => (
+                    <div
+                        key={zone.key}
+                        className={`drop-overlay${this.state.hoveredDropZone === zone.key ? ' drop-overlay--active' : ''}`}
+                        style={{
+                            left: zone.rect.left,
+                            top: zone.rect.top,
+                            width: zone.rect.width,
+                            height: zone.rect.height,
+                        }}
+                        data-zone-key={zone.key}
+                        onDragEnter={(event) => this.handleZoneEnter(event, zone.key)}
+                        onDragOver={(event) => this.handleZoneOver(event, zone.key)}
+                        onDragLeave={(event) => this.handleZoneLeave(event, zone.key)}
+                        onDrop={(event) => this.handleZoneDrop(event, zone.key)}
+                    >
+                        <span className="drop-overlay__label">{zone.label}</span>
+                    </div>
+                ))}
+            </div>
+        );
     }
 
     renderWindows = () => {
@@ -865,7 +1160,15 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                onDragOver={this.handleDesktopDragOver}
+                onDrop={this.handleDesktopDrop}
+            >
+
+                {this.renderDropOverlays()}
 
                 {/* Window Area */}
                 <div
