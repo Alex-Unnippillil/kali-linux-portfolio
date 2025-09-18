@@ -31,7 +31,7 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
             snapped: null,
-            lastSize: null,
+            lastFreeform: null,
             grabbed: false,
         }
         this._usageTimeout = null;
@@ -236,56 +236,31 @@ export class Window extends Component {
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
+        const r = document.querySelector("#" + this.id);
+        const { lastFreeform } = this.state;
         if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
-            if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
+            if (lastFreeform && typeof lastFreeform.x === 'number' && typeof lastFreeform.y === 'number') {
+                r.style.transform = `translate(${lastFreeform.x}px,${lastFreeform.y}px)`;
+            } else {
+                const x = r.style.getPropertyValue('--window-transform-x');
+                const y = r.style.getPropertyValue('--window-transform-y');
+                if (x && y) {
+                    r.style.transform = `translate(${x},${y})`;
+                }
             }
         }
-        if (this.state.lastSize) {
+        if (lastFreeform) {
             this.setState({
-                width: this.state.lastSize.width,
-                height: this.state.lastSize.height,
-                snapped: null
+                width: lastFreeform.width,
+                height: lastFreeform.height,
+                snapped: null,
+                snapPreview: null,
+                snapPosition: null,
+                lastFreeform: null,
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, snapPreview: null, snapPosition: null }, this.resizeBoundries);
         }
-    }
-
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     checkOverlap = () => {
@@ -314,25 +289,49 @@ export class Window extends Component {
     }
 
     checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
+        const r = document.querySelector("#" + this.id);
         if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const rect = r.getBoundingClientRect();
         const threshold = 30;
-        let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const nearLeft = rect.left <= threshold;
+        const nearRight = rect.right >= viewportWidth - threshold;
+        const nearTop = rect.top <= threshold;
+        const nearBottom = rect.bottom >= viewportHeight - threshold;
+
+        let snapPreview = null;
+        let snapPosition = null;
+
+        if (nearTop && nearLeft) {
+            snapPreview = { left: '0', top: '0', width: '50%', height: '50%' };
+            snapPosition = 'top-left';
+        } else if (nearTop && nearRight) {
+            snapPreview = { left: '50%', top: '0', width: '50%', height: '50%' };
+            snapPosition = 'top-right';
+        } else if (nearBottom && nearLeft) {
+            snapPreview = { left: '0', top: '50%', width: '50%', height: '50%' };
+            snapPosition = 'bottom-left';
+        } else if (nearBottom && nearRight) {
+            snapPreview = { left: '50%', top: '50%', width: '50%', height: '50%' };
+            snapPosition = 'bottom-right';
+        } else if (nearLeft) {
+            snapPreview = { left: '0', top: '0', width: '50%', height: '100%' };
+            snapPosition = 'left';
+        } else if (nearRight) {
+            snapPreview = { left: '50%', top: '0', width: '50%', height: '100%' };
+            snapPosition = 'right';
+        } else if (nearTop) {
+            snapPreview = { left: '0', top: '0', width: '100%', height: '50%' };
+            snapPosition = 'top';
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+
+        if (snapPreview) {
+            if (this.state.snapPosition !== snapPosition || !this.state.snapPreview) {
+                this.setState({ snapPreview, snapPosition });
+            }
+        } else if (this.state.snapPreview) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -585,29 +584,77 @@ export class Window extends Component {
     }
 
     snapWindow = (pos) => {
+        this.setWinowsPosition();
         this.focusWindow();
-        const { width, height } = this.state;
+        const { width, height, snapped, lastFreeform } = this.state;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
         let newWidth = width;
         let newHeight = height;
         let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+
+        switch (pos) {
+            case 'left':
+                newWidth = 50;
+                newHeight = 96.3;
+                transform = 'translate(-1pt,-2pt)';
+                break;
+            case 'right':
+                newWidth = 50;
+                newHeight = 96.3;
+                transform = `translate(${viewportWidth / 2}px,-2pt)`;
+                break;
+            case 'top':
+                newWidth = 100.2;
+                newHeight = 50;
+                transform = 'translate(-1pt,-2pt)';
+                break;
+            case 'top-left':
+                newWidth = 50;
+                newHeight = 50;
+                transform = 'translate(-1pt,-2pt)';
+                break;
+            case 'top-right':
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(${viewportWidth / 2}px,-2pt)`;
+                break;
+            case 'bottom-left':
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(-1pt, ${(viewportHeight / 2) - 2}px)`;
+                break;
+            case 'bottom-right':
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(${viewportWidth / 2}px, ${(viewportHeight / 2) - 2}px)`;
+                break;
+            default:
+                break;
         }
+
         const node = document.getElementById(this.id);
+        let recordedFreeform = lastFreeform;
+        if (!snapped && node) {
+            const rect = node.getBoundingClientRect();
+            const xVar = node.style.getPropertyValue('--window-transform-x');
+            const yVar = node.style.getPropertyValue('--window-transform-y');
+            const x = xVar ? parseFloat(xVar) : rect.left;
+            const y = yVar ? parseFloat(yVar) : rect.top;
+            recordedFreeform = { width, height, x, y };
+        }
+
         if (node && transform) {
             node.style.transform = transform;
         }
+
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
-            lastSize: { width, height },
+            lastFreeform: recordedFreeform,
             width: newWidth,
-            height: newHeight
+            height: newHeight,
         }, this.resizeBoundries);
     }
 
