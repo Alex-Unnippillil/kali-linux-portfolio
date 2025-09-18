@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hostile Transfer Demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Ubuntu", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #0f172a;
+        color: #f8fafc;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      main {
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+
+      h1 {
+        font-size: 16px;
+        margin: 0;
+      }
+
+      p {
+        margin: 0;
+        color: #cbd5f5;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      form {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Hostile transfer page</h1>
+      <p>
+        This sandboxed page fabricates a hidden money transfer request whenever the lab exposes a
+        weakness. It cannot escape the sandbox but still tries to force a submission.
+      </p>
+      <p class="hint">Logs stream to the parent via postMessage.</p>
+      <form id="attack-form" method="post" action="/lab/transfer">
+        <input type="hidden" name="account" value="attacker" />
+        <input type="hidden" name="amount" value="5000" />
+        <input type="hidden" name="csrfToken" value="" />
+      </form>
+    </main>
+    <script>
+      (() => {
+        const form = document.getElementById('attack-form');
+        const tokenField = form.querySelector('input[name="csrfToken"]');
+        let latestVersion = 0;
+
+        const attemptSubmission = (config) => {
+          latestVersion = typeof config.version === 'number' ? config.version : latestVersion + 1;
+          const settings = config.settings || {};
+          const attemptId = Date.now();
+
+          // When protections are lax the token is discoverable; otherwise we submit without it.
+          const suppliedToken = settings.requireToken ? '' : settings.exposedToken || '';
+          tokenField.value = suppliedToken;
+
+          window.parent.postMessage(
+            {
+              type: 'csrf-attack-submit',
+              attemptId,
+              token: suppliedToken,
+              version: latestVersion,
+            },
+            '*'
+          );
+        };
+
+        const handleResponse = (data) => {
+          if (typeof data.version === 'number') {
+            latestVersion = data.version;
+          }
+
+          const reasons = Array.isArray(data.reasons) && data.reasons.length
+            ? data.reasons.join('; ')
+            : data.success
+              ? 'Request accepted without CSRF defenses.'
+              : 'Request rejected by active mitigations.';
+
+          const message = data.success
+            ? 'Success: forced transfer executed via hidden form.'
+            : `Blocked: ${reasons}`;
+
+          window.parent.postMessage(
+            {
+              type: 'csrf-attack-log',
+              attemptId: data.attemptId,
+              success: !!data.success,
+              message,
+              version: latestVersion,
+            },
+            '*'
+          );
+        };
+
+        window.addEventListener('message', (event) => {
+          const { data } = event;
+          if (!data || typeof data !== 'object') {
+            return;
+          }
+
+          if (data.type === 'csrf-lab-config') {
+            attemptSubmission(data);
+          } else if (data.type === 'csrf-attack-response') {
+            handleResponse(data);
+          }
+        });
+
+        window.parent.postMessage({ type: 'csrf-attack-ready' }, '*');
+      })();
+    </script>
+  </body>
+</html>

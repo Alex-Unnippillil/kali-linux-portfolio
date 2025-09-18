@@ -112,6 +112,7 @@ const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
+const CSRFLabApp = createDynamicApp('csrf-lab', 'CSRF Lab');
 
 
 
@@ -197,6 +198,7 @@ const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
+const displayCSRFLab = createDisplay(CSRFLabApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -906,6 +908,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHtmlRewrite,
+  },
+  {
+    id: 'csrf-lab',
+    title: 'CSRF Lab',
+    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCSRFLab,
   },
   {
     id: 'contact',
