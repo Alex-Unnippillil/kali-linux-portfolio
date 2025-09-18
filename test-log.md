@@ -32,3 +32,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 - `yarn why bare-fs` shows the module is required by `tar-fs@3.1.0` via `@puppeteer/browsers@2.10.7`.
 - Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
 - `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
+
+## Resource monitor stability (2025-09-18)
+
+- Added `playwright/resource-monitor.stability.spec.ts` to hold the Resource Monitor open for 2 minutes and compute frame drop percentage from `window.__frameTimes`.
+- The spec annotates total samples, expected frames, dropped frames, drop percentage, and average FPS, failing the run when drops exceed 20%.
+- Running `npx playwright test playwright/resource-monitor.stability.spec.ts --config=playwright.config.ts` against `yarn dev` currently returns HTTP 404 for `/apps/resource-monitor`, so the instrumentation array never initializes and metrics are not yet recorded.
