@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -130,7 +130,7 @@ export default function FileExplorer() {
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -188,16 +188,49 @@ export default function FileExplorer() {
     setContent(text);
   };
 
-  const readDir = async (handle) => {
+  const loadMetadata = useCallback(async (metaHandle) => {
+    const map = {};
+    try {
+      for await (const [name, handle] of metaHandle.entries()) {
+        if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+        try {
+          const file = await handle.getFile();
+          const text = await file.text();
+          const data = JSON.parse(text);
+          const target = name.replace(/\.json$/, '');
+          map[target] = data;
+        } catch {}
+      }
+    } catch {}
+    return map;
+  }, []);
+
+  const readDir = useCallback(async (handle) => {
     const ds = [];
     const fs = [];
+    const metadataHandles = [];
     for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
+      if (h.kind === 'file') {
+        fs.push({ name, handle: h });
+      } else if (h.kind === 'directory') {
+        if (name === '.metadata') {
+          metadataHandles.push(h);
+        } else {
+          ds.push({ name, handle: h });
+        }
+      }
     }
+
+    const meta = {};
+    for (const mh of metadataHandles) {
+      Object.assign(meta, await loadMetadata(mh));
+    }
+    const enriched = fs.map((f) =>
+      meta[f.name] ? { ...f, metadata: meta[f.name] } : f
+    );
     setDirs(ds);
-    setFiles(fs);
-  };
+    setFiles(enriched);
+  }, [loadMetadata]);
 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);
@@ -262,7 +295,13 @@ export default function FileExplorer() {
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Select a file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -277,6 +316,7 @@ export default function FileExplorer() {
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -336,19 +376,45 @@ export default function FileExplorer() {
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+          {files.map((f, i) => {
+            const tags = Array.isArray(f.metadata?.tags)
+              ? f.metadata.tags
+              : f.metadata?.tag
+              ? [f.metadata.tag]
+              : [];
+            return (
+              <div
+                key={i}
+                className="px-2 py-1 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openFile(f)}
+              >
+                <div className="flex items-center justify-between space-x-2">
+                  <span className="truncate">{f.name}</span>
+                  {tags.length > 0 && (
+                    <div className="flex space-x-1">
+                      {tags.map((tag, idx) => (
+                        <span
+                          key={`${tag}-${idx}`}
+                          className="px-2 py-0.5 rounded-full bg-black bg-opacity-40 text-xs uppercase tracking-wide"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -356,6 +422,7 @@ export default function FileExplorer() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
