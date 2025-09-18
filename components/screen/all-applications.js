@@ -32,9 +32,9 @@ class AllApplications extends React.Component {
         this.setState({ query: value, apps });
     };
 
-    openApp = (id) => {
+    openApp = (id, options) => {
         if (typeof this.props.openApp === 'function') {
-            this.props.openApp(id);
+            this.props.openApp(id, options);
         }
     };
 
@@ -46,7 +46,7 @@ class AllApplications extends React.Component {
                 name={app.title}
                 id={app.id}
                 icon={app.icon}
-                openApp={() => this.openApp(app.id)}
+                openApp={this.openApp}
                 disabled={app.disabled}
                 prefetch={app.screen?.prefetch}
             />

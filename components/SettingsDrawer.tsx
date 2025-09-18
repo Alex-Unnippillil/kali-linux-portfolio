@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
+import type { MouseEvent } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import { storeFocusTarget, restoreFocusTarget } from '../utils/focusManager';
 
 interface Props {
   highScore?: number;
@@ -10,10 +12,29 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
   const { accent, setAccent, theme, setTheme } = useSettings();
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const focusKey = useId();
+  const focusKeyRef = useRef(`settings-drawer-${focusKey}`);
+
+  useEffect(() => {
+    if (!open) {
+      restoreFocusTarget(focusKeyRef.current, () => triggerRef.current);
+    }
+  }, [open]);
+
+  const toggleOpen = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!open) {
+      triggerRef.current = event.currentTarget;
+      storeFocusTarget(focusKeyRef.current, event.currentTarget);
+      setOpen(true);
+    } else {
+      setOpen(false);
+    }
+  };
 
   return (
     <div>
-      <button aria-label="settings" onClick={() => setOpen(!open)}>
+      <button aria-label="settings" onClick={toggleOpen} ref={triggerRef} aria-expanded={open}>
         Settings
       </button>
       {open && (

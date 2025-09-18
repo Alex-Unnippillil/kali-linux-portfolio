@@ -51,7 +51,10 @@ export function AllApps(props) {
     const [title, setTitle] = useState(false);
 
     return (
-        <div
+        <button
+            type="button"
+            aria-label="Show Applications"
+            data-launcher-trigger="true"
             className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
@@ -60,7 +63,7 @@ export function AllApps(props) {
             onMouseLeave={() => {
                 setTitle(false);
             }}
-            onClick={props.showApps}
+            onClick={(event) => props.showApps(event)}
         >
             <div className="relative">
                 <Image
@@ -80,6 +83,6 @@ export function AllApps(props) {
                     Show Applications
                 </div>
             </div>
-        </div>
+        </button>
     );
 }

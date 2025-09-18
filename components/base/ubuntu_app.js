@@ -15,12 +15,17 @@ export class UbuntuApp extends Component {
         this.setState({ dragging: false });
     }
 
-    openApp = () => {
+    openApp = (event) => {
         if (this.props.disabled) return;
         this.setState({ launching: true }, () => {
             setTimeout(() => this.setState({ launching: false }), 300);
         });
-        this.props.openApp(this.props.id);
+        const trigger = event instanceof HTMLElement
+            ? event
+            : event && event.currentTarget instanceof HTMLElement
+                ? event.currentTarget
+                : null;
+        this.props.openApp(this.props.id, { trigger });
     }
 
     handlePrefetch = () => {
@@ -45,7 +50,7 @@ export class UbuntuApp extends Component {
                     " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(e); } }}
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}

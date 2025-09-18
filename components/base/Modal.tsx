@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { storeFocusTarget, restoreFocusTarget } from '../../utils/focusManager';
 
 interface ModalProps {
     isOpen: boolean;
@@ -11,6 +12,16 @@ interface ModalProps {
      * Defaults to the Next.js root (`__next`).
      */
     overlayRoot?: string | HTMLElement;
+    /**
+     * Optional key used to track which element should regain focus when the
+     * modal closes. If not provided an internal key is generated.
+     */
+    focusKey?: string;
+    /**
+     * Optional fallback resolver invoked when the stored trigger no longer
+     * exists in the DOM.
+     */
+    fallbackFocus?: () => HTMLElement | null;
 }
 
 const FOCUSABLE_SELECTORS = [
@@ -27,11 +38,18 @@ const FOCUSABLE_SELECTORS = [
     '[contenteditable]'
 ].join(',');
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot, focusKey, fallbackFocus }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
     const inertRootRef = useRef<HTMLElement | null>(null);
+    const focusKeyRef = useRef<string>(focusKey || `modal-${Math.random().toString(36).slice(2)}`);
+
+    useEffect(() => {
+        if (focusKey) {
+            focusKeyRef.current = focusKey;
+        }
+    }, [focusKey]);
 
     if (!portalRef.current && typeof document !== 'undefined') {
         const el = document.createElement('div');
@@ -90,6 +108,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
         inertRootRef.current = getOverlayRoot();
         if (isOpen) {
             triggerRef.current = document.activeElement as HTMLElement;
+            storeFocusTarget(focusKeyRef.current, triggerRef.current);
             inertRootRef.current?.setAttribute('inert', '');
             const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
             if (elements && elements.length > 0) {
@@ -99,13 +118,18 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             }
         } else {
             inertRootRef.current?.removeAttribute('inert');
-            triggerRef.current?.focus();
+            restoreFocusTarget(focusKeyRef.current, () => {
+                if (typeof fallbackFocus === 'function') {
+                    return fallbackFocus();
+                }
+                return triggerRef.current;
+            });
             triggerRef.current = null;
         }
         return () => {
             inertRootRef.current?.removeAttribute('inert');
         };
-    }, [isOpen, getOverlayRoot]);
+    }, [isOpen, getOverlayRoot, fallbackFocus]);
 
     if (!isOpen || !portalRef.current) return null;
 
