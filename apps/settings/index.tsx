@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import ProxyChainsPanel from "./components/ProxyChainsPanel";
 import {
   resetSettings,
   defaults,
@@ -286,6 +287,7 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
+          <ProxyChainsPanel />
         </>
       )}
         <input
