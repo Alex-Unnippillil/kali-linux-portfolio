@@ -176,6 +176,12 @@ __tests__/
 - favorites vs “All Applications” grid
 - analytics events for user actions
 
+### Multi-display behavior
+
+- `modules/displayManager.ts` abstracts primary and secondary monitors, tracking origin, bounds, and scale factor. The module derives values from the browser's `window.screen` object when available and falls back to a 1920×1080 primary display with a slightly smaller secondary panel when the OS does not expose multiple monitors.
+- The active display selection persists via the global settings context and can be changed from the Settings app. The dropdown writes to local storage and notifies the desktop so future windows launch on the chosen monitor.
+- Window positions are clamped to the active display when sessions load or the active display changes. This ensures new or restored windows never spawn off-screen even if the user switches to a smaller virtual display.
+
 **App registry.** `apps.config.js` registers apps using dynamic imports to keep the initial bundle lean:
 ```ts
 import dynamic from 'next/dynamic';
