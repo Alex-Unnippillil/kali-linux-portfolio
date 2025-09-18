@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { ensureInputBridge } from '../../modules/desktop/inputBridge';
 
 export class Desktop extends Component {
     constructor() {
@@ -58,6 +59,8 @@ export class Desktop extends Component {
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        ensureInputBridge();
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -155,6 +158,9 @@ export class Desktop extends Component {
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
+        } else if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key === '.') {
+            e.preventDefault();
+            this.openApp('emoji-picker');
         }
         else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();

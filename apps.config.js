@@ -72,6 +72,7 @@ const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
+const EmojiPickerApp = createDynamicApp('emoji/Picker', 'Emoji Picker');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayEmojiPicker = createDisplay(EmojiPickerApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -266,6 +268,19 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'emoji-picker',
+    title: 'Emoji Picker',
+    icon: '/themes/Yaru/apps/emoji-picker.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEmojiPicker,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 40,
+    defaultHeight: 65,
   },
 ];
 
