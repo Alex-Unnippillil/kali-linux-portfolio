@@ -3,12 +3,11 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import { defaults, resetSettings } from "../../utils/settings";
 import {
-  resetSettings,
-  defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
-} from "../../utils/settingsStore";
+} from "../../utils/settings/export";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
