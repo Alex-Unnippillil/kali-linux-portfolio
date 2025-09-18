@@ -18,7 +18,7 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 
 a:focus-visible,
 button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
+    outline: var(--focus-outline-width) solid var(--color-focus-ring) !important;
     outline-offset: 2px;
 }
 
@@ -512,7 +512,7 @@ pre {
 /* Visible focus rings for copy buttons and text areas */
 button:focus-visible,
 textarea:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline: var(--focus-outline-width) solid var(--color-focus-ring);
     outline-offset: 2px;
 }
 
@@ -526,7 +526,9 @@ textarea:focus-visible {
 }
 
 /* High contrast overrides */
-.high-contrast .bg-ub-orange {
+.high-contrast .bg-ub-orange,
+.high-contrast .bg-kali-primary,
+.high-contrast .bg-kali-primary-500 {
     color: #000 !important;
 }
 

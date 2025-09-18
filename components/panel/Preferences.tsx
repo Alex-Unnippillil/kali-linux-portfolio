@@ -76,7 +76,7 @@ export default function Preferences() {
                 onChange={(e) =>
                   setOrientation(e.target.value as "horizontal" | "vertical")
                 }
-                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+                className="bg-kali-surface text-white px-2 py-1 rounded"
               >
                 <option value="horizontal">Horizontal</option>
                 <option value="vertical">Vertical</option>
