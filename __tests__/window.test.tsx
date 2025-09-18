@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { Desktop } from '../components/screen/desktop';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -39,6 +40,126 @@ describe('Window lifecycle', () => {
 
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
+  });
+});
+
+describe('Window tabs', () => {
+  const tabFixtures = [
+    { id: 'doc-1', title: 'Doc 1', render: () => <div>Primary document</div> },
+    { id: 'doc-2', title: 'Doc 2', render: () => <div>Secondary document</div> },
+    { id: 'doc-3', title: 'Doc 3', render: () => <div>Tertiary document</div> },
+  ];
+
+  const baseProps = {
+    id: 'tabbed-window',
+    title: 'Tabbed Window',
+    focus: () => {},
+    hasMinimised: () => {},
+    closed: () => {},
+    hideSideBar: () => {},
+    openApp: () => {},
+    screen: () => <div>Fallback</div>,
+  };
+
+  it('supports keyboard navigation across tabs', () => {
+    render(<Window {...baseProps} tabs={tabFixtures} />);
+
+    const firstTab = screen.getByRole('tab', { name: 'Doc 1' });
+    expect(firstTab).toHaveAttribute('aria-selected', 'true');
+
+    act(() => {
+      fireEvent.keyDown(firstTab, { key: 'ArrowRight' });
+    });
+
+    const secondTab = screen.getByRole('tab', { name: 'Doc 2' });
+    expect(secondTab).toHaveAttribute('aria-selected', 'true');
+    expect(document.activeElement).toBe(secondTab);
+    expect(screen.getByText('Secondary document')).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.keyDown(secondTab, { key: 'Home' });
+    });
+
+    expect(firstTab).toHaveAttribute('aria-selected', 'true');
+
+    act(() => {
+      fireEvent.keyDown(document.activeElement || firstTab, { key: 'End' });
+    });
+
+    const thirdTab = screen.getByRole('tab', { name: 'Doc 3' });
+    expect(thirdTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('Tertiary document')).toBeInTheDocument();
+  });
+
+  it('marks tablist as wrapped when overflow is detected', () => {
+    const ref = React.createRef<Window>();
+    render(<Window {...baseProps} ref={ref} tabs={tabFixtures} />);
+
+    const tablist = screen.getByRole('tablist');
+    Object.defineProperty(tablist, 'clientWidth', { configurable: true, value: 120 });
+    Object.defineProperty(tablist, 'scrollWidth', { configurable: true, value: 260 });
+
+    act(() => {
+      ref.current!.updateTabOverflow();
+    });
+
+    expect(ref.current!.state.tabsWrapped).toBe(true);
+    expect(tablist).toHaveAttribute('data-tabs-wrapped', 'true');
+  });
+});
+
+describe('Desktop tab detachment', () => {
+  it('spawns a new window for detached tabs', () => {
+    const desktop = new Desktop();
+    desktop.setState = (updater: any, callback?: () => void) => {
+      const prev = desktop.state;
+      const next = typeof updater === 'function' ? updater(prev, {}) : updater;
+      desktop.state = { ...prev, ...next };
+      if (callback) callback();
+    };
+    desktop.saveSession = jest.fn();
+
+    desktop.state = {
+      ...desktop.state,
+      closed_windows: { 'test-app': false },
+      favourite_apps: { 'test-app': false },
+      focused_windows: { 'test-app': false },
+      disabled_apps: { 'test-app': false },
+      minimized_windows: { 'test-app': false },
+      window_positions: {},
+      detachedWindows: [],
+    };
+    desktop.initFavourite = { 'test-app': false };
+
+    const app = {
+      id: 'test-app',
+      title: 'Tab App',
+      icon: '/icon.png',
+      screen: () => <div />,
+      resizable: true,
+      allowMaximize: true,
+    };
+    const tab = {
+      id: 'alpha',
+      title: 'Alpha doc',
+      render: () => <div>Alpha</div>,
+    };
+    const event = { clientX: 420, clientY: 360 } as any;
+
+    act(() => {
+      desktop.handleTabDetach(app as any, tab as any, { event });
+    });
+
+    expect(desktop.state.detachedWindows).toHaveLength(1);
+    const detached = desktop.state.detachedWindows[0];
+    expect(detached.title).toBe('Alpha doc');
+    expect(typeof detached.screen).toBe('function');
+    expect(desktop.state.closed_windows[detached.id]).toBe(false);
+    expect(desktop.state.window_positions[detached.id]).toEqual(
+      desktop.deriveDetachedWindowPosition(event)
+    );
+    expect(desktop.app_stack).toContain(detached.id);
+    expect(desktop.saveSession).toHaveBeenCalled();
   });
 });
 
@@ -199,7 +320,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();

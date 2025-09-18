@@ -18,6 +18,7 @@ export class Window extends Component {
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = props.initialY ?? 10;
+        this.tabListRef = React.createRef();
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || (isPortrait ? 90 : 60),
@@ -33,6 +34,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            activeTabId: props.tabs && props.tabs.length ? props.tabs[0].id : null,
+            tabsWrapped: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -56,6 +59,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.updateTabOverflow();
     }
 
     componentWillUnmount() {
@@ -69,6 +73,67 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        let activeChanged = false;
+        if (this.props.tabs !== prevProps.tabs) {
+            const nextActive = this.resolveActiveTabId(this.props.tabs);
+            if (nextActive !== this.state.activeTabId) {
+                activeChanged = true;
+                this.setState({ activeTabId: nextActive }, () => {
+                    this.updateTabOverflow();
+                });
+            }
+        }
+
+        if (!activeChanged && (
+            this.props.tabs !== prevProps.tabs ||
+            prevState.width !== this.state.width ||
+            prevState.height !== this.state.height
+        )) {
+            this.updateTabOverflow();
+        }
+    }
+
+    resolveActiveTabId = (tabs) => {
+        if (!tabs || tabs.length === 0) {
+            return null;
+        }
+        const { activeTabId } = this.state;
+        if (activeTabId && tabs.some(tab => tab.id === activeTabId)) {
+            return activeTabId;
+        }
+        return tabs[0].id;
+    }
+
+    updateTabOverflow = () => {
+        if (!this.props.tabs || this.props.tabs.length === 0) {
+            if (this.state.tabsWrapped) {
+                this.setState({ tabsWrapped: false });
+            }
+            return;
+        }
+        const list = this.tabListRef?.current;
+        if (!list) {
+            return;
+        }
+        const scrollWidth = list.scrollWidth || 0;
+        const clientWidth = list.clientWidth || list.getBoundingClientRect?.().width || 0;
+        const wrapped = scrollWidth - clientWidth > 1;
+        if (wrapped !== this.state.tabsWrapped) {
+            this.setState({ tabsWrapped: wrapped });
+        }
+    }
+
+    handleTabSelect = (tabId) => {
+        if (this.state.activeTabId === tabId) return;
+        this.setState({ activeTabId: tabId });
+    }
+
+    handleTabDetach = (tab, detail = {}) => {
+        if (typeof this.props.onDetachTab !== 'function' || !tab) return;
+        this.props.onDetachTab(tab, { windowId: this.props.id, event: detail.event });
     }
 
     setDefaultWindowDimenstion = () => {
@@ -105,6 +170,7 @@ export class Window extends Component {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
+            this.updateTabOverflow();
         });
     }
 
@@ -661,9 +727,19 @@ export class Window extends Component {
                         />
                         {(this.id === "settings"
                             ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                            : <WindowMainScreen
+                                windowId={this.props.id}
+                                screen={this.props.screen}
+                                title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                                openApp={this.props.openApp}
+                                tabs={this.props.tabs}
+                                activeTabId={this.state.activeTabId}
+                                onTabSelect={this.handleTabSelect}
+                                onTabDetach={this.handleTabDetach}
+                                tabListRef={this.tabListRef}
+                                tabsWrapped={this.state.tabsWrapped}
+                            />)}
                     </div>
                 </Draggable >
             </>
@@ -830,16 +906,143 @@ export class WindowMainScreen extends Component {
         this.state = {
             setDarkBg: false,
         }
+        this.tabRefs = [];
+        this.containerRef = React.createRef();
+        this._bgTimer = null;
     }
     componentDidMount() {
-        setTimeout(() => {
+        this._bgTimer = setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
     }
+    componentWillUnmount() {
+        if (this._bgTimer) {
+            clearTimeout(this._bgTimer);
+        }
+    }
+    setTabRef = (index, node) => {
+        this.tabRefs[index] = node;
+    }
+    focusTab = (index) => {
+        const node = this.tabRefs[index];
+        if (node && typeof node.focus === 'function') {
+            node.focus();
+        }
+    }
+    handleTabKeyDown = (index) => (event) => {
+        const { tabs = [], onTabSelect } = this.props;
+        if (!tabs.length) return;
+        let nextIndex = index;
+        if (event.key === 'ArrowRight') {
+            nextIndex = (index + 1) % tabs.length;
+            event.preventDefault();
+        } else if (event.key === 'ArrowLeft') {
+            nextIndex = (index - 1 + tabs.length) % tabs.length;
+            event.preventDefault();
+        } else if (event.key === 'Home') {
+            nextIndex = 0;
+            event.preventDefault();
+        } else if (event.key === 'End') {
+            nextIndex = tabs.length - 1;
+            event.preventDefault();
+        } else {
+            return;
+        }
+        this.focusTab(nextIndex);
+        if (typeof onTabSelect === 'function') {
+            onTabSelect(tabs[nextIndex].id);
+        }
+    }
+    handleTabDragStart = (tab) => (event) => {
+        if (event && event.dataTransfer) {
+            try {
+                event.dataTransfer.setData('application/x-window-tab', tab.id);
+            } catch (e) { }
+            event.dataTransfer.effectAllowed = 'move';
+        }
+    }
+    handleTabDragEnd = (tab) => (event) => {
+        if (typeof this.props.onTabDetach !== 'function') return;
+        const bounds = this.containerRef.current?.getBoundingClientRect?.();
+        if (!bounds) return;
+        const clientX = typeof event?.clientX === 'number' ? event.clientX : null;
+        const clientY = typeof event?.clientY === 'number' ? event.clientY : null;
+        if (clientX === null || clientY === null) return;
+        const outside = clientX < bounds.left || clientX > bounds.right || clientY < bounds.top || clientY > bounds.bottom;
+        if (outside) {
+            this.props.onTabDetach(tab, { event });
+        }
+    }
+    getTabContent = (tab) => {
+        if (!tab) return null;
+        const renderer = tab.render || tab.screen || tab.content;
+        if (typeof renderer === 'function') {
+            return renderer(this.props.addFolder, this.props.openApp, tab);
+        }
+        return renderer;
+    }
     render() {
+        const { tabs = [], activeTabId, tabListRef, tabsWrapped, title, windowId } = this.props;
+        const hasTabs = Array.isArray(tabs) && tabs.length > 0;
+        const activeTab = hasTabs
+            ? (tabs.find(tab => tab.id === activeTabId) || tabs[0])
+            : null;
+        const panelId = `${windowId || 'window'}-tabpanel`;
+        const tabLabelPrefix = `${windowId || 'window'}-tab-`;
+        const content = hasTabs
+            ? this.getTabContent(activeTab)
+            : (typeof this.props.screen === 'function'
+                ? this.props.screen(this.props.addFolder, this.props.openApp)
+                : this.props.screen);
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div
+                ref={this.containerRef}
+                className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}
+            >
+                {hasTabs && (
+                    <div className="bg-black bg-opacity-30 border-b border-white border-opacity-10">
+                        <div
+                            role="tablist"
+                            aria-label={`${title} tabs`}
+                            ref={tabListRef}
+                            data-tabs-wrapped={tabsWrapped ? 'true' : 'false'}
+                            className="flex flex-wrap gap-1 px-2 pt-2 pb-1"
+                        >
+                            {tabs.map((tab, index) => {
+                                const tabActive = activeTab && tab.id === activeTab.id;
+                                const tabId = `${tabLabelPrefix}${tab.id}`;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        role="tab"
+                                        id={tabId}
+                                        aria-selected={tabActive}
+                                        aria-controls={panelId}
+                                        tabIndex={tabActive ? 0 : -1}
+                                        ref={(node) => this.setTabRef(index, node)}
+                                        className={`rounded-t-md px-3 py-1 text-xs md:text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 transition-colors ${tabActive ? 'bg-ub-cool-grey text-white shadow-inner' : 'bg-black bg-opacity-30 text-gray-200 hover:bg-opacity-40'}`}
+                                        onClick={() => this.props.onTabSelect && this.props.onTabSelect(tab.id)}
+                                        onKeyDown={this.handleTabKeyDown(index)}
+                                        draggable
+                                        onDragStart={this.handleTabDragStart(tab)}
+                                        onDragEnd={this.handleTabDragEnd(tab)}
+                                    >
+                                        <span className="whitespace-nowrap">{tab.title}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+                <div
+                    id={panelId}
+                    role={hasTabs ? 'tabpanel' : undefined}
+                    aria-labelledby={hasTabs && activeTab ? `${tabLabelPrefix}${activeTab.id}` : undefined}
+                    className={hasTabs ? 'p-3 pt-2' : ''}
+                >
+                    {content}
+                </div>
             </div>
         )
     }

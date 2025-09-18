@@ -52,6 +52,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            detachedWindows: [],
         }
     }
 
@@ -144,6 +145,73 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    getWindowEntries = () => {
+        return [...apps, ...this.state.detachedWindows];
+    }
+
+    findWindowMeta = (id) => {
+        return this.getWindowEntries().find(app => app.id === id);
+    }
+
+    deriveDetachedWindowPosition = (event) => {
+        if (!event || typeof event.clientX !== 'number' || typeof event.clientY !== 'number') {
+            return { x: 60, y: 10 };
+        }
+        const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 720;
+        const maxX = Math.max(viewportWidth - 240, 0);
+        const maxY = Math.max(viewportHeight - 180, 0);
+        return {
+            x: clamp(event.clientX - 120, 0, maxX),
+            y: clamp(event.clientY - 90, 0, maxY),
+        };
+    }
+
+    handleTabDetach = (app, tab, details = {}) => {
+        if (!tab || !app) return;
+        const renderer = tab.render || tab.screen || tab.content || app.screen;
+        const screen = (addFolder, openApp) => {
+            if (typeof renderer === 'function') {
+                return renderer(addFolder, openApp, tab);
+            }
+            return renderer;
+        };
+        const timestamp = Date.now();
+        const newId = `${app.id}-tab-${tab.id}-${timestamp}`;
+        const position = this.deriveDetachedWindowPosition(details?.event);
+        const newWindow = {
+            id: newId,
+            title: tab.title || app.title,
+            icon: tab.icon || app.icon,
+            disabled: false,
+            favourite: false,
+            desktop_shortcut: false,
+            resizable: app.resizable,
+            allowMaximize: app.allowMaximize,
+            defaultWidth: app.defaultWidth,
+            defaultHeight: app.defaultHeight,
+            screen,
+            tabs: tab.tabs,
+            origin: { appId: app.id, tabId: tab.id },
+        };
+
+        this.setState((prev) => ({
+            detachedWindows: [...prev.detachedWindows, newWindow],
+            closed_windows: { ...prev.closed_windows, [newId]: false },
+            focused_windows: { ...prev.focused_windows, [newId]: false },
+            disabled_apps: { ...prev.disabled_apps, [newId]: false },
+            favourite_apps: { ...prev.favourite_apps, [newId]: prev.favourite_apps[app.id] ?? false },
+            minimized_windows: { ...prev.minimized_windows, [newId]: false },
+            window_positions: { ...prev.window_positions, [newId]: position },
+        }), () => {
+            this.initFavourite[newId] = false;
+            this.focus(newId);
+            this.app_stack.push(newId);
+            this.saveSession();
+        });
     }
 
     handleGlobalShortcut = (e) => {
@@ -353,7 +421,7 @@ export class Desktop extends Component {
         }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
-        apps.forEach((app) => {
+        this.getWindowEntries().forEach((app) => {
             focused_windows = {
                 ...focused_windows,
                 [app.id]: false,
@@ -397,7 +465,7 @@ export class Desktop extends Component {
     updateAppsData = () => {
         let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
         let desktop_apps = [];
-        apps.forEach((app) => {
+        this.getWindowEntries().forEach((app) => {
             focused_windows = {
                 ...focused_windows,
                 [app.id]: ((this.state.focused_windows[app.id] !== undefined || this.state.focused_windows[app.id] !== null) ? this.state.focused_windows[app.id] : false),
@@ -456,14 +524,18 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
-        apps.forEach((app, index) => {
+        this.getWindowEntries().forEach((app) => {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const tabs = typeof app.tabs === 'function'
+                    ? app.tabs({ addFolder: this.addToDesktop, openApp: this.openApp })
+                    : app.tabs;
                 const props = {
                     title: app.title,
                     id: app.id,
                     screen: app.screen,
+                    tabs: tabs,
                     addFolder: this.addToDesktop,
                     closed: this.closeApp,
                     openApp: this.openApp,
@@ -480,6 +552,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    onDetachTab: Array.isArray(tabs) && tabs.length ? (tab, details) => this.handleTabDetach(app, tab, details) : undefined,
                 }
 
                 windowsJsx.push(
@@ -670,7 +743,7 @@ export class Desktop extends Component {
         }
 
         // persist in trash with autopurge
-        const appMeta = apps.find(a => a.id === objId) || {};
+        const appMeta = this.findWindowMeta(objId) || {};
         const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
         const ms = purgeDays * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -698,10 +771,18 @@ export class Desktop extends Component {
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
 
+        const wasDetached = this.state.detachedWindows.some(win => win.id === objId);
+
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState(prev => ({
+            closed_windows,
+            favourite_apps,
+            detachedWindows: wasDetached
+                ? prev.detachedWindows.filter(win => win.id !== objId)
+                : prev.detachedWindows,
+        }), this.saveSession);
     }
 
     pinApp = (id) => {
