@@ -207,7 +207,7 @@ const utilityList = [
   {
     id: 'qr',
     title: 'QR Tool',
-    icon: '/themes/Yaru/apps/qr.svg',
+    icon: '/icons/128/qr.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -216,7 +216,7 @@ const utilityList = [
   {
     id: 'ascii-art',
     title: 'ASCII Art',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/icons/128/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -225,7 +225,7 @@ const utilityList = [
   {
     id: 'clipboard-manager',
     title: 'Clipboard Manager',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/icons/128/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -234,7 +234,7 @@ const utilityList = [
   {
     id: 'figlet',
     title: 'Figlet',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/icons/128/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -243,7 +243,7 @@ const utilityList = [
   {
     id: 'quote',
     title: 'Quote',
-    icon: '/themes/Yaru/apps/quote.svg',
+    icon: '/icons/128/quote.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -252,7 +252,7 @@ const utilityList = [
   {
     id: 'project-gallery',
     title: 'Project Gallery',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/icons/128/project-gallery.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -261,7 +261,7 @@ const utilityList = [
   {
     id: 'input-lab',
     title: 'Input Lab',
-    icon: '/themes/Yaru/apps/input-lab.svg',
+    icon: '/icons/128/input-lab.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -282,7 +282,7 @@ const gameList = [
   {
     id: '2048',
     title: '2048',
-    icon: '/themes/Yaru/apps/2048.svg',
+    icon: '/icons/128/2048.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -293,7 +293,7 @@ const gameList = [
   {
     id: 'asteroids',
     title: 'Asteroids',
-    icon: '/themes/Yaru/apps/asteroids.svg',
+    icon: '/icons/128/asteroids.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -302,7 +302,7 @@ const gameList = [
   {
     id: 'battleship',
     title: 'Battleship',
-    icon: '/themes/Yaru/apps/battleship.svg',
+    icon: '/icons/128/battleship.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -311,7 +311,7 @@ const gameList = [
   {
     id: 'blackjack',
     title: 'Blackjack',
-    icon: '/themes/Yaru/apps/blackjack.svg',
+    icon: '/icons/128/blackjack.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -321,7 +321,7 @@ const gameList = [
   {
     id: 'breakout',
     title: 'Breakout',
-    icon: '/themes/Yaru/apps/breakout.svg',
+    icon: '/icons/128/breakout.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -330,7 +330,7 @@ const gameList = [
   {
     id: 'car-racer',
     title: 'Car Racer',
-    icon: '/themes/Yaru/apps/car-racer.svg',
+    icon: '/icons/128/car-racer.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -339,7 +339,7 @@ const gameList = [
   {
     id: 'lane-runner',
     title: 'Lane Runner',
-    icon: '/themes/Yaru/apps/car-racer.svg',
+    icon: '/icons/128/car-racer.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -348,7 +348,7 @@ const gameList = [
   {
     id: 'checkers',
     title: 'Checkers',
-    icon: '/themes/Yaru/apps/checkers.svg',
+    icon: '/icons/128/checkers.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -357,7 +357,7 @@ const gameList = [
   {
     id: 'chess',
     title: 'Chess',
-    icon: '/themes/Yaru/apps/chess.svg',
+    icon: '/icons/128/chess.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -367,7 +367,7 @@ const gameList = [
   {
     id: 'connect-four',
     title: 'Connect Four',
-    icon: '/themes/Yaru/apps/connect-four.svg',
+    icon: '/icons/128/connect-four.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -376,7 +376,7 @@ const gameList = [
   {
     id: 'frogger',
     title: 'Frogger',
-    icon: '/themes/Yaru/apps/frogger.svg',
+    icon: '/icons/128/frogger.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -385,7 +385,7 @@ const gameList = [
   {
     id: 'hangman',
     title: 'Hangman',
-    icon: '/themes/Yaru/apps/hangman.svg',
+    icon: '/icons/128/hangman.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -394,7 +394,7 @@ const gameList = [
   {
     id: 'memory',
     title: 'Memory',
-    icon: '/themes/Yaru/apps/memory.svg',
+    icon: '/icons/128/memory.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -403,7 +403,7 @@ const gameList = [
   {
     id: 'minesweeper',
     title: 'Minesweeper',
-    icon: '/themes/Yaru/apps/minesweeper.svg',
+    icon: '/icons/128/minesweeper.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -412,7 +412,7 @@ const gameList = [
   {
     id: 'pacman',
     title: 'Pacman',
-    icon: '/themes/Yaru/apps/pacman.svg',
+    icon: '/icons/128/pacman.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -421,7 +421,7 @@ const gameList = [
   {
     id: 'platformer',
     title: 'Platformer',
-    icon: '/themes/Yaru/apps/platformer.svg',
+    icon: '/icons/128/platformer.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -430,7 +430,7 @@ const gameList = [
   {
     id: 'pong',
     title: 'Pong',
-    icon: '/themes/Yaru/apps/pong.svg',
+    icon: '/icons/128/pong.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -439,7 +439,7 @@ const gameList = [
   {
     id: 'reversi',
     title: 'Reversi',
-    icon: '/themes/Yaru/apps/reversi.svg',
+    icon: '/icons/128/reversi.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -448,7 +448,7 @@ const gameList = [
   {
     id: 'simon',
     title: 'Simon',
-    icon: '/themes/Yaru/apps/simon.svg',
+    icon: '/icons/128/simon.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -457,7 +457,7 @@ const gameList = [
   {
     id: 'snake',
     title: 'Snake',
-    icon: '/themes/Yaru/apps/snake.svg',
+    icon: '/icons/128/snake.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -466,7 +466,7 @@ const gameList = [
   {
     id: 'sokoban',
     title: 'Sokoban',
-    icon: '/themes/Yaru/apps/sokoban.svg',
+    icon: '/icons/128/sokoban.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -475,7 +475,7 @@ const gameList = [
   {
     id: 'solitaire',
     title: 'Solitaire',
-    icon: '/themes/Yaru/apps/solitaire.svg',
+    icon: '/icons/128/solitaire.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -484,7 +484,7 @@ const gameList = [
   {
     id: 'tictactoe',
     title: 'Tic Tac Toe',
-    icon: '/themes/Yaru/apps/tictactoe.svg',
+    icon: '/icons/128/tictactoe.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -494,7 +494,7 @@ const gameList = [
   {
     id: 'tetris',
     title: 'Tetris',
-    icon: '/themes/Yaru/apps/tetris.svg',
+    icon: '/icons/128/tetris.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -503,7 +503,7 @@ const gameList = [
   {
     id: 'tower-defense',
     title: 'Tower Defense',
-    icon: '/themes/Yaru/apps/tower-defense.svg',
+    icon: '/icons/128/tower-defense.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -512,7 +512,7 @@ const gameList = [
   {
     id: 'word-search',
     title: 'Word Search',
-    icon: '/themes/Yaru/apps/word-search.svg',
+    icon: '/icons/128/word-search.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -521,7 +521,7 @@ const gameList = [
   {
     id: 'wordle',
     title: 'Wordle',
-    icon: '/themes/Yaru/apps/wordle.svg',
+    icon: '/icons/128/wordle.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -530,7 +530,7 @@ const gameList = [
   {
     id: 'nonogram',
     title: 'Nonogram',
-    icon: '/themes/Yaru/apps/nonogram.svg',
+    icon: '/icons/128/nonogram.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -539,7 +539,7 @@ const gameList = [
   {
     id: 'space-invaders',
     title: 'Space Invaders',
-    icon: '/themes/Yaru/apps/space-invaders.svg',
+    icon: '/icons/128/space-invaders.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -548,7 +548,7 @@ const gameList = [
   {
     id: 'sudoku',
     title: 'Sudoku',
-    icon: '/themes/Yaru/apps/sudoku.svg',
+    icon: '/icons/128/sudoku.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -557,7 +557,7 @@ const gameList = [
   {
     id: 'flappy-bird',
     title: 'Flappy Bird',
-    icon: '/themes/Yaru/apps/flappy-bird.svg',
+    icon: '/icons/128/flappy-bird.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -566,7 +566,7 @@ const gameList = [
   {
     id: 'candy-crush',
     title: 'Candy Crush',
-    icon: '/themes/Yaru/apps/candy-crush.svg',
+    icon: '/icons/128/candy-crush.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -575,7 +575,7 @@ const gameList = [
   {
     id: 'gomoku',
     title: 'Gomoku',
-    icon: '/themes/Yaru/apps/gomoku.svg',
+    icon: '/icons/128/gomoku.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -584,7 +584,7 @@ const gameList = [
   {
     id: 'pinball',
     title: 'Pinball',
-    icon: '/themes/Yaru/apps/pinball.svg',
+    icon: '/icons/128/pinball.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -598,7 +598,7 @@ const apps = [
   {
     id: 'chrome',
     title: 'Google Chrome',
-    icon: '/themes/Yaru/apps/chrome.png',
+    icon: '/icons/128/chrome.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -607,7 +607,7 @@ const apps = [
   {
     id: 'calculator',
     title: 'Calculator',
-    icon: '/themes/Yaru/apps/calc.png',
+    icon: '/icons/128/calc.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -620,7 +620,7 @@ const apps = [
   {
     id: 'terminal',
     title: 'Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/icons/128/bash.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -630,7 +630,7 @@ const apps = [
     // VSCode app uses a Stack iframe, so no editor dependencies are required
     id: 'vscode',
     title: 'Visual Studio Code',
-    icon: '/themes/Yaru/apps/vscode.png',
+    icon: '/icons/128/vscode.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -641,7 +641,7 @@ const apps = [
   {
     id: 'x',
     title: 'X',
-    icon: '/themes/Yaru/apps/x.png',
+    icon: '/icons/128/x.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -650,7 +650,7 @@ const apps = [
   {
     id: 'spotify',
     title: 'Spotify',
-    icon: '/themes/Yaru/apps/spotify.svg',
+    icon: '/icons/128/spotify.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -659,7 +659,7 @@ const apps = [
   {
     id: 'youtube',
     title: 'YouTube',
-    icon: '/themes/Yaru/apps/youtube.svg',
+    icon: '/icons/128/youtube.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -668,7 +668,7 @@ const apps = [
   {
     id: 'beef',
     title: 'BeEF',
-    icon: '/themes/Yaru/apps/beef.svg',
+    icon: '/icons/128/beef.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -677,7 +677,7 @@ const apps = [
   {
     id: 'about',
     title: 'About Alex',
-    icon: '/themes/Yaru/system/user-home.png',
+    icon: '/icons/128/user-home.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -686,7 +686,7 @@ const apps = [
   {
     id: 'settings',
     title: 'Settings',
-    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    icon: '/icons/128/gnome-control-center.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -695,7 +695,7 @@ const apps = [
   {
     id: 'files',
     title: 'Files',
-    icon: '/themes/Yaru/system/folder.png',
+    icon: '/icons/128/folder.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -704,7 +704,7 @@ const apps = [
   {
     id: 'resource-monitor',
     title: 'Resource Monitor',
-    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    icon: '/icons/128/resource-monitor.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -713,7 +713,7 @@ const apps = [
   {
     id: 'screen-recorder',
     title: 'Screen Recorder',
-    icon: '/themes/Yaru/apps/screen-recorder.svg',
+    icon: '/icons/128/screen-recorder.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -722,7 +722,7 @@ const apps = [
   {
     id: 'ettercap',
     title: 'Ettercap',
-    icon: '/themes/Yaru/apps/ettercap.svg',
+    icon: '/icons/128/ettercap.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -731,7 +731,7 @@ const apps = [
   {
     id: 'ble-sensor',
     title: 'BLE Sensor',
-    icon: '/themes/Yaru/apps/bluetooth.svg',
+    icon: '/icons/128/bluetooth.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -740,7 +740,7 @@ const apps = [
   {
     id: 'metasploit',
     title: 'Metasploit',
-    icon: '/themes/Yaru/apps/metasploit.svg',
+    icon: '/icons/128/metasploit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -749,7 +749,7 @@ const apps = [
   {
     id: 'wireshark',
     title: 'Wireshark',
-    icon: '/themes/Yaru/apps/wireshark.svg',
+    icon: '/icons/128/wireshark.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -758,7 +758,7 @@ const apps = [
   {
     id: 'todoist',
     title: 'Todoist',
-    icon: '/themes/Yaru/apps/todoist.png',
+    icon: '/icons/128/todoist.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -767,7 +767,7 @@ const apps = [
   {
     id: 'sticky_notes',
     title: 'Sticky Notes',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/icons/128/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -776,7 +776,7 @@ const apps = [
   {
     id: 'trash',
     title: 'Trash',
-    icon: '/themes/Yaru/status/user-trash-symbolic.svg',
+    icon: '/icons/128/user-trash-symbolic.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -785,7 +785,7 @@ const apps = [
   {
     id: 'gedit',
     title: 'Contact Me',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/icons/128/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -794,7 +794,7 @@ const apps = [
   {
     id: 'converter',
     title: 'Converter',
-    icon: '/themes/Yaru/apps/calc.png',
+    icon: '/icons/128/calc.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -803,7 +803,7 @@ const apps = [
   {
     id: 'kismet',
     title: 'Kismet',
-    icon: '/themes/Yaru/apps/kismet.svg',
+    icon: '/icons/128/kismet.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -812,7 +812,7 @@ const apps = [
   {
     id: 'nikto',
     title: 'Nikto',
-    icon: '/themes/Yaru/apps/nikto.svg',
+    icon: '/icons/128/nikto.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -821,7 +821,7 @@ const apps = [
   {
     id: 'autopsy',
     title: 'Autopsy',
-    icon: '/themes/Yaru/apps/autopsy.svg',
+    icon: '/icons/128/autopsy.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -830,7 +830,7 @@ const apps = [
   {
     id: 'plugin-manager',
     title: 'Plugin Manager',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/icons/128/project-gallery.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -838,7 +838,7 @@ const apps = [
   },
   {    id: 'reaver',
     title: 'Reaver',
-    icon: '/themes/Yaru/apps/reaver.svg',
+    icon: '/icons/128/reaver.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -847,7 +847,7 @@ const apps = [
   {
     id: 'nessus',
     title: 'Nessus',
-    icon: '/themes/Yaru/apps/nessus.svg',
+    icon: '/icons/128/nessus.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -856,7 +856,7 @@ const apps = [
   {
     id: 'ghidra',
     title: 'Ghidra',
-    icon: '/themes/Yaru/apps/ghidra.svg',
+    icon: '/icons/128/ghidra.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -865,7 +865,7 @@ const apps = [
   {
     id: 'mimikatz',
     title: 'Mimikatz',
-    icon: '/themes/Yaru/apps/mimikatz.svg',
+    icon: '/icons/128/mimikatz.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -874,7 +874,7 @@ const apps = [
   {
     id: 'mimikatz/offline',
     title: 'Mimikatz Offline',
-    icon: '/themes/Yaru/apps/mimikatz.svg',
+    icon: '/icons/128/mimikatz.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -883,7 +883,7 @@ const apps = [
   {
     id: 'ssh',
     title: 'SSH Builder',
-    icon: '/themes/Yaru/apps/ssh.svg',
+    icon: '/icons/128/ssh.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -892,7 +892,7 @@ const apps = [
   {
     id: 'http',
     title: 'HTTP Builder',
-    icon: '/themes/Yaru/apps/http.svg',
+    icon: '/icons/128/http.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -901,7 +901,7 @@ const apps = [
   {
     id: 'html-rewriter',
     title: 'HTML Rewriter',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/icons/128/project-gallery.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -910,7 +910,7 @@ const apps = [
   {
     id: 'contact',
     title: 'Contact',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/icons/128/project-gallery.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -919,7 +919,7 @@ const apps = [
   {
     id: 'hydra',
     title: 'Hydra',
-    icon: '/themes/Yaru/apps/hydra.svg',
+    icon: '/icons/128/hydra.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -928,7 +928,7 @@ const apps = [
   {
     id: 'nmap-nse',
     title: 'Nmap NSE',
-    icon: '/themes/Yaru/apps/nmap-nse.svg',
+    icon: '/icons/128/nmap-nse.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -937,7 +937,7 @@ const apps = [
   {
     id: 'weather',
     title: 'Weather',
-    icon: '/themes/Yaru/apps/weather.svg',
+    icon: '/icons/128/weather.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -946,7 +946,7 @@ const apps = [
   {
     id: 'weather-widget',
     title: 'Weather Widget',
-    icon: '/themes/Yaru/apps/weather.svg',
+    icon: '/icons/128/weather.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -955,7 +955,7 @@ const apps = [
   {
     id: 'serial-terminal',
     title: 'Serial Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/icons/128/bash.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -964,7 +964,7 @@ const apps = [
   {
     id: 'radare2',
     title: 'Radare2',
-    icon: '/themes/Yaru/apps/radare2.svg',
+    icon: '/icons/128/radare2.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -973,7 +973,7 @@ const apps = [
   {
     id: 'volatility',
     title: 'Volatility',
-    icon: '/themes/Yaru/apps/volatility.svg',
+    icon: '/icons/128/volatility.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -982,7 +982,7 @@ const apps = [
   {
     id: 'hashcat',
     title: 'Hashcat',
-    icon: '/themes/Yaru/apps/hashcat.svg',
+    icon: '/icons/128/hashcat.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -991,7 +991,7 @@ const apps = [
   {
     id: 'msf-post',
     title: 'Metasploit Post',
-    icon: '/themes/Yaru/apps/msf-post.svg',
+    icon: '/icons/128/msf-post.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -1000,7 +1000,7 @@ const apps = [
   {
     id: 'evidence-vault',
     title: 'Evidence Vault',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/icons/128/project-gallery.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -1009,7 +1009,7 @@ const apps = [
   {
     id: 'dsniff',
     title: 'dsniff',
-    icon: '/themes/Yaru/apps/dsniff.svg',
+    icon: '/icons/128/dsniff.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -1018,7 +1018,7 @@ const apps = [
   {
     id: 'john',
     title: 'John the Ripper',
-    icon: '/themes/Yaru/apps/john.svg',
+    icon: '/icons/128/john.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -1027,7 +1027,7 @@ const apps = [
   {
     id: 'openvas',
     title: 'OpenVAS',
-    icon: '/themes/Yaru/apps/openvas.svg',
+    icon: '/icons/128/openvas.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -1036,7 +1036,7 @@ const apps = [
   {
     id: 'recon-ng',
     title: 'Recon-ng',
-    icon: '/themes/Yaru/apps/reconng.svg',
+    icon: '/icons/128/reconng.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -1045,7 +1045,7 @@ const apps = [
   {
     id: 'security-tools',
     title: 'Security Tools',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/icons/128/project-gallery.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,

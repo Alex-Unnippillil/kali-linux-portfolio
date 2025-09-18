@@ -123,7 +123,7 @@ const WhiskerMenu: React.FC = () => {
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          src="/icons/128/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}

@@ -109,7 +109,7 @@ const Radare2 = ({ initialData = {} }) => {
       {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
       <div className="flex gap-2 mb-2 flex-wrap items-center">
         <img
-          src="/themes/Yaru/apps/radare2.svg"
+          src="/icons/128/radare2.svg"
           alt="Radare2 badge"
           className="w-12 h-12"
         />
