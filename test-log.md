@@ -32,3 +32,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 - `yarn why bare-fs` shows the module is required by `tar-fs@3.1.0` via `@puppeteer/browsers@2.10.7`.
 - Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
 - `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
+
+## Lighthouse CI budget for `/apps/alex`
+
+- Added a Playwright-driven `@lhci/cli` audit in the Accessibility workflow to cover `/apps/alex`.
+- CI now fails if Accessibility or Best Practices scores drop below 95, or if Cumulative Layout Shift exceeds 0.05.
+- HTML reports are uploaded from `lhci-report/` as the `lighthouse-ci-report` artifact.
