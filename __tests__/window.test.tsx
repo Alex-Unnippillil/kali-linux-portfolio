@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import styles from '../components/base/window.module.css';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -38,6 +39,111 @@ describe('Window lifecycle', () => {
     });
 
     expect(closed).toHaveBeenCalledWith('test-window');
+    jest.useRealTimers();
+  });
+});
+
+describe('Window edge feedback', () => {
+  it('applies feedback class when dragging into the left boundary', () => {
+    jest.useFakeTimers();
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const node = document.getElementById('test-window')!;
+    node.getBoundingClientRect = () => ({
+      left: 0,
+      top: 10,
+      right: 320,
+      bottom: 210,
+      width: 320,
+      height: 200,
+      x: 0,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag({}, {
+        node,
+        x: 0,
+        y: 10,
+        deltaX: -8,
+        deltaY: 0
+      } as any);
+    });
+
+    expect(node.classList.contains(styles.edgeFeedback)).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(220);
+    });
+
+    expect(node.classList.contains(styles.edgeFeedback)).toBe(false);
+    jest.useRealTimers();
+  });
+
+  it('applies feedback class when resize meets the viewport edge', () => {
+    jest.useFakeTimers();
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const node = document.getElementById('test-window')!;
+    node.getBoundingClientRect = () => {
+      const widthPx = (ref.current!.state.width / 100) * window.innerWidth;
+      const heightPx = (ref.current!.state.height / 100) * window.innerHeight;
+      return {
+        left: 0,
+        top: 0,
+        right: widthPx,
+        bottom: heightPx,
+        width: widthPx,
+        height: heightPx,
+        x: 0,
+        y: 0,
+        toJSON: () => {}
+      };
+    };
+
+    act(() => {
+      ref.current!.setState({ width: 99.9 });
+      ref.current!.resizeBoundries();
+    });
+
+    act(() => {
+      ref.current!.handleHorizontalResize();
+    });
+
+    expect(node.classList.contains(styles.edgeFeedback)).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(220);
+    });
+
+    expect(node.classList.contains(styles.edgeFeedback)).toBe(false);
     jest.useRealTimers();
   });
 });
