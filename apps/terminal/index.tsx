@@ -63,8 +63,10 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+type OpenApp = (id: string, metadata?: Record<string, unknown>) => void;
+
 export interface TerminalProps {
-  openApp?: (id: string) => void;
+  openApp?: OpenApp;
 }
 
 export interface TerminalHandle {

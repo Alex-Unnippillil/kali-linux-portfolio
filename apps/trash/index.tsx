@@ -8,7 +8,9 @@ const DEFAULT_ICON = '/themes/Yaru/system/folder.png';
 const EMPTY_ICON = '/themes/Yaru/status/user-trash-symbolic.svg';
 const FULL_ICON = '/themes/Yaru/status/user-trash-full-symbolic.svg';
 
-export default function Trash({ openApp }: { openApp: (id: string) => void }) {
+type OpenApp = (id: string, metadata?: Record<string, unknown>) => void;
+
+export default function Trash({ openApp }: { openApp: OpenApp }) {
   const {
     items,
     setItems,

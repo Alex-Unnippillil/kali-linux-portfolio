@@ -17,8 +17,10 @@ interface Project {
   language: string;
 }
 
+type OpenApp = (id: string, metadata?: Record<string, unknown>) => void;
+
 interface Props {
-  openApp?: (id: string) => void;
+  openApp?: OpenApp;
 }
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });

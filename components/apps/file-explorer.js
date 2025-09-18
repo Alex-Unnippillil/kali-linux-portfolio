@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -91,7 +91,7 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer() {
+export default function FileExplorer({ metadata }) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -121,16 +121,6 @@ export default function FileExplorer() {
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
   }, []);
-
-  useEffect(() => {
-    if (!opfsSupported || !root) return;
-    (async () => {
-      setUnsavedDir(await getDir('unsaved'));
-      setDirHandle(root);
-      setPath([{ name: root.name || '/', handle: root }]);
-      await readDir(root);
-    })();
-  }, [opfsSupported, root, getDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -188,7 +178,7 @@ export default function FileExplorer() {
     setContent(text);
   };
 
-  const readDir = async (handle) => {
+  const readDir = useCallback(async (handle) => {
     const ds = [];
     const fs = [];
     for await (const [name, h] of handle.entries()) {
@@ -197,7 +187,63 @@ export default function FileExplorer() {
     }
     setDirs(ds);
     setFiles(fs);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!opfsSupported || !root) return;
+    (async () => {
+      setUnsavedDir(await getDir('unsaved'));
+      setDirHandle(root);
+      setPath([{ name: root.name || '/', handle: root }]);
+      await readDir(root);
+    })();
+  }, [opfsSupported, root, getDir, readDir]);
+
+  const applyMetadataPath = useCallback(
+    async (targetPath) => {
+      if (!root) return;
+      const segments = String(targetPath)
+        .split('/')
+        .map((seg) => seg.trim())
+        .filter(Boolean);
+      let current = root;
+      const breadcrumbs = [{ name: root.name || '/', handle: root }];
+      try {
+        for (const segment of segments) {
+          current = await current.getDirectoryHandle(segment, { create: true });
+          breadcrumbs.push({ name: segment, handle: current });
+        }
+      } catch {
+        return;
+      }
+      setDirHandle(current);
+      setPath(breadcrumbs);
+      await readDir(current);
+    },
+    [root, readDir],
+  );
+
+  const pendingPathRef = useRef(null);
+
+  useEffect(() => {
+    const targetPath =
+      metadata && typeof metadata.path === 'string' ? metadata.path : null;
+    if (targetPath === null) return;
+    pendingPathRef.current = targetPath;
+    if (!opfsSupported || !root) return;
+    applyMetadataPath(targetPath).finally(() => {
+      if (pendingPathRef.current === targetPath) pendingPathRef.current = null;
+    });
+  }, [metadata, opfsSupported, root, applyMetadataPath]);
+
+  useEffect(() => {
+    if (!pendingPathRef.current) return;
+    if (!opfsSupported || !root) return;
+    const targetPath = pendingPathRef.current;
+    applyMetadataPath(targetPath).finally(() => {
+      if (pendingPathRef.current === targetPath) pendingPathRef.current = null;
+    });
+  }, [opfsSupported, root, applyMetadataPath]);
 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);

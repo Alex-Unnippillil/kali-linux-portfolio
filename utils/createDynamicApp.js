@@ -34,8 +34,12 @@ export const createDisplay = (Component) => {
   const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
     ssr: false,
   });
-  const Display = (addFolder, openApp) => (
-    <DynamicComponent addFolder={addFolder} openApp={openApp} />
+  const Display = (addFolder, openApp, metadata) => (
+    <DynamicComponent
+      addFolder={addFolder}
+      openApp={openApp}
+      metadata={metadata}
+    />
   );
 
   Display.prefetch = () => {

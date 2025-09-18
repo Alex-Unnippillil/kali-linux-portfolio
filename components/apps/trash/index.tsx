@@ -10,6 +10,8 @@ interface TrashItem {
   closedAt: number;
 }
 
+type OpenApp = (id: string, metadata?: Record<string, unknown>) => void;
+
 const formatAge = (closedAt: number): string => {
   const diff = Date.now() - closedAt;
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));
@@ -21,7 +23,7 @@ const formatAge = (closedAt: number): string => {
   return 'Just now';
 };
 
-export default function Trash({ openApp }: { openApp: (id: string) => void }) {
+export default function Trash({ openApp }: { openApp: OpenApp }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
 
