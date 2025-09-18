@@ -1,0 +1,67 @@
+{
+  "apps": [
+    {
+      "id": "open",
+      "label": "Launch",
+      "tooltip": "Open the application inside the desktop workspace."
+    },
+    {
+      "id": "inspect",
+      "label": "Details",
+      "tooltip": "View this application in the app catalog."
+    }
+  ],
+  "settings": [
+    {
+      "id": "open",
+      "label": "Open",
+      "tooltip": "Jump directly to this setting panel."
+    },
+    {
+      "id": "section",
+      "label": "Section",
+      "tooltip": "Open the broader section that contains this setting."
+    }
+  ],
+  "files": [
+    {
+      "id": "open",
+      "label": "Open",
+      "tooltip": "Open the file explorer to this location."
+    },
+    {
+      "id": "copyPath",
+      "label": "Copy path",
+      "tooltip": "Copy the file path to the clipboard."
+    },
+    {
+      "id": "preview",
+      "label": "Preview",
+      "tooltip": "Open the file in a new browser tab."
+    }
+  ],
+  "commands": [
+    {
+      "id": "run",
+      "label": "Run",
+      "tooltip": "Send the command to the terminal app."
+    },
+    {
+      "id": "copy",
+      "label": "Copy",
+      "tooltip": "Copy the command to the clipboard."
+    }
+  ],
+  "help": [
+    {
+      "id": "open",
+      "label": "Open",
+      "tooltip": "Open the help article in a new tab."
+    },
+    {
+      "id": "copy",
+      "label": "Copy link",
+      "tooltip": "Copy the article URL to the clipboard."
+    }
+  ]
+}
