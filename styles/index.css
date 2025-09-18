@@ -11,6 +11,26 @@ body{
     color: var(--color-text);
 }
 
+.cursor-default {
+    cursor: default;
+}
+
+.cursor-move {
+    cursor: move;
+}
+
+.cursor-copy {
+    cursor: copy;
+}
+
+.cursor-busy {
+    cursor: progress, wait;
+}
+
+.cursor-not-allowed {
+    cursor: not-allowed;
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
