@@ -7,6 +7,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.
 - Register apps and games uniformly with `display*` helpers and small default window sizes.
 - Ensure new utilities have Jest tests mirroring existing ones.
+- Wire redaction detectors behind `NEXT_PUBLIC_REDACTION_ENABLED` (set to `"false"` to disable automatic scans). Metadata is stored via `.redaction.json` sidecar files and localStorage entries with the `redaction:` prefix.
 - Fix terminal build by importing `@xterm/xterm/css/xterm.css` and registering `FitAddon`.
 - Follow `docs/new-app-checklist.md` for all new apps.
 

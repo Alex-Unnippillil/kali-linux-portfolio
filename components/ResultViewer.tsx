@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
+import {
+  detectSensitiveStrings,
+  createMasksFromMatches,
+  buildRedactionMetadata,
+  downloadRedactionMetadata,
+} from '../utils/redaction';
 
 interface ViewerProps {
   data: any[];
@@ -41,12 +47,16 @@ export default function ResultViewer({ data }: ViewerProps) {
   const exportCsv = () => {
     const csv = [keys.join(','), ...data.map((row) => keys.map((k) => JSON.stringify(row[k] ?? '')).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
+    const matches = detectSensitiveStrings(csv);
+    const masks = createMasksFromMatches(matches);
+    const metadata = buildRedactionMetadata(masks);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'results.csv';
     a.click();
     URL.revokeObjectURL(url);
+    downloadRedactionMetadata('results.csv', metadata);
   };
 
   return (

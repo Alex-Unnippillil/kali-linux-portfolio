@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { collectNodeRedactions, buildRedactionMetadata, serializeRedactionMetadata } from '../../utils/redaction';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -660,12 +661,21 @@ export class Desktop extends Component {
 
         // capture window snapshot
         let image = null;
+        let redactionMeta = null;
         const node = document.getElementById(objId);
         if (node) {
             try {
                 image = await toPng(node);
             } catch (e) {
                 // ignore snapshot errors
+            }
+            try {
+                const masks = collectNodeRedactions(node);
+                if (masks.length) {
+                    redactionMeta = serializeRedactionMetadata(buildRedactionMetadata(masks));
+                }
+            } catch (e) {
+                // ignore detection issues
             }
         }
 
@@ -682,6 +692,7 @@ export class Desktop extends Component {
             title: appMeta.title || objId,
             icon: appMeta.icon,
             image,
+            redaction: redactionMeta,
             closedAt: now,
         });
         safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
