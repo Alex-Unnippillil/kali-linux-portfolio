@@ -1,9 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import LabMode from '../../LabMode';
 import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
+
+const SCRIPT_SNIPPETS = [
+  {
+    id: 'panel-log',
+    label: 'DOM ready logger',
+    code: `document.addEventListener('DOMContentLoaded', () => {\n  const panel = document.querySelector('[data-panel]');\n  console.log('CSP lab inline script', panel);\n});`,
+  },
+  {
+    id: 'menu-toggle',
+    label: 'Menu toggle helper',
+    code: `const menu = document.querySelector('[data-menu]');\nif (menu) {\n  menu.classList.toggle('is-open');\n}`,
+  },
+  {
+    id: 'custom',
+    label: 'Custom snippet',
+    code: '',
+  },
+];
+
+const HASH_ALGORITHMS = ['SHA-256', 'SHA-384', 'SHA-512'];
+
+const DIRECTIVE_OPTIONS = [
+  { id: 'script-src', label: 'script-src' },
+  { id: 'style-src', label: 'style-src' },
+];
+
+const BUILT_IN_SOURCES = [
+  { value: "'self'", label: "'self' (current origin)" },
+  { value: "'unsafe-inline'", label: "'unsafe-inline' (not recommended)" },
+  { value: "'unsafe-eval'", label: "'unsafe-eval' (avoid in production)" },
+];
+
+const HASH_PREFIX = {
+  'SHA-256': 'sha256',
+  'SHA-384': 'sha384',
+  'SHA-512': 'sha512',
+};
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -12,6 +49,7 @@ const tabs = [
   { id: 'sigma', label: 'Sigma Explorer' },
   { id: 'yara', label: 'YARA Tester' },
   { id: 'mitre', label: 'MITRE ATT&CK' },
+  { id: 'csp', label: 'CSP Helper' },
   { id: 'fixtures', label: 'Fixtures' },
 ];
 
@@ -41,6 +79,187 @@ export default function SecurityTools() {
   const runYara = () => {
     const matched = sampleText.includes('MALWARE');
     setYaraResult(matched ? 'Demo rule matched sample.txt' : 'No matches');
+  };
+
+  const [directives, setDirectives] = useState({
+    "default-src": ["'self'"],
+    'script-src': ["'self'"],
+    'style-src': ["'self'"],
+  });
+  const [selectedDirective, setSelectedDirective] = useState('script-src');
+  const [selectedSnippet, setSelectedSnippet] = useState(SCRIPT_SNIPPETS[0].id);
+  const [customSnippet, setCustomSnippet] = useState('');
+  const [mode, setMode] = useState('nonce');
+  const [algorithm, setAlgorithm] = useState('SHA-256');
+  const [generatedValue, setGeneratedValue] = useState('');
+  const [generatorStatus, setGeneratorStatus] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState('');
+  const [policyCopyFeedback, setPolicyCopyFeedback] = useState('');
+  const [customSource, setCustomSource] = useState('');
+
+  const snippetText = useMemo(() => {
+    if (selectedSnippet === 'custom') {
+      return customSnippet;
+    }
+    const match = SCRIPT_SNIPPETS.find((item) => item.id === selectedSnippet);
+    return match ? match.code : '';
+  }, [customSnippet, selectedSnippet]);
+
+  const policyString = useMemo(
+    () =>
+      Object.entries(directives)
+        .map(([directive, values]) =>
+          values.length ? `${directive} ${values.join(' ')}` : directive,
+        )
+        .join('; '),
+    [directives],
+  );
+
+  useEffect(() => {
+    if (!copyFeedback) return;
+    const timer = setTimeout(() => setCopyFeedback(''), 2000);
+    return () => clearTimeout(timer);
+  }, [copyFeedback]);
+
+  useEffect(() => {
+    if (!policyCopyFeedback) return;
+    const timer = setTimeout(() => setPolicyCopyFeedback(''), 2000);
+    return () => clearTimeout(timer);
+  }, [policyCopyFeedback]);
+
+  const updateDirective = (directive, updater) => {
+    setDirectives((prev) => {
+      const current = prev[directive] || [];
+      const updated = updater(current);
+      return { ...prev, [directive]: updated };
+    });
+  };
+
+  const hasSource = (directive, source) =>
+    (directives[directive] || []).includes(source);
+
+  const toggleSource = (directive, source) => {
+    updateDirective(directive, (current) =>
+      current.includes(source)
+        ? current.filter((item) => item !== source)
+        : [...current, source],
+    );
+  };
+
+  const addCustomSource = () => {
+    const trimmed = customSource.trim();
+    if (!trimmed) return;
+    updateDirective(selectedDirective, (current) =>
+      current.includes(trimmed) ? current : [...current, trimmed],
+    );
+    setCustomSource('');
+  };
+
+  const removeSource = (directive, source) => {
+    updateDirective(directive, (current) =>
+      current.filter((item) => item !== source),
+    );
+  };
+
+  const toBase64 = (buffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    if (typeof window !== 'undefined' && typeof window.btoa === 'function') {
+      return window.btoa(binary);
+    }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.btoa === 'function') {
+      return globalThis.btoa(binary);
+    }
+    return '';
+  };
+
+  const applyGeneratedValue = (formatted, type, prefix) => {
+    setGeneratedValue(formatted);
+    setGeneratorStatus(`Added ${formatted} to ${selectedDirective}.`);
+    setCopyFeedback('');
+    updateDirective(selectedDirective, (current) => {
+      const filtered = current.filter((item) => {
+        if (type === 'nonce') {
+          return !item.startsWith("'nonce-");
+        }
+        return prefix ? !item.startsWith(`'${prefix}-`) : true;
+      });
+      return [...filtered, formatted];
+    });
+  };
+
+  const generateNonce = () => {
+    if (typeof window === 'undefined' || !window.crypto?.getRandomValues) {
+      setGeneratorStatus('Crypto API unavailable in this environment.');
+      return;
+    }
+    const random = new Uint8Array(16);
+    window.crypto.getRandomValues(random);
+    const base64 = toBase64(random.buffer);
+    if (!base64) {
+      setGeneratorStatus('Failed to encode nonce.');
+      return;
+    }
+    applyGeneratedValue(`'nonce-${base64}'`, 'nonce');
+  };
+
+  const generateHash = async () => {
+    if (!snippetText) {
+      setGeneratorStatus('Provide a script snippet before hashing.');
+      return;
+    }
+    if (typeof window === 'undefined' || !window.crypto?.subtle) {
+      setGeneratorStatus('Crypto.subtle is unavailable in this environment.');
+      return;
+    }
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(snippetText);
+      const digest = await window.crypto.subtle.digest(algorithm, data);
+      const base64 = toBase64(digest);
+      if (!base64) {
+        setGeneratorStatus('Failed to encode hash.');
+        return;
+      }
+      const prefix = HASH_PREFIX[algorithm] || 'sha256';
+      applyGeneratedValue(`'${prefix}-${base64}'`, 'hash', prefix);
+    } catch (err) {
+      setGeneratorStatus('Hash generation failed.');
+    }
+  };
+
+  const runGenerator = () => {
+    if (mode === 'nonce') {
+      generateNonce();
+    } else {
+      generateHash();
+    }
+  };
+
+  const copyGenerated = () => {
+    if (!generatedValue) return;
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      setCopyFeedback('Clipboard API unavailable.');
+      return;
+    }
+    navigator.clipboard
+      .writeText(generatedValue)
+      .then(() => setCopyFeedback('Copied value to clipboard.'))
+      .catch(() => setCopyFeedback('Copy failed.'));
+  };
+
+  const copyPolicy = () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      setPolicyCopyFeedback('Clipboard API unavailable.');
+      return;
+    }
+    navigator.clipboard
+      .writeText(`Content-Security-Policy: ${policyString}`)
+      .then(() => setPolicyCopyFeedback('Policy copied.'))
+      .catch(() => setPolicyCopyFeedback('Copy failed.'));
   };
 
   // Lab access gate
@@ -205,6 +424,203 @@ export default function SecurityTools() {
               </div>
             )}
 
+            {active === 'csp' && (
+              <div className="space-y-4 text-xs">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <section className="bg-black bg-opacity-40 p-3 rounded border border-gray-700">
+                    <h3 className="text-sm font-bold mb-2">Directive Editor</h3>
+                    <label className="block mb-2">
+                      <span className="mr-2">Directive</span>
+                      <select
+                        value={selectedDirective}
+                        onChange={(e) => setSelectedDirective(e.target.value)}
+                        className="bg-ub-cool-grey text-white p-1 rounded"
+                      >
+                        {DIRECTIVE_OPTIONS.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="space-y-2 mb-3">
+                      {BUILT_IN_SOURCES.map((source) => (
+                        <label key={source.value} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={hasSource(selectedDirective, source.value)}
+                            onChange={() => toggleSource(selectedDirective, source.value)}
+                          />
+                          <span>{source.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="mb-3">
+                      <label className="block mb-1">Add custom source</label>
+                      <div className="flex gap-2">
+                        <input
+                          value={customSource}
+                          onChange={(e) => setCustomSource(e.target.value)}
+                          className="flex-1 p-1 text-black rounded"
+                          placeholder="https://cdn.example.com"
+                        />
+                        <button
+                          type="button"
+                          onClick={addCustomSource}
+                          className="px-2 py-1 bg-ub-green text-black rounded"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-1">Sources</h4>
+                      <ul className="space-y-1">
+                        {(directives[selectedDirective] || []).map((source) => (
+                          <li
+                            key={source}
+                            className="flex items-center justify-between bg-ub-cool-grey bg-opacity-70 px-2 py-1 rounded"
+                          >
+                            <span className="break-all">{source}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeSource(selectedDirective, source)}
+                              className="text-red-300 hover:text-red-200"
+                              aria-label={`Remove ${source}`}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </section>
+
+                  <section className="bg-black bg-opacity-40 p-3 rounded border border-gray-700">
+                    <h3 className="text-sm font-bold mb-2">Inline Script Helper</h3>
+                    <label className="block mb-2">
+                      <span className="mr-2">Snippet</span>
+                      <select
+                        value={selectedSnippet}
+                        onChange={(e) => setSelectedSnippet(e.target.value)}
+                        className="bg-ub-cool-grey text-white p-1 rounded"
+                      >
+                        {SCRIPT_SNIPPETS.map((snippet) => (
+                          <option key={snippet.id} value={snippet.id}>
+                            {snippet.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <textarea
+                      value={snippetText}
+                      onChange={(e) => {
+                        if (selectedSnippet === 'custom') {
+                          setCustomSnippet(e.target.value);
+                        }
+                      }}
+                      readOnly={selectedSnippet !== 'custom'}
+                      className="w-full h-32 p-2 text-black rounded font-mono"
+                      aria-label="inline script snippet"
+                    />
+                    {selectedSnippet !== 'custom' && (
+                      <p className="mt-1 text-[11px] text-gray-300">
+                        Switch to the custom option to edit the snippet text.
+                      </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-2 items-center">
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name="csp-mode"
+                          value="nonce"
+                          checked={mode === 'nonce'}
+                          onChange={(e) => setMode(e.target.value)}
+                        />
+                        Nonce
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name="csp-mode"
+                          value="hash"
+                          checked={mode === 'hash'}
+                          onChange={(e) => setMode(e.target.value)}
+                        />
+                        Hash
+                      </label>
+                      {mode === 'hash' && (
+                        <select
+                          value={algorithm}
+                          onChange={(e) => setAlgorithm(e.target.value)}
+                          className="bg-ub-cool-grey text-white p-1 rounded"
+                        >
+                          {HASH_ALGORITHMS.map((alg) => (
+                            <option key={alg} value={alg}>
+                              {alg}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <button
+                        type="button"
+                        onClick={runGenerator}
+                        className="px-2 py-1 bg-ub-green text-black rounded"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                    {generatorStatus && (
+                      <div className="mt-2 text-[11px] text-green-300" role="status" aria-live="polite">
+                        {generatorStatus}
+                      </div>
+                    )}
+                    {generatedValue && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <input
+                          value={generatedValue}
+                          readOnly
+                          className="flex-1 p-1 text-black rounded font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={copyGenerated}
+                          className="px-2 py-1 bg-ub-cool-grey text-white rounded"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
+                    {copyFeedback && (
+                      <div className="mt-1 text-[11px]" role="status" aria-live="polite">
+                        {copyFeedback}
+                      </div>
+                    )}
+                  </section>
+                </div>
+                <section className="bg-black bg-opacity-40 p-3 rounded border border-gray-700">
+                  <h3 className="text-sm font-bold mb-2">Policy Preview</h3>
+                  <pre className="bg-black bg-opacity-40 p-2 rounded overflow-auto whitespace-pre-wrap font-mono">
+                    {`Content-Security-Policy: ${policyString}`}
+                  </pre>
+                  <div className="mt-2 flex flex-wrap gap-2 items-center">
+                    <button
+                      type="button"
+                      onClick={copyPolicy}
+                      className="px-2 py-1 bg-ub-green text-black rounded"
+                    >
+                      Copy header
+                    </button>
+                    {policyCopyFeedback && (
+                      <span className="text-[11px]" role="status" aria-live="polite">
+                        {policyCopyFeedback}
+                      </span>
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
+
             {active === 'suricata' && (
             <div>
               <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
@@ -276,10 +692,15 @@ export default function SecurityTools() {
         )}
         </div>
         <ExplainerPane
-          lines={["Use this lab to explore static security data."]}
+          lines={[
+            'Toggle script-src or style-src sources to see how the CSP header is assembled.',
+            'Generate a nonce or SHA hash for the selected inline snippet—the result is added to the active directive.',
+            "Copy the finished Content-Security-Policy header to reuse it in server or framework configs.",
+          ]}
           resources={[
-            { label: 'NIST SP 800-115', url: 'https://csrc.nist.gov/publications/detail/sp/800-115/final' },
-            { label: 'OWASP Testing Guide', url: 'https://owasp.org/www-project-web-security-testing-guide/' },
+            { label: 'MDN: Content Security Policy', url: 'https://developer.mozilla.org/docs/Web/HTTP/CSP' },
+            { label: 'Chrome DevRel: Script nonces', url: 'https://developer.chrome.com/docs/web-platform/content-security-policy/#script-nonce' },
+            { label: 'OWASP CSP Cheat Sheet', url: 'https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html' },
           ]}
         />
       </div>
