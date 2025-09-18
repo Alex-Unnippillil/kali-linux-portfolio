@@ -1,19 +1,29 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
 import FormulaEditor from './components/FormulaEditor';
-import Tape from './components/Tape';
+import Tape, { TapeEntry } from './components/Tape';
+
+type StoredHistoryEntry = Omit<TapeEntry, 'id'> & { id?: string };
+
+const generateHistoryId = () => {
+  const cryptoObj = typeof globalThis.crypto !== 'undefined' ? globalThis.crypto : null;
+  if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
+    return cryptoObj.randomUUID();
+  }
+  return `calc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
 
 export default function Calculator() {
   const HISTORY_LIMIT = 10;
-  const [history, setHistory] = usePersistentState<
-    { expr: string; result: string }[]
+  const [history, setHistory, , clearHistory] = usePersistentState<
+    StoredHistoryEntry[]
   >(
     'calc-history',
     () => [],
-    (v): v is { expr: string; result: string }[] =>
+    (v): v is StoredHistoryEntry[] =>
       Array.isArray(v) &&
       v.every(
         (item) =>
@@ -21,6 +31,31 @@ export default function Calculator() {
           typeof item?.result === 'string',
       ),
   );
+
+  const { hydratedHistory, needsHydration } = useMemo<{
+    hydratedHistory: TapeEntry[];
+    needsHydration: boolean;
+  }>(() => {
+    let mutated = false;
+    const withIds = history.map((entry) => {
+      if (typeof entry?.id === 'string') {
+        return entry as TapeEntry;
+      }
+      mutated = true;
+      return { ...entry, id: generateHistoryId() } as TapeEntry;
+    });
+
+    return {
+      hydratedHistory: withIds,
+      needsHydration: mutated,
+    };
+  }, [history]);
+
+  useEffect(() => {
+    if (needsHydration) {
+      setHistory(hydratedHistory);
+    }
+  }, [hydratedHistory, needsHydration, setHistory]);
 
   const btnCls =
     'btn min-h-12 w-12 transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-white';
@@ -92,7 +127,10 @@ export default function Calculator() {
             try {
               const result = evaluate(expr);
               setHistory((prev) =>
-                [{ expr, result }, ...prev].slice(0, HISTORY_LIMIT),
+                [
+                  { id: generateHistoryId(), expr, result },
+                  ...prev,
+                ].slice(0, HISTORY_LIMIT),
               );
               display.value = result;
             } catch (e: any) {
@@ -328,13 +366,13 @@ export default function Calculator() {
       </div>
       <FormulaEditor />
       <div id="history" className="history hidden" aria-live="polite">
-        {history.map(({ expr, result }, i) => (
+        {hydratedHistory.map(({ expr, result }, i) => (
           <div key={i} className="history-entry">
             {expr} = {result}
           </div>
         ))}
       </div>
-      <Tape entries={history} />
+      <Tape entries={hydratedHistory} onClearHistory={clearHistory} />
     </div>
   );
 }
