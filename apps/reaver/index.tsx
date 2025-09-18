@@ -6,7 +6,7 @@ import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
 } from './components/RouterProfiles';
-import APList from './components/APList';
+import AccessPointList from './components/ListView';
 import ProgressDonut from './components/ProgressDonut';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -210,7 +210,7 @@ const ReaverPanel: React.FC = () => {
 
       <div className="mb-6">
         <h2 className="text-lg mb-2">Access Points</h2>
-        <APList />
+        <AccessPointList />
       </div>
 
       <div className="mb-6">

@@ -4,8 +4,8 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
-import FindingCard from './components/FindingCard';
 import FiltersDrawer from './components/FiltersDrawer';
+import ListView from './components/ListView';
 import { Plugin, Severity, Scan, Finding, severities } from './types';
 
 const Nessus: React.FC = () => {
@@ -37,23 +37,48 @@ const Nessus: React.FC = () => {
   const listRef = useRef<HTMLUListElement>(null);
   const PAGE_SIZE = 50;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [loadingPlugins, setLoadingPlugins] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
+      setLoadingPlugins(true);
       try {
         const res = await fetch('/demo-data/nessus/plugins.json');
-        const json: Plugin[] = await res.json();
-        setPlugins(json);
-        const tagSet = new Set<string>();
-        for (const p of json) {
-          p.tags?.forEach((t) => tagSet.add(t));
+        if (!res.ok) {
+          throw new Error('Failed to load plugins');
         }
-        setTags(Array.from(tagSet));
+        const json = (await res.json()) as Plugin[];
+        if (cancelled) return;
+        if (Array.isArray(json)) {
+          setPlugins(json);
+          const tagSet = new Set<string>();
+          for (const plugin of json) {
+            plugin.tags?.forEach((tag) => tagSet.add(tag));
+          }
+          setTags(Array.from(tagSet));
+        } else {
+          setPlugins([]);
+          setTags([]);
+        }
       } catch {
-        // ignore fetch errors
+        if (!cancelled) {
+          setPlugins([]);
+          setTags([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPlugins(false);
+        }
       }
     };
+
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -139,6 +164,11 @@ const Nessus: React.FC = () => {
     [plugins, severityFilters, tagFilters],
   );
 
+  const visiblePlugins = useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount],
+  );
+
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [filtered]);
@@ -177,22 +207,13 @@ const Nessus: React.FC = () => {
         >
           Filters
         </button>
-        <ul
+        <ListView
           ref={listRef}
+          plugins={visiblePlugins}
+          loading={loadingPlugins}
+          hasMore={visibleCount < filtered.length}
           onScroll={handleScroll}
-          className="space-y-2 max-h-96 overflow-auto"
-        >
-          {filtered.slice(0, visibleCount).map((p) => (
-            <li key={p.id}>
-              <FindingCard plugin={p} />
-            </li>
-          ))}
-        </ul>
-        {visibleCount < filtered.length && (
-          <div className="mt-2 text-center text-sm text-gray-400">
-            Scroll to load more...
-          </div>
-        )}
+        />
       </section>
 
       <section>
