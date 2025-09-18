@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { globalShortcutManager } from '../../hooks/useGlobalShortcuts';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.shortcutUnsubscribe = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -87,15 +89,44 @@ export class Desktop extends Component {
         this.checkForAppShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
-        document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.shortcutUnsubscribe = globalShortcutManager.subscribe({
+            onAltTab: (direction) => {
+                if (!this.state.showWindowSwitcher) {
+                    this.openWindowSwitcher();
+                }
+                this.cycleApps(direction);
+            },
+            onAltBacktick: (direction) => {
+                this.cycleAppWindows(direction);
+            },
+            onCtrlBacktick: () => {
+                this.openApp('terminal');
+            },
+            onClipboard: () => {
+                this.openApp('clipboard-manager');
+            },
+            onWinKey: () => {
+                this.showAllApps();
+            },
+            onMetaArrow: (key) => {
+                const id = this.getFocusedWindowId();
+                if (id) {
+                    const event = new CustomEvent('super-arrow', { detail: key });
+                    document.getElementById(id)?.dispatchEvent(event);
+                }
+            },
+        });
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
-        document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (typeof this.shortcutUnsubscribe === 'function') {
+            this.shortcutUnsubscribe();
+            this.shortcutUnsubscribe = null;
+        }
     }
 
     checkForNewFolders = () => {
@@ -144,34 +175,6 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
-    }
-
-    handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
-            }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
-            e.preventDefault();
-            this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
-            }
-        }
     }
 
     getFocusedWindowId = () => {
@@ -468,6 +471,7 @@ export class Desktop extends Component {
                     closed: this.closeApp,
                     openApp: this.openApp,
                     focus: this.focus,
+                    onFocusRequest: this.handleFocusRequest,
                     isFocused: this.state.focused_windows[app.id],
                     hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
@@ -557,9 +561,10 @@ export class Desktop extends Component {
     giveFocusToLastApp = () => {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
-            for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+            for (let index = this.app_stack.length - 1; index >= 0; index--) {
+                const id = this.app_stack[index];
+                if (!this.state.minimized_windows[id]) {
+                    this.focus(id);
                     break;
                 }
             }
@@ -651,7 +656,6 @@ export class Desktop extends Component {
                     this.focus(objId);
                     this.saveSession();
                 });
-                this.app_stack.push(objId);
             }, 200);
         }
     }
@@ -733,7 +737,7 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -745,6 +749,13 @@ export class Desktop extends Component {
             }
         }
         this.setState({ focused_windows });
+        this.handleFocusRequest(objId);
+    }
+
+    handleFocusRequest = (objId) => {
+        if (!objId) return;
+        this.app_stack = this.app_stack.filter(id => id !== objId);
+        this.app_stack.push(objId);
     }
 
     addNewFolder = () => {
@@ -900,6 +911,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    onFocusWindow={this.handleFocusRequest}
                 />
 
                 {/* Desktop Apps */}

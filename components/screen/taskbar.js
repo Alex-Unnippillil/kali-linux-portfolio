@@ -7,10 +7,16 @@ export default function Taskbar(props) {
     const handleClick = (app) => {
         const id = app.id;
         if (props.minimized_windows[id]) {
+            if (typeof props.onFocusWindow === 'function') {
+                props.onFocusWindow(id);
+            }
             props.openApp(id);
         } else if (props.focused_windows[id]) {
             props.minimize(id);
         } else {
+            if (typeof props.onFocusWindow === 'function') {
+                props.onFocusWindow(id);
+            }
             props.openApp(id);
         }
     };
