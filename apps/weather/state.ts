@@ -68,3 +68,9 @@ export function useCurrentGroup() {
   return usePersistentState<string | null>('weather-current-group', null, isStringOrNull);
 }
 
+const isProviderId = (value: unknown): value is string => typeof value === 'string';
+
+export function useWeatherProviderSetting() {
+  return usePersistentState<string>('weather-provider', 'open-meteo', isProviderId);
+}
+
