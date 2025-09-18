@@ -27,12 +27,12 @@ type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
-  '#1793d1', // kali blue (default)
-  '#e53e3e', // red
-  '#d97706', // orange
-  '#38a169', // green
-  '#805ad5', // purple
-  '#ed64a6', // pink
+  '#367bf0', // Kali blue (default)
+  '#38bdf8', // neon cyan
+  '#a400a4', // Kali purple
+  '#22c55e', // success green
+  '#f97316', // signal orange
+  '#f43f5e', // punchy magenta
 ];
 
 // Utility to lighten or darken a hex color by a percentage
@@ -138,13 +138,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
       '--color-primary': accent,
       '--color-accent': accent,
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--color-accent-border': border,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
