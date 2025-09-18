@@ -1,0 +1,161 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.tabBar {
+  --tab-bar-gap: var(--space-2);
+  --tab-bar-padding-inline: calc(var(--space-2) * 2);
+  --tab-bar-padding-inline-sm: var(--space-2);
+  --tab-bar-padding-block: var(--space-2);
+  --tab-gap: var(--space-2);
+  --tab-height: var(--hit-area);
+  --tab-radius: var(--radius-lg);
+  --tab-padding-inline: calc(var(--space-2) * 2);
+  --tab-padding-inline-sm: var(--space-2);
+  --tab-close-size: calc(var(--hit-area) / 2);
+  --new-tab-size: var(--hit-area);
+  display: flex;
+  align-items: center;
+  gap: var(--tab-bar-gap);
+  padding: var(--tab-bar-padding-block) var(--tab-bar-padding-inline);
+  background-color: var(--color-ub-lite-abrgn);
+  color: var(--color-text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+}
+
+.tabsScroll {
+  display: flex;
+  align-items: center;
+  gap: var(--tab-bar-gap);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tab-gap);
+  padding-inline: var(--tab-padding-inline);
+  min-height: var(--tab-height);
+  border-radius: var(--tab-radius);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+  white-space: nowrap;
+}
+
+.tabActive {
+  background-color: var(--color-ub-med-abrgn);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.tab:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 2px;
+}
+
+.tabLabel {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tab-close-size);
+  height: var(--tab-close-size);
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+}
+
+.tabCloseButton:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tabCloseButton:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 1px;
+}
+
+.newTabButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--new-tab-size);
+  height: var(--new-tab-size);
+  border-radius: var(--tab-radius);
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  background-color: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+}
+
+.newTabButton:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-style: solid;
+}
+
+.newTabButton:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 1px;
+}
+
+.panelContainer {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.panel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.panelHidden {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .tabBar {
+    padding-inline: var(--tab-bar-padding-inline-sm);
+    gap: var(--space-1);
+  }
+
+  .tabsScroll {
+    gap: var(--space-1);
+  }
+
+  .tab {
+    padding-inline: var(--tab-padding-inline-sm);
+  }
+
+  .tabLabel {
+    max-width: 9rem;
+  }
+}
