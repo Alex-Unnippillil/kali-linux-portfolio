@@ -1,0 +1,129 @@
+{
+  "tracks": [
+    {
+      "id": "soundhelix-song-1",
+      "title": "Signal Drift",
+      "artist": "SoundHelix Collective",
+      "album": "Signal Drift",
+      "duration": 378,
+      "tags": ["ambient", "intro"],
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    },
+    {
+      "id": "soundhelix-song-2",
+      "title": "Dynamic Sweep",
+      "artist": "SoundHelix Collective",
+      "album": "Signal Drift",
+      "duration": 412,
+      "tags": ["electronic", "focus"],
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+    },
+    {
+      "id": "soundhelix-song-3",
+      "title": "Night Watch",
+      "artist": "SoundHelix Collective",
+      "album": "Signal Drift",
+      "duration": 389,
+      "tags": ["synth", "nocturnal"],
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    },
+    {
+      "id": "soundhelix-song-4",
+      "title": "Pulse Cascade",
+      "artist": "SoundHelix Collective",
+      "album": "Pulse Cascade",
+      "duration": 366,
+      "tags": ["uplifting", "scan"],
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+    },
+    {
+      "id": "soundhelix-song-5",
+      "title": "Parallel Signals",
+      "artist": "SoundHelix Collective",
+      "album": "Pulse Cascade",
+      "duration": 401,
+      "tags": ["focus", "instrumental"],
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+    },
+    {
+      "id": "soundhelix-song-6",
+      "title": "Quiet Recon",
+      "artist": "SoundHelix Collective",
+      "album": "Night Watch",
+      "duration": 355,
+      "tags": ["downtempo", "late-night"],
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+    }
+  ],
+  "albums": [
+    {
+      "id": "signal-drift",
+      "title": "Signal Drift",
+      "artist": "SoundHelix Collective",
+      "year": 2023,
+      "tags": ["ambient", "synth"],
+      "tracks": [
+        "soundhelix-song-1",
+        "soundhelix-song-2",
+        "soundhelix-song-3"
+      ]
+    },
+    {
+      "id": "pulse-cascade",
+      "title": "Pulse Cascade",
+      "artist": "SoundHelix Collective",
+      "year": 2022,
+      "tags": ["electronic", "focus"],
+      "tracks": [
+        "soundhelix-song-4",
+        "soundhelix-song-5",
+        "soundhelix-song-2"
+      ]
+    },
+    {
+      "id": "night-watch",
+      "title": "Night Watch",
+      "artist": "SoundHelix Collective",
+      "year": 2021,
+      "tags": ["downtempo", "nocturnal"],
+      "tracks": [
+        "soundhelix-song-3",
+        "soundhelix-song-6"
+      ]
+    }
+  ],
+  "playlists": [
+    {
+      "id": "focus-scan",
+      "title": "Focus Scan",
+      "description": "Bright electronic cuts to keep recon sessions rolling.",
+      "tags": ["focus", "electronic"],
+      "tracks": [
+        "soundhelix-song-2",
+        "soundhelix-song-4",
+        "soundhelix-song-5"
+      ]
+    },
+    {
+      "id": "after-hours",
+      "title": "After Hours",
+      "description": "Downtempo ambience for late-night log reviews.",
+      "tags": ["downtempo", "night"],
+      "tracks": [
+        "soundhelix-song-3",
+        "soundhelix-song-6",
+        "soundhelix-song-1"
+      ]
+    },
+    {
+      "id": "launch-sequence",
+      "title": "Launch Sequence",
+      "description": "High-energy intros to kick off a new engagement.",
+      "tags": ["uplifting", "intro"],
+      "tracks": [
+        "soundhelix-song-1",
+        "soundhelix-song-4"
+      ]
+    }
+  ]
+}
