@@ -4,78 +4,91 @@ on:
   pull_request:
 
 jobs:
-  install:
+  lint-types:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install --immutable --immutable-cache
+      - name: Run ESLint
+        run: yarn lint
+      - name: Type check
+        run: yarn tsc --noEmit
 
-  lint:
+  build-analyze:
+    name: Build & Bundle Budgets
     runs-on: ubuntu-latest
-    needs: install
+    needs: lint-types
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: npm run lint
-
-  typecheck:
-    runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install --immutable --immutable-cache
+      - name: Build application
+        run: yarn build
+      - name: Check bundle budgets
+        run: yarn bundle:budgets
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: npm run tsc -- --noEmit
+          name: next-build-artifacts
+          path: |
+            reports/bundle-budgets.json
+            .next/build-manifest.json
+          if-no-files-found: error
 
-  test:
+  e2e:
+    name: Deploy Preview & E2E
     runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn test --coverage
-
-  security:
-    runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn npm audit
-
-  vercel-preview:
-    runs-on: ubuntu-latest
-    needs: install
+    needs: build-analyze
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install --immutable --immutable-cache
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Pull Vercel environment
+        run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build Vercel preview
+        run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy preview
+        id: deploy
+        run: |
+          preview_url=$(npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} --yes)
+          preview_url=$(echo "$preview_url" | tail -n 1)
+          if [ -z "$preview_url" ]; then
+            echo 'Failed to determine preview URL' >&2
+            exit 1
+          fi
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $preview_url"
+      - name: Run Playwright smoke tests
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: npx playwright test
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore

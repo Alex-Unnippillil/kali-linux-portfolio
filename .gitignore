@@ -49,3 +49,6 @@ package-lock.json
 utils/gamepad.js
 tsconfig.gamepad.tsbuildinfo
 tsconfig.tsbuildinfo
+
+# reports
+/reports/
