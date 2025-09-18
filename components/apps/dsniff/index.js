@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import TitleBar from '../../base/TitleBar';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -348,17 +350,43 @@ const Dsniff = () => {
     return searchMatch && filterMatch && protocolMatch;
   });
 
+  const headerButtonStyle = useMemo(
+    () => ({
+      background: 'color-mix(in srgb, var(--color-surface), transparent 45%)',
+      borderColor: 'color-mix(in srgb, var(--color-border), transparent 20%)',
+    }),
+    [],
+  );
+
+  const headerButtonClass =
+    'rounded border px-3 py-1 text-xs font-medium transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]';
+
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
-      <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-lg">dsniff</h1>
-        <button
-          onClick={exportSummary}
-          className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        >
-          Export summary
-        </button>
-      </div>
+      <TitleBar
+        headingLevel={1}
+        icon={
+          <Image
+            src="/themes/Yaru/apps/dsniff.svg"
+            alt="dsniff icon"
+            width={28}
+            height={28}
+            sizes="28px"
+            priority
+          />
+        }
+        title="dsniff"
+        actions={
+          <button
+            type="button"
+            onClick={exportSummary}
+            className={headerButtonClass}
+            style={headerButtonStyle}
+          >
+            Export summary
+          </button>
+        }
+      />
       <div className="mb-2 text-yellow-300 text-sm">
         For lab use only – simulated traffic
       </div>

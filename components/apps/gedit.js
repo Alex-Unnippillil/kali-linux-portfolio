@@ -3,7 +3,14 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
+import TitleBar from '../base/TitleBar';
 import { createDisplay } from '../../utils/createDynamicApp';
+
+const headerButtonClass = 'rounded border px-3 py-1 text-xs font-medium transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)] disabled:opacity-50';
+const headerButtonStyle = {
+    background: 'color-mix(in srgb, var(--color-surface), transparent 45%)',
+    borderColor: 'color-mix(in srgb, var(--color-border), transparent 20%)',
+};
 
 export class Gedit extends Component {
 
@@ -144,12 +151,31 @@ export class Gedit extends Component {
         const messageInvalid = this.state.messageTouched && this.state.messageError;
         return (
             <div className="w-full h-full relative flex flex-col bg-ub-cool-grey text-white select-none">
-                <div className="flex items-center justify-between w-full bg-ub-gedit-light bg-opacity-60 border-b border-t border-blue-400 text-sm">
-                    <span className="font-bold ml-2">Send a Message to Me</span>
-                    <div className="flex">
-                        <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</div>
-                    </div>
-                </div>
+                <TitleBar
+                    headingLevel={1}
+                    icon={
+                        <Image
+                            src="/themes/Yaru/apps/gedit.png"
+                            alt="Gedit icon"
+                            width={28}
+                            height={28}
+                            sizes="28px"
+                            priority
+                        />
+                    }
+                    title="Send a Message to Me"
+                    actions={
+                        <button
+                            type="button"
+                            onClick={this.sendMessage}
+                            className={headerButtonClass}
+                            style={headerButtonStyle}
+                            disabled={this.state.sending}
+                        >
+                            Send
+                        </button>
+                    }
+                />
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
                     <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
                     <div className="relative">
