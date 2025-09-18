@@ -10,6 +10,7 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
+import TabBar from '../../ui/TabBar';
 
 interface Tile {
   title: string;
@@ -92,8 +93,6 @@ const Chrome: React.FC = () => {
   const tabSearchRef = useRef<HTMLInputElement | null>(null);
   const [tabQuery, setTabQuery] = useState('');
   const [overflowing, setOverflowing] = useState(false);
-  const draggingId = useRef<number | null>(null);
-  const dragTabId = useRef<number | null>(null);
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [editingTiles, setEditingTiles] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -310,36 +309,6 @@ const Chrome: React.FC = () => {
   },
   [activeId, tabs],
 );
-
-  const handleDragStart = useCallback(
-    (id: number) => () => {
-      dragTabId.current = id;
-    },
-    [],
-  );
-
-  const handleDrop = useCallback(
-    (id: number) => (e: React.DragEvent) => {
-      e.preventDefault();
-      const from = dragTabId.current;
-      dragTabId.current = null;
-      if (from === null || from === id) return;
-      setTabs((prev) => {
-        const next = [...prev];
-        const fromIdx = next.findIndex((t) => t.id === from);
-        const toIdx = next.findIndex((t) => t.id === id);
-        if (fromIdx === -1 || toIdx === -1) return prev;
-        const [moved] = next.splice(fromIdx, 1);
-        next.splice(toIdx, 0, moved);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const allowDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
 
   const reload = useCallback(() => {
     iframeRef.current?.contentWindow?.location.reload();
@@ -593,64 +562,79 @@ const Chrome: React.FC = () => {
     </div>
   );
 
-  const onTabStripKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (tabs.length === 0) return;
-      const idx = tabs.findIndex((t) => t.id === activeId);
-      if (e.key === 'ArrowRight') {
-        const next = tabs[(idx + 1) % tabs.length];
-        setActiveId(next.id);
-        setAddress(next.url);
-        document.getElementById(`tab-${next.id}`)?.scrollIntoView({
-          inline: 'nearest',
-        });
-      } else if (e.key === 'ArrowLeft') {
-        const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
-        setActiveId(prev.id);
-        setAddress(prev.url);
-        document.getElementById(`tab-${prev.id}`)?.scrollIntoView({
-          inline: 'nearest',
-        });
-      } else if (e.key === 'Delete') {
-        closeTab(activeId);
-      } else if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
+  const handleSelectTab = useCallback(
+    (id: string | number) => {
+      const numericId = Number(id);
+      const next = tabs.find((t) => t.id === numericId);
+      if (!next) return;
+      setActiveId(next.id);
+      setAddress(next.url);
+    },
+    [tabs],
+  );
+
+  const handleReorderTabs = useCallback((sourceId: string | number, targetId: string | number) => {
+    const fromId = Number(sourceId);
+    const toId = Number(targetId);
+    if (Number.isNaN(fromId) || Number.isNaN(toId)) return;
+    setTabs((prev) => {
+      const fromIdx = prev.findIndex((t) => t.id === fromId);
+      const toIdx = prev.findIndex((t) => t.id === toId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const nextTabs = [...prev];
+      const [moved] = nextTabs.splice(fromIdx, 1);
+      nextTabs.splice(toIdx, 0, moved);
+      return nextTabs;
+    });
+  }, []);
+
+  const handleTabBarKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Delete') {
+        if (tabs.length > 1) {
+          event.preventDefault();
+          closeTab(activeId);
+        }
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
         tabSearchRef.current?.focus();
       }
     },
-    [tabs, activeId, closeTab],
+    [activeId, closeTab, tabs.length],
   );
 
-  const onDragStart = useCallback(
-    (id: number) => (e: React.DragEvent<HTMLDivElement>) => {
-      draggingId.current = id;
-      e.dataTransfer.effectAllowed = 'move';
-    },
-    [],
+  const tabItems = useMemo(
+    () =>
+      filteredTabs.map((t) => {
+        let icon: React.ReactNode | undefined;
+        try {
+          const origin = new URL(t.url).origin;
+          const src = favicons[origin];
+          if (src) {
+            icon = <img src={src} alt="" className="h-4 w-4" />;
+          }
+        } catch {
+          /* ignore */
+        }
+        const display = t.url.replace(/^https?:\/\/(www\.)?/, '');
+        return {
+          id: t.id,
+          label: <span className="max-w-[160px] truncate">{display}</span>,
+          icon,
+          meta: t.muted ? (
+            <span className="text-xs" role="img" aria-label="Muted">
+              🔇
+            </span>
+          ) : undefined,
+          closable: tabs.length > 1,
+          closeLabel: `Close ${display || 'tab'}`,
+          title: t.url,
+        };
+      }),
+    [filteredTabs, favicons, tabs.length],
   );
-
-  const onDrop = useCallback(
-    (id: number) => (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const from = draggingId.current;
-      if (from === null || from === id) return;
-      setTabs((prev) => {
-        const fromIdx = prev.findIndex((t) => t.id === from);
-        const toIdx = prev.findIndex((t) => t.id === id);
-        if (fromIdx < 0 || toIdx < 0) return prev;
-        const newTabs = [...prev];
-        const [moved] = newTabs.splice(fromIdx, 1);
-        newTabs.splice(toIdx, 0, moved);
-        return newTabs;
-      });
-      draggingId.current = null;
-    },
-    [],
-  );
-
-  const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  }, []);
 
   const blockedView = (
     <div className="flex flex-col items-center justify-center w-full h-full text-center p-4">
@@ -708,57 +692,17 @@ const Chrome: React.FC = () => {
           +
         </button>
       </div>
-      <div
-        className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto"
+      <TabBar
         ref={tabStripRef}
-        tabIndex={0}
-        onKeyDown={onTabStripKeyDown}
-      >
-        {filteredTabs.map((t) => (
-          <div
-            key={t.id}
-            id={`tab-${t.id}`}
-            className={`flex items-center px-2 py-1 cursor-pointer ${t.id === activeId ? 'bg-gray-600' : 'bg-gray-700'} `}
-            onClick={() => setActiveId(t.id)}
-            draggable
-            onDragStart={onDragStart(t.id)}
-            onDragOver={onDragOver}
-            onDrop={onDrop(t.id)}
-
-          >
-            {(() => {
-              try {
-                const origin = new URL(t.url).origin;
-                const src = favicons[origin];
-                return src ? (
-                  <img
-                    src={src}
-                    alt=""
-                    className="w-4 h-4 mr-1 flex-shrink-0"
-                  />
-                ) : null;
-              } catch {
-                return null;
-              }
-            })()}
-            <span className="mr-2 truncate" style={{ maxWidth: 100 }}>
-              {t.url.replace(/^https?:\/\/(www\.)?/, '')}
-            </span>
-            {t.muted && <span className="mr-1">🔇</span>}
-            {tabs.length > 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
-                }}
-                aria-label="Close Tab"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+        tabs={tabItems}
+        activeId={activeId}
+        onSelect={handleSelectTab}
+        onClose={(id) => closeTab(Number(id))}
+        onReorder={handleReorderTabs}
+        onKeyDown={handleTabBarKeyDown}
+        ariaLabel="Browser tabs"
+        className="w-full bg-gray-700"
+      />
       {overflowing && (
         <div className="bg-gray-700 p-1">
           <input

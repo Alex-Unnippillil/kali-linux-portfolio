@@ -1,12 +1,64 @@
 'use client';
 
+import { useCallback, useMemo, useState } from 'react';
 import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
+import TabBar from '../../components/ui/TabBar';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
+const DEFAULT_FILES = ['README.md', 'CHANGELOG.md', 'package.json'] as const;
+
 export default function VsCode() {
+  const [openFiles, setOpenFiles] = useState<string[]>(() => [...DEFAULT_FILES]);
+  const [activeFile, setActiveFile] = useState<string>(DEFAULT_FILES[0]);
+
+  const handleSelectFile = useCallback((id: string | number) => {
+    setActiveFile(String(id));
+  }, []);
+
+  const handleCloseFile = useCallback(
+    (id: string | number) => {
+      setOpenFiles((prev) => {
+        if (prev.length <= 1) return prev;
+        const fileId = String(id);
+        const index = prev.indexOf(fileId);
+        if (index === -1) return prev;
+        const next = prev.filter((file) => file !== fileId);
+        setActiveFile((current) => {
+          if (current !== fileId) return current;
+          return next[index] ?? next[index - 1] ?? next[0] ?? current;
+        });
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleReorderFiles = useCallback((sourceId: string | number, targetId: string | number) => {
+    setOpenFiles((prev) => {
+      const fromIdx = prev.indexOf(String(sourceId));
+      const toIdx = prev.indexOf(String(targetId));
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const fileTabs = useMemo(
+    () =>
+      openFiles.map((file) => ({
+        id: file,
+        label: <span className="max-w-[160px] truncate">{file}</span>,
+        closable: openFiles.length > 1,
+        closeLabel: `Close ${file}`,
+      })),
+    [openFiles],
+  );
+
   return (
     <div
       className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
@@ -48,9 +100,18 @@ export default function VsCode() {
             <CloseIcon />
           </button>
         </div>
+        <TabBar
+          tabs={fileTabs}
+          activeId={activeFile}
+          onSelect={handleSelectFile}
+          onClose={handleCloseFile}
+          onReorder={handleReorderFiles}
+          ariaLabel="Open files"
+          className="bg-transparent"
+        />
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
           <ExternalFrame
-            src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
+            src={`https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=${encodeURIComponent(activeFile)}`}
             title="VsCode"
             className="w-full h-full"
             onLoad={() => {}}
