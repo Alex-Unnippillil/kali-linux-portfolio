@@ -20,7 +20,7 @@ function fuzzyHighlight(text, query) {
   return { matched: qi === q.length, nodes: result };
 }
 
-export default function AppGrid({ openApp }) {
+export default function AppGrid({ openApp, longPressHintId }) {
   const [query, setQuery] = useState('');
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
@@ -83,6 +83,8 @@ export default function AppGrid({ openApp }) {
           name={app.title}
           displayName={<>{app.nodes}</>}
           openApp={() => openApp && openApp(app.id)}
+          longPressHintId={longPressHintId}
+          announceLongPress
         />
       </div>
     );
@@ -96,7 +98,11 @@ export default function AppGrid({ openApp }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div
+        className="w-full flex-1 h-[70vh] outline-none"
+        onKeyDown={handleKeyDown}
+        aria-describedby={longPressHintId || undefined}
+      >
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);

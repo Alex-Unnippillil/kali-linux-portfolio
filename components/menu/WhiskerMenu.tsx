@@ -20,6 +20,8 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
+const LONG_PRESS_HINT_ID = 'context-menu-touch-hint';
+
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('all');
@@ -170,6 +172,8 @@ const WhiskerMenu: React.FC = () => {
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    longPressHintId={LONG_PRESS_HINT_ID}
+                    announceLongPress
                   />
                 </div>
               ))}

@@ -24,6 +24,10 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const LONG_PRESS_DURATION_MS = 400;
+const LONG_PRESS_MOVEMENT_THRESHOLD = 16;
+const LONG_PRESS_HINT_ID = 'context-menu-touch-hint';
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -52,7 +56,21 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            longPressIndicator: {
+                visible: false,
+                x: 0,
+                y: 0,
+                duration: LONG_PRESS_DURATION_MS,
+            },
         }
+
+        this.desktopRef = React.createRef();
+        this.longPressTimer = null;
+        this.longPressPointerId = null;
+        this.longPressContextTarget = null;
+        this.longPressPosition = null;
+        this.longPressStart = null;
+        this.suppressContextMenu = false;
     }
 
     componentDidMount() {
@@ -89,6 +107,10 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        document.addEventListener('pointerdown', this.handlePointerDown);
+        document.addEventListener('pointermove', this.handlePointerMove);
+        document.addEventListener('pointerup', this.handlePointerUp);
+        document.addEventListener('pointercancel', this.handlePointerCancel);
     }
 
     componentWillUnmount() {
@@ -96,6 +118,11 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        document.removeEventListener('pointerdown', this.handlePointerDown);
+        document.removeEventListener('pointermove', this.handlePointerMove);
+        document.removeEventListener('pointerup', this.handlePointerUp);
+        document.removeEventListener('pointercancel', this.handlePointerCancel);
+        this.clearLongPress(true);
     }
 
     checkForNewFolders = () => {
@@ -144,6 +171,181 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    handlePointerDown = (e) => {
+        if (!e || e.isPrimary === false) {
+            this.clearLongPress();
+            return;
+        }
+        if (e.pointerType !== 'touch' && e.pointerType !== 'pen') {
+            this.clearLongPress();
+            return;
+        }
+        const rawTarget = e.target;
+        if (!(rawTarget instanceof Element)) {
+            this.clearLongPress();
+            return;
+        }
+        const target = rawTarget.closest('[data-context]');
+        if (!target) {
+            this.clearLongPress();
+            return;
+        }
+
+        this.clearLongPress();
+        this.longPressPointerId = e.pointerId;
+        this.longPressContextTarget = target;
+        this.longPressPosition = {
+            pageX: e.pageX,
+            pageY: e.pageY,
+            clientX: e.clientX,
+            clientY: e.clientY,
+        };
+        this.longPressStart = { x: e.pageX, y: e.pageY };
+
+        const point = this.getRelativePoint(e.clientX, e.clientY);
+        this.setState({
+            longPressIndicator: {
+                visible: true,
+                x: point.x,
+                y: point.y,
+                duration: LONG_PRESS_DURATION_MS,
+            },
+        });
+
+        this.longPressTimer = window.setTimeout(() => {
+            this.longPressTimer = null;
+            this.triggerLongPress();
+        }, LONG_PRESS_DURATION_MS);
+    }
+
+    handlePointerMove = (e) => {
+        if (this.longPressPointerId === null || this.longPressPointerId !== e.pointerId) {
+            return;
+        }
+        if (!this.longPressStart) {
+            return;
+        }
+
+        const dx = e.pageX - this.longPressStart.x;
+        const dy = e.pageY - this.longPressStart.y;
+        if ((dx * dx + dy * dy) > (LONG_PRESS_MOVEMENT_THRESHOLD * LONG_PRESS_MOVEMENT_THRESHOLD)) {
+            this.clearLongPress();
+            return;
+        }
+
+        this.longPressPosition = {
+            pageX: e.pageX,
+            pageY: e.pageY,
+            clientX: e.clientX,
+            clientY: e.clientY,
+        };
+        this.updateLongPressIndicatorPosition(e.clientX, e.clientY);
+    }
+
+    handlePointerUp = (e) => {
+        if (this.longPressPointerId === null || this.longPressPointerId !== e.pointerId) {
+            return;
+        }
+        this.clearLongPress();
+    }
+
+    handlePointerCancel = (e) => {
+        if (this.longPressPointerId === null || this.longPressPointerId !== e.pointerId) {
+            return;
+        }
+        this.clearLongPress();
+    }
+
+    triggerLongPress = () => {
+        if (!this.longPressContextTarget || !this.longPressPosition) {
+            return;
+        }
+
+        const { pageX, pageY, clientX, clientY } = this.longPressPosition;
+        const target = this.longPressContextTarget;
+
+        this.hideLongPressIndicator();
+
+        const syntheticEvent = {
+            pageX,
+            pageY,
+            clientX,
+            clientY,
+            target,
+            preventDefault: () => { },
+        };
+
+        this.checkContextMenu(syntheticEvent);
+        this.suppressContextMenu = true;
+        window.setTimeout(() => {
+            this.suppressContextMenu = false;
+        }, LONG_PRESS_DURATION_MS);
+
+        this.longPressPointerId = null;
+        this.longPressContextTarget = null;
+        this.longPressPosition = null;
+        this.longPressStart = null;
+    }
+
+    getRelativePoint = (clientX, clientY) => {
+        const host = this.desktopRef?.current;
+        if (host && typeof host.getBoundingClientRect === 'function') {
+            const rect = host.getBoundingClientRect();
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top,
+            };
+        }
+        return { x: clientX, y: clientY };
+    }
+
+    updateLongPressIndicatorPosition = (clientX, clientY) => {
+        const point = this.getRelativePoint(clientX, clientY);
+        this.setState(prev => {
+            if (!prev.longPressIndicator || !prev.longPressIndicator.visible) {
+                return null;
+            }
+            if (prev.longPressIndicator.x === point.x && prev.longPressIndicator.y === point.y) {
+                return null;
+            }
+            return {
+                longPressIndicator: {
+                    ...prev.longPressIndicator,
+                    x: point.x,
+                    y: point.y,
+                },
+            };
+        });
+    }
+
+    hideLongPressIndicator = () => {
+        this.setState(prev => {
+            if (!prev.longPressIndicator || !prev.longPressIndicator.visible) {
+                return null;
+            }
+            return {
+                longPressIndicator: {
+                    ...prev.longPressIndicator,
+                    visible: false,
+                },
+            };
+        });
+    }
+
+    clearLongPress = (skipState = false) => {
+        if (this.longPressTimer) {
+            clearTimeout(this.longPressTimer);
+            this.longPressTimer = null;
+        }
+        this.longPressPointerId = null;
+        this.longPressContextTarget = null;
+        this.longPressPosition = null;
+        this.longPressStart = null;
+        if (!skipState) {
+            this.hideLongPressIndicator();
+        }
     }
 
     handleGlobalShortcut = (e) => {
@@ -232,7 +434,16 @@ export class Desktop extends Component {
     }
 
     checkContextMenu = (e) => {
-        e.preventDefault();
+        if (this.suppressContextMenu) {
+            if (e && typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            this.suppressContextMenu = false;
+            return;
+        }
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
         this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
@@ -444,6 +655,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    longPressHintId: LONG_PRESS_HINT_ID,
+                    announceLongPress: true,
                 }
 
                 appsJsx.push(
@@ -864,8 +1077,36 @@ export class Desktop extends Component {
     }
 
     render() {
+        const { longPressIndicator } = this.state;
+        const longPressHintId = LONG_PRESS_HINT_ID;
+
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                ref={this.desktopRef}
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+            >
+                <span id={longPressHintId} className="sr-only">
+                    Long press and hold to open the context menu for additional actions.
+                </span>
+                {longPressIndicator.visible && (
+                    <div
+                        className="pointer-events-none absolute z-[70] transform -translate-x-1/2 -translate-y-1/2"
+                        style={{ left: `${longPressIndicator.x}px`, top: `${longPressIndicator.y}px` }}
+                        aria-hidden="true"
+                    >
+                        <svg
+                            className="long-press-indicator"
+                            viewBox="0 0 48 48"
+                            role="presentation"
+                            style={{ '--long-press-duration': `${longPressIndicator.duration}ms` }}
+                        >
+                            <circle className="long-press-indicator__track" cx="24" cy="24" r="20" />
+                            <circle className="long-press-indicator__progress" cx="24" cy="24" r="20" />
+                        </svg>
+                    </div>
+                )}
 
                 {/* Window Area */}
                 <div
@@ -873,6 +1114,7 @@ export class Desktop extends Component {
                     role="main"
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
+                    aria-describedby={longPressHintId}
                 >
                     {this.renderWindows()}
                 </div>
@@ -900,6 +1142,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    longPressHintId={longPressHintId}
                 />
 
                 {/* Desktop Apps */}
@@ -953,13 +1196,15 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.app_stack}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        longPressHintId={longPressHintId} /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
                         games={games}
                         onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+                        onClose={() => this.setState({ showShortcutSelector: false })}
+                        longPressHintId={longPressHintId} /> : null}
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
