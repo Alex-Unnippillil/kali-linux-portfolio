@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import { SCALE_PRESETS, ScalePresetId, isScalePresetId } from "../../utils/scalePresets";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -25,6 +26,8 @@ export default function Settings() {
     setReducedMotion,
     fontScale,
     setFontScale,
+    scalePreset,
+    setScalePreset,
     highContrast,
     setHighContrast,
     haptics,
@@ -55,6 +58,10 @@ export default function Settings() {
 
   const changeBackground = (name: string) => setWallpaper(name);
 
+  const currentScalePreset = SCALE_PRESETS.find(
+    (preset) => preset.id === scalePreset
+  );
+
   const handleExport = async () => {
     const data = await exportSettingsData();
     const blob = new Blob([data], { type: "application/json" });
@@ -77,6 +84,8 @@ export default function Settings() {
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
+      if (parsed.scalePreset !== undefined && isScalePresetId(parsed.scalePreset))
+        setScalePreset(parsed.scalePreset);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
@@ -99,6 +108,7 @@ export default function Settings() {
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
+    setScalePreset(defaults.scalePreset as ScalePresetId);
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
@@ -149,6 +159,26 @@ export default function Settings() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex flex-col items-center my-4 gap-2 text-center">
+            <label htmlFor="interface-scale" className="text-ubt-grey font-medium">
+              Interface Scale
+            </label>
+            <select
+              id="interface-scale"
+              value={scalePreset}
+              onChange={(e) => setScalePreset(e.target.value as ScalePresetId)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              {SCALE_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-ubt-grey max-w-xs">
+              {currentScalePreset?.description}
+            </p>
           </div>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>

@@ -10,6 +10,8 @@ import {
   setReducedMotion as saveReducedMotion,
   getFontScale as loadFontScale,
   setFontScale as saveFontScale,
+  getScalePreset as loadScalePreset,
+  setScalePreset as saveScalePreset,
   getHighContrast as loadHighContrast,
   setHighContrast as saveHighContrast,
   getLargeHitAreas as loadLargeHitAreas,
@@ -23,7 +25,13 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { DEFAULT_SCALE_PRESET, ScalePresetId, isScalePresetId } from '../utils/scalePresets';
 type Density = 'regular' | 'compact';
+
+const DENSITY_MULTIPLIERS: Record<Density, number> = {
+  regular: 1,
+  compact: 0.85,
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -57,6 +65,7 @@ interface SettingsContextValue {
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
+  scalePreset: ScalePresetId;
   highContrast: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
@@ -68,6 +77,7 @@ interface SettingsContextValue {
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
+  setScalePreset: (value: ScalePresetId) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
@@ -82,6 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
+  scalePreset: defaults.scalePreset as ScalePresetId,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
@@ -93,6 +104,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
+  setScalePreset: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
@@ -107,6 +119,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
+  const [scalePreset, setScalePreset] = useState<ScalePresetId>(
+    (defaults.scalePreset as ScalePresetId) ?? DEFAULT_SCALE_PRESET,
+  );
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
@@ -122,6 +137,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
+      const preset = await loadScalePreset();
+      setScalePreset(isScalePresetId(preset) ? preset : DEFAULT_SCALE_PRESET);
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
@@ -157,28 +174,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [wallpaper]);
 
   useEffect(() => {
-    const spacing: Record<Density, Record<string, string>> = {
-      regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
-      },
-      compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
-      },
-    };
-    const vars = spacing[density];
-    Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
-    });
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-scale', scalePreset);
+    }
+    saveScalePreset(scalePreset);
+  }, [scalePreset]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const multiplier = DENSITY_MULTIPLIERS[density] ?? 1;
+      document.documentElement.style.setProperty(
+        '--user-space-scale',
+        multiplier.toString(),
+      );
+    }
     saveDensity(density);
   }, [density]);
 
@@ -188,7 +197,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty(
+        '--user-font-scale',
+        fontScale.toString(),
+      );
+    }
     saveFontScale(fontScale);
   }, [fontScale]);
 
@@ -244,6 +258,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         density,
         reducedMotion,
         fontScale,
+        scalePreset,
         highContrast,
         largeHitAreas,
         pongSpin,
@@ -255,6 +270,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setDensity,
         setReducedMotion,
         setFontScale,
+        setScalePreset,
         setHighContrast,
         setLargeHitAreas,
         setPongSpin,

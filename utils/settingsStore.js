@@ -9,11 +9,31 @@ const DEFAULT_SETTINGS = {
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
+  scalePreset: 'balanced',
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+};
+
+const safeLocalStorageGet = (key, fallback) => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const safeLocalStorageSet = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore storage failures (private mode, SSR, etc.)
+  }
 };
 
 export async function getAccent() {
@@ -37,18 +57,24 @@ export async function setWallpaper(wallpaper) {
 }
 
 export async function getDensity() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  return safeLocalStorageGet('density', DEFAULT_SETTINGS.density);
 }
 
 export async function setDensity(density) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  safeLocalStorageSet('density', density);
+}
+
+export async function getScalePreset() {
+  return safeLocalStorageGet('scale-preset', DEFAULT_SETTINGS.scalePreset);
+}
+
+export async function setScalePreset(scale) {
+  safeLocalStorageSet('scale-preset', scale);
 }
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
+  const stored = safeLocalStorageGet('reduced-motion', null);
   if (stored !== null) {
     return stored === 'true';
   }
@@ -56,71 +82,58 @@ export async function getReducedMotion() {
 }
 
 export async function setReducedMotion(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+  safeLocalStorageSet('reduced-motion', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
+  const stored = safeLocalStorageGet('font-scale', null);
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
 export async function setFontScale(scale) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  safeLocalStorageSet('font-scale', String(scale));
 }
 
 export async function getHighContrast() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  return safeLocalStorageGet('high-contrast', 'false') === 'true';
 }
 
 export async function setHighContrast(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  safeLocalStorageSet('high-contrast', value ? 'true' : 'false');
 }
 
 export async function getLargeHitAreas() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  return safeLocalStorageGet('large-hit-areas', 'false') === 'true';
 }
 
 export async function setLargeHitAreas(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+  safeLocalStorageSet('large-hit-areas', value ? 'true' : 'false');
 }
 
 export async function getHaptics() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
+  const val = safeLocalStorageGet('haptics', null);
   return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
 export async function setHaptics(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('haptics', value ? 'true' : 'false');
+  safeLocalStorageSet('haptics', value ? 'true' : 'false');
 }
 
 export async function getPongSpin() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
+  const val = safeLocalStorageGet('pong-spin', null);
   return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
 export async function setPongSpin(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
+  safeLocalStorageSet('pong-spin', value ? 'true' : 'false');
 }
 
 export async function getAllowNetwork() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  return safeLocalStorageGet('allow-network', 'false') === 'true';
 }
 
 export async function setAllowNetwork(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  safeLocalStorageSet('allow-network', value ? 'true' : 'false');
 }
 
 export async function resetSettings() {
@@ -129,14 +142,20 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
+  try {
+    const { localStorage } = window;
+    localStorage.removeItem('density');
+    localStorage.removeItem('scale-preset');
+    localStorage.removeItem('reduced-motion');
+    localStorage.removeItem('font-scale');
+    localStorage.removeItem('high-contrast');
+    localStorage.removeItem('large-hit-areas');
+    localStorage.removeItem('pong-spin');
+    localStorage.removeItem('allow-network');
+    localStorage.removeItem('haptics');
+  } catch {
+    // ignore storage failures during reset
+  }
 }
 
 export async function exportSettings() {
@@ -146,6 +165,7 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    scalePreset,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -157,6 +177,7 @@ export async function exportSettings() {
     getDensity(),
     getReducedMotion(),
     getFontScale(),
+    getScalePreset(),
     getHighContrast(),
     getLargeHitAreas(),
     getPongSpin(),
@@ -170,6 +191,7 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    scalePreset,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -194,6 +216,7 @@ export async function importSettings(json) {
     density,
     reducedMotion,
     fontScale,
+    scalePreset,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -206,6 +229,7 @@ export async function importSettings(json) {
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
+  if (scalePreset !== undefined) await setScalePreset(scalePreset);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
