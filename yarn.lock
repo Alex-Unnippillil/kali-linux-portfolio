@@ -5539,15 +5539,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chrono-node@npm:^2.8.4":
-  version: 2.8.4
-  resolution: "chrono-node@npm:2.8.4"
-  dependencies:
-    dayjs: "npm:^1.10.0"
-  checksum: 10c0/675acdd2945a093b17511a2c112751f7f858b526ded90bc82d922b37173af9fbceaec0a00fbdf61a099bd4f26d12497bc6e5e2740c66eb04ebcfcef63806011c
-  languageName: node
-  linkType: hard
-
 "ci-info@npm:^4.2.0":
   version: 4.3.0
   resolution: "ci-info@npm:4.3.0"
@@ -6150,7 +6141,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dayjs@npm:^1.10.0, dayjs@npm:^1.11.11":
+"dayjs@npm:^1.11.11":
   version: 1.11.18
   resolution: "dayjs@npm:1.11.18"
   checksum: 10c0/83b67f5d977e2634edf4f5abdd91d9041a696943143638063016915d2cd8c7e57e0751e40379a07ebca8be7a48dd380bef8752d22a63670f2d15970e34f96d7a
@@ -9654,6 +9645,15 @@ __metadata:
   version: 7.18.3
   resolution: "lru-cache@npm:7.18.3"
   checksum: 10c0/b3a452b491433db885beed95041eb104c157ef7794b9c9b4d647be503be91769d11206bb573849a16b4cc0d03cbd15ffd22df7960997788b74c1d399ac7a4fed
+  languageName: node
+  linkType: hard
+
+"lucide-react@npm:^0.544.0":
+  version: 0.544.0
+  resolution: "lucide-react@npm:0.544.0"
+  peerDependencies:
+    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/2503f8cf65e62915997073b6053423bf8091b9470cb397560b417ef2f1628ea162c49e821b787cf153afb86828482d941f051c3f2aa642a1fa58c3de227e0113
   languageName: node
   linkType: hard
 
@@ -13898,10 +13898,10 @@ __metadata:
     canvas-confetti: "npm:1.9.3"
     capstone-wasm: "npm:^1.0.3"
     chess.js: "npm:^1.0.0"
-    chrono-node: "npm:^2.8.4"
     cron-parser: "npm:^5.3.0"
     cytoscape: "npm:^3.33.1"
     cytoscape-cose-bilkent: "npm:^4.1.0"
+    date-fns: "npm:^4.1.0"
     decimal.js: "npm:^10.4.3"
     diff: "npm:^8"
     dompurify: "npm:^3.2.6"
@@ -13922,6 +13922,7 @@ __metadata:
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
+    lucide-react: "npm:^0.544.0"
     magic-string: "npm:0.30.18"
     marked: "npm:^16.2.1"
     mathjs: "npm:^14.6.0"

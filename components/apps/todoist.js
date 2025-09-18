@@ -1,6 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as chrono from 'chrono-node';
+import {
+  addDays,
+  addWeeks,
+  addMonths,
+  addYears,
+  isValid,
+  nextDay,
+  parse,
+  parseISO,
+  startOfDay,
+} from 'date-fns';
 import { RRule } from 'rrule';
+import { CalendarDays, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
 
 const STORAGE_KEY = 'portfolio-tasks';
@@ -16,6 +27,117 @@ const WIP_LIMITS = {
   Upcoming: 0,
   Someday: 0,
 };
+
+const WEEKDAY_INDEX = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+function getUpcomingWeekday(name, base, includeToday = false) {
+  const target = WEEKDAY_INDEX[name];
+  if (typeof target !== 'number') return null;
+  const baseDay = base.getDay();
+  if (includeToday && baseDay === target) {
+    return base;
+  }
+  if (target > baseDay) {
+    return addDays(base, target - baseDay);
+  }
+  return nextDay(base, target);
+}
+
+const DATE_PATTERNS = [
+  {
+    createRegex: () => /\b(\d{4}-\d{2}-\d{2})\b/,
+    getDate: (match) => parseISO(match[1]),
+  },
+  {
+    createRegex: () => /\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/,
+    getDate: (match, base) => {
+      const token = match[3].length === 2 ? 'MM/dd/yy' : 'MM/dd/yyyy';
+      return parse(match[0], token, base);
+    },
+  },
+  {
+    createRegex: () => /\bday after tomorrow\b/i,
+    getDate: (_, base) => addDays(base, 2),
+  },
+  {
+    createRegex: () => /\btomorrow\b/i,
+    getDate: (_, base) => addDays(base, 1),
+  },
+  {
+    createRegex: () => /\btoday\b/i,
+    getDate: (_, base) => base,
+  },
+  {
+    createRegex: () =>
+      /\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+    getDate: (match, base) => nextDay(base, WEEKDAY_INDEX[match[1].toLowerCase()]),
+  },
+  {
+    createRegex: () =>
+      /\b(?:this|coming)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+    getDate: (match, base) => getUpcomingWeekday(match[1].toLowerCase(), base, true),
+  },
+  {
+    createRegex: () =>
+      /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+    getDate: (match, base) => getUpcomingWeekday(match[1].toLowerCase(), base, true),
+  },
+  {
+    createRegex: () => /\bnext\s+week\b/i,
+    getDate: (_, base) => addWeeks(base, 1),
+  },
+  {
+    createRegex: () => /\bnext\s+month\b/i,
+    getDate: (_, base) => addMonths(base, 1),
+  },
+  {
+    createRegex: () => /\bnext\s+year\b/i,
+    getDate: (_, base) => addYears(base, 1),
+  },
+  {
+    createRegex: () => /\bin\s+(\d+)\s+(day|days)\b/i,
+    getDate: (match, base) => addDays(base, Number(match[1])),
+  },
+  {
+    createRegex: () => /\bin\s+(\d+)\s+(week|weeks)\b/i,
+    getDate: (match, base) => addWeeks(base, Number(match[1])),
+  },
+  {
+    createRegex: () => /\bin\s+(\d+)\s+(month|months)\b/i,
+    getDate: (match, base) => addMonths(base, Number(match[1])),
+  },
+  {
+    createRegex: () => /\bin\s+(\d+)\s+(year|years)\b/i,
+    getDate: (match, base) => addYears(base, Number(match[1])),
+  },
+];
+
+function parseNaturalLanguageDate(text, base = new Date()) {
+  const normalizedBase = startOfDay(base);
+  let best = null;
+
+  for (const pattern of DATE_PATTERNS) {
+    const match = pattern.createRegex().exec(text);
+    if (!match) continue;
+    const rawDate = pattern.getDate(match, normalizedBase);
+    if (!rawDate || !isValid(rawDate)) continue;
+    const normalizedDate = startOfDay(rawDate);
+    const index = typeof match.index === 'number' ? match.index : text.indexOf(match[0]);
+    if (!best || index < best.index) {
+      best = { date: normalizedDate, matchText: match[0], index };
+    }
+  }
+
+  return best ? { date: best.date, matchText: best.matchText } : null;
+}
 
 const PRIORITY_COLORS = {
   high: 'bg-red-500',
@@ -290,7 +412,12 @@ export default function Todoist() {
       }
     }
     if (!task.recurring) return task.due;
-    const next = chrono.parseDate(`next ${task.recurring}`, base);
+    const phrase = task.recurring.trim();
+    const recurring = parseRecurring(
+      phrase.startsWith('every') ? phrase : `every ${phrase}`,
+      base,
+    );
+    const next = recurring?.preview?.[0];
     return next ? next.toISOString().split('T')[0] : task.due;
   };
 
@@ -343,13 +470,9 @@ export default function Todoist() {
     e.preventDefault();
     if (!quick.trim()) return;
     let due;
-    try {
-      const date = chrono.parseDate(quick);
-      if (date) {
-        due = date.toISOString().split('T')[0];
-      }
-    } catch {
-      // ignore
+    const dateInfo = parseNaturalLanguageDate(quick);
+    if (dateInfo) {
+      due = dateInfo.date.toISOString().split('T')[0];
     }
     const priorityMatch = quick.match(/!([1-3])/);
     const sectionMatch = quick.match(/#(\w+)/);
@@ -357,11 +480,8 @@ export default function Todoist() {
     const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
     const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
     let title = quick;
-    if (due) {
-      const parsed = chrono.parse(quick)[0];
-      if (parsed) {
-        title = title.replace(parsed.text, '').trim();
-      }
+    if (dateInfo?.matchText) {
+      title = title.replace(dateInfo.matchText, '').trim();
     }
     if (priorityMatch) {
       title = title.replace(priorityMatch[0], '').trim();
@@ -372,6 +492,7 @@ export default function Todoist() {
     if (recurringMatch) {
       title = title.replace(recurringMatch[0], '').trim();
     }
+    title = title.replace(/\s{2,}/g, ' ').trim();
     const section = sectionMatch ? sectionMatch[1] : undefined;
     let recurring = recurringMatch ? recurringMatch[1].toLowerCase() : undefined;
     let rrule;
@@ -610,7 +731,7 @@ export default function Todoist() {
             <div className="flex flex-wrap gap-2 text-xs text-gray-500">
               {task.due && (
                 <span className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full ${chipColor}`}>
-                  <span aria-hidden>📅</span>
+                  <CalendarDays className="w-3 h-3" aria-hidden="true" />
                   {task.due}
                 </span>
               )}
@@ -621,9 +742,10 @@ export default function Todoist() {
             onClick={() =>
               setEditingTask({ id: task.id, group, title: task.title })
             }
-            className="ml-2 text-xs text-blue-600"
+            className="ml-2 text-xs text-blue-600 inline-flex items-center gap-1"
           >
-            Edit
+            <Pencil className="w-3 h-3" aria-hidden="true" />
+            <span>Edit</span>
           </button>
         </div>
         <div
@@ -736,7 +858,7 @@ export default function Todoist() {
             }}
             aria-label="Previous month"
           >
-            &lt;
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           </button>
           <h2 className="font-bold text-lg">{monthLabel}</h2>
           <button
@@ -751,7 +873,7 @@ export default function Todoist() {
             }}
             aria-label="Next month"
           >
-            &gt;
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-sm">
