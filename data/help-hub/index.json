@@ -1,0 +1,89 @@
+[
+  {
+    "id": "personalize-desktop",
+    "title": "Personalize the desktop quickly",
+    "description": "Change wallpaper, accent color, and dock layout so the workspace feels familiar right away.",
+    "tags": ["getting-started", "personalization"],
+    "video": {
+      "src": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+      "type": "video/mp4",
+      "caption": "/help-hub/captions/personalize-desktop.vtt",
+      "transcript": [
+        "Open the Settings app from the dock or launcher.",
+        "Pick the Appearance tab to swap wallpapers and accent colors.",
+        "Adjust dock size and auto-hide to match how you prefer to work."
+      ]
+    },
+    "actions": [
+      { "kind": "app", "label": "Open Settings", "target": "settings" },
+      {
+        "kind": "link",
+        "label": "Appearance preferences",
+        "target": "/apps/settings#appearance"
+      }
+    ]
+  },
+  {
+    "id": "keyboard-shortcuts",
+    "title": "Master keyboard shortcuts",
+    "description": "Navigate between windows, focus the dock, and trigger app menus without leaving the keyboard.",
+    "tags": ["productivity", "accessibility"],
+    "video": {
+      "src": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+      "type": "video/mp4",
+      "caption": "/help-hub/captions/keyboard-shortcuts.vtt",
+      "transcript": [
+        "Press Super+Arrow keys to snap the focused window.",
+        "Use Alt+Tab to cycle running apps and Shift to reverse direction.",
+        "Open the shortcut overlay with Ctrl+/."
+      ]
+    },
+    "actions": [
+      {
+        "kind": "link",
+        "label": "Keyboard-only guidance",
+        "target": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/keyboard-only-test-plan.md",
+        "newTab": true
+      }
+    ]
+  },
+  {
+    "id": "simulate-tools-safely",
+    "title": "Use the security tool simulators safely",
+    "description": "Every offensive tool is sandboxed. Review canned output, craft commands, and stay within the lab.",
+    "tags": ["simulation", "safety", "security"],
+    "actions": [
+      { "kind": "app", "label": "Open Security Tools", "target": "security-tools" },
+      {
+        "kind": "link",
+        "label": "Read the safety checklist",
+        "target": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/tasks.md#security-tool-simulators",
+        "newTab": true
+      }
+    ]
+  },
+  {
+    "id": "explore-projects",
+    "title": "Explore highlighted projects",
+    "description": "Jump into curated labs, write-ups, and dashboards collected from the Project Gallery app.",
+    "tags": ["projects", "showcase"],
+    "video": {
+      "src": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+      "type": "video/mp4",
+      "caption": "/help-hub/captions/explore-projects.vtt",
+      "transcript": [
+        "Open the Project Gallery from the launcher.",
+        "Filter by stack or tag to find security labs, dashboards, and automation demos.",
+        "Use the compare view to line up two projects side by side."
+      ]
+    },
+    "actions": [
+      { "kind": "app", "label": "Open Project Gallery", "target": "project-gallery" },
+      {
+        "kind": "link",
+        "label": "Project deep link",
+        "target": "/apps/project-gallery#featured"
+      }
+    ]
+  }
+]

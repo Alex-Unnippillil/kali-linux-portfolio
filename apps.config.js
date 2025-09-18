@@ -70,6 +70,7 @@ const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
+const HelpHubApp = createDynamicApp('help-hub', 'Help Hub');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
@@ -160,6 +161,7 @@ const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayHelpHub = createDisplay(HelpHubApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
@@ -204,6 +206,15 @@ const displayKismet = createDisplay(KismetApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
+  {
+    id: 'help-hub',
+    title: 'Help Hub',
+    icon: '/themes/Yaru/apps/help-hub.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayHelpHub,
+  },
   {
     id: 'qr',
     title: 'QR Tool',

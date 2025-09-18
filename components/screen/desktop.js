@@ -80,6 +80,13 @@ export class Desktop extends Component {
             } else {
                 this.openApp('about-alex');
             }
+            const seenHelpHub = safeLocalStorage?.getItem('help-hub-onboarded');
+            if (!seenHelpHub) {
+                setTimeout(() => {
+                    this.openApp('help-hub');
+                }, 400);
+                safeLocalStorage?.setItem('help-hub-onboarded', '1');
+            }
         });
         this.setContextListeners();
         this.setEventListeners();
