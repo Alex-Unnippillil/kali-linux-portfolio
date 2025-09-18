@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import FilePreviewPane from './file-explorer/previewers/FilePreviewPane';
+import { MAX_PREVIEW_SIZE } from './file-explorer/previewers/constants';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -62,6 +64,81 @@ export async function saveFileDialog(options = {}) {
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
 
+const JSON_EXTENSIONS = new Set(['json', 'geojson', 'har', 'jsonl']);
+const TEXT_EXTENSIONS = new Set([
+  'txt',
+  'md',
+  'markdown',
+  'log',
+  'csv',
+  'xml',
+  'html',
+  'htm',
+  'css',
+  'js',
+  'ts',
+  'tsx',
+  'jsx',
+  'yml',
+  'yaml',
+  'ini',
+  'cfg',
+  'conf',
+  'py',
+  'sh',
+  'c',
+  'cpp',
+  'rs',
+  'go',
+  'java',
+  'rb',
+  'php',
+  'sql',
+]);
+const IMAGE_EXTENSIONS = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'bmp',
+  'webp',
+  'svg',
+  'ico',
+  'avif',
+  'heic',
+  'heif',
+]);
+const JSON_MIME_TYPES = new Set(['application/json', 'application/ld+json']);
+const TEXT_MIME_TYPES = new Set([
+  'application/xml',
+  'application/javascript',
+  'application/x-javascript',
+  'application/x-sh',
+  'application/sql',
+]);
+
+function getExtension(name) {
+  const lastDot = name.lastIndexOf('.');
+  if (lastDot === -1) return '';
+  return name.slice(lastDot + 1).toLowerCase();
+}
+
+function getPreviewType(mimeType, extension) {
+  if (JSON_MIME_TYPES.has(mimeType) || JSON_EXTENSIONS.has(extension)) {
+    return 'json';
+  }
+  if (mimeType?.startsWith('image/') || IMAGE_EXTENSIONS.has(extension)) {
+    return 'image';
+  }
+  if (mimeType?.startsWith('text/')) {
+    return 'text';
+  }
+  if (TEXT_MIME_TYPES.has(mimeType) || TEXT_EXTENSIONS.has(extension)) {
+    return 'text';
+  }
+  return 'unsupported';
+}
+
 function openDB() {
   return getDb(DB_NAME, 1, {
     upgrade(db) {
@@ -99,22 +176,18 @@ export default function FileExplorer() {
   const [path, setPath] = useState([]);
   const [recent, setRecent] = useState([]);
   const [currentFile, setCurrentFile] = useState(null);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState(null);
+  const [imageSrc, setImageSrc] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const previewTokenRef = useRef(0);
+  const imageUrlRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
-  const {
-    supported: opfsSupported,
-    root,
-    getDir,
-    readFile: opfsRead,
-    writeFile: opfsWrite,
-    deleteFile: opfsDelete,
-  } = useOPFS();
-  const [unsavedDir, setUnsavedDir] = useState(null);
+  const { supported: opfsSupported, root } = useOPFS();
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -125,32 +198,76 @@ export default function FileExplorer() {
   useEffect(() => {
     if (!opfsSupported || !root) return;
     (async () => {
-      setUnsavedDir(await getDir('unsaved'));
       setDirHandle(root);
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root]);
 
-  const saveBuffer = async (name, data) => {
-    if (unsavedDir) await opfsWrite(name, data, unsavedDir);
-  };
+  const loadPreview = async ({ name, getFile, handle }) => {
+    const token = previewTokenRef.current + 1;
+    previewTokenRef.current = token;
+    setLoadingPreview(true);
+    setCurrentFile(null);
+    setContent(null);
+    setImageSrc(null);
 
-  const loadBuffer = async (name) => {
-    if (!unsavedDir) return null;
-    return await opfsRead(name, unsavedDir);
-  };
+    try {
+      const fileObject = await getFile();
+      const mimeType = fileObject.type || '';
+      const extension = getExtension(name);
+      const previewType = getPreviewType(mimeType, extension);
+      const tooLarge = fileObject.size > MAX_PREVIEW_SIZE;
 
-  const removeBuffer = async (name) => {
-    if (unsavedDir) await opfsDelete(name, unsavedDir);
+      if (previewTokenRef.current !== token) return;
+
+      const nextFile = {
+        name,
+        handle,
+        file: fileObject,
+        type: mimeType,
+        size: fileObject.size,
+        extension,
+        previewType,
+        tooLarge,
+      };
+
+      setCurrentFile(nextFile);
+
+      if (tooLarge || previewType === 'unsupported') {
+        return;
+      }
+
+      if (previewType === 'image') {
+        const url = URL.createObjectURL(fileObject);
+        if (previewTokenRef.current === token) {
+          setImageSrc(url);
+        } else {
+          URL.revokeObjectURL(url);
+        }
+        return;
+      }
+
+      const text = await fileObject.text();
+      if (previewTokenRef.current === token) {
+        setContent(text);
+      }
+    } catch {
+      if (previewTokenRef.current === token) {
+        setCurrentFile(null);
+      }
+    } finally {
+      if (previewTokenRef.current === token) {
+        setLoadingPreview(false);
+      }
+    }
   };
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const text = await file.text();
-    setCurrentFile({ name: file.name });
-    setContent(text);
+    await loadPreview({ name: file.name, handle: null, getFile: async () => file });
+    e.target.value = '';
   };
 
   const openFolder = async () => {
@@ -175,17 +292,11 @@ export default function FileExplorer() {
   };
 
   const openFile = async (file) => {
-    setCurrentFile(file);
-    let text = '';
-    if (opfsSupported) {
-      const unsaved = await loadBuffer(file.name);
-      if (unsaved !== null) text = unsaved;
-    }
-    if (!text) {
-      const f = await file.handle.getFile();
-      text = await f.text();
-    }
-    setContent(text);
+    await loadPreview({
+      name: file.name,
+      handle: file.handle,
+      getFile: () => file.handle.getFile(),
+    });
   };
 
   const readDir = async (handle) => {
@@ -222,20 +333,21 @@ export default function FileExplorer() {
     await readDir(prev.handle);
   };
 
-  const saveFile = async () => {
+  const openExternally = async () => {
     if (!currentFile) return;
     try {
-      const writable = await currentFile.handle.createWritable();
-      await writable.write(content);
-      await writable.close();
-      if (opfsSupported) await removeBuffer(currentFile.name);
+      const blob =
+        currentFile.file ||
+        (currentFile.handle && (await currentFile.handle.getFile()));
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const opened = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
     } catch {}
-  };
-
-  const onChange = (e) => {
-    const text = e.target.value;
-    setContent(text);
-    if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
   };
 
   const runSearch = () => {
@@ -259,38 +371,49 @@ export default function FileExplorer() {
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  useEffect(() => {
+    const previous = imageUrlRef.current;
+    if (previous && previous !== imageSrc) {
+      URL.revokeObjectURL(previous);
+    }
+    imageUrlRef.current = imageSrc || null;
+    return () => {
+      if (imageUrlRef.current) {
+        URL.revokeObjectURL(imageUrlRef.current);
+        imageUrlRef.current = null;
+      }
+    };
+  }, [imageSrc]);
+
   if (!supported) {
     return (
-      <div className="p-4 flex flex-col h-full">
+      <div className="p-4 flex flex-col h-full space-y-4">
         <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
-        {!currentFile && (
+        <div className="flex items-center space-x-2">
           <button
             onClick={() => fallbackInputRef.current?.click()}
-            className="px-2 py-1 bg-black bg-opacity-50 rounded self-start"
+            className="px-2 py-1 bg-black bg-opacity-50 rounded"
           >
             Open File
           </button>
-        )}
-        {currentFile && (
-          <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+          {currentFile && (
             <button
-              onClick={async () => {
-                const handle = await saveFileDialog({ suggestedName: currentFile.name });
-                const writable = await handle.createWritable();
-                await writable.write(content);
-                await writable.close();
-              }}
-              className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded self-start"
+              onClick={openExternally}
+              disabled={loadingPreview}
+              className="px-2 py-1 bg-black bg-opacity-50 rounded disabled:opacity-50"
             >
-              Save
+              Open externally
             </button>
-          </>
-        )}
+          )}
+        </div>
+        <div className="flex-1 overflow-hidden border border-gray-600 rounded bg-ub-cool-grey">
+          <FilePreviewPane
+            currentFile={currentFile}
+            content={content}
+            imageSrc={imageSrc}
+            loading={loadingPreview}
+          />
+        </div>
       </div>
     );
   }
@@ -308,8 +431,12 @@ export default function FileExplorer() {
         )}
         <Breadcrumbs path={path} onNavigate={navigateTo} />
         {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
+          <button
+            onClick={openExternally}
+            disabled={loadingPreview}
+            className="px-2 py-1 bg-black bg-opacity-50 rounded disabled:opacity-50"
+          >
+            Open externally
           </button>
         )}
       </div>
@@ -347,9 +474,14 @@ export default function FileExplorer() {
           ))}
         </div>
         <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
+          <div className="flex-1 overflow-hidden bg-ub-cool-grey">
+            <FilePreviewPane
+              currentFile={currentFile}
+              content={content}
+              imageSrc={imageSrc}
+              loading={loadingPreview}
+            />
+          </div>
           <div className="p-2 border-t border-gray-600">
             <input
               value={query}
