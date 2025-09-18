@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import kioskManager from '../../modules/kiosk/manager';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -30,6 +31,8 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.baseDisabledApps = {};
+        this.kioskUnsubscribe = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,12 +55,15 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            kioskRestrictions: kioskManager.getRestrictions(),
         }
     }
 
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        this.kioskUnsubscribe = kioskManager.subscribe(this.handleKioskUpdate);
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -96,6 +102,37 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (typeof this.kioskUnsubscribe === 'function') {
+            this.kioskUnsubscribe();
+        }
+    }
+
+    handleKioskUpdate = () => {
+        const restrictions = kioskManager.getRestrictions();
+        this.setState({ kioskRestrictions: restrictions }, () => {
+            this.refreshKioskDisabledApps();
+            this.enforceKioskWindows();
+        });
+    }
+
+    refreshKioskDisabledApps = () => {
+        this.setState(prev => {
+            const disabled_apps = { ...(prev.disabled_apps || {}) };
+            Object.keys(disabled_apps).forEach(id => {
+                disabled_apps[id] = (this.baseDisabledApps[id] || false) || !kioskManager.canLaunchApp(id);
+            });
+            return { disabled_apps };
+        });
+    }
+
+    enforceKioskWindows = () => {
+        const active = kioskManager.getActiveProfile ? kioskManager.getActiveProfile() : null;
+        if (!active) return;
+        Object.keys(this.state.closed_windows).forEach(id => {
+            if (this.state.closed_windows[id] === false && !kioskManager.canLaunchApp(id)) {
+                this.closeApp(id);
+            }
+        });
     }
 
     checkForNewFolders = () => {
@@ -132,6 +169,24 @@ export class Desktop extends Component {
         }
     }
 
+    attemptClearSession = () => {
+        const active = typeof kioskManager.getActiveProfile === 'function'
+            ? kioskManager.getActiveProfile()
+            : null;
+        if (active) {
+            const secret = typeof window !== 'undefined' ? window.prompt('Enter kiosk credentials to exit') : '';
+            if (!kioskManager.deactivateProfile(secret || '')) {
+                return;
+            }
+        }
+        if (typeof this.props.clearSession === 'function') {
+            this.props.clearSession();
+        }
+        if (typeof window !== 'undefined') {
+            window.location.reload();
+        }
+    }
+
     setContextListeners = () => {
         document.addEventListener('contextmenu', this.checkContextMenu);
         // on click, anywhere, hide all menus
@@ -149,19 +204,22 @@ export class Desktop extends Component {
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
+            if (kioskManager.isRestrictionEnabled('disableAppSwitching')) {
+                return;
+            }
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
             }
+            this.cycleApps(e.shiftKey ? -1 : 1);
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
         }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
+            if (kioskManager.isRestrictionEnabled('disableAppSwitching')) {
+                return;
+            }
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -212,6 +270,7 @@ export class Desktop extends Component {
     }
 
     openWindowSwitcher = () => {
+        if (kioskManager.isRestrictionEnabled('disableAppSwitching')) return;
         const windows = this.app_stack
             .filter(id => this.state.closed_windows[id] === false)
             .map(id => apps.find(a => a.id === id))
@@ -234,6 +293,9 @@ export class Desktop extends Component {
     checkContextMenu = (e) => {
         e.preventDefault();
         this.hideAllContextMenu();
+        if (kioskManager.isRestrictionEnabled('disableContextMenus')) {
+            return;
+        }
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
@@ -269,6 +331,7 @@ export class Desktop extends Component {
     }
 
     handleContextKey = (e) => {
+        if (kioskManager.isRestrictionEnabled('disableContextMenus')) return;
         if (!(e.shiftKey && e.key === 'F10')) return;
         e.preventDefault();
         this.hideAllContextMenu();
@@ -364,8 +427,9 @@ export class Desktop extends Component {
             };
             disabled_apps = {
                 ...disabled_apps,
-                [app.id]: app.disabled,
+                [app.id]: app.disabled || !kioskManager.canLaunchApp(app.id),
             };
+            this.baseDisabledApps[app.id] = app.disabled;
             favourite_apps = {
                 ...favourite_apps,
                 [app.id]: app.favourite,
@@ -408,8 +472,9 @@ export class Desktop extends Component {
             };
             disabled_apps = {
                 ...disabled_apps,
-                [app.id]: app.disabled
+                [app.id]: app.disabled || !kioskManager.canLaunchApp(app.id)
             };
+            this.baseDisabledApps[app.id] = app.disabled;
             closed_windows = {
                 ...closed_windows,
                 [app.id]: ((this.state.closed_windows[app.id] !== undefined || this.state.closed_windows[app.id] !== null) ? this.state.closed_windows[app.id] : true)
@@ -578,12 +643,16 @@ export class Desktop extends Component {
 
     handleOpenAppEvent = (e) => {
         const id = e.detail;
-        if (id) {
+        if (id && kioskManager.canLaunchApp(id)) {
             this.openApp(id);
         }
     }
 
     openApp = (objId) => {
+
+        if (!kioskManager.canLaunchApp(objId)) {
+            return;
+        }
 
         // google analytics
         ReactGA.event({
@@ -911,7 +980,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    clearSession={this.attemptClearSession}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu

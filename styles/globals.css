@@ -77,3 +77,26 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+body.presentation-mode {
+  cursor: none !important;
+}
+
+body.presentation-mode * {
+  cursor: none !important;
+}
+
+.presentation-pointer {
+  position: fixed;
+  width: 160px;
+  height: 160px;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 2px solid var(--color-accent, #1793d1);
+  background: radial-gradient(circle, rgba(23, 147, 209, 0.25) 0%, rgba(23, 147, 209, 0.15) 40%, rgba(0, 0, 0, 0.55) 80%);
+  box-shadow: 0 0 0 200vmax rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+  z-index: 9999;
+}

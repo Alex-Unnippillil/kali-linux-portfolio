@@ -1,5 +1,6 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import kioskManager from '../../modules/kiosk/manager';
 
 class AllApplications extends React.Component {
     constructor() {
@@ -9,15 +10,37 @@ class AllApplications extends React.Component {
             apps: [],
             unfilteredApps: [],
         };
+        this.kioskUnsubscribe = null;
     }
 
     componentDidMount() {
-        const { apps = [], games = [] } = this.props;
+        this.syncApps(this.props);
+        this.kioskUnsubscribe = kioskManager.subscribe(() => this.syncApps(this.props));
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.apps !== this.props.apps || prevProps.games !== this.props.games) {
+            this.syncApps(this.props);
+        }
+    }
+
+    componentWillUnmount() {
+        if (typeof this.kioskUnsubscribe === 'function') {
+            this.kioskUnsubscribe();
+        }
+    }
+
+    syncApps = (props) => {
+        const { apps = [], games = [] } = props;
         const combined = [...apps];
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.setState({ apps: combined, unfilteredApps: combined });
+        const decorated = combined.map(app => ({
+            ...app,
+            disabled: app.disabled || !kioskManager.canLaunchApp(app.id),
+        }));
+        this.setState({ apps: decorated, unfilteredApps: decorated });
     }
 
     handleChange = (e) => {

@@ -10,14 +10,18 @@ interface NotificationsContextValue {
   notifications: Record<string, AppNotification[]>;
   pushNotification: (appId: string, message: string) => void;
   clearNotifications: (appId?: string) => void;
+  muted: boolean;
+  setMuted: (value: boolean) => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Record<string, AppNotification[]>>({});
+  const [muted, setMuted] = useState(false);
 
   const pushNotification = useCallback((appId: string, message: string) => {
+    if (muted) return;
     setNotifications(prev => {
       const list = prev[appId] ?? [];
       const next = {
@@ -33,7 +37,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       };
       return next;
     });
-  }, []);
+  }, [muted]);
 
   const clearNotifications = useCallback((appId?: string) => {
     setNotifications(prev => {
@@ -59,10 +63,15 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, pushNotification, clearNotifications }}
+      value={{ notifications, pushNotification, clearNotifications, muted, setMuted }}
     >
       {children}
       <div className="notification-center">
+        {muted && (
+          <div className="notification-muted" role="status">
+            Notifications muted for presentation mode
+          </div>
+        )}
         {Object.entries(notifications).map(([appId, list]) => (
           <section key={appId} className="notification-group">
             <h3>{appId}</h3>

@@ -4,6 +4,7 @@ import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
+import kioskManager from '../../modules/kiosk/manager';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -32,6 +33,10 @@ export default class Navbar extends Component {
                                         id="status-bar"
                                         aria-label="System status"
                                         onClick={() => {
+                                                if (kioskManager.isRestrictionEnabled('disableQuickSettings')) {
+                                                        this.setState({ status_card: false });
+                                                        return;
+                                                }
                                                 this.setState({ status_card: !this.state.status_card });
                                         }}
                                         className={
