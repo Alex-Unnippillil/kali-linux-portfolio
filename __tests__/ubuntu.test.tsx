@@ -11,6 +11,9 @@ jest.mock('../components/screen/navbar', () => function NavbarMock() {
 jest.mock('../components/screen/lock_screen', () => function LockScreenMock() {
   return <div data-testid="lock-screen" />;
 });
+jest.mock('../components/screen/shutdown_overlay', () => function ShutdownOverlayMock() {
+  return <div data-testid="shutdown-overlay" />;
+});
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
 describe('Ubuntu component', () => {
@@ -55,6 +58,18 @@ describe('Ubuntu component', () => {
     act(() => {
       instance!.shutDown();
     });
+    expect(instance!.state.powerMenuOpen).toBe(true);
+    expect(instance!.state.shutDownScreen).toBe(false);
+  });
+
+  it('confirms power off from the overlay', () => {
+    let instance: Ubuntu | null = null;
+    render(<Ubuntu ref={(c) => (instance = c)} />);
+    expect(instance).not.toBeNull();
+    act(() => {
+      instance!.confirmPowerOff();
+    });
     expect(instance!.state.shutDownScreen).toBe(true);
+    expect(instance!.state.powerMenuOpen).toBe(false);
   });
 });
