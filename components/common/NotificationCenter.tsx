@@ -62,18 +62,37 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       value={{ notifications, pushNotification, clearNotifications }}
     >
       {children}
-      <div className="notification-center">
+      <aside
+        className="notification-center"
+        role="region"
+        aria-label="Notification center"
+        aria-live="polite"
+        aria-atomic="false"
+      >
+        <h2 id="notification-center-heading" className="sr-only">
+          Notification center
+        </h2>
+        <p className="sr-only" aria-live="polite">
+          {totalCount === 0
+            ? 'No notifications'
+            : `${totalCount} notification${totalCount === 1 ? '' : 's'} available`}
+        </p>
         {Object.entries(notifications).map(([appId, list]) => (
-          <section key={appId} className="notification-group">
-            <h3>{appId}</h3>
-            <ul>
+          <section
+            key={appId}
+            className="notification-group"
+            role="group"
+            aria-labelledby={`notifications-${appId}`}
+          >
+            <h3 id={`notifications-${appId}`}>{appId}</h3>
+            <ul role="list">
               {list.map(n => (
-                <li key={n.id}>{n.message}</li>
+                <li key={n.id} role="listitem">{n.message}</li>
               ))}
             </ul>
           </section>
         ))}
-      </div>
+      </aside>
     </NotificationsContext.Provider>
   );
 };
