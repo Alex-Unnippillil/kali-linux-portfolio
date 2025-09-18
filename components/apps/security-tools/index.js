@@ -4,6 +4,7 @@ import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
+import { useAppPrivacy } from '../../../utils/privacyRegistry';
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -20,6 +21,8 @@ export default function SecurityTools() {
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [fixtureData, setFixtureData] = useState([]);
+  const { permissions } = useAppPrivacy('security-tools');
+  const clipboardAllowed = permissions.clipboard;
 
   // Logs, rules and fixtures
   const [suricata, setSuricata] = useState([]);
@@ -138,6 +141,11 @@ export default function SecurityTools() {
           />
           {query ? (
             <div className="text-xs">
+              {!clipboardAllowed && (
+                <div className="mb-2 rounded bg-ub-red/40 text-red-200 p-2" role="alert">
+                  Clipboard actions are disabled by the Privacy Dashboard.
+                </div>
+              )}
           {suricataResults.length > 0 && (
             <div className="mb-2">
               <h3 className="text-sm font-bold">Suricata</h3>
@@ -194,6 +202,11 @@ export default function SecurityTools() {
         ) : (
           <>
             <p className="text-xs mb-2">All tools are static demos using local fixtures. No external network activity occurs.</p>
+            {!clipboardAllowed && (
+              <div className="mb-2 rounded bg-ub-red/40 text-red-200 p-2" role="alert">
+                Clipboard actions are disabled by the Privacy Dashboard.
+              </div>
+            )}
             <div className="mb-2 flex flex-wrap">{tabs.map(tabButton)}</div>
 
             {active === 'repeater' && (
@@ -201,6 +214,7 @@ export default function SecurityTools() {
                 <CommandBuilder
                   doc="Build a curl command. Output is copy-only and not executed."
                   build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
+                  canCopy={clipboardAllowed}
                 />
               </div>
             )}

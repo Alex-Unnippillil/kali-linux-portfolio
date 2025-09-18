@@ -108,6 +108,7 @@ const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
+const PrivacyDashboardApp = createDynamicApp('privacy-dashboard', 'Privacy Dashboard');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
@@ -193,6 +194,7 @@ const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
+const displayPrivacyDashboard = createDisplay(PrivacyDashboardApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
@@ -1050,6 +1052,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySecurityTools,
+  },
+  {
+    id: 'privacy-dashboard',
+    title: 'Privacy Dashboard',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPrivacyDashboard,
   },
   // Utilities are grouped separately
   ...utilities,
