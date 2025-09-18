@@ -377,6 +377,9 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        if (typeof this.props.onFocusRequest === 'function') {
+            this.props.onFocusRequest(this.id);
+        }
     }
 
     minimizeWindow = () => {
