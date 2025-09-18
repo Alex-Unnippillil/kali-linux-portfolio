@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
-import { validateServerEnv } from '../../lib/validate';
+import { validateServerEnv } from '../../lib/env';
 import { getServiceSupabase } from '../../lib/supabase';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
@@ -10,9 +10,13 @@ const RATE_LIMIT_MAX = 5;
 export const rateLimit = new Map();
 
 export default async function handler(req, res) {
+  let env;
   try {
-    validateServerEnv(process.env);
-  } catch {
+    env = validateServerEnv(process.env);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Environment validation failed for contact API', error);
+    }
     if (!process.env.RECAPTCHA_SECRET) {
       res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
     } else {
@@ -66,7 +70,7 @@ export default async function handler(req, res) {
   }
 
   const { recaptchaToken = '', ...rest } = req.body || {};
-  const secret = process.env.RECAPTCHA_SECRET;
+  const secret = env?.RECAPTCHA_SECRET || process.env.RECAPTCHA_SECRET;
   if (!secret) {
     console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
     res.status(503).json({ ok: false, code: 'recaptcha_disabled' });

@@ -2,11 +2,22 @@ import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
 import { createMocks } from 'node-mocks-http';
 
 describe('contact api', () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = 'site-key';
+    process.env.NEXT_PUBLIC_SERVICE_ID = 'service';
+    process.env.NEXT_PUBLIC_TEMPLATE_ID = 'template';
+    process.env.NEXT_PUBLIC_USER_ID = 'user';
+  });
+
   afterEach(() => {
     rateLimit.clear();
     jest.restoreAllMocks();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
+    delete process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    delete process.env.NEXT_PUBLIC_SERVICE_ID;
+    delete process.env.NEXT_PUBLIC_TEMPLATE_ID;
+    delete process.env.NEXT_PUBLIC_USER_ID;
   });
 
   test('returns 200 when inputs pass', async () => {
