@@ -24,6 +24,22 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const ILLEGAL_RENAME_CHARS = /[\\/:*?"<>|]/;
+
+const splitFileName = (name) => {
+    if (typeof name !== 'string') {
+        return { base: '', extension: '' };
+    }
+    const lastDot = name.lastIndexOf('.');
+    if (lastDot <= 0 || lastDot === name.length - 1) {
+        return { base: name, extension: '' };
+    }
+    return {
+        base: name.slice(0, lastDot),
+        extension: name.slice(lastDot),
+    };
+};
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -52,12 +68,15 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            rename: null,
         }
     }
 
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        this.applyRenamedTitles();
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -78,7 +97,7 @@ export class Desktop extends Component {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
-                this.openApp('about-alex');
+                this.openApp('about');
             }
         });
         this.setContextListeners();
@@ -98,6 +117,150 @@ export class Desktop extends Component {
         window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
 
+    applyRenamedTitles = () => {
+        apps.forEach(app => {
+            if (app.originalTitle === undefined) {
+                app.originalTitle = app.title;
+            }
+        });
+        if (!safeLocalStorage) return;
+        let stored = {};
+        try { stored = JSON.parse(safeLocalStorage.getItem('app_renames') || '{}'); } catch (e) { stored = {}; }
+        if (!stored || typeof stored !== 'object') return;
+        Object.keys(stored).forEach(id => {
+            const title = stored[id];
+            if (typeof title !== 'string') return;
+            const app = apps.find(a => a.id === id);
+            if (app) {
+                if (app.originalTitle === undefined) {
+                    app.originalTitle = app.title;
+                }
+                app.title = title;
+            }
+        });
+    }
+
+    validateRename = (value) => {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return 'Name cannot be empty.';
+        }
+        if (ILLEGAL_RENAME_CHARS.test(value)) {
+            return 'Name cannot contain /, \\, :, *, ?, ", <, >, or |.';
+        }
+        return '';
+    }
+
+    focusRenameInput = (id) => {
+        if (typeof document === 'undefined') return;
+        const focus = () => {
+            const input = document.querySelector(`[data-rename-input="${id}"]`);
+            if (input && typeof input.focus === 'function') {
+                input.focus();
+                if (typeof input.select === 'function') {
+                    input.select();
+                }
+            }
+        };
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(focus);
+        } else {
+            setTimeout(focus, 0);
+        }
+    }
+
+    focusIcon = (id) => {
+        if (typeof document === 'undefined') return;
+        const focus = () => {
+            const el = document.getElementById(`app-${id}`);
+            if (el && typeof el.focus === 'function') {
+                el.focus();
+            }
+        };
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(focus);
+        } else {
+            setTimeout(focus, 0);
+        }
+    }
+
+    startRename = (id) => {
+        if (!id) return;
+        const app = apps.find(a => a.id === id);
+        if (!app) return;
+        const { base, extension } = splitFileName(app.title);
+        if (app.originalTitle === undefined) {
+            app.originalTitle = app.title;
+        }
+        this.hideAllContextMenu();
+        this.setState({ rename: { id, value: base, extension, error: '' } }, () => this.focusRenameInput(id));
+    }
+
+    handleRenameChange = (value) => {
+        this.setState(prev => {
+            if (!prev.rename) return null;
+            const error = this.validateRename(value);
+            return { rename: { ...prev.rename, value, error } };
+        });
+    }
+
+    persistRename = (app, newTitle, originalTitle) => {
+        if (app.id.startsWith('new-folder-')) {
+            if (!safeLocalStorage) return;
+            let folders = [];
+            try { folders = JSON.parse(safeLocalStorage.getItem('new_folders') || '[]'); } catch (e) { folders = []; }
+            const index = folders.findIndex(folder => folder.id === app.id);
+            if (index !== -1) {
+                folders[index].name = newTitle;
+                safeLocalStorage.setItem('new_folders', JSON.stringify(folders));
+            }
+            return;
+        }
+        if (!safeLocalStorage) return;
+        let renames = {};
+        try { renames = JSON.parse(safeLocalStorage.getItem('app_renames') || '{}'); } catch (e) { renames = {}; }
+        if (newTitle === originalTitle) {
+            delete renames[app.id];
+        } else {
+            renames[app.id] = newTitle;
+        }
+        if (Object.keys(renames).length) {
+            safeLocalStorage.setItem('app_renames', JSON.stringify(renames));
+        } else {
+            safeLocalStorage.removeItem('app_renames');
+        }
+    }
+
+    commitRename = () => {
+        const rename = this.state.rename;
+        if (!rename) return;
+        const error = this.validateRename(rename.value);
+        if (error) {
+            this.setState({ rename: { ...rename, error } }, () => this.focusRenameInput(rename.id));
+            return;
+        }
+        const app = apps.find(a => a.id === rename.id);
+        if (!app) {
+            this.setState({ rename: null });
+            return;
+        }
+        const trimmed = rename.value.trim();
+        const newTitle = `${trimmed}${rename.extension}`;
+        const originalTitle = app.originalTitle !== undefined ? app.originalTitle : app.title;
+        if (app.originalTitle === undefined) {
+            app.originalTitle = originalTitle;
+        }
+        app.title = newTitle;
+        this.persistRename(app, newTitle, originalTitle);
+        this.setState({ rename: null }, () => this.focusIcon(app.id));
+    }
+
+    cancelRename = () => {
+        const rename = this.state.rename;
+        if (!rename) return;
+        this.setState({ rename: null }, () => this.focusIcon(rename.id));
+    }
+
     checkForNewFolders = () => {
         const stored = safeLocalStorage?.getItem('new_folders');
         if (!stored) {
@@ -110,6 +273,7 @@ export class Desktop extends Component {
                 apps.push({
                     id: `new-folder-${folder.id}`,
                     title: folder.name,
+                    originalTitle: folder.name,
                     icon: '/themes/Yaru/system/folder.png',
                     disabled: true,
                     favourite: false,
@@ -354,6 +518,9 @@ export class Desktop extends Component {
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
+            if (app.originalTitle === undefined) {
+                app.originalTitle = app.title;
+            }
             focused_windows = {
                 ...focused_windows,
                 [app.id]: false,
@@ -398,6 +565,9 @@ export class Desktop extends Component {
         let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
         let desktop_apps = [];
         apps.forEach((app) => {
+            if (app.originalTitle === undefined) {
+                app.originalTitle = app.title;
+            }
             focused_windows = {
                 ...focused_windows,
                 [app.id]: ((this.state.focused_windows[app.id] !== undefined || this.state.focused_windows[app.id] !== null) ? this.state.focused_windows[app.id] : false),
@@ -437,6 +607,7 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.desktop_apps.includes(app.id)) {
 
+                const isRenaming = this.state.rename && this.state.rename.id === app.id;
                 const props = {
                     name: app.title,
                     id: app.id,
@@ -444,6 +615,14 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    isRenaming: !!isRenaming,
+                    renameValue: isRenaming ? this.state.rename.value : undefined,
+                    renameExtension: isRenaming ? this.state.rename.extension : undefined,
+                    renameError: isRenaming ? this.state.rename.error : undefined,
+                    onRenameChange: this.handleRenameChange,
+                    onRenameCommit: this.commitRename,
+                    onRenameCancel: this.cancelRename,
+                    onStartRename: () => this.startRename(app.id),
                 }
 
                 appsJsx.push(
@@ -808,6 +987,7 @@ export class Desktop extends Component {
         apps.push({
             id: `new-folder-${folder_id}`,
             title: folder_name,
+            originalTitle: folder_name,
             icon: '/themes/Yaru/system/folder.png',
             disabled: true,
             favourite: false,
@@ -919,6 +1099,7 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    onRename={() => this.startRename(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
