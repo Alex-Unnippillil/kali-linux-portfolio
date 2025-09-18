@@ -42,6 +42,102 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window force quit control', () => {
+  let confirmSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    confirmSpy.mockRestore();
+  });
+
+  it('renders force quit button and triggers handler without restart', () => {
+    const forceQuit = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        forceQuit={forceQuit}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /force quit window/i });
+    fireEvent.click(button);
+
+    expect(forceQuit).toHaveBeenCalledWith('test-window', { restart: false });
+  });
+
+  it('passes restart flag when user confirms relaunch', () => {
+    confirmSpy.mockReturnValue(true);
+    const forceQuit = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        forceQuit={forceQuit}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /force quit window/i }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(forceQuit).toHaveBeenCalledWith('test-window', { restart: true });
+  });
+
+  it('clears timers and cancels dock animation before forcing quit', () => {
+    jest.useFakeTimers();
+    const forceQuit = jest.fn();
+    const ref = React.createRef<Window>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        forceQuit={forceQuit}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const timeout = setTimeout(() => {}, 1000);
+    if (ref.current) {
+      (ref.current as any)._usageTimeout = timeout;
+      (ref.current as any)._usageTimerCleanup = jest.fn(() => clearTimeout(timeout));
+      const cancel = jest.fn();
+      (ref.current as any)._dockAnimation = { cancel, onfinish: jest.fn() };
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: /force quit window/i }));
+
+    if (ref.current) {
+      expect((ref.current as any)._usageTimeout).toBeNull();
+    }
+    expect(forceQuit).toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
