@@ -865,7 +865,11 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                className={"kali-gradient-bg h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 relative overflow-hidden overscroll-none window-parent"}
+            >
 
                 {/* Window Area */}
                 <div

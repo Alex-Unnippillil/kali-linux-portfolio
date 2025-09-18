@@ -115,7 +115,7 @@ export default class Ubuntu extends Component {
 
 	render() {
 		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                        <div className="w-screen h-screen overflow-hidden kali-gradient-bg" id="monitor-screen">
 				<LockScreen
 					isLocked={this.state.screen_locked}
 					bgImgName={this.state.bg_image_name}
