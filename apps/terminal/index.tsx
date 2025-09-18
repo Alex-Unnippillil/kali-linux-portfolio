@@ -8,6 +8,7 @@ import React, {
   useImperativeHandle,
   useCallback,
 } from 'react';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
@@ -77,6 +78,7 @@ const files: Record<string, string> = {
 };
 
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+  const chromeRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -101,10 +103,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [chromeFocused, setChromeFocused] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const paletteRef = useRef<HTMLDivElement | null>(null);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -152,17 +157,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     );
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      handleInput(text);
-    } catch {}
-  };
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -235,58 +229,73 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => workerRef.current?.terminate();
   }, []);
 
-    const runCommand = useCallback(
-      async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
-        const expanded =
-          aliasesRef.current[name]
-            ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
-        const [cmdName, ...cmdRest] = expanded.split(/\s+/);
-        const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
-        if (handler) await handler(cmdRest.join(' '), contextRef.current);
-        else if (cmdName) await runWorker(expanded);
-      },
-      [runWorker],
-    );
+  const runCommand = useCallback(
+    async (cmd: string) => {
+      const [name, ...rest] = cmd.trim().split(/\s+/);
+      const expanded =
+        aliasesRef.current[name]
+          ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
+          : cmd;
+      const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+      const handler = registryRef.current[cmdName];
+      historyRef.current.push(cmd);
+      if (handler) await handler(cmdRest.join(' '), contextRef.current);
+      else if (cmdName) await runWorker(expanded);
+    },
+    [runWorker],
+  );
 
-    const autocomplete = useCallback(() => {
-      const current = commandRef.current;
-      const registry = registryRef.current;
-      const matches = Object.keys(registry).filter((c) => c.startsWith(current));
-      if (matches.length === 1) {
-        const completion = matches[0].slice(current.length);
-        termRef.current?.write(completion);
-        commandRef.current = matches[0];
-      } else if (matches.length > 1) {
-        writeLine(matches.join('  '));
-        prompt();
-        termRef.current?.write(commandRef.current);
-      }
-    }, [prompt, writeLine]);
+  const autocomplete = useCallback(() => {
+    const current = commandRef.current;
+    const registry = registryRef.current;
+    const matches = Object.keys(registry).filter((c) => c.startsWith(current));
+    if (matches.length === 1) {
+      const completion = matches[0].slice(current.length);
+      termRef.current?.write(completion);
+      commandRef.current = matches[0];
+    } else if (matches.length > 1) {
+      writeLine(matches.join('  '));
+      prompt();
+      termRef.current?.write(commandRef.current);
+    }
+  }, [prompt, writeLine]);
 
-    const handleInput = useCallback(
-      (data: string) => {
-        for (const ch of data) {
-          if (ch === '\r') {
-            termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
-            commandRef.current = '';
-            prompt();
-          } else if (ch === '\u007F') {
-            if (commandRef.current.length > 0) {
-              termRef.current?.write('\b \b');
-              commandRef.current = commandRef.current.slice(0, -1);
-            }
-          } else {
-            commandRef.current += ch;
-            termRef.current?.write(ch);
+  const handleInput = useCallback(
+    (data: string) => {
+      for (const ch of data) {
+        if (ch === '\r') {
+          termRef.current?.writeln('');
+          runCommand(commandRef.current.trim());
+          commandRef.current = '';
+          prompt();
+        } else if (ch === '\u007F') {
+          if (commandRef.current.length > 0) {
+            termRef.current?.write('\b \b');
+            commandRef.current = commandRef.current.slice(0, -1);
           }
+        } else {
+          commandRef.current += ch;
+          termRef.current?.write(ch);
         }
-      },
-      [runCommand, prompt],
-    );
+      }
+    },
+    [runCommand, prompt],
+  );
+
+  const focusTerminal = useCallback(() => {
+    termRef.current?.focus();
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(contentRef.current).catch(() => {});
+  }, []);
+
+  const handlePaste = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      handleInput(text);
+    } catch {}
+  }, [handleInput]);
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
@@ -348,27 +357,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
           autocomplete();
-        } else if (domEvent.ctrlKey && domEvent.key === 'f') {
-          domEvent.preventDefault();
-          const q = window.prompt('Search');
-          if (q) searchRef.current?.findNext(q);
-        } else if (domEvent.ctrlKey && domEvent.key === 'r') {
-          domEvent.preventDefault();
-          const q = window.prompt('Search history');
-          if (q) {
-            const match = [...historyRef.current]
-              .reverse()
-              .find((c) => c.includes(q));
-            if (match && termRef.current) {
-              termRef.current.write('\u001b[2K\r');
-              prompt();
-              termRef.current.write(match);
-              commandRef.current = match;
-            } else {
-              writeLine(`No match: ${q}`);
-              prompt();
-            }
-          }
         }
       });
       updateOverflow();
@@ -395,26 +383,157 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, []);
 
   useEffect(() => {
-    const listener = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        setPaletteOpen((v) => {
-          const next = !v;
-          if (next) termRef.current?.blur();
-          else termRef.current?.focus();
-          return next;
-        });
+    const node = chromeRef.current;
+    if (!node) return;
+
+    const handleFocusIn = () => setChromeFocused(true);
+    const handleFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget as Node | null;
+      if (!next || !node.contains(next)) {
+        setChromeFocused(false);
       }
     };
-    window.addEventListener('keydown', listener);
-    return () => window.removeEventListener('keydown', listener);
-  }, [paletteOpen]);
+
+    node.addEventListener('focusin', handleFocusIn);
+    node.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      node.removeEventListener('focusin', handleFocusIn);
+      node.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
+
+  useFocusTrap(
+    chromeRef as React.RefObject<HTMLElement>,
+    chromeFocused && !paletteOpen && !settingsOpen,
+  );
+  useFocusTrap(paletteRef as React.RefObject<HTMLElement>, paletteOpen);
+  useFocusTrap(settingsRef as React.RefObject<HTMLElement>, settingsOpen);
+
+  useEffect(() => {
+    if (!paletteOpen) {
+      setPaletteInput('');
+      focusTerminal();
+    } else {
+      termRef.current?.blur?.();
+    }
+  }, [paletteOpen, focusTerminal]);
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      focusTerminal();
+    } else {
+      termRef.current?.blur?.();
+    }
+  }, [settingsOpen, focusTerminal]);
+
+  const isMac =
+    typeof navigator !== 'undefined' &&
+    /Mac|iPhone|iPad|iPod/.test(navigator.platform || '');
+
+  useEffect(() => {
+    const node = chromeRef.current;
+    if (!node) return;
+
+    const isInteractionActive = () => {
+      const active = document.activeElement;
+      return (
+        paletteOpen ||
+        settingsOpen ||
+        (active instanceof HTMLElement && node.contains(active))
+      );
+    };
+
+    const handleShortcut = (event: KeyboardEvent) => {
+      const active = isInteractionActive();
+      const key = event.key.toLowerCase();
+
+      if (!active && key !== 'escape') {
+        return;
+      }
+
+      if (key === 'escape') {
+        if (paletteOpen) {
+          event.preventDefault();
+          setPaletteOpen(false);
+          setPaletteInput('');
+          focusTerminal();
+          return;
+        }
+        if (settingsOpen) {
+          event.preventDefault();
+          setSettingsOpen(false);
+          focusTerminal();
+          return;
+        }
+        if (active) {
+          event.preventDefault();
+          focusTerminal();
+        }
+        return;
+      }
+
+      const modKey = isMac ? event.metaKey : event.ctrlKey;
+      if (!modKey || !active) return;
+
+      if (key === 'c') {
+        event.preventDefault();
+        handleCopy();
+      } else if (key === 'v') {
+        event.preventDefault();
+        handlePaste();
+      } else if (key === 'f') {
+        event.preventDefault();
+        const q = window.prompt('Search');
+        if (q) searchRef.current?.findNext(q);
+      } else if (key === 'r') {
+        event.preventDefault();
+        const q = window.prompt('Search history');
+        if (q) {
+          const match = [...historyRef.current]
+            .reverse()
+            .find((c) => c.includes(q));
+          if (match && termRef.current) {
+            termRef.current.write('\u001b[2K\r');
+            prompt();
+            termRef.current.write(match);
+            commandRef.current = match;
+          } else {
+            writeLine(`No match: ${q}`);
+            prompt();
+          }
+        }
+      } else if (key === 'p' && event.shiftKey) {
+        event.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [
+    chromeRef,
+    focusTerminal,
+    handleCopy,
+    handlePaste,
+    isMac,
+    paletteOpen,
+    prompt,
+    settingsOpen,
+    writeLine,
+  ]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" ref={chromeRef}>
       {paletteOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
-          <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10" role="presentation">
+          <div
+            ref={paletteRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            className="mt-10 w-80 bg-gray-800 p-4 rounded"
+          >
             <input
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
@@ -425,12 +544,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                   runCommand(paletteInput);
                   setPaletteInput('');
                   setPaletteOpen(false);
-                  termRef.current?.focus();
-                } else if (e.key === 'Escape') {
-                  setPaletteOpen(false);
-                  termRef.current?.focus();
                 }
               }}
+              aria-label="Run command"
             />
             <ul className="max-h-40 overflow-y-auto">
               {Object.keys(registryRef.current)
@@ -445,8 +561,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       {settingsOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10" role="presentation">
+          <div
+            ref={settingsRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Terminal settings"
+            className="bg-gray-900 p-4 rounded space-y-4"
+          >
             <div className="grid grid-cols-8 gap-2">
               {ansiColors.map((c, i) => (
                 <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
@@ -459,10 +581,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             </pre>
             <div className="flex justify-end gap-2">
               <button
+                autoFocus
                 className="px-2 py-1 bg-gray-700 rounded"
                 onClick={() => {
                   setSettingsOpen(false);
-                  termRef.current?.focus();
                 }}
               >
                 Cancel
@@ -471,7 +593,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                 className="px-2 py-1 bg-blue-600 rounded"
                 onClick={() => {
                   setSettingsOpen(false);
-                  termRef.current?.focus();
                 }}
               >
                 Apply
@@ -488,7 +609,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            aria-pressed={settingsOpen}
+          >
             <SettingsIcon />
           </button>
         </div>
@@ -496,6 +621,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <TerminalContainer
             ref={containerRef}
             className="resize overflow-hidden font-mono"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-label="Terminal output"
             style={{
               width: '80ch',
               height: '24em',
