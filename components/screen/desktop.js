@@ -126,8 +126,10 @@ export class Desktop extends Component {
     setEventListeners = () => {
         const openSettings = document.getElementById("open-settings");
         if (openSettings) {
-            openSettings.addEventListener("click", () => {
-                this.openApp("settings");
+            openSettings.addEventListener("click", (event) => {
+                const target = event.currentTarget;
+                const section = target && target.dataset ? target.dataset.section : undefined;
+                this.openApp("settings", section ? { section } : undefined);
             });
         }
     }
@@ -577,13 +579,33 @@ export class Desktop extends Component {
     }
 
     handleOpenAppEvent = (e) => {
-        const id = e.detail;
-        if (id) {
-            this.openApp(id);
+        const detail = e.detail;
+        if (!detail) return;
+        if (typeof detail === 'string') {
+            this.openApp(detail);
+        } else if (typeof detail === 'object' && detail.id) {
+            this.openApp(detail.id, detail);
         }
     }
 
-    openApp = (objId) => {
+    openApp = (objId, options = {}) => {
+
+        const targetSection = (
+            objId === 'settings' &&
+            options &&
+            typeof options === 'object' &&
+            typeof options.section === 'string'
+        ) ? options.section : undefined;
+
+        const storePendingSection = () => {
+            if (!targetSection || typeof window === 'undefined') return;
+            window.__settingsSectionTarget = targetSection;
+        };
+
+        const notifySettings = () => {
+            if (!targetSection || typeof window === 'undefined') return;
+            window.dispatchEvent(new CustomEvent('settings:navigate', { detail: { section: targetSection } }));
+        };
 
         // google analytics
         ReactGA.event({
@@ -607,6 +629,9 @@ export class Desktop extends Component {
             } else {
                 this.focus(objId);
                 this.saveSession();
+            }
+            if (targetSection) {
+                notifySettings();
             }
             return;
         } else {
@@ -644,12 +669,19 @@ export class Desktop extends Component {
             recentApps = recentApps.slice(0, 10);
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
+            if (targetSection) {
+                storePendingSection();
+            }
+
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    if (targetSection) {
+                        notifySettings();
+                    }
                 });
                 this.app_stack.push(objId);
             }, 200);

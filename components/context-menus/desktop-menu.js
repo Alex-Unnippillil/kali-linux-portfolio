@@ -17,8 +17,12 @@ function DesktopMenu(props) {
         props.openApp("terminal");
     }
 
-    const openSettings = () => {
-        props.openApp("settings");
+    const openSettings = (section) => {
+        if (section) {
+            props.openApp("settings", { section });
+        } else {
+            props.openApp("settings");
+        }
     }
 
     const checkFullScreen = () => {
@@ -87,7 +91,7 @@ function DesktopMenu(props) {
             </button>
             <Devider />
             <button
-                onClick={openSettings}
+                onClick={() => openSettings("appearance.wallpaper")}
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
@@ -100,7 +104,7 @@ function DesktopMenu(props) {
                 <span className="ml-5">Display Settings</span>
             </div>
             <button
-                onClick={openSettings}
+                onClick={() => openSettings()}
                 type="button"
                 role="menuitem"
                 aria-label="Settings"
