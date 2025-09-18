@@ -1,0 +1,10 @@
+{
+  "id": "subnet-calculator",
+  "name": "Subnet Calculator",
+  "category": "Utilities",
+  "description": "Interactive IPv4 calculator that derives network, broadcast, host range, and usable address counts for any CIDR prefix.",
+  "icon": "/apps/subnet-calculator/icon.svg",
+  "tags": ["networking", "ipv4", "calculator"],
+  "screens": [],
+  "source": "https://github.com/Alex-Unnippillil/kali-linux-portfolio"
+}
