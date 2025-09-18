@@ -8,6 +8,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
+import { displayDiskManager } from './components/apps/disk-manager';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
@@ -230,6 +231,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'disk-manager',
+    title: 'Disk Manager',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDiskManager,
   },
   {
     id: 'figlet',
