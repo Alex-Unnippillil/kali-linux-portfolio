@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
+import { useNetworkProfile, DEFAULT_NETWORK_PROFILE } from '../hooks/useNetworkProfile';
+import type { NetworkProfile } from '../hooks/useNetworkProfile';
 
 interface ModuleOption {
   name: string;
@@ -46,6 +48,40 @@ const modules: Module[] = [
   },
 ];
 
+const cloneProfileForState = (profile: NetworkProfile): NetworkProfile => ({
+  proxyEnabled: profile.proxyEnabled,
+  proxyUrl: profile.proxyUrl,
+  vpnConnected: profile.vpnConnected,
+  vpnLabel: profile.vpnLabel,
+  dnsServers: [...profile.dnsServers],
+  env: { ...profile.env },
+});
+
+const formatEnv = (env: Record<string, string>) =>
+  Object.entries(env)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+
+const parseDns = (value: string) =>
+  value
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+
+const parseEnv = (value: string) => {
+  const next: Record<string, string> = {};
+  value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .forEach((line) => {
+      const [key, ...rest] = line.split('=');
+      if (!key) return;
+      next[key.trim()] = rest.join('=').trim();
+    });
+  return next;
+};
+
 const ModuleWorkspace: React.FC = () => {
   const [workspaces, setWorkspaces] = usePersistentState<string[]>(
     'workspaces',
@@ -53,6 +89,19 @@ const ModuleWorkspace: React.FC = () => {
   );
   const [newWorkspace, setNewWorkspace] = useState('');
   const [currentWorkspace, setCurrentWorkspace] = useState('');
+
+  const {
+    applyWorkspaceProfile,
+    updateWorkspaceProfile,
+    getWorkspaceProfile,
+    activeWorkspace: activeNetworkWorkspace,
+    profile: activeProfile,
+  } = useNetworkProfile();
+  const [profileDraft, setProfileDraft] = useState<NetworkProfile>(() =>
+    cloneProfileForState(DEFAULT_NETWORK_PROFILE),
+  );
+  const [dnsInput, setDnsInput] = useState('');
+  const [envInput, setEnvInput] = useState('');
 
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<Module | null>(null);
@@ -68,6 +117,39 @@ const ModuleWorkspace: React.FC = () => {
     () => (filter ? modules.filter((m) => m.tags.includes(filter)) : modules),
     [filter],
   );
+
+  useEffect(() => {
+    if (!currentWorkspace && workspaces.length > 0) {
+      setCurrentWorkspace(workspaces[0]);
+    }
+  }, [currentWorkspace, workspaces]);
+
+  useEffect(() => {
+    if (!currentWorkspace) return;
+    applyWorkspaceProfile(currentWorkspace);
+  }, [currentWorkspace, applyWorkspaceProfile]);
+
+  useEffect(() => {
+    if (!currentWorkspace) {
+      setProfileDraft(cloneProfileForState(DEFAULT_NETWORK_PROFILE));
+      setDnsInput('');
+      setEnvInput('');
+      return;
+    }
+    const source =
+      activeNetworkWorkspace === currentWorkspace
+        ? activeProfile
+        : getWorkspaceProfile(currentWorkspace);
+    const clone = cloneProfileForState(source);
+    setProfileDraft(clone);
+    setDnsInput(clone.dnsServers.join(', '));
+    setEnvInput(formatEnv(clone.env));
+  }, [
+    currentWorkspace,
+    activeNetworkWorkspace,
+    activeProfile,
+    getWorkspaceProfile,
+  ]);
 
   const addWorkspace = useCallback(() => {
     const name = newWorkspace.trim();
@@ -135,6 +217,121 @@ const ModuleWorkspace: React.FC = () => {
       </section>
       {currentWorkspace && (
         <>
+          <section
+            className="space-y-3 rounded bg-gray-800 p-4 border border-gray-700"
+            aria-label="Network profile configuration"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Network Profile</h2>
+              <span className="text-xs text-gray-300">
+                Proxy {profileDraft.proxyEnabled ? 'enabled' : 'disabled'} · VPN{' '}
+                {profileDraft.vpnConnected ? 'on' : 'off'}
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                <span>Proxy URL</span>
+                <input
+                  value={profileDraft.proxyUrl}
+                  onChange={(e) =>
+                    setProfileDraft((prev) => ({ ...prev, proxyUrl: e.target.value }))
+                  }
+                  onBlur={() =>
+                    currentWorkspace &&
+                    updateWorkspaceProfile(currentWorkspace, {
+                      proxyUrl: profileDraft.proxyUrl,
+                    })
+                  }
+                  placeholder="http://127.0.0.1:8080"
+                  className="p-2 rounded border border-gray-700 bg-gray-900 text-white"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={profileDraft.proxyEnabled}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setProfileDraft((prev) => ({ ...prev, proxyEnabled: next }));
+                    if (currentWorkspace) {
+                      updateWorkspaceProfile(currentWorkspace, { proxyEnabled: next });
+                    }
+                  }}
+                />
+                <span>Enable proxy</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={profileDraft.vpnConnected}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setProfileDraft((prev) => ({ ...prev, vpnConnected: next }));
+                    if (currentWorkspace) {
+                      updateWorkspaceProfile(currentWorkspace, { vpnConnected: next });
+                    }
+                  }}
+                />
+                <span>VPN connected</span>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span>VPN label</span>
+                <input
+                  value={profileDraft.vpnLabel}
+                  onChange={(e) =>
+                    setProfileDraft((prev) => ({ ...prev, vpnLabel: e.target.value }))
+                  }
+                  onBlur={() =>
+                    currentWorkspace &&
+                    updateWorkspaceProfile(currentWorkspace, {
+                      vpnLabel: profileDraft.vpnLabel,
+                    })
+                  }
+                  disabled={!profileDraft.vpnConnected}
+                  placeholder="Lab VPN"
+                  className="p-2 rounded border border-gray-700 bg-gray-900 text-white disabled:opacity-50"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                <span>DNS servers (comma separated)</span>
+                <input
+                  value={dnsInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setDnsInput(value);
+                    setProfileDraft((prev) => ({ ...prev, dnsServers: parseDns(value) }));
+                  }}
+                  onBlur={() =>
+                    currentWorkspace &&
+                    updateWorkspaceProfile(currentWorkspace, {
+                      dnsServers: parseDns(dnsInput),
+                    })
+                  }
+                  placeholder="1.1.1.1, 1.0.0.1"
+                  className="p-2 rounded border border-gray-700 bg-gray-900 text-white"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                <span>Environment variables (KEY=value per line)</span>
+                <textarea
+                  value={envInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEnvInput(value);
+                    setProfileDraft((prev) => ({ ...prev, env: parseEnv(value) }));
+                  }}
+                  onBlur={() =>
+                    currentWorkspace &&
+                    updateWorkspaceProfile(currentWorkspace, {
+                      env: parseEnv(envInput),
+                    })
+                  }
+                  className="h-24 p-2 rounded border border-gray-700 bg-gray-900 text-white"
+                  placeholder={'API_KEY=demo\nTOKEN=lab'}
+                />
+              </label>
+            </div>
+          </section>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('')}

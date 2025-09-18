@@ -2,12 +2,21 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ModuleWorkspace from '../pages/module-workspace';
 import { getValue, clearStore } from '../utils/moduleStore';
+import { NetworkProfileProvider } from '../hooks/useNetworkProfile';
 
 describe('ModuleWorkspace key-value store', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   afterEach(() => clearStore());
 
   it('saves module output to the store', () => {
-    render(<ModuleWorkspace />);
+    render(
+      <NetworkProfileProvider>
+        <ModuleWorkspace />
+      </NetworkProfileProvider>,
+    );
 
     fireEvent.change(screen.getByPlaceholderText('New workspace'), {
       target: { value: 'ws1' },
