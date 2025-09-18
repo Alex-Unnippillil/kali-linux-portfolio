@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  createContext,
+} from 'react';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -14,12 +21,15 @@ export interface TabDefinition {
   onActivate?: () => void;
   onDeactivate?: () => void;
   onClose?: () => void;
+  data?: Record<string, unknown>;
 }
 
 interface TabbedWindowProps {
   initialTabs: TabDefinition[];
+  tabs?: TabDefinition[];
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
+  onDetachTab?: (tab: TabDefinition, index: number) => void;
   className?: string;
 }
 
@@ -34,42 +44,63 @@ export const useTab = () => useContext(TabContext);
 
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
   initialTabs,
+  tabs: controlledTabs,
   onNewTab,
   onTabsChange,
+  onDetachTab,
   className = '',
 }) => {
-  const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
+  const isControlled = Array.isArray(controlledTabs);
+  const [internalTabs, setInternalTabs] = useState<TabDefinition[]>(initialTabs);
+  const currentTabs = isControlled ? controlledTabs ?? [] : internalTabs;
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
-      const prev = tabs.find((t) => t.id === prevActive.current);
-      const next = tabs.find((t) => t.id === activeId);
+      const prev = currentTabs.find((t) => t.id === prevActive.current);
+      const next = currentTabs.find((t) => t.id === activeId);
       if (prev && prev.onDeactivate) prev.onDeactivate();
       if (next && next.onActivate) next.onActivate();
       prevActive.current = activeId;
     }
-  }, [activeId, tabs]);
+  }, [activeId, currentTabs]);
+
+  useEffect(() => {
+    if (currentTabs.length === 0) {
+      if (activeId !== '') setActiveId('');
+      return;
+    }
+    if (!currentTabs.some((t) => t.id === activeId)) {
+      const first = currentTabs[0];
+      if (first) setActiveId(first.id);
+    }
+  }, [currentTabs, activeId]);
 
   const updateTabs = useCallback(
     (updater: (prev: TabDefinition[]) => TabDefinition[]) => {
-      setTabs((prev) => {
-        const next = updater(prev);
+      if (isControlled) {
+        const prev = controlledTabs ?? [];
+        const next = updater(prev.slice());
+        onTabsChange?.(next);
+        return next;
+      }
+      let result: TabDefinition[] = [];
+      setInternalTabs((prev) => {
+        const next = updater(prev.slice());
+        result = next;
         onTabsChange?.(next);
         return next;
       });
+      return result;
     },
-    [onTabsChange],
+    [controlledTabs, isControlled, onTabsChange],
   );
 
-  const setActive = useCallback(
-    (id: string) => {
-      setActiveId(id);
-    },
-    [],
-  );
+  const setActive = useCallback((id: string) => {
+    setActiveId(id);
+  }, []);
 
   const closeTab = useCallback(
     (id: string) => {
@@ -80,8 +111,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         if (removed && removed.onClose) removed.onClose();
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
-          setActiveId(fallback.id);
-        } else if (next.length === 0 && onNewTab) {
+          if (fallback) setActiveId(fallback.id);
+        } else if (next.length === 0 && onNewTab && !onDetachTab) {
           const tab = onNewTab();
           next.push(tab);
           setActiveId(tab.id);
@@ -89,7 +120,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         return next;
       });
     },
-    [activeId, onNewTab, updateTabs],
+    [activeId, onDetachTab, onNewTab, updateTabs],
   );
 
   const addTab = useCallback(() => {
@@ -112,6 +143,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const handleDrop = (index: number) => (e: React.DragEvent) => {
     e.preventDefault();
     const src = dragSrc.current;
+    dragSrc.current = null;
     if (src === null || src === index) return;
     updateTabs((prev) => {
       const next = [...prev];
@@ -120,6 +152,27 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       return next;
     });
   };
+
+  const detachTabAt = useCallback(
+    (index: number) => {
+      let removed: TabDefinition | undefined;
+      updateTabs((prev) => {
+        if (!prev[index]) return prev;
+        const next = [...prev];
+        [removed] = next.splice(index, 1);
+        if (!removed) return prev;
+        if (next.length === 0) {
+          setActiveId('');
+        } else if (removed.id === activeId) {
+          const fallback = next[index] || next[index - 1];
+          if (fallback) setActiveId(fallback.id);
+        }
+        return next;
+      });
+      if (removed) onDetachTab?.(removed, index);
+    },
+    [activeId, onDetachTab, updateTabs],
+  );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
@@ -134,31 +187,25 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
     if (e.ctrlKey && e.key === 'Tab') {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx = e.shiftKey
-          ? (idx - 1 + prev.length) % prev.length
-          : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
+      if (currentTabs.length === 0) return;
+      const idx = currentTabs.findIndex((t) => t.id === activeId);
+      const nextIdx = e.shiftKey
+        ? (idx - 1 + currentTabs.length) % currentTabs.length
+        : (idx + 1) % currentTabs.length;
+      const nextTab = currentTabs[nextIdx];
+      setActiveId(nextTab.id);
       return;
     }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx =
-          e.key === 'ArrowLeft'
-            ? (idx - 1 + prev.length) % prev.length
-            : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
+      if (currentTabs.length === 0) return;
+      const idx = currentTabs.findIndex((t) => t.id === activeId);
+      const nextIdx =
+        e.key === 'ArrowLeft'
+          ? (idx - 1 + currentTabs.length) % currentTabs.length
+          : (idx + 1) % currentTabs.length;
+      const nextTab = currentTabs[nextIdx];
+      setActiveId(nextTab.id);
     }
   };
 
@@ -169,7 +216,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       onKeyDown={onKeyDown}
     >
       <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
-        {tabs.map((t, i) => (
+        {currentTabs.map((t, i) => (
           <div
             key={t.id}
             className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
@@ -179,10 +226,13 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             onDragStart={handleDragStart(i)}
             onDragOver={handleDragOver(i)}
             onDrop={handleDrop(i)}
+            onDragEnd={() => {
+              dragSrc.current = null;
+            }}
             onClick={() => setActive(t.id)}
           >
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
+            {t.closable !== false && currentTabs.length > 1 && (
               <button
                 className="p-0.5"
                 onClick={(e) => {
@@ -196,6 +246,26 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             )}
           </div>
         ))}
+        {onDetachTab && (
+          <div
+            className="px-3 py-1 bg-gray-800 text-xs flex items-center"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragSrc.current !== null) {
+                detachTabAt(dragSrc.current);
+                dragSrc.current = null;
+              }
+            }}
+            aria-label="Detach Tab"
+            role="button"
+          >
+            Detach
+          </div>
+        )}
         {onNewTab && (
           <button
             className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
@@ -207,7 +277,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         )}
       </div>
       <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
+        {currentTabs.map((t) => (
           <TabContext.Provider
             key={t.id}
             value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}

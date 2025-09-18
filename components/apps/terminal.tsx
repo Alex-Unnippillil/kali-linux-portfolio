@@ -16,11 +16,11 @@ const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
  * overflows. The actual indicator/scroll handling lives inside the terminal
  * app, this wrapper just provides the necessary container styles.
  */
-export default function Terminal() {
+export default function Terminal({ openApp }: { openApp?: (id: string) => void }) {
   return (
     <div className="h-full w-full overflow-y-auto">
       <HelpPanel appId="terminal" />
-      <TerminalApp />
+      <TerminalApp openApp={openApp} />
     </div>
   );
 }
