@@ -11,7 +11,10 @@ import {
   deactivateEnemy,
   loadSprite,
   clearSpriteCache,
+  serializeLevelData,
+  deserializeLevelData,
 } from '../apps/games/tower-defense';
+import type { LevelData } from '../apps/games/tower-defense';
 
 describe('tower defense core', () => {
   test('path computed once and reused', () => {
@@ -55,5 +58,77 @@ describe('tower defense core', () => {
     const d1 = getTowerDPS('single', 1);
     const d2 = getTowerDPS('single', 2);
     expect(d2).toBeGreaterThan(d1);
+  });
+
+  test('level data round-trips through serialization', () => {
+    const level: LevelData = {
+      path: [
+        {
+          x: 1,
+          y: 2,
+        },
+      ],
+      spawners: [
+        {
+          x: 0,
+          y: 0,
+        },
+      ],
+      towers: [
+        {
+          x: 3,
+          y: 4,
+          range: 2,
+          damage: 5,
+          level: 1,
+          type: 'single',
+        },
+      ],
+      waves: [['fast', 'tank']],
+    };
+    const json = serializeLevelData(level);
+    const parsed = deserializeLevelData(json);
+    expect(parsed).toEqual(level);
+  });
+
+  test('serializeLevelData strips runtime-only tower fields', () => {
+    const level: LevelData = {
+      path: [],
+      spawners: [],
+      towers: [
+        {
+          x: 1,
+          y: 1,
+          range: 2,
+          damage: 3,
+          level: 4,
+          type: 'single',
+        },
+      ],
+      waves: [],
+    };
+    (level.towers[0] as any).cool = 99;
+    const json = serializeLevelData(level);
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    const tower = (parsed.towers as any[])[0];
+    expect(tower.cool).toBeUndefined();
+    expect(tower).toEqual({
+      x: 1,
+      y: 1,
+      range: 2,
+      damage: 3,
+      level: 4,
+      type: 'single',
+    });
+  });
+
+  test('deserializeLevelData rejects invalid enemy identifiers', () => {
+    const json = JSON.stringify({
+      path: [],
+      spawners: [],
+      towers: [],
+      waves: [['fast', 'ghost']],
+    });
+    expect(() => deserializeLevelData(json)).toThrow(/enemy/i);
   });
 });

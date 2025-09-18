@@ -11,6 +11,9 @@ import {
   Enemy,
   createEnemyPool,
   spawnEnemy,
+  serializeLevelData,
+  deserializeLevelData,
+  LevelData,
 } from "../games/tower-defense";
 
 const GRID_SIZE = 10;
@@ -89,8 +92,11 @@ interface EnemyInstance extends Enemy {
 const TowerDefense = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [editing, setEditing] = useState(true);
+  const [editMode, setEditMode] = useState<"path" | "spawner">("path");
   const [path, setPath] = useState<{ x: number; y: number }[]>([]);
+  const [spawners, setSpawners] = useState<Vec[]>([]);
   const pathSetRef = useRef<Set<string>>(new Set());
+  const spawnerSetRef = useRef<Set<string>>(new Set());
   const [towers, setTowers] = useState<Tower[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
@@ -117,10 +123,17 @@ const TowerDefense = () => {
   const [waveConfig, setWaveConfig] = useState<
     (keyof typeof ENEMY_TYPES)[][]
   >([Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[]]);
-  const [waveJson, setWaveJson] = useState("");
+  const [levelJson, setLevelJson] = useState("");
   useEffect(() => {
-    setWaveJson(JSON.stringify(waveConfig, null, 2));
-  }, [waveConfig]);
+    setLevelJson(
+      serializeLevelData({
+        path,
+        spawners,
+        towers,
+        waves: waveConfig,
+      }),
+    );
+  }, [path, spawners, towers, waveConfig]);
   const addWave = () => setWaveConfig((w) => [...w, []]);
   const addEnemyToWave = (
     index: number,
@@ -132,24 +145,61 @@ const TowerDefense = () => {
       return copy;
     });
   };
-  const importWaves = () => {
-    try {
-      const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
-      if (Array.isArray(data)) setWaveConfig(data);
-    } catch {
-      alert("Invalid wave JSON");
-    }
-  };
-  const exportWaves = () => {
-    const json = JSON.stringify(waveConfig, null, 2);
-    setWaveJson(json);
+  const exportLevel = () => {
+    const json = serializeLevelData({
+      path,
+      spawners,
+      towers,
+      waves: waveConfig,
+    });
+    setLevelJson(json);
     navigator.clipboard
       ?.writeText(json)
       .catch(() => {});
   };
 
+  const applyLevelData = (data: LevelData) => {
+    pathSetRef.current = new Set(
+      data.path.map((cell) => `${cell.x},${cell.y}`),
+    );
+    spawnerSetRef.current = new Set(
+      data.spawners.map((cell) => `${cell.x},${cell.y}`),
+    );
+    setPath(data.path.map((cell) => ({ ...cell })));
+    setSpawners(data.spawners.map((cell) => ({ ...cell })));
+    setTowers(data.towers.map((tower) => ({ ...tower })));
+    setWaveConfig(data.waves.map((wave) => [...wave]));
+    setSelected(null);
+    setHovered(null);
+    running.current = false;
+    waveCountdownRef.current = null;
+    waveRef.current = 1;
+    spawnTimer.current = 0;
+    enemiesSpawnedRef.current = 0;
+    enemiesRef.current = [];
+    enemyPool.current = createEnemyPool(50);
+    damageNumbersRef.current = [];
+    damageTicksRef.current = [];
+    flowFieldRef.current = null;
+    forceRerender((n) => n + 1);
+  };
+
+  const importLevel = () => {
+    try {
+      const data = deserializeLevelData(levelJson);
+      applyLevelData(data);
+      setLevelJson(serializeLevelData(data));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Invalid level JSON";
+      alert(message);
+    }
+  };
+
+  const cellKey = (x: number, y: number) => `${x},${y}`;
+
   const togglePath = (x: number, y: number) => {
-    const key = `${x},${y}`;
+    const key = cellKey(x, y);
     setPath((p) => {
       const set = pathSetRef.current;
       if (set.has(key)) {
@@ -161,13 +211,27 @@ const TowerDefense = () => {
     });
   };
 
+  const toggleSpawner = (x: number, y: number) => {
+    const key = cellKey(x, y);
+    setSpawners((items) => {
+      const set = spawnerSetRef.current;
+      if (set.has(key)) {
+        set.delete(key);
+        return items.filter((cell) => !(cell.x === x && cell.y === y));
+      }
+      set.add(key);
+      return [...items, { x, y }];
+    });
+  };
+
   const handleCanvasClick = (e: React.MouseEvent) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    const key = `${x},${y}`;
+    const key = cellKey(x, y);
     if (editing) {
-      togglePath(x, y);
+      if (editMode === "path") togglePath(x, y);
+      else toggleSpawner(x, y);
       return;
     }
     const existing = towers.findIndex((t) => t.x === x && t.y === y);
@@ -175,7 +239,7 @@ const TowerDefense = () => {
       setSelected(existing);
       return;
     }
-    if (pathSetRef.current.has(key)) return;
+    if (pathSetRef.current.has(key) || spawnerSetRef.current.has(key)) return;
     setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
   };
 
@@ -214,6 +278,22 @@ const TowerDefense = () => {
       ctx.lineTo(CANVAS_SIZE, i * CELL_SIZE);
       ctx.stroke();
     }
+    ctx.fillStyle = "rgba(0, 255, 255, 0.2)";
+    spawners.forEach((cell) => {
+      ctx.fillRect(
+        cell.x * CELL_SIZE,
+        cell.y * CELL_SIZE,
+        CELL_SIZE,
+        CELL_SIZE,
+      );
+      ctx.strokeStyle = "#00ffff";
+      ctx.strokeRect(
+        cell.x * CELL_SIZE,
+        cell.y * CELL_SIZE,
+        CELL_SIZE,
+        CELL_SIZE,
+      );
+    });
     ctx.fillStyle = "rgba(255,255,0,0.2)";
     path.forEach((c) => {
       ctx.fillRect(c.x * CELL_SIZE, c.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
@@ -285,10 +365,12 @@ const TowerDefense = () => {
     const type = wave[enemiesSpawnedRef.current];
     if (!type) return;
     const spec = ENEMY_TYPES[type];
+    const spawnPoint = spawners[0] ?? path[0];
+    if (!spawnPoint) return;
     const enemy = spawnEnemy(enemyPool.current, {
       id: Date.now(),
-      x: path[0].x,
-      y: path[0].y,
+      x: spawnPoint.x,
+      y: spawnPoint.y,
       pathIndex: 0,
       progress: 0,
       health: spec.health,
@@ -398,13 +480,13 @@ const TowerDefense = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
-    };
+  const start = () => {
+    if (!path.length || !waveConfig.length) return;
+    setEditing(false);
+    waveRef.current = 1;
+    waveCountdownRef.current = 3;
+    forceRerender((n) => n + 1);
+  };
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
@@ -440,6 +522,26 @@ const TowerDefense = () => {
             Start
           </button>
         </div>
+        {editing && (
+          <div className="flex space-x-2 text-xs mb-2">
+            <label className="inline-flex items-center space-x-1">
+              <input
+                type="radio"
+                checked={editMode === "path"}
+                onChange={() => setEditMode("path")}
+              />
+              <span>Path</span>
+            </label>
+            <label className="inline-flex items-center space-x-1">
+              <input
+                type="radio"
+                checked={editMode === "spawner"}
+                onChange={() => setEditMode("spawner")}
+              />
+              <span>Spawners</span>
+            </label>
+          </div>
+        )}
         <div className="space-y-1 mb-2 text-xs">
           {waveConfig.map((wave, i) => (
             <div key={i} className="flex items-center space-x-2">
@@ -465,23 +567,26 @@ const TowerDefense = () => {
           >
             Add Wave
           </button>
+          <div className="text-xs text-gray-300">
+            Level JSON includes path, spawners, towers, and waves.
+          </div>
           <textarea
-            className="w-full bg-black text-white p-1 rounded h-24"
-            value={waveJson}
-            onChange={(e) => setWaveJson(e.target.value)}
+            className="w-full bg-black text-white p-1 rounded h-32"
+            value={levelJson}
+            onChange={(e) => setLevelJson(e.target.value)}
           />
           <div className="space-x-2">
             <button
               className="px-2 py-1 bg-gray-700 rounded"
-              onClick={importWaves}
+              onClick={importLevel}
             >
-              Import
+              Load
             </button>
             <button
               className="px-2 py-1 bg-gray-700 rounded"
-              onClick={exportWaves}
+              onClick={exportLevel}
             >
-              Export
+              Copy JSON
             </button>
           </div>
         </div>
