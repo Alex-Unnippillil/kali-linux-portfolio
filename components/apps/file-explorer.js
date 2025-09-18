@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
-import Breadcrumbs from '../ui/Breadcrumbs';
+import Breadcrumb from '../base/Breadcrumb';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -213,6 +213,79 @@ export default function FileExplorer() {
     await readDir(target.handle);
   };
 
+  const tryNavigatePath = async (parts, basePath, baseHandle) => {
+    if (!baseHandle) return null;
+    const newPath = basePath.map((segment) => ({ name: segment.name, handle: segment.handle }));
+    let currentHandle = baseHandle;
+
+    for (const part of parts) {
+      if (!part) continue;
+      if (part === '.') continue;
+      if (part === '..') {
+        if (newPath.length > 1) {
+          newPath.pop();
+          currentHandle = newPath[newPath.length - 1].handle;
+        }
+        continue;
+      }
+      const rootCandidate = newPath[0];
+      const currentRootName = rootCandidate?.name || '/';
+      if (
+        newPath.length === 1 &&
+        (currentRootName === part || (currentRootName === '/' && part === '/'))
+      ) {
+        continue;
+      }
+      try {
+        const nextHandle = await currentHandle.getDirectoryHandle(part);
+        newPath.push({ name: nextHandle.name || part, handle: nextHandle });
+        currentHandle = nextHandle;
+      } catch (error) {
+        console.warn('Unable to navigate to path segment', part, error);
+        return null;
+      }
+    }
+
+    return { handle: currentHandle, newPath };
+  };
+
+  const editPath = async (rawPath) => {
+    if (!path.length) return;
+    const trimmed = (rawPath || '').trim();
+    if (!trimmed) return;
+
+    const rootEntry = path[0];
+
+    if (trimmed === '/' || trimmed === rootEntry.name) {
+      setDirHandle(rootEntry.handle);
+      setPath([rootEntry]);
+      await readDir(rootEntry.handle);
+      return;
+    }
+
+    const parts = trimmed.split(/[\\/]/).filter(Boolean);
+
+    const absoluteResult = await tryNavigatePath(parts, [rootEntry], rootEntry.handle);
+
+    if (trimmed.startsWith('/')) {
+      if (!absoluteResult) return;
+      setDirHandle(absoluteResult.handle);
+      setPath(absoluteResult.newPath);
+      await readDir(absoluteResult.handle);
+      return;
+    }
+
+    const currentEntry = path[path.length - 1];
+    const relativeResult = await tryNavigatePath(parts, path, currentEntry.handle);
+
+    const finalResult = relativeResult || absoluteResult;
+    if (!finalResult) return;
+
+    setDirHandle(finalResult.handle);
+    setPath(finalResult.newPath);
+    await readDir(finalResult.handle);
+  };
+
   const goBack = async () => {
     if (path.length <= 1) return;
     const newPath = path.slice(0, -1);
@@ -306,7 +379,20 @@ export default function FileExplorer() {
             Back
           </button>
         )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
+        <div className="flex-1 min-w-0">
+          <Breadcrumb
+            segments={path.map((segment, index) => ({
+              id: `${segment.name || 'root'}-${index}`,
+              label: segment.name || '/',
+            }))}
+            onNavigate={navigateTo}
+            allowEditing
+            onEdit={editPath}
+            ariaLabel="File path"
+            inputLabel="Edit file path"
+            className="truncate"
+          />
+        </div>
         {currentFile && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
