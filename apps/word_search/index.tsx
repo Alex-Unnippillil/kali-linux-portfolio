@@ -9,6 +9,7 @@ import GameLayout from '../../components/apps/GameLayout';
 import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext';
 import { PUZZLE_PACKS, PackName } from '../../games/word-search/packs';
 import ListImport from '../../games/word-search/components/ListImport';
+import AlertBanner from '../../components/common/AlertBanner';
 
 const WORD_COUNT = 5;
 const GRID_SIZE = 12;
@@ -413,9 +414,9 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   if (error) {
     return (
-      <div className="p-4 text-red-600" role="alert">
+      <AlertBanner tone="danger" className="m-4" title="Word search failed to load">
         {error}
-      </div>
+      </AlertBanner>
     );
   }
 

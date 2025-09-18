@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { createLogger } from '../../lib/logger';
+import AlertBanner from '../common/AlertBanner';
 
 interface Props {
   children: ReactNode;
@@ -28,10 +29,13 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div role="alert" className="p-4 text-center">
-          <h1 className="text-xl font-bold">Something went wrong.</h1>
-          <p>Please refresh the page or try again.</p>
-        </div>
+        <AlertBanner
+          tone="danger"
+          title="Something went wrong"
+          className="flex-col items-center text-center"
+        >
+          Please refresh the page or try again.
+        </AlertBanner>
       );
     }
 

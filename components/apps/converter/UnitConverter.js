@@ -6,6 +6,7 @@ import {
   convertUnit,
 } from './unitData';
 import usePersistentState from '../../../hooks/usePersistentState';
+import AlertBanner from '../../common/AlertBanner';
 
 const categories = allCategories;
 
@@ -267,9 +268,9 @@ const UnitConverter = () => {
         </button>
       </div>
       {error && (
-        <div className="text-red-400" role="alert">
+        <AlertBanner tone="danger" className="mt-2">
           {error}
-        </div>
+        </AlertBanner>
       )}
       <div data-testid="unit-result" className="mt-2">
         {leftVal && rightVal && `${format(leftVal, fromUnit)} = ${format(rightVal, toUnit)}`}

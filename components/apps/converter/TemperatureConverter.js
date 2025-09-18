@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { unitMap, unitDetails, convertUnit } from './unitData';
+import AlertBanner from '../../common/AlertBanner';
 
 const TemperatureConverter = () => {
   const category = 'temperature';
@@ -152,7 +153,11 @@ const TemperatureConverter = () => {
           Swap Units
         </button>
       </div>
-      {error && <div className="text-red-400" role="alert">{error}</div>}
+      {error && (
+        <AlertBanner tone="danger" className="mt-2">
+          {error}
+        </AlertBanner>
+      )}
       <div data-testid="temp-result" className="mt-2">
         {leftVal && rightVal && `${format(leftVal, fromUnit)} = ${format(rightVal, toUnit)}`}
       </div>
