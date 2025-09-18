@@ -78,4 +78,26 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy preview
+        id: deploy
+        run: |
+          set -eo pipefail
+          DEPLOY_URL=$(npx vercel deploy --prebuilt --environment=preview --token=${{ secrets.VERCEL_TOKEN }} --yes | tail -n 1 | tr -d '[:space:]')
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "Failed to determine Vercel preview URL" >&2
+            exit 1
+          fi
+          echo "preview-url=${DEPLOY_URL}" >> "$GITHUB_OUTPUT"
+          echo "VERCEL_DEPLOYMENT_URL=${DEPLOY_URL}" >> "$GITHUB_ENV"
+          echo "Preview available at ${DEPLOY_URL}"
+      - name: Run Lighthouse CI
+        env:
+          LHCI_PREVIEW_URL: ${{ steps.deploy.outputs.preview-url }}
+          LHCI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx lhci autorun
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/*.html
