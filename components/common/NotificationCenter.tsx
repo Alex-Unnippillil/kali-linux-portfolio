@@ -1,4 +1,11 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 export interface AppNotification {
   id: string;
@@ -16,6 +23,19 @@ export const NotificationsContext = createContext<NotificationsContextValue | nu
 
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Record<string, AppNotification[]>>({});
+
+  const orderedNotifications = useMemo(() => {
+    return Object.entries(notifications)
+      .flatMap(([appId, list]) =>
+        list.map(notification => ({
+          ...notification,
+          appId,
+        }))
+      )
+      .sort((a, b) => a.date - b.date);
+  }, [notifications]);
+
+  const hasNotifications = orderedNotifications.length > 0;
 
   const pushNotification = useCallback((appId: string, message: string) => {
     setNotifications(prev => {
@@ -62,17 +82,26 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       value={{ notifications, pushNotification, clearNotifications }}
     >
       {children}
-      <div className="notification-center">
-        {Object.entries(notifications).map(([appId, list]) => (
-          <section key={appId} className="notification-group">
-            <h3>{appId}</h3>
-            <ul>
-              {list.map(n => (
-                <li key={n.id}>{n.message}</li>
-              ))}
-            </ul>
-          </section>
-        ))}
+      <div
+        className={`notification-center${hasNotifications ? ' notification-center--visible' : ''}`}
+        aria-live="polite"
+        aria-atomic="false"
+        aria-hidden={hasNotifications ? undefined : true}
+      >
+        <TransitionGroup component={null}>
+          {orderedNotifications.map(notification => (
+            <CSSTransition key={notification.id} classNames="notification" timeout={320}>
+              <article className="notification-toast" role="status">
+                <div className="notification-card">
+                  <span className="notification-app" title={notification.appId}>
+                    {notification.appId}
+                  </span>
+                  <p className="notification-message">{notification.message}</p>
+                </div>
+              </article>
+            </CSSTransition>
+          ))}
+        </TransitionGroup>
       </div>
     </NotificationsContext.Provider>
   );
