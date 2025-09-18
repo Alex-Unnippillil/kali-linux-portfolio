@@ -463,7 +463,9 @@ export class Desktop extends Component {
                 const props = {
                     title: app.title,
                     id: app.id,
+                    icon: app.icon,
                     screen: app.screen,
+                    importer: app.importer,
                     addFolder: this.addToDesktop,
                     closed: this.closeApp,
                     openApp: this.openApp,

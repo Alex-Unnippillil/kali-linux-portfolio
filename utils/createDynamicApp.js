@@ -2,15 +2,21 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
 
-export const createDynamicApp = (id, title) =>
-  dynamic(
+const createImporter = (id) =>
+  () =>
+    import(
+      /* webpackPrefetch: true */ `../components/apps/${id}`
+    );
+
+export const createDynamicApp = (id, title) => {
+  const importer = createImporter(id);
+
+  const DynamicComponent = dynamic(
     async () => {
       try {
-        const mod = await import(
-          /* webpackPrefetch: true */ `../components/apps/${id}`
-        );
+        const mod = await importer();
         logEvent({ category: 'Application', action: `Loaded ${title}` });
-        return mod.default;
+        return mod.default || mod;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
         return () => (
@@ -30,6 +36,11 @@ export const createDynamicApp = (id, title) =>
     }
   );
 
+  DynamicComponent.importer = importer;
+
+  return DynamicComponent;
+};
+
 export const createDisplay = (Component) => {
   const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
     ssr: false,
@@ -43,6 +54,10 @@ export const createDisplay = (Component) => {
       Component.preload();
     }
   };
+
+  if (Component.importer) {
+    Display.importer = Component.importer;
+  }
 
   return Display;
 };
