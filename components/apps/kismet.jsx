@@ -1,4 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+const DEVICE_COLUMNS = [
+  {
+    id: 'ssid',
+    label: 'SSID',
+    getValue: (network) => network.ssid || '(hidden)',
+    cellClassName: 'pr-2',
+  },
+  {
+    id: 'bssid',
+    label: 'BSSID',
+    getValue: (network) => network.bssid,
+    cellClassName: 'pr-2',
+  },
+  {
+    id: 'channel',
+    label: 'Channel',
+    getValue: (network) => (network.channel ?? '-').toString(),
+    cellClassName: 'pr-2',
+  },
+  {
+    id: 'frames',
+    label: 'Frames',
+    getValue: (network) => network.frames,
+  },
+];
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -132,10 +158,14 @@ const TimeChart = ({ data }) => {
   );
 };
 
-const KismetApp = ({ onNetworkDiscovered }) => {
+const KismetApp = ({ onNetworkDiscovered, onVisibleDataChange, exportToolbar }) => {
   const [networks, setNetworks] = useState([]);
   const [channels, setChannels] = useState({});
   const [times, setTimes] = useState({});
+
+  useEffect(() => {
+    onVisibleDataChange?.({ columns: DEVICE_COLUMNS, rows: networks });
+  }, [networks, onVisibleDataChange]);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -162,22 +192,27 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 
       {networks.length > 0 && (
         <>
+          {exportToolbar ? (
+            <div className="flex justify-end mb-2">{exportToolbar}</div>
+          ) : null}
           <table className="text-sm w-full" aria-label="Networks">
             <thead>
               <tr className="text-left">
-                <th className="pr-2">SSID</th>
-                <th className="pr-2">BSSID</th>
-                <th className="pr-2">Channel</th>
-                <th>Frames</th>
+                {DEVICE_COLUMNS.map((column) => (
+                  <th key={column.id} className={column.cellClassName || ''}>
+                    {column.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {networks.map((n) => (
                 <tr key={n.bssid} className="odd:bg-gray-800">
-                  <td className="pr-2">{n.ssid || '(hidden)'}</td>
-                  <td className="pr-2">{n.bssid}</td>
-                  <td className="pr-2">{n.channel ?? '-'}</td>
-                  <td>{n.frames}</td>
+                  {DEVICE_COLUMNS.map((column) => (
+                    <td key={column.id} className={column.cellClassName || ''}>
+                      {column.getValue(n)}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
