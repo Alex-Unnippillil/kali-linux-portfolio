@@ -37,6 +37,11 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragFrame = null;
+        this._dragFrameType = null;
+        this._pendingDragData = null;
+        this._hasPendingDrag = false;
+        this._pendingSnapPosition = null;
     }
 
     componentDidMount() {
@@ -69,6 +74,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelDragFrame();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -319,21 +325,26 @@ export class Window extends Component {
         var rect = r.getBoundingClientRect();
         const threshold = 30;
         let snap = null;
+        let snapPosition = null;
         if (rect.left <= threshold) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+            snapPosition = 'left';
+            this.setState({ snapPreview: snap, snapPosition });
         }
         else if (rect.right >= window.innerWidth - threshold) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
+            snapPosition = 'right';
+            this.setState({ snapPreview: snap, snapPosition });
         }
         else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
+            snapPosition = 'top';
+            this.setState({ snapPreview: snap, snapPosition });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
         }
+        this._pendingSnapPosition = snapPosition;
     }
 
     applyEdgeResistance = (node, data) => {
@@ -357,7 +368,47 @@ export class Window extends Component {
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
-    handleDrag = (e, data) => {
+    requestDragFrame = () => {
+        if (this._dragFrame !== null) {
+            return;
+        }
+        const hasWindow = typeof window !== 'undefined';
+        const supportsRAF = hasWindow && typeof window.requestAnimationFrame === 'function';
+        if (supportsRAF) {
+            this._dragFrameType = 'raf';
+            this._dragFrame = window.requestAnimationFrame(this.runDragFrame);
+        } else {
+            this._dragFrameType = 'timeout';
+            this._dragFrame = setTimeout(this.runDragFrame, 16);
+        }
+    }
+
+    cancelDragFrame = () => {
+        if (this._dragFrame === null) {
+            return;
+        }
+        if (this._dragFrameType === 'raf') {
+            const hasWindow = typeof window !== 'undefined';
+            if (hasWindow && typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(this._dragFrame);
+            }
+        } else if (this._dragFrameType === 'timeout') {
+            clearTimeout(this._dragFrame);
+        }
+        this._dragFrame = null;
+        this._dragFrameType = null;
+    }
+
+    runDragFrame = () => {
+        this._dragFrame = null;
+        this._dragFrameType = null;
+        if (!this._hasPendingDrag) {
+            return;
+        }
+        const data = this._pendingDragData;
+        this._hasPendingDrag = false;
+        this._pendingDragData = null;
+
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
@@ -365,9 +416,26 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
+    flushDragFrame = () => {
+        if (!this._hasPendingDrag) {
+            this.cancelDragFrame();
+            return;
+        }
+        this.cancelDragFrame();
+        this.runDragFrame();
+    }
+
+    handleDrag = (e, data) => {
+        this._pendingDragData = data;
+        this._hasPendingDrag = true;
+        this.requestDragFrame();
+    }
+
     handleStop = () => {
+        this.flushDragFrame();
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
+        const snapPos = this.state.snapPosition ?? this._pendingSnapPosition;
+        this._pendingSnapPosition = null;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
