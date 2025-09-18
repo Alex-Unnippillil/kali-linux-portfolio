@@ -1,6 +1,16 @@
 import React from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import presets, { FilterPreset } from '../../../filters/presets';
+import builtinPresets from '../filters/presets.json';
+
+interface FilterPreset {
+  label: string;
+  expression: string;
+  docUrl?: string;
+}
+
+const builtInPresets: FilterPreset[] = (builtinPresets as FilterPreset[]).map(
+  (preset) => ({ ...preset })
+);
 
 interface FilterHelperProps {
   value: string;
@@ -17,7 +27,7 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     []
   );
 
-  const allPresets = [...customPresets, ...presets];
+  const allPresets = [...customPresets, ...builtInPresets];
 
 
   const suggestions = Array.from(
@@ -93,9 +103,10 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        placeholder="Quick search (e.g. tcp)"
+        placeholder="Display filter (e.g. tcp, ip.addr == 10.0.0.1)"
         aria-label="Quick search"
         className="px-2 py-1 bg-gray-800 rounded text-white"
+        spellCheck={false}
       />
       <button
         onClick={handleSavePreset}
