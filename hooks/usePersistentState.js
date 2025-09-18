@@ -49,3 +49,17 @@ export const useSnapSetting = () =>
     true,
     (value) => typeof value === "boolean",
   );
+
+export const useSnapAssistSetting = () =>
+  usePersistentState(
+    "snap-assist-enabled",
+    true,
+    (value) => typeof value === "boolean",
+  );
+
+export const useSnapCornerSetting = () =>
+  usePersistentState(
+    "snap-corners-enabled",
+    true,
+    (value) => typeof value === "boolean",
+  );

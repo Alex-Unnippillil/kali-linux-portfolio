@@ -22,7 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, useSnapAssistSetting, useSnapCornerSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
@@ -456,6 +456,9 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
+        const snapEnabled = this.props.snapEnabled !== false;
+        const snapAssistEnabled = this.props.snapAssistEnabled !== false;
+        const snapCornerEnabled = this.props.snapCornerEnabled !== false;
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
@@ -479,7 +482,9 @@ export class Desktop extends Component {
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
-                    snapEnabled: this.props.snapEnabled,
+                    snapEnabled,
+                    snapAssist: snapAssistEnabled,
+                    cornerSnap: snapCornerEnabled,
                 }
 
                 windowsJsx.push(
@@ -491,12 +496,31 @@ export class Desktop extends Component {
     }
 
     updateWindowPosition = (id, x, y) => {
-        const snap = this.props.snapEnabled
+        const snapEnabled = this.props.snapEnabled !== false;
+        const snap = snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
         this.setState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
+    }
+
+    toggleSnapSetting = () => {
+        if (this.props.setSnapEnabled) {
+            this.props.setSnapEnabled(value => !value);
+        }
+    }
+
+    toggleSnapAssistSetting = () => {
+        if (this.props.setSnapAssistEnabled) {
+            this.props.setSnapAssistEnabled(value => !value);
+        }
+    }
+
+    toggleSnapCornerSetting = () => {
+        if (this.props.setSnapCornerEnabled) {
+            this.props.setSnapCornerEnabled(value => !value);
+        }
     }
 
     saveSession = () => {
@@ -864,6 +888,9 @@ export class Desktop extends Component {
     }
 
     render() {
+        const snapEnabled = this.props.snapEnabled !== false;
+        const snapAssistEnabled = this.props.snapAssistEnabled !== false;
+        const snapCornerEnabled = this.props.snapCornerEnabled !== false;
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -912,6 +939,12 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    snapEnabled={snapEnabled}
+                    snapAssistEnabled={snapAssistEnabled}
+                    snapCornerEnabled={snapCornerEnabled}
+                    onToggleSnap={this.props.setSnapEnabled ? this.toggleSnapSetting : undefined}
+                    onToggleSnapAssist={this.props.setSnapAssistEnabled ? this.toggleSnapAssistSetting : undefined}
+                    onToggleSnapCorner={this.props.setSnapCornerEnabled ? this.toggleSnapCornerSetting : undefined}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
@@ -973,6 +1006,18 @@ export class Desktop extends Component {
 }
 
 export default function DesktopWithSnap(props) {
-    const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const [snapEnabled, setSnapEnabled] = useSnapSetting();
+    const [snapAssistEnabled, setSnapAssistEnabled] = useSnapAssistSetting();
+    const [snapCornerEnabled, setSnapCornerEnabled] = useSnapCornerSetting();
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            setSnapEnabled={setSnapEnabled}
+            snapAssistEnabled={snapAssistEnabled}
+            setSnapAssistEnabled={setSnapAssistEnabled}
+            snapCornerEnabled={snapCornerEnabled}
+            setSnapCornerEnabled={setSnapCornerEnabled}
+        />
+    );
 }

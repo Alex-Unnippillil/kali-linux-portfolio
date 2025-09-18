@@ -200,9 +200,68 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    isSnapEnabled = () => this.props.snapEnabled !== false;
+
+    isSnapAssistEnabled = () => this.props.snapAssist !== false && this.isSnapEnabled();
+
+    isCornerSnapEnabled = () => this.props.cornerSnap !== false;
+
     snapToGrid = (value) => {
-        if (!this.props.snapEnabled) return value;
+        if (!this.isSnapEnabled()) return value;
         return Math.round(value / 8) * 8;
+    }
+
+    getSnapConfig = (position) => {
+        const halfWidth = window.innerWidth / 2;
+        const halfHeight = window.innerHeight / 2;
+        const configs = {
+            left: { width: 50, height: 96.3, transform: 'translate(-1pt,-2pt)' },
+            right: { width: 50, height: 96.3, transform: `translate(${halfWidth}px,-2pt)` },
+            top: { width: 100.2, height: 50, transform: 'translate(-1pt,-2pt)' },
+            bottom: { width: 100.2, height: 50, transform: `translate(-1pt,${halfHeight - 2}px)` },
+            'top-left': { width: 50, height: 50, transform: 'translate(-1pt,-2pt)' },
+            'top-right': { width: 50, height: 50, transform: `translate(${halfWidth}px,-2pt)` },
+            'bottom-left': { width: 50, height: 50, transform: `translate(-1pt,${halfHeight - 2}px)` },
+            'bottom-right': { width: 50, height: 50, transform: `translate(${halfWidth}px,${halfHeight - 2}px)` },
+        };
+        return configs[position] || null;
+    }
+
+    calculateSnapPreview = (rect) => {
+        const threshold = 30;
+        const nearLeft = rect.left <= threshold;
+        const nearRight = rect.right >= window.innerWidth - threshold;
+        const nearTop = rect.top <= threshold;
+        const nearBottom = rect.bottom >= window.innerHeight - threshold;
+
+        if (this.isCornerSnapEnabled()) {
+            if (nearLeft && nearTop) {
+                return { position: 'top-left', preview: { left: '0', top: '0', width: '50%', height: '50%' } };
+            }
+            if (nearRight && nearTop) {
+                return { position: 'top-right', preview: { left: '50%', top: '0', width: '50%', height: '50%' } };
+            }
+            if (nearLeft && nearBottom) {
+                return { position: 'bottom-left', preview: { left: '0', top: '50%', width: '50%', height: '50%' } };
+            }
+            if (nearRight && nearBottom) {
+                return { position: 'bottom-right', preview: { left: '50%', top: '50%', width: '50%', height: '50%' } };
+            }
+        }
+
+        if (nearLeft) {
+            return { position: 'left', preview: { left: '0', top: '0', width: '50%', height: '100%' } };
+        }
+        if (nearRight) {
+            return { position: 'right', preview: { left: '50%', top: '0', width: '50%', height: '100%' } };
+        }
+        if (nearTop) {
+            return { position: 'top', preview: { left: '0', top: '0', width: '100%', height: '50%' } };
+        }
+        if (nearBottom) {
+            return { position: 'bottom', preview: { left: '0', top: '50%', width: '100%', height: '50%' } };
+        }
+        return null;
     }
 
     handleVerticleResize = () => {
@@ -248,43 +307,36 @@ export class Window extends Component {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                snapPreview: null,
+                snapPosition: null
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, snapPreview: null, snapPosition: null }, this.resizeBoundries);
         }
     }
 
     snapWindow = (position) => {
+        if (!this.isSnapEnabled()) return;
+        if (position && position.includes('-') && !this.isCornerSnapEnabled()) {
+            return;
+        }
+        this.focusWindow();
         this.setWinowsPosition();
         const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
+        const config = this.getSnapConfig(position);
+        if (!config) return;
         const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
+        if (r && config.transform) {
+            r.style.transform = config.transform;
         }
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
             lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
+            width: config.width,
+            height: config.height
         }, this.resizeBoundries);
     }
 
@@ -314,25 +366,23 @@ export class Window extends Component {
     }
 
     checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
-        const threshold = 30;
-        let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+        const node = document.querySelector("#" + this.id);
+        if (!node) return;
+        if (!this.isSnapEnabled()) {
+            if (this.state.snapPreview || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
+            return;
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        const rect = node.getBoundingClientRect();
+        const result = this.calculateSnapPreview(rect);
+        if (result) {
+            this.setState({
+                snapPreview: this.isSnapAssistEnabled() ? result.preview : null,
+                snapPosition: result.position
+            });
+        } else if (this.state.snapPreview || this.state.snapPosition) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -518,25 +568,116 @@ export class Window extends Component {
         }
     }
 
+    handleDirectionalSnap = (key) => {
+        const snappingActive = this.isSnapEnabled();
+        const allowCorners = snappingActive && this.isCornerSnapEnabled();
+
+        if (key === 'ArrowUp') {
+            if (!snappingActive) {
+                this.maximizeWindow();
+                this.focusWindow();
+                return true;
+            }
+            if (this.state.snapped === 'bottom') {
+                this.snapWindow('top');
+            } else if (allowCorners && this.state.snapped === 'left') {
+                this.snapWindow('top-left');
+            } else if (allowCorners && this.state.snapped === 'right') {
+                this.snapWindow('top-right');
+            } else if (allowCorners && this.state.snapped === 'bottom-left') {
+                this.snapWindow('left');
+            } else if (allowCorners && this.state.snapped === 'bottom-right') {
+                this.snapWindow('right');
+            } else if (this.state.snapped === 'top' || this.state.snapped === 'top-left' || this.state.snapped === 'top-right') {
+                this.maximizeWindow();
+            } else {
+                this.maximizeWindow();
+            }
+            this.focusWindow();
+            return true;
+        }
+
+        if (key === 'ArrowDown') {
+            if (this.state.maximized) {
+                this.restoreWindow();
+                this.focusWindow();
+                return true;
+            }
+            if (!snappingActive) {
+                return false;
+            }
+            if (allowCorners && this.state.snapped === 'left') {
+                this.snapWindow('bottom-left');
+            } else if (allowCorners && this.state.snapped === 'right') {
+                this.snapWindow('bottom-right');
+            } else if (allowCorners && this.state.snapped === 'top-left') {
+                this.snapWindow('left');
+            } else if (allowCorners && this.state.snapped === 'top-right') {
+                this.snapWindow('right');
+            } else if (this.state.snapped === 'top') {
+                this.snapWindow('bottom');
+            } else if (allowCorners && (this.state.snapped === 'bottom-left' || this.state.snapped === 'bottom-right')) {
+                this.unsnapWindow();
+            } else if (this.state.snapped === 'bottom') {
+                this.unsnapWindow();
+            } else {
+                this.snapWindow('bottom');
+            }
+            this.focusWindow();
+            return true;
+        }
+
+        if (!snappingActive) {
+            return false;
+        }
+
+        if (key === 'ArrowLeft') {
+            if (this.state.snapped === 'left' || this.state.snapped === 'top-left' || this.state.snapped === 'bottom-left') {
+                this.unsnapWindow();
+            } else {
+                this.snapWindow('left');
+            }
+            this.focusWindow();
+            return true;
+        }
+
+        if (key === 'ArrowRight') {
+            if (this.state.snapped === 'right' || this.state.snapped === 'top-right' || this.state.snapped === 'bottom-right') {
+                this.unsnapWindow();
+            } else {
+                this.snapWindow('right');
+            }
+            this.focusWindow();
+            return true;
+        }
+        return false;
+    }
+
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
+        } else if (e.metaKey || e.ctrlKey) {
+            if (this.handleDirectionalSnap(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
         } else if (e.altKey) {
+            const snappingActive = this.isSnapEnabled();
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
+            } else if (snappingActive && e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
+            } else if (snappingActive && e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
+            } else if (snappingActive && e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('top');
@@ -566,65 +707,27 @@ export class Window extends Component {
     }
 
     handleSuperArrow = (e) => {
-        const key = e.detail;
-        if (key === 'ArrowLeft') {
-            if (this.state.snapped === 'left') this.unsnapWindow();
-            else this.snapWindow('left');
-        } else if (key === 'ArrowRight') {
-            if (this.state.snapped === 'right') this.unsnapWindow();
-            else this.snapWindow('right');
-        } else if (key === 'ArrowUp') {
-            this.maximizeWindow();
-        } else if (key === 'ArrowDown') {
-            if (this.state.maximized) {
-                this.restoreWindow();
-            } else if (this.state.snapped) {
-                this.unsnapWindow();
-            }
-        }
-    }
-
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
+        this.handleDirectionalSnap(e.detail);
     }
 
     render() {
+        const assistEnabled = this.isSnapAssistEnabled();
+        const preview = assistEnabled ? this.state.snapPreview : null;
+        const dragHintId = `${this.id}-drag-hint`;
         return (
             <>
-                {this.state.snapPreview && (
+                {preview && (
                     <div
                         data-testid="snap-preview"
+                        aria-hidden="true"
                         className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
+                        style={{ left: preview.left, top: preview.top, width: preview.width, height: preview.height }}
                     />
                 )}
                 <Draggable
                     axis="both"
                     handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
+                    grid={this.isSnapEnabled() ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}
@@ -639,9 +742,13 @@ export class Window extends Component {
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
+                        aria-describedby={dragHintId}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
+                        <span id={dragHintId} className="sr-only">
+                            Press Space or Enter on the title bar to start dragging. Use arrow keys while the window is grabbed to move it. When tiling is enabled you can use Meta and Arrow keys to snap the window to edges or corners.
+                        </span>
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar

@@ -155,9 +155,9 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
-    expect(ref.current!.state.snapped).toBe('left');
+    expect(ref.current!.state.snapped).toBe('top-left');
     expect(ref.current!.state.width).toBe(50);
-    expect(ref.current!.state.height).toBe(96.3);
+    expect(ref.current!.state.height).toBe(50);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
@@ -196,10 +196,17 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
-    expect(ref.current!.state.snapped).toBe('left');
+    expect(ref.current!.state.snapped).toBe('top-left');
+
+    const altEvent = {
+      key: 'ArrowDown',
+      altKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    } as any;
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown(altEvent);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -243,7 +250,7 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
-    expect(ref.current!.state.snapped).toBe('left');
+    expect(ref.current!.state.snapped).toBe('top-left');
 
     act(() => {
       ref.current!.changeCursorToMove();
