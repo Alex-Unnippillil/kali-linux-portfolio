@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import styles from './WhiskerMenu.module.css';
 
 type AppMeta = {
   id: string;
@@ -134,7 +135,7 @@ const WhiskerMenu: React.FC = () => {
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
+          className={`absolute left-0 mt-1 z-50 flex shadow-lg ${styles.menuContainer}`}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -142,20 +143,20 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
+          <div className={`flex flex-col p-2 ${styles.menuSidebar}`}>
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`${styles.menuButton} text-left px-2 py-1 rounded mb-1 ${category === cat.id ? styles.menuButtonActive : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
               </button>
             ))}
           </div>
-          <div className="p-3">
+          <div className={`p-3 ${styles.menuContent}`}>
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              className={`mb-3 w-64 px-2 py-1 rounded focus:outline-none ${styles.menuSearch}`}
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}

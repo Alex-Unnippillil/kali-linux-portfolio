@@ -1,0 +1,42 @@
+.menuContainer {
+  background-color: color-mix(in srgb, var(--color-ub-grey) calc(var(--window-opacity) * 100%), transparent);
+  color: var(--color-text);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--color-text), transparent 85%);
+  overflow: hidden;
+}
+
+.menuSidebar {
+  background-color: color-mix(in srgb, var(--color-ub-window-title) calc(var(--window-opacity) * 100%), transparent);
+  border-right: 1px solid color-mix(in srgb, var(--color-text), transparent 80%);
+}
+
+.menuContent {
+  color: inherit;
+}
+
+.menuSearch {
+  background-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+  color: inherit;
+  border: 1px solid color-mix(in srgb, var(--color-text), transparent 80%);
+}
+
+.menuSearch::placeholder {
+  color: color-mix(in srgb, var(--color-text), transparent 40%);
+}
+
+.menuButton {
+  color: inherit;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.menuButtonActive {
+  background-color: color-mix(in srgb, var(--color-text), transparent 85%);
+}
+
+.menuButton:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-text), transparent 60%);
+  outline-offset: 1px;
+}

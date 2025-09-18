@@ -612,6 +612,18 @@ export class Window extends Component {
     }
 
     render() {
+        const windowClasses = [
+            this.state.cursorType,
+            this.state.closed ? "closed-window" : "",
+            this.state.maximized ? "duration-300 rounded-none" : "rounded-lg rounded-b-none",
+            this.props.minimized ? "opacity-0 invisible duration-200" : "",
+            this.state.grabbed ? "opacity-70" : "",
+            this.state.snapPreview ? "ring-2 ring-blue-400" : "",
+            this.props.isFocused ? "z-30" : "z-20 notFocused",
+            "opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col",
+            styles.windowFrame,
+        ].filter(Boolean).join(" ");
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -635,7 +647,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={windowClasses}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -838,7 +850,9 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div
+                className={`w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen ${styles.windowBody} ${this.state.setDarkBg ? styles.windowBodyDark : ""}`}
+            >
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
