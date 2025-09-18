@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ProgressBar, {
+  computeEtaSeconds,
+  type ProgressMetadata,
+} from '../../base/ProgressBar';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -15,6 +19,24 @@ const VIDEO_CACHE_NAME = 'youtube-video-cache';
 const CACHED_LIST_KEY = 'youtube:cached-videos';
 const MAX_CACHE_BYTES = 100 * 1024 * 1024;
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+const formatBytes = (bytes: number) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const precision = value >= 10 || unitIndex === 0 ? 0 : 1;
+  return `${value.toFixed(precision)} ${units[unitIndex]}`;
+};
+
+interface OperationProgress {
+  progress: number;
+  metadata: ProgressMetadata;
+}
 
 async function trimVideoCache() {
   if (!('storage' in navigator) || !navigator.storage?.estimate) return;
@@ -270,6 +292,8 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [, setPlaybackRate] = useState(1);
   const [solidHeader, setSolidHeader] = useState(false);
+  const [downloadProgress, setDownloadProgress] =
+    useState<OperationProgress | null>(null);
 
   useEffect(() => {
     const onScroll = () => setSolidHeader(window.scrollY > 0);
@@ -280,6 +304,15 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const downloadCurrent = useCallback(async () => {
     if (!current) return;
     try {
+      setDownloadProgress({
+        progress: 5,
+        metadata: {
+          step: { current: 1, total: 3, label: 'Fetching stream info' },
+          detail: 'Contacting stream API…',
+          etaSeconds: null,
+        },
+      });
+
       const infoRes = await fetch(
         `https://piped.video/api/v1/streams/${current.id}`,
       );
@@ -287,11 +320,90 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       const streamUrl =
         info?.videoStreams?.find((s: any) => s.container === 'mp4')?.url ||
         info?.videoStreams?.[0]?.url;
-      if (!streamUrl) return;
+      if (!streamUrl) {
+        setDownloadProgress(null);
+        return;
+      }
+
+      setDownloadProgress({
+        progress: 12,
+        metadata: {
+          step: { current: 2, total: 3, label: 'Negotiating stream' },
+          detail: 'Selecting MP4 variant…',
+          etaSeconds: null,
+        },
+      });
+
       const response = await fetch(streamUrl);
       const cache = await caches.open(VIDEO_CACHE_NAME);
       await cache.put(streamUrl, response.clone());
-      const blob = await response.blob();
+
+      const total = Number(response.headers.get('content-length')) || 0;
+      let blob: Blob;
+      if (response.body && typeof response.body.getReader === 'function') {
+        const reader = response.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let received = 0;
+        let progressValue = 18;
+        const startedAt =
+          typeof performance !== 'undefined' &&
+          typeof performance.now === 'function'
+            ? performance.now()
+            : Date.now();
+
+        if (total > 0) {
+          setDownloadProgress({
+            progress: 18,
+            metadata: {
+              step: { current: 2, total: 3, label: 'Downloading video' },
+              detail: `0 of ${formatBytes(total)}`,
+              etaSeconds: null,
+            },
+          });
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            chunks.push(value);
+            received += value.length;
+            if (total > 0) {
+              const percent = Math.min(99, (received / total) * 100);
+              setDownloadProgress({
+                progress: percent,
+                metadata: {
+                  step: { current: 2, total: 3, label: 'Downloading video' },
+                  detail: `${formatBytes(received)} of ${formatBytes(total)}`,
+                  etaSeconds: computeEtaSeconds(received, total, startedAt),
+                },
+              });
+            } else {
+              progressValue = Math.min(95, progressValue + 1);
+              setDownloadProgress({
+                progress: progressValue,
+                metadata: {
+                  step: { current: 2, total: 3, label: 'Downloading video' },
+                  detail: `${formatBytes(received)} downloaded`,
+                  etaSeconds: null,
+                },
+              });
+            }
+          }
+        }
+        blob = new Blob(chunks, { type: 'video/mp4' });
+      } else {
+        setDownloadProgress({
+          progress: 60,
+          metadata: {
+            step: { current: 2, total: 3, label: 'Downloading video' },
+            detail: 'Preparing download…',
+            etaSeconds: null,
+          },
+        });
+        blob = await response.blob();
+      }
+
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `${current.title || current.id}.mp4`;
@@ -304,8 +416,18 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       list.push({ url: streamUrl, ts: Date.now() });
       localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));
       await trimVideoCache();
+
+      setDownloadProgress({
+        progress: 100,
+        metadata: {
+          step: { current: 3, total: 3, label: 'Finalizing download' },
+          detail: `Saved ${formatBytes(blob.size)}`,
+          etaSeconds: 0,
+        },
+      });
+      setTimeout(() => setDownloadProgress(null), 1500);
     } catch {
-      // ignore errors
+      setDownloadProgress(null);
     }
   }, [current]);
 
@@ -653,6 +775,15 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 </svg>
               </button>
             </div>
+          </div>
+        )}
+        {downloadProgress && (
+          <div className="mt-2 w-full max-w-md">
+            <ProgressBar
+              progress={downloadProgress.progress}
+              label="Video download"
+              metadata={downloadProgress.metadata}
+            />
           </div>
         )}
         <VirtualGrid

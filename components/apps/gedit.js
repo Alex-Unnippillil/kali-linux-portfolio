@@ -190,7 +190,25 @@ export class Gedit extends Component {
                     this.state.sending && (
                         <div className="flex justify-center items-center h-full w-full bg-gray-400 bg-opacity-30 absolute top-0 left-0">
                             {this.state.showProgress ? (
-                                <ProgressBar progress={this.state.progress} />
+                                <ProgressBar
+                                    progress={this.state.progress}
+                                    label="Sending message"
+                                    metadata={{
+                                        step: {
+                                            current: this.state.progress >= 100 ? 2 : 1,
+                                            total: 2,
+                                            label:
+                                                this.state.progress >= 100
+                                                    ? 'Finalizing delivery'
+                                                    : 'Contacting EmailJS gateway',
+                                        },
+                                        detail:
+                                            this.state.progress >= 100
+                                                ? 'Message delivered'
+                                                : 'Preparing encrypted payload',
+                                        etaSeconds: this.state.progress >= 100 ? 0 : null,
+                                    }}
+                                />
                             ) : (
                                 <Image
                                     className="w-8 motion-safe:animate-spin"
