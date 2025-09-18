@@ -20,9 +20,16 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getFocusMode as loadFocusMode,
+  setFocusMode as saveFocusMode,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  DEFAULT_FOCUS_MODE,
+  FocusModeSettings,
+  FocusAppOverride,
+} from '../utils/focusSchedule';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +70,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  focusMode: FocusModeSettings;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +82,15 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setFocusMode: (
+    value:
+      | FocusModeSettings
+      | ((prev: FocusModeSettings) => FocusModeSettings),
+  ) => void;
+  updateFocusOverride: (
+    appId: string,
+    override: FocusAppOverride | null,
+  ) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +105,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  focusMode: DEFAULT_FOCUS_MODE,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +117,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setFocusMode: () => {},
+  updateFocusOverride: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +133,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [focusMode, setFocusModeState] = useState<FocusModeSettings>(DEFAULT_FOCUS_MODE);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +149,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setFocusModeState(await loadFocusMode());
     })();
   }, []);
 
@@ -236,6 +258,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveFocusMode(focusMode);
+  }, [focusMode]);
+
+  const setFocusMode = (
+    value:
+      | FocusModeSettings
+      | ((prev: FocusModeSettings) => FocusModeSettings),
+  ) => {
+    setFocusModeState(prev =>
+      typeof value === 'function' ? (value as (p: FocusModeSettings) => FocusModeSettings)(prev) : value,
+    );
+  };
+
+  const updateFocusOverride = (
+    appId: string,
+    override: FocusAppOverride | null,
+  ) => {
+    setFocusMode(current => {
+      const nextOverrides = { ...current.overrides };
+      if (override) nextOverrides[appId] = override;
+      else delete nextOverrides[appId];
+      return { ...current, overrides: nextOverrides };
+    });
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +298,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        focusMode,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +310,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setFocusMode,
+        updateFocusOverride,
       }}
     >
       {children}

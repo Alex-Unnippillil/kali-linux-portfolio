@@ -1,7 +1,11 @@
 import { useContext } from 'react';
-import { NotificationsContext } from '../components/common/NotificationCenter';
+import {
+  NotificationsContext,
+  NotificationsContextValue,
+  NotificationOptions,
+} from '../components/common/NotificationCenter';
 
-export const useNotifications = () => {
+export const useNotifications = (): NotificationsContextValue => {
   const ctx = useContext(NotificationsContext);
   if (!ctx) {
     throw new Error('useNotifications must be used within NotificationCenter');
@@ -10,3 +14,4 @@ export const useNotifications = () => {
 };
 
 export default useNotifications;
+export type { NotificationOptions, NotificationsContextValue };

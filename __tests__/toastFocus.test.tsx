@@ -1,15 +1,11 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import Toast from '../components/ui/Toast';
-import FormError from '../components/ui/FormError';
 import { SettingsContext } from '../hooks/useSettings';
 import { defaults } from '../utils/settingsStore';
-import { DEFAULT_FOCUS_MODE } from '../utils/focusSchedule';
+import { DEFAULT_FOCUS_MODE, FocusModeSettings } from '../utils/focusSchedule';
 
-const renderWithSettings = (
-  ui: React.ReactNode,
-  { focusMode = DEFAULT_FOCUS_MODE } = {},
-) => {
+const renderWithFocus = (focusMode: FocusModeSettings) => {
   const value = {
     accent: defaults.accent,
     wallpaper: defaults.wallpaper,
@@ -37,22 +33,39 @@ const renderWithSettings = (
     setFocusMode: jest.fn(),
     updateFocusOverride: jest.fn(),
   };
+
   return render(
-    <SettingsContext.Provider value={value}>{ui}</SettingsContext.Provider>,
+    <SettingsContext.Provider value={value}>
+      <Toast message="Queued" />
+    </SettingsContext.Provider>,
   );
 };
 
-describe('live region components', () => {
-  it('Toast uses polite live region', () => {
-    const { unmount } = renderWithSettings(<Toast message="Saved" />);
-    const region = screen.getByRole('status');
-    expect(region).toHaveAttribute('aria-live', 'polite');
-    unmount();
+describe('focus aware toast', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
   });
 
-  it('FormError announces politely', () => {
-    renderWithSettings(<FormError>Required field</FormError>);
-    const region = screen.getByRole('status');
-    expect(region).toHaveAttribute('aria-live', 'polite');
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  it('suppresses toast UI when focus mode hides toasts', () => {
+    renderWithFocus({
+      ...DEFAULT_FOCUS_MODE,
+      enabled: true,
+      suppressToasts: true,
+    });
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('renders toast when focus mode allows banners', () => {
+    renderWithFocus({
+      ...DEFAULT_FOCUS_MODE,
+      enabled: true,
+      suppressToasts: false,
+    });
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 });

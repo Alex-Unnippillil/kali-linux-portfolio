@@ -36,6 +36,7 @@ const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
 const Game2048App = createDynamicApp('2048', '2048');
 const SnakeApp = createDynamicApp('snake', 'Snake');
 const MemoryApp = createDynamicApp('memory', 'Memory');
+const FocusModeApp = createDynamicApp('focus', 'Focus Mode');
 // Classic puzzle where players clear a minefield.
 const MinesweeperApp = createDynamicApp('minesweeper', 'Minesweeper');
 const PongApp = createDynamicApp('pong', 'Pong');
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayFocusMode = createDisplay(FocusModeApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -266,6 +268,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'focus',
+    title: 'Focus Mode',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFocusMode,
   },
 ];
 

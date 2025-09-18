@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface ToastProps {
   message: string;
@@ -17,8 +18,19 @@ const Toast: React.FC<ToastProps> = ({
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
+  const { focusMode } = useSettings();
+  const suppressToast = focusMode.enabled && focusMode.suppressToasts;
 
   useEffect(() => {
+    if (suppressToast) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      setVisible(false);
+      if (onClose) onClose();
+      return;
+    }
     setVisible(true);
     timeoutRef.current = setTimeout(() => {
       onClose && onClose();
@@ -26,7 +38,11 @@ const Toast: React.FC<ToastProps> = ({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [duration, onClose]);
+  }, [duration, onClose, suppressToast]);
+
+  if (suppressToast) {
+    return null;
+  }
 
   return (
     <div
