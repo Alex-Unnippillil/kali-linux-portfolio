@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
+  uiScale: 1,
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
@@ -69,6 +70,17 @@ export async function getFontScale() {
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('font-scale', String(scale));
+}
+
+export async function getUiScale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.uiScale;
+  const stored = window.localStorage.getItem('ui-scale');
+  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.uiScale;
+}
+
+export async function setUiScale(scale) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('ui-scale', String(scale));
 }
 
 export async function getHighContrast() {
@@ -132,6 +144,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
+  window.localStorage.removeItem('ui-scale');
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
@@ -146,6 +159,7 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    uiScale,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -157,6 +171,7 @@ export async function exportSettings() {
     getDensity(),
     getReducedMotion(),
     getFontScale(),
+    getUiScale(),
     getHighContrast(),
     getLargeHitAreas(),
     getPongSpin(),
@@ -170,6 +185,7 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    uiScale,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -194,6 +210,7 @@ export async function importSettings(json) {
     density,
     reducedMotion,
     fontScale,
+    uiScale,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -206,6 +223,7 @@ export async function importSettings(json) {
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
+  if (uiScale !== undefined) await setUiScale(uiScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);

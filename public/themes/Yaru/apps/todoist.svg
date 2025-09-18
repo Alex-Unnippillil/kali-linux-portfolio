@@ -1,0 +1,8 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Task list icon</title>
+  <desc id="desc">Rounded red square with stacked check marks</desc>
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="#dc2626" />
+  <path d="M32 48 52 64 92 32" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M32 70 52 86 92 54" stroke="#fde68a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" />
+  <path d="M32 92 52 108 92 76" stroke="#fee2e2" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />
+</svg>

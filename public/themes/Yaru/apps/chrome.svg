@@ -1,0 +1,12 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Chromium style browser icon</title>
+  <desc id="desc">Tri-colour circular icon inspired by the Chromium browser logo</desc>
+  <circle cx="64" cy="64" r="56" fill="#0f172a" />
+  <g transform="translate(64 64)">
+    <path d="M0-48A48 48 0 0 1 43.2-24L24 8H-4.5Z" fill="#f87171" />
+    <path d="M24 8 43.2-24A48 48 0 0 1 8 47.5H-24Z" fill="#22c55e" />
+    <path d="M8 47.5H-40A48 48 0 0 1-4.5-48L-4.4-11Z" fill="#38bdf8" />
+  </g>
+  <circle cx="64" cy="64" r="24" fill="#0ea5e9" stroke="#f8fafc" stroke-width="6" />
+  <circle cx="64" cy="64" r="12" fill="#f8fafc" />
+</svg>

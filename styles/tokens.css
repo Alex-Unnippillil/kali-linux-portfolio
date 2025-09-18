@@ -34,12 +34,12 @@
   --game-color-danger: #b91c1c;
 
   /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
+  --space-1: calc(4px * var(--ui-scale));
+  --space-2: calc(8px * var(--ui-scale));
+  --space-3: calc(12px * var(--ui-scale));
+  --space-4: calc(16px * var(--ui-scale));
+  --space-5: calc(24px * var(--ui-scale));
+  --space-6: calc(32px * var(--ui-scale));
 
   /* Radius */
   --radius-sm: 2px;
@@ -55,8 +55,9 @@
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
+  --ui-scale: 1;
   /* Minimum interactive target size */
-  --hit-area: 32px;
+  --hit-area: calc(32px * var(--ui-scale));
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
@@ -86,7 +87,7 @@
 
 /* Larger hit areas */
 .large-hit-area {
-  --hit-area: 48px;
+  --hit-area: calc(48px * var(--ui-scale));
 }
 
 /* Reduced motion */

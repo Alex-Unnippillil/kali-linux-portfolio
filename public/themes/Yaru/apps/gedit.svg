@@ -1,0 +1,23 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Text editor icon</title>
+  <desc id="desc">Stylised sheet of paper with an orange pencil to suggest editing</desc>
+  <defs>
+    <linearGradient id="gedit-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0f172a" />
+      <stop offset="1" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="gedit-pencil" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fb923c" />
+      <stop offset="1" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#gedit-bg)" />
+  <rect x="28" y="22" width="60" height="84" rx="10" fill="#f8fafc" />
+  <path d="M36 40h44" stroke="#cbd5f5" stroke-width="6" stroke-linecap="round" />
+  <path d="M36 58h44" stroke="#cbd5f5" stroke-width="6" stroke-linecap="round" />
+  <path d="M36 76h36" stroke="#cbd5f5" stroke-width="6" stroke-linecap="round" />
+  <path d="M36 94h28" stroke="#cbd5f5" stroke-width="6" stroke-linecap="round" />
+  <path d="M58 96l32-32 12 12-32 32-16 4z" fill="url(#gedit-pencil)" />
+  <path d="M102 76l-4 4-12-12 4-4a6 6 0 0 1 8.5 0l3.5 3.5a6 6 0 0 1 0 8.5z" fill="#facc15" />
+  <path d="M60 102l14-3.5-10.5-10.5z" fill="#1f2937" opacity="0.35" />
+</svg>

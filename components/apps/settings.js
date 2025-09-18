@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, uiScale, setUiScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -87,6 +87,20 @@ export function Settings() {
                         />
                     ))}
                 </div>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">UI Scale:</label>
+                <input
+                    type="range"
+                    min="100"
+                    max="200"
+                    step="10"
+                    value={Math.round(uiScale * 100)}
+                    onChange={(e) => setUiScale(parseInt(e.target.value, 10) / 100)}
+                    className="ubuntu-slider"
+                    aria-label="UI scale"
+                />
+                <span className="ml-2 text-ubt-grey">{Math.round(uiScale * 100)}%</span>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Density:</label>
@@ -250,6 +264,7 @@ export function Settings() {
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
+                        setUiScale(defaults.uiScale);
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
                     }}
@@ -273,6 +288,8 @@ export function Settings() {
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
+                        if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
+                        if (parsed.uiScale !== undefined) setUiScale(parsed.uiScale);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import useTrashState from './state';
 import HistoryList from './components/HistoryList';
 
-const DEFAULT_ICON = '/themes/Yaru/system/folder.png';
+const DEFAULT_ICON = '/themes/Yaru/system/folder.svg';
 const EMPTY_ICON = '/themes/Yaru/status/user-trash-symbolic.svg';
 const FULL_ICON = '/themes/Yaru/status/user-trash-full-symbolic.svg';
 

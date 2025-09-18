@@ -1,0 +1,6 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Social app icon</title>
+  <desc id="desc">Minimal dark square with a stylised white X</desc>
+  <rect x="12" y="12" width="104" height="104" rx="24" fill="#111827" />
+  <path d="M40 36h16l16 22 20-22h16l-26 30 26 30h-16l-18-22-18 22H40l26-30z" fill="#f8fafc" />
+</svg>
