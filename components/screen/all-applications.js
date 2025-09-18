@@ -55,14 +55,26 @@ class AllApplications extends React.Component {
 
     render() {
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+            <div
+                className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="all-applications-heading"
+                tabIndex={-1}
+            >
+                <h2 id="all-applications-heading" className="sr-only">Application launcher</h2>
                 <input
                     className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
                     placeholder="Search"
                     value={this.state.query}
                     onChange={this.handleChange}
+                    aria-label="Search applications"
                 />
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+                <div
+                    className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center"
+                    role="region"
+                    aria-label="Application shortcuts"
+                >
                     {this.renderApps()}
                 </div>
             </div>

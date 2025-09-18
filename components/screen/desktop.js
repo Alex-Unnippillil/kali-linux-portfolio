@@ -52,7 +52,11 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            liveMessage: '',
+            livePriority: 'polite',
+            liveRegionId: 0,
         }
+        this._clearLiveTimeout = null;
     }
 
     componentDidMount() {
@@ -96,6 +100,31 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this._clearLiveTimeout) {
+            clearTimeout(this._clearLiveTimeout);
+            this._clearLiveTimeout = null;
+        }
+    }
+
+    getAppTitle = (id) => {
+        const app = apps.find(a => a.id === id) || games.find(g => g.id === id);
+        return app?.title || id;
+    }
+
+    announce = (message, priority = 'polite') => {
+        if (!message) return;
+        if (this._clearLiveTimeout) {
+            clearTimeout(this._clearLiveTimeout);
+        }
+        this.setState(prev => ({
+            liveMessage: message,
+            livePriority: priority,
+            liveRegionId: prev.liveRegionId + 1,
+        }));
+        this._clearLiveTimeout = setTimeout(() => {
+            this.setState({ liveMessage: '' });
+            this._clearLiveTimeout = null;
+        }, 1000);
     }
 
     checkForNewFolders = () => {
@@ -218,11 +247,13 @@ export class Desktop extends Component {
             .filter(Boolean);
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+            this.announce('Window switcher opened');
         }
     }
 
     closeWindowSwitcher = () => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.announce('Window switcher closed');
     }
 
     selectWindow = (id) => {
@@ -300,6 +331,8 @@ export class Desktop extends Component {
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
 
+        if (!contextMenu) return;
+
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
         if (posx + menuWidth > window.innerWidth) posx -= menuWidth;
@@ -312,14 +345,25 @@ export class Desktop extends Component {
         contextMenu.style.top = posy;
 
         this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+        const labels = {
+            desktop: 'Desktop context menu opened',
+            default: 'Context menu opened',
+            app: 'Application context menu opened',
+            taskbar: 'Taskbar context menu opened',
+        };
+        this.announce(labels[menuName] || 'Context menu opened');
     }
 
     hideAllContextMenu = () => {
         const menus = { ...this.state.context_menus };
+        const wasOpen = Object.values(menus).some(Boolean);
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
         this.setState({ context_menus: menus, context_app: null });
+        if (wasOpen) {
+            this.announce('Context menus closed');
+        }
     }
 
     getMenuPosition = (e) => {
@@ -543,6 +587,7 @@ export class Desktop extends Component {
     hasMinimised = (objId) => {
         let minimized_windows = this.state.minimized_windows;
         var focused_windows = this.state.focused_windows;
+        const title = this.getAppTitle(objId);
 
         // remove focus and minimise this window
         minimized_windows[objId] = true;
@@ -552,6 +597,7 @@ export class Desktop extends Component {
         this.hideSideBar(null, false);
 
         this.giveFocusToLastApp();
+        this.announce(`${title} window minimized`);
     }
 
     giveFocusToLastApp = () => {
@@ -591,6 +637,8 @@ export class Desktop extends Component {
             action: `Opened ${objId} window`
         });
 
+        const title = this.getAppTitle(objId);
+
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
@@ -603,10 +651,14 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState({ minimized_windows: minimized_windows }, () => {
+                    this.saveSession();
+                    this.announce(`${title} window restored`);
+                });
             } else {
                 this.focus(objId);
                 this.saveSession();
+                this.announce(`${title} window focused`);
             }
             return;
         } else {
@@ -650,6 +702,7 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.announce(`${title} window opened`);
                 });
                 this.app_stack.push(objId);
             }, 200);
@@ -697,11 +750,15 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        const title = this.getAppTitle(objId);
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps }, () => {
+            this.saveSession();
+            this.announce(`${title} window closed`);
+        });
     }
 
     pinApp = (id) => {
@@ -752,7 +809,18 @@ export class Desktop extends Component {
     }
 
     openShortcutSelector = () => {
-        this.setState({ showShortcutSelector: true });
+        this.setState({ showShortcutSelector: true }, () => {
+            this.announce('Shortcut selector opened');
+        });
+    }
+
+    closeShortcutSelector = (callback) => {
+        this.setState({ showShortcutSelector: false }, () => {
+            this.announce('Shortcut selector closed');
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
     }
 
     addShortcutToDesktop = (app_id) => {
@@ -765,7 +833,7 @@ export class Desktop extends Component {
             shortcuts.push(app_id);
             safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
         }
-        this.setState({ showShortcutSelector: false }, this.updateAppsData);
+        this.closeShortcutSelector(this.updateAppsData);
     }
 
     checkForAppShortcuts = () => {
@@ -823,7 +891,11 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = () => {
+        this.setState(prev => ({ allAppsView: !prev.allAppsView }), () => {
+            this.announce(this.state.allAppsView ? 'Application launcher opened' : 'Application launcher closed');
+        });
+    }
 
     renderNameBar = () => {
         let addFolder = () => {
@@ -839,7 +911,7 @@ export class Desktop extends Component {
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="New folder name" />
                 </div>
                 <div className="flex">
                     <button
@@ -864,18 +936,25 @@ export class Desktop extends Component {
     }
 
     render() {
+        const { liveMessage, livePriority, liveRegionId } = this.state;
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                aria-label="Desktop workspace"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+            >
 
                 {/* Window Area */}
-                <div
+                <section
                     id="window-area"
-                    role="main"
+                    role="region"
+                    aria-label="Open windows"
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >
                     {this.renderWindows()}
-                </div>
+                </section>
 
                 {/* Background Image */}
                 <BackgroundImage />
@@ -959,13 +1038,22 @@ export class Desktop extends Component {
                     <ShortcutSelector apps={apps}
                         games={games}
                         onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+                        onClose={() => this.closeShortcutSelector()} /> : null}
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <div
+                    data-testid="desktop-live-region"
+                    className="sr-only"
+                    aria-live={livePriority}
+                    aria-atomic="true"
+                >
+                    <span key={liveRegionId}>{liveMessage}</span>
+                </div>
 
             </main>
         )
