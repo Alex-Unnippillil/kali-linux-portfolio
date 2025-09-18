@@ -119,8 +119,9 @@ const WhiskerMenu: React.FC = () => {
       <button
         ref={buttonRef}
         type="button"
+        aria-expanded={open}
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className={`btn btn--ghost btn--toolbar ${open ? 'is-active' : ''}`}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -146,7 +147,9 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                type="button"
+                aria-pressed={category === cat.id}
+                className={`btn btn--ghost btn--dense w-full justify-start text-left mb-1 ${category === cat.id ? 'is-active' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}

@@ -60,6 +60,85 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+
+  /* Control + button states */
+  --control-transition-duration: var(--motion-fast);
+  --control-transition-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --control-transform-active: translateY(1px) scale(0.99);
+  --control-ring-width: 3px;
+  --control-ring-color: color-mix(in srgb, var(--color-accent) 55%, transparent 45%);
+  --control-ring-offset: color-mix(in srgb, var(--color-bg) 85%, transparent 15%);
+
+  --control-surface: color-mix(in srgb, var(--color-surface) 80%, white 20%);
+  --control-surface-hover: color-mix(in srgb, var(--color-surface) 70%, white 30%);
+  --control-surface-active: color-mix(in srgb, var(--color-surface) 60%, white 40%);
+  --control-surface-border: color-mix(in srgb, var(--color-border) 80%, transparent 20%);
+  --control-surface-border-hover: color-mix(in srgb, var(--color-border) 60%, var(--color-accent) 40%);
+  --control-surface-border-active: var(--color-accent);
+  --control-surface-foreground: var(--color-text);
+  --control-surface-shadow: 0 1px 2px color-mix(in srgb, var(--color-inverse) 20%, transparent 80%);
+  --control-surface-shadow-hover: 0 6px 18px color-mix(in srgb, var(--color-inverse) 25%, transparent 75%);
+  --control-surface-shadow-active: inset 0 1px 1px color-mix(in srgb, var(--color-inverse) 30%, transparent 70%);
+  --control-surface-shadow-focus: 0 0 0 var(--control-ring-width) var(--control-ring-color), var(--control-surface-shadow);
+
+  --control-primary-surface: var(--color-primary);
+  --control-primary-hover: color-mix(in srgb, var(--color-primary) 88%, white 12%);
+  --control-primary-active: color-mix(in srgb, var(--color-primary) 78%, black 22%);
+  --control-primary-border: color-mix(in srgb, var(--color-primary) 70%, black 30%);
+  --control-primary-border-hover: color-mix(in srgb, var(--color-primary) 85%, black 15%);
+  --control-primary-border-active: color-mix(in srgb, var(--color-primary) 72%, black 28%);
+  --control-primary-foreground: #f5f5f5;
+  --control-primary-shadow: 0 6px 20px color-mix(in srgb, var(--color-primary) 40%, transparent 60%);
+  --control-primary-shadow-hover: 0 10px 28px color-mix(in srgb, var(--color-primary) 45%, transparent 55%);
+  --control-primary-shadow-active: inset 0 1px 0 color-mix(in srgb, white 45%, transparent 55%);
+
+  --control-success-surface: var(--game-color-success);
+  --control-success-hover: color-mix(in srgb, var(--game-color-success) 88%, white 12%);
+  --control-success-active: color-mix(in srgb, var(--game-color-success) 75%, black 25%);
+  --control-success-border: color-mix(in srgb, var(--game-color-success) 70%, black 30%);
+  --control-success-border-hover: color-mix(in srgb, var(--game-color-success) 85%, black 15%);
+  --control-success-border-active: color-mix(in srgb, var(--game-color-success) 72%, black 28%);
+  --control-success-foreground: #041b0b;
+  --control-success-shadow: 0 6px 16px color-mix(in srgb, var(--game-color-success) 45%, transparent 55%);
+  --control-success-shadow-hover: 0 10px 24px color-mix(in srgb, var(--game-color-success) 50%, transparent 50%);
+  --control-success-shadow-active: inset 0 1px 0 color-mix(in srgb, white 45%, transparent 55%);
+
+  --control-warning-surface: var(--game-color-warning);
+  --control-warning-hover: color-mix(in srgb, var(--game-color-warning) 88%, white 12%);
+  --control-warning-active: color-mix(in srgb, var(--game-color-warning) 75%, black 25%);
+  --control-warning-border: color-mix(in srgb, var(--game-color-warning) 65%, black 35%);
+  --control-warning-border-hover: color-mix(in srgb, var(--game-color-warning) 82%, black 18%);
+  --control-warning-border-active: color-mix(in srgb, var(--game-color-warning) 70%, black 30%);
+  --control-warning-foreground: #1f1300;
+  --control-warning-shadow: 0 6px 18px color-mix(in srgb, var(--game-color-warning) 45%, transparent 55%);
+  --control-warning-shadow-hover: 0 10px 26px color-mix(in srgb, var(--game-color-warning) 50%, transparent 50%);
+  --control-warning-shadow-active: inset 0 1px 0 color-mix(in srgb, white 45%, transparent 55%);
+
+  --control-danger-surface: var(--game-color-danger);
+  --control-danger-hover: color-mix(in srgb, var(--game-color-danger) 88%, white 12%);
+  --control-danger-active: color-mix(in srgb, var(--game-color-danger) 76%, black 24%);
+  --control-danger-border: color-mix(in srgb, var(--game-color-danger) 70%, black 30%);
+  --control-danger-border-hover: color-mix(in srgb, var(--game-color-danger) 85%, black 15%);
+  --control-danger-border-active: color-mix(in srgb, var(--game-color-danger) 72%, black 28%);
+  --control-danger-foreground: #fef2f2;
+  --control-danger-shadow: 0 6px 20px color-mix(in srgb, var(--game-color-danger) 45%, transparent 55%);
+  --control-danger-shadow-hover: 0 10px 28px color-mix(in srgb, var(--game-color-danger) 50%, transparent 50%);
+  --control-danger-shadow-active: inset 0 1px 0 color-mix(in srgb, white 40%, transparent 60%);
+
+  --control-ghost-surface: transparent;
+  --control-ghost-hover: color-mix(in srgb, var(--color-primary) 18%, transparent 82%);
+  --control-ghost-active: color-mix(in srgb, var(--color-primary) 26%, transparent 74%);
+  --control-ghost-border: color-mix(in srgb, var(--color-primary) 45%, transparent 55%);
+  --control-ghost-border-hover: color-mix(in srgb, var(--color-primary) 65%, transparent 35%);
+  --control-ghost-border-active: color-mix(in srgb, var(--color-primary) 75%, transparent 25%);
+  --control-ghost-foreground: var(--color-text);
+  --control-ghost-shadow: none;
+  --control-ghost-focus: 0 0 0 var(--control-ring-width) var(--control-ring-color);
+
+  --control-disabled-surface: color-mix(in srgb, var(--color-muted) 85%, transparent 15%);
+  --control-disabled-foreground: color-mix(in srgb, var(--color-text) 50%, transparent 50%);
+  --control-disabled-border: color-mix(in srgb, var(--color-border) 70%, transparent 30%);
+  --control-disabled-opacity: 1;
 }
 
 /* High contrast theme */
@@ -77,6 +156,77 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+
+  --control-surface: #000000;
+  --control-surface-hover: #222222;
+  --control-surface-active: #444444;
+  --control-surface-border: #ffffff;
+  --control-surface-border-hover: #ffff00;
+  --control-surface-border-active: #ffbf00;
+  --control-surface-foreground: #ffffff;
+  --control-surface-shadow: none;
+  --control-surface-shadow-hover: none;
+  --control-surface-shadow-active: none;
+  --control-surface-shadow-focus: 0 0 0 var(--control-ring-width) #ffff00;
+
+  --control-primary-surface: #ffff00;
+  --control-primary-hover: #ffff33;
+  --control-primary-active: #ffbf00;
+  --control-primary-border: #000000;
+  --control-primary-border-hover: #000000;
+  --control-primary-border-active: #000000;
+  --control-primary-foreground: #000000;
+  --control-primary-shadow: none;
+  --control-primary-shadow-hover: none;
+  --control-primary-shadow-active: none;
+
+  --control-success-surface: #00ffff;
+  --control-success-hover: #33ffff;
+  --control-success-active: #00bfbf;
+  --control-success-border: #ffffff;
+  --control-success-border-hover: #ffff00;
+  --control-success-border-active: #ffbf00;
+  --control-success-foreground: #000000;
+  --control-success-shadow: none;
+  --control-success-shadow-hover: none;
+  --control-success-shadow-active: none;
+
+  --control-warning-surface: #ff00ff;
+  --control-warning-hover: #ff33ff;
+  --control-warning-active: #bf00bf;
+  --control-warning-border: #ffffff;
+  --control-warning-border-hover: #ffff00;
+  --control-warning-border-active: #ffbf00;
+  --control-warning-foreground: #000000;
+  --control-warning-shadow: none;
+  --control-warning-shadow-hover: none;
+  --control-warning-shadow-active: none;
+
+  --control-danger-surface: #ff0000;
+  --control-danger-hover: #ff3333;
+  --control-danger-active: #bf0000;
+  --control-danger-border: #ffffff;
+  --control-danger-border-hover: #ffff00;
+  --control-danger-border-active: #ffbf00;
+  --control-danger-foreground: #000000;
+  --control-danger-shadow: none;
+  --control-danger-shadow-hover: none;
+  --control-danger-shadow-active: none;
+
+  --control-ghost-surface: transparent;
+  --control-ghost-hover: #ffff00;
+  --control-ghost-active: #ffbf00;
+  --control-ghost-border: #ffffff;
+  --control-ghost-border-hover: #ffff00;
+  --control-ghost-border-active: #ffbf00;
+  --control-ghost-foreground: #ffffff;
+  --control-ghost-shadow: none;
+  --control-ghost-focus: 0 0 0 var(--control-ring-width) #ffff00;
+
+  --control-disabled-surface: #2b2b2b;
+  --control-disabled-foreground: #cccccc;
+  --control-disabled-border: #f5f5f5;
+  --control-ring-color: #ffff00;
 }
 
 /* Dyslexia-friendly fonts */
@@ -94,6 +244,8 @@
   --motion-fast: 0ms;
   --motion-medium: 0ms;
   --motion-slow: 0ms;
+  --control-transition-duration: 0ms;
+  --control-transform-active: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -101,6 +253,8 @@
     --motion-fast: 0ms;
     --motion-medium: 0ms;
     --motion-slow: 0ms;
+    --control-transition-duration: 0ms;
+    --control-transform-active: none;
   }
 }
 
@@ -116,5 +270,17 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --control-surface: #000000;
+    --control-surface-hover: #222222;
+    --control-surface-active: #444444;
+    --control-surface-border: #ffffff;
+    --control-surface-border-hover: #ffff00;
+    --control-surface-border-active: #ffbf00;
+    --control-surface-foreground: #ffffff;
+    --control-surface-shadow: none;
+    --control-surface-shadow-hover: none;
+    --control-surface-shadow-active: none;
+    --control-surface-shadow-focus: 0 0 0 var(--control-ring-width) #ffff00;
+    --control-ring-color: #ffff00;
   }
 }

@@ -3,7 +3,7 @@ export default function BetaBadge() {
   return (
     <button
       type="button"
-      className="fixed bottom-4 right-4 rounded bg-yellow-500/90 px-2 py-1 text-xs font-semibold text-black"
+      className="btn btn--warning btn--dense fixed bottom-4 right-4 text-xs font-semibold"
     >
       Beta
     </button>

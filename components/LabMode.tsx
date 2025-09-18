@@ -32,7 +32,7 @@ export default function LabMode({ children }: Props) {
     <div className="w-full h-full">
       <div className="bg-ub-yellow text-black p-2 text-xs flex justify-between items-center" aria-label="training banner">
         <span>{enabled ? 'Lab Mode enabled: all actions are simulated.' : 'Lab Mode disabled: enable to use training features.'}</span>
-        <button onClick={toggle} className="px-2 py-1 bg-ub-green text-black" type="button">
+        <button onClick={toggle} className="btn btn--success btn--dense" type="button">
           {enabled ? 'Disable' : 'Enable'}
         </button>
       </div>
