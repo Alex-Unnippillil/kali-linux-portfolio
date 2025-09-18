@@ -8,6 +8,9 @@ jest.mock('react-draggable', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
+jest.mock('../utils/sandboxManager', () => ({
+  isWindowSandboxed: jest.fn(() => false),
+}));
 
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
