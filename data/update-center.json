@@ -1,0 +1,82 @@
+{
+  "channels": [
+    {
+      "id": "stable",
+      "label": "Stable",
+      "description": "Verified monthly builds recommended for most visitors. Prioritizes reliability and accessibility fixes.",
+      "currentVersion": "2024.10",
+      "releases": [
+        {
+          "version": "2025.02",
+          "date": "2025-02-10",
+          "highlights": [
+            "Refined desktop dock animations for smoother window launching",
+            "Faster module index hydration to cut cold boot time by 20%",
+            "Audit sweep covering 30+ keyboard navigation paths"
+          ]
+        },
+        {
+          "version": "2024.10",
+          "date": "2024-10-02",
+          "highlights": [
+            "Rolled out high-contrast wallpapers and colorblind-friendly status badges",
+            "Pinned quick access to the Plugin Catalog and module changelog",
+            "Bundled offline fixtures for Wireshark and OpenVAS demos"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "label": "Beta",
+      "description": "Early preview of quarterly features. Carries faster iteration with additional telemetry hooks.",
+      "currentVersion": "2024.12",
+      "releases": [
+        {
+          "version": "2025.03",
+          "date": "2025-03-05",
+          "highlights": [
+            "Rolled in Scene Graph debugger for 3D visualizations",
+            "Beta contact workflow with scripted failure injection",
+            "Expanded analytics opt-in banner for lab participants"
+          ]
+        },
+        {
+          "version": "2024.12",
+          "date": "2024-12-08",
+          "highlights": [
+            "Previewed vector scope overlay for the screen recorder",
+            "Added beta badges to experimental catalog entries",
+            "Bundled nightly update stress-test harness"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nightly",
+      "label": "Nightly",
+      "description": "Daily snapshots generated from the integration branch. Best suited for contributors validating fixes.",
+      "currentVersion": "2025.02-15",
+      "releases": [
+        {
+          "version": "2025.02-28",
+          "date": "2025-02-28",
+          "highlights": [
+            "Fuzz nightly plugin API to catch sandbox regressions",
+            "Surface service worker cache diffs in the developer console",
+            "Nightly telemetry scrubbing pipeline for anonymized logs"
+          ]
+        },
+        {
+          "version": "2025.02-20",
+          "date": "2025-02-20",
+          "highlights": [
+            "Introduce experimental keyboard macro recorder",
+            "Nightly theming hooks for window chrome overrides",
+            "Async plugin validator with worker mirroring"
+          ]
+        }
+      ]
+    }
+  ]
+}
