@@ -2,6 +2,8 @@ import React, { useRef } from 'react'
 import useFocusTrap from '../../hooks/useFocusTrap'
 import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
+const interactiveItemClasses = 'w-full text-left cursor-default py-0.5 mb-1.5 transition-hover transition-active hover:bg-[var(--interactive-hover)] focus:bg-[var(--interactive-hover)] focus-visible:bg-[var(--interactive-hover)] active:bg-[var(--interactive-active)]'
+
 function DefaultMenu(props) {
     const menuRef = useRef(null)
     useFocusTrap(menuRef, props.active)
@@ -20,7 +22,7 @@ function DefaultMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={`${props.active ? 'block' : 'hidden'} cursor-default w-52 context-menu-bg border text-left border-[color:var(--color-border)] text-[color:var(--color-text)] py-4 absolute z-50 text-sm`}
         >
 
             <Devider />
@@ -30,7 +32,7 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Linkedin"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className={`block ${interactiveItemClasses}`}
             >
                 <span className="ml-5">🙋‍♂️</span> <span className="ml-2">Follow on <strong>Linkedin</strong></span>
             </a>
@@ -40,7 +42,7 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Github"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className={`block ${interactiveItemClasses}`}
             >
                 <span className="ml-5">🤝</span> <span className="ml-2">Follow on <strong>Github</strong></span>
             </a>
@@ -50,7 +52,7 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Contact Me"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className={`block ${interactiveItemClasses}`}
             >
                 <span className="ml-5">📥</span> <span className="ml-2">Contact Me</span>
             </a>
@@ -60,7 +62,7 @@ function DefaultMenu(props) {
                 onClick={() => { localStorage.clear(); window.location.reload() }}
                 role="menuitem"
                 aria-label="Reset Kali Linux"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className={interactiveItemClasses}
             >
                 <span className="ml-5">🧹</span> <span className="ml-2">Reset Kali Linux</span>
             </button>
@@ -71,7 +73,7 @@ function DefaultMenu(props) {
 function Devider() {
     return (
         <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+            <div className="border-t border-[color:color-mix(in_srgb,_var(--color-border),_transparent_25%)] py-1 w-2/5"></div>
         </div>
     );
 }

@@ -19,6 +19,8 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --interactive-hover: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  --interactive-active: color-mix(in srgb, var(--color-primary) 30%, transparent);
   accent-color: var(--color-control-accent);
 }
 
