@@ -1,0 +1,634 @@
+{
+  "categories": [
+    {
+      "id": "smileys",
+      "label": "Smileys & Emotion",
+      "items": [
+        {
+          "id": "grinning_face",
+          "char": "😀",
+          "name": "Grinning face",
+          "shortcodes": ["grinning"],
+          "keywords": ["happy", "smile", "joy"]
+        },
+        {
+          "id": "beaming_face_with_smiling_eyes",
+          "char": "😁",
+          "name": "Beaming face with smiling eyes",
+          "shortcodes": ["grin"],
+          "keywords": ["happy", "beaming", "smile"]
+        },
+        {
+          "id": "face_with_tears_of_joy",
+          "char": "😂",
+          "name": "Face with tears of joy",
+          "shortcodes": ["joy"],
+          "keywords": ["lol", "cry", "tears"]
+        },
+        {
+          "id": "rolling_on_the_floor_laughing",
+          "char": "🤣",
+          "name": "Rolling on the floor laughing",
+          "shortcodes": ["rofl"],
+          "keywords": ["laugh", "rolling", "happy"]
+        },
+        {
+          "id": "smiling_face_with_smiling_eyes",
+          "char": "😊",
+          "name": "Smiling face with smiling eyes",
+          "shortcodes": ["blush"],
+          "keywords": ["smile", "blush", "warm"]
+        },
+        {
+          "id": "smiling_face_with_heart_eyes",
+          "char": "😍",
+          "name": "Smiling face with heart-eyes",
+          "shortcodes": ["heart_eyes"],
+          "keywords": ["love", "hearts", "smile"]
+        },
+        {
+          "id": "face_blowing_a_kiss",
+          "char": "😘",
+          "name": "Face blowing a kiss",
+          "shortcodes": ["kissing_heart"],
+          "keywords": ["kiss", "affection", "love"]
+        },
+        {
+          "id": "smiling_face_with_sunglasses",
+          "char": "😎",
+          "name": "Smiling face with sunglasses",
+          "shortcodes": ["sunglasses"],
+          "keywords": ["cool", "smile", "shades"]
+        },
+        {
+          "id": "thinking_face",
+          "char": "🤔",
+          "name": "Thinking face",
+          "shortcodes": ["thinking"],
+          "keywords": ["ponder", "hmm", "consider"]
+        },
+        {
+          "id": "pleading_face",
+          "char": "🥺",
+          "name": "Pleading face",
+          "shortcodes": ["pleading_face"],
+          "keywords": ["please", "begging", "sad"]
+        }
+      ]
+    },
+    {
+      "id": "people",
+      "label": "People & Body",
+      "items": [
+        {
+          "id": "waving_hand",
+          "char": "👋",
+          "name": "Waving hand",
+          "shortcodes": ["wave"],
+          "keywords": ["hello", "goodbye", "hi"],
+          "skins": ["👋", "👋🏻", "👋🏼", "👋🏽", "👋🏾", "👋🏿"]
+        },
+        {
+          "id": "thumbs_up",
+          "char": "👍",
+          "name": "Thumbs up",
+          "shortcodes": ["+1", "thumbsup"],
+          "keywords": ["approve", "ok", "like"],
+          "skins": ["👍", "👍🏻", "👍🏼", "👍🏽", "👍🏾", "👍🏿"]
+        },
+        {
+          "id": "thumbs_down",
+          "char": "👎",
+          "name": "Thumbs down",
+          "shortcodes": ["-1", "thumbsdown"],
+          "keywords": ["disapprove", "no", "dislike"],
+          "skins": ["👎", "👎🏻", "👎🏼", "👎🏽", "👎🏾", "👎🏿"]
+        },
+        {
+          "id": "clapping_hands",
+          "char": "👏",
+          "name": "Clapping hands",
+          "shortcodes": ["clap"],
+          "keywords": ["applause", "praise", "bravo"],
+          "skins": ["👏", "👏🏻", "👏🏼", "👏🏽", "👏🏾", "👏🏿"]
+        },
+        {
+          "id": "folded_hands",
+          "char": "🙏",
+          "name": "Folded hands",
+          "shortcodes": ["pray", "please"],
+          "keywords": ["thanks", "request", "hope"],
+          "skins": ["🙏", "🙏🏻", "🙏🏼", "🙏🏽", "🙏🏾", "🙏🏿"]
+        },
+        {
+          "id": "ok_hand",
+          "char": "👌",
+          "name": "OK hand",
+          "shortcodes": ["ok_hand"],
+          "keywords": ["agree", "perfect", "ok"],
+          "skins": ["👌", "👌🏻", "👌🏼", "👌🏽", "👌🏾", "👌🏿"]
+        },
+        {
+          "id": "raised_fist",
+          "char": "✊",
+          "name": "Raised fist",
+          "shortcodes": ["fist"],
+          "keywords": ["power", "solidarity", "resist"],
+          "skins": ["✊", "✊🏻", "✊🏼", "✊🏽", "✊🏾", "✊🏿"]
+        },
+        {
+          "id": "victory_hand",
+          "char": "✌️",
+          "name": "Victory hand",
+          "shortcodes": ["v"],
+          "keywords": ["peace", "victory", "hand"],
+          "skins": ["✌️", "✌🏻", "✌🏼", "✌🏽", "✌🏾", "✌🏿"]
+        }
+      ]
+    },
+    {
+      "id": "animals",
+      "label": "Animals & Nature",
+      "items": [
+        {
+          "id": "dog_face",
+          "char": "🐶",
+          "name": "Dog face",
+          "shortcodes": ["dog"],
+          "keywords": ["pet", "puppy", "animal"]
+        },
+        {
+          "id": "cat_face",
+          "char": "🐱",
+          "name": "Cat face",
+          "shortcodes": ["cat"],
+          "keywords": ["kitten", "pet", "animal"]
+        },
+        {
+          "id": "monkey_face",
+          "char": "🐵",
+          "name": "Monkey face",
+          "shortcodes": ["monkey"],
+          "keywords": ["playful", "animal", "cheeky"]
+        },
+        {
+          "id": "panda_face",
+          "char": "🐼",
+          "name": "Panda face",
+          "shortcodes": ["panda_face"],
+          "keywords": ["bear", "bamboo", "animal"]
+        },
+        {
+          "id": "fox_face",
+          "char": "🦊",
+          "name": "Fox face",
+          "shortcodes": ["fox_face"],
+          "keywords": ["cunning", "animal", "wild"]
+        },
+        {
+          "id": "lion_face",
+          "char": "🦁",
+          "name": "Lion face",
+          "shortcodes": ["lion"],
+          "keywords": ["king", "animal", "wild"]
+        },
+        {
+          "id": "unicorn_face",
+          "char": "🦄",
+          "name": "Unicorn face",
+          "shortcodes": ["unicorn"],
+          "keywords": ["myth", "magical", "fantasy"]
+        },
+        {
+          "id": "koala",
+          "char": "🐨",
+          "name": "Koala",
+          "shortcodes": ["koala"],
+          "keywords": ["bear", "australia", "animal"]
+        },
+        {
+          "id": "butterfly",
+          "char": "🦋",
+          "name": "Butterfly",
+          "shortcodes": ["butterfly"],
+          "keywords": ["insect", "nature", "wings"]
+        },
+        {
+          "id": "hatching_chick",
+          "char": "🐣",
+          "name": "Hatching chick",
+          "shortcodes": ["hatching_chick"],
+          "keywords": ["bird", "easter", "baby"]
+        }
+      ]
+    },
+    {
+      "id": "food",
+      "label": "Food & Drink",
+      "items": [
+        {
+          "id": "red_apple",
+          "char": "🍎",
+          "name": "Red apple",
+          "shortcodes": ["apple"],
+          "keywords": ["fruit", "healthy", "food"]
+        },
+        {
+          "id": "green_apple",
+          "char": "🍏",
+          "name": "Green apple",
+          "shortcodes": ["green_apple"],
+          "keywords": ["fruit", "sour", "food"]
+        },
+        {
+          "id": "avocado",
+          "char": "🥑",
+          "name": "Avocado",
+          "shortcodes": ["avocado"],
+          "keywords": ["fruit", "toast", "healthy"]
+        },
+        {
+          "id": "pizza",
+          "char": "🍕",
+          "name": "Slice of pizza",
+          "shortcodes": ["pizza"],
+          "keywords": ["slice", "cheese", "food"]
+        },
+        {
+          "id": "hamburger",
+          "char": "🍔",
+          "name": "Hamburger",
+          "shortcodes": ["hamburger"],
+          "keywords": ["burger", "fast", "food"]
+        },
+        {
+          "id": "taco",
+          "char": "🌮",
+          "name": "Taco",
+          "shortcodes": ["taco"],
+          "keywords": ["mexican", "food", "spicy"]
+        },
+        {
+          "id": "sushi",
+          "char": "🍣",
+          "name": "Sushi",
+          "shortcodes": ["sushi"],
+          "keywords": ["fish", "roll", "japanese"]
+        },
+        {
+          "id": "birthday_cake",
+          "char": "🎂",
+          "name": "Birthday cake",
+          "shortcodes": ["birthday"],
+          "keywords": ["dessert", "celebrate", "cake"]
+        },
+        {
+          "id": "hot_beverage",
+          "char": "☕",
+          "name": "Hot beverage",
+          "shortcodes": ["coffee"],
+          "keywords": ["tea", "espresso", "drink"]
+        },
+        {
+          "id": "bubble_tea",
+          "char": "🧋",
+          "name": "Bubble tea",
+          "shortcodes": ["bubble_tea"],
+          "keywords": ["drink", "boba", "milk"]
+        }
+      ]
+    },
+    {
+      "id": "activities",
+      "label": "Activities & Entertainment",
+      "items": [
+        {
+          "id": "soccer_ball",
+          "char": "⚽",
+          "name": "Soccer ball",
+          "shortcodes": ["soccer"],
+          "keywords": ["sports", "football", "game"]
+        },
+        {
+          "id": "basketball",
+          "char": "🏀",
+          "name": "Basketball",
+          "shortcodes": ["basketball"],
+          "keywords": ["sports", "game", "hoop"]
+        },
+        {
+          "id": "trophy",
+          "char": "🏆",
+          "name": "Trophy",
+          "shortcodes": ["trophy"],
+          "keywords": ["award", "win", "prize"]
+        },
+        {
+          "id": "musical_keyboard",
+          "char": "🎹",
+          "name": "Musical keyboard",
+          "shortcodes": ["musical_keyboard"],
+          "keywords": ["music", "piano", "instrument"]
+        },
+        {
+          "id": "video_game",
+          "char": "🎮",
+          "name": "Video game",
+          "shortcodes": ["video_game"],
+          "keywords": ["controller", "gaming", "play"]
+        },
+        {
+          "id": "joystick",
+          "char": "🕹️",
+          "name": "Joystick",
+          "shortcodes": ["joystick"],
+          "keywords": ["retro", "arcade", "game"]
+        },
+        {
+          "id": "performing_arts",
+          "char": "🎭",
+          "name": "Performing arts",
+          "shortcodes": ["performing_arts"],
+          "keywords": ["theater", "mask", "stage"]
+        },
+        {
+          "id": "artist_palette",
+          "char": "🎨",
+          "name": "Artist palette",
+          "shortcodes": ["art"],
+          "keywords": ["paint", "creative", "color"]
+        },
+        {
+          "id": "headphone",
+          "char": "🎧",
+          "name": "Headphone",
+          "shortcodes": ["headphones"],
+          "keywords": ["music", "listen", "audio"]
+        },
+        {
+          "id": "microphone",
+          "char": "🎤",
+          "name": "Microphone",
+          "shortcodes": ["microphone"],
+          "keywords": ["sing", "karaoke", "audio"]
+        }
+      ]
+    },
+    {
+      "id": "travel",
+      "label": "Travel & Places",
+      "items": [
+        {
+          "id": "automobile",
+          "char": "🚗",
+          "name": "Automobile",
+          "shortcodes": ["car"],
+          "keywords": ["drive", "vehicle", "road"]
+        },
+        {
+          "id": "bus",
+          "char": "🚌",
+          "name": "Bus",
+          "shortcodes": ["bus"],
+          "keywords": ["transit", "vehicle", "ride"]
+        },
+        {
+          "id": "police_car",
+          "char": "🚓",
+          "name": "Police car",
+          "shortcodes": ["police_car"],
+          "keywords": ["law", "vehicle", "sirens"]
+        },
+        {
+          "id": "train",
+          "char": "🚆",
+          "name": "Train",
+          "shortcodes": ["train"],
+          "keywords": ["rail", "transport", "vehicle"]
+        },
+        {
+          "id": "airplane",
+          "char": "✈️",
+          "name": "Airplane",
+          "shortcodes": ["airplane"],
+          "keywords": ["fly", "plane", "travel"]
+        },
+        {
+          "id": "rocket",
+          "char": "🚀",
+          "name": "Rocket",
+          "shortcodes": ["rocket"],
+          "keywords": ["space", "launch", "ship"]
+        },
+        {
+          "id": "sailboat",
+          "char": "⛵",
+          "name": "Sailboat",
+          "shortcodes": ["sailboat"],
+          "keywords": ["boat", "sail", "water"]
+        },
+        {
+          "id": "bicycle",
+          "char": "🚲",
+          "name": "Bicycle",
+          "shortcodes": ["bike"],
+          "keywords": ["ride", "cycle", "transport"]
+        },
+        {
+          "id": "camping",
+          "char": "🏕️",
+          "name": "Camping",
+          "shortcodes": ["camping"],
+          "keywords": ["tent", "outdoors", "night"]
+        },
+        {
+          "id": "earth_globe_europe_africa",
+          "char": "🌍",
+          "name": "Globe showing Europe-Africa",
+          "shortcodes": ["earth_africa"],
+          "keywords": ["planet", "world", "global"]
+        }
+      ]
+    },
+    {
+      "id": "objects",
+      "label": "Objects",
+      "items": [
+        {
+          "id": "light_bulb",
+          "char": "💡",
+          "name": "Light bulb",
+          "shortcodes": ["bulb"],
+          "keywords": ["idea", "bright", "energy"]
+        },
+        {
+          "id": "laptop",
+          "char": "💻",
+          "name": "Laptop",
+          "shortcodes": ["computer"],
+          "keywords": ["work", "technology", "pc"]
+        },
+        {
+          "id": "desktop_computer",
+          "char": "🖥️",
+          "name": "Desktop computer",
+          "shortcodes": ["desktop_computer"],
+          "keywords": ["pc", "workstation", "screen"]
+        },
+        {
+          "id": "keyboard",
+          "char": "⌨️",
+          "name": "Keyboard",
+          "shortcodes": ["keyboard"],
+          "keywords": ["typing", "keys", "input"]
+        },
+        {
+          "id": "mobile_phone",
+          "char": "📱",
+          "name": "Mobile phone",
+          "shortcodes": ["iphone"],
+          "keywords": ["smartphone", "call", "device"]
+        },
+        {
+          "id": "battery",
+          "char": "🔋",
+          "name": "Battery",
+          "shortcodes": ["battery"],
+          "keywords": ["power", "charge", "energy"]
+        },
+        {
+          "id": "package",
+          "char": "📦",
+          "name": "Package",
+          "shortcodes": ["package"],
+          "keywords": ["delivery", "box", "mail"]
+        },
+        {
+          "id": "gear",
+          "char": "⚙️",
+          "name": "Gear",
+          "shortcodes": ["gear"],
+          "keywords": ["settings", "cog", "mechanical"]
+        },
+        {
+          "id": "hammer_and_wrench",
+          "char": "🛠️",
+          "name": "Hammer and wrench",
+          "shortcodes": ["hammer_and_wrench"],
+          "keywords": ["tools", "fix", "build"]
+        },
+        {
+          "id": "magnet",
+          "char": "🧲",
+          "name": "Magnet",
+          "shortcodes": ["magnet"],
+          "keywords": ["attract", "magnetic", "force"]
+        }
+      ]
+    },
+    {
+      "id": "symbols",
+      "label": "Symbols",
+      "items": [
+        {
+          "id": "red_heart",
+          "char": "❤️",
+          "name": "Red heart",
+          "shortcodes": ["heart"],
+          "keywords": ["love", "like", "affection"]
+        },
+        {
+          "id": "orange_heart",
+          "char": "🧡",
+          "name": "Orange heart",
+          "shortcodes": ["orange_heart"],
+          "keywords": ["heart", "love", "warm"]
+        },
+        {
+          "id": "yellow_heart",
+          "char": "💛",
+          "name": "Yellow heart",
+          "shortcodes": ["yellow_heart"],
+          "keywords": ["friendship", "heart", "bright"]
+        },
+        {
+          "id": "green_heart",
+          "char": "💚",
+          "name": "Green heart",
+          "shortcodes": ["green_heart"],
+          "keywords": ["eco", "heart", "support"]
+        },
+        {
+          "id": "blue_heart",
+          "char": "💙",
+          "name": "Blue heart",
+          "shortcodes": ["blue_heart"],
+          "keywords": ["trust", "heart", "calm"]
+        },
+        {
+          "id": "purple_heart",
+          "char": "💜",
+          "name": "Purple heart",
+          "shortcodes": ["purple_heart"],
+          "keywords": ["love", "heart", "care"]
+        },
+        {
+          "id": "sparkles",
+          "char": "✨",
+          "name": "Sparkles",
+          "shortcodes": ["sparkles"],
+          "keywords": ["shine", "magic", "glitter"]
+        },
+        {
+          "id": "collision",
+          "char": "💥",
+          "name": "Collision",
+          "shortcodes": ["boom"],
+          "keywords": ["explosion", "impact", "pow"]
+        },
+        {
+          "id": "warning",
+          "char": "⚠️",
+          "name": "Warning",
+          "shortcodes": ["warning"],
+          "keywords": ["alert", "danger", "sign"]
+        },
+        {
+          "id": "check_mark_button",
+          "char": "✅",
+          "name": "Check mark button",
+          "shortcodes": ["white_check_mark"],
+          "keywords": ["confirm", "check", "done"]
+        },
+        {
+          "id": "cross_mark",
+          "char": "❌",
+          "name": "Cross mark",
+          "shortcodes": ["x"],
+          "keywords": ["cancel", "close", "incorrect"]
+        },
+        {
+          "id": "recycling_symbol",
+          "char": "♻️",
+          "name": "Recycling symbol",
+          "shortcodes": ["recycle"],
+          "keywords": ["green", "reuse", "cycle"]
+        },
+        {
+          "id": "yin_yang",
+          "char": "☯️",
+          "name": "Yin yang",
+          "shortcodes": ["yin_yang"],
+          "keywords": ["balance", "tao", "symbol"]
+        },
+        {
+          "id": "infinity",
+          "char": "♾️",
+          "name": "Infinity",
+          "shortcodes": ["infinity"],
+          "keywords": ["forever", "loop", "symbol"]
+        }
+      ]
+    }
+  ]
+}
