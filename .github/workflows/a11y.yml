@@ -18,4 +18,14 @@ jobs:
           yarn dev &
           npx wait-on http://localhost:3000
       - run: npx pa11y-ci --config pa11yci.json
-      - run: npx playwright test playwright/a11y.spec.ts
+      - name: Run Playwright accessibility checks
+        run: npx playwright test playwright/a11y.spec.ts
+      - name: Audit /apps/alex with Lighthouse CI
+        run: npx playwright test playwright/lighthouse.spec.ts
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-ci-report
+          path: lhci-report
+          if-no-files-found: warn
