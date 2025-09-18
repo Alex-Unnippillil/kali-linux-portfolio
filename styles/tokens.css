@@ -25,7 +25,8 @@
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  --window-opacity: 0.85;
+  --kali-bg: rgb(15 19 23 / var(--window-opacity));
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -77,6 +78,7 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --window-opacity: 1;
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +118,6 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --window-opacity: 1;
   }
 }
