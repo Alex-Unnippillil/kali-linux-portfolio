@@ -5,6 +5,7 @@ import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
+import ShortcutOverlay from './ui/ShortcutOverlay';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
@@ -15,13 +16,19 @@ export default class Ubuntu extends Component {
 			screen_locked: false,
 			bg_image_name: 'wall-2',
 			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+                        shutDownScreen: false,
+                        showShortcutOverlay: false
+                };
+        }
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                window.addEventListener('keydown', this.handleShortcutOverlayHotkey);
+        }
+
+        componentWillUnmount() {
+                window.removeEventListener('keydown', this.handleShortcutOverlayHotkey);
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -113,22 +120,48 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
-					unLockScreen={this.unLockScreen}
-				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+        handleShortcutOverlayHotkey = (event) => {
+                const target = event.target;
+                const tagName = target?.tagName;
+                const isEditable =
+                        tagName === 'INPUT' ||
+                        tagName === 'TEXTAREA' ||
+                        target?.isContentEditable;
+                if (isEditable) return;
+
+                const isSlashKey = event.key === '/' || event.key === '?' || event.code === 'Slash';
+                if (event.metaKey && isSlashKey) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.setState((state) => ({ showShortcutOverlay: !state.showShortcutOverlay }));
+                } else if (event.key === 'Escape' && this.state.showShortcutOverlay) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.setState({ showShortcutOverlay: false });
+                }
+        };
+
+        closeShortcutOverlay = () => {
+                this.setState({ showShortcutOverlay: false });
+        };
+
+        render() {
+                return (
+                        <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                                <LockScreen
+                                        isLocked={this.state.screen_locked}
+                                        bgImgName={this.state.bg_image_name}
+                                        unLockScreen={this.unLockScreen}
+                                />
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <ShortcutOverlay open={this.state.showShortcutOverlay} onClose={this.closeShortcutOverlay} />
+                        </div>
+                );
+        }
 }
