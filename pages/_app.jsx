@@ -91,10 +91,16 @@ function MyApp(props) {
       }, 100);
     };
 
+    const handleAnnounce = (event) => {
+      if (!event || typeof event.detail !== 'string') return;
+      update(event.detail);
+    };
+
     const handleCopy = () => update('Copied to clipboard');
     const handleCut = () => update('Cut to clipboard');
     const handlePaste = () => update('Pasted from clipboard');
 
+    window.addEventListener('live-region-announce', handleAnnounce);
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
     window.addEventListener('paste', handlePaste);
@@ -133,6 +139,7 @@ function MyApp(props) {
     }
 
     return () => {
+      window.removeEventListener('live-region-announce', handleAnnounce);
       window.removeEventListener('copy', handleCopy);
       window.removeEventListener('cut', handleCut);
       window.removeEventListener('paste', handlePaste);
