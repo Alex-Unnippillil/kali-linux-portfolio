@@ -1,0 +1,74 @@
+{
+  "versions": [
+    {
+      "id": "tls13",
+      "name": "TLS 1.3",
+      "summary": "Latest TLS revision with shorter handshakes and forward secrecy by default.",
+      "compatibility": "Supported by browsers and OS releases from 2018 onward. Older appliances may require firmware updates but most managed providers enable it.",
+      "usage": "Enable by default and prefer for all clients. Keep TLS 1.2 only for legacy compatibility."
+    },
+    {
+      "id": "tls12",
+      "name": "TLS 1.2",
+      "summary": "Mature workhorse version still required for older clients.",
+      "compatibility": "Universally supported, including legacy Java 8, Windows Server 2012, and embedded stacks.",
+      "usage": "Keep as fallback with a restricted cipher list. Plan migrations to retire it as clients update."
+    },
+    {
+      "id": "tls11",
+      "name": "TLS 1.1",
+      "summary": "Legacy protocol lacking modern ciphers and features.",
+      "compatibility": "Disabled by default in current browsers; only very old clients still rely on it.",
+      "usage": "Disable entirely. If a legacy system mandates it, isolate the traffic and plan an upgrade."
+    },
+    {
+      "id": "tls10",
+      "name": "TLS 1.0",
+      "summary": "Deprecated protocol vulnerable to BEAST and similar attacks.",
+      "compatibility": "Unsupported in modern browsers and compliance frameworks such as PCI DSS.",
+      "usage": "Must remain disabled. Replace or upgrade systems that still require it."
+    }
+  ],
+  "ciphers": [
+    {
+      "id": "tls13_aes256_gcm_sha384",
+      "name": "TLS_AES_256_GCM_SHA384",
+      "summary": "AEAD cipher suite for TLS 1.3 using 256-bit AES-GCM.",
+      "compatibility": "Available wherever TLS 1.3 is negotiated. Hardware acceleration common on servers and desktops.",
+      "usage": "Offer alongside TLS_AES_128_GCM_SHA256. Use when compliance calls for 256-bit keys.",
+      "version": "TLS 1.3"
+    },
+    {
+      "id": "tls13_chacha20_poly1305_sha256",
+      "name": "TLS_CHACHA20_POLY1305_SHA256",
+      "summary": "TLS 1.3 cipher optimized for mobile and CPU-constrained clients.",
+      "compatibility": "Excellent performance on mobile ARM devices; supported by Chrome, Firefox, Safari, and OpenSSL 1.1.1+.",
+      "usage": "Keep enabled as an alternative for clients without AES acceleration.",
+      "version": "TLS 1.3"
+    },
+    {
+      "id": "tls12_ecdhe_rsa_aes128_gcm_sha256",
+      "name": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+      "summary": "Forward-secret TLS 1.2 suite using AES-GCM.",
+      "compatibility": "Works with modern browsers, Java 8u51+, OpenSSL 1.0.1+, and Windows Server 2012.",
+      "usage": "Keep as the default TLS 1.2 option when RSA certificates are in use.",
+      "version": "TLS 1.2"
+    },
+    {
+      "id": "tls12_ecdhe_ecdsa_aes256_gcm_sha384",
+      "name": "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+      "summary": "ECDSA certificate with AES-256-GCM for TLS 1.2.",
+      "compatibility": "Requires ECDSA server certificates and client support (Chrome, Firefox, iOS 11+, Android 7+).",
+      "usage": "Enable for environments issuing ECDSA certificates to get smaller handshake sizes.",
+      "version": "TLS 1.2"
+    },
+    {
+      "id": "tls12_rsa_3des_ede_sha",
+      "name": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "summary": "Legacy 3DES CBC cipher without forward secrecy.",
+      "compatibility": "Only present on outdated stacks; fails modern compliance benchmarks.",
+      "usage": "Remove from configurations. If a device still relies on it, segment and upgrade urgently.",
+      "version": "TLS 1.2 and below"
+    }
+  ]
+}
