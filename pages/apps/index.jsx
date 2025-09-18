@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { isHeavyApp } from '../../lib/appRegistry';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -44,6 +45,7 @@ const AppsPage = () => {
           <Link
             key={app.id}
             href={`/apps/${app.id}`}
+            prefetch={!isHeavyApp(app.id)}
             className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
             aria-label={app.title}
           >
