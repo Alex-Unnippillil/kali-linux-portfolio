@@ -1,0 +1,18 @@
+[
+  "alert",
+  "attack",
+  "detection",
+  "forensics",
+  "http",
+  "ids",
+  "log",
+  "malware",
+  "mitre",
+  "network",
+  "rule",
+  "sigma",
+  "suricata",
+  "threat-hunting",
+  "windows",
+  "yara"
+]
