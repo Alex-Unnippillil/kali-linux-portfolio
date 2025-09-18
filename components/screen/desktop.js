@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { clampDuration, getMotionDuration } from '../../utils/motion';
 
 export class Desktop extends Component {
     constructor() {
@@ -40,6 +41,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            taskbar_icon_origins: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -480,6 +482,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    taskbarOrigin: this.state.taskbar_icon_origins[app.id],
                 }
 
                 windowsJsx.push(
@@ -488,6 +491,33 @@ export class Desktop extends Component {
             }
         });
         return windowsJsx;
+    }
+
+    updateTaskbarOrigins = (origins) => {
+        this.setState(prev => {
+            const previous = prev.taskbar_icon_origins || {};
+            const nextKeys = Object.keys(origins);
+            const prevKeys = Object.keys(previous);
+            if (nextKeys.length === prevKeys.length) {
+                let changed = false;
+                for (const key of nextKeys) {
+                    const prevOrigin = previous[key];
+                    const nextOrigin = origins[key];
+                    if (!prevOrigin || !nextOrigin) {
+                        changed = true;
+                        break;
+                    }
+                    if (Math.abs(prevOrigin.x - nextOrigin.x) > 0.5 || Math.abs(prevOrigin.y - nextOrigin.y) > 0.5) {
+                        changed = true;
+                        break;
+                    }
+                }
+                if (!changed) {
+                    return null;
+                }
+            }
+            return { taskbar_icon_origins: origins };
+        });
     }
 
     updateWindowPosition = (id, x, y) => {
@@ -644,7 +674,7 @@ export class Desktop extends Component {
             recentApps = recentApps.slice(0, 10);
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
-            setTimeout(() => {
+            const openWindow = () => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
@@ -652,7 +682,13 @@ export class Desktop extends Component {
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
-            }, 200);
+            };
+            const delay = clampDuration(getMotionDuration('fast'), 180);
+            if (delay > 0) {
+                setTimeout(openWindow, delay);
+            } else {
+                openWindow();
+            }
         }
     }
 
@@ -900,6 +936,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    reportIconPositions={this.updateTaskbarOrigins}
                 />
 
                 {/* Desktop Apps */}
