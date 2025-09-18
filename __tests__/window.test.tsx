@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { motionDurations } from '../utils/motion';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -34,7 +35,7 @@ describe('Window lifecycle', () => {
     expect(hideSideBar).toHaveBeenCalledWith('test-window', false);
 
     act(() => {
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(motionDurations.fade);
     });
 
     expect(closed).toHaveBeenCalledWith('test-window');
@@ -199,7 +200,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();

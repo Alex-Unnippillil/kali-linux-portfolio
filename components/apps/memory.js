@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
+import { spring, transitionString } from '../../utils/motion';
 
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 
@@ -290,7 +291,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         style={{
           width: `${size * 120}px`,
           transform: nudge ? 'translateX(2px)' : 'none',
-          transition: 'transform 150ms',
+          transition: transitionString('transform', spring({ reducedMotion: reduceMotion.current })),
         }}
       >
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${size}, minmax(0,1fr))` }}>
@@ -312,13 +313,17 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
                 className={`relative w-full aspect-square [perspective:600px] rounded transform ${
                   isHighlighted ? 'ring-4 ring-green-600' : ''
                 } ${
-                  reduceMotion.current ? '' : 'transition-transform duration-200'
+                  reduceMotion.current
+                    ? ''
+                    : 'transition-transform motion-duration-spring motion-ease-spring'
                 } ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
               >
                 <div
                   data-testid="card-inner"
                   className={`w-full h-full transition-transform ${
-                    reduceMotion.current ? '' : 'duration-500'
+                    reduceMotion.current
+                      ? ''
+                      : 'motion-duration-spring motion-ease-spring'
                   } [transform-style:preserve-3d]`}
                   style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
                 >
@@ -326,7 +331,11 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
                   <div
                     className={`absolute inset-0 rounded flex items-center justify-center [transform:rotateY(180deg)] [backface-visibility:hidden] ${
                       isHighlighted ? 'bg-green-500 text-black' : 'bg-white text-black'
-                    } ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
+                    } ${
+                      reduceMotion.current
+                        ? ''
+                        : 'transition-colors motion-duration-fade motion-ease-fade'
+                    }`}
                   >
                     {card.image ? (
                       <img src={card.image} alt="" className="w-3/4 h-3/4 object-contain" />

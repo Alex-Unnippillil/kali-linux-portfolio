@@ -51,6 +51,11 @@
   --motion-fast: 150ms;
   --motion-medium: 300ms;
   --motion-slow: 500ms;
+  --motion-duration-cap: 450ms;
+  --motion-duration-spring: min(var(--motion-slow), 320ms);
+  --motion-duration-fade: min(var(--motion-medium), 200ms);
+  --motion-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-fade: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
@@ -94,6 +99,9 @@
   --motion-fast: 0ms;
   --motion-medium: 0ms;
   --motion-slow: 0ms;
+  --motion-duration-cap: 0ms;
+  --motion-duration-spring: 0ms;
+  --motion-duration-fade: 0ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -101,6 +109,9 @@
     --motion-fast: 0ms;
     --motion-medium: 0ms;
     --motion-slow: 0ms;
+    --motion-duration-cap: 0ms;
+    --motion-duration-spring: 0ms;
+    --motion-duration-fade: 0ms;
   }
 }
 

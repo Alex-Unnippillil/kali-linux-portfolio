@@ -1,5 +1,6 @@
 // Simulator: displays sample credential artifacts. For educational use only.
 import React, { useState, useEffect } from 'react';
+import { fade, transitionString } from '../../../utils/motion';
 
 const artifacts = [
   { label: 'SAM Database (sample)', found: true },
@@ -61,7 +62,9 @@ const CredentialArtifactLocator = () => {
           className="bg-blue-500 h-4"
           style={{
             width: `${progress}%`,
-            transition: prefersReducedMotion ? 'none' : 'width 0.2s',
+            transition: prefersReducedMotion
+              ? 'none'
+              : transitionString('width', fade({ reducedMotion: prefersReducedMotion })),
           }}
           role="progressbar"
           aria-label="scan progress"

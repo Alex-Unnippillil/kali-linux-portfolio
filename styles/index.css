@@ -38,6 +38,30 @@ button:focus-visible {
     scroll-behavior: auto !important;
 }
 
+.motion-duration-spring {
+    transition-duration: var(--motion-duration-spring);
+}
+
+.motion-duration-fade {
+    transition-duration: var(--motion-duration-fade);
+}
+
+.motion-ease-spring {
+    transition-timing-function: var(--motion-ease-spring);
+}
+
+.motion-ease-fade {
+    transition-timing-function: var(--motion-ease-fade);
+}
+
+.motion-spring {
+    transition: transform var(--motion-duration-spring) var(--motion-ease-spring);
+}
+
+.motion-fade {
+    transition: opacity var(--motion-duration-fade) var(--motion-ease-fade);
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {
@@ -48,7 +72,8 @@ button:focus-visible {
 
 
 .animateShow {
-    animation: transformDownShow 200ms 1 forwards;
+    animation: transformDownShow var(--motion-duration-fade) 1 forwards;
+    animation-timing-function: var(--motion-ease-fade);
 }
 
 @keyframes transformDownShow {
@@ -111,7 +136,8 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .closed-window {
-    animation: closeWindow 200ms 1 forwards;
+    animation: closeWindow var(--motion-duration-fade) 1 forwards;
+    animation-timing-function: var(--motion-ease-spring);
 }
 
 @keyframes closeWindow {
