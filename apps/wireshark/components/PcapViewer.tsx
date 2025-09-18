@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
-import LayerView from './LayerView';
+import LayerView, { FieldRange, LayerField } from './LayerView';
+import HexView from './HexView';
 
 
 interface PcapViewerProps {
@@ -22,12 +23,6 @@ const samples = [
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
 
-// Convert bytes to hex dump string
-const toHex = (bytes: Uint8Array) =>
-  Array.from(bytes, (b, i) =>
-    `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
-  ).join('');
-
 interface Packet {
   timestamp: string;
   src: string;
@@ -39,13 +34,10 @@ interface Packet {
   dport?: number;
 }
 
-interface Layer {
-  name: string;
-  fields: Record<string, string>;
-}
+type PacketMeta = Pick<Packet, 'src' | 'dest' | 'protocol' | 'info' | 'sport' | 'dport'>;
 
 // Basic Ethernet + IPv4 parser
-const parseEthernetIpv4 = (data: Uint8Array) => {
+const parseEthernetIpv4 = (data: Uint8Array): PacketMeta => {
   if (data.length < 34) return { src: '', dest: '', protocol: 0, info: '' };
   const etherType = (data[12] << 8) | data[13];
   if (etherType !== 0x0800) return { src: '', dest: '', protocol: 0, info: '' };
@@ -86,7 +78,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
     offset += 16;
     if (offset + capLen > view.byteLength) break;
     const data = new Uint8Array(buf.slice(offset, offset + capLen));
-    const meta: any = parseEthernetIpv4(data);
+    const meta = parseEthernetIpv4(data);
     packets.push({
       timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
       src: meta.src,
@@ -142,7 +134,7 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
       const capLen = view.getUint32(offset + 20, little);
       const dataStart = offset + 28;
       const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
-      const meta: any = parseEthernetIpv4(data);
+      const meta = parseEthernetIpv4(data);
       const res = ifaces[ifaceId]?.tsres ?? 1e-6;
       const timestamp = ((tsHigh * 2 ** 32 + tsLow) * res).toFixed(6);
       packets.push({
@@ -177,60 +169,240 @@ const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
   return magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
 };
 
-const decodePacketLayers = (pkt: Packet): Layer[] => {
-  const data = pkt.data;
-  const layers: Layer[] = [];
-  if (data.length >= 14) {
-    const destMac = Array.from(data.slice(0, 6))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(':');
-    const srcMac = Array.from(data.slice(6, 12))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(':');
-    const type = ((data[12] << 8) | data[13]).toString(16).padStart(4, '0');
-    layers.push({
-      name: 'Ethernet',
-      fields: {
-        Destination: destMac,
-        Source: srcMac,
-        Type: `0x${type}`,
-      },
-    });
-  }
-  if (data.length >= 34) {
-    const srcIp = Array.from(data.slice(26, 30)).join('.');
-    const destIp = Array.from(data.slice(30, 34)).join('.');
-    const proto = data[23];
-    layers.push({
-      name: 'IPv4',
-      fields: {
-        Source: srcIp,
-        Destination: destIp,
-        Protocol: protocolName(proto),
-      },
-    });
-    if (proto === 6 && data.length >= 54) {
-      const sport = (data[34] << 8) | data[35];
-      const dport = (data[36] << 8) | data[37];
-      layers.push({
-        name: 'TCP',
-        fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
-        },
-      });
-    } else if (proto === 17 && data.length >= 42) {
-      const sport = (data[34] << 8) | data[35];
-      const dport = (data[36] << 8) | data[37];
-      layers.push({
-        name: 'UDP',
-        fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
-        },
-      });
+const recomputeIpv4Checksum = (buffer: Uint8Array) => {
+  if (buffer.length <= 24) return;
+  const ipStart = 14;
+  if (ipStart >= buffer.length) return;
+  const headerWords = buffer[ipStart] & 0x0f;
+  const headerLength = headerWords * 4;
+  if (headerWords < 5 || ipStart + headerLength > buffer.length) return;
+
+  const checksumOffset = ipStart + 10;
+  if (checksumOffset + 1 >= buffer.length) return;
+
+  buffer[checksumOffset] = 0;
+  buffer[checksumOffset + 1] = 0;
+
+  let sum = 0;
+  for (let i = 0; i < headerLength; i += 2) {
+    const high = buffer[ipStart + i];
+    const low = buffer[ipStart + i + 1] ?? 0;
+    sum += (high << 8) | low;
+    while (sum > 0xffff) {
+      sum = (sum & 0xffff) + (sum >> 16);
     }
   }
+
+  const checksum = (~sum) & 0xffff;
+  buffer[checksumOffset] = (checksum >> 8) & 0xff;
+  buffer[checksumOffset + 1] = checksum & 0xff;
+};
+
+interface LayerDescriptor {
+  name: string;
+  fields: LayerField[];
+}
+
+const formatMac = (bytes: Uint8Array) =>
+  Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join(':');
+
+const formatIp = (bytes: Uint8Array) => Array.from(bytes).join('.');
+
+const readUint16 = (data: Uint8Array, offset: number) =>
+  offset + 1 < data.length ? (data[offset] << 8) | data[offset + 1] : 0;
+
+const readUint32 = (data: Uint8Array, offset: number) => {
+  if (offset + 3 >= data.length) return 0;
+  return (
+    (data[offset] << 24) |
+    (data[offset + 1] << 16) |
+    (data[offset + 2] << 8) |
+    data[offset + 3]
+  ) >>> 0;
+};
+
+const decodePacketLayers = (data: Uint8Array): LayerDescriptor[] => {
+  const layers: LayerDescriptor[] = [];
+
+  if (data.length >= 14) {
+    layers.push({
+      name: 'Ethernet',
+      fields: [
+        {
+          label: 'Destination',
+          value: formatMac(data.slice(0, 6)),
+          start: 0,
+          length: 6,
+          description: 'Destination MAC address',
+        },
+        {
+          label: 'Source',
+          value: formatMac(data.slice(6, 12)),
+          start: 6,
+          length: 6,
+          description: 'Source MAC address',
+        },
+        {
+          label: 'Type',
+          value: `0x${readUint16(data, 12).toString(16).padStart(4, '0').toUpperCase()}`,
+          start: 12,
+          length: 2,
+          description: 'EtherType identifying the payload protocol',
+        },
+      ],
+    });
+  }
+
+  if (data.length >= 34) {
+    const ipStart = 14;
+    const version = data[ipStart] >> 4;
+    const headerLength = (data[ipStart] & 0x0f) * 4;
+    if (version === 4 && headerLength >= 20 && ipStart + headerLength <= data.length) {
+      const proto = data[ipStart + 9];
+      const checksum = readUint16(data, ipStart + 10);
+      const totalLength = readUint16(data, ipStart + 2);
+      const ttl = data[ipStart + 8];
+      const ipFields: LayerField[] = [
+        {
+          label: 'Version/IHL',
+          value: `v${version}, ${headerLength} bytes`,
+          start: ipStart,
+          length: 1,
+          description: 'Version and Internet Header Length',
+        },
+        {
+          label: 'Total Length',
+          value: `${totalLength} bytes`,
+          start: ipStart + 2,
+          length: 2,
+          description: 'Total length of the IPv4 packet',
+        },
+        {
+          label: 'Time To Live',
+          value: ttl.toString(),
+          start: ipStart + 8,
+          length: 1,
+          description: 'Hop limit before the packet is discarded',
+        },
+        {
+          label: 'Protocol',
+          value: protocolName(proto),
+          start: ipStart + 9,
+          length: 1,
+          description: 'Transport protocol identifier',
+        },
+        {
+          label: 'Header Checksum',
+          value: `0x${checksum.toString(16).padStart(4, '0').toUpperCase()}`,
+          start: ipStart + 10,
+          length: 2,
+          description: 'Automatically recomputed after edits',
+        },
+        {
+          label: 'Source',
+          value: formatIp(data.slice(ipStart + 12, ipStart + 16)),
+          start: ipStart + 12,
+          length: 4,
+          description: 'Source IPv4 address',
+        },
+        {
+          label: 'Destination',
+          value: formatIp(data.slice(ipStart + 16, ipStart + 20)),
+          start: ipStart + 16,
+          length: 4,
+          description: 'Destination IPv4 address',
+        },
+      ];
+      layers.push({ name: 'IPv4', fields: ipFields });
+
+      const transportStart = ipStart + headerLength;
+      if (proto === 6 && transportStart + 20 <= data.length) {
+        const seq = readUint32(data, transportStart + 4);
+        const ack = readUint32(data, transportStart + 8);
+        const flags = data[transportStart + 13];
+        layers.push({
+          name: 'TCP',
+          fields: [
+            {
+              label: 'Source Port',
+              value: readUint16(data, transportStart).toString(),
+              start: transportStart,
+              length: 2,
+              description: 'Origin TCP port number',
+            },
+            {
+              label: 'Destination Port',
+              value: readUint16(data, transportStart + 2).toString(),
+              start: transportStart + 2,
+              length: 2,
+              description: 'Destination TCP port number',
+            },
+            {
+              label: 'Sequence Number',
+              value: seq.toString(),
+              start: transportStart + 4,
+              length: 4,
+              description: 'Sequence number for this segment',
+            },
+            {
+              label: 'Acknowledgment',
+              value: ack.toString(),
+              start: transportStart + 8,
+              length: 4,
+              description: 'Acknowledged sequence number',
+            },
+            {
+              label: 'Flags',
+              value: `0x${flags.toString(16).padStart(2, '0').toUpperCase()}`,
+              start: transportStart + 13,
+              length: 1,
+              description: 'Control flags (SYN, ACK, FIN, etc.)',
+            },
+          ],
+        });
+      } else if (proto === 17 && transportStart + 8 <= data.length) {
+        layers.push({
+          name: 'UDP',
+          fields: [
+            {
+              label: 'Source Port',
+              value: readUint16(data, transportStart).toString(),
+              start: transportStart,
+              length: 2,
+              description: 'Origin UDP port number',
+            },
+            {
+              label: 'Destination Port',
+              value: readUint16(data, transportStart + 2).toString(),
+              start: transportStart + 2,
+              length: 2,
+              description: 'Destination UDP port number',
+            },
+            {
+              label: 'Length',
+              value: `${readUint16(data, transportStart + 4)} bytes`,
+              start: transportStart + 4,
+              length: 2,
+              description: 'Length of the UDP datagram',
+            },
+            {
+              label: 'Checksum',
+              value: `0x${readUint16(data, transportStart + 6)
+                .toString(16)
+                .padStart(4, '0')
+                .toUpperCase()}`,
+              start: transportStart + 6,
+              length: 2,
+              description: 'Checksum over the UDP header and payload',
+            },
+          ],
+        });
+      }
+    }
+  }
+
   return layers;
 };
 
@@ -246,6 +418,11 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [sharedBuffer, setSharedBuffer] = useState<Uint8Array | null>(null);
+  const [highlight, setHighlight] = useState<FieldRange | null>(null);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const selectedPacketRef = useRef<Packet | null>(null);
+  const layerInstructionsId = useId();
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -279,6 +456,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     const pkts = await parseWithWasm(buf);
     setPackets(pkts);
     setSelected(null);
+    setSharedBuffer(null);
+    setHighlight(null);
+    setValidationMessage(null);
+    selectedPacketRef.current = null;
   };
 
   const handleSample = async (path: string) => {
@@ -287,18 +468,97 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     const pkts = await parseWithWasm(buf);
     setPackets(pkts);
     setSelected(null);
+    setSharedBuffer(null);
+    setHighlight(null);
+    setValidationMessage(null);
+    selectedPacketRef.current = null;
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const filtered = useMemo(() => {
+    return packets.filter((p) => {
+      if (!filter) return true;
+      const term = filter.toLowerCase();
+      return (
+        p.src.toLowerCase().includes(term) ||
+        p.dest.toLowerCase().includes(term) ||
+        protocolName(p.protocol).toLowerCase().includes(term) ||
+        (p.info || '').toLowerCase().includes(term)
+      );
+    });
+  }, [packets, filter]);
+
+  useEffect(() => {
+    if (selected !== null && selected >= filtered.length) {
+      setSelected(null);
+      setSharedBuffer(null);
+      setHighlight(null);
+    }
+  }, [filtered.length, selected]);
+
+  useEffect(() => {
+    const packet =
+      selected !== null && selected < filtered.length ? filtered[selected] : null;
+    if (!packet) {
+      if (sharedBuffer !== null) {
+        setSharedBuffer(null);
+      }
+      setHighlight(null);
+      setValidationMessage(null);
+      selectedPacketRef.current = null;
+      return;
+    }
+    if (selectedPacketRef.current !== packet) {
+      selectedPacketRef.current = packet;
+      setSharedBuffer(new Uint8Array(packet.data));
+      setHighlight(null);
+      setValidationMessage(null);
+    }
+  }, [filtered, selected, sharedBuffer]);
+
+  const selectedPacket =
+    selected !== null && selected < filtered.length ? filtered[selected] : null;
+  const layers = sharedBuffer ? decodePacketLayers(sharedBuffer) : [];
+
+  const handleSelectPacket = (index: number) => {
+    const packet = filtered[index];
+    setSelected(index);
+    if (packet) {
+      const copy = new Uint8Array(packet.data);
+      setSharedBuffer(copy);
+      selectedPacketRef.current = packet;
+      setHighlight(null);
+      setValidationMessage(null);
+    }
+  };
+
+  const handleBufferUpdate = (next: Uint8Array) => {
+    const updated = new Uint8Array(next);
+    recomputeIpv4Checksum(updated);
+    setSharedBuffer(updated);
+    if (selected === null) return;
+    const packet = filtered[selected];
+    if (!packet) return;
+    const meta = parseEthernetIpv4(updated);
+    setPackets((prev) => {
+      const idx = prev.indexOf(packet);
+      if (idx === -1) return prev;
+      const nextPackets = [...prev];
+      const current = nextPackets[idx];
+      const updatedPacket: Packet = {
+        ...current,
+        data: updated,
+        src: meta.src || current.src,
+        dest: meta.dest || current.dest,
+        protocol: meta.protocol || current.protocol,
+        info: meta.info || current.info,
+        sport: meta.sport ?? current.sport,
+        dport: meta.dport ?? current.dport,
+      };
+      nextPackets[idx] = updatedPacket;
+      selectedPacketRef.current = updatedPacket;
+      return nextPackets;
+    });
+  };
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -407,7 +667,8 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                               protocolName(pkt.protocol).toString()
                             ] || ''
                       }`}
-                      onClick={() => setSelected(i)}
+                      onClick={() => handleSelectPacket(i)}
+                      aria-selected={selected === i}
                     >
                       {columns.map((col) => {
                         let val = '';
@@ -439,21 +700,43 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 </tbody>
               </table>
             </div>
-            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
+            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-3">
+              {selectedPacket && sharedBuffer ? (
                 <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
+                  <p id={layerInstructionsId} className="sr-only">
+                    Use Tab or Shift+Tab to move between fields. Focused rows highlight the
+                    corresponding bytes in the hex editor below.
+                  </p>
+                  {layers.map((layer, index) => (
+                    <LayerView
+                      key={`${layer.name}-${index}`}
+                      name={layer.name}
+                      fields={layer.fields}
+                      onFocusField={setHighlight}
+                      instructionsId={layerInstructionsId}
+                    />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <HexView
+                    buffer={sharedBuffer}
+                    highlight={highlight}
+                    onChange={handleBufferUpdate}
+                    onFocusRange={setHighlight}
+                    onValidation={setValidationMessage}
+                  />
                 </>
               ) : (
-                'Select a packet'
+                <p className="text-gray-400">Select a packet to inspect its structure</p>
               )}
             </div>
           </div>
         </>
       )}
+      <div aria-live="polite" className="sr-only">
+        {highlight ? `Highlighting ${highlight.label}` : ''}
+      </div>
+      <div aria-live="assertive" className="sr-only">
+        {validationMessage || ''}
+      </div>
     </div>
   );
 };
