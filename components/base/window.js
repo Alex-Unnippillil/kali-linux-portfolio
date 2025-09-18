@@ -5,6 +5,7 @@ import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
+import { toPng } from 'html-to-image';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
@@ -37,11 +38,16 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._previewRequest = null;
     }
 
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('kali-request-preview', this.handlePreviewRequest);
+            this.publishWindowState({ action: 'mounted' });
+        }
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -68,6 +74,22 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('kali-request-preview', this.handlePreviewRequest);
+            this.publishWindowState({ action: 'unmounted' });
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevProps.minimized !== this.props.minimized ||
+            prevProps.isFocused !== this.props.isFocused ||
+            prevState.maximized !== this.state.maximized ||
+            prevState.closed !== this.state.closed ||
+            prevState.snapped !== this.state.snapped
+        ) {
+            this.publishWindowState({ action: 'updated' });
         }
     }
 
@@ -198,6 +220,61 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    publishWindowState = (detail = {}) => {
+        if (typeof window === 'undefined' || !this.id) return;
+        const event = new CustomEvent('kali-window-state', {
+            detail: {
+                id: this.id,
+                title: this.props.title,
+                minimized: !!this.props.minimized,
+                focused: !!this.props.isFocused,
+                maximized: !!this.state.maximized,
+                closed: !!this.state.closed,
+                snapped: this.state.snapped,
+                ...detail,
+            },
+        });
+        window.dispatchEvent(event);
+    }
+
+    handlePreviewRequest = async (event) => {
+        const detail = event?.detail;
+        if (!detail || detail.id !== this.id) {
+            return;
+        }
+
+        this._previewRequest = detail.requestId;
+
+        const respond = (payload) => {
+            if (typeof window === 'undefined' || this._previewRequest !== detail.requestId) {
+                return;
+            }
+            const response = new CustomEvent('kali-window-preview', {
+                detail: { id: this.id, requestId: detail.requestId, ...payload },
+            });
+            window.dispatchEvent(response);
+            this._previewRequest = null;
+        };
+
+        if (this.props.minimized || this.state.closed) {
+            respond({ image: null, status: 'minimized' });
+            return;
+        }
+
+        const node = document.getElementById(this.id);
+        if (!node) {
+            respond({ image: null, status: 'unavailable' });
+            return;
+        }
+
+        try {
+            const dataUrl = await toPng(node, { cacheBust: true });
+            respond({ image: dataUrl, status: 'ok' });
+        } catch (error) {
+            respond({ image: null, status: 'error' });
+        }
     }
 
     snapToGrid = (value) => {
