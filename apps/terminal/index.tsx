@@ -7,10 +7,13 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import type { TerminalCommand } from '../../data/terminal-commands';
+import { TERMINAL_COMMANDS } from '../../data/terminal-commands';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -99,7 +102,21 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     runWorker: async () => {},
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [paletteInput, setPaletteInput] = useState('');
+  const [paletteQuery, setPaletteQuery] = useState('');
+  const [paletteIndex, setPaletteIndex] = useState(0);
+  const paletteInputRef = useRef<HTMLInputElement | null>(null);
+  const filteredCommands = useMemo(() => {
+    const query = paletteQuery.trim().toLowerCase();
+    if (!query) return TERMINAL_COMMANDS;
+    return TERMINAL_COMMANDS.filter(
+      ({ title, snippet, description, keywords = [] }: TerminalCommand) => {
+        const haystack = [title, snippet, description, ...keywords]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(query);
+      },
+    );
+  }, [paletteQuery]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
@@ -152,6 +169,88 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     );
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
+
+  const setCommandBuffer = useCallback(
+    (value: string) => {
+      if (!termRef.current) return;
+      termRef.current.write('\u001b[2K\r');
+      prompt();
+      if (value) termRef.current.write(value);
+      commandRef.current = value;
+    },
+    [prompt],
+  );
+
+  const openCommandPalette = useCallback(() => {
+    setPaletteOpen(true);
+    setPaletteQuery('');
+    setPaletteIndex(0);
+    termRef.current?.blur();
+  }, []);
+
+  const closeCommandPalette = useCallback(() => {
+    setPaletteOpen(false);
+    setPaletteQuery('');
+    setPaletteIndex(0);
+    termRef.current?.focus();
+  }, []);
+
+  const handlePaletteConfirm = useCallback(
+    (entry?: TerminalCommand) => {
+      const snippet = entry?.snippet ?? paletteQuery.trim();
+      if (!snippet) {
+        closeCommandPalette();
+        return;
+      }
+      setCommandBuffer(snippet);
+      closeCommandPalette();
+    },
+    [paletteQuery, closeCommandPalette, setCommandBuffer],
+  );
+
+  const handlePaletteKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        event.stopPropagation();
+        setPaletteIndex((index) => {
+          if (!filteredCommands.length) return 0;
+          return Math.min(index + 1, filteredCommands.length - 1);
+        });
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        event.stopPropagation();
+        setPaletteIndex((index) => {
+          if (!filteredCommands.length) return 0;
+          return Math.max(index - 1, 0);
+        });
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        const selection =
+          filteredCommands.length > 0
+            ? filteredCommands[Math.min(paletteIndex, filteredCommands.length - 1)]
+            : undefined;
+        handlePaletteConfirm(selection);
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeCommandPalette();
+      }
+    },
+    [
+      filteredCommands,
+      paletteIndex,
+      handlePaletteConfirm,
+      closeCommandPalette,
+    ],
+  );
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -359,11 +458,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             const match = [...historyRef.current]
               .reverse()
               .find((c) => c.includes(q));
-            if (match && termRef.current) {
-              termRef.current.write('\u001b[2K\r');
-              prompt();
-              termRef.current.write(match);
-              commandRef.current = match;
+            if (match) {
+              setCommandBuffer(match);
             } else {
               writeLine(`No match: ${q}`);
               prompt();
@@ -378,7 +474,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      setCommandBuffer,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -398,49 +504,122 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     const listener = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
-        setPaletteOpen((v) => {
-          const next = !v;
-          if (next) termRef.current?.blur();
-          else termRef.current?.focus();
-          return next;
-        });
+        if (paletteOpen) closeCommandPalette();
+        else openCommandPalette();
       }
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
+  }, [paletteOpen, openCommandPalette, closeCommandPalette]);
+
+  useEffect(() => {
+    if (!paletteOpen) return;
+    setPaletteIndex(0);
+  }, [paletteOpen, paletteQuery]);
+
+  useEffect(() => {
+    if (!paletteOpen) return;
+    const focusInput = () => {
+      if (paletteInputRef.current) {
+        paletteInputRef.current.focus();
+        paletteInputRef.current.select();
+      }
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      const frame = requestAnimationFrame(focusInput);
+      return () => cancelAnimationFrame(frame);
+    }
+    const timeout = setTimeout(focusInput, 0);
+    return () => clearTimeout(timeout);
   }, [paletteOpen]);
+
+  const activeOptionId = useMemo(() => {
+    if (!filteredCommands.length) return undefined;
+    const index = Math.min(paletteIndex, filteredCommands.length - 1);
+    return `terminal-command-${filteredCommands[index].id}`;
+  }, [filteredCommands, paletteIndex]);
 
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
-          <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
-            <input
-              autoFocus
-              className="w-full mb-2 bg-black text-white p-2"
-              value={paletteInput}
-              onChange={(e) => setPaletteInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  runCommand(paletteInput);
-                  setPaletteInput('');
-                  setPaletteOpen(false);
-                  termRef.current?.focus();
-                } else if (e.key === 'Escape') {
-                  setPaletteOpen(false);
-                  termRef.current?.focus();
-                }
-              }}
-            />
-            <ul className="max-h-40 overflow-y-auto">
-              {Object.keys(registryRef.current)
-                .filter((c) => c.startsWith(paletteInput))
-                .map((c) => (
-                  <li key={c} className="text-white">
-                    {c}
-                  </li>
-                ))}
-            </ul>
+        <div className="absolute inset-0 z-20 flex items-start justify-center bg-black/70 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            className="mt-16 w-full max-w-xl rounded-lg border border-slate-700 bg-slate-900/95 p-5 shadow-2xl"
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
+                  Command palette
+                  <input
+                    ref={paletteInputRef}
+                    value={paletteQuery}
+                    onChange={(event) => setPaletteQuery(event.target.value)}
+                    onKeyDown={handlePaletteKeyDown}
+                    placeholder="Search terminal snippets…"
+                    className="mt-2 w-full rounded-md border border-slate-700 bg-slate-950/60 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    aria-controls="terminal-command-list"
+                    aria-expanded={true}
+                    aria-activedescendant={activeOptionId}
+                    role="combobox"
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+              <div className="max-h-64 overflow-y-auto rounded-md border border-slate-800 bg-black/40">
+                {filteredCommands.length === 0 ? (
+                  <p className="px-4 py-6 text-sm text-slate-400">
+                    No commands match{' '}
+                    <span className="font-semibold text-slate-200">{paletteQuery || 'your search'}</span>.
+                  </p>
+                ) : (
+                  <ul
+                    id="terminal-command-list"
+                    role="listbox"
+                    aria-label="Terminal command suggestions"
+                    className="divide-y divide-slate-800"
+                  >
+                    {filteredCommands.map((command, index) => {
+                      const clampedIndex = Math.min(paletteIndex, filteredCommands.length - 1);
+                      const isActive = index === clampedIndex;
+                      const optionId = `terminal-command-${command.id}`;
+                      return (
+                        <li key={command.id}>
+                          <button
+                            type="button"
+                            id={optionId}
+                            role="option"
+                            aria-selected={isActive}
+                            className={`w-full px-3 py-2 text-left transition-colors focus:outline-none ${
+                              isActive
+                                ? 'bg-sky-500/30 text-slate-50'
+                                : 'text-slate-200 hover:bg-slate-700/40 focus:bg-slate-700/40'
+                            }`}
+                            onMouseEnter={() => setPaletteIndex(index)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => handlePaletteConfirm(command)}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="font-mono text-sm">{command.title}</span>
+                              <span className="text-[10px] uppercase tracking-wider text-slate-300/80">
+                                snippet
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-300/90">{command.description}</p>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>Press Enter to insert into the active session.</span>
+                <span>Esc to close</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
