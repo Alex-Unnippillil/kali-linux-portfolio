@@ -87,6 +87,7 @@ const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
+const UpdateCenterApp = createDynamicApp('update-center', 'Update Center');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
@@ -170,6 +171,7 @@ const displayGhidra = createDisplay(GhidraApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
+const displayUpdateCenter = createDisplay(UpdateCenterApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
@@ -691,6 +693,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'update-center',
+    title: 'Update Center',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayUpdateCenter,
   },
   {
     id: 'files',

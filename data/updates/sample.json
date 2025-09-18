@@ -1,0 +1,94 @@
+{
+  "lastChecked": "2024-01-18T13:40:00Z",
+  "available": [
+    {
+      "id": "kali-toolkit",
+      "name": "Kali Linux Toolkit",
+      "version": "2024.1",
+      "size": "512 MB",
+      "severity": "security",
+      "releaseDate": "2024-01-15T09:00:00Z",
+      "requiresRestart": true,
+      "summary": "Aggregated updates for core security tooling and meta-packages."
+    },
+    {
+      "id": "net-harden",
+      "name": "Network Hardening Profiles",
+      "version": "2.5.7",
+      "size": "86 MB",
+      "severity": "recommended",
+      "releaseDate": "2024-01-10T11:30:00Z",
+      "requiresRestart": false,
+      "summary": "Updated firewall presets and intrusion detection signatures."
+    },
+    {
+      "id": "desktop-shell",
+      "name": "Desktop Shell Enhancements",
+      "version": "1.14.2",
+      "size": "64 MB",
+      "severity": "feature",
+      "releaseDate": "2024-01-08T16:45:00Z",
+      "requiresRestart": false,
+      "summary": "Quality-of-life improvements, accessibility fixes, and new wallpapers."
+    }
+  ],
+  "channels": [
+    {
+      "id": "stable",
+      "name": "Stable",
+      "track": "Rolling",
+      "status": "active",
+      "recommended": true,
+      "lastSynced": "2024-01-18T12:05:00Z",
+      "description": "Fully verified packages for mission-critical workstations."
+    },
+    {
+      "id": "test",
+      "name": "Testing",
+      "track": "Next",
+      "status": "available",
+      "recommended": false,
+      "lastSynced": "2024-01-17T20:15:00Z",
+      "description": "Upcoming updates staged for compatibility verification."
+    },
+    {
+      "id": "experimental",
+      "name": "Experimental",
+      "track": "Edge",
+      "status": "available",
+      "recommended": false,
+      "lastSynced": "2024-01-16T09:00:00Z",
+      "description": "Daily builds with the newest research tooling and UI experiments."
+    }
+  ],
+  "history": [
+    {
+      "id": "2024-01-12-toolkit",
+      "title": "Toolkit definitions",
+      "date": "2024-01-12T07:20:00Z",
+      "result": "success",
+      "notes": "Installed updated exploit-db index and refreshed wordlists."
+    },
+    {
+      "id": "2024-01-05-kernel",
+      "title": "Kernel patch cycle",
+      "date": "2024-01-05T03:10:00Z",
+      "result": "reboot required",
+      "notes": "Queued reboot to finalize low-level driver patches."
+    },
+    {
+      "id": "2023-12-22-labs",
+      "title": "Lab tooling refresh",
+      "date": "2023-12-22T18:45:00Z",
+      "result": "failed",
+      "notes": "Canceled due to checksum mismatch from remote mirror."
+    }
+  ],
+  "settings": {
+    "autoCheck": true,
+    "autoDownload": false,
+    "downloadOverMetered": false,
+    "notifyOnCompletion": true,
+    "maintenanceWindow": "Sundays 02:00-04:00 UTC"
+  }
+}
