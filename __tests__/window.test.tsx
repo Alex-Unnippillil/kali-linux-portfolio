@@ -9,6 +9,69 @@ jest.mock('react-draggable', () => ({
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+const DESKTOP_WIDTH = 1200;
+const DESKTOP_HEIGHT = 800;
+const ORIGINAL_VIEWPORT = { width: window.innerWidth, height: window.innerHeight };
+
+const setViewport = (width: number, height: number) => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: width, writable: true });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: height, writable: true });
+};
+
+const createDesktopContainer = () => {
+  const container = document.createElement('div');
+  container.id = 'window-area';
+  container.style.position = 'relative';
+  container.style.width = `${DESKTOP_WIDTH}px`;
+  container.style.height = `${DESKTOP_HEIGHT}px`;
+  container.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    right: DESKTOP_WIDTH,
+    bottom: DESKTOP_HEIGHT,
+    width: DESKTOP_WIDTH,
+    height: DESKTOP_HEIGHT,
+    x: 0,
+    y: 0,
+    toJSON: () => {},
+  });
+  document.body.appendChild(container);
+  return container;
+};
+
+const attachComputedRect = (element: HTMLElement) => {
+  element.getBoundingClientRect = () => {
+    const transform = element.style.transform || 'translate(0px, 0px)';
+    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform);
+    const x = match ? parseFloat(match[1]) : 0;
+    const y = match ? parseFloat(match[2]) : 0;
+    const widthPercent = parseFloat(element.style.width || '0');
+    const heightPercent = parseFloat(element.style.height || '0');
+    const width = (DESKTOP_WIDTH * widthPercent) / 100;
+    const height = (DESKTOP_HEIGHT * heightPercent) / 100;
+    return {
+      left: x,
+      top: y,
+      right: x + width,
+      bottom: y + height,
+      width,
+      height,
+      x,
+      y,
+      toJSON: () => {},
+    } as unknown as DOMRect;
+  };
+};
+
+beforeEach(() => {
+  setViewport(DESKTOP_WIDTH, DESKTOP_HEIGHT);
+});
+
+afterEach(() => {
+  setViewport(ORIGINAL_VIEWPORT.width, ORIGINAL_VIEWPORT.height);
+  document.querySelectorAll('#window-area').forEach((node) => node.remove());
+});
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
@@ -45,6 +108,7 @@ describe('Window lifecycle', () => {
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
+    const desktop = createDesktopContainer();
     render(
       <Window
         id="test-window"
@@ -56,20 +120,21 @@ describe('Window snapping preview', () => {
         hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
-      />
+      />,
+      { container: desktop }
     );
 
     const winEl = document.getElementById('test-window')!;
     // Simulate being near the left edge
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 80,
       right: 105,
-      bottom: 110,
+      bottom: 180,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 80,
       toJSON: () => {}
     });
 
@@ -82,6 +147,7 @@ describe('Window snapping preview', () => {
 
   it('hides preview when away from edge', () => {
     const ref = React.createRef<Window>();
+    const desktop = createDesktopContainer();
     render(
       <Window
         id="test-window"
@@ -93,7 +159,8 @@ describe('Window snapping preview', () => {
         hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
-      />
+      />,
+      { container: desktop }
     );
 
     const winEl = document.getElementById('test-window')!;
@@ -121,6 +188,7 @@ describe('Window snapping preview', () => {
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     const ref = React.createRef<Window>();
+    const desktop = createDesktopContainer();
     render(
       <Window
         id="test-window"
@@ -132,19 +200,20 @@ describe('Window snapping finalize and release', () => {
         hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
-      />
+      />,
+      { container: desktop }
     );
 
     const winEl = document.getElementById('test-window')!;
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 80,
       right: 105,
-      bottom: 110,
+      bottom: 180,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 80,
       toJSON: () => {}
     });
 
@@ -157,11 +226,12 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
     expect(ref.current!.state.width).toBe(50);
-    expect(ref.current!.state.height).toBe(96.3);
+    expect(ref.current!.state.height).toBe(100);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
     const ref = React.createRef<Window>();
+    const desktop = createDesktopContainer();
     render(
       <Window
         id="test-window"
@@ -173,19 +243,20 @@ describe('Window snapping finalize and release', () => {
         hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
-      />
+      />,
+      { container: desktop }
     );
 
     const winEl = document.getElementById('test-window')!;
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 80,
       right: 105,
-      bottom: 110,
+      bottom: 180,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 80,
       toJSON: () => {}
     });
 
@@ -199,7 +270,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -209,6 +285,7 @@ describe('Window snapping finalize and release', () => {
 
   it('releases snap when starting drag', () => {
     const ref = React.createRef<Window>();
+    const desktop = createDesktopContainer();
     render(
       <Window
         id="test-window"
@@ -220,19 +297,20 @@ describe('Window snapping finalize and release', () => {
         hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
-      />
+      />,
+      { container: desktop }
     );
 
     const winEl = document.getElementById('test-window')!;
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 80,
       right: 105,
-      bottom: 110,
+      bottom: 180,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 80,
       toJSON: () => {}
     });
 
@@ -252,6 +330,82 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window snapping geometry', () => {
+  const renderSnappableWindow = () => {
+    const ref = React.createRef<Window>();
+    const desktop = createDesktopContainer();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />,
+      { container: desktop }
+    );
+    const winEl = document.getElementById('test-window')!;
+    if (!winEl.style.transform) {
+      winEl.style.transform = 'translate(0px, 0px)';
+    }
+    attachComputedRect(winEl);
+    return { ref, winEl };
+  };
+
+  it('aligns left snap to half the desktop', () => {
+    const { ref, winEl } = renderSnappableWindow();
+    act(() => {
+      ref.current!.snapWindow('left');
+    });
+    const rect = winEl.getBoundingClientRect();
+    expect(rect.left).toBeCloseTo(0, 5);
+    expect(rect.top).toBeCloseTo(0, 5);
+    expect(rect.width).toBeCloseTo(DESKTOP_WIDTH / 2, 5);
+    expect(rect.height).toBeCloseTo(DESKTOP_HEIGHT, 5);
+  });
+
+  it('aligns right snap to half the desktop width', () => {
+    const { ref, winEl } = renderSnappableWindow();
+    act(() => {
+      ref.current!.snapWindow('right');
+    });
+    const rect = winEl.getBoundingClientRect();
+    expect(rect.left).toBeCloseTo(DESKTOP_WIDTH / 2, 5);
+    expect(rect.top).toBeCloseTo(0, 5);
+    expect(rect.width).toBeCloseTo(DESKTOP_WIDTH / 2, 5);
+    expect(rect.height).toBeCloseTo(DESKTOP_HEIGHT, 5);
+  });
+
+  it('maximizes to fill the desktop when snapped to the top', () => {
+    const { ref, winEl } = renderSnappableWindow();
+    act(() => {
+      ref.current!.snapWindow('top');
+    });
+    const rect = winEl.getBoundingClientRect();
+    expect(rect.left).toBeCloseTo(0, 5);
+    expect(rect.top).toBeCloseTo(0, 5);
+    expect(rect.width).toBeCloseTo(DESKTOP_WIDTH, 5);
+    expect(rect.height).toBeCloseTo(DESKTOP_HEIGHT, 5);
+    expect(ref.current!.state.maximized).toBe(true);
+  });
+
+  it('snaps to the bottom half of the desktop', () => {
+    const { ref, winEl } = renderSnappableWindow();
+    act(() => {
+      ref.current!.snapWindow('bottom');
+    });
+    const rect = winEl.getBoundingClientRect();
+    expect(rect.left).toBeCloseTo(0, 5);
+    expect(rect.top).toBeCloseTo(DESKTOP_HEIGHT / 2, 5);
+    expect(rect.width).toBeCloseTo(DESKTOP_WIDTH, 5);
+    expect(rect.height).toBeCloseTo(DESKTOP_HEIGHT / 2, 5);
   });
 });
 
