@@ -43,11 +43,19 @@ function DesktopMenu(props) {
         }
     }
 
+    const copyDisabled = !props.canCopySelection
+
+    const makeCopyHandler = (handler) => () => {
+        if (copyDisabled) return
+        handler && handler()
+    }
+
     return (
         <div
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
+            data-preserve-selection="true"
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
@@ -67,6 +75,42 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">Create Shortcut...</span>
+            </button>
+            <button
+                type="button"
+                onClick={makeCopyHandler(props.onCopyPaths)}
+                role="menuitem"
+                aria-label="Copy path"
+                aria-disabled={copyDisabled}
+                aria-keyshortcuts="Ctrl+C"
+                disabled={copyDisabled}
+                className={(copyDisabled ? " text-gray-400 cursor-default " : " hover:bg-ub-warm-grey hover:bg-opacity-20 ") + " w-full text-left py-0.5 mb-1.5"}
+            >
+                <span className="ml-5">Copy path</span>
+            </button>
+            <button
+                type="button"
+                onClick={makeCopyHandler(props.onCopyIcon)}
+                role="menuitem"
+                aria-label="Copy icon"
+                aria-disabled={copyDisabled}
+                aria-keyshortcuts="Ctrl+Shift+C"
+                disabled={copyDisabled}
+                className={(copyDisabled ? " text-gray-400 cursor-default " : " hover:bg-ub-warm-grey hover:bg-opacity-20 ") + " w-full text-left py-0.5 mb-1.5"}
+            >
+                <span className="ml-5">Copy icon</span>
+            </button>
+            <button
+                type="button"
+                onClick={makeCopyHandler(props.onCopyAsPng)}
+                role="menuitem"
+                aria-label="Copy icon as PNG"
+                aria-disabled={copyDisabled}
+                aria-keyshortcuts="Ctrl+Alt+C"
+                disabled={copyDisabled}
+                className={(copyDisabled ? " text-gray-400 cursor-default " : " hover:bg-ub-warm-grey hover:bg-opacity-20 ") + " w-full text-left py-0.5 mb-1.5"}
+            >
+                <span className="ml-5">Copy as PNG</span>
             </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
