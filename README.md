@@ -132,6 +132,16 @@ through `gamepad.vibrationActuator` where available. Key bindings configured wit
 `components/apps/Games/common/input-remap` are persisted in the browser's Origin Private
 File System (OPFS) so players can store per-game profiles.
 
+### Stylus Calibration & Button Mapping
+
+The **Stylus Settings** utility exposes a live pressure canvas, curve editor, and per-app
+button overrides. Pointer events stream pressure values through a configurable Bezier
+curve managed by `hooks/useSettings.tsx`. Presets (linear, soft, and firm) offer quick
+starting points, while manual edits persist via `safeLocalStorage`. Focus changes from the
+desktop emit a `kali:window-focus` event so each window can automatically receive its
+stored mapping. Usage metrics such as sample counts and average pressure are surfaced in
+the UI and logged through the existing analytics wrapper.
+
 ---
 
 ## App Shell & Architecture

@@ -72,6 +72,7 @@ const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
+const StylusSettingsApp = createDynamicApp('stylus-settings', 'Stylus Settings');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayStylusSettings = createDisplay(StylusSettingsApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -266,6 +268,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'stylus-settings',
+    title: 'Stylus Settings',
+    icon: '/themes/Yaru/apps/input-lab.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayStylusSettings,
   },
 ];
 
