@@ -375,6 +375,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Settings | /apps/settings | Utility / Media |
 | Trash | /apps/trash | Utility / Media |
 | Project Gallery | /apps/project-gallery | Utility / Media |
+| Gesture Customizer | /apps/gesture-customizer | Input & Automation |
 | Quote | /apps/quote | Utility / Media |
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
@@ -383,6 +384,11 @@ The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app fo
 add, reorder, or delete moods; selections persist in the browser's Origin Private File
 System so your choices restore on load. The last mood played is remembered, and
 play/pause and track controls include keyboard hotkeys.
+
+The Gesture Customizer app exposes the desktop manager's window operations for
+three and four-finger gestures. Conflicts with existing keyboard shortcuts are
+highlighted, and presets are stored in the browser's Origin Private File System
+for quick reuse across sessions.
 
 ### Terminal Commands
 - `clear` – clears the terminal display.
