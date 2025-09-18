@@ -78,6 +78,8 @@ const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
+const LogConsoleApp = createDynamicApp('log-console', 'Log Console');
+
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
@@ -163,6 +165,7 @@ const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
+const displayLogConsole = createDisplay(LogConsoleApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 
@@ -709,6 +712,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'log-console',
+    title: 'Log Console',
+    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLogConsole,
   },
   {
     id: 'screen-recorder',
