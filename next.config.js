@@ -3,6 +3,7 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const path = require('path');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -87,6 +88,33 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
+const SERVER_ONLY_MODULES = [
+  'async_hooks',
+  'child_process',
+  'dns',
+  'fs',
+  'module',
+  'net',
+  'os',
+  'path',
+  'tls',
+];
+
+const WEBPACK_ALIASES = {
+  '@': path.resolve(__dirname),
+  '@apps': path.resolve(__dirname, 'apps'),
+  '@components': path.resolve(__dirname, 'components'),
+  '@data': path.resolve(__dirname, 'data'),
+  '@hooks': path.resolve(__dirname, 'hooks'),
+  '@lib': path.resolve(__dirname, 'lib'),
+  '@modules': path.resolve(__dirname, 'modules'),
+  '@pages': path.resolve(__dirname, 'pages'),
+  '@src': path.resolve(__dirname, 'src'),
+  '@styles': path.resolve(__dirname, 'styles'),
+  '@types': path.resolve(__dirname, 'types'),
+  '@utils': path.resolve(__dirname, 'utils'),
+};
+
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
@@ -94,16 +122,18 @@ function configureWebpack(config, { isServer }) {
     ...(config.experiments || {}),
     asyncWebAssembly: true,
   };
-  // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
-  config.resolve.fallback = {
-    ...(config.resolve.fallback || {}),
-    module: false,
-    async_hooks: false,
-  };
+  if (!isServer) {
+    const fallback = { ...(config.resolve.fallback || {}) };
+    for (const moduleName of SERVER_ONLY_MODULES) {
+      fallback[moduleName] = false;
+    }
+    config.resolve.fallback = fallback;
+  }
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    ...WEBPACK_ALIASES,
+    'react-dom$': path.resolve(__dirname, 'lib/react-dom-shim.js'),
   };
   if (isProd) {
     config.optimization = {
