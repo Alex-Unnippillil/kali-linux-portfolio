@@ -24,10 +24,67 @@ button:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-        animation-duration: 0.01ms !important;
+        animation-duration: 0ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        transition-duration: 0ms !important;
         scroll-behavior: auto !important;
+    }
+
+    .animateShow,
+    .all-apps-anim,
+    .app-icon-launch,
+    .shake,
+    .key-press,
+    .reveal,
+    .tile-pop,
+    .score-pop,
+    .peek,
+    .shuffle {
+        animation: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+
+    .closed-window {
+        animation: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(1) !important;
+    }
+
+    .scalable-app-icon.scale {
+        animation: none !important;
+        transform: translate(-50%, -50%) scale(1) !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+
+    .animate-deal {
+        animation: none !important;
+        transform: translateY(0) !important;
+        opacity: 1 !important;
+    }
+
+    .chip-pop {
+        animation: none !important;
+        transform: translateY(0) scale(1) !important;
+        opacity: 1 !important;
+    }
+
+    .merge-ripple {
+        animation: none !important;
+        transform: none !important;
+        opacity: 0 !important;
+    }
+
+    .hangman-part {
+        animation: none !important;
+        stroke-dashoffset: 0 !important;
+    }
+
+    .word-found {
+        animation: none !important;
+        background-size: 100% 100% !important;
     }
 }
 
@@ -345,14 +402,6 @@ dialog {
     }
     .card.flipped {
         transform: none;
-    }
-    .chip-pop,
-    .animate-deal,
-    .peek,
-    .shuffle {
-        animation: none;
-        transform: none;
-        opacity: 1;
     }
 }
 

@@ -468,12 +468,21 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        const prefersReducedMotion =
+            typeof window !== 'undefined' &&
+            window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
-            setTimeout(() => {
-                this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            const finalizeClose = () => {
+                this.props.closed(this.id);
+            };
+            if (prefersReducedMotion) {
+                finalizeClose();
+            } else {
+                setTimeout(finalizeClose, 300); // allow CSS animation to finish before unmount
+            }
         });
     }
 
