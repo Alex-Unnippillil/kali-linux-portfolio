@@ -10,8 +10,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: yarn
+          node-version-file: .nvmrc
+          cache: "yarn"
+      - run: node -v
       - run: yarn install --immutable
       - run: npx playwright install --with-deps
       - run: |

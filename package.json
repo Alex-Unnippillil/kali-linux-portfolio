@@ -24,7 +24,7 @@
     "verify:all": "node scripts/verify.mjs"
   },
   "engines": {
-    "node": "20.19.5"
+    "node": ">=22 <23"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
