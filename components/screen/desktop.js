@@ -23,6 +23,8 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import Toast from '../ui/Toast';
+import { copyPathsToClipboard, copyIconsToClipboard, copyIconsAsPng } from '../../utils/clipboard';
 
 export class Desktop extends Component {
     constructor() {
@@ -52,6 +54,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            selectedDesktopApps: [],
+            clipboardMessage: '',
         }
     }
 
@@ -135,30 +139,197 @@ export class Desktop extends Component {
     setContextListeners = () => {
         document.addEventListener('contextmenu', this.checkContextMenu);
         // on click, anywhere, hide all menus
-        document.addEventListener('click', this.hideAllContextMenu);
+        document.addEventListener('click', this.handleDocumentClick);
         // allow keyboard activation of context menus
         document.addEventListener('keydown', this.handleContextKey);
     }
 
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
-        document.removeEventListener("click", this.hideAllContextMenu);
+        document.removeEventListener("click", this.handleDocumentClick);
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    handleDocumentClick = (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target || (!target.closest('[data-context="app"]') && !target.closest('[data-preserve-selection="true"]'))) {
+            this.clearDesktopSelection();
+        }
+        this.hideAllContextMenu();
+    }
+
+    setDesktopSelection = (ids) => {
+        this.setState({ selectedDesktopApps: ids });
+    }
+
+    clearDesktopSelection = () => {
+        if (!this.state.selectedDesktopApps.length) return;
+        this.setDesktopSelection([]);
+    }
+
+    handleIconSelect = (id, options = {}) => {
+        this.setState((prev) => {
+            const additive = options?.additive;
+            const current = new Set(prev.selectedDesktopApps);
+            if (additive) {
+                if (current.has(id)) {
+                    current.delete(id);
+                } else {
+                    current.add(id);
+                }
+            } else {
+                if (current.size === 1 && current.has(id)) {
+                    return null;
+                }
+                current.clear();
+                current.add(id);
+            }
+            return { selectedDesktopApps: Array.from(current) };
+        });
+    }
+
+    ensureAppSelection = (id) => {
+        if (!id) return;
+        if (!this.state.selectedDesktopApps.includes(id)) {
+            this.setDesktopSelection([id]);
+        }
+    }
+
+    getSelectedDesktopApps = () => {
+        return this.state.selectedDesktopApps
+            .map(id => apps.find(app => app.id === id))
+            .filter(Boolean);
+    }
+
+    buildDesktopPath = (app) => {
+        if (!app) return '';
+        const fallback = app.id || 'icon';
+        const raw = (app.title || fallback).trim();
+        const safeName = raw.replace(/[\\/:*?"<>|]/g, '-');
+        if (app.id && app.id.startsWith('new-folder-')) {
+            return `/home/kali/Desktop/${safeName || fallback}`;
+        }
+        return `/home/kali/Desktop/${safeName || fallback}.desktop`;
+    }
+
+    resolveIconPath = (iconPath) => {
+        if (!iconPath) return null;
+        let normalized = iconPath.startsWith('./') ? iconPath.replace('./', '/') : iconPath;
+        if (normalized.startsWith('//')) {
+            if (typeof window === 'undefined') return `https:${normalized}`;
+            return `${window.location.protocol}${normalized}`;
+        }
+        if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('data:')) {
+            return normalized;
+        }
+        if (typeof window === 'undefined') {
+            return normalized;
+        }
+        try {
+            return new URL(normalized, window.location.origin).toString();
+        } catch {
+            return normalized;
+        }
+    }
+
+    handleClipboardResult = (result) => {
+        if (result?.success) {
+            return true;
+        }
+        if (!result) {
+            this.showClipboardMessage('Unable to copy the selected items.');
+            return false;
+        }
+        switch (result.reason) {
+            case 'permission-denied':
+                this.showClipboardMessage('Clipboard access was denied. Enable permissions to copy desktop icons.');
+                break;
+            case 'unsupported':
+                this.showClipboardMessage('Clipboard API is not available in this browser.');
+                break;
+            default:
+                this.showClipboardMessage('Unable to copy the selected items.');
+                break;
+        }
+        return false;
+    }
+
+    showClipboardMessage = (message) => {
+        this.setState({ clipboardMessage: message });
+    }
+
+    clearClipboardMessage = () => {
+        this.setState({ clipboardMessage: '' });
+    }
+
+    copySelectedPaths = async () => {
+        const selected = this.getSelectedDesktopApps();
+        if (!selected.length) return;
+        const paths = selected.map(this.buildDesktopPath);
+        try {
+            const result = await copyPathsToClipboard(paths);
+            this.handleClipboardResult(result);
+        } finally {
+            this.hideAllContextMenu();
+        }
+    }
+
+    copySelectedIcons = async () => {
+        const icons = this.getSelectedDesktopApps()
+            .map(app => this.resolveIconPath(app?.icon))
+            .filter(Boolean);
+        if (!icons.length) return;
+        try {
+            const result = await copyIconsToClipboard(icons);
+            this.handleClipboardResult(result);
+        } finally {
+            this.hideAllContextMenu();
+        }
+    }
+
+    copySelectedAsPng = async () => {
+        const icons = this.getSelectedDesktopApps()
+            .map(app => this.resolveIconPath(app?.icon))
+            .filter(Boolean);
+        if (!icons.length) return;
+        try {
+            const result = await copyIconsAsPng(icons);
+            this.handleClipboardResult(result);
+        } finally {
+            this.hideAllContextMenu();
+        }
+    }
+
     handleGlobalShortcut = (e) => {
+        const key = e.key.toLowerCase();
+        if (e.ctrlKey && key === 'c') {
+            if (!this.state.selectedDesktopApps.length) return;
+            if (e.altKey && !e.shiftKey) {
+                e.preventDefault();
+                this.copySelectedAsPng();
+                return;
+            }
+            if (e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                this.copySelectedIcons();
+                return;
+            }
+            if (!e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                this.copySelectedPaths();
+                return;
+            }
+        }
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
+            } else {
+                this.cycleApps(e.shiftKey ? -1 : 1);
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+        } else if (e.ctrlKey && e.shiftKey && key === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
@@ -250,6 +421,7 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened App Context Menu`
                 });
+                this.ensureAppSelection(appId);
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
             case "taskbar":
@@ -284,6 +456,7 @@ export class Desktop extends Component {
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
+                this.ensureAppSelection(appId);
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
                 break;
             case "taskbar":
@@ -444,6 +617,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    selected: this.state.selectedDesktopApps.includes(app.id),
+                    onSelect: this.handleIconSelect,
                 }
 
                 appsJsx.push(
@@ -838,8 +1013,8 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label id="new-folder-name-label" htmlFor="folder-name-input">New folder name</label>
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" aria-labelledby="new-folder-name-label" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
                 </div>
                 <div className="flex">
                     <button
@@ -911,6 +1086,10 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    onCopyPaths={this.copySelectedPaths}
+                    onCopyIcon={this.copySelectedIcons}
+                    onCopyAsPng={this.copySelectedAsPng}
+                    canCopySelection={this.state.selectedDesktopApps.length > 0}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -966,6 +1145,10 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                {this.state.clipboardMessage ? (
+                    <Toast message={this.state.clipboardMessage} onClose={this.clearClipboardMessage} />
+                ) : null}
 
             </main>
         )

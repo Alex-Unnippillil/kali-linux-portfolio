@@ -30,6 +30,7 @@ function TaskbarMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
+            data-preserve-selection="true"
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
         >
             <button
