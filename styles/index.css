@@ -93,10 +93,6 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     position: relative;
 }
 
-.notFocused {
-    filter: brightness(90%);
-}
-
 .root,
 #root,
 #docs-root {
@@ -105,9 +101,49 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: var(--window-shadow-elevation, 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%));
+    -webkit-box-shadow: var(--window-shadow-elevation, 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%));
+    -moz-box-shadow: var(--window-shadow-elevation, 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%));
+}
+
+.main-window {
+    --window-shadow-elevation: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    --window-titlebar-bg: var(--color-ub-window-title);
+    --window-titlebar-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-inverse), transparent 85%);
+    transition:
+        filter var(--motion-medium, 300ms) ease,
+        box-shadow var(--motion-medium, 300ms) ease,
+        outline var(--motion-medium, 300ms) ease;
+    outline: 0 solid transparent;
+    will-change: filter, box-shadow;
+}
+
+.main-window .bg-ub-window-title {
+    background-color: var(--window-titlebar-bg);
+    box-shadow: var(--window-titlebar-shadow);
+    transition:
+        background-color var(--motion-fast, 150ms) ease,
+        box-shadow var(--motion-fast, 150ms) ease;
+}
+
+.main-window.window--focused,
+.main-window[data-focused="true"] {
+    --window-shadow-elevation:
+        0 0 0 1px color-mix(in srgb, var(--color-primary) 60%, transparent 40%),
+        0 0 0 6px color-mix(in srgb, var(--color-primary) 25%, transparent 75%),
+        0 18px 48px -16px color-mix(in srgb, var(--color-primary) 45%, transparent 82%);
+    --window-titlebar-bg: color-mix(in srgb, var(--color-primary) 65%, var(--color-ub-window-title) 35%);
+    --window-titlebar-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-primary) 45%, transparent 55%);
+    filter: brightness(1);
+}
+
+.main-window[data-focused="false"] {
+    --window-shadow-elevation:
+        0 6px 22px -16px color-mix(in srgb, var(--color-inverse) 55%, transparent 85%),
+        0 0 0 1px color-mix(in srgb, var(--color-inverse) 60%, transparent 92%);
+    --window-titlebar-bg: color-mix(in srgb, var(--color-ub-window-title) 85%, transparent 15%);
+    --window-titlebar-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-inverse), transparent 92%);
+    filter: brightness(0.82) saturate(0.92);
 }
 
 .closed-window {
