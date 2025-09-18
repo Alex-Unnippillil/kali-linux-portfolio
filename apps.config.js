@@ -72,6 +72,7 @@ const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
+const MetadataPeekApp = createDynamicApp('metadata-peek', 'Metadata Peek');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayMetadataPeek = createDisplay(MetadataPeekApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -266,6 +268,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'metadata-peek',
+    title: 'Metadata Peek',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMetadataPeek,
   },
 ];
 
