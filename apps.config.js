@@ -63,6 +63,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
+const UpdateCenterApp = createDynamicApp('update-center', 'Update Center');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
@@ -153,6 +154,7 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
+const displayUpdateCenter = createDisplay(UpdateCenterApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 
@@ -691,6 +693,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'update-center',
+    title: 'Update Center',
+    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayUpdateCenter,
   },
   {
     id: 'files',
