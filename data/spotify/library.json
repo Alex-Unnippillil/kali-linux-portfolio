@@ -1,0 +1,106 @@
+{
+  "tracks": [
+    {
+      "id": "helix-neon-drive",
+      "title": "Neon Drive",
+      "artist": "SoundHelix Ensemble",
+      "album": "Kali Nights",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+      "cover": "/themes/Yaru/apps/spotify.svg"
+    },
+    {
+      "id": "helix-midnight-terminal",
+      "title": "Midnight Terminal",
+      "artist": "SoundHelix Ensemble",
+      "album": "Kali Nights",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+      "cover": "/themes/Yaru/apps/spotify.svg"
+    },
+    {
+      "id": "helix-cyan-aurora",
+      "title": "Cyan Aurora",
+      "artist": "Echo Sector",
+      "album": "Polar Wave",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+      "cover": "/themes/Yaru/apps/spotify.svg"
+    },
+    {
+      "id": "helix-terminal-dawn",
+      "title": "Terminal Dawn",
+      "artist": "Echo Sector",
+      "album": "Polar Wave",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+      "cover": "/themes/Yaru/apps/spotify.svg"
+    },
+    {
+      "id": "helix-overclocked-lullaby",
+      "title": "Overclocked Lullaby",
+      "artist": "Bitshift Dreams",
+      "album": "Kernel Reveries",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+      "cover": "/themes/Yaru/apps/spotify.svg"
+    },
+    {
+      "id": "helix-sandstorm-protocol",
+      "title": "Sandstorm Protocol",
+      "artist": "Bitshift Dreams",
+      "album": "Kernel Reveries",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+      "cover": "/themes/Yaru/apps/spotify.svg"
+    }
+  ],
+  "albums": [
+    {
+      "id": "album-kali-nights",
+      "title": "Kali Nights",
+      "artist": "SoundHelix Ensemble",
+      "cover": "/themes/Yaru/apps/spotify.svg",
+      "tracks": [
+        "helix-neon-drive",
+        "helix-midnight-terminal"
+      ]
+    },
+    {
+      "id": "album-polar-wave",
+      "title": "Polar Wave",
+      "artist": "Echo Sector",
+      "cover": "/themes/Yaru/apps/spotify.svg",
+      "tracks": [
+        "helix-cyan-aurora",
+        "helix-terminal-dawn"
+      ]
+    },
+    {
+      "id": "album-kernel-reveries",
+      "title": "Kernel Reveries",
+      "artist": "Bitshift Dreams",
+      "cover": "/themes/Yaru/apps/spotify.svg",
+      "tracks": [
+        "helix-overclocked-lullaby",
+        "helix-sandstorm-protocol"
+      ]
+    }
+  ],
+  "playlists": [
+    {
+      "id": "playlist-deep-focus",
+      "title": "Deep Focus",
+      "description": "Slow-burn instrumentals for writing exploits.",
+      "tracks": [
+        "helix-neon-drive",
+        "helix-overclocked-lullaby",
+        "helix-terminal-dawn"
+      ]
+    },
+    {
+      "id": "playlist-sprint-mode",
+      "title": "Sprint Mode",
+      "description": "High-tempo outrun tracks for late-night patching.",
+      "tracks": [
+        "helix-sandstorm-protocol",
+        "helix-midnight-terminal",
+        "helix-cyan-aurora"
+      ]
+    }
+  ]
+}
