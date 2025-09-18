@@ -29,6 +29,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    showNotificationPreviews,
+    setShowNotificationPreviews,
     theme,
     setTheme,
   } = useSettings();
@@ -285,6 +287,19 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+          <div className="flex flex-col items-center gap-2 text-center text-ubt-grey px-4">
+            <div className="flex items-center gap-3">
+              <span>Show notification previews on lock screen</span>
+              <ToggleSwitch
+                checked={showNotificationPreviews}
+                onChange={setShowNotificationPreviews}
+                ariaLabel="Toggle lock screen notification previews"
+              />
+            </div>
+            <p className="max-w-xl text-sm text-ubt-grey/80">
+              When disabled, the lock screen only shows app summaries and hides sensitive content until you unlock.
+            </p>
           </div>
         </>
       )}
