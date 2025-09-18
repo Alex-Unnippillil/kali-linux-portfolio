@@ -19,17 +19,24 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import { WorkspaceContext, WorkspaceProvider } from '../panel/workspace-context';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
+    static contextType = WorkspaceContext;
+
     constructor() {
         super();
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.workspaceManagerReady = false;
+        this.isRestoringWorkspace = false;
+        this.skipNextPersist = false;
+        this.defaultWorkspaceSnapshot = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,7 +59,142 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            activeWorkspace: null,
         }
+    }
+
+    setState(updater, callback) {
+        super.setState(updater, () => {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            const shouldSkip = this.skipNextPersist;
+            this.skipNextPersist = false;
+            if (this.workspaceManagerReady && !this.isRestoringWorkspace && !shouldSkip) {
+                this.persistWorkspaceState();
+            }
+        });
+    }
+
+    cloneStateMap = (source = {}) => {
+        const result = {};
+        for (const key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                const value = source[key];
+                if (Array.isArray(value)) {
+                    result[key] = [...value];
+                } else if (value && typeof value === 'object') {
+                    result[key] = { ...value };
+                } else {
+                    result[key] = value;
+                }
+            }
+        }
+        return result;
+    }
+
+    hasSnapshotData = (snapshot) => {
+        if (!snapshot) {
+            return false;
+        }
+        return (
+            Object.keys(snapshot.closed_windows || {}).length > 0 ||
+            Object.keys(snapshot.minimized_windows || {}).length > 0 ||
+            Object.keys(snapshot.focused_windows || {}).length > 0 ||
+            Object.keys(snapshot.overlapped_windows || {}).length > 0 ||
+            Object.keys(snapshot.window_positions || {}).length > 0 ||
+            (Array.isArray(snapshot.desktop_apps) && snapshot.desktop_apps.length > 0) ||
+            (Array.isArray(snapshot.app_stack) && snapshot.app_stack.length > 0)
+        );
+    }
+
+    captureWorkspaceSnapshot = (state = this.state) => {
+        return {
+            closed_windows: this.cloneStateMap(state.closed_windows || {}),
+            minimized_windows: this.cloneStateMap(state.minimized_windows || {}),
+            focused_windows: this.cloneStateMap(state.focused_windows || {}),
+            overlapped_windows: this.cloneStateMap(state.overlapped_windows || {}),
+            window_positions: this.cloneStateMap(state.window_positions || {}),
+            desktop_apps: Array.isArray(state.desktop_apps) ? [...state.desktop_apps] : [],
+            app_stack: Array.isArray(this.app_stack) ? [...this.app_stack] : [],
+        };
+    }
+
+    buildWorkspaceStateFromSnapshot = (snapshot = {}) => {
+        const defaults = this.defaultWorkspaceSnapshot || {
+            focused_windows: {},
+            closed_windows: {},
+            minimized_windows: {},
+            overlapped_windows: {},
+            window_positions: {},
+            desktop_apps: Array.isArray(this.state.desktop_apps) ? [...this.state.desktop_apps] : [],
+        };
+        const source = this.hasSnapshotData(snapshot) ? snapshot : defaults;
+        return {
+            focused_windows: this.cloneStateMap(source.focused_windows || {}),
+            closed_windows: this.cloneStateMap(source.closed_windows || {}),
+            minimized_windows: this.cloneStateMap(source.minimized_windows || {}),
+            overlapped_windows: this.cloneStateMap(source.overlapped_windows || {}),
+            window_positions: this.cloneStateMap(source.window_positions || {}),
+            desktop_apps: Array.isArray(source.desktop_apps) ? [...source.desktop_apps] : [],
+        };
+    }
+
+    persistWorkspaceState = () => {
+        const manager = this.context;
+        if (!manager || typeof manager.updateWorkspaceState !== 'function') {
+            return;
+        }
+        const workspaceId = this.state.activeWorkspace || manager.activeWorkspace;
+        if (!workspaceId) {
+            return;
+        }
+        manager.updateWorkspaceState(workspaceId, this.captureWorkspaceSnapshot());
+    }
+
+    initializeWorkspaceManager = () => {
+        const manager = this.context;
+        if (!manager) {
+            this.workspaceManagerReady = true;
+            return;
+        }
+        const workspaceId = manager.activeWorkspace;
+        const snapshot = typeof manager.getWorkspaceState === 'function' ? manager.getWorkspaceState(workspaceId) : undefined;
+        if (this.hasSnapshotData(snapshot)) {
+            this.isRestoringWorkspace = true;
+            this.skipNextPersist = true;
+            this.setState({
+                activeWorkspace: workspaceId,
+                ...this.buildWorkspaceStateFromSnapshot(snapshot),
+            }, () => {
+                this.app_stack = Array.isArray(snapshot?.app_stack) ? [...snapshot.app_stack] : [];
+                this.isRestoringWorkspace = false;
+                this.workspaceManagerReady = true;
+            });
+        } else {
+            this.skipNextPersist = true;
+            this.setState({ activeWorkspace: workspaceId }, () => {
+                this.workspaceManagerReady = true;
+                this.persistWorkspaceState();
+            });
+        }
+    }
+
+    loadWorkspace = (workspaceId) => {
+        const manager = this.context;
+        if (!manager) {
+            return;
+        }
+        const snapshot = typeof manager.getWorkspaceState === 'function' ? manager.getWorkspaceState(workspaceId) : undefined;
+        this.isRestoringWorkspace = true;
+        this.skipNextPersist = true;
+        this.setState({
+            activeWorkspace: workspaceId,
+            ...this.buildWorkspaceStateFromSnapshot(snapshot),
+        }, () => {
+            this.app_stack = Array.isArray(snapshot?.app_stack) ? [...snapshot.app_stack] : [];
+            this.isRestoringWorkspace = false;
+        });
     }
 
     componentDidMount() {
@@ -89,6 +231,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.initializeWorkspaceManager();
     }
 
     componentWillUnmount() {
@@ -96,6 +239,21 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.workspaceManagerReady = false;
+    }
+
+    componentDidUpdate() {
+        const manager = this.context;
+        if (!manager) {
+            return;
+        }
+        const workspaceId = manager.activeWorkspace;
+        if (workspaceId && workspaceId !== this.state.activeWorkspace) {
+            if (this.state.activeWorkspace && typeof manager.updateWorkspaceState === 'function') {
+                manager.updateWorkspaceState(this.state.activeWorkspace, this.captureWorkspaceSnapshot());
+            }
+            this.loadWorkspace(workspaceId);
+        }
     }
 
     checkForNewFolders = () => {
@@ -391,6 +549,15 @@ export class Desktop extends Component {
         }, () => {
             if (typeof callback === 'function') callback();
         });
+        this.defaultWorkspaceSnapshot = {
+            focused_windows: { ...focused_windows },
+            closed_windows: { ...closed_windows },
+            minimized_windows: { ...minimized_windows },
+            overlapped_windows: { ...overlapped_windows },
+            window_positions: {},
+            desktop_apps: [...desktop_apps],
+            app_stack: [],
+        };
         this.initFavourite = { ...favourite_apps };
     }
 
@@ -974,5 +1141,9 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    return (
+        <WorkspaceProvider>
+            <Desktop {...props} snapEnabled={snapEnabled} />
+        </WorkspaceProvider>
+    );
 }
