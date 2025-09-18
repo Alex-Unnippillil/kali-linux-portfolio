@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
+import { FormField, FormInput, FormTextarea } from "../../components/forms";
 import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
@@ -140,20 +141,14 @@ const ContactApp: React.FC = () => {
         </button>
       </p>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-        <div>
-          <label htmlFor="contact-name" className="mb-[6px] block text-sm">
-            Name
-          </label>
-          <div className="relative">
-            <input
-              id="contact-name"
-              className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+        <FormField
+          id="contact-name"
+          label="Name"
+          required
+          startAdornment={
             <svg
-              className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
+              aria-hidden="true"
+              className="h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -166,25 +161,23 @@ const ContactApp: React.FC = () => {
                 d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25v-1.5A4.5 4.5 0 0 1 9 14.25h6a4.5 4.5 0 0 1 4.5 4.5v1.5"
               />
             </svg>
-          </div>
-        </div>
-        <div>
-          <label htmlFor="contact-email" className="mb-[6px] block text-sm">
-            Email
-          </label>
-          <div className="relative">
-            <input
-              id="contact-email"
-              type="email"
-              className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              aria-invalid={!!emailError}
-              aria-describedby={emailError ? "contact-email-error" : undefined}
-            />
+          }
+        >
+          <FormInput
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+          />
+        </FormField>
+        <FormField
+          id="contact-email"
+          label="Email"
+          required
+          error={emailError}
+          startAdornment={
             <svg
-              className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
+              aria-hidden="true"
+              className="h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -197,30 +190,24 @@ const ContactApp: React.FC = () => {
                 d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15A2.25 2.25 0 0 1 2.25 17.25V6.75A2.25 2.25 0 0 1 4.5 4.5h15a2.25 2.25 0 0 1 2.25 2.25ZM3 6l9 6 9-6"
               />
             </svg>
-          </div>
-          {emailError && (
-            <FormError id="contact-email-error" className="mt-2">
-              {emailError}
-            </FormError>
-          )}
-        </div>
-        <div>
-          <label htmlFor="contact-message" className="mb-[6px] block text-sm">
-            Message
-          </label>
-          <div className="relative">
-            <textarea
-              id="contact-message"
-              className="w-full rounded border border-gray-700 bg-gray-800 p-2 pl-10 text-white"
-              rows={4}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              required
-              aria-invalid={!!messageError}
-              aria-describedby={messageError ? "contact-message-error" : undefined}
-            />
+          }
+        >
+          <FormInput
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+        </FormField>
+        <FormField
+          id="contact-message"
+          label="Message"
+          required
+          error={messageError}
+          startAdornment={
             <svg
-              className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
+              aria-hidden="true"
+              className="h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -233,13 +220,14 @@ const ContactApp: React.FC = () => {
                 d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286a2.25 2.25 0 0 1-1.98 2.193c-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.1 2.1 0 0 1-.825-.242M3.75 7.5c0-1.621 1.152-3.026 2.76-3.235A48.455 48.455 0 0 1 12 3c2.115 0 4.198.137 6.24.402 1.608.209 2.76 1.614 2.76 3.235v6.226c0 1.621-1.152 3.026-2.76 3.235-.577.075-1.157.14-1.74.194V21L12.345 16.845"
               />
             </svg>
-          </div>
-          {messageError && (
-            <FormError id="contact-message-error" className="mt-2">
-              {messageError}
-            </FormError>
-          )}
-        </div>
+          }
+        >
+          <FormTextarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+          />
+        </FormField>
         <input
           type="text"
           value={honeypot}

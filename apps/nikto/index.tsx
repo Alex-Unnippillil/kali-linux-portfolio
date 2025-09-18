@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import HeaderLab from './components/HeaderLab';
+import { FormCheckbox, FormField, FormInput } from '../../components/forms';
 
 interface NiktoFinding {
   path: string;
@@ -118,41 +119,27 @@ const NiktoPage: React.FC = () => {
         Build a nikto command without running any scans. Data and reports are static and for learning only.
       </p>
       <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 md:grid-cols-3">
-        <div>
-          <label htmlFor="nikto-host" className="block text-sm mb-1">
-            Host
-          </label>
-          <input
-            id="nikto-host"
-            className="w-full p-2 rounded text-black"
+        <FormField id="nikto-host" label="Host" className="md:col-span-1">
+          <FormInput
             value={host}
             onChange={(e) => setHost(e.target.value)}
           />
-        </div>
-        <div>
-          <label htmlFor="nikto-port" className="block text-sm mb-1">
-            Port
-          </label>
-          <input
-            id="nikto-port"
+        </FormField>
+        <FormField id="nikto-port" label="Port" className="md:col-span-1">
+          <FormInput
             type="number"
-            className="w-full p-2 rounded text-black"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            inputMode="numeric"
           />
-        </div>
-        <div className="flex items-center mt-2">
-          <input
-            id="nikto-ssl"
-            type="checkbox"
-            className="mr-2"
-            checked={ssl}
-            onChange={(e) => setSsl(e.target.checked)}
-          />
-          <label htmlFor="nikto-ssl" className="text-sm">
-            SSL
-          </label>
-        </div>
+        </FormField>
+        <FormCheckbox
+          id="nikto-ssl"
+          label="SSL"
+          checked={ssl}
+          onChange={(e) => setSsl(e.target.checked)}
+          className="md:self-end"
+        />
       </form>
       <div>
         <h2 className="text-lg mb-2">Command Preview</h2>

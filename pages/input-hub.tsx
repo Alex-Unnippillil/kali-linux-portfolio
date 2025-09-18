@@ -3,6 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import {
+  FormCheckbox,
+  FormField,
+  FormInput,
+  FormSelect,
+  FormTextarea,
+} from '../components/forms';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -179,48 +186,48 @@ const InputHub = () => {
           {emailjsReady ? 'EmailJS: Online' : 'EmailJS: Offline'}
         </span>
       </div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <input
-          className="p-1 border"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          className="p-1 border"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <select
-          className="p-1 border"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        >
-          {subjectTemplates.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <textarea
-          className="p-1 border"
-          placeholder="Message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          required
-        />
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={useCaptcha}
-            onChange={(e) => setUseCaptcha(e.target.checked)}
-            disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <FormField id="input-hub-name" label="Name" required>
+          <FormInput
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
           />
-          <span>Use reCAPTCHA</span>
-        </label>
+        </FormField>
+        <FormField id="input-hub-email" label="Email" required>
+          <FormInput
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+        </FormField>
+        <FormField id="input-hub-subject" label="Subject">
+          <FormSelect
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          >
+            {subjectTemplates.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </FormSelect>
+        </FormField>
+        <FormField id="input-hub-message" label="Message" required>
+          <FormTextarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+          />
+        </FormField>
+        <FormCheckbox
+          id="input-hub-captcha"
+          label="Use reCAPTCHA"
+          checked={useCaptcha}
+          onChange={(e) => setUseCaptcha(e.target.checked)}
+          disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+        />
         <button type="submit" className="bg-blue-500 text-white px-2 py-1">
           Send
         </button>

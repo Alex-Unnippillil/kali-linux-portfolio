@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { FormField, FormInput } from '../../components/forms';
 
 const VCardPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -71,42 +72,35 @@ const VCardPage: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
       <form className="w-full max-w-md space-y-2">
-        <label className="block text-sm">
-          Full Name
-          <input
-            type="text"
+        <FormField id="vcard-name" label="Full Name">
+          <FormInput
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
+            autoComplete="name"
           />
-        </label>
-        <label className="block text-sm">
-          Organization
-          <input
-            type="text"
+        </FormField>
+        <FormField id="vcard-org" label="Organization">
+          <FormInput
             value={org}
             onChange={(e) => setOrg(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
           />
-        </label>
-        <label className="block text-sm">
-          Phone
-          <input
+        </FormField>
+        <FormField id="vcard-phone" label="Phone">
+          <FormInput
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
+            inputMode="tel"
           />
-        </label>
-        <label className="block text-sm">
-          Email
-          <input
+        </FormField>
+        <FormField id="vcard-email" label="Email">
+          <FormInput
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
+            inputMode="email"
           />
-        </label>
+        </FormField>
       </form>
       {vcard && (
         <div className="flex flex-col items-center gap-2">

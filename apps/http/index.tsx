@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import { FormField, FormInput, FormSelect } from '../../components/forms';
 
 const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
@@ -24,13 +25,8 @@ const HTTPBuilder: React.FC = () => {
         .
       </p>
       <form onSubmit={(e) => e.preventDefault()} className="mb-4 space-y-4">
-        <div>
-          <label htmlFor="http-method" className="mb-1 block text-sm font-medium">
-            Method
-          </label>
-          <select
-            id="http-method"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+        <FormField id="http-method" label="Method">
+          <FormSelect
             value={method}
             onChange={(e) => setMethod(e.target.value)}
           >
@@ -38,20 +34,15 @@ const HTTPBuilder: React.FC = () => {
             <option value="POST">POST</option>
             <option value="PUT">PUT</option>
             <option value="DELETE">DELETE</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="http-url" className="mb-1 block text-sm font-medium">
-            URL
-          </label>
-          <input
-            id="http-url"
-            type="text"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+          </FormSelect>
+        </FormField>
+        <FormField id="http-url" label="URL">
+          <FormInput
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            inputMode="url"
           />
-        </div>
+        </FormField>
       </form>
       <div>
         <h2 className="mb-2 text-lg">Command Preview</h2>

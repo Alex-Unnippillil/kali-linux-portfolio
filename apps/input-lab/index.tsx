@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
+import { FormField, FormInput } from '../../components/forms';
 
 const SAVE_KEY = 'input-lab:text';
 
@@ -73,13 +74,8 @@ export default function InputLab() {
     <div className="min-h-screen bg-gray-900 p-4 text-white">
       <h1 className="mb-4 text-2xl">Input Lab</h1>
       <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-        <div>
-          <label htmlFor="input-lab-text" className="mb-1 block text-sm font-medium">
-            Text
-          </label>
-          <input
-            id="input-lab-text"
-            type="text"
+        <FormField id="input-lab-text" label="Text" required error={error}>
+          <FormInput
             value={text}
             onChange={(e) => setText(e.target.value)}
             onCompositionStart={(e) =>
@@ -107,10 +103,8 @@ export default function InputLab() {
               }
             }}
             onClick={handleCaret}
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
           />
-          {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
-        </div>
+        </FormField>
       </form>
       <div role="status" aria-live="polite" className="mt-4 text-sm text-green-400">
         {status}
