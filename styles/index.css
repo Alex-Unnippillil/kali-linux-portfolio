@@ -21,39 +21,29 @@ button:focus-visible {
     outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
     outline-offset: 2px;
 }
-
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
-}
-
 .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: var(--motion-fast, 0.01ms) !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: var(--motion-fast, 0.01ms) !important;
     scroll-behavior: auto !important;
 }
 
 /* Top NavBar styling */
 
 .top-arrow-up {
-    border-inline-start: 5px solid transparent;
-    border-inline-end: 5px solid transparent;
-    border-block-end: 5px solid var(--color-muted);
+    border-inline-start: var(--space-fluid-1) solid transparent;
+    border-inline-end: var(--space-fluid-1) solid transparent;
+    border-block-end: var(--space-fluid-1) solid var(--color-muted);
 }
 
 
 .animateShow {
-    animation: transformDownShow 200ms 1 forwards;
+    animation: transformDownShow var(--motion-medium, 200ms) ease-out 1 forwards;
 }
 
 @keyframes transformDownShow {
     0% {
-        transform: translateY(-10px);
+        transform: translateY(calc(-1 * var(--space-fluid-2)));
         opacity: 0;
     }
 
@@ -72,11 +62,11 @@ input[type=range].ubuntu-slider {
         color-mix(in srgb, var(--color-text), transparent 70%) 100%
     );
     background-position: center;
-    background-size: 99% 3px;
+    background-size: 99% clamp(0.125rem, 0.4vh, 0.1875rem);
     background-repeat: no-repeat;
     /* width: 65%; */
-    height: 6px;
-    border-radius: 50%;
+    height: clamp(var(--space-1), 0.6vh, var(--space-2));
+    border-radius: var(--radius-round);
 }
 
 input[type=range].ubuntu-slider::-webkit-slider-thumb {
@@ -87,9 +77,9 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     background-color: var(--color-surface);
     pointer-events: none;
-    border-radius: 50%;
-    width: 12px;
-    height: 12px;
+    border-radius: var(--radius-round);
+    width: clamp(0.75rem, 1.5vw, 1rem);
+    height: clamp(0.75rem, 1.5vw, 1rem);
     position: relative;
 }
 
@@ -105,13 +95,13 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: var(--shadow-window);
+    -webkit-box-shadow: var(--shadow-window);
+    -moz-box-shadow: var(--shadow-window);
 }
 
 .closed-window {
-    animation: closeWindow 200ms 1 forwards;
+    animation: closeWindow var(--motion-medium, 200ms) ease-in forwards;
 }
 
 @keyframes closeWindow {
@@ -130,6 +120,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .windowMainScreen {
     container-type: inline-size;
+    container-name: window;
+    padding-inline: var(--window-padding-inline, 0px);
+    padding-block: var(--window-padding-block, 0px);
+    border-radius: var(--radius-fluid);
+    gap: var(--window-gap, 0px);
 }
 
 .windowMainScreen::-webkit-scrollbar-track {
@@ -138,13 +133,71 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .windowMainScreen::-webkit-scrollbar {
-    width: 6px;
+    width: clamp(0.35rem, 0.8vw, 0.5rem);
     background-color: transparent;
 }
 
 .windowMainScreen::-webkit-scrollbar-thumb {
     background-color: var(--color-border);
-    border-radius: 5px;
+    border-radius: var(--radius-fluid);
+}
+
+.window-layout {
+    container-type: inline-size;
+    container-name: app-window;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-fluid-2);
+    padding: var(--space-fluid-2);
+    --window-padding-inline: var(--space-fluid-2);
+    --window-padding-block: var(--space-fluid-2);
+    --window-gap: var(--space-fluid-2);
+}
+
+.window-layout--split {
+    flex-direction: row;
+    align-items: stretch;
+    gap: var(--space-fluid-3);
+}
+
+.window-layout__sidebar {
+    flex: 0 0 clamp(15rem, 28cqi, 22rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-fluid-1);
+}
+
+.window-layout__content {
+    flex: 1 1 clamp(20rem, 60cqi, 70rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-fluid-2);
+}
+
+.sidebar-toggle {
+    display: none;
+    gap: var(--space-fluid-1);
+}
+
+@container app-window (max-width: 56rem) {
+    .window-layout--split {
+        flex-direction: column;
+    }
+    .window-layout__sidebar {
+        display: none !important;
+    }
+    .sidebar-toggle {
+        display: flex;
+    }
+}
+
+@container app-window (min-width: 56rem) {
+    .window-layout__sidebar {
+        display: flex !important;
+    }
+    .sidebar-toggle {
+        display: none !important;
+    }
 }
 
 /* SideBarApp Scale image onClick */
@@ -170,7 +223,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .xterm .xterm-cursor {
-    animation: cursor-pulse 1s steps(2) infinite;
+    animation: cursor-pulse var(--motion-slow, 1s) steps(2) infinite;
 }
 
 dialog {
@@ -219,7 +272,7 @@ dialog {
 
 /* Show Applications overlay animation */
 .all-apps-anim {
-    animation: allAppsScale 200ms ease-out;
+    animation: allAppsScale var(--motion-medium, 200ms) ease-out;
 }
 
 @keyframes allAppsScale {
@@ -236,7 +289,7 @@ dialog {
 
 /* App icon click animation */
 .app-icon-launch {
-    animation: appIconLaunch 200ms ease-in-out;
+    animation: appIconLaunch var(--motion-medium, 200ms) ease-in-out;
 }
 
 @keyframes appIconLaunch {
@@ -257,7 +310,8 @@ dialog {
 .card {
     position: relative;
     transform-style: preserve-3d;
-    transition: transform 0.6s ease, opacity 0.3s ease;
+    transition: transform var(--motion-slow, 0.6s) ease,
+        opacity var(--motion-medium, 0.3s) ease;
 }
 
 .card-face {
@@ -287,9 +341,9 @@ dialog {
 }
 
 .animate-deal {
-    transform: translateY(-20px);
+    transform: translateY(calc(-1 * var(--space-fluid-3)));
     opacity: 0;
-    animation: dealCard 0.3s forwards ease-out;
+    animation: dealCard var(--motion-fast, 0.3s) forwards ease-out;
 }
 
 @keyframes dealCard {
@@ -300,7 +354,7 @@ dialog {
 }
 
 .peek {
-    animation: dealerPeek 0.6s ease-in-out;
+    animation: dealerPeek var(--motion-slow, 0.6s) ease-in-out;
 }
 
 @keyframes dealerPeek {
@@ -313,8 +367,10 @@ dialog {
 }
 
 .chip {
-    width: 2.5rem;
-    height: 2.5rem;
+    inline-size: clamp(2rem, 8cqi, 2.5rem);
+    block-size: clamp(2rem, 8cqi, 2.5rem);
+    width: clamp(2rem, 8cqi, 2.5rem);
+    height: clamp(2rem, 8cqi, 2.5rem);
     border-radius: 9999px;
     display: flex;
     align-items: center;
@@ -322,20 +378,20 @@ dialog {
     border: 2px solid var(--color-inverse);
     position: absolute;
     inset-inline-start: 0;
-    transition: transform 0.3s;
+    transition: transform var(--motion-fast, 0.3s) ease-out;
 }
 
 .chip-pop {
-    animation: chipPop 0.3s ease-out forwards;
+    animation: chipPop var(--motion-fast, 0.3s) ease-out forwards;
 }
 
 @keyframes chipPop {
-    from { transform: translateY(10px) scale(0.5); opacity: 0; }
+    from { transform: translateY(var(--space-fluid-2)) scale(0.5); opacity: 0; }
     to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .shuffle {
-    animation: shuffleDeck 0.5s;
+    animation: shuffleDeck var(--motion-medium, 0.5s);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -358,9 +414,9 @@ dialog {
 
 @keyframes shuffleDeck {
     0% { transform: translateX(0); }
-    25% { transform: translateX(-3px) rotate(-2deg); }
-    50% { transform: translateX(3px) rotate(2deg); }
-    75% { transform: translateX(-2px) rotate(-1deg); }
+    25% { transform: translateX(calc(-1 * var(--space-fluid-1))) rotate(-2deg); }
+    50% { transform: translateX(var(--space-fluid-1)) rotate(2deg); }
+    75% { transform: translateX(calc(-0.8 * var(--space-fluid-1))) rotate(-1deg); }
     100% { transform: translateX(0); }
 }
 
@@ -380,7 +436,7 @@ dialog {
 }
 
 .emoji-list>li {
-    padding-inline-start: 10px;
+    padding-inline-start: clamp(var(--space-2), 1.2vw, var(--space-4));
 }
 
 .list-pc {
@@ -404,14 +460,14 @@ dialog {
 }
 
 @keyframes shake {
-    10%, 90% { transform: translateX(-1px); }
-    20%, 80% { transform: translateX(2px); }
-    30%, 50%, 70% { transform: translateX(-4px); }
-    40%, 60% { transform: translateX(4px); }
+    10%, 90% { transform: translateX(calc(-0.4 * var(--space-fluid-1))); }
+    20%, 80% { transform: translateX(calc(0.8 * var(--space-fluid-1))); }
+    30%, 50%, 70% { transform: translateX(calc(-1.6 * var(--space-fluid-1))); }
+    40%, 60% { transform: translateX(calc(1.6 * var(--space-fluid-1))); }
 }
 
 .shake {
-    animation: shake 0.5s;
+    animation: shake var(--motion-medium, 0.5s);
 }
 
 @keyframes keypress {
@@ -420,7 +476,7 @@ dialog {
 }
 
 .key-press {
-    animation: keypress 0.1s;
+    animation: keypress var(--motion-fast, 0.1s);
 }
 
 @keyframes reveal {
@@ -429,7 +485,7 @@ dialog {
 }
 
 .reveal {
-    animation: reveal 0.3s ease-out;
+    animation: reveal var(--motion-medium, 0.3s) ease-out;
 }
 
 @keyframes tile-pop {
@@ -438,7 +494,7 @@ dialog {
 }
 
 .tile-pop {
-    animation: tile-pop 0.15s ease-out;
+    animation: tile-pop var(--motion-fast, 0.15s) ease-out;
 
 }
 
@@ -452,7 +508,7 @@ dialog {
     inset: 0;
     border-radius: inherit;
     background: color-mix(in srgb, var(--color-text), transparent 50%);
-    animation: merge-ripple 0.4s ease-out;
+    animation: merge-ripple var(--motion-medium, 0.4s) ease-out;
     pointer-events: none;
 }
 
@@ -464,7 +520,7 @@ dialog {
 
 .score-pop {
     display: inline-block;
-    animation: score-pop 0.3s ease-out;
+    animation: score-pop var(--motion-medium, 0.3s) ease-out;
 }
 
 @keyframes hangman-draw {
@@ -475,7 +531,7 @@ dialog {
 .hangman-part {
     stroke-dasharray: 100;
     stroke-dashoffset: 100;
-    animation: hangman-draw 0.5s ease-out forwards;
+    animation: hangman-draw var(--motion-medium, 0.5s) ease-out forwards;
 
 }
 
@@ -492,7 +548,7 @@ dialog {
     );
     background-repeat: no-repeat;
     background-size: 0% 100%;
-    animation: word-found-highlight 0.6s forwards;
+    animation: word-found-highlight var(--motion-slow, 0.6s) forwards;
     display: inline-block;
 }
 
