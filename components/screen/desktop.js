@@ -444,6 +444,7 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    snapEnabled: this.props.snapEnabled,
                 }
 
                 appsJsx.push(

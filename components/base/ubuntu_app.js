@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import Image from 'next/image'
+import DesktopIcon from '../core/DesktopIcon'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -32,35 +32,19 @@ export class UbuntuApp extends Component {
 
     render() {
         return (
-            <div
-                role="button"
-                aria-label={this.props.name}
-                aria-disabled={this.props.disabled}
-                data-context="app"
-                data-app-id={this.props.id}
-                draggable
+            <DesktopIcon
+                id={this.props.id}
+                icon={this.props.icon}
+                label={this.props.displayName || this.props.name}
+                disabled={this.props.disabled}
+                launching={this.state.launching}
+                dragging={this.state.dragging}
+                snapEnabled={this.props.snapEnabled}
+                onActivate={this.openApp}
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
-                className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
-                    " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
-                id={"app-" + this.props.id}
-                onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
-                onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
-            >
-                <Image
-                    width={40}
-                    height={40}
-                    className="mb-1 w-10"
-                    src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
-                    sizes="40px"
-                />
-                {this.props.displayName || this.props.name}
-
-            </div>
+                onPrefetch={this.handlePrefetch}
+            />
         )
     }
 }
