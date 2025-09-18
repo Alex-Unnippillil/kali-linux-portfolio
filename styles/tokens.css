@@ -53,7 +53,7 @@
   --motion-slow: 500ms;
 
   /* Fonts */
-  --font-family-base: 'Ubuntu', sans-serif;
+  --font-family-base: var(--font-family-body, 'Ubuntu', sans-serif);
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;

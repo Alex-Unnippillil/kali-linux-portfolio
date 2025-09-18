@@ -20,6 +20,14 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getBodyFont as loadBodyFont,
+  setBodyFont as saveBodyFont,
+  getCodeFont as loadCodeFont,
+  setCodeFont as saveCodeFont,
+  getAntialiasing as loadAntialiasing,
+  setAntialiasing as saveAntialiasing,
+  getHinting as loadHinting,
+  setHinting as saveHinting,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -34,6 +42,104 @@ export const ACCENT_OPTIONS = [
   '#805ad5', // purple
   '#ed64a6', // pink
 ];
+
+export const BODY_FONT_OPTIONS = [
+  {
+    id: 'ubuntu',
+    label: 'Ubuntu',
+    stack: "'Ubuntu', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+    sample: 'The quick brown fox jumps over the lazy dog.',
+  },
+  {
+    id: 'system',
+    label: 'System UI',
+    stack:
+      "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif",
+    sample: 'System fonts follow your device defaults.',
+  },
+  {
+    id: 'inter',
+    label: 'Inter',
+    stack: "'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+    sample: 'Inter keeps dense dashboards readable.',
+  },
+] as const;
+
+export const CODE_FONT_OPTIONS = [
+  {
+    id: 'fira-code',
+    label: 'Fira Code',
+    stack: "'Fira Code', 'Source Code Pro', 'Ubuntu Mono', 'Courier New', monospace",
+    sample: 'const packet = decode(frame);',
+  },
+  {
+    id: 'jetbrains-mono',
+    label: 'JetBrains Mono',
+    stack: "'JetBrains Mono', 'Fira Code', 'Source Code Pro', 'SFMono-Regular', monospace",
+    sample: 'git commit -m "refine settings";',
+  },
+  {
+    id: 'system-mono',
+    label: 'System Mono',
+    stack: "'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Courier New', monospace",
+    sample: 'printf("hello, kali\n");',
+  },
+] as const;
+
+export const ANTIALIASING_OPTIONS = [
+  {
+    id: 'system',
+    label: 'System default',
+    description: 'Use the browser and OS smoothing.',
+  },
+  {
+    id: 'grayscale',
+    label: 'Grayscale',
+    description: 'Force grayscale antialiasing for crisper edges.',
+  },
+] as const;
+
+export const HINTING_OPTIONS = [
+  {
+    id: 'auto',
+    label: 'Auto',
+    description: 'Browser chooses optimal hinting.',
+  },
+  {
+    id: 'legibility',
+    label: 'Legibility',
+    description: 'Prioritize smooth curves and readability.',
+  },
+  {
+    id: 'precision',
+    label: 'Precision',
+    description: 'Favor sharp geometry for UI text.',
+  },
+] as const;
+
+type BodyFontId = (typeof BODY_FONT_OPTIONS)[number]['id'];
+type CodeFontId = (typeof CODE_FONT_OPTIONS)[number]['id'];
+type AntialiasingId = (typeof ANTIALIASING_OPTIONS)[number]['id'];
+type HintingId = (typeof HINTING_OPTIONS)[number]['id'];
+
+const bodyFontStacks = new Map<BodyFontId, string>(
+  BODY_FONT_OPTIONS.map((option) => [option.id, option.stack]),
+);
+
+const codeFontStacks = new Map<CodeFontId, string>(
+  CODE_FONT_OPTIONS.map((option) => [option.id, option.stack]),
+);
+
+const antialiasingPresets: Record<AntialiasingId, { webkit: string; moz: string; standard: string }> = {
+  system: { webkit: 'auto', moz: 'auto', standard: 'auto' },
+  grayscale: { webkit: 'antialiased', moz: 'grayscale', standard: 'always' },
+};
+
+const hintingPresets: Record<HintingId, string> = {
+  auto: 'auto',
+  legibility: 'optimizeLegibility',
+  precision: 'geometricPrecision',
+};
 
 // Utility to lighten or darken a hex color by a percentage
 const shadeColor = (color: string, percent: number): string => {
@@ -62,6 +168,10 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  bodyFont: BodyFontId;
+  codeFont: CodeFontId;
+  antialiasing: AntialiasingId;
+  hinting: HintingId;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +183,10 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setBodyFont: (value: BodyFontId) => void;
+  setCodeFont: (value: CodeFontId) => void;
+  setAntialiasing: (value: AntialiasingId) => void;
+  setHinting: (value: HintingId) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +201,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  bodyFont: defaults.bodyFont as BodyFontId,
+  codeFont: defaults.codeFont as CodeFontId,
+  antialiasing: defaults.antialiasing as AntialiasingId,
+  hinting: defaults.hinting as HintingId,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,10 +216,46 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setBodyFont: () => {},
+  setCodeFont: () => {},
+  setAntialiasing: () => {},
+  setHinting: () => {},
   setTheme: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const resolveBodyFont = (): BodyFontId => {
+    if (typeof window === 'undefined') return defaults.bodyFont as BodyFontId;
+    const stored = window.localStorage.getItem('font-body');
+    return stored && bodyFontStacks.has(stored as BodyFontId)
+      ? (stored as BodyFontId)
+      : (defaults.bodyFont as BodyFontId);
+  };
+
+  const resolveCodeFont = (): CodeFontId => {
+    if (typeof window === 'undefined') return defaults.codeFont as CodeFontId;
+    const stored = window.localStorage.getItem('font-code');
+    return stored && codeFontStacks.has(stored as CodeFontId)
+      ? (stored as CodeFontId)
+      : (defaults.codeFont as CodeFontId);
+  };
+
+  const resolveAntialiasing = (): AntialiasingId => {
+    if (typeof window === 'undefined') return defaults.antialiasing as AntialiasingId;
+    const stored = window.localStorage.getItem('font-antialiasing');
+    return stored && Object.prototype.hasOwnProperty.call(antialiasingPresets, stored)
+      ? (stored as AntialiasingId)
+      : (defaults.antialiasing as AntialiasingId);
+  };
+
+  const resolveHinting = (): HintingId => {
+    if (typeof window === 'undefined') return defaults.hinting as HintingId;
+    const stored = window.localStorage.getItem('font-hinting');
+    return stored && Object.prototype.hasOwnProperty.call(hintingPresets, stored)
+      ? (stored as HintingId)
+      : (defaults.hinting as HintingId);
+  };
+
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
@@ -112,6 +266,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [bodyFont, setBodyFont] = useState<BodyFontId>(() => resolveBodyFont());
+  const [codeFont, setCodeFont] = useState<CodeFontId>(() => resolveCodeFont());
+  const [antialiasing, setAntialiasing] = useState<AntialiasingId>(() => resolveAntialiasing());
+  const [hinting, setHinting] = useState<HintingId>(() => resolveHinting());
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +285,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      const storedBodyFont = await loadBodyFont();
+      if (bodyFontStacks.has(storedBodyFont as BodyFontId)) {
+        setBodyFont(storedBodyFont as BodyFontId);
+      } else {
+        setBodyFont(defaults.bodyFont as BodyFontId);
+      }
+      const storedCodeFont = await loadCodeFont();
+      if (codeFontStacks.has(storedCodeFont as CodeFontId)) {
+        setCodeFont(storedCodeFont as CodeFontId);
+      } else {
+        setCodeFont(defaults.codeFont as CodeFontId);
+      }
+      const storedAntialiasing = await loadAntialiasing();
+      if (Object.prototype.hasOwnProperty.call(antialiasingPresets, storedAntialiasing)) {
+        setAntialiasing(storedAntialiasing as AntialiasingId);
+      } else {
+        setAntialiasing(defaults.antialiasing as AntialiasingId);
+      }
+      const storedHinting = await loadHinting();
+      if (Object.prototype.hasOwnProperty.call(hintingPresets, storedHinting)) {
+        setHinting(storedHinting as HintingId);
+      } else {
+        setHinting(defaults.hinting as HintingId);
+      }
       setTheme(loadTheme());
     })();
   }, []);
@@ -198,6 +380,46 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [highContrast]);
 
   useEffect(() => {
+    const stack =
+      bodyFontStacks.get(bodyFont) ?? bodyFontStacks.get(defaults.bodyFont as BodyFontId);
+    if (stack) {
+      document.documentElement.style.setProperty('--font-family-body', stack);
+      document.documentElement.style.setProperty('--font-family-base', stack);
+      document.body.style.fontFamily = stack;
+    }
+    document.documentElement.dataset.bodyFont = bodyFont;
+    saveBodyFont(bodyFont);
+  }, [bodyFont]);
+
+  useEffect(() => {
+    const stack =
+      codeFontStacks.get(codeFont) ?? codeFontStacks.get(defaults.codeFont as CodeFontId);
+    if (stack) {
+      document.documentElement.style.setProperty('--font-family-code', stack);
+    }
+    document.documentElement.dataset.codeFont = codeFont;
+    saveCodeFont(codeFont);
+  }, [codeFont]);
+
+  useEffect(() => {
+    const preset =
+      antialiasingPresets[antialiasing] ||
+      antialiasingPresets[defaults.antialiasing as AntialiasingId];
+    document.documentElement.style.setProperty('--font-smoothing-webkit', preset.webkit);
+    document.documentElement.style.setProperty('--font-smoothing-moz', preset.moz);
+    document.documentElement.style.setProperty('--font-smoothing-standard', preset.standard);
+    document.documentElement.dataset.fontAntialiasing = antialiasing;
+    saveAntialiasing(antialiasing);
+  }, [antialiasing]);
+
+  useEffect(() => {
+    const preset = hintingPresets[hinting] || hintingPresets[defaults.hinting as HintingId];
+    document.documentElement.style.setProperty('--font-text-rendering', preset);
+    document.documentElement.dataset.fontHinting = hinting;
+    saveHinting(hinting);
+  }, [hinting]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
@@ -249,6 +471,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        bodyFont,
+        codeFont,
+        antialiasing,
+        hinting,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +486,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setBodyFont,
+        setCodeFont,
+        setAntialiasing,
+        setHinting,
         setTheme,
       }}
     >
