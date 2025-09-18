@@ -1,10 +1,144 @@
 {
   "summary": [
     {
+      "src": "192.168.0.50",
+      "dst": "192.168.0.5",
+      "protocol": "ARP",
+      "info": "Reply 192.168.0.1 is-at 00:50:56:aa:bb:cc"
+    },
+    {
+      "src": "192.168.0.50",
+      "dst": "192.168.0.1",
+      "protocol": "ARP",
+      "info": "Reply 192.168.0.5 is-at 00:50:56:aa:bb:cc"
+    },
+    {
+      "src": "192.168.0.5",
+      "dst": "192.168.0.10",
+      "protocol": "HTTP",
+      "info": "GET /login"
+    },
+    {
+      "src": "192.168.0.10",
+      "dst": "192.168.0.5",
+      "protocol": "HTTP",
+      "info": "HTTP/1.1 200 OK (Login)"
+    },
+    {
       "src": "192.168.0.5",
       "dst": "192.168.0.10",
       "protocol": "HTTP",
       "info": "POST /login username=demo password=demo123"
+    }
+  ],
+  "frames": [
+    {
+      "frame": 12,
+      "timestamp": "00:00:00.900",
+      "src": "192.168.0.50",
+      "dst": "192.168.0.5",
+      "protocol": "ARP",
+      "info": "Reply 192.168.0.1 is-at 00:50:56:aa:bb:cc",
+      "timeline": "Attacker poisons the victim's ARP cache by impersonating the gateway.",
+      "explanation": "The attacker-hosted dsniff box forges an ARP reply claiming the router's IP (192.168.0.1) now maps to its own MAC. The victim will start sending traffic for the gateway to the attacker.",
+      "topologyFocus": ["attacker", "victim", "gateway"],
+      "arpFocus": ["192.168.0.1", "192.168.0.5"]
+    },
+    {
+      "frame": 18,
+      "timestamp": "00:00:01.200",
+      "src": "192.168.0.50",
+      "dst": "192.168.0.1",
+      "protocol": "ARP",
+      "info": "Reply 192.168.0.5 is-at 00:50:56:aa:bb:cc",
+      "timeline": "The gateway is poisoned so that traffic headed back to the victim also detours through the attacker.",
+      "explanation": "A second forged ARP reply convinces the router that the victim's IP should resolve to the attacker's MAC. With both directions poisoned, the attacker is in the middle of the victim's conversations.",
+      "topologyFocus": ["attacker", "victim", "gateway"],
+      "arpFocus": ["192.168.0.1", "192.168.0.5"]
+    },
+    {
+      "frame": 36,
+      "timestamp": "00:00:02.200",
+      "src": "192.168.0.5",
+      "dst": "192.168.0.10",
+      "protocol": "HTTP",
+      "info": "GET /login",
+      "timeline": "Victim browses to the login page; packets traverse the attacker-controlled path.",
+      "explanation": "With ARP tables poisoned, the victim's HTTP request is relayed through the attacker. The HTTP GET for /login is visible in clear text.",
+      "topologyFocus": ["victim", "attacker", "server"],
+      "arpFocus": ["192.168.0.5"]
+    },
+    {
+      "frame": 48,
+      "timestamp": "00:00:02.450",
+      "src": "192.168.0.10",
+      "dst": "192.168.0.5",
+      "protocol": "HTTP",
+      "info": "HTTP/1.1 200 OK (Login)",
+      "timeline": "Server response also flows through the attacker before reaching the victim.",
+      "explanation": "The HTTP 200 OK carrying the login page assets passes through the dsniff host. The attacker can monitor or alter responses at this stage.",
+      "topologyFocus": ["server", "attacker", "victim"],
+      "arpFocus": ["192.168.0.5"]
+    },
+    {
+      "frame": 60,
+      "timestamp": "00:00:03.000",
+      "src": "192.168.0.5",
+      "dst": "192.168.0.10",
+      "protocol": "HTTP",
+      "info": "POST /login username=demo password=demo123",
+      "timeline": "Credentials are submitted in plain text and captured by dsniff.",
+      "explanation": "The victim posts credentials to the server over HTTP. Because the session is unencrypted, the attacker sees the username and password within the captured packet payload.",
+      "topologyFocus": ["victim", "attacker", "server"],
+      "arpFocus": ["192.168.0.5"]
+    }
+  ],
+  "topology": [
+    {
+      "id": "victim",
+      "label": "Victim workstation",
+      "role": "User endpoint",
+      "ip": "192.168.0.5"
+    },
+    {
+      "id": "attacker",
+      "label": "Attacker (dsniff)",
+      "role": "Man-in-the-middle",
+      "ip": "192.168.0.50"
+    },
+    {
+      "id": "gateway",
+      "label": "Gateway/Router",
+      "role": "Default route",
+      "ip": "192.168.0.1"
+    },
+    {
+      "id": "server",
+      "label": "Web server",
+      "role": "Target application",
+      "ip": "192.168.0.10"
+    }
+  ],
+  "arpTable": [
+    {
+      "ip": "192.168.0.1",
+      "mac": "00:50:56:aa:bb:cc",
+      "note": "Gateway IP now resolves to the attacker on the victim host"
+    },
+    {
+      "ip": "192.168.0.5",
+      "mac": "00:50:56:aa:bb:cc",
+      "note": "Gateway sees the victim IP mapped to the attacker"
+    },
+    {
+      "ip": "192.168.0.10",
+      "mac": "00:10:20:30:40:50",
+      "note": "Legitimate web server"
+    },
+    {
+      "ip": "192.168.0.50",
+      "mac": "00:50:56:aa:bb:cc",
+      "note": "Attacker machine"
     }
   ],
   "remediation": [

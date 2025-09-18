@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
@@ -129,7 +129,7 @@ const LogRow = ({ log, prefersReduced }) => {
   );
 };
 
-const TimelineItem = ({ log, prefersReduced }) => {
+const TimelineItem = ({ log, prefersReduced, isActive, onSelect }) => {
   const itemRef = useRef(null);
   useEffect(() => {
     const el = itemRef.current;
@@ -143,7 +143,21 @@ const TimelineItem = ({ log, prefersReduced }) => {
 
   return (
     <li ref={itemRef} className="mb-1">
-      <span className="text-green-400">{log.protocol}</span> {log.host} {log.details}
+      <button
+        type="button"
+        onClick={() => onSelect(log.frameIndex)}
+        className={`w-full text-left px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+          isActive ? 'bg-ubt-blue text-white' : 'bg-transparent hover:bg-ub-grey/60'
+        }`}
+        aria-current={isActive ? 'step' : undefined}
+      >
+        <span className="block text-[10px] text-gray-300 uppercase tracking-wider">
+          {log.timestamp}
+        </span>
+        <span className="text-green-400 font-semibold">{log.protocol}</span>{' '}
+        <span className="text-white">{log.host}</span>{' '}
+        <span className="text-green-300">{log.details}</span>
+      </button>
     </li>
   );
 };
@@ -171,8 +185,22 @@ const Credential = ({ cred }) => {
   );
 };
 
-const SessionTile = ({ session, onView }) => (
-  <div className="flex bg-ub-grey rounded overflow-hidden">
+const SessionTile = ({ session, onView, isActive }) => (
+  <div
+    className={`flex bg-ub-grey rounded overflow-hidden border transition-colors focus-within:ring-2 focus-within:ring-yellow-400 ${
+      isActive ? 'border-ubt-blue shadow-lg shadow-ubt-blue/40' : 'border-transparent'
+    }`}
+    role="button"
+    tabIndex={0}
+    aria-pressed={isActive}
+    onClick={onView}
+    onKeyDown={(event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onView();
+      }
+    }}
+  >
     <div
       className={`w-1 ${protocolColors[session.protocol] || 'bg-gray-500'}`}
     />
@@ -185,18 +213,23 @@ const SessionTile = ({ session, onView }) => (
           <button
             className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
             title="Copy session"
-            onClick={() =>
+            onClick={(event) => {
+              event.stopPropagation();
               navigator.clipboard?.writeText(
                 `${session.src}\t${session.dst}\t${session.protocol}\t${session.info}`,
-              )
-            }
+              );
+            }}
           >
             📋
           </button>
           <button
             className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
             title="View details"
-            onClick={onView}
+            aria-pressed={isActive}
+            onClick={(event) => {
+              event.stopPropagation();
+              onView();
+            }}
           >
             🔍
           </button>
@@ -219,15 +252,90 @@ const Dsniff = () => {
   const [newField, setNewField] = useState('host');
   const [newValue, setNewValue] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
-  const [selectedPacket, setSelectedPacket] = useState(null);
+  const [currentFrame, setCurrentFrame] = useState(0);
   const [domainSummary, setDomainSummary] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [protocolFilter, setProtocolFilter] = useState([]);
 
-  const { summary: pcapSummary, remediation } = pcapFixture;
+  const captureFrames = pcapFixture.frames || [];
+  const summaryRows = pcapFixture.summary || [];
+  const baseRows = captureFrames.length ? captureFrames : summaryRows;
+  const topologyNodes = pcapFixture.topology || [];
+  const arpTableEntries = pcapFixture.arpTable || [];
+  const remediation = pcapFixture.remediation || [];
+  const totalFrames = baseRows.length;
+  const safeIndex = totalFrames ? Math.min(currentFrame, totalFrames - 1) : 0;
+  const pcapSummary = baseRows.map(({ src, dst, protocol, info }) => ({
+    src,
+    dst,
+    protocol,
+    info,
+  }));
+  const activeFrame =
+    captureFrames.length && totalFrames ? captureFrames[safeIndex] : null;
+  const sliderMax = Math.max(totalFrames - 1, 0);
+  const isFirstFrame = safeIndex === 0;
+  const isLastFrame = totalFrames ? safeIndex === totalFrames - 1 : true;
+  const activeTopologyFocus = activeFrame?.topologyFocus || [];
+  const activeArpFocus = activeFrame?.arpFocus || [];
+  const frameExplanation =
+    activeFrame?.explanation ||
+    (totalFrames
+      ? 'Use the controls to move between captured frames.'
+      : 'No capture data loaded.');
 
   const sampleCommand = 'urlsnarf -i eth0';
   const sampleOutput = urlsnarfFixture.slice(0, 1).join('\n');
+
+  const goToFrame = useCallback(
+    (index) => {
+      if (!totalFrames) return;
+      const clamped = Math.min(Math.max(index, 0), totalFrames - 1);
+      setCurrentFrame(clamped);
+    },
+    [totalFrames],
+  );
+
+  const handleFrameKeyNavigation = useCallback(
+    (event) => {
+      if (event.target !== event.currentTarget) return;
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        goToFrame(safeIndex + 1);
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        goToFrame(safeIndex - 1);
+      }
+    },
+    [goToFrame, safeIndex],
+  );
+
+  const exportCurrentSlice = useCallback(() => {
+    if (
+      !totalFrames ||
+      typeof window === 'undefined' ||
+      typeof URL === 'undefined' ||
+      typeof Blob === 'undefined' ||
+      typeof document === 'undefined' ||
+      !URL.createObjectURL
+    )
+      return;
+    const endIndex = Math.min(safeIndex + 1, totalFrames);
+    const slice = baseRows.slice(0, endIndex);
+    if (!slice.length) return;
+    const blob = new Blob([JSON.stringify(slice, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `dsniff-capture-frames-0-${endIndex - 1}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [baseRows, safeIndex, totalFrames]);
 
   const copySampleCommand = () => {
     if (navigator.clipboard) {
@@ -236,11 +344,11 @@ const Dsniff = () => {
   };
 
   const copySelectedPacket = () => {
-    if (selectedPacket !== null && navigator.clipboard) {
-      const pkt = pcapSummary[selectedPacket];
-      const text = `${pkt.src}\t${pkt.dst}\t${pkt.protocol}\t${pkt.info}`;
-      navigator.clipboard.writeText(text);
-    }
+    if (!totalFrames || !navigator.clipboard) return;
+    const pkt = pcapSummary[safeIndex];
+    if (!pkt) return;
+    const text = `${pkt.src}\t${pkt.dst}\t${pkt.protocol}\t${pkt.info}`;
+    navigator.clipboard.writeText(text);
   };
 
   useEffect(() => {
@@ -259,7 +367,8 @@ const Dsniff = () => {
   }, []);
 
   useEffect(() => {
-    if (!urlsnarfLogs.length) return;
+    if (!urlsnarfLogs.length && !captureFrames.length && !summaryRows.length)
+      return;
 
     const domainMap = {};
     urlsnarfLogs.forEach((log) => {
@@ -270,7 +379,8 @@ const Dsniff = () => {
       if (log.protocol === 'HTTP') domainMap[log.host].risk = 'High';
     });
 
-    pcapSummary.forEach((pkt) => {
+    const dataset = captureFrames.length ? captureFrames : summaryRows;
+    dataset.forEach((pkt) => {
       const domain = pkt.dst;
       if (!domainMap[domain])
         domainMap[domain] = { urls: new Set(), credentials: [], risk: 'Low' };
@@ -295,18 +405,52 @@ const Dsniff = () => {
       risk: data.risk,
     }));
     setDomainSummary(summary);
+  }, [urlsnarfLogs, captureFrames, summaryRows]);
+
+  useEffect(() => {
+    const dataset = (captureFrames.length ? captureFrames : summaryRows).map(
+      (item, idx) => ({
+        protocol: item.protocol,
+        host: item.dst,
+        details: item.timeline || item.info,
+        frameIndex: idx,
+        timestamp:
+          item.timestamp || `Frame ${String(idx + 1).padStart(2, '0')}`,
+      }),
+    );
+
+    if (!dataset.length) {
+      setTimeline([]);
+      return;
+    }
 
     if (prefersReduced) {
-      setTimeline(urlsnarfLogs);
-    } else {
-      setTimeline([]);
-      urlsnarfLogs.forEach((log, idx) => {
-        setTimeout(() => {
-          setTimeline((prev) => [...prev, log]);
-        }, idx * 1000);
-      });
+      setTimeline(dataset);
+      return;
     }
-  }, [urlsnarfLogs, prefersReduced, pcapSummary]);
+
+    setTimeline([]);
+    const timers = [];
+    dataset.forEach((entry, idx) => {
+      timers.push(
+        setTimeout(() => {
+          setTimeline((prev) => [...prev, entry]);
+        }, idx * 1000),
+      );
+    });
+
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, [captureFrames, summaryRows, prefersReduced]);
+
+  useEffect(() => {
+    if (!totalFrames && currentFrame !== 0) {
+      setCurrentFrame(0);
+    } else if (totalFrames && currentFrame > totalFrames - 1) {
+      setCurrentFrame(totalFrames - 1);
+    }
+  }, [totalFrames, currentFrame]);
 
   const addFilter = () => {
     if (newValue.trim()) {
@@ -448,10 +592,146 @@ const Dsniff = () => {
       </div>
       <div className="mb-4" data-testid="pcap-demo">
         <h2 className="font-bold mb-2 text-sm">PCAP credential leakage demo</h2>
+        <div
+          className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+          data-testid="capture-controls"
+          role="group"
+          aria-label="Capture frame controls"
+          tabIndex={0}
+          onKeyDown={handleFrameKeyNavigation}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goToFrame(safeIndex - 1)}
+              disabled={isFirstFrame || !totalFrames}
+              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+            >
+              Previous frame
+            </button>
+            <button
+              type="button"
+              onClick={() => goToFrame(safeIndex + 1)}
+              disabled={isLastFrame || !totalFrames}
+              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+            >
+              Next frame
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-1 sm:flex-none">
+            <label
+              htmlFor="frame-slider"
+              className="text-xs text-gray-300 whitespace-nowrap"
+            >
+              Frame {totalFrames ? safeIndex + 1 : 0} / {totalFrames}
+            </label>
+            <input
+              id="frame-slider"
+              type="range"
+              min="0"
+              max={sliderMax}
+              value={totalFrames ? safeIndex : 0}
+              onChange={(event) => goToFrame(Number(event.target.value))}
+              disabled={totalFrames <= 1}
+              className="flex-1 accent-ubt-blue"
+              aria-valuemin={0}
+              aria-valuemax={sliderMax}
+              aria-valuenow={totalFrames ? safeIndex : 0}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={exportCurrentSlice}
+            disabled={!totalFrames}
+            className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+          >
+            Export slice
+          </button>
+        </div>
+        <div
+          className="mb-3 text-xs"
+          aria-live="polite"
+          data-testid="frame-explanation"
+        >
+          <p className="text-green-300 font-semibold">
+            {activeFrame
+              ? activeFrame.timeline
+              : 'Step through the capture to see the attack from setup to credential leak.'}
+          </p>
+          <p className="text-gray-300 mt-1">{frameExplanation}</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-2">
           {pcapSummary.map((pkt, i) => (
-            <SessionTile key={`tile-${i}`} session={pkt} onView={() => setSelectedPacket(i)} />
+            <SessionTile
+              key={`tile-${i}`}
+              session={pkt}
+              onView={() => goToFrame(i)}
+              isActive={safeIndex === i}
+            />
           ))}
+        </div>
+        <div
+          className="grid gap-2 md:grid-cols-2 mb-2"
+          data-testid="capture-context"
+        >
+          <div className="bg-black p-2 rounded" data-testid="topology-panel">
+            <h3 className="font-bold mb-1 text-sm">Network topology</h3>
+            <ul className="space-y-1 text-xs" role="list">
+              {topologyNodes.map((node) => {
+                const highlighted = activeTopologyFocus.includes(node.id);
+                return (
+                  <li
+                    key={node.id}
+                    className={`flex items-center justify-between px-2 py-1 rounded border ${
+                      highlighted
+                        ? 'border-ubt-blue bg-ubt-blue/30 text-white'
+                        : 'border-transparent bg-ub-grey/40'
+                    }`}
+                    aria-current={highlighted ? 'true' : undefined}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{node.label}</span>
+                      <span className="text-gray-300">{node.role}</span>
+                    </div>
+                    <span className="text-green-300">{node.ip}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <div className="bg-black p-2 rounded" data-testid="arp-table">
+            <h3 className="font-bold mb-1 text-sm">Observed ARP table</h3>
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-green-400">
+                  <th className="pr-2">IP</th>
+                  <th className="pr-2">MAC</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {arpTableEntries.map((entry, idx) => {
+                  const highlighted = activeArpFocus.includes(entry.ip);
+                  return (
+                    <tr
+                      key={entry.ip}
+                      className={`${
+                        highlighted
+                          ? 'bg-ubt-blue/40'
+                          : idx % 2 === 0
+                          ? 'bg-black'
+                          : 'bg-ub-grey'
+                      }`}
+                    >
+                      <td className="pr-2 text-white">{entry.ip}</td>
+                      <td className="pr-2 text-green-300">{entry.mac}</td>
+                      <td className="text-gray-300">{entry.note}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
         <table className="w-full text-left text-xs mb-2">
           <thead>
@@ -463,36 +743,50 @@ const Dsniff = () => {
             </tr>
           </thead>
           <tbody>
-            {pcapSummary.map((pkt, i) => (
-              <tr
-                key={i}
-                tabIndex={0}
-                onClick={() => setSelectedPacket(i)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') setSelectedPacket(i);
-                }}
-                className={`cursor-pointer ${
-                  selectedPacket === i
-                    ? 'bg-ubt-blue'
-                    : i % 2 === 0
-                    ? 'bg-black'
-                    : 'bg-ub-grey'
-                }`}
-              >
-                <td className="pr-2 text-white">{pkt.src}</td>
-                <td className="pr-2 text-white">{pkt.dst}</td>
-                <td className="pr-2 text-green-400">{pkt.protocol}</td>
-                <td className="text-green-400">{pkt.info}</td>
-              </tr>
-            ))}
+            {pcapSummary.map((pkt, i) => {
+              const isActive = safeIndex === i;
+              return (
+                <tr
+                  key={i}
+                  tabIndex={0}
+                  role="row"
+                  aria-selected={isActive}
+                  onClick={() => goToFrame(i)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      goToFrame(i);
+                    } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      goToFrame(i + 1);
+                    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      goToFrame(i - 1);
+                    }
+                  }}
+                  className={`cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                    isActive
+                      ? 'bg-ubt-blue'
+                      : i % 2 === 0
+                      ? 'bg-black'
+                      : 'bg-ub-grey'
+                  }`}
+                >
+                  <td className="pr-2 text-white">{pkt.src}</td>
+                  <td className="pr-2 text-white">{pkt.dst}</td>
+                  <td className="pr-2 text-green-400">{pkt.protocol}</td>
+                  <td className="text-green-400">{pkt.info}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         <button
           onClick={copySelectedPacket}
-          disabled={selectedPacket === null}
+          disabled={!totalFrames}
           className="mb-2 px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
         >
-          Copy selected row
+          Copy active frame
         </button>
         <div className="bg-black p-2">
           <h3 className="font-bold mb-1 text-sm">Remediation</h3>
@@ -542,7 +836,13 @@ const Dsniff = () => {
         <h2 className="font-bold mb-2 text-sm">Capture timeline</h2>
         <ol className="list-decimal pl-5 text-xs">
           {timeline.map((log, i) => (
-            <TimelineItem key={i} log={log} prefersReduced={prefersReduced} />
+            <TimelineItem
+              key={log.frameIndex ?? i}
+              log={log}
+              prefersReduced={prefersReduced}
+              isActive={log.frameIndex === safeIndex}
+              onSelect={goToFrame}
+            />
           ))}
         </ol>
       </div>
