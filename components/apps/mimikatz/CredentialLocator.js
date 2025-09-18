@@ -1,5 +1,6 @@
 // Simulator: displays sample credential artifacts. For educational use only.
 import React, { useState, useEffect } from 'react';
+import ProgressBar from '../../ui/ProgressBar';
 
 const artifacts = [
   { label: 'SAM Database (sample)', found: true },
@@ -56,20 +57,13 @@ const CredentialArtifactLocator = () => {
       >
         Locate Artifacts
       </button>
-      <div className="w-full bg-gray-700 h-4 mb-2">
-        <div
-          className="bg-blue-500 h-4"
-          style={{
-            width: `${progress}%`,
-            transition: prefersReducedMotion ? 'none' : 'width 0.2s',
-          }}
-          role="progressbar"
-          aria-label="scan progress"
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        />
-      </div>
+      <ProgressBar
+        value={progress}
+        className="w-full h-4 mb-2"
+        aria-label="Scan progress"
+        aria-valuetext={`${progress}%`}
+        reduceMotion={prefersReducedMotion}
+      />
       <ul>
         {results.map((r, idx) => (
           <li

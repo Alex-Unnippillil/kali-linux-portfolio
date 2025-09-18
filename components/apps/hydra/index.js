@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import ProgressBar from '../../ui/ProgressBar';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -652,12 +653,11 @@ const HydraApp = () => {
           alt="credentials"
           className="w-5 h-5"
         />
-        <div className="flex-1 bg-gray-700 h-2 rounded">
-          <div
-            className="bg-green-500 h-2 rounded"
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
+        <ProgressBar
+          value={progress}
+          className="flex-1 h-2"
+          aria-label="Hydra spray progress"
+        />
       </div>
       <p className="mt-2 text-sm text-yellow-300">
         This demo slows after {BACKOFF_THRESHOLD} tries to mimic password spray

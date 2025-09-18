@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
+import ProgressBar from '@/components/ui/ProgressBar';
 
 interface Preset {
   value: string;
@@ -317,12 +318,12 @@ const Hashcat: React.FC = () => {
       </div>
 
       <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
-        <div className="w-full bg-gray-400 dark:bg-gray-600 rounded h-2">
-          <div
-            className="h-2 bg-green-500 rounded"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+        <ProgressBar
+          value={progress}
+          className="h-2"
+          aria-label="Hashcat progress"
+          aria-valuetext={`${Math.round(progress)}%`}
+        />
         <div className="text-xs text-center mt-1">ETA: {eta}</div>
       </div>
       <div className="bg-black text-green-400 p-2 h-32 overflow-auto font-mono text-xs">

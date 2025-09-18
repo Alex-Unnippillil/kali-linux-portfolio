@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import ProgressBar from '../../ui/ProgressBar';
 
 export const hashTypes = [
   {
@@ -133,20 +134,17 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
   return (
     <div
       className="w-48"
-      role="progressbar"
-      aria-label="Hash cracking progress"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={progress}
-      aria-valuetext={`${progress}%`}
+      role="group"
+      aria-label="Hash cracking progress summary"
     >
       <div className="text-sm mb-1">Progress: {progress}%</div>
-      <div className="w-full h-4 bg-gray-700 rounded">
-        <div
-          className="h-4 bg-blue-600 rounded"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <ProgressBar
+        value={progress}
+        className="h-4"
+        aria-label="Hash cracking progress"
+        aria-valuetext={`${progress}%`}
+        reduceMotion={reduceMotion}
+      />
       <div role="status" aria-live="polite" className="text-sm mt-2">
         <div>Attempts/sec: {hashRates[index]}</div>
         <div>ETA: {etas[index]}</div>
