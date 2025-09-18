@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 const BackgroundImage = dynamic(
@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useWindowRules, { readCurrentMonitors } from '../../hooks/useWindowRules';
 
 export class Desktop extends Component {
     constructor() {
@@ -40,6 +41,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_rule_state: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -89,6 +91,27 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevProps.evaluateWindowRules !== this.props.evaluateWindowRules) {
+            this.applyWindowRulesToAll();
+        }
+        if (prevProps.monitors !== this.props.monitors) {
+            this.applyWindowRulesToAll();
+        }
+        if (prevState.window_positions !== this.state.window_positions) {
+            Object.keys(this.state.window_positions).forEach(id => {
+                const prevPos = prevState.window_positions[id];
+                const nextPos = this.state.window_positions[id];
+                if (!nextPos) return;
+                if (!prevPos || prevPos.x !== nextPos.x || prevPos.y !== nextPos.y) {
+                    if (this.state.closed_windows[id] === false) {
+                        this.applyWindowRulesForWindow(id);
+                    }
+                }
+            });
+        }
     }
 
     componentWillUnmount() {
@@ -454,6 +477,78 @@ export class Desktop extends Component {
         return appsJsx;
     }
 
+    getMonitorIdForWindow = (id) => {
+        const monitors = Array.isArray(this.props.monitors) ? this.props.monitors : [];
+        if (!monitors.length) return undefined;
+        const pos = this.state.window_positions[id];
+        if (!pos) {
+            const primary = monitors.find(m => m && m.primary);
+            return primary ? primary.id : monitors[0].id;
+        }
+        for (const monitor of monitors) {
+            if (!monitor || !monitor.bounds) continue;
+            const { x, y, width, height } = monitor.bounds;
+            if (
+                typeof x === 'number' && typeof y === 'number' &&
+                typeof width === 'number' && typeof height === 'number'
+            ) {
+                if (pos.x >= x && pos.x < x + width && pos.y >= y && pos.y < y + height) {
+                    return monitor.id;
+                }
+            }
+        }
+        const primary = monitors.find(m => m && m.primary);
+        return primary ? primary.id : monitors[0].id;
+    }
+
+    applyWindowRulesForWindow = (id) => {
+        if (!this.props.evaluateWindowRules) return;
+        if (this.state.closed_windows[id]) return;
+        const appMeta = apps.find(app => app.id === id);
+        if (!appMeta) return;
+        const descriptor = {
+            appId: id,
+            title: appMeta.title || id,
+            monitorId: this.getMonitorIdForWindow(id),
+        };
+        const result = this.props.evaluateWindowRules(descriptor) || {};
+        const applied = {
+            layout: result.layout,
+            alwaysOnTop: typeof result.alwaysOnTop === 'boolean' ? result.alwaysOnTop : undefined,
+            opacity: typeof result.opacity === 'number' ? result.opacity : undefined,
+        };
+        const hasEffect = !!applied.layout || typeof applied.alwaysOnTop === 'boolean' || typeof applied.opacity === 'number';
+        this.setState(prev => {
+            const previous = prev.window_rule_state[id];
+            if (!hasEffect) {
+                if (!previous) return null;
+                const next = { ...prev.window_rule_state };
+                delete next[id];
+                return { window_rule_state: next };
+            }
+            if (
+                previous &&
+                previous.layout === applied.layout &&
+                previous.alwaysOnTop === applied.alwaysOnTop &&
+                previous.opacity === applied.opacity
+            ) {
+                return null;
+            }
+            return {
+                window_rule_state: {
+                    ...prev.window_rule_state,
+                    [id]: applied,
+                }
+            };
+        });
+    }
+
+    applyWindowRulesToAll = () => {
+        if (!this.props.evaluateWindowRules) return;
+        const openIds = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
+        openIds.forEach(this.applyWindowRulesForWindow);
+    }
+
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
@@ -480,6 +575,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    ruleState: this.state.window_rule_state[app.id],
                 }
 
                 windowsJsx.push(
@@ -496,7 +592,10 @@ export class Desktop extends Component {
             : (v) => v;
         this.setState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+        }), () => {
+            this.saveSession();
+            this.applyWindowRulesForWindow(id);
+        });
     }
 
     saveSession = () => {
@@ -603,10 +702,14 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState({ minimized_windows: minimized_windows }, () => {
+                    this.saveSession();
+                    this.applyWindowRulesForWindow(objId);
+                });
             } else {
                 this.focus(objId);
                 this.saveSession();
+                this.applyWindowRulesForWindow(objId);
             }
             return;
         } else {
@@ -650,6 +753,7 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.applyWindowRulesForWindow(objId);
                 });
                 this.app_stack.push(objId);
             }, 200);
@@ -701,7 +805,10 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        const window_rule_state = { ...this.state.window_rule_state };
+        delete window_rule_state[objId];
+
+        this.setState({ closed_windows, favourite_apps, window_rule_state }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -974,5 +1081,26 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const {
+        evaluateWindowRules,
+        monitors,
+        setMonitors,
+    } = useWindowRules();
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const detect = () => setMonitors(readCurrentMonitors());
+        detect();
+        window.addEventListener('resize', detect);
+        return () => window.removeEventListener('resize', detect);
+    }, [setMonitors]);
+
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            evaluateWindowRules={evaluateWindowRules}
+            monitors={monitors}
+        />
+    );
 }

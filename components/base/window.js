@@ -56,6 +56,9 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (this.props.ruleState?.layout) {
+            this.applyRuleLayout(this.props.ruleState.layout);
+        }
     }
 
     componentWillUnmount() {
@@ -68,6 +71,29 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        const currentLayout = this.props.ruleState?.layout;
+        const prevLayout = prevProps.ruleState?.layout;
+        if (currentLayout !== prevLayout) {
+            this.applyRuleLayout(currentLayout);
+        }
+        if (currentLayout === 'tile' && this.state.snapped !== 'left' && prevState.snapped !== this.state.snapped) {
+            this.applyRuleLayout(currentLayout);
+        }
+    }
+
+    applyRuleLayout = (layout) => {
+        if (layout === 'tile') {
+            if (this.state.snapped !== 'left') {
+                this.snapWindow('left');
+            }
+        } else if (layout === 'float') {
+            if (this.state.snapped) {
+                this.unsnapWindow();
+            }
         }
     }
 
@@ -612,6 +638,17 @@ export class Window extends Component {
     }
 
     render() {
+        const ruleOpacity = this.props.minimized ? undefined : this.props.ruleState?.opacity;
+        const inlineStyle = {
+            width: `${this.state.width}%`,
+            height: `${this.state.height}%`,
+            opacity: typeof ruleOpacity === 'number' ? ruleOpacity : undefined,
+        };
+        const baseFocusClass = this.props.isFocused ? " z-30 " : " z-20 notFocused";
+        const alwaysOnTop = this.props.ruleState?.alwaysOnTop;
+        const zClass = alwaysOnTop
+            ? (this.props.isFocused ? " z-50 " : " z-50 notFocused")
+            : baseFocusClass;
         return (
             <>
                 {this.state.snapPreview && (
@@ -634,8 +671,8 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        style={inlineStyle}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + zClass + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
