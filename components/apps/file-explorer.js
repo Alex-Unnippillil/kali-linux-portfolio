@@ -4,6 +4,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import {
+  startDownloadWatcher,
+  stopDownloadWatcher,
+  subscribeToDownloadConflicts,
+  resolveDownloadConflict,
+  undoLastDownloadBatch,
+} from '../../modules/filesystem/downloadWatcher';
+
+const RULE_LABELS = {
+  type: 'File type',
+  size: 'File size',
+  domain: 'Source domain',
+};
+
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, index);
+  const rounded = index === 0 ? Math.round(value) : value.toFixed(1);
+  return `${rounded} ${units[index]}`;
+};
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -102,8 +124,12 @@ export default function FileExplorer() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [watcherActive, setWatcherActive] = useState(false);
+  const [conflict, setConflict] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const statusTimeoutRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -115,6 +141,18 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const showStatus = (message, duration = 4000) => {
+    if (statusTimeoutRef.current) {
+      clearTimeout(statusTimeoutRef.current);
+    }
+    setStatusMessage(message);
+    if (duration > 0) {
+      statusTimeoutRef.current = window.setTimeout(() => {
+        setStatusMessage('');
+      }, duration);
+    }
+  };
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -131,6 +169,63 @@ export default function FileExplorer() {
       await readDir(root);
     })();
   }, [opfsSupported, root, getDir]);
+
+  useEffect(() => {
+    let mounted = true;
+    startDownloadWatcher().then((started) => {
+      if (!mounted) return;
+      setWatcherActive(started);
+      if (!started) {
+        setStatusMessage("Download automation isn't supported in this browser.");
+      }
+    });
+    const unsubscribe = subscribeToDownloadConflicts((event) => {
+      setConflict(event);
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
+      stopDownloadWatcher();
+      if (statusTimeoutRef.current) {
+        clearTimeout(statusTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!conflict) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        resolveDownloadConflict(conflict.id, { action: 'skip' });
+        setConflict(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [conflict]);
+
+  const handleConflictAction = (action) => {
+    if (!conflict) return;
+    resolveDownloadConflict(conflict.id, { action });
+    setConflict(null);
+    if (action === 'keep-both') {
+      showStatus('Kept both files with unique names.', 3000);
+    } else if (action === 'replace') {
+      showStatus('Replaced the older download.', 3000);
+    } else {
+      showStatus('Skipped moving the download.', 3000);
+    }
+  };
+
+  const handleUndoAutomation = async () => {
+    const restored = await undoLastDownloadBatch();
+    if (restored) {
+      showStatus('Restored the last tidy batch.', 3500);
+    } else {
+      showStatus('No automated changes to undo.', 2500);
+    }
+  };
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -306,11 +401,23 @@ export default function FileExplorer() {
             Back
           </button>
         )}
+        <button
+          onClick={handleUndoAutomation}
+          disabled={!watcherActive}
+          className="px-2 py-1 bg-black bg-opacity-50 rounded disabled:opacity-40"
+        >
+          Undo last tidy
+        </button>
         <Breadcrumbs path={path} onNavigate={navigateTo} />
         {currentFile && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
           </button>
+        )}
+        {statusMessage && (
+          <div className="ml-auto text-xs text-ubt-grey" role="status">
+            {statusMessage}
+          </div>
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
@@ -370,6 +477,58 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
+      {conflict && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="download-conflict-title"
+            className="w-11/12 max-w-md rounded border border-gray-700 bg-ub-cool-grey p-4 shadow-lg"
+          >
+            <h2 id="download-conflict-title" className="text-lg font-bold mb-2">
+              Resolve download conflict
+            </h2>
+            <p className="text-sm mb-3">
+              A file named <span className="font-mono">{conflict.name}</span> already exists in{' '}
+              <span className="font-semibold">{conflict.pathLabel}</span>.
+            </p>
+            <div className="text-xs text-gray-300 space-y-1 mb-4">
+              <div>
+                <span className="font-semibold">Existing:</span> {conflict.existing.name} • {formatBytes(conflict.existing.size)}
+              </div>
+              <div>
+                <span className="font-semibold">Incoming:</span> {conflict.incoming.name} • {formatBytes(conflict.incoming.size)}
+              </div>
+              {conflict.rules && conflict.rules.length > 0 && (
+                <div>
+                  <span className="font-semibold">Rules applied:</span>{' '}
+                  {conflict.rules.map((rule) => RULE_LABELS[rule] || rule).join(', ')}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => handleConflictAction('skip')}
+                className="px-3 py-1 rounded bg-black bg-opacity-50 hover:bg-opacity-80"
+              >
+                Skip
+              </button>
+              <button
+                onClick={() => handleConflictAction('keep-both')}
+                className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500"
+              >
+                Keep both
+              </button>
+              <button
+                onClick={() => handleConflictAction('replace')}
+                className="px-3 py-1 rounded bg-red-600 hover:bg-red-500"
+              >
+                Replace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
