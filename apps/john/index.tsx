@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import AuditSimulator from './components/AuditSimulator';
+import ProgressBar from '@/components/ui/ProgressBar';
 
 interface HashItem {
   hash: string;
@@ -214,12 +215,12 @@ const JohnApp: React.FC = () => {
       </div>
 
       <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
-        <div className="w-full bg-gray-400 dark:bg-gray-600 rounded h-2">
-          <div
-            className="h-2 bg-blue-500 rounded"
-            style={{ width: `${overallProgress}%` }}
-          />
-        </div>
+        <ProgressBar
+          value={overallProgress}
+          className="h-2"
+          aria-label="Overall cracking progress"
+          aria-valuetext={`${Math.round(overallProgress)}%`}
+        />
         <div className="text-xs text-center mt-1">ETA: {eta}</div>
       </div>
 

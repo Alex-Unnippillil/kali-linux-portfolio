@@ -3,6 +3,7 @@ import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
 import hipaaProfile from './templates/hipaa.json';
+import ProgressBar from '../../ui/ProgressBar';
 
 const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
@@ -411,12 +412,13 @@ const OpenVASApp = () => {
         </button>
       </div>
       {loading && (
-        <div className="w-full bg-gray-700 h-2 mb-4">
-          <div
-            style={{ width: `${progress}%` }}
-            className="h-2 bg-green-500 transition-all"
-          />
-        </div>
+        <ProgressBar
+          value={progress}
+          className="w-full h-2 mb-4"
+          aria-label="OpenVAS scan progress"
+          aria-valuetext={`${Math.round(progress)}%`}
+          reduceMotion={reduceMotion.current}
+        />
       )}
       <SeverityChart
         data={severityCounts}

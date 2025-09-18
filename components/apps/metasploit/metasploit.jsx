@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import ProgressBar from '../../ui/ProgressBar';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -477,15 +478,12 @@ const MetasploitApp = ({
                     <li key={i}>{t}</li>
                   ))}
                 </ul>
-                <div
-                  className="w-full bg-ub-grey h-2 mt-2"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(progress)}
-                >
-                  <div className="h-full bg-ub-orange" style={{ width: `${progress}%` }} />
-                </div>
+                <ProgressBar
+                  value={progress}
+                  className="mt-2 h-2"
+                  aria-label="Exploit replay progress"
+                  aria-valuetext={`${Math.round(progress)}%`}
+                />
               </>
             )}
           </div>

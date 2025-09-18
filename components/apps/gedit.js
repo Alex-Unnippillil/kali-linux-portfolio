@@ -190,7 +190,11 @@ export class Gedit extends Component {
                     this.state.sending && (
                         <div className="flex justify-center items-center h-full w-full bg-gray-400 bg-opacity-30 absolute top-0 left-0">
                             {this.state.showProgress ? (
-                                <ProgressBar progress={this.state.progress} />
+                                <ProgressBar
+                                    value={this.state.progress}
+                                    className="w-48"
+                                    aria-label="Message send progress"
+                                />
                             ) : (
                                 <Image
                                     className="w-8 motion-safe:animate-spin"

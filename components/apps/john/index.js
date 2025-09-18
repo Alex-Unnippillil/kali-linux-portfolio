@@ -8,6 +8,7 @@ import {
 } from './utils';
 import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
+import ProgressBar from '../../ui/ProgressBar';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -27,7 +28,6 @@ const JohnApp = () => {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState('wordlist');
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [animOffset, setAnimOffset] = useState(0);
   const [mode, setMode] = useState('wordlist');
   const [candidates, setCandidates] = useState([]);
   const [potfileEntries, setPotfileEntries] = useState([]);
@@ -44,17 +44,6 @@ const JohnApp = () => {
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
-
-  useEffect(() => {
-    if (prefersReducedMotion) return undefined;
-    let frame;
-    const animate = () => {
-      setAnimOffset((o) => (o + 1) % 20);
-      frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [prefersReducedMotion]);
 
   useEffect(
     () => () => {
@@ -438,26 +427,14 @@ const JohnApp = () => {
         </div>
         {loading && (
           <>
-            <div className="w-full bg-gray-700 rounded h-4 overflow-hidden mt-2 relative">
-              <div
-                className="h-full"
-                style={{
-                  width: `${progress}%`,
-                  backgroundImage:
-                    phase === 'wordlist'
-                      ? 'repeating-linear-gradient(45deg,#065f46,#065f46 10px,#1e3a8a 10px,#1e3a8a 20px)'
-                      : 'repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a 10px,#065f46 10px,#065f46 20px)',
-                  backgroundSize: '20px 20px',
-                  backgroundPosition: `${phase === 'wordlist' ? animOffset : -animOffset}px 0`,
-                  transition: prefersReducedMotion ? 'none' : 'width 0.2s ease-out',
-                }}
-                role="progressbar"
-                aria-valuenow={Math.round(progress)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <span className="sr-only">{`Progress ${Math.round(progress)} percent`}</span>
-              </div>
+            <div className="relative mt-2">
+              <ProgressBar
+                value={progress}
+                className="h-4"
+                aria-label="John the Ripper cracking progress"
+                aria-valuetext={`${Math.round(progress)}%`}
+                reduceMotion={prefersReducedMotion}
+              />
               <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
                 {`${Math.round(progress)}%`}
               </span>
