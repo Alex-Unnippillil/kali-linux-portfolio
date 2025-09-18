@@ -73,7 +73,15 @@ export async function setFontScale(scale) {
 
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  const stored = window.localStorage.getItem('high-contrast');
+  if (stored !== null) {
+    return stored === 'true';
+  }
+  try {
+    return window.matchMedia?.('(prefers-contrast: more)').matches ?? false;
+  } catch (e) {
+    return DEFAULT_SETTINGS.highContrast;
+  }
 }
 
 export async function setHighContrast(value) {
