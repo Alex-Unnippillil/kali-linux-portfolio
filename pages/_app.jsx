@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import CommandPalette from '../components/base/CommandPalette';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -160,6 +161,7 @@ function MyApp(props) {
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
+            <CommandPalette />
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {
