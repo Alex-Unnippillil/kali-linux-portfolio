@@ -13,6 +13,7 @@
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:settings-memory": "jest --runTestsByPath __tests__/settingsMemoryUsage.test.ts --runInBand",
     "lint": "eslint . --max-warnings=0",
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
