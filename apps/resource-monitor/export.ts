@@ -1,4 +1,4 @@
-import { FetchEntry } from '../../lib/fetchProxy';
+import type { FetchEntry } from '../../lib/fetchProxy';
 
 export function serializeMetrics(entries: FetchEntry[]): string {
   return JSON.stringify(entries, null, 2);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow, { type TabDefinition } from '../../components/ui/TabbedWindow';
 import HydraApp from '../../components/apps/hydra';
 import StrategyTrainer from './components/StrategyTrainer';
 

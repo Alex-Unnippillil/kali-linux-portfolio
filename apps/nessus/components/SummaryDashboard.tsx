@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Severity, severities } from '../types';
+import { type Severity, severities } from '../types';
 
 const colors: Record<Severity, string> = {
   Critical: 'bg-red-700',

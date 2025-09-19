@@ -1,5 +1,5 @@
 import {
-  GameState,
+  type GameState,
   drawFromStock,
   moveWasteToTableau,
   moveTableauToTableau,

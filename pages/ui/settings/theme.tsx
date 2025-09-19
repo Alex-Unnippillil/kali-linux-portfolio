@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent } from 'react';
+import { type ChangeEvent } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
 

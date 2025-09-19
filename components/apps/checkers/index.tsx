@@ -8,8 +8,8 @@ import {
   applyMove,
   isDraw,
   hasMoves,
-  Move,
-  Board,
+  type Move,
+  type Board,
 } from './engine';
 
 const Checkers = () => {

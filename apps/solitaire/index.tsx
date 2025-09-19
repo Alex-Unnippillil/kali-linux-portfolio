@@ -8,8 +8,8 @@ import {
   autoMove,
   getHint,
   cardToString,
-  Suit,
-  Card,
+  type Suit,
+  type Card,
   setDrawMode,
 } from '../games/solitaire/logic';
 

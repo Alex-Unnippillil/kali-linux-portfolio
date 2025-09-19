@@ -1,5 +1,5 @@
 import {
-  LeaderboardEntry,
+  type LeaderboardEntry,
   getLeaderboard,
   recordScore as baseRecordScore,
 } from '../components/apps/Games/common/leaderboard';

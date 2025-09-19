@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect, ChangeEvent } from 'react';
+import { useRef, useState, useCallback, useEffect, type ChangeEvent } from 'react';
 import QRCode from 'qrcode';
 import Presets from './components/Presets';
 import Scan from './components/Scan';

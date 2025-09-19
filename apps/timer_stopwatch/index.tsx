@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef, RefObject } from 'react';
+import { useEffect, useState, useRef, type RefObject } from 'react';
 import useIntersection from '../../hooks/useIntersection';
 
 export default function TimerStopwatch() {

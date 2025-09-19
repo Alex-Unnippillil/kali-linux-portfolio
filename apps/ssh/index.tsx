@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow, { type TabDefinition } from '../../components/ui/TabbedWindow';
 
 const SSHBuilder: React.FC = () => {
   const [user, setUser] = useState('');

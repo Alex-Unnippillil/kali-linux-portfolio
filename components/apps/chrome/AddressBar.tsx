@@ -5,7 +5,7 @@ import {
   getBookmarks,
   exportBookmarks,
   importBookmarks,
-  Bookmark,
+  type Bookmark,
 } from './bookmarks';
 
 interface AddressBarProps {

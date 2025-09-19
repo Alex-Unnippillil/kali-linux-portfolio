@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { minimax, checkWinner, createBoard, Player } from '../../../apps/games/tictactoe/logic';
+import { minimax, checkWinner, createBoard, type Player } from '../../../apps/games/tictactoe/logic';
 
 type Step = {
   board: (Player | null)[];
