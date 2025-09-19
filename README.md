@@ -92,6 +92,21 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn licenses:check` – generate `reports/license-report.json` and fail if any dependency uses an unapproved license.
+
+## License Compliance Workflow
+
+- Approved licenses are tracked in [`config/license-allowlist.json`](./config/license-allowlist.json).
+- `yarn licenses:check` parses the dependency tree with [`license-checker`](https://github.com/davglass/license-checker) and compares each SPDX expression with the allowlist.
+- The script writes a machine-readable report to `reports/license-report.json`; GitHub Actions uploads it as a build artifact for every pull request.
+
+### Updating the allowlist for new dependencies
+
+1. Run `yarn install` after adding or upgrading dependencies.
+2. Execute `yarn licenses:check` to regenerate the report. The command will fail if a package introduces a license that is not already approved.
+3. Review the new license terms. If the license is acceptable for the project, append it to the `allowedLicenses` array in [`config/license-allowlist.json`](./config/license-allowlist.json) (keep the list sorted alphabetically).
+4. Re-run `yarn licenses:check` to confirm compliance, then commit the dependency update, allowlist change, and regenerated report if needed.
+5. If the license is not acceptable, replace the dependency before merging.
 
 ---
 
