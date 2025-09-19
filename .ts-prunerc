@@ -1,0 +1,4 @@
+{
+  "project": "tsconfig.ts-prune.json",
+  "ignore": "^(app/|components/|games/|pages/|player/|styles/|public/|chrome-extension/|calc/|scanner/|scripts/|templates/|__tests__/|playwright/|docs/)"
+}

@@ -1,9 +1,10 @@
 import { createLogger, Logger } from '../../lib/logger';
 
-export interface Chat {
+interface Chat {
   id: string;
 }
 
+// ts-prune-ignore-next
 export function getChatId(chat?: Chat, logger: Logger = createLogger()) {
   if (!chat) {
     logger.error('chat is required');

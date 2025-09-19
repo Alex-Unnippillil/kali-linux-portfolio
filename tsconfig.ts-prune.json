@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "modules/metadata.ts",
+    "components/InstallButton.tsx",
+    "components/ModuleCard.tsx",
+    "pages/post_exploitation.tsx"
+  ]
+}

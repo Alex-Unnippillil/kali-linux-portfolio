@@ -1,4 +1,4 @@
-export type EventName =
+type EventName =
   | 'cta_click'
   | 'signup_submit'
   | 'contact_submit'

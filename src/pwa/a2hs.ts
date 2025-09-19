@@ -6,6 +6,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
+// ts-prune-ignore-next
 export function initA2HS() {
   if (typeof window === 'undefined') return;
   window.addEventListener('beforeinstallprompt', (e: Event) => {
