@@ -4,19 +4,9 @@ on:
   pull_request:
 
 jobs:
-  install:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-
   lint:
+    name: Lint
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,11 +14,11 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: npm run lint
+      - run: yarn lint
 
   typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,11 +26,11 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: npm run tsc -- --noEmit
+      - run: yarn typecheck
 
-  test:
+  unit:
+    name: Unit Tests
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -49,10 +39,75 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: yarn test --coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: warn
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+      - name: Upload Next.js build
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: .next
+          if-no-files-found: error
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .
+      - run: npx playwright install --with-deps
+      - run: npx playwright test
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: warn
+      - name: Upload Playwright traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results
+          if-no-files-found: warn
 
   security:
+    name: Security Audit
     runs-on: ubuntu-latest
-    needs: install
+    needs:
+      - lint
+      - typecheck
+      - unit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,8 +118,12 @@ jobs:
       - run: yarn npm audit
 
   vercel-preview:
+    name: Vercel Preview
     runs-on: ubuntu-latest
-    needs: install
+    needs:
+      - lint
+      - typecheck
+      - unit
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

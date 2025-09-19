@@ -1,8 +1,36 @@
-# Kali Linux Portfolio 
+# Kali Linux Portfolio
+
+[![Lint Status](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml/badge.svg?branch=main&job=Lint)](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml?query=workflow%3ACI)
+[![Typecheck Status](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml/badge.svg?branch=main&job=Typecheck)](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml?query=workflow%3ACI)
+[![Unit Test Status](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml/badge.svg?branch=main&job=Unit%20Tests)](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml?query=workflow%3ACI)
+[![Build Status](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml/badge.svg?branch=main&job=Build)](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml?query=workflow%3ACI)
+[![E2E Status](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml/badge.svg?branch=main&job=E2E)](https://github.com/Alex-Unnippillil/kali-linux-portfolio/actions/workflows/ci.yml?query=workflow%3ACI)
 
 A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
 
 > Repo homepage: https://unnippillil.com/
+
+---
+
+## Continuous Integration
+
+The CI pipeline runs discrete quality gates with explicit dependencies so that build and end-to-end tests only execute after fast feedback checks succeed.
+
+| Job | Description | Depends on |
+| --- | --- | --- |
+| Lint | Runs `yarn lint` with ESLint. | — |
+| Typecheck | Runs `yarn typecheck` for TypeScript coverage. | — |
+| Unit Tests | Executes `yarn test --coverage` and uploads the Jest `coverage/` report as `coverage-report`. | — |
+| Build | Builds the production bundle and uploads the `.next/` directory as the `next-build` artifact. | Lint, Typecheck, Unit Tests |
+| E2E | Downloads the production build artifact, starts `yarn start`, runs Playwright specs, and uploads both the HTML report and trace bundles. | Build |
+| Security Audit | Executes `yarn npm audit` to surface vulnerable packages. | Lint, Typecheck, Unit Tests |
+| Vercel Preview | Runs the Vercel CLI preview deployment flow. | Lint, Typecheck, Unit Tests |
+
+Artifacts exposed by CI:
+
+- **Coverage report** (`coverage-report`) – Jest LCOV/HTML output from the unit test job.
+- **Next build** (`next-build`) – Production `.next` directory for debugging or reuse in downstream jobs.
+- **Playwright results** (`playwright-report`, `playwright-traces`) – HTML report plus raw trace archives for failed E2E runs.
 
 ---
 
