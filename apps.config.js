@@ -216,7 +216,7 @@ const utilityList = [
   {
     id: 'ascii-art',
     title: 'ASCII Art',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -225,7 +225,7 @@ const utilityList = [
   {
     id: 'clipboard-manager',
     title: 'Clipboard Manager',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -234,7 +234,7 @@ const utilityList = [
   {
     id: 'figlet',
     title: 'Figlet',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -598,7 +598,7 @@ const apps = [
   {
     id: 'chrome',
     title: 'Google Chrome',
-    icon: '/themes/Yaru/apps/chrome.png',
+    icon: '/themes/Yaru/apps/chrome.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -607,7 +607,7 @@ const apps = [
   {
     id: 'calculator',
     title: 'Calculator',
-    icon: '/themes/Yaru/apps/calc.png',
+    icon: '/themes/Yaru/apps/calc.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -620,7 +620,7 @@ const apps = [
   {
     id: 'terminal',
     title: 'Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/themes/Yaru/apps/bash.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -630,7 +630,7 @@ const apps = [
     // VSCode app uses a Stack iframe, so no editor dependencies are required
     id: 'vscode',
     title: 'Visual Studio Code',
-    icon: '/themes/Yaru/apps/vscode.png',
+    icon: '/themes/Yaru/apps/vscode.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -641,7 +641,7 @@ const apps = [
   {
     id: 'x',
     title: 'X',
-    icon: '/themes/Yaru/apps/x.png',
+    icon: '/themes/Yaru/apps/x.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -677,7 +677,7 @@ const apps = [
   {
     id: 'about',
     title: 'About Alex',
-    icon: '/themes/Yaru/system/user-home.png',
+    icon: '/themes/Yaru/system/user-home.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -686,7 +686,7 @@ const apps = [
   {
     id: 'settings',
     title: 'Settings',
-    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    icon: '/themes/Yaru/apps/gnome-control-center.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -695,7 +695,7 @@ const apps = [
   {
     id: 'files',
     title: 'Files',
-    icon: '/themes/Yaru/system/folder.png',
+    icon: '/themes/Yaru/system/folder.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -758,7 +758,7 @@ const apps = [
   {
     id: 'todoist',
     title: 'Todoist',
-    icon: '/themes/Yaru/apps/todoist.png',
+    icon: '/themes/Yaru/apps/todoist.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -767,7 +767,7 @@ const apps = [
   {
     id: 'sticky_notes',
     title: 'Sticky Notes',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -785,7 +785,7 @@ const apps = [
   {
     id: 'gedit',
     title: 'Contact Me',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -794,7 +794,7 @@ const apps = [
   {
     id: 'converter',
     title: 'Converter',
-    icon: '/themes/Yaru/apps/calc.png',
+    icon: '/themes/Yaru/apps/calc.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -955,7 +955,7 @@ const apps = [
   {
     id: 'serial-terminal',
     title: 'Serial Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/themes/Yaru/apps/bash.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,

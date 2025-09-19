@@ -23,8 +23,8 @@ export default function Settings() {
     setDensity,
     reducedMotion,
     setReducedMotion,
-    fontScale,
-    setFontScale,
+    uiScale,
+    setUiScale,
     highContrast,
     setHighContrast,
     haptics,
@@ -76,7 +76,8 @@ export default function Settings() {
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
+      if (parsed.uiScale !== undefined) setUiScale(parsed.uiScale);
+      else if (parsed.fontScale !== undefined) setUiScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
@@ -93,12 +94,16 @@ export default function Settings() {
     )
       return;
     await resetSettings();
-    window.localStorage.clear();
+    try {
+      window.localStorage.clear();
+    } catch (error) {
+      // localStorage may be unavailable in non-browser environments
+    }
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
+    setUiScale(defaults.uiScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
@@ -212,17 +217,19 @@ export default function Settings() {
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
+            <label htmlFor="ui-scale" className="mr-2 text-ubt-grey">
+              UI Scale: {Math.round(uiScale * 100)}%
+            </label>
             <input
-              id="font-scale"
+              id="ui-scale"
               type="range"
-              min="0.75"
-              max="1.5"
+              min="1"
+              max="2"
               step="0.05"
-              value={fontScale}
-              onChange={(e) => setFontScale(parseFloat(e.target.value))}
+              value={uiScale}
+              onChange={(e) => setUiScale(parseFloat(e.target.value))}
               className="ubuntu-slider"
-              aria-label="Icon size"
+              aria-label="UI scale"
             />
           </div>
           <div className="flex justify-center my-4">

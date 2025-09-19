@@ -1,7 +1,9 @@
 import { useRef, useEffect } from 'react';
+import { useSettings } from './useSettings';
 
 export default function useCanvasResize(baseWidth: number, baseHeight: number) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { uiScale } = useSettings();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -20,7 +22,7 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
       );
       const width = baseWidth * scale;
       const height = baseHeight * scale;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = (window.devicePixelRatio || 1) * uiScale;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       canvas.width = Math.floor(width * dpr);
@@ -29,15 +31,18 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
     };
 
     resize();
-    const ro = new ResizeObserver(resize);
     const parent = canvas.parentElement;
-    if (parent) ro.observe(parent);
+    const ro =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(resize)
+        : null;
+    if (ro && parent) ro.observe(parent);
     window.addEventListener('resize', resize);
     return () => {
       window.removeEventListener('resize', resize);
-      ro.disconnect();
+      ro?.disconnect();
     };
-  }, [baseWidth, baseHeight]);
+  }, [baseWidth, baseHeight, uiScale]);
 
   return canvasRef;
 }
