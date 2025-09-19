@@ -120,13 +120,13 @@ function DesktopMenu(props) {
             </button>
             <Devider />
             <button
-                onClick={props.clearSession}
+                onClick={props.resetSession}
                 type="button"
                 role="menuitem"
-                aria-label="Clear Session"
+                aria-label="Reset Session"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Clear Session</span>
+                <span className="ml-5">Reset Session</span>
             </button>
         </div>
     )

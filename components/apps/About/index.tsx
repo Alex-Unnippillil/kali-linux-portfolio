@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
@@ -9,6 +9,7 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import useSession from '../../../hooks/useSession';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -244,10 +245,160 @@ function About() {
         </li>
         <li className="mt-3 list-star">I also have interests in deep learning, software development, and animation.</li>
       </ul>
+      <DesktopProfilesPanel />
       <WorkerStatus />
       <SafetyNote />
       <Timeline />
     </>
+  );
+}
+
+function DesktopProfilesPanel() {
+  const {
+    profiles,
+    activeProfile,
+    setActiveProfile,
+    createProfile,
+    deleteProfile,
+    resetSession,
+    requestRestore,
+    session,
+  } = useSession();
+  const [profileName, setProfileName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const options = useMemo(
+    () =>
+      profiles.map((id) => ({
+        id,
+        label: id === 'default' ? 'Default profile' : id,
+      })),
+    [profiles],
+  );
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = profileName.trim();
+    if (!trimmed) {
+      setError('Enter a profile name to create a snapshot.');
+      return;
+    }
+    createProfile(trimmed);
+    setProfileName('');
+    setError(null);
+  };
+
+  const handleInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setProfileName(event.target.value);
+    if (error) {
+      setError(null);
+    }
+  };
+
+  const handleRestore = () => {
+    requestRestore();
+  };
+
+  const handleReset = () => {
+    resetSession();
+    requestRestore();
+  };
+
+  return (
+    <section className="w-5/6 md:w-3/4 mt-8 p-4 bg-ub-cool-grey bg-opacity-30 rounded border border-black border-opacity-30">
+      <h2 className="text-lg md:text-xl font-semibold text-ubt-blue">Desktop profiles</h2>
+      <p className="text-xs md:text-sm text-gray-200 mt-2">
+        Save different window layouts under named profiles. Restoring a session reopens saved windows and clamps them inside the
+        viewport.
+      </p>
+      <form
+        className="mt-4 flex flex-col md:flex-row md:items-end gap-2"
+        onSubmit={handleSubmit}
+        aria-label="Create desktop profile"
+      >
+        <label htmlFor="desktop-profile-name" className="text-xs uppercase tracking-wide text-gray-300">
+          New profile
+        </label>
+        <div className="flex w-full md:w-auto gap-2">
+          <input
+            id="desktop-profile-name"
+            type="text"
+            className="flex-1 md:w-48 px-2 py-1 rounded bg-ub-grey text-white border border-black border-opacity-40 focus:outline-none focus:ring-1 focus:ring-ubt-blue"
+            value={profileName}
+            onChange={handleInput}
+            placeholder="For example, Workbench"
+            autoComplete="off"
+          />
+          <button
+            type="submit"
+            className="px-3 py-1.5 rounded border border-ubt-blue text-ubt-blue hover:bg-ubt-blue hover:bg-opacity-10 transition"
+          >
+            Save
+          </button>
+        </div>
+      </form>
+      {error && (
+        <p role="alert" className="mt-1 text-xs text-red-300">
+          {error}
+        </p>
+      )}
+      <ul className="mt-4 space-y-2" role="list">
+        {options.map(({ id, label }) => (
+          <li
+            key={id}
+            className={`flex items-center justify-between rounded border border-black border-opacity-30 px-3 py-2 ${
+              id === activeProfile ? 'bg-ub-cool-grey bg-opacity-70' : 'bg-ub-cool-grey bg-opacity-30'
+            }`}
+          >
+            <button
+              type="button"
+              className="flex-1 text-left focus:outline-none"
+              onClick={() => setActiveProfile(id)}
+              aria-pressed={id === activeProfile}
+            >
+              <span className="font-medium text-white">{label}</span>
+              <span className="block text-xs text-gray-300">
+                {id === activeProfile
+                  ? `${session.openWindows.length} saved window${session.openWindows.length === 1 ? '' : 's'}`
+                  : 'Switch to this layout'}
+              </span>
+            </button>
+            {id !== 'default' && (
+              <button
+                type="button"
+                className="ml-3 px-2 py-1 text-xs border border-black border-opacity-40 rounded hover:bg-ub-warm-grey hover:bg-opacity-20"
+                onClick={() => deleteProfile(id)}
+              >
+                Delete
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 flex flex-col md:flex-row gap-2">
+        <button
+          type="button"
+          className="px-3 py-1.5 rounded border border-ubt-blue text-ubt-blue hover:bg-ubt-blue hover:bg-opacity-10 transition"
+          onClick={handleRestore}
+        >
+          Restore session
+        </button>
+        <button
+          type="button"
+          className="px-3 py-1.5 rounded border border-gray-500 text-gray-200 hover:bg-ub-warm-grey hover:bg-opacity-10 transition"
+          onClick={handleReset}
+        >
+          Reset active profile
+        </button>
+      </div>
+      <p className="mt-3 text-xs md:text-sm text-gray-300">
+        Active profile <span className="font-semibold text-white">{activeProfile}</span> keeps{' '}
+        <span className="font-semibold text-white">{session.openWindows.length}</span>{' '}
+        window{session.openWindows.length === 1 ? '' : 's'} ready and{' '}
+        <span className="font-semibold text-white">{session.dock.length}</span>{' '}
+        dock shortcut{session.dock.length === 1 ? '' : 's'}.
+      </p>
+    </section>
   );
 }
 
