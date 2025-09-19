@@ -27,6 +27,15 @@
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
 
+  /* Window states */
+  --window-shadow-active: 0 18px 48px rgba(0, 0, 0, 0.55);
+  --window-shadow-inactive: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --window-opacity-active: 1;
+  --window-opacity-inactive: 0.94;
+  --window-titlebar-active: var(--color-ub-window-title);
+  --window-titlebar-inactive: var(--color-ub-med-abrgn);
+  --window-titlebar-text: var(--color-text);
+
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
   --game-color-success: #15803d;

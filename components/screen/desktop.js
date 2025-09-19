@@ -53,6 +53,8 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
         }
+        this._focusBroadcastHandle = null;
+        this._pendingFocusUpdates = new Map();
     }
 
     componentDidMount() {
@@ -96,6 +98,12 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (typeof window !== 'undefined' && this._focusBroadcastHandle) {
+            window.clearTimeout(this._focusBroadcastHandle);
+        }
+        if (this._pendingFocusUpdates) {
+            this._pendingFocusUpdates.clear();
+        }
     }
 
     checkForNewFolders = () => {
@@ -541,17 +549,22 @@ export class Desktop extends Component {
     }
 
     hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
-
-        // remove focus and minimise this window
-        minimized_windows[objId] = true;
-        focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
-
-        this.hideSideBar(null, false);
-
-        this.giveFocusToLastApp();
+        this.setState(prevState => {
+            const minimized_windows = { ...prevState.minimized_windows, [objId]: true };
+            const focused_windows = { ...prevState.focused_windows };
+            const updates = [];
+            if (focused_windows[objId] !== false) {
+                focused_windows[objId] = false;
+                updates.push({ id: objId, active: false });
+            }
+            if (updates.length) {
+                this.queueFocusBroadcast(updates);
+            }
+            return { minimized_windows, focused_windows };
+        }, () => {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+        });
     }
 
     giveFocusToLastApp = () => {
@@ -732,19 +745,78 @@ export class Desktop extends Component {
         this.hideAllContextMenu()
     }
 
-    focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
-            }
+    queueFocusBroadcast = (updates) => {
+        if (!updates || !updates.length) return;
+        if (typeof window === 'undefined' || typeof window.setTimeout !== 'function' || typeof window.dispatchEvent !== 'function') {
+            return;
         }
-        this.setState({ focused_windows });
+        if (!this._pendingFocusUpdates) {
+            this._pendingFocusUpdates = new Map();
+        }
+        updates.forEach(({ id, active }) => {
+            if (!id) return;
+            this._pendingFocusUpdates.set(id, !!active);
+        });
+        if (this._focusBroadcastHandle) {
+            return;
+        }
+        this._focusBroadcastHandle = window.setTimeout(() => {
+            this._focusBroadcastHandle = null;
+            if (!this._pendingFocusUpdates || !this._pendingFocusUpdates.size) {
+                if (this._pendingFocusUpdates) {
+                    this._pendingFocusUpdates.clear();
+                }
+                return;
+            }
+            const entries = Array.from(this._pendingFocusUpdates.entries());
+            this._pendingFocusUpdates.clear();
+            entries.forEach(([id, active]) => {
+                if (!id) return;
+                const detail = { id, active };
+                let event = null;
+                if (typeof CustomEvent === 'function') {
+                    event = new CustomEvent('desktop-window-focus', { detail });
+                } else if (typeof document !== 'undefined' && typeof document.createEvent === 'function') {
+                    event = document.createEvent('CustomEvent');
+                    event.initCustomEvent('desktop-window-focus', false, false, detail);
+                }
+                if (event) {
+                    window.dispatchEvent(event);
+                }
+            });
+        }, 16);
+    }
+
+    focus = (objId) => {
+        // removes focus from all window and
+        // gives focus to window with 'id = objId'
+        if (!objId) return;
+        this.setState(prevState => {
+            const focused_windows = { ...prevState.focused_windows };
+            const openWindows = Object.keys(prevState.closed_windows || {}).filter(id => prevState.closed_windows[id] === false);
+            if (!openWindows.includes(objId)) {
+                openWindows.push(objId);
+            }
+            const updates = new Map();
+            openWindows.forEach(id => {
+                const next = id === objId;
+                if (focused_windows[id] !== next) {
+                    focused_windows[id] = next;
+                    updates.set(id, next);
+                }
+            });
+            Object.keys(focused_windows).forEach(id => {
+                if (!openWindows.includes(id) && focused_windows[id]) {
+                    focused_windows[id] = false;
+                    updates.set(id, false);
+                }
+            });
+            if (!updates.size) {
+                return null;
+            }
+            this.queueFocusBroadcast(Array.from(updates.entries()).map(([id, active]) => ({ id, active })));
+            return { focused_windows };
+        });
     }
 
     addNewFolder = () => {
