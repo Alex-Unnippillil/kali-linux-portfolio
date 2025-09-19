@@ -7,6 +7,8 @@ import path from 'path';
 const execFileAsync = promisify(execFile);
 const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
 
+// NOTE: Complexity baseline recorded in eslint.overrides.mjs because this
+// simulation handles install checks, session resumption, and cleanup.
 export default async function handler(req, res) {
   if (
     process.env.FEATURE_TOOL_APIS !== 'enabled' ||

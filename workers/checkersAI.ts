@@ -13,6 +13,31 @@ const inBounds = (r: number, c: number) => r >= 0 && r < 8 && c >= 0 && c < 8;
 const cloneBoard = (board: Board): Board =>
   board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
+const addDirectionalMoves = (
+  board: Board,
+  piece: Piece,
+  origin: [number, number],
+  dr: number,
+  dc: number,
+  moves: Move[],
+  captures: Move[],
+) => {
+  const [r, c] = origin;
+  const r1 = r + dr;
+  const c1 = c + dc;
+  if (!inBounds(r1, c1)) return;
+  const target = board[r1][c1];
+  if (!target) {
+    moves.push({ from: origin, to: [r1, c1] });
+    return;
+  }
+  if (target.color === piece.color) return;
+  const r2 = r + dr * 2;
+  const c2 = c + dc * 2;
+  if (!inBounds(r2, c2) || board[r2][c2]) return;
+  captures.push({ from: origin, to: [r2, c2], captured: [r1, c1] });
+};
+
 const getPieceMoves = (
   board: Board,
   r: number,
@@ -28,19 +53,7 @@ const getPieceMoves = (
   const moves: Move[] = [];
   const captures: Move[] = [];
   for (const [dr, dc] of dirs) {
-    const r1 = r + dr;
-    const c1 = c + dc;
-    if (!inBounds(r1, c1)) continue;
-    const target = board[r1][c1];
-    if (!target) {
-      moves.push({ from: [r, c], to: [r1, c1] });
-    } else if (target.color !== piece.color) {
-      const r2 = r + dr * 2;
-      const c2 = c + dc * 2;
-      if (inBounds(r2, c2) && !board[r2][c2]) {
-        captures.push({ from: [r, c], to: [r2, c2], captured: [r1, c1] });
-      }
-    }
+    addDirectionalMoves(board, piece, [r, c], dr, dc, moves, captures);
   }
   return enforceCapture && captures.length ? captures : [...captures, ...moves];
 };

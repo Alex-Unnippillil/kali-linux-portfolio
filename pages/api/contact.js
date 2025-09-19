@@ -9,6 +9,8 @@ const RATE_LIMIT_MAX = 5;
 
 export const rateLimit = new Map();
 
+// NOTE: Complexity baseline tracked in eslint.overrides.mjs while we evaluate
+// opportunities to split rate limiting, captcha, and storage flows.
 export default async function handler(req, res) {
   try {
     validateServerEnv(process.env);

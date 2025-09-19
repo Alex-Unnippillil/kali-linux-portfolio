@@ -188,30 +188,29 @@ export async function importSettings(json) {
     console.error('Invalid settings', e);
     return;
   }
-  const {
-    accent,
-    wallpaper,
-    density,
-    reducedMotion,
-    fontScale,
-    highContrast,
-    largeHitAreas,
-    pongSpin,
-    allowNetwork,
-    haptics,
-    theme,
-  } = settings;
-  if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
-  if (density !== undefined) await setDensity(density);
-  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
-  if (fontScale !== undefined) await setFontScale(fontScale);
-  if (highContrast !== undefined) await setHighContrast(highContrast);
-  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
-  if (pongSpin !== undefined) await setPongSpin(pongSpin);
-  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
-  if (haptics !== undefined) await setHaptics(haptics);
-  if (theme !== undefined) setTheme(theme);
+  const setters = {
+    accent: setAccent,
+    wallpaper: setWallpaper,
+    density: setDensity,
+    reducedMotion: setReducedMotion,
+    fontScale: setFontScale,
+    highContrast: setHighContrast,
+    largeHitAreas: setLargeHitAreas,
+    pongSpin: setPongSpin,
+    allowNetwork: setAllowNetwork,
+    haptics: setHaptics,
+    theme: async (value) => {
+      setTheme(value);
+    },
+  };
+
+  const tasks = Object.entries(setters)
+    .filter(([key]) => settings[key] !== undefined)
+    .map(async ([key, setter]) => {
+      await setter(settings[key]);
+    });
+
+  await Promise.all(tasks);
 }
 
 export const defaults = DEFAULT_SETTINGS;

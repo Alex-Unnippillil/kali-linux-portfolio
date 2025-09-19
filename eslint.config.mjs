@@ -1,5 +1,6 @@
 import { FlatCompat } from '@eslint/eslintrc';
 import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
+import baselineOverrides from './eslint.overrides.mjs';
 
 const compat = new FlatCompat();
 
@@ -27,6 +28,28 @@ const config = [
       'jsx-a11y/control-has-associated-label': 'error',
     },
   }),
+  {
+    files: [
+      'app/**/*.{js,jsx,ts,tsx}',
+      'components/**/*.{js,jsx,ts,tsx}',
+      'hooks/**/*.{js,jsx,ts,tsx}',
+      'lib/**/*.{js,jsx,ts,tsx}',
+      'modules/**/*.{js,jsx,ts,tsx}',
+      'pages/**/*.{js,jsx,ts,tsx}',
+      'src/**/*.{js,jsx,ts,tsx}',
+      'utils/**/*.{js,ts}',
+      'workers/**/*.{js,ts}',
+    ],
+    rules: {
+      complexity: ['error', 20],
+      'max-lines-per-function': [
+        'error',
+        { max: 200, skipBlankLines: true, skipComments: true },
+      ],
+      'max-nested-callbacks': ['error', 4],
+    },
+  },
+  ...baselineOverrides,
 ];
 
 export default config;
