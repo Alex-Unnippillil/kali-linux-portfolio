@@ -40,6 +40,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_snaps: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -70,11 +71,15 @@ export class Desktop extends Component {
                 this.setState({ favourite_apps });
             }
 
+            const snaps = {};
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+                session.windows.forEach(({ id, x, y, snap }) => {
                     positions[id] = { x, y };
+                    if (snap && snap.position) {
+                        snaps[id] = snap;
+                    }
                 });
-                this.setState({ window_positions: positions }, () => {
+                this.setState({ window_positions: positions, window_snaps: snaps }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
@@ -480,6 +485,8 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    snapState: this.state.window_snaps[app.id],
+                    onSnapChange: (snap) => this.handleSnapChange(app.id, snap),
                 }
 
                 windowsJsx.push(
@@ -499,14 +506,44 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    handleSnapChange = (id, snap) => {
+        this.setState(prev => {
+            const window_snaps = { ...prev.window_snaps };
+            if (snap && snap.position) {
+                const rect = snap.rect
+                    ? {
+                        left: Math.round(Number(snap.rect.left) * 100) / 100,
+                        top: Math.round(Number(snap.rect.top) * 100) / 100,
+                        width: Math.round(Number(snap.rect.width) * 100) / 100,
+                        height: Math.round(Number(snap.rect.height) * 100) / 100,
+                    }
+                    : undefined;
+                window_snaps[id] = rect
+                    ? { position: snap.position, rect }
+                    : { position: snap.position };
+            } else {
+                delete window_snaps[id];
+            }
+            return { window_snaps };
+        }, this.saveSession);
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const windows = openWindows.map(id => {
+            const position = this.state.window_positions[id] || { x: 60, y: 10 };
+            const snap = this.state.window_snaps[id];
+            const entry = {
+                id,
+                x: position.x,
+                y: position.y,
+            };
+            if (snap && snap.position) {
+                entry.snap = snap;
+            }
+            return entry;
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
     }

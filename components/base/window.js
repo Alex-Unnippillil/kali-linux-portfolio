@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Component } from 'react';
+import { createPortal } from 'react-dom';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
@@ -30,6 +31,7 @@ export class Window extends Component {
             },
             snapPreview: null,
             snapPosition: null,
+            snapTarget: null,
             snapped: null,
             lastSize: null,
             grabbed: false,
@@ -37,10 +39,16 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._previewFrame = null;
+        this._pendingPreview = null;
+        this._activeSnapDefinition = null;
+        this._initialSnapFrame = null;
+        this._isMounted = false;
     }
 
     componentDidMount() {
         this.id = this.props.id;
+        this._isMounted = true;
         this.setDefaultWindowDimenstion();
 
         // google analytics
@@ -56,6 +64,12 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (this.props.snapState && this.props.snapEnabled !== false) {
+            this._initialSnapFrame = window.requestAnimationFrame(() => {
+                this._initialSnapFrame = null;
+                this.snapWindow(this.props.snapState, { silent: true });
+            });
+        }
     }
 
     componentWillUnmount() {
@@ -68,6 +82,36 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._previewFrame) {
+            cancelAnimationFrame(this._previewFrame);
+            this._previewFrame = null;
+        }
+        if (this._initialSnapFrame) {
+            cancelAnimationFrame(this._initialSnapFrame);
+            this._initialSnapFrame = null;
+        }
+        this._pendingPreview = null;
+        this._activeSnapDefinition = null;
+        this._isMounted = false;
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.props.snapEnabled === false && prevProps.snapEnabled !== false) {
+            this.clearSnapPreview();
+            if (this.state.snapped) {
+                this.unsnapWindow();
+            }
+        }
+
+        const previousPosition = prevProps.snapState?.position || null;
+        const nextPosition = this.props.snapState?.position || null;
+        if (nextPosition !== previousPosition) {
+            if (nextPosition && nextPosition !== this.state.snapped && this.props.snapEnabled !== false) {
+                this.snapWindow(this.props.snapState, { silent: true });
+            } else if (!nextPosition && this.state.snapped) {
+                this.unsnapWindow({ silent: true });
+            }
         }
     }
 
@@ -92,14 +136,15 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
+        const computedHeight = window.innerHeight
+            - (window.innerHeight * (this.state.height / 100.0))
+            - 28;
+        const computedWidth = window.innerWidth
+            - (window.innerWidth * (this.state.width / 100.0));
         this.setState({
             parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
+                height: Math.max(0, computedHeight),
+                width: Math.max(0, computedWidth)
             }
         }, () => {
             if (this._uiExperiments) {
@@ -205,6 +250,144 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
+    notifySnapChange = (snap, options = {}) => {
+        if (options.silent) return;
+        if (typeof this.props.onSnapChange === 'function') {
+            this.props.onSnapChange(snap);
+        }
+    }
+
+    clearSnapPreview = () => {
+        this._pendingPreview = null;
+        this._activeSnapDefinition = null;
+        if (this._previewFrame) {
+            cancelAnimationFrame(this._previewFrame);
+            this._previewFrame = null;
+        }
+        if (this._isMounted && (this.state.snapPreview || this.state.snapPosition)) {
+            this.setState({ snapPreview: null, snapPosition: null });
+        }
+    }
+
+    getWindowAreaRect = () => {
+        const area = document.getElementById('window-area');
+        if (area) {
+            return area.getBoundingClientRect();
+        }
+        return {
+            left: 0,
+            top: 0,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            right: window.innerWidth,
+            bottom: window.innerHeight
+        };
+    }
+
+    buildSnapDefinition = (position, containerRect) => {
+        if (!containerRect) return null;
+        const width = containerRect.width;
+        const height = containerRect.height;
+        if (!width || !height) return null;
+        const round = (value) => Math.round(value * 100) / 100;
+        if (position === 'left' || position === 'right') {
+            const halfWidth = width / 2;
+            const left = position === 'right' ? width - halfWidth : 0;
+            const rect = {
+                left: round(left),
+                top: 0,
+                width: round(halfWidth),
+                height: round(height),
+            };
+            return {
+                position,
+                rect,
+                widthPercent: (halfWidth / width) * 100,
+                heightPercent: 100,
+            };
+        }
+        if (position === 'top') {
+            const halfHeight = height / 2;
+            const rect = {
+                left: 0,
+                top: 0,
+                width: round(width),
+                height: round(halfHeight),
+            };
+            return {
+                position,
+                rect,
+                widthPercent: 100,
+                heightPercent: (halfHeight / height) * 100,
+            };
+        }
+        return null;
+    }
+
+    updateSnapPreview = (definition) => {
+        if (!this._isMounted) return;
+        if (this.props.snapEnabled === false) {
+            definition = null;
+        }
+        this._pendingPreview = definition;
+        if (this._previewFrame) return;
+        this._previewFrame = window.requestAnimationFrame(() => {
+            this._previewFrame = null;
+            const next = this._pendingPreview;
+            this._pendingPreview = null;
+            if (!this._isMounted) return;
+            if (!next) {
+                if (this.state.snapPreview || this.state.snapPosition) {
+                    this.setState({ snapPreview: null, snapPosition: null });
+                }
+                this._activeSnapDefinition = null;
+                return;
+            }
+            this._activeSnapDefinition = next;
+            const { rect } = next;
+            const { snapPreview, snapPosition } = this.state;
+            if (
+                !snapPreview ||
+                snapPosition !== next.position ||
+                snapPreview.left !== rect.left ||
+                snapPreview.top !== rect.top ||
+                snapPreview.width !== rect.width ||
+                snapPreview.height !== rect.height
+            ) {
+                this.setState({ snapPreview: rect, snapPosition: next.position });
+            }
+        });
+    }
+
+    updateSnapPreviewFromNode = (node) => {
+        if (!node || this.props.snapEnabled === false) {
+            this.updateSnapPreview(null);
+            return;
+        }
+        const area = document.getElementById('window-area');
+        if (!area) {
+            this.updateSnapPreview(null);
+            return;
+        }
+        const nodeRect = node.getBoundingClientRect();
+        const containerRect = area.getBoundingClientRect();
+        const threshold = 32;
+        const distanceLeft = nodeRect.left - containerRect.left;
+        const distanceRight = containerRect.right - nodeRect.right;
+        const distanceTop = nodeRect.top - containerRect.top;
+
+        let definition = null;
+        if (distanceLeft <= threshold) {
+            definition = this.buildSnapDefinition('left', containerRect);
+        } else if (distanceRight <= threshold) {
+            definition = this.buildSnapDefinition('right', containerRect);
+        } else if (distanceTop <= threshold) {
+            definition = this.buildSnapDefinition('top', containerRect);
+        }
+
+        this.updateSnapPreview(definition);
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
@@ -234,58 +417,100 @@ export class Window extends Component {
         }
     }
 
-    unsnapWindow = () => {
+    unsnapWindow = (options = {}) => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
-        if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
+        if (this._previewFrame) {
+            cancelAnimationFrame(this._previewFrame);
+            this._previewFrame = null;
+        }
+        this._pendingPreview = null;
+        this._activeSnapDefinition = null;
+        const node = document.querySelector(`#${this.id}`);
+        if (node) {
+            const x = node.style.getPropertyValue('--window-transform-x');
+            const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
+                node.style.transform = `translate(${x},${y})`;
             }
         }
+        const nextState = {
+            snapped: null,
+            snapTarget: null,
+            snapPreview: null,
+            snapPosition: null,
+        };
         if (this.state.lastSize) {
-            this.setState({
-                width: this.state.lastSize.width,
-                height: this.state.lastSize.height,
-                snapped: null
-            }, this.resizeBoundries);
-        } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            nextState.width = this.state.lastSize.width;
+            nextState.height = this.state.lastSize.height;
         }
+        this.setState(nextState, () => {
+            this.resizeBoundries();
+            this.notifySnapChange(null, options);
+            this.checkOverlap();
+        });
     }
 
-    snapWindow = (position) => {
+    snapWindow = (target, options = {}) => {
+        if (!target) return;
+        if (this.props.snapEnabled === false && !options.force) {
+            return;
+        }
+        const containerRect = this.getWindowAreaRect();
+        let definition = null;
+        if (typeof target === 'string') {
+            definition = this.buildSnapDefinition(target, containerRect);
+        } else if (target && typeof target === 'object') {
+            const position = target.position;
+            if (position) {
+                definition = this.buildSnapDefinition(position, containerRect);
+                if (definition && target.rect) {
+                    const rect = target.rect;
+                    const normalizedRect = {
+                        left: Number(rect.left),
+                        top: Number(rect.top),
+                        width: Number(rect.width),
+                        height: Number(rect.height),
+                    };
+                    definition = {
+                        position: definition.position,
+                        rect: normalizedRect,
+                        widthPercent: containerRect.width ? (normalizedRect.width / containerRect.width) * 100 : definition.widthPercent,
+                        heightPercent: containerRect.height ? (normalizedRect.height / containerRect.height) * 100 : definition.heightPercent,
+                    };
+                }
+            }
+        }
+        if (!definition) return;
+
+        if (this._previewFrame) {
+            cancelAnimationFrame(this._previewFrame);
+            this._previewFrame = null;
+        }
+        this._pendingPreview = null;
+        this._activeSnapDefinition = null;
+
+        this.focusWindow();
         this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
+        const node = document.getElementById(this.id);
+        if (node) {
+            node.style.transform = `translate(${definition.rect.left}px, ${definition.rect.top}px)`;
         }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
+        const previousWidth = this.state.width;
+        const previousHeight = this.state.height;
+        const lastSize = this.state.snapped ? this.state.lastSize : { width: previousWidth, height: previousHeight };
         this.setState({
             snapPreview: null,
             snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
+            snapped: definition.position,
+            snapTarget: definition,
+            lastSize,
+            width: definition.widthPercent,
+            height: definition.heightPercent,
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+            this.notifySnapChange({ position: definition.position, rect: definition.rect }, options);
+        });
     }
 
     checkOverlap = () => {
@@ -314,25 +539,11 @@ export class Window extends Component {
     }
 
     checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
-        const threshold = 30;
-        let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
-        }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        const node = document.getElementById(this.id);
+        if (node) {
+            this.updateSnapPreviewFromNode(node);
+        } else {
+            this.updateSnapPreview(null);
         }
     }
 
@@ -360,17 +571,25 @@ export class Window extends Component {
     handleDrag = (e, data) => {
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
+            this.updateSnapPreviewFromNode(data.node);
+        } else {
+            this.updateSnapPreview(null);
         }
         this.checkOverlap();
-        this.checkSnapPreview();
     }
 
     handleStop = () => {
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
-        if (snapPos) {
-            this.snapWindow(snapPos);
-        } else {
+        if (this._previewFrame) {
+            cancelAnimationFrame(this._previewFrame);
+            this._previewFrame = null;
+        }
+        const definition = this._activeSnapDefinition;
+        this._pendingPreview = null;
+        this._activeSnapDefinition = null;
+        if (definition) {
+            this.snapWindow(definition);
+        } else if (this.state.snapPreview || this.state.snapPosition) {
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -457,6 +676,9 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
+            if (this.state.snapped) {
+                this.unsnapWindow();
+            }
             var r = document.querySelector("#" + this.id);
             this.setWinowsPosition();
             // translate window to maximize position
@@ -468,6 +690,7 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        this.notifySnapChange(null);
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
@@ -505,7 +728,7 @@ export class Window extends Component {
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
                     this.checkOverlap();
-                    this.checkSnapPreview();
+                    this.updateSnapPreviewFromNode(node);
                     this.setWinowsPosition();
                 }
             }
@@ -584,43 +807,30 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
-
     render() {
+        const preview = this.state.snapPreview;
+        const previewRoot = typeof document !== 'undefined'
+            ? document.getElementById('window-area') || document.body
+            : null;
+        const previewActive = !!preview;
+        const previewNode = previewRoot && preview
+            ? createPortal(
+                <div
+                    data-testid="snap-preview"
+                    className="absolute border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                    style={{
+                        left: `${preview.left}px`,
+                        top: `${preview.top}px`,
+                        width: `${preview.width}px`,
+                        height: `${preview.height}px`,
+                    }}
+                />,
+                previewRoot
+            )
+            : null;
         return (
             <>
-                {this.state.snapPreview && (
-                    <div
-                        data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
-                    />
-                )}
+                {previewNode}
                 <Draggable
                     axis="both"
                     handle=".bg-ub-window-title"
@@ -635,8 +845,19 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={
+                            this.state.cursorType +
+                            " " +
+                            (this.state.closed ? " closed-window " : "") +
+                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") +
+                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
+                            (this.state.grabbed ? " opacity-70 " : "") +
+                            (previewActive ? " ring-2 ring-blue-400 " : "") +
+                            (this.props.isFocused ? " z-30 " : " z-20 notFocused") +
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"
+                        }
                         id={this.id}
+                        data-snap-position={this.state.snapped || undefined}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
