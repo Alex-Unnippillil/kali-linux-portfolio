@@ -19,6 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import TaskPreview from './task-preview';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.previewHideTimeout = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +54,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            taskPreview: null,
+            pendingTaskbarFocus: null,
         }
     }
 
@@ -96,6 +100,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.cancelPreviewHide();
     }
 
     checkForNewFolders = () => {
@@ -555,14 +560,74 @@ export class Desktop extends Component {
     }
 
     giveFocusToLastApp = () => {
-        // if there is atleast one app opened, give it focus
+        let nextFocused = null;
         if (!this.checkAllMinimised()) {
             for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+                const candidate = this.app_stack[index];
+                if (this.state.closed_windows[candidate] === false && !this.state.minimized_windows[candidate]) {
+                    nextFocused = candidate;
+                    this.focus(candidate);
                     break;
                 }
             }
+        }
+        this.setState({ pendingTaskbarFocus: nextFocused });
+        return nextFocused;
+    }
+
+    cancelPreviewHide = () => {
+        if (this.previewHideTimeout) {
+            clearTimeout(this.previewHideTimeout);
+            this.previewHideTimeout = null;
+        }
+    }
+
+    schedulePreviewHide = () => {
+        this.cancelPreviewHide();
+        this.previewHideTimeout = setTimeout(() => {
+            this.setState({ taskPreview: null });
+            this.previewHideTimeout = null;
+        }, 120);
+    }
+
+    hideTaskPreview = () => {
+        this.cancelPreviewHide();
+        if (this.state.taskPreview) {
+            this.setState({ taskPreview: null });
+        }
+    }
+
+    showTaskPreview = (appId, anchor) => {
+        if (!appId || this.state.closed_windows[appId]) {
+            return;
+        }
+        this.cancelPreviewHide();
+        this.setState({
+            taskPreview: {
+                appId,
+                anchor,
+            }
+        });
+    }
+
+    handlePreviewClose = (appId) => {
+        if (!appId) return;
+        this.cancelPreviewHide();
+        this.hideTaskPreview();
+        this.closeApp(appId);
+    }
+
+    handlePreviewEnter = () => {
+        this.cancelPreviewHide();
+    }
+
+    handlePreviewLeave = () => {
+        this.schedulePreviewHide();
+    }
+
+    clearPendingTaskbarFocus = () => {
+        if (this.state.pendingTaskbarFocus !== null) {
+            this.setState({ pendingTaskbarFocus: null });
         }
     }
 
@@ -701,7 +766,12 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        const nextState = { closed_windows, favourite_apps };
+        if (this.state.taskPreview && this.state.taskPreview.appId === objId) {
+            this.cancelPreviewHide();
+            nextState.taskPreview = null;
+        }
+        this.setState(nextState, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -864,6 +934,10 @@ export class Desktop extends Component {
     }
 
     render() {
+        const previewState = this.state.taskPreview;
+        const previewApp = previewState ? apps.find(app => app.id === previewState.appId) : null;
+        const previewAnchor = previewState ? previewState.anchor : null;
+        const previewMinimized = previewState ? !!this.state.minimized_windows[previewState.appId] : false;
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -900,6 +974,21 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    onPreviewStart={this.showTaskPreview}
+                    onPreviewEnd={this.schedulePreviewHide}
+                    onPreviewClear={this.hideTaskPreview}
+                    pendingFocusId={this.state.pendingTaskbarFocus}
+                    onPendingFocusHandled={this.clearPendingTaskbarFocus}
+                />
+
+                <TaskPreview
+                    app={previewApp || null}
+                    anchor={previewAnchor || null}
+                    minimized={previewMinimized}
+                    visible={!!previewApp}
+                    onClose={this.handlePreviewClose}
+                    onMouseEnter={this.handlePreviewEnter}
+                    onMouseLeave={this.handlePreviewLeave}
                 />
 
                 {/* Desktop Apps */}
