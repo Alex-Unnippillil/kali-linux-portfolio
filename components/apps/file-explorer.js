@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
+import { useFileSafetyPrompt } from '../../hooks/useFileSafetyPrompt';
+import FileSafetyModal from '../FileSafetyModal';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
 export async function openFileDialog(options = {}) {
@@ -104,6 +106,7 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const { requestFileAccess, modalProps } = useFileSafetyPrompt('FileExplorer');
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -148,9 +151,18 @@ export default function FileExplorer() {
   const openFallback = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const text = await file.text();
-    setCurrentFile({ name: file.name });
-    setContent(text);
+    const allowed = await requestFileAccess(
+      file,
+      async () => {
+        const text = await file.text();
+        setCurrentFile({ name: file.name });
+        setContent(text);
+      },
+      { source: 'file-explorer-fallback' },
+    );
+    if (!allowed && e.target) {
+      e.target.value = '';
+    }
   };
 
   const openFolder = async () => {
@@ -175,17 +187,25 @@ export default function FileExplorer() {
   };
 
   const openFile = async (file) => {
-    setCurrentFile(file);
-    let text = '';
-    if (opfsSupported) {
-      const unsaved = await loadBuffer(file.name);
-      if (unsaved !== null) text = unsaved;
-    }
-    if (!text) {
-      const f = await file.handle.getFile();
-      text = await f.text();
-    }
-    setContent(text);
+    try {
+      const actualFile = await file.handle.getFile();
+      await requestFileAccess(
+        actualFile,
+        async () => {
+          let text = '';
+          if (opfsSupported) {
+            const unsaved = await loadBuffer(file.name);
+            if (unsaved !== null) text = unsaved;
+          }
+          if (!text) {
+            text = await actualFile.text();
+          }
+          setCurrentFile(file);
+          setContent(text);
+        },
+        { source: 'file-explorer-open' },
+      );
+    } catch {}
   };
 
   const readDir = async (handle) => {
@@ -291,85 +311,89 @@ export default function FileExplorer() {
             </button>
           </>
         )}
+        <FileSafetyModal {...modalProps} />
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
-        </button>
-        {path.length > 1 && (
-          <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Back
+    <>
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+        <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
+          <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Open Folder
           </button>
-        )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
-        {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
-        )}
-      </div>
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
-          <div className="p-2 font-bold">Recent</div>
-          {recent.map((r, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
-            >
-              {r.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
-        </div>
-        <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
-          <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
-            <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
-              Search
+          {path.length > 1 && (
+            <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Back
             </button>
-            <div className="max-h-40 overflow-auto mt-2">
-              {results.map((r, i) => (
-                <div key={i}>
-                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
-                </div>
-              ))}
+          )}
+          <Breadcrumbs path={path} onNavigate={navigateTo} />
+          {currentFile && (
+            <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Save
+            </button>
+          )}
+        </div>
+        <div className="flex flex-1 overflow-hidden">
+          <div className="w-40 overflow-auto border-r border-gray-600">
+            <div className="p-2 font-bold">Recent</div>
+            {recent.map((r, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openRecent(r)}
+              >
+                {r.name}
+              </div>
+            ))}
+            <div className="p-2 font-bold">Directories</div>
+            {dirs.map((d, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openDir(d)}
+              >
+                {d.name}
+              </div>
+            ))}
+            <div className="p-2 font-bold">Files</div>
+            {files.map((f, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openFile(f)}
+              >
+                {f.name}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 flex flex-col">
+            {currentFile && (
+              <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            )}
+            <div className="p-2 border-t border-gray-600">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                className="px-1 py-0.5 text-black"
+              />
+              <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
+                Search
+              </button>
+              <div className="max-h-40 overflow-auto mt-2">
+                {results.map((r, i) => (
+                  <div key={i}>
+                    <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+      <FileSafetyModal {...modalProps} />
+    </>
   );
 }

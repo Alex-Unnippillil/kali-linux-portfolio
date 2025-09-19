@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import usePersistentState from '../../../../hooks/usePersistentState';
 import defaultTemplates from '../../../../templates/export/report-templates.json';
+import { useFileSafetyPrompt } from '../../../../hooks/useFileSafetyPrompt';
+import FileSafetyModal from '../../../FileSafetyModal';
 
 interface Finding {
   title: string;
@@ -48,6 +50,7 @@ export default function ReportTemplates() {
   const [templateData, setTemplateData] = useState<Record<string, TemplateDef>>(defaultTemplates);
   const keys = Object.keys(templateData);
   const [template, setTemplate] = usePersistentState('reconng-report-template', keys[0]);
+  const { requestFileAccess, modalProps } = useFileSafetyPrompt('ReconngReportTemplates');
 
   const templateKey = keys.includes(template) ? template : keys[0];
   const report = useMemo(
@@ -67,21 +70,26 @@ export default function ReportTemplates() {
 
   const [showDialog, setShowDialog] = useState(false);
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(reader.result as string) as Record<string, TemplateDef>;
-        setTemplateData(parsed);
-        const first = Object.keys(parsed)[0];
-        if (first) setTemplate(first);
-      } catch {
-        // ignore parse errors
-      }
-    };
-    reader.readAsText(file);
+    await requestFileAccess(
+      file,
+      async () => {
+        try {
+          const parsed = JSON.parse(await file.text()) as Record<string, TemplateDef>;
+          setTemplateData(parsed);
+          const first = Object.keys(parsed)[0];
+          if (first) setTemplate(first);
+        } catch {
+          // ignore parse errors
+        }
+      },
+      { source: 'reconng-report-import' },
+    );
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
   const shareJson = JSON.stringify(templateData, null, 2);
@@ -155,6 +163,7 @@ export default function ReportTemplates() {
           </div>
         </dialog>
       )}
+      <FileSafetyModal {...modalProps} />
     </div>
   );
 }

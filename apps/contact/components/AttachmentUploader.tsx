@@ -1,4 +1,6 @@
 import React, { useRef } from 'react';
+import { useFileSafetyPrompt } from '../../../hooks/useFileSafetyPrompt';
+import FileSafetyModal from '../../../components/FileSafetyModal';
 
 export const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024; // 5MB per file
 export const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
@@ -15,8 +17,9 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
   onError,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { requestFileAccess, modalProps } = useFileSafetyPrompt('ContactAttachmentUploader');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
@@ -24,6 +27,10 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
     const valid: File[] = [];
 
     for (const file of Array.from(files)) {
+      const allowed = await requestFileAccess(file, undefined, { source: 'contact-attachment' });
+      if (!allowed) {
+        continue;
+      }
       if (file.size > MAX_ATTACHMENT_SIZE) {
         onError?.(`Attachment '${file.name}' exceeds the ${
           MAX_ATTACHMENT_SIZE / (1024 * 1024)
@@ -57,6 +64,7 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
         onChange={handleChange}
         className="text-sm"
       />
+      <FileSafetyModal {...modalProps} />
     </div>
   );
 };
