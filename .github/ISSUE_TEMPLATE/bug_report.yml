@@ -1,0 +1,61 @@
+name: "Bug report"
+description: "Report a defect or regression in the Kali Linux Portfolio"
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! Please include as much detail as possible so we can reproduce the issue locally and in CI.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+      placeholder: "Window manager locks up when opening the terminal app"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Provide a numbered list of steps that consistently reproduce the problem. Include sample input or links if relevant.
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened, including error messages or screenshots.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, OS, device, build SHA, or any other context needed to reproduce.
+      placeholder: "Chrome 131 on macOS 15, yarn dev"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Paste stack traces, console logs, or attach images that help illustrate the issue.
+  - type: checkboxes
+    id: regression
+    attributes:
+      label: Regression Check
+      description: Let us know if this used to work.
+      options:
+        - label: I confirmed this worked in a previous release/build
+        - label: I am not sure if this ever worked
