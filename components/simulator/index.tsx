@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+
 import type {
   SimulatorParserRequest,
   SimulatorParserResponse,

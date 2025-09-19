@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
 
 function middleEllipsis(text: string, max = 30) {
