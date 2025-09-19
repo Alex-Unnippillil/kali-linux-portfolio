@@ -91,6 +91,7 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn typecheck:all` – run TypeScript project references via `tsc -b` to ensure every package typechecks in order.
 - `yarn export` – generate a static export in the `out/` directory.
 
 ---
