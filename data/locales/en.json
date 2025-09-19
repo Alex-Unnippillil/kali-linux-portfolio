@@ -1,0 +1,37 @@
+{
+  "quickSettings": {
+    "panelLabel": "Quick settings",
+    "theme": "Theme",
+    "themeValue": {
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "sound": "Sound",
+    "network": "Network",
+    "reducedMotion": "Reduced motion",
+    "locale": {
+      "label": "Language",
+      "placeholder": "Choose a language"
+    }
+  },
+  "locale": {
+    "en": "English",
+    "es": "Español"
+  },
+  "whisker": {
+    "buttonLabel": "Applications",
+    "searchPlaceholder": "Search",
+    "categories": {
+      "all": "All",
+      "favorites": "Favorites",
+      "recent": "Recent",
+      "utilities": "Utilities",
+      "games": "Games"
+    }
+  },
+  "status": {
+    "online": "Online",
+    "onlineBlocked": "Online (requests blocked)",
+    "offline": "Offline"
+  }
+}
