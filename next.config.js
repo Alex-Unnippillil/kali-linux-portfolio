@@ -3,6 +3,7 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { runtimeCaching } = require('./lib/pwa/runtimeCaching.js');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -81,6 +82,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
+    runtimeCaching,
   },
 });
 

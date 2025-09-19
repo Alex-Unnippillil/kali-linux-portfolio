@@ -5,6 +5,12 @@ if (typeof global.structuredClone !== 'function') {
   // @ts-ignore
   global.structuredClone = (val) => (val === undefined ? val : JSON.parse(JSON.stringify(val)));
 }
+// Ensure workbox and other service-worker aware packages see a self reference
+// @ts-ignore
+if (typeof globalThis.self === 'undefined') {
+  // @ts-ignore
+  globalThis.self = globalThis;
+}
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
 

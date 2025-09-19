@@ -10,14 +10,19 @@ export interface FetchLog {
   responseSize?: number;
   fromServiceWorkerCache?: boolean;
   error?: unknown;
+  timedOut?: boolean;
+  timeoutAt?: number;
 }
 
 export type FetchEntry = FetchLog;
 
 const active = new Map<number, FetchLog>();
 let counter = 0;
+const timeouts = new Map<number, ReturnType<typeof setTimeout>>();
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+export const API_TIMEOUT_MS = 5000;
 
 function bodySize(body: BodyInit | null | undefined): number | undefined {
   if (body == null) return 0;
@@ -32,8 +37,10 @@ export function getActiveFetches(): FetchLog[] {
   return Array.from(active.values());
 }
 
+type FetchProxyEvent = 'start' | 'end' | 'timeout';
+
 export function onFetchProxy(
-  type: 'start' | 'end',
+  type: FetchProxyEvent,
   handler: (e: CustomEvent<FetchLog>) => void,
 ) {
   const event = `fetchproxy-${type}`;
@@ -44,7 +51,7 @@ export function onFetchProxy(
   return () => {};
 }
 
-function notify(type: 'start' | 'end', record: FetchLog) {
+function notify(type: FetchProxyEvent, record: FetchLog) {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(`fetchproxy-${type}`, { detail: record }));
   }
@@ -79,6 +86,13 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
     active.set(id, record);
     notify('start', record);
 
+    const timeoutHandle = setTimeout(() => {
+      record.timedOut = true;
+      record.timeoutAt = now();
+      notify('timeout', record);
+    }, API_TIMEOUT_MS);
+    timeouts.set(id, timeoutHandle);
+
     try {
       const response = await originalFetch(input as any, init);
       const end = now();
@@ -94,6 +108,11 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
       const finalize = (size?: number) => {
         if (typeof size === 'number') record.responseSize = size;
         active.delete(id);
+        const handle = timeouts.get(id);
+        if (handle) {
+          clearTimeout(handle);
+          timeouts.delete(id);
+        }
         notify('end', record);
       };
 
@@ -124,6 +143,11 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
       record.duration = end - record.startTime;
       record.error = err;
       active.delete(id);
+      const handle = timeouts.get(id);
+      if (handle) {
+        clearTimeout(handle);
+        timeouts.delete(id);
+      }
       notify('end', record);
       throw err;
     }
