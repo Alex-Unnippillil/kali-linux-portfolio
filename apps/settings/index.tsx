@@ -10,6 +10,7 @@ import {
   importSettings as importSettingsData,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
+import DiagnosticsPanel from "./components/DiagnosticsPanel";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 
@@ -38,6 +39,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "diagnostics", label: "Diagnostics" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -288,6 +290,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "diagnostics" && <DiagnosticsPanel />}
         <input
           type="file"
           accept="application/json"
