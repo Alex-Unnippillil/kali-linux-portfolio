@@ -1,0 +1,94 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Button stories visual regression Destructive matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ub-red text-white hover:bg-ub-red/90 focus-visible:outline-ub-red disabled:bg-ub-red/70 px-4 py-2 text-sm"
+  type="button"
+>
+  Delete
+</button>
+`;
+
+exports[`Button stories visual regression Disabled matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ubt-blue text-white hover:bg-ubt-blue/90 focus-visible:outline-ubt-blue disabled:bg-ubt-blue/70 px-4 py-2 text-sm"
+  disabled=""
+  type="button"
+>
+  Disabled
+</button>
+`;
+
+exports[`Button stories visual regression FocusVisible matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ubt-blue text-white hover:bg-ubt-blue/90 focus-visible:outline-ubt-blue disabled:bg-ubt-blue/70 px-4 py-2 text-sm"
+  type="button"
+>
+  Focus Visible
+</button>
+`;
+
+exports[`Button stories visual regression Ghost matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-transparent text-white hover:bg-white/10 focus-visible:outline-white disabled:text-white/70 px-4 py-2 text-sm"
+  type="button"
+>
+  Ghost Button
+</button>
+`;
+
+exports[`Button stories visual regression Large matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ubt-blue text-white hover:bg-ubt-blue/90 focus-visible:outline-ubt-blue disabled:bg-ubt-blue/70 px-5 py-3 text-base"
+  type="button"
+>
+  Large Button
+</button>
+`;
+
+exports[`Button stories visual regression Loading matches the snapshot 1`] = `
+<button
+  aria-busy="true"
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ubt-blue text-white hover:bg-ubt-blue/90 focus-visible:outline-ubt-blue disabled:bg-ubt-blue/70 px-4 py-2 text-sm opacity-80"
+  data-loading="true"
+  disabled=""
+  type="button"
+>
+  <span
+    aria-hidden="true"
+    class="mr-2 inline-flex h-4 w-4 items-center justify-center"
+  >
+    <span
+      class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+    />
+  </span>
+  Loading
+</button>
+`;
+
+exports[`Button stories visual regression Primary matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ubt-blue text-white hover:bg-ubt-blue/90 focus-visible:outline-ubt-blue disabled:bg-ubt-blue/70 px-4 py-2 text-sm"
+  type="button"
+>
+  Click me
+</button>
+`;
+
+exports[`Button stories visual regression Secondary matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ub-cool-grey text-white hover:bg-ub-cool-grey/90 focus-visible:outline-ub-cool-grey disabled:bg-ub-cool-grey/70 px-4 py-2 text-sm"
+  type="button"
+>
+  Secondary Button
+</button>
+`;
+
+exports[`Button stories visual regression Small matches the snapshot 1`] = `
+<button
+  class="relative inline-flex items-center justify-center rounded-md border border-transparent font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 data-[loading=true]:cursor-wait min-h-[32px] min-w-[32px] select-none whitespace-nowrap bg-ubt-blue text-white hover:bg-ubt-blue/90 focus-visible:outline-ubt-blue disabled:bg-ubt-blue/70 px-3 py-1.5 text-sm"
+  type="button"
+>
+  Small Button
+</button>
+`;
