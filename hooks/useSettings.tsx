@@ -20,10 +20,15 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTaskbarAlignment as loadTaskbarAlignment,
+  setTaskbarAlignment as saveTaskbarAlignment,
+  getTaskbarCompact as loadTaskbarCompact,
+  setTaskbarCompact as saveTaskbarCompact,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+type TaskbarAlignment = 'left' | 'center' | 'right';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +68,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  taskbarAlignment: TaskbarAlignment;
+  taskbarCompact: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +81,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setTaskbarAlignment: (value: TaskbarAlignment) => void;
+  setTaskbarCompact: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +97,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  taskbarAlignment: defaults.taskbarAlignment as TaskbarAlignment,
+  taskbarCompact: defaults.taskbarCompact,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +110,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setTaskbarAlignment: () => {},
+  setTaskbarCompact: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +126,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [taskbarAlignment, setTaskbarAlignment] = useState<TaskbarAlignment>(
+    (defaults.taskbarAlignment as TaskbarAlignment) || 'left'
+  );
+  const [taskbarCompact, setTaskbarCompact] = useState<boolean>(defaults.taskbarCompact);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +145,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setTaskbarAlignment((await loadTaskbarAlignment()) as TaskbarAlignment);
+      setTaskbarCompact(await loadTaskbarCompact());
     })();
   }, []);
 
@@ -236,6 +255,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveTaskbarAlignment(taskbarAlignment);
+  }, [taskbarAlignment]);
+
+  useEffect(() => {
+    saveTaskbarCompact(taskbarCompact);
+  }, [taskbarCompact]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +277,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        taskbarAlignment,
+        taskbarCompact,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +290,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setTaskbarAlignment,
+        setTaskbarCompact,
       }}
     >
       {children}

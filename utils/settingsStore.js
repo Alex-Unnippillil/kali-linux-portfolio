@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  taskbarAlignment: 'left',
+  taskbarCompact: false,
 };
 
 export async function getAccent() {
@@ -123,6 +125,30 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTaskbarAlignment() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.taskbarAlignment;
+  const value = window.localStorage.getItem('taskbar-alignment');
+  return value === 'center' || value === 'right' || value === 'left'
+    ? value
+    : DEFAULT_SETTINGS.taskbarAlignment;
+}
+
+export async function setTaskbarAlignment(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('taskbar-alignment', value);
+}
+
+export async function getTaskbarCompact() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.taskbarCompact;
+  const value = window.localStorage.getItem('taskbar-compact');
+  return value === null ? DEFAULT_SETTINGS.taskbarCompact : value === 'true';
+}
+
+export async function setTaskbarCompact(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('taskbar-compact', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +163,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('taskbar-alignment');
+  window.localStorage.removeItem('taskbar-compact');
 }
 
 export async function exportSettings() {
@@ -151,6 +179,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    taskbarAlignment,
+    taskbarCompact,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +192,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTaskbarAlignment(),
+    getTaskbarCompact(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +207,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    taskbarAlignment,
+    taskbarCompact,
     theme,
   });
 }
@@ -199,6 +233,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    taskbarAlignment,
+    taskbarCompact,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +247,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (taskbarAlignment !== undefined) await setTaskbarAlignment(taskbarAlignment);
+  if (taskbarCompact !== undefined) await setTaskbarCompact(taskbarCompact);
   if (theme !== undefined) setTheme(theme);
 }
 
