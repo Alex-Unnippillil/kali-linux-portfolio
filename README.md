@@ -113,6 +113,14 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 
 ---
 
+## Performance budgets
+
+- Pull requests run a Lighthouse gate that enforces [`lighthouse-budgets.json`](./lighthouse-budgets.json).
+- CI uploads the HTML report, JSON payload, Chrome trace, and a markdown summary comment on failure or success.
+- Follow the remediation and local reproduction steps documented in [`docs/performance-gate.md`](./docs/performance-gate.md).
+
+---
+
 ## Tech Stack
 
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts

@@ -79,3 +79,96 @@ jobs:
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  performance:
+    runs-on: ubuntu-latest
+    needs: install
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+      - name: Run Lighthouse with budgets
+        run: |
+          set -euo pipefail
+          mkdir -p .lighthouse
+          PORT=3000 yarn start --hostname 0.0.0.0 --port 3000 > .lighthouse/next.log 2>&1 &
+          server_pid=$!
+          cleanup() {
+            if ps -p "$server_pid" > /dev/null 2>&1; then
+              kill "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+            fi
+          }
+          trap cleanup EXIT
+          npx wait-on http://127.0.0.1:3000
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:3000/ \
+            --preset=desktop \
+            --output=json \
+            --output=html \
+            --output-path=.lighthouse/report \
+            --save-assets \
+            --budgets-path=./lighthouse-budgets.json \
+            --chrome-flags="--headless=new --no-sandbox --disable-gpu"
+      - name: Summarize Lighthouse results
+        id: summarize_lighthouse
+        run: |
+          set +e
+          node scripts/perf/generate-lighthouse-summary.mjs \
+            .lighthouse/report.report.json \
+            .lighthouse/summary.md \
+            .lighthouse/summary.json
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload Lighthouse artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: |
+            .lighthouse/report.report.html
+            .lighthouse/report.report.json
+            .lighthouse/report.report.assets/**
+            .lighthouse/summary.md
+            .lighthouse/summary.json
+            .lighthouse/next.log
+      - name: Add summary to job summary
+        if: ${{ always() }}
+        run: |
+          if [ -f .lighthouse/summary.md ]; then
+            cat .lighthouse/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Comment with Lighthouse summary
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const summaryPath = path.join(process.cwd(), '.lighthouse/summary.md');
+            if (!fs.existsSync(summaryPath)) {
+              core.warning('No Lighthouse summary found to comment with.');
+              return;
+            }
+            const body = `<!-- lighthouse-performance-gate -->\n${fs.readFileSync(summaryPath, 'utf8')}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find((comment) => comment.body && comment.body.startsWith('<!-- lighthouse-performance-gate -->'));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+      - name: Enforce Lighthouse budgets
+        if: ${{ steps.summarize_lighthouse.outputs.exit_code != '0' }}
+        run: |
+          echo 'Lighthouse budgets or runtime checks failed.' >&2
+          exit 1
