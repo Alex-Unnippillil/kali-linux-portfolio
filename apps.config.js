@@ -1,17 +1,19 @@
-import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import { createDynamicApp, createDisplay } from '@/utils';
 
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/chrome';
-import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayWeather } from './components/apps/weather';
-import { displayClipboardManager } from './components/apps/ClipboardManager';
-import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayScreenRecorder } from './components/apps/screen-recorder';
-import { displayNikto } from './components/apps/nikto';
+import {
+  displayClipboardManager,
+  displayChrome,
+  displayFiglet,
+  displayGedit,
+  displayNikto,
+  displayResourceMonitor,
+  displayScreenRecorder,
+  displaySettings,
+  displaySpotify,
+  displayTodoist,
+  displayWeather,
+  displayX,
+} from '@/components/apps';
 
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },

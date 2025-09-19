@@ -1,5 +1,5 @@
 import { createGame, guess } from '../apps/hangman/engine';
-import { Replay } from '../utils/replay';
+import { Replay } from '@/utils';
 
 describe('replay system', () => {
   test('playback matches recorded run', () => {

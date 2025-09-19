@@ -1,9 +1,12 @@
 import { render, waitFor } from '@testing-library/react';
 import Page2048 from '../apps/2048';
-import { getDailySeed } from '../utils/dailySeed';
+import { getDailySeed } from '@/utils';
 
 jest.mock('react-ga4', () => ({ event: jest.fn() }));
-jest.mock('../utils/dailySeed');
+jest.mock('@/utils', () => ({
+  ...jest.requireActual('@/utils'),
+  getDailySeed: jest.fn(),
+}));
 
 test('daily seed produces identical starting boards', async () => {
   (getDailySeed as jest.Mock).mockResolvedValue('abcd');

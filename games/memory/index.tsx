@@ -8,7 +8,7 @@ import {
   getLeaderboard,
   recordScore,
   type LeaderboardEntry,
-} from '../../components/apps/Games/common/leaderboard';
+} from '@/components/apps/Games/common/leaderboard';
 
 const ATTACK_LIMIT = 60_000; // 60 seconds
 

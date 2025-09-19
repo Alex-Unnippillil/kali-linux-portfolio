@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import copyToClipboard from "../../utils/clipboard";
+import { copyToClipboard } from "@/utils";
 
 type Rates = Record<string, number>;
 const initialRates = {

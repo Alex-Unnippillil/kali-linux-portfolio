@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import MetasploitApp from '../components/apps/metasploit';
+import MetasploitApp from '@/components/apps/metasploit';
 
 describe.skip('Metasploit app', () => {
   beforeEach(() => {

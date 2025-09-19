@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Reader from '../components/apps/chrome/Reader';
+import Reader from '@/components/apps/chrome/Reader';
 
 const sampleHtml = `<!DOCTYPE html><html><head><title>t</title></head><body><article><h1>Sample</h1><p>Content here</p></article></body></html>`;
 

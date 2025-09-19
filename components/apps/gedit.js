@@ -3,7 +3,7 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
-import { createDisplay } from '../../utils/createDynamicApp';
+import { createDisplay } from '@/utils';
 
 export class Gedit extends Component {
 

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import PluginManager from '../components/apps/plugin-manager';
+import PluginManager from '@/components/apps/plugin-manager';
 
 describe('PluginManager', () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import { getMedal } from '../components/apps/car-racer';
+import { getMedal } from '@/components/apps/car-racer';
 
 describe('car racer medals', () => {
   test('awards medals based on score', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { getDailySeed } from '../../utils/dailySeed';
+import { getDailySeed } from '@/utils';
 
 const WordSearch = dynamic(
   () => import('../../apps/word_search'),

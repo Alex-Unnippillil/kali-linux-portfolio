@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import ReadLaterList from '../components/apps/chrome/ReadLaterList';
+import ReadLaterList from '@/components/apps/chrome/ReadLaterList';
 
 describe('ReadLaterList', () => {
   beforeEach(() => {

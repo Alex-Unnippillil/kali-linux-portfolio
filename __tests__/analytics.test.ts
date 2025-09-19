@@ -1,5 +1,5 @@
 import ReactGA from 'react-ga4';
-import { logEvent, logGameStart, logGameEnd, logGameError } from '../utils/analytics';
+import { logEvent, logGameStart, logGameEnd, logGameError } from '@/utils';
 
 jest.mock('react-ga4', () => ({
   event: jest.fn(),

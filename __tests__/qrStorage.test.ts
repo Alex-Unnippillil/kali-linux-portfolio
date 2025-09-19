@@ -1,4 +1,4 @@
-import { clearScans, loadScans, saveScans } from '../utils/qrStorage';
+import { clearScans, loadScans, saveScans } from '@/utils';
 
 describe('qrStorage', () => {
   beforeEach(() => {

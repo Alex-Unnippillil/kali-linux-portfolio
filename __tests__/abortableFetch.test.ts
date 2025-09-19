@@ -1,4 +1,4 @@
-import { abortableFetch } from '../utils/abortableFetch';
+import { abortableFetch } from '@/utils';
 
 test('abortableFetch can be aborted', async () => {
   const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((_input: any, init?: RequestInit) => {

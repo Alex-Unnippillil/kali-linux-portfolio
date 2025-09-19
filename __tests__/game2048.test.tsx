@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react';
-import Game2048, { setSeed } from '../components/apps/2048';
+import Game2048, { setSeed } from '@/components/apps/2048';
 
 beforeEach(() => {
   window.localStorage.clear();

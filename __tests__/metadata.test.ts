@@ -1,4 +1,4 @@
-import modules from '../modules/metadata';
+import { moduleMetadataList as modules } from '@/modules';
 
 describe('modules metadata', () => {
   it('matches the current module metadata', () => {

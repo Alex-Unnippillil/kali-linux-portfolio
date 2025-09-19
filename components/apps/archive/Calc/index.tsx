@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { create, all } from 'mathjs';
-import Decimal, { add, subtract } from '../../../../utils/decimal';
+import { Decimal, add, subtract } from '@/utils';
 import usePersistentState from '../../../../hooks/usePersistentState';
 import { useHistory, HistoryEntry } from '../../../../calc/history';
 

@@ -7,7 +7,7 @@ import {
   GAMEPAD_PRESETS,
   CalibrationData,
   AxisRange,
-} from "../utils/gamepad";
+} from "@/utils";
 
 export default function GamepadCalibration() {
   const [pad, setPad] = useState<Gamepad | null>(null);

@@ -1,4 +1,4 @@
-import share, { canShare } from '../utils/share';
+import { share, canShare } from '@/utils';
 
 describe('share utility', () => {
   afterEach(() => {

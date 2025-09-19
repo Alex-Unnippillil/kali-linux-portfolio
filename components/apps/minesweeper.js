@@ -3,7 +3,7 @@ import GameLayout from './GameLayout';
 import usePersistedState from '../../hooks/usePersistedState';
 import calculate3BV from '../../games/minesweeper/metrics';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
-import { getDailySeed } from '../../utils/dailySeed';
+import { getDailySeed } from '@/utils';
 
 /**
  * Classic Minesweeper implementation.

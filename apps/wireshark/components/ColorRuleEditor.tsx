@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { colorDefinitions } from '../../../components/apps/wireshark/colorDefs';
+import { colorDefinitions } from '@/components/apps/wireshark/colorDefs';
 
 interface Rule {
   expression: string;

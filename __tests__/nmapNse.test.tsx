@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import NmapNSEApp from '../components/apps/nmap-nse';
+import NmapNSEApp from '@/components/apps/nmap-nse';
 
 describe('NmapNSEApp', () => {
   it('shows example output for selected script', async () => {

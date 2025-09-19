@@ -20,9 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTheme as loadTheme,
+  setTheme as saveTheme,
   defaults,
-} from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+} from '@/utils';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI

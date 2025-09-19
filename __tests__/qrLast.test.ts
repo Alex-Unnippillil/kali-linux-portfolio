@@ -3,7 +3,7 @@ import {
   loadLastScan,
   saveLastGeneration,
   saveLastScan,
-} from '../utils/qrStorage';
+} from '@/utils';
 
 describe('qr last storage', () => {
   beforeEach(() => {

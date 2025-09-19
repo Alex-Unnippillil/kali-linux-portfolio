@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { dictionaries } from '../../../utils/wordle';
+import { dictionaries } from '@/utils';
 
 type DictName = keyof typeof dictionaries;
 

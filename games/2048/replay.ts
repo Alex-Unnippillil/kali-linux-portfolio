@@ -1,7 +1,7 @@
-import { Replay } from '../../utils/replay';
+import { Replay } from '@/utils';
 import { serialize } from '../../apps/games/rng';
 import type { Board } from '../../apps/games/_2048/logic';
-import { shareBlob } from '../../components/apps/Games/common/share';
+import { shareBlob } from '@/components/apps/Games/common/share';
 
 const recorder = new Replay<string>();
 let startState: { board: Board; rng: string } | null = null;

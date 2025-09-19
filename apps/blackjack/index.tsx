@@ -1,3 +1,3 @@
 'use client';
-import Blackjack from '../../components/apps/blackjack';
+import Blackjack from '@/components/apps/blackjack';
 export default Blackjack;

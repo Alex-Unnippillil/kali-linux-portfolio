@@ -9,7 +9,7 @@ if (typeof globalThis.structuredClone !== 'function') {
 }
 
 import { renderHook, act } from '@testing-library/react';
-import useGameSaves from '../components/apps/Games/common/save';
+import useGameSaves from '@/components/apps/Games/common/save';
 
 describe('named save slots', () => {
   test('save and load slots via IndexedDB', async () => {

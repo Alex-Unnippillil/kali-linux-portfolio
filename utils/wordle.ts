@@ -1,7 +1,7 @@
-import commonWords from '../components/apps/wordle_words.json';
-import altWords from '../components/apps/wordle_words_alt.json';
-import animalWords from '../components/apps/wordle_words_animals.json';
-import fruitWords from '../components/apps/wordle_words_fruits.json';
+import commonWords from '@/components/apps/wordle_words.json';
+import altWords from '@/components/apps/wordle_words_alt.json';
+import animalWords from '@/components/apps/wordle_words_animals.json';
+import fruitWords from '@/components/apps/wordle_words_fruits.json';
 import { getDailySeed } from './dailyChallenge';
 
 

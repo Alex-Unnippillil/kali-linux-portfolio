@@ -21,7 +21,7 @@ import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import { safeLocalStorage } from '@/utils';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {

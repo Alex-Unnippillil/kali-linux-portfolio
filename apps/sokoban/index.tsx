@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
+import { logEvent, logGameStart, logGameEnd, logGameError } from '@/utils';
 import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
 import {
   loadLevel,

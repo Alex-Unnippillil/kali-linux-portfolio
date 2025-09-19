@@ -5,7 +5,7 @@ import {
   generateLinePatterns,
   lineToClues,
   autoFillLines,
-} from '../components/apps/nonogramUtils';
+} from '@/components/apps/nonogramUtils';
 
 describe('nonogram utilities', () => {
   test('validateSolution confirms grid matches clues', () => {

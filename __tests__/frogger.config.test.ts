@@ -1,5 +1,5 @@
 jest.mock('next/dynamic', () => jest.fn(() => () => null));
-jest.mock('../components/apps/x', () => ({ displayX: () => null }));
+jest.mock('@/components/apps/x', () => ({ displayX: () => null }));
 
 import { games } from '../apps.config';
 

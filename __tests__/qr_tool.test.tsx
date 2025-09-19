@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
-import QRTool from '../components/apps/qr_tool';
+import QRTool from '@/components/apps/qr_tool';
 import QRCode from 'qrcode';
 
 jest.mock('qrcode');

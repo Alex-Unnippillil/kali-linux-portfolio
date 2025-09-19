@@ -11,7 +11,7 @@ import {
   addToInventory,
   useInventory,
   POWER_UPS,
-} from '../components/apps/asteroids-utils';
+} from '@/components/apps/asteroids-utils';
 
 describe('wrap', () => {
   it('wraps positive overflow', () => {

@@ -1,5 +1,5 @@
 import ReactGA from 'react-ga4';
-import { reportWebVitals } from '../utils/reportWebVitals';
+import { reportWebVitals } from '@/utils';
 
 jest.mock('react-ga4', () => ({
   event: jest.fn(),

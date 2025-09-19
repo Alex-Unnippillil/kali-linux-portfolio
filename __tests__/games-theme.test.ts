@@ -6,7 +6,7 @@ import {
   protanopiaPalette,
   deuteranopiaPalette,
   tritanopiaPalette,
-} from '../components/apps/Games/common/theme';
+} from '@/components/apps/Games/common/theme';
 
 describe('game theme accessibility', () => {
   test('default palette meets WCAG AA contrast', () => {

@@ -6,7 +6,7 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { hasOffscreenCanvas } from '../../../../../utils/feature';
+import { hasOffscreenCanvas } from '@/utils';
 
 export interface CanvasHandle {
   getInputCoords: (

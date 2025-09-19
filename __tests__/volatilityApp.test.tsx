@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import VolatilityApp from '../components/apps/volatility';
+import VolatilityApp from '@/components/apps/volatility';
 
 describe('VolatilityApp demo', () => {
   test('renders process tree and modules from fixture', () => {

@@ -1,4 +1,4 @@
-import { createToneSchedule } from '../utils/audio';
+import { createToneSchedule } from '@/utils';
 
 describe('createToneSchedule', () => {
   test('tone schedule jitter under 10 ms per step across 20 steps', () => {

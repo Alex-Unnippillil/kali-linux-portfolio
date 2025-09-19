@@ -2,7 +2,7 @@
 
 import Phaser from 'phaser';
 import { Howl } from 'howler';
-import { getDb } from '../../utils/safeIDB';
+import { getDb } from '@/utils';
 
 // IndexedDB helpers for persistent highscore
 const DB_NAME = 'phaser-template';

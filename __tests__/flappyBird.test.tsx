@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import FlappyBird from '../components/apps/flappy-bird';
+import FlappyBird from '@/components/apps/flappy-bird';
 
 beforeAll(() => {
   // Minimal ResizeObserver mock for the test environment

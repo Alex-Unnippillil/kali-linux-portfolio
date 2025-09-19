@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import PluginBrowser from '../components/apps/volatility/PluginBrowser';
+import PluginBrowser from '@/components/apps/volatility/PluginBrowser';
 
 describe('Volatility PluginBrowser', () => {
   test('filters plugins and shows output', () => {

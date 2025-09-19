@@ -1,1 +1,1 @@
-export { default } from '../../components/apps/minesweeper';
+export { default } from '@/components/apps/minesweeper';

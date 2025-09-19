@@ -1,7 +1,6 @@
 "use client";
 
-import { isBrowser } from '../../utils/env';
-import { getDb } from '../../utils/safeIDB';
+import { isBrowser, getDb } from '@/utils';
 
 let notesContainer = null;
 let addNoteBtn = null;

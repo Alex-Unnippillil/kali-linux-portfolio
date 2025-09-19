@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import { safeLocalStorage } from '@/utils';
 
 type AppMeta = {
   id: string;

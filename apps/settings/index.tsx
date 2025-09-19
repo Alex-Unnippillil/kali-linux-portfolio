@@ -8,7 +8,7 @@ import {
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
-} from "../../utils/settingsStore";
+} from "@/utils";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";

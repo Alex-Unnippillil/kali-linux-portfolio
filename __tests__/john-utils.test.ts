@@ -1,4 +1,4 @@
-import { identifyHashType } from '../components/apps/john/utils';
+import { identifyHashType } from '@/components/apps/john/utils';
 
 describe('identifyHashType', () => {
   it('detects common hash types', () => {

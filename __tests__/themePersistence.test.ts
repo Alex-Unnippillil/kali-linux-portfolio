@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../hooks/useSettings';
-import { getTheme, getUnlockedThemes, setTheme } from '../utils/theme';
+import { getTheme, getUnlockedThemes, setTheme } from '@/utils';
 
 
 describe('theme persistence and unlocking', () => {

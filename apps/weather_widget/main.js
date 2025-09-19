@@ -1,6 +1,5 @@
 import demoCity from './demoCity.json';
-import { isBrowser } from '../../utils/env';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import { isBrowser, safeLocalStorage } from '@/utils';
 
 if (isBrowser) {
 const widget = document.getElementById('weather');

@@ -1,4 +1,4 @@
-import modules from '../../components/apps/metasploit/modules.json';
+import modules from '@/components/apps/metasploit/modules.json';
 
 export default function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {

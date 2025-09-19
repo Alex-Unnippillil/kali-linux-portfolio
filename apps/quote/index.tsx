@@ -4,9 +4,8 @@ import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../public/quotes/quotes.json';
 import PlaylistBuilder from './components/PlaylistBuilder';
-import share, { canShare } from '../../utils/share';
+import { share, canShare, copyToClipboard } from '@/utils';
 import Posterizer from './components/Posterizer';
-import copyToClipboard from '../../utils/clipboard';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>

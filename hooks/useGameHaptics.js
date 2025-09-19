@@ -6,7 +6,7 @@ import {
   vibrate as vibrateNative,
   patterns,
   supportsVibration,
-} from '../components/apps/Games/common/haptics';
+} from '@/components/apps/Games/common/haptics';
 
 // Exposes helpers for triggering game haptics with an on/off toggle.
 export default function useGameHaptics() {

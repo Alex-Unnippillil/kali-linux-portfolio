@@ -1,4 +1,4 @@
-import { generatePuzzle } from "../components/apps/word-search";
+import { generatePuzzle } from "@/components/apps/word-search";
 
 describe("word search generator", () => {
   test("omits diagonal placements when disabled", () => {

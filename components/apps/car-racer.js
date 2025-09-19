@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
-import { hasOffscreenCanvas } from '../../utils/feature';
+import { hasOffscreenCanvas } from '@/utils';
 
 // Canvas dimensions
 const WIDTH = 300;

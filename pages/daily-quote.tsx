@@ -3,8 +3,7 @@
 import { useRef } from 'react';
 import useDailyQuote from '../hooks/useDailyQuote';
 import { toPng } from 'html-to-image';
-import share, { canShare } from '../utils/share';
-import copyToClipboard from '../utils/clipboard';
+import { share, canShare, copyToClipboard } from '@/utils';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>

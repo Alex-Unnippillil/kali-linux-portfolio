@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import WiresharkApp from '../components/apps/wireshark';
+import WiresharkApp from '@/components/apps/wireshark';
 
 describe('WiresharkApp', () => {
   beforeEach(() => {

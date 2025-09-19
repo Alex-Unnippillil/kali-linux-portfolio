@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react';
-import Memory from '../components/apps/memory';
+import Memory from '@/components/apps/memory';
 
-jest.mock('../components/apps/memory_utils', () => ({
+jest.mock('@/components/apps/memory_utils', () => ({
   createDeck: () => [
     { id: 0, value: 'A' },
     { id: 1, value: 'A' },

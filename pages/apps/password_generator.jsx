@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-import { getDailySeed } from '../../utils/dailySeed';
+import { getDailySeed } from '@/utils';
 
 const PasswordGenerator = dynamic(() => import('../../apps/password_generator'), {
   ssr: false,

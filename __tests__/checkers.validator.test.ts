@@ -8,7 +8,7 @@ import {
   bitCount,
   hasMoves,
   isDraw,
-} from '../components/apps/checkers/engine';
+} from '@/components/apps/checkers/engine';
 
 test('forced jumps are enforced', () => {
   const board = createBoard();

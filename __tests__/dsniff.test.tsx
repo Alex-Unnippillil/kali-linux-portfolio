@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, within } from '@testing-library/react';
-import Dsniff from '../components/apps/dsniff';
+import Dsniff from '@/components/apps/dsniff';
 
 describe('Dsniff component', () => {
   it('shows fixture logs', async () => {

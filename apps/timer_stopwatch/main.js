@@ -1,4 +1,4 @@
-import { isBrowser } from '../../utils/env';
+import { isBrowser } from '@/utils';
 
 if (isBrowser) {
 let mode = 'timer';

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import AutopsyAppComponent from '../../components/apps/autopsy';
+import AutopsyAppComponent from '@/components/apps/autopsy';
 import KeywordTester from './components/KeywordTester';
 
 const AutopsyPage: React.FC = () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import NiktoApp from '../components/apps/nikto';
+import NiktoApp from '@/components/apps/nikto';
 
 describe('NiktoApp', () => {
   it('parses dropped text report and displays data', async () => {
