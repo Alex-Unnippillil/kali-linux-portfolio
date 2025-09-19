@@ -16,6 +16,7 @@
     "lint": "eslint . --max-warnings=0",
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
+    "typecheck:all": "tsc -b --noEmit tsconfig.all.json",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
