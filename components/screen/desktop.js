@@ -23,6 +23,8 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSettings } from '../../hooks/useSettings';
+import displayManager from '../../modules/displayManager';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +32,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.displayUnsubscribe = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -59,6 +62,12 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        const activeDisplayId = this.props.activeDisplayId || displayManager.getActiveDisplayId();
+        displayManager.setActiveDisplay(activeDisplayId);
+        this.displayUnsubscribe = displayManager.subscribe(({ activeDisplayId: currentId }) => {
+            this.realignWindowsToDisplay(currentId);
+        });
+
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
@@ -72,7 +81,7 @@ export class Desktop extends Component {
 
             if (session.windows && session.windows.length) {
                 session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                    positions[id] = displayManager.clampPosition({ x, y }, { displayId: activeDisplayId });
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
@@ -96,6 +105,18 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.displayUnsubscribe) {
+            this.displayUnsubscribe();
+            this.displayUnsubscribe = null;
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps?.activeDisplayId !== this.props.activeDisplayId) {
+            const activeDisplayId = this.props.activeDisplayId || displayManager.getActiveDisplayId();
+            displayManager.setActiveDisplay(activeDisplayId);
+            this.realignWindowsToDisplay(activeDisplayId);
+        }
     }
 
     checkForNewFolders = () => {
@@ -494,8 +515,29 @@ export class Desktop extends Component {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
+        const activeDisplayId = this.props.activeDisplayId || displayManager.getActiveDisplayId();
+        const position = displayManager.clampPosition({ x: snap(x), y: snap(y) }, { displayId: activeDisplayId });
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
+            window_positions: { ...prev.window_positions, [id]: position }
+        }), this.saveSession);
+    }
+
+    realignWindowsToDisplay = (displayId) => {
+        const targetDisplayId = displayId || this.props.activeDisplayId || displayManager.getActiveDisplayId();
+        const currentPositions = this.state.window_positions || {};
+        const updates = {};
+        let changed = false;
+        Object.entries(currentPositions).forEach(([key, value]) => {
+            if (!value) return;
+            const clamped = displayManager.clampPosition(value, { displayId: targetDisplayId });
+            if (clamped.x !== value.x || clamped.y !== value.y) {
+                updates[key] = clamped;
+                changed = true;
+            }
+        });
+        if (!changed) return;
+        this.setState(prev => ({
+            window_positions: { ...prev.window_positions, ...updates }
         }), this.saveSession);
     }
 
@@ -610,8 +652,6 @@ export class Desktop extends Component {
             }
             return;
         } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -645,9 +685,23 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
             setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState(prevState => {
+                    const favourite_apps = { ...prevState.favourite_apps, [objId]: true };
+                    const closed_windows = { ...prevState.closed_windows, [objId]: false };
+                    const activeDisplayId = this.props.activeDisplayId || displayManager.getActiveDisplayId();
+                    const window_positions = { ...prevState.window_positions };
+                    const openWindows = Object.values(prevState.closed_windows || {}).filter(value => value === false).length;
+                    const nextPosition = window_positions[objId]
+                        ? displayManager.clampPosition(window_positions[objId], { displayId: activeDisplayId })
+                        : displayManager.getCascadePosition(openWindows, { displayId: activeDisplayId });
+                    window_positions[objId] = nextPosition;
+                    return {
+                        closed_windows,
+                        favourite_apps,
+                        allAppsView: false,
+                        window_positions,
+                    };
+                }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -972,7 +1026,12 @@ export class Desktop extends Component {
     }
 }
 
+Desktop.defaultProps = {
+    activeDisplayId: 'primary'
+};
+
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { activeDisplayId } = useSettings();
+    return <Desktop {...props} snapEnabled={snapEnabled} activeDisplayId={activeDisplayId} />;
 }

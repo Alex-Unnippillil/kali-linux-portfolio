@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  activeDisplay: 'primary',
 };
 
 export async function getAccent() {
@@ -123,6 +124,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getActiveDisplay() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.activeDisplay;
+  return window.localStorage.getItem('active-display') || DEFAULT_SETTINGS.activeDisplay;
+}
+
+export async function setActiveDisplay(id) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('active-display', id);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('active-display');
 }
 
 export async function exportSettings() {
@@ -151,6 +163,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    activeDisplay,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +175,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getActiveDisplay(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +189,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    activeDisplay,
     theme,
   });
 }
@@ -200,6 +215,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    activeDisplay,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -211,6 +227,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (activeDisplay !== undefined) await setActiveDisplay(activeDisplay);
   if (theme !== undefined) setTheme(theme);
 }
 
