@@ -1,4 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { serverOnly } from './server-only';
+
+serverOnly('lib/server/service-client');
 
 export function getServiceClient(): SupabaseClient | null {
   const url = process.env.SUPABASE_URL;

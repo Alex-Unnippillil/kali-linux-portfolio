@@ -8,7 +8,7 @@ export interface Logger {
 }
 
 class ConsoleLogger implements Logger {
-  constructor(private correlationId: string) {}
+  constructor(private readonly correlationId: string) {}
 
   private log(level: string, message: string, meta: Record<string, any> = {}) {
     const safeMeta: Record<string, any> = {};
@@ -29,37 +29,28 @@ class ConsoleLogger implements Logger {
   info(message: string, meta?: Record<string, any>) {
     this.log('info', message, meta);
   }
+
   warn(message: string, meta?: Record<string, any>) {
     this.log('warn', message, meta);
   }
+
   error(message: string, meta?: Record<string, any>) {
     this.log('error', message, meta);
   }
+
   debug(message: string, meta?: Record<string, any>) {
     this.log('debug', message, meta);
   }
 }
 
-function generateCorrelationId(): string {
-  if (typeof globalThis === 'object') {
-    const cryptoObj: any = (globalThis as any).crypto;
-    if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
-      return cryptoObj.randomUUID();
-    }
-  }
-  try {
-    const { randomUUID } = require('crypto');
-    return randomUUID();
-  } catch {
-    // Fallback for environments without crypto support
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
+export function createConsoleLogger(correlationId: string): Logger {
+  return new ConsoleLogger(correlationId);
 }
 
-export function createLogger(correlationId: string = generateCorrelationId()): Logger {
-  return new ConsoleLogger(correlationId);
+export function fallbackCorrelationId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
