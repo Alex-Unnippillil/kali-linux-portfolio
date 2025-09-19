@@ -1,7 +1,34 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import { z } from 'zod';
+import logger from './logger';
 import { getTheme, setTheme } from './theme';
+
+const SETTINGS_SCHEMA_VERSION = 1;
+
+const settingsDataSchema = z
+  .object({
+    accent: z.string().min(1).optional(),
+    wallpaper: z.string().min(1).optional(),
+    density: z.enum(['regular', 'compact']).optional(),
+    reducedMotion: z.boolean().optional(),
+    fontScale: z.number().min(0.5).max(2).optional(),
+    highContrast: z.boolean().optional(),
+    largeHitAreas: z.boolean().optional(),
+    pongSpin: z.boolean().optional(),
+    haptics: z.boolean().optional(),
+    theme: z.string().min(1).optional(),
+  })
+  .strict();
+
+const settingsFileSchema = z
+  .object({
+    schemaVersion: z.number().int().positive(),
+    exportedAt: z.string().optional(),
+    data: settingsDataSchema,
+  })
+  .strict();
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -149,7 +176,6 @@ export async function exportSettings() {
     highContrast,
     largeHitAreas,
     pongSpin,
-    allowNetwork,
     haptics,
   ] = await Promise.all([
     getAccent(),
@@ -160,11 +186,10 @@ export async function exportSettings() {
     getHighContrast(),
     getLargeHitAreas(),
     getPongSpin(),
-    getAllowNetwork(),
     getHaptics(),
   ]);
   const theme = getTheme();
-  return JSON.stringify({
+  const data = {
     accent,
     wallpaper,
     density,
@@ -173,22 +198,29 @@ export async function exportSettings() {
     highContrast,
     largeHitAreas,
     pongSpin,
-    allowNetwork,
     haptics,
     theme,
+  };
+  return JSON.stringify({
+    schemaVersion: SETTINGS_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
   });
 }
 
-export async function importSettings(json) {
-  if (typeof window === 'undefined') return;
-  let settings;
-  try {
-    settings = typeof json === 'string' ? JSON.parse(json) : json;
-  } catch (e) {
-    console.error('Invalid settings', e);
-    return;
-  }
-  const {
+function computeDiff(previous, next) {
+  return Object.entries(next).reduce((changes, [key, value]) => {
+    if (value === undefined) return changes;
+    if (!Object.prototype.hasOwnProperty.call(previous, key)) return changes;
+    if (!Object.is(previous[key], value)) {
+      changes.push({ key, previous: previous[key], next: value });
+    }
+    return changes;
+  }, []);
+}
+
+async function getCurrentSettingsSnapshot() {
+  const [
     accent,
     wallpaper,
     density,
@@ -197,21 +229,132 @@ export async function importSettings(json) {
     highContrast,
     largeHitAreas,
     pongSpin,
-    allowNetwork,
+    haptics,
+  ] = await Promise.all([
+    getAccent(),
+    getWallpaper(),
+    getDensity(),
+    getReducedMotion(),
+    getFontScale(),
+    getHighContrast(),
+    getLargeHitAreas(),
+    getPongSpin(),
+    getHaptics(),
+  ]);
+  const theme = getTheme();
+  return {
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
     haptics,
     theme,
-  } = settings;
-  if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
-  if (density !== undefined) await setDensity(density);
-  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
-  if (fontScale !== undefined) await setFontScale(fontScale);
-  if (highContrast !== undefined) await setHighContrast(highContrast);
-  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
-  if (pongSpin !== undefined) await setPongSpin(pongSpin);
-  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
-  if (haptics !== undefined) await setHaptics(haptics);
-  if (theme !== undefined) setTheme(theme);
+  };
+}
+
+async function applySettingsData(data) {
+  const tasks = [];
+  if (data.accent !== undefined) tasks.push(setAccent(data.accent));
+  if (data.wallpaper !== undefined) tasks.push(setWallpaper(data.wallpaper));
+  if (data.density !== undefined) tasks.push(setDensity(data.density));
+  if (data.reducedMotion !== undefined)
+    tasks.push(setReducedMotion(data.reducedMotion));
+  if (data.fontScale !== undefined) tasks.push(setFontScale(data.fontScale));
+  if (data.highContrast !== undefined)
+    tasks.push(setHighContrast(data.highContrast));
+  if (data.largeHitAreas !== undefined)
+    tasks.push(setLargeHitAreas(data.largeHitAreas));
+  if (data.pongSpin !== undefined) tasks.push(setPongSpin(data.pongSpin));
+  if (data.haptics !== undefined) tasks.push(setHaptics(data.haptics));
+  await Promise.all(tasks);
+  if (data.theme !== undefined) setTheme(data.theme);
+}
+
+function parseSettingsJson(json) {
+  let raw;
+  try {
+    raw = typeof json === 'string' ? JSON.parse(json) : json;
+  } catch (error) {
+    logger.error('Settings import parse failure', error);
+    throw new Error('Settings file is not valid JSON.');
+  }
+
+  const parsed = settingsFileSchema.safeParse(raw);
+  if (!parsed.success) {
+    const unsupported = parsed.error.issues
+      .filter((issue) => issue.code === 'unrecognized_keys')
+      .flatMap((issue) => issue.keys || []);
+
+    if (unsupported.length > 0) {
+      logger.error('Settings import contains unsupported fields', {
+        unsupported,
+      });
+      throw new Error(
+        `Settings file contains unsupported fields: ${unsupported.join(', ')}.`
+      );
+    }
+
+    const missingSchemaVersion = parsed.error.issues.some(
+      (issue) =>
+        issue.path[0] === 'schemaVersion' && issue.code === 'invalid_type'
+    );
+    if (missingSchemaVersion) {
+      logger.error('Settings import missing schema version metadata');
+      throw new Error('Settings file is missing schema version metadata.');
+    }
+
+    logger.error('Settings import schema validation failed', parsed.error);
+    throw new Error('Settings file is not compatible with this version.');
+  }
+
+  if (parsed.data.schemaVersion !== SETTINGS_SCHEMA_VERSION) {
+    logger.error('Unsupported settings schema version', {
+      schemaVersion: parsed.data.schemaVersion,
+    });
+    throw new Error(
+      `Settings file uses schema version ${parsed.data.schemaVersion}, but version ${SETTINGS_SCHEMA_VERSION} is required.`
+    );
+  }
+
+  return parsed.data;
+}
+
+export async function importSettings(json, options = {}) {
+  if (typeof window === 'undefined') {
+    logger.error('Settings import attempted outside the browser environment');
+    throw new Error('Settings can only be imported in the browser.');
+  }
+
+  const parsed = parseSettingsJson(json);
+  const current = await getCurrentSettingsSnapshot();
+  const diff = computeDiff(current, parsed.data);
+
+  let applied = false;
+  const apply = async () => {
+    if (applied) {
+      return;
+    }
+    await applySettingsData(parsed.data);
+    applied = true;
+  };
+
+  if (options.apply === true) {
+    await apply();
+  }
+
+  return {
+    diff,
+    metadata: {
+      schemaVersion: parsed.schemaVersion,
+      exportedAt: parsed.exportedAt,
+    },
+    data: parsed.data,
+    apply,
+  };
 }
 
 export const defaults = DEFAULT_SETTINGS;

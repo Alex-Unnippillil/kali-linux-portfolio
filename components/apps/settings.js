@@ -8,6 +8,28 @@ export function Settings() {
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
+    const formatValue = (value) => {
+        if (typeof value === 'boolean') {
+            return value ? 'On' : 'Off';
+        }
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value.toString() : '—';
+        }
+        if (value === null || value === undefined) {
+            return '—';
+        }
+        return String(value);
+    };
+
+    const summarizeDiff = (diff = []) => {
+        if (!Array.isArray(diff) || diff.length === 0) {
+            return 'No changes detected.';
+        }
+        return diff
+            .map((change) => `• ${change.key}: ${formatValue(change.previous)} → ${formatValue(change.next)}`)
+            .join('\n');
+    };
+
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
     const changeBackgroundImage = (e) => {
@@ -266,18 +288,37 @@ export function Settings() {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
                     const text = await file.text();
-                    await importSettingsData(text);
                     try {
-                        const parsed = JSON.parse(text);
-                        if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-                        if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
-                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
-                        if (parsed.theme !== undefined) { setTheme(parsed.theme); }
-                    } catch (err) {
-                        console.error('Invalid settings', err);
+                        const result = await importSettingsData(text);
+                        const summary = summarizeDiff(result && result.diff);
+                        const schemaLabel = result && result.metadata && result.metadata.schemaVersion !== undefined
+                            ? `v${result.metadata.schemaVersion}`
+                            : 'unknown';
+                        const exportedLabel = result && result.metadata && result.metadata.exportedAt
+                            ? `\nExported: ${new Date(result.metadata.exportedAt).toLocaleString()}`
+                            : '';
+                        const message = `Import settings (schema ${schemaLabel})?\n${summary}${exportedLabel}`;
+                        if (!window.confirm(message)) {
+                            e.target.value = '';
+                            return;
+                        }
+
+                        await result.apply();
+
+                        const data = (result && result.data) || {};
+                        if (data.accent !== undefined) setAccent(data.accent);
+                        if (data.wallpaper !== undefined) setWallpaper(data.wallpaper);
+                        if (data.density !== undefined) setDensity(data.density);
+                        if (data.reducedMotion !== undefined) setReducedMotion(!!data.reducedMotion);
+                        if (data.largeHitAreas !== undefined) setLargeHitAreas(!!data.largeHitAreas);
+                        if (data.fontScale !== undefined) setFontScale(Number(data.fontScale));
+                        if (data.highContrast !== undefined) setHighContrast(!!data.highContrast);
+                        if (data.pongSpin !== undefined) setPongSpin(!!data.pongSpin);
+                        if (data.haptics !== undefined) setHaptics(!!data.haptics);
+                        if (data.theme !== undefined) { setTheme(data.theme); }
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : 'Failed to import settings.';
+                        window.alert(message);
                     }
                     e.target.value = '';
                 }}
