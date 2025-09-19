@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import { BootStateProvider } from '../hooks/useBootState';
 
 const Ubuntu = dynamic(
   () =>
@@ -34,7 +35,9 @@ const App = () => (
       Skip to content
     </a>
     <Meta />
-    <Ubuntu />
+    <BootStateProvider>
+      <Ubuntu />
+    </BootStateProvider>
     <BetaBadge />
     <InstallButton />
   </>
