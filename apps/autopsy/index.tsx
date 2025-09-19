@@ -32,7 +32,7 @@ const AutopsyPage: React.FC = () => {
       <div className="flex space-x-2">
         <button
           className={`px-2 py-1 rounded ${
-            view === 'autopsy' ? 'bg-ub-grey text-white' : 'bg-ub-orange text-black'
+            view === 'autopsy' ? 'bg-ub-grey text-white' : 'bg-ub-orange'
           }`}
           onClick={() => setView('autopsy')}
         >
@@ -40,7 +40,7 @@ const AutopsyPage: React.FC = () => {
         </button>
         <button
           className={`px-2 py-1 rounded ${
-            view === 'keywords' ? 'bg-ub-grey text-white' : 'bg-ub-orange text-black'
+            view === 'keywords' ? 'bg-ub-grey text-white' : 'bg-ub-orange'
           }`}
           onClick={() => setView('keywords')}
         >

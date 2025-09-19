@@ -9,6 +9,7 @@
   --color-primary: #1793d1; /* kali blue accent */
   --color-secondary: #1a1f26; /* complementary dark */
   --color-accent: #1793d1; /* accent matches primary */
+  --color-on-accent: #000000; /* default accessible foreground on accent */
   /* Utility colors */
   --color-muted: #2a2e36; /* muted surfaces */
   --color-surface: #1a1f26; /* panel surfaces */
@@ -76,4 +77,8 @@ html[data-theme='matrix'] {
 *:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+.text-on-accent {
+  color: var(--color-on-accent);
 }

@@ -500,7 +500,7 @@ const Hangman = () => {
         <button
           onClick={handleHint}
           disabled={hintCoins <= 0 || paused}
-          className="px-2 py-0.5 bg-ub-orange text-black rounded-full text-xs shadow" 
+          className="px-2 py-0.5 bg-ub-orange rounded-full text-xs shadow"
         >
           Hint ({hintCoins})
         </button>

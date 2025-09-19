@@ -461,7 +461,7 @@ const MetasploitApp = ({
           <div className="mt-4">
             <button
               onClick={startReplay}
-              className="px-2 py-1 bg-ub-orange rounded text-black"
+              className="px-2 py-1 bg-ub-orange rounded"
             >
               Replay Mock Exploit
             </button>

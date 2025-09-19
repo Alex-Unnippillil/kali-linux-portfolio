@@ -516,6 +516,10 @@ textarea:focus-visible {
     outline-offset: 2px;
 }
 
+.bg-ub-orange {
+    color: var(--color-on-accent, #000000);
+}
+
 /* Enable scroll snapping for gallery containers */
 .gallery-container {
     scroll-snap-type: x mandatory;

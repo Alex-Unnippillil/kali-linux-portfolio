@@ -71,7 +71,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           {filtered.map((w, i) => (
             <li
               key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
+              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange' : ''}`}
             >
               {w.title}
             </li>
