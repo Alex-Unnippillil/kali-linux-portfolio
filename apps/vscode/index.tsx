@@ -1,8 +1,14 @@
 'use client';
 
-import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
-import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
+import {
+  BranchIcon,
+  CheckIcon,
+  CloseIcon,
+  FolderIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+} from '../../components/ui/icons';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
@@ -39,13 +45,13 @@ export default function VsCode() {
           style={{ backgroundColor: kaliTheme.background }}
         >
           <button aria-label="Minimize">
-            <MinimizeIcon />
+            <MinimizeIcon className="w-4 h-4" size={16} aria-hidden />
           </button>
           <button aria-label="Maximize">
-            <MaximizeIcon />
+            <MaximizeIcon className="w-4 h-4" size={16} aria-hidden />
           </button>
           <button aria-label="Close">
-            <CloseIcon />
+            <CloseIcon className="w-4 h-4" size={16} aria-hidden />
           </button>
         </div>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
@@ -56,12 +62,7 @@ export default function VsCode() {
             onLoad={() => {}}
           />
           <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
-            <Image
-              src="/themes/Yaru/system/view-app-grid-symbolic.svg"
-              alt="Open Folder"
-              width={64}
-              height={64}
-            />
+            <FolderIcon className="w-16 h-16 text-white" size={64} aria-hidden />
             <span className="text-lg">Open Folder</span>
           </div>
         </div>
@@ -70,34 +71,11 @@ export default function VsCode() {
           style={{ backgroundColor: kaliTheme.sidebar }}
         >
           <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-3 h-3"
-            >
-              <line x1="6" y1="3" x2="6" y2="15" />
-              <circle cx="18" cy="6" r="3" />
-              <circle cx="6" cy="18" r="3" />
-              <path d="M18 9a9 9 0 0 1-9 9" />
-            </svg>
+            <BranchIcon className="w-3 h-3" size={12} aria-hidden />
             MAIN
           </span>
           <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-3 h-3"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <CheckIcon className="w-3 h-3" size={12} aria-hidden />
             CHECKS
           </span>
         </div>

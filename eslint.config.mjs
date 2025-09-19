@@ -11,6 +11,7 @@ const config = [
     },
     rules: {
       'no-top-level-window/no-top-level-window-or-document': 'error',
+      'no-top-level-window/enforce-internal-icons': 'error',
     },
   },
   {

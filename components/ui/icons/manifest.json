@@ -1,0 +1,139 @@
+[
+  {
+    "name": "CloseIcon",
+    "title": "Close window",
+    "paths": [
+      { "d": "M7 7L17 17" },
+      { "d": "M7 17L17 7" }
+    ]
+  },
+  {
+    "name": "MinimizeIcon",
+    "title": "Minimize window",
+    "paths": [
+      { "d": "M5 18H19" }
+    ]
+  },
+  {
+    "name": "MaximizeIcon",
+    "title": "Maximize window",
+    "paths": [
+      { "d": "M6 6H18V18H6Z" }
+    ]
+  },
+  {
+    "name": "RestoreIcon",
+    "title": "Restore window",
+    "paths": [
+      { "d": "M9 5H19V15H9Z" },
+      { "d": "M5 9H15V19H5Z" }
+    ]
+  },
+  {
+    "name": "PinIcon",
+    "title": "Pin window",
+    "paths": [
+      { "d": "M12 22V14" },
+      { "d": "M8 4H16L15 10H9Z" },
+      { "d": "M10.5 10H13.5" }
+    ]
+  },
+  {
+    "name": "WifiIcon",
+    "title": "Wi-Fi connected",
+    "paths": [
+      { "d": "M4.93 11.07A10 10 0 0 1 19.07 11.07" },
+      { "d": "M7.76 14.24A6.5 6.5 0 0 1 16.24 14.24" },
+      { "d": "M10.6 17.4A2.5 2.5 0 0 1 13.4 17.4" }
+    ],
+    "circles": [
+      { "cx": 12, "cy": 20, "r": 1.2, "fill": "currentColor", "stroke": "none" }
+    ]
+  },
+  {
+    "name": "WifiOffIcon",
+    "title": "Wi-Fi offline",
+    "paths": [
+      { "d": "M4.93 11.07A10 10 0 0 1 19.07 11.07" },
+      { "d": "M7.76 14.24A6.5 6.5 0 0 1 16.24 14.24" },
+      { "d": "M10.6 17.4A2.5 2.5 0 0 1 13.4 17.4" },
+      { "d": "M4 4L20 20" }
+    ],
+    "circles": [
+      { "cx": 12, "cy": 20, "r": 1.2, "fill": "currentColor", "stroke": "none" }
+    ]
+  },
+  {
+    "name": "VolumeIcon",
+    "title": "System volume",
+    "paths": [
+      { "d": "M5 9V15H8L13 19V5L8 9H5Z" },
+      { "d": "M16 9.5A3.5 3.5 0 0 1 16 14.5" },
+      { "d": "M18 8A5.5 5.5 0 0 1 18 16" }
+    ]
+  },
+  {
+    "name": "BatteryIcon",
+    "title": "Battery status",
+    "paths": [
+      { "d": "M3 8H18V16H3Z" },
+      { "d": "M18 10H21V14H18" }
+    ]
+  },
+  {
+    "name": "DownloadIcon",
+    "title": "Download",
+    "paths": [
+      { "d": "M12 3V15" },
+      { "d": "M6 11L12 17L18 11" },
+      { "d": "M5 21H19" }
+    ]
+  },
+  {
+    "name": "InfoIcon",
+    "title": "Information",
+    "paths": [
+      { "d": "M12 5A7 7 0 1 1 12 19A7 7 0 0 1 12 5Z" },
+      { "d": "M12 11V15" },
+      { "d": "M12 8H12.01" }
+    ]
+  },
+  {
+    "name": "GridIcon",
+    "title": "Applications grid",
+    "paths": [
+      { "d": "M4 4H10V10H4Z" },
+      { "d": "M14 4H20V10H14Z" },
+      { "d": "M4 14H10V20H4Z" },
+      { "d": "M14 14H20V20H14Z" }
+    ]
+  },
+  {
+    "name": "BranchIcon",
+    "title": "Git branch",
+    "lines": [
+      { "x1": 6, "y1": 3, "x2": 6, "y2": 15 }
+    ],
+    "circles": [
+      { "cx": 18, "cy": 6, "r": 3 },
+      { "cx": 6, "cy": 18, "r": 3 }
+    ],
+    "paths": [
+      { "d": "M18 9A9 9 0 0 1 9 18" }
+    ]
+  },
+  {
+    "name": "CheckIcon",
+    "title": "Completed",
+    "paths": [
+      { "d": "M20 7L11 16L6 11" }
+    ]
+  },
+  {
+    "name": "FolderIcon",
+    "title": "Folder",
+    "paths": [
+      { "d": "M4 7H10L12 9H20V19H4Z" }
+    ]
+  }
+]

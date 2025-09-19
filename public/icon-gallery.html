@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Icon Gallery</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+      }
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 4rem;
+        max-width: 960px;
+        color: #111827;
+        background: #f9fafb;
+      }
+      h1 {
+        margin-bottom: 0.25rem;
+      }
+      p.description {
+        margin-top: 0;
+        color: #4b5563;
+      }
+      .icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+      }
+      .icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        background: white;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+      }
+      .icon__preview svg {
+        display: block;
+        width: 64px;
+        height: 64px;
+      }
+      .icon__meta {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        color: #1f2937;
+      }
+      .icon__meta span {
+        color: #6b7280;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #0f172a;
+          color: #e2e8f0;
+        }
+        p.description {
+          color: #94a3b8;
+        }
+        .icon {
+          background: #111827;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.4);
+        }
+        .icon__meta {
+          color: #e2e8f0;
+        }
+        .icon__meta span {
+          color: #94a3b8;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Icon Gallery</h1>
+    <p class="description">Generated from <code>components/ui/icons/manifest.json</code>. Each icon is rendered at 64px using the shared 24px stroke.</p>
+    <div class="icon-grid">
+      
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Close window"
+    >
+      <title>Close window</title>
+      <path d="M7 7L17 17" /><path d="M7 17L17 7" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>CloseIcon</strong>
+          <span>Close window</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Minimize window"
+    >
+      <title>Minimize window</title>
+      <path d="M5 18H19" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>MinimizeIcon</strong>
+          <span>Minimize window</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Maximize window"
+    >
+      <title>Maximize window</title>
+      <path d="M6 6H18V18H6Z" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>MaximizeIcon</strong>
+          <span>Maximize window</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Restore window"
+    >
+      <title>Restore window</title>
+      <path d="M9 5H19V15H9Z" /><path d="M5 9H15V19H5Z" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>RestoreIcon</strong>
+          <span>Restore window</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Pin window"
+    >
+      <title>Pin window</title>
+      <path d="M12 22V14" /><path d="M8 4H16L15 10H9Z" /><path d="M10.5 10H13.5" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>PinIcon</strong>
+          <span>Pin window</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Wi-Fi connected"
+    >
+      <title>Wi-Fi connected</title>
+      <path d="M4.93 11.07A10 10 0 0 1 19.07 11.07" /><path d="M7.76 14.24A6.5 6.5 0 0 1 16.24 14.24" /><path d="M10.6 17.4A2.5 2.5 0 0 1 13.4 17.4" />
+      
+      <circle cx="12" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>WifiIcon</strong>
+          <span>Wi-Fi connected</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Wi-Fi offline"
+    >
+      <title>Wi-Fi offline</title>
+      <path d="M4.93 11.07A10 10 0 0 1 19.07 11.07" /><path d="M7.76 14.24A6.5 6.5 0 0 1 16.24 14.24" /><path d="M10.6 17.4A2.5 2.5 0 0 1 13.4 17.4" /><path d="M4 4L20 20" />
+      
+      <circle cx="12" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>WifiOffIcon</strong>
+          <span>Wi-Fi offline</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="System volume"
+    >
+      <title>System volume</title>
+      <path d="M5 9V15H8L13 19V5L8 9H5Z" /><path d="M16 9.5A3.5 3.5 0 0 1 16 14.5" /><path d="M18 8A5.5 5.5 0 0 1 18 16" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>VolumeIcon</strong>
+          <span>System volume</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Battery status"
+    >
+      <title>Battery status</title>
+      <path d="M3 8H18V16H3Z" /><path d="M18 10H21V14H18" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>BatteryIcon</strong>
+          <span>Battery status</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Download"
+    >
+      <title>Download</title>
+      <path d="M12 3V15" /><path d="M6 11L12 17L18 11" /><path d="M5 21H19" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>DownloadIcon</strong>
+          <span>Download</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Information"
+    >
+      <title>Information</title>
+      <path d="M12 5A7 7 0 1 1 12 19A7 7 0 0 1 12 5Z" /><path d="M12 11V15" /><path d="M12 8H12.01" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>InfoIcon</strong>
+          <span>Information</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Applications grid"
+    >
+      <title>Applications grid</title>
+      <path d="M4 4H10V10H4Z" /><path d="M14 4H20V10H14Z" /><path d="M4 14H10V20H4Z" /><path d="M14 14H20V20H14Z" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>GridIcon</strong>
+          <span>Applications grid</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Git branch"
+    >
+      <title>Git branch</title>
+      <path d="M18 9A9 9 0 0 1 9 18" />
+      <line x1="6" y1="3" x2="6" y2="15" />
+      <circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" />
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>BranchIcon</strong>
+          <span>Git branch</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Completed"
+    >
+      <title>Completed</title>
+      <path d="M20 7L11 16L6 11" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>CheckIcon</strong>
+          <span>Completed</span>
+        </div>
+      </div>
+    
+      <div class="icon">
+        <div class="icon__preview">
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      role="img"
+      aria-label="Folder"
+    >
+      <title>Folder</title>
+      <path d="M4 7H10L12 9H20V19H4Z" />
+      
+      
+    </svg>
+  </div>
+        <div class="icon__meta">
+          <strong>FolderIcon</strong>
+          <span>Folder</span>
+        </div>
+      </div>
+    
+    </div>
+  </body>
+</html>
