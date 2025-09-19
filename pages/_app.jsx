@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { ToastProvider } from '../components/ui/ToastProvider';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -157,11 +158,12 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
-            <ShortcutOverlay />
-            <Analytics
+          <ToastProvider>
+            <PipPortalProvider>
+              <div aria-live="polite" id="live-region" />
+              <Component {...pageProps} />
+              <ShortcutOverlay />
+              <Analytics
               beforeSend={(e) => {
                 if (e.url.includes('/admin') || e.url.includes('/private')) return null;
                 const evt = e;
@@ -170,8 +172,9 @@ function MyApp(props) {
               }}
             />
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-          </PipPortalProvider>
+              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            </PipPortalProvider>
+          </ToastProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>

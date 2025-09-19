@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
-import Toast from '../components/ui/Toast';
+import { ToastProvider, useNotifications } from '../components/ui/ToastProvider';
 import FormError from '../components/ui/FormError';
 
 describe('live region components', () => {
-  it('Toast uses polite live region', () => {
-    const { unmount } = render(<Toast message="Saved" />);
-    const region = screen.getByRole('status');
+  function ToastHarness() {
+    const { notify } = useNotifications();
+    useEffect(() => {
+      void notify({ message: 'Saved', duration: 10000 });
+    }, [notify]);
+    return null;
+  }
+
+  it('Toast uses polite live region', async () => {
+    const { unmount } = render(
+      <ToastProvider>
+        <ToastHarness />
+      </ToastProvider>,
+    );
+    const region = await screen.findByRole('status');
     expect(region).toHaveAttribute('aria-live', 'polite');
     unmount();
   });
