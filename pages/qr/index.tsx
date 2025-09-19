@@ -17,6 +17,8 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]['id'];
 
+// NOTE: Page aggregates multiple QR workflows; tracked in eslint.overrides.mjs
+// until we break the UI into smaller flows.
 const QRPage: React.FC = () => {
   const [active, setActive] = useState<TabId>('text');
   const [text, setText] = useState('');

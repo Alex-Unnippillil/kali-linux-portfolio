@@ -17,6 +17,8 @@ const severityColors: Record<string, string> = {
   Info: '#4b5563',
 };
 
+// NOTE: Page mirrors Nikto report layout; tracked in eslint.overrides.mjs for
+// future decomposition into widgets.
 const NiktoReport: React.FC = () => {
   const [findings, setFindings] = useState<NiktoFinding[]>([]);
   const [severity, setSeverity] = useState('All');

@@ -23,6 +23,8 @@ interface Finding {
 const radius = 60;
 const circumference = 2 * Math.PI * radius;
 
+// NOTE: Length exceeds max-lines rule to preserve detailed Nessus report UI;
+// tracked in eslint.overrides.mjs for future modularization.
 const NessusReport: React.FC = () => {
   const [selected, setSelected] = useState<Finding | null>(null);
   const [severity, setSeverity] = useState<string>('All');
