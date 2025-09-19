@@ -3,14 +3,15 @@ import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import path from 'path';
+import { serverEnv } from '../../lib/env.server';
 
 const execFileAsync = promisify(execFile);
 const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
 
 export default async function handler(req, res) {
   if (
-    process.env.FEATURE_TOOL_APIS !== 'enabled' ||
-    process.env.FEATURE_HYDRA !== 'enabled'
+    serverEnv.FEATURE_TOOL_APIS !== 'enabled' ||
+    serverEnv.FEATURE_HYDRA !== 'enabled'
   ) {
     res.status(501).json({ error: 'Not implemented' });
     return;

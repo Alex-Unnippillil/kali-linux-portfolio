@@ -3,11 +3,12 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
+import { serverEnv } from '../../lib/env.server';
 
 const execFileAsync = promisify(execFile);
 
 export default async function handler(req, res) {
-  if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
+  if (serverEnv.FEATURE_TOOL_APIS !== 'enabled') {
     res.status(501).json({ error: 'Not implemented' });
     return;
   }

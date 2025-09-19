@@ -1,5 +1,6 @@
 import { getServiceClient } from '../../../lib/service-client';
 import { createLogger } from '../../../lib/logger';
+import { serverEnv } from '../../../lib/env.server';
 
 export default async function handler(
   req,
@@ -13,7 +14,7 @@ export default async function handler(
   }
 
   const key = req.headers['x-admin-key'];
-  if (key !== process.env.ADMIN_READ_KEY) {
+  if (key !== serverEnv.ADMIN_READ_KEY) {
     logger.warn('unauthorized admin access attempt');
     res.status(401).json({ error: 'Unauthorized' });
     return;

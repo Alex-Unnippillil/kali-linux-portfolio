@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
+import { clientEnv } from '../../../lib/env.client';
 
 type Video = WatchLaterVideo;
 
@@ -14,7 +15,7 @@ interface Props {
 const VIDEO_CACHE_NAME = 'youtube-video-cache';
 const CACHED_LIST_KEY = 'youtube:cached-videos';
 const MAX_CACHE_BYTES = 100 * 1024 * 1024;
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+const YOUTUBE_API_KEY = clientEnv.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 async function trimVideoCache() {
   if (!('storage' in navigator) || !navigator.storage?.estimate) return;

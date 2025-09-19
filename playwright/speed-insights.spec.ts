@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+import { clientEnv } from '../lib/env.client';
+
 test.skip(
-  process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true',
+  clientEnv.NEXT_PUBLIC_STATIC_EXPORT === 'true',
   'Speed Insights script is disabled during static export',
 );
 

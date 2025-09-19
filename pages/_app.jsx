@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { clientEnv } from '../lib/env.client';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -34,7 +35,7 @@ function MyApp(props) {
       window.initA2HS();
     }
     const initAnalytics = async () => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+      const trackingId = clientEnv.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
         const { default: ReactGA } = await import('react-ga4');
         ReactGA.initialize(trackingId);
@@ -44,7 +45,7 @@ function MyApp(props) {
       console.error('Analytics initialization failed', err);
     });
 
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    if (clientEnv.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
         try {
@@ -170,7 +171,7 @@ function MyApp(props) {
               }}
             />
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            {clientEnv.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
           </PipPortalProvider>
         </SettingsProvider>
       </div>

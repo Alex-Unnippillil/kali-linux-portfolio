@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+import { clientEnv } from '../lib/env.client';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -68,7 +69,7 @@ const DummyForm: React.FC = () => {
     }
     setError('');
     setSuccess(false);
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (clientEnv.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/dummy', {
         method: 'POST',
         headers: {

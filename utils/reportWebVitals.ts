@@ -1,5 +1,7 @@
 import ReactGA from 'react-ga4';
 
+import { clientEnv } from '../lib/env.client';
+
 interface WebVitalMetric {
   id: string;
   name: string;
@@ -12,7 +14,7 @@ const thresholds: Record<string, number> = {
 };
 
 export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
+  if (clientEnv.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
   if (name !== 'LCP' && name !== 'INP') return;
 
   const rounded = Math.round(value);

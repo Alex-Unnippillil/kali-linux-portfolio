@@ -1,3 +1,5 @@
+import { clientEnv } from './env.client';
+
 export interface ClientErrorPayload {
   message: string;
   stack?: string;
@@ -15,7 +17,7 @@ export async function reportClientError(error: Error, componentStack?: string) {
     segment: typeof window !== 'undefined' ? window.location.pathname : '',
   };
 
-  if (process.env.NODE_ENV === 'development') {
+  if (clientEnv.NODE_ENV === 'development') {
     console.error('[ClientError]', payload);
     return;
   }
