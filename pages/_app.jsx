@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { LiveRegionProvider, useLiveRegion } from '../hooks/useLiveRegion';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -24,11 +25,7 @@ const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
 });
 
-
-function MyApp(props) {
-  const { Component, pageProps } = props;
-
-
+function AppShell({ Component, pageProps }) {
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
@@ -80,20 +77,15 @@ function MyApp(props) {
     }
   }, []);
 
+  const { announce } = useLiveRegion();
+
   useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return;
-
-    const update = (message) => {
-      liveRegion.textContent = '';
-      setTimeout(() => {
-        liveRegion.textContent = message;
-      }, 100);
-    };
-
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
+    const handleCopy = () =>
+      announce('Copied to clipboard', { politeness: 'polite', priority: 'urgent' });
+    const handleCut = () =>
+      announce('Cut to clipboard', { politeness: 'polite', priority: 'urgent' });
+    const handlePaste = () =>
+      announce('Pasted from clipboard', { politeness: 'polite', priority: 'urgent' });
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
@@ -104,14 +96,14 @@ function MyApp(props) {
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
       clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
+        announce('Copied to clipboard', { politeness: 'polite', priority: 'urgent' });
         return originalWrite(text);
       };
     }
     if (originalRead) {
       clipboard.readText = async () => {
         const text = await originalRead();
-        update('Pasted from clipboard');
+        announce('Pasted from clipboard', { politeness: 'polite', priority: 'urgent' });
         return text;
       };
     }
@@ -119,7 +111,10 @@ function MyApp(props) {
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
       const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
+        announce(
+          `${title}${options?.body ? ' ' + options.body : ''}`,
+          { politeness: 'assertive', priority: 'urgent' },
+        );
         return new OriginalNotification(title, options);
       };
       WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
@@ -144,10 +139,10 @@ function MyApp(props) {
         window.Notification = OriginalNotification;
       }
     };
-  }, []);
+  }, [announce]);
 
   return (
-    <ErrorBoundary>
+    <>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -158,7 +153,6 @@ function MyApp(props) {
         </a>
         <SettingsProvider>
           <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
             <Analytics
@@ -174,9 +168,19 @@ function MyApp(props) {
           </PipPortalProvider>
         </SettingsProvider>
       </div>
+    </>
+  );
+}
+
+function MyApp(props) {
+  const { Component, pageProps } = props;
+
+  return (
+    <ErrorBoundary>
+      <LiveRegionProvider>
+        <AppShell Component={Component} pageProps={pageProps} />
+      </LiveRegionProvider>
     </ErrorBoundary>
-
-
   );
 }
 

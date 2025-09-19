@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useLiveAnnouncement } from '../../hooks/useLiveRegion';
 
 interface ToastProps {
   message: string;
@@ -18,6 +19,11 @@ const Toast: React.FC<ToastProps> = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
 
+  useLiveAnnouncement(visible ? message : null, {
+    politeness: 'assertive',
+    priority: 'urgent',
+  });
+
   useEffect(() => {
     setVisible(true);
     timeoutRef.current = setTimeout(() => {
@@ -30,8 +36,7 @@ const Toast: React.FC<ToastProps> = ({
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role="alert"
       className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
     >
       <span>{message}</span>
