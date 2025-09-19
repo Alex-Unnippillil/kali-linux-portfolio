@@ -24,6 +24,8 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const ICON_POSITIONS_KEY = 'desktop-icon-positions';
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -41,6 +43,9 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            iconPositions: {},
+            draggingIcon: null,
+            dragPreview: null,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -53,6 +58,11 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
         }
+        this.iconLayerRef = React.createRef();
+        this.dragState = null;
+        this.dragCapturedTarget = null;
+        this.dragAnimationFrame = null;
+        this.pendingDragPreview = null;
     }
 
     componentDidMount() {
@@ -96,7 +106,256 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.dragAnimationFrame) {
+            cancelAnimationFrame(this.dragAnimationFrame);
+            this.dragAnimationFrame = null;
+        }
+        if (this.dragCapturedTarget && this.dragState && typeof this.dragCapturedTarget.releasePointerCapture === 'function') {
+            try {
+                this.dragCapturedTarget.releasePointerCapture(this.dragState.pointerId);
+            } catch (e) {
+                // ignore capture release errors
+            }
+        }
+        this.dragState = null;
+        this.dragCapturedTarget = null;
+        this.pendingDragPreview = null;
     }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.desktop_apps !== this.state.desktop_apps) {
+            this.ensureIconPositions();
+        }
+    }
+
+    loadStoredIconPositions = () => {
+        if (!safeLocalStorage) return null;
+        try {
+            const raw = safeLocalStorage.getItem(ICON_POSITIONS_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            const result = {};
+            Object.keys(parsed).forEach((key) => {
+                const value = parsed[key];
+                if (!value || typeof value !== 'object') return;
+                const rowValue = Number(value.row);
+                const colValue = Number(value.col);
+                const row = Number.isFinite(rowValue) ? Math.max(0, Math.round(rowValue)) : 0;
+                const col = Number.isFinite(colValue) ? Math.max(0, Math.round(colValue)) : 0;
+                result[key] = { row, col };
+            });
+            return result;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    persistIconPositions = (positions) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(ICON_POSITIONS_KEY, JSON.stringify(positions));
+        } catch (e) {
+            // ignore storage failures
+        }
+    };
+
+    ensureIconPositions = () => {
+        this.setState((prev) => {
+            if (!prev.desktop_apps || prev.desktop_apps.length === 0) return null;
+            const hasExisting = Object.keys(prev.iconPositions || {}).length > 0;
+            const positions = hasExisting
+                ? { ...prev.iconPositions }
+                : this.loadStoredIconPositions() || {};
+            let changed = !hasExisting && Object.keys(positions).length > 0;
+            const known = new Set(prev.desktop_apps);
+            prev.desktop_apps.forEach((id, index) => {
+                if (!positions[id]) {
+                    positions[id] = { row: index, col: 0 };
+                    changed = true;
+                }
+            });
+            Object.keys(positions).forEach((id) => {
+                if (!known.has(id)) {
+                    delete positions[id];
+                    changed = true;
+                }
+            });
+            if (!changed) return null;
+            this.persistIconPositions(positions);
+            return { iconPositions: positions };
+        });
+    };
+
+    getGridMetrics = () => {
+        if (typeof window === 'undefined') {
+            const iconWidth = 96;
+            const iconHeight = 96;
+            const spacing = 32;
+            return {
+                iconWidth,
+                iconHeight,
+                cellWidth: iconWidth + spacing,
+                cellHeight: iconHeight + spacing,
+            };
+        }
+        const style = window.getComputedStyle(document.documentElement);
+        const parse = (name, fallback) => {
+            const value = parseFloat(style.getPropertyValue(name));
+            return Number.isFinite(value) ? value : fallback;
+        };
+        const iconWidth = parse('--desktop-icon-width', 96);
+        const iconHeight = parse('--desktop-icon-height', 96);
+        const cellWidth = parse('--desktop-grid-cell-width', iconWidth + 32);
+        const cellHeight = parse('--desktop-grid-cell-height', iconHeight + 32);
+        return { iconWidth, iconHeight, cellWidth, cellHeight };
+    };
+
+    clampIconPosition = (x, y, rect, metrics) => {
+        const maxX = Math.max(0, rect.width - metrics.iconWidth);
+        const maxY = Math.max(0, rect.height - metrics.iconHeight);
+        return {
+            x: Math.min(Math.max(0, x), maxX),
+            y: Math.min(Math.max(0, y), maxY),
+        };
+    };
+
+    scheduleDragPreview = (position) => {
+        this.pendingDragPreview = position;
+        if (this.dragAnimationFrame) return;
+        this.dragAnimationFrame = requestAnimationFrame(() => {
+            this.dragAnimationFrame = null;
+            if (this.pendingDragPreview) {
+                this.setState({ dragPreview: this.pendingDragPreview });
+                this.pendingDragPreview = null;
+            }
+        });
+    };
+
+    handleIconPointerDown = (event, id) => {
+        if (event.pointerType !== 'touch' && event.button !== 0) return;
+        const layer = this.iconLayerRef.current;
+        if (!layer) return;
+        const containerRect = layer.getBoundingClientRect();
+        const targetRect = event.currentTarget.getBoundingClientRect();
+        const metrics = this.getGridMetrics();
+        const offsetX = event.clientX - targetRect.left;
+        const offsetY = event.clientY - targetRect.top;
+        const fallbackIndex = Math.max(0, this.state.desktop_apps.indexOf(id));
+        const currentPosition = this.state.iconPositions[id] || { row: fallbackIndex, col: 0 };
+        const baseX = currentPosition.col * metrics.cellWidth;
+        const baseY = currentPosition.row * metrics.cellHeight;
+        this.dragState = {
+            id,
+            pointerId: event.pointerId,
+            offsetX,
+            offsetY,
+            containerRect,
+            metrics,
+            startRow: currentPosition.row,
+            startCol: currentPosition.col,
+        };
+        this.dragCapturedTarget = event.currentTarget;
+        if (typeof this.dragCapturedTarget.setPointerCapture === 'function') {
+            try {
+                this.dragCapturedTarget.setPointerCapture(event.pointerId);
+            } catch (e) {
+                // ignore capture issues
+            }
+        }
+        this.setState({ draggingIcon: id, dragPreview: { x: baseX, y: baseY } });
+        if (event.pointerType === 'touch') {
+            event.preventDefault();
+        }
+    };
+
+    handleIconPointerMove = (event) => {
+        if (!this.dragState || event.pointerId !== this.dragState.pointerId) return;
+        const { containerRect, metrics, offsetX, offsetY } = this.dragState;
+        const rawX = event.clientX - containerRect.left - offsetX;
+        const rawY = event.clientY - containerRect.top - offsetY;
+        const next = this.clampIconPosition(rawX, rawY, containerRect, metrics);
+        this.scheduleDragPreview(next);
+        if (event.pointerType === 'touch') {
+            event.preventDefault();
+        }
+    };
+
+    handleIconPointerUp = (event) => {
+        if (!this.dragState || event.pointerId !== this.dragState.pointerId) return;
+        const { id, containerRect, metrics, offsetX, offsetY } = this.dragState;
+        const rawX = event.clientX - containerRect.left - offsetX;
+        const rawY = event.clientY - containerRect.top - offsetY;
+        const clamped = this.clampIconPosition(rawX, rawY, containerRect, metrics);
+        const col = Math.max(0, Math.round(clamped.x / metrics.cellWidth));
+        const row = Math.max(0, Math.round(clamped.y / metrics.cellHeight));
+        this.completeIconDrag(id, { row, col });
+    };
+
+    handleIconPointerCancel = (event) => {
+        if (!this.dragState || event.pointerId !== this.dragState.pointerId) return;
+        const { id, startRow, startCol } = this.dragState;
+        this.completeIconDrag(id, { row: startRow, col: startCol }, true);
+    };
+
+    completeIconDrag = (id, position, cancelled = false) => {
+        const pointerId = this.dragState ? this.dragState.pointerId : undefined;
+        if (
+            this.dragCapturedTarget &&
+            typeof this.dragCapturedTarget.releasePointerCapture === 'function' &&
+            pointerId !== undefined
+        ) {
+            try {
+                this.dragCapturedTarget.releasePointerCapture(pointerId);
+            } catch (e) {
+                // ignore release failures
+            }
+        }
+        this.dragCapturedTarget = null;
+        this.dragState = null;
+        if (this.dragAnimationFrame) {
+            cancelAnimationFrame(this.dragAnimationFrame);
+            this.dragAnimationFrame = null;
+        }
+        this.pendingDragPreview = null;
+        this.setState((prev) => {
+            if (cancelled) {
+                return { draggingIcon: null, dragPreview: null };
+            }
+            const current = prev.iconPositions[id] || { row: 0, col: 0 };
+            if (current.row === position.row && current.col === position.col) {
+                return { draggingIcon: null, dragPreview: null };
+            }
+            const iconPositions = { ...prev.iconPositions, [id]: position };
+            return { iconPositions, draggingIcon: null, dragPreview: null };
+        }, () => {
+            if (!cancelled) {
+                this.persistIconPositions(this.state.iconPositions);
+            }
+        });
+    };
+
+    handleIconKeyDown = (event, id) => {
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const step = event.shiftKey ? 5 : 1;
+        let rowDelta = 0;
+        let colDelta = 0;
+        if (event.key === 'ArrowUp') rowDelta = -step;
+        if (event.key === 'ArrowDown') rowDelta = step;
+        if (event.key === 'ArrowLeft') colDelta = -step;
+        if (event.key === 'ArrowRight') colDelta = step;
+        this.setState((prev) => {
+            const current = prev.iconPositions[id] || { row: 0, col: 0 };
+            const row = Math.max(0, current.row + rowDelta);
+            const col = Math.max(0, current.col + colDelta);
+            if (row === current.row && col === current.col) return null;
+            const iconPositions = { ...prev.iconPositions, [id]: { row, col } };
+            return { iconPositions, draggingIcon: prev.draggingIcon === id ? null : prev.draggingIcon, dragPreview: null };
+        }, () => {
+            this.persistIconPositions(this.state.iconPositions);
+        });
+    };
 
     checkForNewFolders = () => {
         const stored = safeLocalStorage?.getItem('new_folders');
@@ -389,6 +648,7 @@ export class Desktop extends Component {
             minimized_windows,
             desktop_apps
         }, () => {
+            this.ensureIconPositions();
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
@@ -427,31 +687,71 @@ export class Desktop extends Component {
             minimized_windows,
             favourite_apps,
             desktop_apps
+        }, () => {
+            this.ensureIconPositions();
         });
         this.initFavourite = { ...favourite_apps };
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
-
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+        const { desktop_apps, iconPositions, draggingIcon, dragPreview } = this.state;
+        if (!desktop_apps || desktop_apps.length === 0) return null;
+        const metrics = this.getGridMetrics();
+        const icons = desktop_apps.map((appId, index) => {
+            const app = apps.find((item) => item.id === appId);
+            if (!app) return null;
+            const position = iconPositions[appId] || { row: index, col: 0 };
+            const isDragging = draggingIcon === appId;
+            const coordinates = isDragging && dragPreview
+                ? dragPreview
+                : {
+                    x: position.col * metrics.cellWidth,
+                    y: position.row * metrics.cellHeight,
+                };
+            const props = {
+                name: app.title,
+                id: app.id,
+                icon: app.icon,
+                openApp: this.openApp,
+                disabled: this.state.disabled_apps[app.id],
+                prefetch: app.screen?.prefetch,
+            };
+            return (
+                <div
+                    key={app.id}
+                    className={`desktop-icon${isDragging ? ' desktop-icon--dragging' : ''}`}
+                    style={{
+                        transform: `translate3d(${coordinates.x}px, ${coordinates.y}px, 0)`,
+                        width: 'var(--desktop-icon-width)',
+                        height: 'var(--desktop-icon-height)',
+                    }}
+                    onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
+                    onPointerMove={this.handleIconPointerMove}
+                    onPointerUp={this.handleIconPointerUp}
+                    onPointerCancel={this.handleIconPointerCancel}
+                    data-desktop-icon={app.id}
+                    data-grid-row={position.row}
+                    data-grid-col={position.col}
+                >
+                    <UbuntuApp
+                        {...props}
+                        isDragging={isDragging}
+                        onKeyDown={(e) => this.handleIconKeyDown(e, app.id)}
+                        draggable={false}
+                    />
+                </div>
+            );
+        }).filter(Boolean);
+        if (!icons.length) return null;
+        return (
+            <div
+                className="desktop-icon-layer"
+                ref={this.iconLayerRef}
+                data-desktop-icon-layer="true"
+            >
+                {icons}
+            </div>
+        );
     }
 
     renderWindows = () => {
