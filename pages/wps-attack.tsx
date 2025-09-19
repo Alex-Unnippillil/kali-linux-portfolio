@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import Meta from '../components/SEO/Meta';
+import useWizardController from '../hooks/useWizardController';
 
 interface Step {
   title: string;
@@ -38,8 +39,16 @@ Connection established to ExampleAP`,
 ];
 
 const WpsAttack = () => {
-  const [current, setCurrent] = useState(0);
-  const step = steps[current];
+  const wizard = useWizardController<Record<string, never>>(
+    useMemo(
+      () => ({
+        paramName: 'step',
+        steps: steps.map((_, index) => ({ id: `phase-${index}` })),
+      }),
+      [],
+    ),
+  );
+  const step = steps[wizard.currentStepIndex] ?? steps[0];
 
   return (
     <>
@@ -51,11 +60,11 @@ const WpsAttack = () => {
             <li
               key={s.title}
               className={`p-4 rounded border ${
-                idx === current ? 'bg-black border-green-400' : 'bg-ub-grey border-gray-600'
+                idx === wizard.currentStepIndex ? 'bg-black border-green-400' : 'bg-ub-grey border-gray-600'
               }`}
             >
               <div className="font-bold">{`Step ${idx + 1}: ${s.title}`}</div>
-              {idx === current && (
+              {idx === wizard.currentStepIndex && (
                 <pre className="bg-ub-black text-green-400 p-2 mt-2 text-sm overflow-auto whitespace-pre-wrap">
 {`$ ${s.command}
 ${s.output}`}
@@ -67,15 +76,15 @@ ${s.output}`}
         <div className="flex justify-between mt-4">
           <button
             className="px-4 py-2 bg-gray-700 rounded disabled:opacity-50"
-            onClick={() => setCurrent((c) => Math.max(c - 1, 0))}
-            disabled={current === 0}
+            onClick={wizard.goBack}
+            disabled={wizard.isFirst}
           >
             Previous
           </button>
           <button
             className="px-4 py-2 bg-ub-green text-black rounded disabled:opacity-50"
-            onClick={() => setCurrent((c) => Math.min(c + 1, steps.length - 1))}
-            disabled={current === steps.length - 1}
+            onClick={wizard.goNext}
+            disabled={wizard.isLast}
           >
             Next
           </button>
