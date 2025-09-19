@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useSearchIndex } from '../../hooks/useSearchIndex';
 
 type AppMeta = {
   id: string;
@@ -40,6 +41,7 @@ const WhiskerMenu: React.FC = () => {
   }, [allApps, open]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
+  const { search } = useSearchIndex(allApps);
 
   const currentApps = useMemo(() => {
     let list: AppMeta[];
@@ -59,12 +61,13 @@ const WhiskerMenu: React.FC = () => {
       default:
         list = allApps;
     }
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+    const trimmedQuery = query.trim();
+    if (trimmedQuery) {
+      const matchIds = new Set(search(trimmedQuery).map(app => app.id));
+      list = list.filter(a => matchIds.has(a.id));
     }
     return list;
-  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps, search]);
 
   useEffect(() => {
     if (!open) return;
