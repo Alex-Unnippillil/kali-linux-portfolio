@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { useBugReport } from '../common/BugReportProvider';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const { open: openBugReport } = useBugReport();
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -256,6 +258,14 @@ export function Settings() {
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop
+                </button>
+            </div>
+            <div className="flex justify-center my-4">
+                <button
+                    onClick={() => openBugReport({ source: 'settings' })}
+                    className="px-4 py-2 rounded bg-ubt-ubuntu text-white"
+                >
+                    Report a bug
                 </button>
             </div>
             <input
