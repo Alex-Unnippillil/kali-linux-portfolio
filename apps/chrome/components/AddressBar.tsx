@@ -77,6 +77,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
         onClick={goBack}
         disabled={index <= 0}
         className="px-2 border rounded"
+        aria-label="Back"
       >
         ◀
       </button>
@@ -85,6 +86,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
         onClick={goForward}
         disabled={index >= history.length - 1}
         className="px-2 border rounded"
+        aria-label="Forward"
       >
         ▶
       </button>
