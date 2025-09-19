@@ -3,7 +3,7 @@
     "target": "es2020",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowJs": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
@@ -15,11 +15,13 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": [],
+    "types": ["node", "react", "react-dom", "next"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
-
+      "@/*": ["./*"],
+      "three-forcegraph": ["types/vendor/three-forcegraph"],
+      "three-forcegraph/*": ["types/vendor/three-forcegraph"],
+      "three-forcegraph/dist/three-forcegraph": ["types/vendor/three-forcegraph"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],

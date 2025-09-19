@@ -36,7 +36,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: npm run tsc -- --noEmit
+      - run: yarn typecheck
 
   test:
     runs-on: ubuntu-latest
