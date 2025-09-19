@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { useProfiles } from '../../hooks/useProfiles';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { activeProfileId } = useProfiles();
+    const profileId = activeProfileId ?? null;
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -222,7 +225,7 @@ export function Settings() {
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
                     onClick={async () => {
-                        const data = await exportSettingsData();
+                        const data = await exportSettingsData(profileId);
                         const blob = new Blob([data], { type: 'application/json' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
@@ -243,7 +246,11 @@ export function Settings() {
                 </button>
                 <button
                     onClick={async () => {
-                        await resetSettings();
+                        await resetSettings(profileId);
+                        const sessionKey = profileId
+                            ? `desktop-session:${profileId}`
+                            : 'desktop-session';
+                        window.localStorage.removeItem(sessionKey);
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
                         setDensity(defaults.density);
@@ -266,7 +273,7 @@ export function Settings() {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
                     const text = await file.text();
-                    await importSettingsData(text);
+                    await importSettingsData(text, profileId);
                     try {
                         const parsed = JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);

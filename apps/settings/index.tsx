@@ -12,8 +12,11 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { useProfiles } from "../../hooks/useProfiles";
 
 export default function Settings() {
+  const { activeProfileId } = useProfiles();
+  const profileId = activeProfileId ?? null;
   const {
     accent,
     setAccent,
@@ -56,7 +59,7 @@ export default function Settings() {
   const changeBackground = (name: string) => setWallpaper(name);
 
   const handleExport = async () => {
-    const data = await exportSettingsData();
+    const data = await exportSettingsData(profileId);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -68,7 +71,7 @@ export default function Settings() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    await importSettingsData(text);
+    await importSettingsData(text, profileId);
     try {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
@@ -92,8 +95,11 @@ export default function Settings() {
       )
     )
       return;
-    await resetSettings();
-    window.localStorage.clear();
+    await resetSettings(profileId);
+    const sessionKey = profileId
+      ? `desktop-session:${profileId}`
+      : "desktop-session";
+    window.localStorage.removeItem(sessionKey);
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);

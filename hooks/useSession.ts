@@ -1,5 +1,6 @@
 import usePersistentState from './usePersistentState';
 import { defaults } from '../utils/settingsStore';
+import { useProfiles } from './useProfiles';
 
 export interface SessionWindow {
   id: string;
@@ -30,8 +31,12 @@ function isSession(value: unknown): value is DesktopSession {
 }
 
 export default function useSession() {
+  const { activeProfileId } = useProfiles();
+  const storageKey = activeProfileId
+    ? `desktop-session:${activeProfileId}`
+    : 'desktop-session';
   const [session, setSession, _reset, clear] = usePersistentState<DesktopSession>(
-    'desktop-session',
+    storageKey,
     initialSession,
     isSession,
   );
