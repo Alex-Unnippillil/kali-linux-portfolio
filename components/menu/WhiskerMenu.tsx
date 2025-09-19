@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { GridIcon } from '../ui/icons';
 
 type AppMeta = {
   id: string;
@@ -122,13 +122,7 @@ const WhiskerMenu: React.FC = () => {
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
-        <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
-        />
+        <GridIcon size={16} className="inline mr-1" aria-hidden="true" />
         Applications
       </button>
       {open && (

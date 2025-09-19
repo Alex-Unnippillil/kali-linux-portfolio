@@ -3,6 +3,7 @@ import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
 import hipaaProfile from './templates/hipaa.json';
+import { DownloadIcon } from '../../ui/icons';
 
 const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
@@ -638,7 +639,7 @@ const OpenVASApp = () => {
           aria-label="Download summary"
           className="inline-flex items-center mt-2 p-2 bg-blue-600 rounded"
         >
-          <img src="/themes/Yaru/status/download.svg" alt="" className="w-4 h-4" />
+          <DownloadIcon size={16} aria-hidden="true" className="w-4 h-4" />
         </a>
       )}
       <footer className="mt-4 text-xs text-gray-400">

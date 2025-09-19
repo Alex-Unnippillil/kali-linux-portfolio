@@ -6,6 +6,23 @@ import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
 import ActivityCalendar from 'react-activity-calendar';
+import {
+  DownloadIcon,
+  FolderIcon,
+  GraduationCapIcon,
+  InfoIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+} from '../ui/icons';
+
+const SECTION_ICONS = {
+  about: InfoIcon,
+  education: GraduationCapIcon,
+  skills: SparklesIcon,
+  certs: ShieldCheckIcon,
+  projects: FolderIcon,
+  resume: DownloadIcon,
+};
 
 export class AboutAlex extends Component {
 
@@ -61,25 +78,21 @@ export class AboutAlex extends Component {
     renderNavLinks = () => {
         return (
             <>
-                {data.sections.map((section) => (
-                    <div
-                        key={section.id}
-                        id={section.id}
-                        tabIndex="0"
-                        onFocus={this.changeScreen}
-                        className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
-                    >
-                        <Image
-                            className=" w-3 md:w-4"
-                            alt={section.alt}
-                            src={section.icon}
-                            width={16}
-                            height={16}
-                            sizes="16px"
-                        />
-                        <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
-                    </div>
-                ))}
+                {data.sections.map((section) => {
+                    const Icon = SECTION_ICONS[section.id] || InfoIcon;
+                    return (
+                        <div
+                            key={section.id}
+                            id={section.id}
+                            tabIndex="0"
+                            onFocus={this.changeScreen}
+                            className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
+                        >
+                            <Icon size={16} className="text-gray-200" aria-hidden="true" />
+                            <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
+                        </div>
+                    );
+                })}
             </>
         );
     }

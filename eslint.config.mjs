@@ -11,6 +11,20 @@ const config = [
     },
     rules: {
       'no-top-level-window/no-top-level-window-or-document': 'error',
+      'no-top-level-window/no-outside-icon-imports': ['error', {
+        include: [
+          'components/(base|menu|screen|ui|util-components)/',
+          'components/ModuleCard',
+          'apps/(beef|vscode)/',
+        ],
+        disallow: [
+          { pattern: 'themes/Yaru/window' },
+          {
+            pattern:
+              'themes/Yaru/status/(?:network|audio|battery|decompiler|download|about|chrome_refresh|view-app-grid|education|skills|experience|projects)',
+          },
+        ],
+      }],
     },
   },
   {
