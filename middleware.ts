@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest, userAgent } from 'next/server';
 
 function nonce() {
   const arr = new Uint8Array(16);
@@ -8,6 +8,9 @@ function nonce() {
 
 export function middleware(req: NextRequest) {
   const n = nonce();
+  const { device } = userAgent(req);
+  const deviceType = device?.type;
+  const isMobileDevice = deviceType === 'mobile' || deviceType === 'tablet';
   const csp = [
     "default-src 'self'",
     "img-src 'self' https: data:",
@@ -25,5 +28,6 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  res.cookies.set('device', isMobileDevice ? 'm' : 'd', { path: '/' });
   return res;
 }
