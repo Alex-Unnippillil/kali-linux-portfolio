@@ -60,7 +60,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: yarn npm audit
+      - run: yarn audit:check
 
   vercel-preview:
     runs-on: ubuntu-latest

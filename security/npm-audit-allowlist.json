@@ -1,0 +1,7 @@
+{
+  "metadata": {
+    "description": "High-severity advisories must be remediated unless tracked here with a documented reason and optional expiry.",
+    "lastUpdated": "2024-09-19"
+  },
+  "allowlist": []
+}

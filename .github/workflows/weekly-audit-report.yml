@@ -1,0 +1,32 @@
+name: Weekly npm audit report
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Generate npm audit report
+        run: |
+          REPORT="$(mktemp)"
+          if yarn audit:check --report > "$REPORT"; then
+            status=0
+          else
+            status=$?
+          fi
+          echo "--- npm audit summary ---"
+          cat "$REPORT"
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$REPORT"
+          exit "$status"
