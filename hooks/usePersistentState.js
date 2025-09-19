@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { profileSelector } from '../utils/stateProfiler';
 
 // Persist state in localStorage with validation and helpers.
 export default function usePersistentState(key, initial, validator) {
   const getInitial = () => (typeof initial === "function" ? initial() : initial);
 
-  const [state, setState] = useState(() => {
+  const readStoredValue = () => {
     if (typeof window === "undefined") return getInitial();
     try {
       const stored = window.localStorage.getItem(key);
@@ -20,7 +21,14 @@ export default function usePersistentState(key, initial, validator) {
       // ignore parsing errors and fall back
     }
     return getInitial();
-  });
+  };
+
+  const [state, setState] = useState(() =>
+    profileSelector(`usePersistentState:init:${key}`, readStoredValue, {
+      thresholdMs: 4,
+      metadata: { key, source: 'usePersistentState' },
+    }),
+  );
 
   useEffect(() => {
     try {
