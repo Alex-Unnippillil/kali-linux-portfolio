@@ -1,5 +1,13 @@
 name: CI
 
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  CI_BUNDLE_JS_BUDGET_KB: "350"
+  CI_BUNDLE_CSS_BUDGET_KB: "120"
+  CI_PERF_SCORE_BUDGET: "0.9"
+  CI_LCP_BUDGET_MS: "3000"
+  CI_TBT_BUDGET_MS: "200"
+
 on:
   pull_request:
 
@@ -24,7 +32,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: npm run lint
+      - run: yarn lint --max-warnings=0
 
   typecheck:
     runs-on: ubuntu-latest
@@ -36,7 +44,93 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: npm run tsc -- --noEmit
+      - run: yarn typecheck
+
+  build:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Create production build
+        run: yarn build
+      - name: Upload Next.js build output
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: .next
+          retention-days: 7
+
+  playwright:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Start Next.js server
+        run: |
+          yarn start --hostname 0.0.0.0 --port 3000 > .next-server.log 2>&1 &
+          echo $! > .next-server-pid
+          npx wait-on http://127.0.0.1:3000
+      - name: Run Playwright tests
+        run: npx playwright test --reporter=line,html
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+            .next-server.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Shutdown Next.js server
+        if: always()
+        run: |
+          if [ -f .next-server-pid ]; then
+            kill $(cat .next-server-pid) || true
+          fi
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
+      - name: Run Lighthouse CI
+        run: npx @lhci/cli@0.14.0 autorun
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci
+          if-no-files-found: ignore
+          retention-days: 7
 
   test:
     runs-on: ubuntu-latest
@@ -79,3 +173,219 @@ jobs:
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  pr-comment:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - build
+      - playwright
+      - lighthouse
+    if: always()
+    env:
+      LINT_RESULT: ${{ needs.lint.result }}
+      TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+      BUILD_RESULT: ${{ needs.build.result }}
+      PLAYWRIGHT_RESULT: ${{ needs.playwright.result }}
+      LIGHTHOUSE_RESULT: ${{ needs.lighthouse.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Summarize workflow results
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const core = require('@actions/core');
+
+            const marker = '<!-- ci-status-summary -->';
+            const formatResult = (result) => {
+              switch (result) {
+                case 'success':
+                  return '✅ Passed';
+                case 'failure':
+                  return '❌ Failed';
+                case 'cancelled':
+                  return '⚠️ Cancelled';
+                case 'skipped':
+                  return '⚠️ Skipped';
+                default:
+                  return `ℹ️ ${result}`;
+              }
+            };
+
+            const rows = [
+              { name: 'Lint', value: process.env.LINT_RESULT },
+              { name: 'Typecheck', value: process.env.TYPECHECK_RESULT },
+              { name: 'Build', value: process.env.BUILD_RESULT },
+              { name: 'Playwright', value: process.env.PLAYWRIGHT_RESULT },
+              { name: 'Lighthouse', value: process.env.LIGHTHOUSE_RESULT },
+            ];
+
+            const table = rows
+              .map((row) => `| ${row.name} | ${formatResult(row.value)} |`)
+              .join('\n');
+
+            const configPath = path.join(process.env.GITHUB_WORKSPACE, 'lighthouserc.json');
+            let resourceLines = [];
+            let timingLines = [];
+            let performanceLine = '';
+            let byteBudgetLine = '';
+
+            try {
+              const lhciRaw = fs.readFileSync(configPath, 'utf8');
+              const lhciConfig = JSON.parse(lhciRaw);
+              const budgets = lhciConfig?.ci?.collect?.settings?.budgets ?? [];
+              const assertions = lhciConfig?.ci?.assert?.assertions ?? {};
+
+              const resourceMap = new Map();
+              const timingMap = new Map();
+
+              for (const budget of budgets) {
+                for (const size of budget.resourceSizes ?? []) {
+                  if (!resourceMap.has(size.resourceType)) {
+                    resourceMap.set(size.resourceType, size.budget);
+                  }
+                }
+                for (const timing of budget.timings ?? []) {
+                  if (!timingMap.has(timing.metric)) {
+                    timingMap.set(timing.metric, timing.budget);
+                  }
+                }
+              }
+
+              resourceLines = Array.from(resourceMap.entries()).map(
+                ([type, value]) => `- ${type} budget: ≤ ${value} KB`
+              );
+
+              timingLines = Array.from(timingMap.entries()).map(
+                ([metric, value]) => `- ${metric} budget: ≤ ${value} ms`
+              );
+
+              const perfAssertion = assertions['categories:performance'];
+              if (Array.isArray(perfAssertion) && perfAssertion[1]?.minScore !== undefined) {
+                performanceLine = `- Lighthouse performance score: ≥ ${perfAssertion[1].minScore}`;
+              } else if (process.env.CI_PERF_SCORE_BUDGET) {
+                performanceLine = `- Lighthouse performance score: ≥ ${process.env.CI_PERF_SCORE_BUDGET}`;
+              }
+
+              const byteAssertion = assertions['byte-efficiency/total-byte-weight'];
+              if (Array.isArray(byteAssertion) && byteAssertion[1]?.maxNumericValue !== undefined) {
+                const kb = Math.round(Number(byteAssertion[1].maxNumericValue) / 1024);
+                byteBudgetLine = `- Total byte weight budget: ≤ ${kb} KB`;
+              }
+
+              const lcpAssertion = assertions['largest-contentful-paint'];
+              if (Array.isArray(lcpAssertion) && lcpAssertion[1]?.maxNumericValue !== undefined) {
+                timingLines.push(`- largest-contentful-paint budget: ≤ ${lcpAssertion[1].maxNumericValue} ms`);
+              }
+
+              const tbtAssertion = assertions['total-blocking-time'];
+              if (Array.isArray(tbtAssertion) && tbtAssertion[1]?.maxNumericValue !== undefined) {
+                timingLines.push(`- total-blocking-time budget: ≤ ${tbtAssertion[1].maxNumericValue} ms`);
+              }
+
+              const fcpAssertion = assertions['first-contentful-paint'];
+              if (Array.isArray(fcpAssertion) && fcpAssertion[1]?.maxNumericValue !== undefined) {
+                timingLines.push(`- first-contentful-paint budget: ≤ ${fcpAssertion[1].maxNumericValue} ms`);
+              }
+            } catch (error) {
+              core.warning(`Unable to parse Lighthouse budgets: ${error.message}`);
+            }
+
+            if (!resourceLines.length) {
+              const fallbackResources = [];
+              if (process.env.CI_BUNDLE_JS_BUDGET_KB) {
+                fallbackResources.push(
+                  `- script budget: ≤ ${process.env.CI_BUNDLE_JS_BUDGET_KB} KB`
+                );
+              }
+              if (process.env.CI_BUNDLE_CSS_BUDGET_KB) {
+                fallbackResources.push(
+                  `- stylesheet budget: ≤ ${process.env.CI_BUNDLE_CSS_BUDGET_KB} KB`
+                );
+              }
+              if (fallbackResources.length) {
+                resourceLines = fallbackResources;
+              }
+            }
+
+            if (!timingLines.length) {
+              const fallbackTimings = [];
+              if (process.env.CI_LCP_BUDGET_MS) {
+                fallbackTimings.push(
+                  `- largest-contentful-paint budget: ≤ ${process.env.CI_LCP_BUDGET_MS} ms`
+                );
+              }
+              if (process.env.CI_TBT_BUDGET_MS) {
+                fallbackTimings.push(
+                  `- total-blocking-time budget: ≤ ${process.env.CI_TBT_BUDGET_MS} ms`
+                );
+              }
+              if (fallbackTimings.length) {
+                timingLines = fallbackTimings;
+              }
+            }
+
+            const lines = [
+              marker,
+              '## CI Summary',
+              '',
+              '| Check | Status |',
+              '| --- | --- |',
+              table,
+            ];
+
+            const budgetBlocks = [];
+            if (resourceLines.length) {
+              budgetBlocks.push('**Bundle Budgets**', ...resourceLines);
+            }
+            const uniqueTimingLines = Array.from(new Set(timingLines));
+            if (uniqueTimingLines.length) {
+              budgetBlocks.push('', '**Performance Budgets**', ...uniqueTimingLines);
+            }
+            if (byteBudgetLine) {
+              budgetBlocks.push('', byteBudgetLine);
+            }
+            if (performanceLine) {
+              budgetBlocks.push('', performanceLine);
+            }
+
+            if (budgetBlocks.length) {
+              lines.push('', ...budgetBlocks);
+            }
+
+            const body = lines.join('\n');
+
+            const { repo, owner } = context.repo;
+            const issue_number = context.issue.number;
+            const existingComments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              }
+            );
+            const previous = existingComments.find((comment) =>
+              typeof comment.body === 'string' && comment.body.includes(marker)
+            );
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
