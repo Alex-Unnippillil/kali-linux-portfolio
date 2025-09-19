@@ -64,7 +64,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus-ring"
           placeholder="Search windows"
         />
         <ul>

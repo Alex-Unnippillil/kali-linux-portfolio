@@ -18,8 +18,16 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 
 a:focus-visible,
 button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
-    outline-offset: 2px;
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: var(--focus-outline-offset);
+}
+
+.focus-ring {
+    transition: var(--focus-ring-transition);
+}
+
+.focus-ring:focus-visible {
+    box-shadow: var(--focus-ring-shadow);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -64,7 +72,6 @@ button:focus-visible {
 }
 
 input[type=range].ubuntu-slider {
-    outline: none;
     -webkit-appearance: none;
     background: linear-gradient(
         to right,
@@ -77,6 +84,12 @@ input[type=range].ubuntu-slider {
     /* width: 65%; */
     height: 6px;
     border-radius: 50%;
+}
+
+input[type=range].ubuntu-slider:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: var(--focus-outline-offset);
+    box-shadow: var(--focus-ring-shadow);
 }
 
 input[type=range].ubuntu-slider::-webkit-slider-thumb {

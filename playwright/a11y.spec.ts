@@ -51,3 +51,33 @@ for (const path of urls) {
     }
   });
 }
+
+test('desktop focus indicator follows accent token', async ({ page }) => {
+  await page.goto('http://localhost:3000/');
+  const target = page.locator('button[aria-label="System status"]');
+  await target.focus();
+  const styles = await target.evaluate((el) => {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const accentToken = (rootStyle.getPropertyValue('--focus-outline-color') || rootStyle.getPropertyValue('--color-focus-ring') || '#1793d1').trim();
+    const toRgb = (value: string) => {
+      const probe = document.createElement('div');
+      probe.style.color = value;
+      document.body.appendChild(probe);
+      const rgb = getComputedStyle(probe).color;
+      probe.remove();
+      return rgb;
+    };
+    const accentRgb = toRgb(accentToken);
+    const computed = getComputedStyle(el as HTMLElement);
+    return {
+      outlineColor: computed.outlineColor,
+      outlineWidth: computed.outlineWidth,
+      boxShadow: computed.boxShadow,
+      accentRgb,
+    };
+  });
+
+  expect(parseFloat(styles.outlineWidth)).toBeGreaterThanOrEqual(2);
+  expect(styles.outlineColor).toBe(styles.accentRgb);
+  expect(styles.boxShadow).not.toBe('none');
+});
