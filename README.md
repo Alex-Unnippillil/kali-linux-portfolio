@@ -92,6 +92,13 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn verify:fresh` – run install, build, and a short preview start while failing on any ESLint/TypeScript/Next.js warnings.
+
+## Fresh Clone Verification
+
+- Always run `yarn verify:fresh` from a clean working tree (ideally a brand-new clone or after `git clean -xfd` and `rm -rf node_modules`) before cutting releases or upgrading dependencies.
+- The script executes `yarn install --immutable`, `yarn build`, and a production `yarn start` preview. It fails if the build or preview logs ESLint, TypeScript, or Next.js warnings, so fix those before committing. Yarn install output still surfaces dependency warnings for visibility.
+- Maintainers can add a nightly CI job that calls `yarn verify:fresh` to detect ecosystem drift (for example, `yarn install --immutable` failures or new build warnings) before they reach contributors.
 
 ---
 
