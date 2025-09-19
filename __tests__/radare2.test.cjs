@@ -1,4 +1,4 @@
-import {
+const {
   saveSnippet,
   loadSnippets,
   convertAnalysisToGhidra,
@@ -7,7 +7,7 @@ import {
   saveBookmarks,
   loadBookmarks,
   extractStrings,
-} from '../components/apps/radare2/utils';
+} = require('../components/apps/radare2/utils');
 
 describe('Radare2 utilities', () => {
   beforeEach(() => {

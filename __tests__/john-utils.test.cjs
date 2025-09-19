@@ -1,4 +1,4 @@
-import { parseRules, distributeTasks } from '../components/apps/john/utils';
+const { parseRules, distributeTasks } = require('../components/apps/john/utils');
 
 describe('john utilities', () => {
   test('parseRules filters comments and empty lines', () => {

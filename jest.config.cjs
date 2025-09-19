@@ -7,14 +7,14 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
-    '^@/(.*)$': '<rootDir>/$1',
+    '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.cjs',
   },
   testPathIgnorePatterns: [
     '<rootDir>/playwright/',
     '<rootDir>/__tests__/playwright/',
     '<rootDir>/tests/',
   ],
+  testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/__tests__/**/*.test.cjs'],
 };
 
 module.exports = createJestConfig(customJestConfig);
