@@ -2,6 +2,8 @@
 
 This document tracks planned improvements and new features for the desktop portfolio apps.
 
+Each app now maintains a scoped README under `apps/<app>/README.md` describing the module, entry points, and launch commands. Consult those files when picking up or updating any app workstream.
+
 ## Foundation
 - Add dynamic app factory at `utils/createDynamicApp.js` to unify dynamic imports and GA events.
 - Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.

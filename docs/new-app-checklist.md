@@ -2,6 +2,11 @@
 
 Use this checklist when adding a new app to the portfolio.
 
+## Documentation
+
+- Create or update `apps/<app-id>/README.md` so the automation in `yarn lint` can verify documentation coverage.
+- Include purpose, entry points, how to launch the app locally, and the maintainer contact line in the README.
+
 ## Icon
 
 - Place a **64x64** SVG or PNG icon in `public/themes/Yaru/apps/`.
