@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { normalizeForSearch, computeSearchScoreNormalized } from '../../utils/search';
 
 type AppMeta = {
   id: string;
@@ -11,6 +12,10 @@ type AppMeta = {
   disabled?: boolean;
   favourite?: boolean;
 };
+
+type ScoredAppMeta = AppMeta & { searchScore?: number };
+
+const showSearchScores = process.env.NODE_ENV === 'development';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -41,7 +46,7 @@ const WhiskerMenu: React.FC = () => {
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
-  const currentApps = useMemo(() => {
+  const currentApps = useMemo<ScoredAppMeta[]>(() => {
     let list: AppMeta[];
     switch (category) {
       case 'favorites':
@@ -59,11 +64,22 @@ const WhiskerMenu: React.FC = () => {
       default:
         list = allApps;
     }
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+    const normalizedQuery = normalizeForSearch(query);
+    if (!normalizedQuery) {
+      return list.map(app => ({ ...app }));
     }
-    return list;
+
+    return list
+      .map(app => {
+        const normalizedTitle = normalizeForSearch(app.title);
+        const score = computeSearchScoreNormalized(normalizedQuery, normalizedTitle);
+        return {
+          ...app,
+          searchScore: score
+        };
+      })
+      .filter(app => (app.searchScore ?? 0) > 0)
+      .sort((a, b) => (b.searchScore ?? 0) - (a.searchScore ?? 0));
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
@@ -171,6 +187,11 @@ const WhiskerMenu: React.FC = () => {
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
                   />
+                  {showSearchScores && typeof app.searchScore === 'number' && (
+                    <div className="mt-1 text-center text-xs text-gray-300">
+                      score: {app.searchScore.toFixed(2)}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
