@@ -7,21 +7,49 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import WarningBanner from './WarningBanner';
+import { runDependencyProbes } from '../lib/dependencyProbes';
+import { BootStateContext } from '../hooks/useBootState';
+import { createLogger } from '../lib/logger';
+
+const bootLogger = createLogger('boot-sequence');
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
+        static contextType = BootStateContext;
+
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
 			bg_image_name: 'wall-2',
 			booting_screen: true,
 			shutDownScreen: false
 		};
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                this.checkDependencies();
+        }
+
+        checkDependencies = () => {
+                const result = runDependencyProbes();
+                const contextValue = this.context;
+                if (contextValue && typeof contextValue.setBootState === 'function') {
+                        contextValue.setBootState({
+                                checked: true,
+                                result,
+                        });
+                }
+                if (result.missing.length > 0) {
+                        bootLogger.warn('Missing dependencies detected', {
+                                summary: result.summary,
+                                missing: result.missing.map((item) => item.id),
+                        });
+                } else {
+                        bootLogger.info('All dependency checks passed');
+                }
+        };
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -113,13 +141,31 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
-					unLockScreen={this.unLockScreen}
+        render() {
+                const contextValue = this.context || {};
+                const bootState = contextValue.state || { checked: false, result: null };
+                const result = bootState.result;
+                const showWarning = Boolean(
+                        bootState.checked && result && result.missing && result.missing.length > 0,
+                );
+
+                return (
+                        <div className="relative w-screen h-screen overflow-hidden" id="monitor-screen">
+                                {showWarning && (
+                                        <div className="pointer-events-none absolute inset-x-0 top-0 z-50 flex justify-center p-4">
+                                                <div className="pointer-events-auto max-w-3xl w-full">
+                                                        <WarningBanner
+                                                                title={result.summary}
+                                                                messages={result.messages}
+                                                                actionHref="/docs/getting-started.md#environment"
+                                                        />
+                                                </div>
+                                        </div>
+                                )}
+                                <LockScreen
+                                        isLocked={this.state.screen_locked}
+                                        bgImgName={this.state.bg_image_name}
+                                        unLockScreen={this.unLockScreen}
 				/>
 				<BootingScreen
 					visible={this.state.booting_screen}
