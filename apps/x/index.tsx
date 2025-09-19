@@ -10,7 +10,7 @@ import {
 import DOMPurify from 'dompurify';
 import Script from 'next/script';
 import usePersistentState from '../../hooks/usePersistentState';
-import { useSettings } from '../../hooks/useSettings';
+import { selectAccent, useSettingsSelector } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
@@ -65,7 +65,7 @@ const IconBadge = (props: SVGProps<SVGSVGElement>) => (
 );
 
 export default function XTimeline() {
-  const { accent } = useSettings();
+  const accent = useSettingsSelector(selectAccent);
   const [profilePresets, setProfilePresets] = usePersistentState<string[]>(
     'x-profile-presets',
     () => ['AUnnippillil']
@@ -324,20 +324,22 @@ export default function XTimeline() {
           </button>
         </header>
         <div className="p-1.5 space-y-4 flex-1 overflow-auto">
-        <form onSubmit={handleScheduleTweet} className="space-y-2">
-          <textarea
-            value={tweetText}
-            onChange={(e) => setTweetText(e.target.value)}
-            placeholder="Tweet text"
-            className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          />
-          <div className="flex gap-2 items-center">
-            <input
-              type="datetime-local"
-              value={tweetTime}
-              onChange={(e) => setTweetTime(e.target.value)}
-              className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          <form onSubmit={handleScheduleTweet} className="space-y-2">
+            <textarea
+              value={tweetText}
+              onChange={(e) => setTweetText(e.target.value)}
+              placeholder="Tweet text"
+              aria-label="Tweet text"
+              className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             />
+            <div className="flex gap-2 items-center">
+              <input
+                type="datetime-local"
+                value={tweetTime}
+                onChange={(e) => setTweetTime(e.target.value)}
+                aria-label="Schedule time"
+                className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              />
             <button
               type="submit"
               className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
@@ -410,6 +412,11 @@ export default function XTimeline() {
               timelineType === 'profile'
                 ? 'Add screen name'
                 : 'Add list (owner/slug or id)'
+            }
+            aria-label={
+              timelineType === 'profile'
+                ? 'Add profile preset'
+                : 'Add list preset'
             }
             className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           />

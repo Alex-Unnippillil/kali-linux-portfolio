@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useSettings } from './useSettings';
+import { selectReducedMotion, useSettingsSelector } from './useSettings';
 
 export default function usePrefersReducedMotion() {
-  const { reducedMotion } = useSettings();
+  const reducedMotion = useSettingsSelector(selectReducedMotion);
   const [prefersReduced, setPrefersReduced] = useState(false);
 
   useEffect(() => {

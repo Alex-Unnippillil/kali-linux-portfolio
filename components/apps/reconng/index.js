@@ -7,7 +7,7 @@ import React, {
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
-import { useSettings } from '../../../hooks/useSettings';
+import { useSettingsSelector } from '../../../hooks/useSettings';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -134,7 +134,7 @@ const createWorkspace = (index) => ({
 });
 
 const ReconNG = () => {
-  const { allowNetwork } = useSettings();
+  const allowNetwork = useSettingsSelector((state) => state.allowNetwork);
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');

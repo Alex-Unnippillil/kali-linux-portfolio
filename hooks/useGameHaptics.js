@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useSettings } from './useSettings';
+import { useSettingsActions, useSettingsSelector } from './useSettings';
 import {
   vibrate as vibrateNative,
   patterns,
@@ -10,7 +10,8 @@ import {
 
 // Exposes helpers for triggering game haptics with an on/off toggle.
 export default function useGameHaptics() {
-  const { haptics: enabled, setHaptics } = useSettings();
+  const enabled = useSettingsSelector((state) => state.haptics);
+  const { setHaptics } = useSettingsActions();
 
   const vibrate = useCallback(
     (pattern) => {

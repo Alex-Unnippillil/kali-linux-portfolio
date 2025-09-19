@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from 'react'
-import { useSettings } from '../../hooks/useSettings';
+import { useSettingsSelector } from '../../hooks/useSettings';
 
 export default function BackgroundImage() {
-    const { wallpaper } = useSettings();
+    const wallpaper = useSettingsSelector((state) => state.wallpaper);
     const [needsOverlay, setNeedsOverlay] = useState(false);
 
     useEffect(() => {

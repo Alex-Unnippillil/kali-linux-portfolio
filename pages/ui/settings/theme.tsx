@@ -2,21 +2,28 @@
 
 import { ChangeEvent } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import { useSettings } from '../../../hooks/useSettings';
+import {
+  selectTheme,
+  useSettingsActions,
+  useSettingsSelector,
+} from '../../../hooks/useSettings';
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({
   checked,
   onChange,
+  ariaLabel,
 }: {
   checked: boolean;
   onChange: (val: boolean) => void;
+  ariaLabel: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
       className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
@@ -32,7 +39,8 @@ function Toggle({
 }
 
 export default function ThemeSettings() {
-  const { theme, setTheme } = useSettings();
+  const theme = useSettingsSelector(selectTheme);
+  const { setTheme } = useSettingsActions();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
 
@@ -71,6 +79,7 @@ export default function ThemeSettings() {
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>
             <Toggle
               checked={panelSize === 32}
+              ariaLabel="Toggle panel icon size"
               onChange={(val) => setPanelSize(val ? 32 : 16)}
             />
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>
@@ -97,6 +106,7 @@ export default function ThemeSettings() {
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>
             <Toggle
               checked={gridSize === 96}
+              ariaLabel="Toggle grid icon size"
               onChange={(val) => setGridSize(val ? 96 : 64)}
             />
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>

@@ -2,8 +2,12 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
 import usePersistentState from '../../hooks/usePersistentState';
-import { useSettings as useGlobalSettings } from '../../hooks/useSettings';
-import { SettingsProvider, useSettings as useGameSettings } from './GameSettingsContext';
+import { useSettingsSelector } from '../../hooks/useSettings';
+import {
+  SettingsProvider,
+  useGameSettingsActions,
+  useGameSettingsSelector,
+} from './GameSettingsContext';
 import { getBallSpin } from '../../games/pong/physics';
 
 // Basic timing constants so the simulation is consistent across refresh rates
@@ -28,7 +32,8 @@ const PongInner = () => {
   const frameRef = useRef(0);
 
   const [scores, setScores] = useState({ player: 0, opponent: 0 });
-  const { difficulty, setDifficulty } = useGameSettings();
+  const difficulty = useGameSettingsSelector((state) => state.difficulty);
+  const { setDifficulty } = useGameSettingsActions();
   const [match, setMatch] = useState({ player: 0, opponent: 0 });
   const [matchWinner, setMatchWinner] = useState(null);
   const [mode, setMode] = useState('cpu'); // 'cpu', 'local', 'online', or 'practice'
@@ -40,7 +45,7 @@ const PongInner = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [rally, setRally] = useState(0);
-  const { pongSpin } = useGlobalSettings();
+  const pongSpin = useSettingsSelector((state) => state.pongSpin);
   const [highScore, setHighScore] = usePersistentState(
     'pong_highscore',
     0,

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
-import { useSettings } from '../../hooks/useSettings';
+import { useSettingsSelector } from '../../hooks/useSettings';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
-  const { allowNetwork } = useSettings();
+  const allowNetwork = useSettingsSelector((state) => state.allowNetwork);
   const [online, setOnline] = useState(true);
 
   useEffect(() => {

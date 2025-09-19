@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
-import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import {
+  ACCENT_OPTIONS,
+  selectAccent,
+  selectTheme,
+  useSettingsActions,
+  useSettingsSelector,
+} from '../hooks/useSettings';
 
 interface Props {
   highScore?: number;
@@ -9,7 +15,9 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const accent = useSettingsSelector(selectAccent);
+  const theme = useSettingsSelector(selectTheme);
+  const { setAccent, setTheme } = useSettingsActions();
 
   return (
     <div>

@@ -1,10 +1,10 @@
 import React from 'react';
 import Clock from '../util-components/clock';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettingsSelector } from '../../hooks/useSettings';
 
 export default function LockScreen(props) {
 
-    const { wallpaper } = useSettings();
+    const wallpaper = useSettingsSelector((state) => state.wallpaper);
 
     if (props.isLocked) {
         window.addEventListener('click', props.unLockScreen);

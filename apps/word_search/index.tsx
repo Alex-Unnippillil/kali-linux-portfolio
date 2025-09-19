@@ -6,7 +6,13 @@ import type { Position, WordPlacement } from './types';
 import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import GameLayout from '../../components/apps/GameLayout';
-import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext';
+import {
+  SettingsProvider,
+  selectGameHighContrast,
+  selectGameQuality,
+  useGameSettingsActions,
+  useGameSettingsSelector,
+} from '../../components/apps/GameSettingsContext';
 import { PUZZLE_PACKS, PackName } from '../../games/word-search/packs';
 import ListImport from '../../games/word-search/components/ListImport';
 
@@ -58,7 +64,9 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
-  const { quality, setQuality, highContrast, setHighContrast } = useSettings();
+  const quality = useGameSettingsSelector(selectGameQuality);
+  const highContrast = useGameSettingsSelector(selectGameHighContrast);
+  const { setQuality, setHighContrast } = useGameSettingsActions();
   const [pack, setPack] = useState<PackName | 'random' | 'custom'>('random');
   const [allowBackwards, setAllowBackwards] = useState(true);
   const [allowDiagonal, setAllowDiagonal] = useState(true);
@@ -467,6 +475,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         <label className="flex items-center space-x-1">
           <input
             type="checkbox"
+            aria-label="Allow backwards words"
             checked={allowBackwards}
             onChange={(e) => setAllowBackwards(e.target.checked)}
           />
@@ -475,6 +484,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         <label className="flex items-center space-x-1">
           <input
             type="checkbox"
+            aria-label="Allow diagonal words"
             checked={allowDiagonal}
             onChange={(e) => setAllowDiagonal(e.target.checked)}
           />
@@ -506,7 +516,13 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         >
           Import LB
         </button>
-        <input ref={inputRef} type="file" className="hidden" onChange={importLeaderboard} />
+        <input
+          ref={inputRef}
+          type="file"
+          aria-label="Import leaderboard file"
+          className="hidden"
+          onChange={importLeaderboard}
+        />
         <button
           type="button"
           onClick={useFirstHint}
@@ -530,6 +546,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             min="0.5"
             max="1"
             step="0.1"
+            aria-label="Adjust puzzle quality"
             value={quality}
             onChange={(e) => setQuality(parseFloat(e.target.value))}
           />
@@ -537,6 +554,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         <label className="flex items-center space-x-1">
           <input
             type="checkbox"
+            aria-label="Toggle high contrast letters"
             checked={highContrast}
             onChange={(e) => setHighContrast(e.target.checked)}
           />
