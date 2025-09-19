@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
+import { logRedactionSummary, redactSensitive } from '@/lib/redact';
 import data from '../components/apps/nessus/sample-report.json';
 
 const severityColors: Record<string, string> = {
@@ -98,7 +99,9 @@ const NessusReport: React.FC = () => {
     const csv = [header, ...rows]
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
       .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const { text, stats } = redactSensitive(csv);
+    logRedactionSummary(stats, 'nessus-report');
+    const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -154,7 +157,7 @@ const NessusReport: React.FC = () => {
 
       </div>
       <div className="flex items-center space-x-2 mb-4 flex-wrap">
-        <label htmlFor="report-file" className="text-sm">
+        <label htmlFor="report-file" id="report-file-label" className="text-sm">
           Import report
         </label>
         <input
@@ -163,6 +166,7 @@ const NessusReport: React.FC = () => {
           accept=".json"
           className="text-black p-1 rounded"
           onChange={handleFile}
+          aria-labelledby="report-file-label"
         />
         <label htmlFor="severity-filter" className="text-sm">
           Filter severity
@@ -215,6 +219,7 @@ const NessusReport: React.FC = () => {
           className="p-2 bg-blue-600 rounded"
           aria-label="Export CSV"
         >
+          <span className="sr-only">Export CSV</span>
           <svg
             viewBox="0 0 24 24"
             fill="none"

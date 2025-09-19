@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { logRedactionSummary, redactSensitive } from '@/lib/redact';
 
 const suggestions = {
   '/admin': 'Restrict access to the admin portal or remove it from public view.',
@@ -55,15 +56,19 @@ const NiktoApp = () => {
   }, [findings]);
 
   const copyReport = async () => {
+    const { text, stats } = redactSensitive(htmlReport);
+    logRedactionSummary(stats, 'nikto-html');
     try {
-      await navigator.clipboard?.writeText(htmlReport);
+      await navigator.clipboard?.writeText(text);
     } catch {
       // ignore
     }
   };
 
   const exportReport = () => {
-    const blob = new Blob([htmlReport], { type: 'text/html' });
+    const { text, stats } = redactSensitive(htmlReport);
+    logRedactionSummary(stats, 'nikto-html');
+    const blob = new Blob([text], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -151,7 +156,9 @@ const NiktoApp = () => {
         row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',')
       )
       .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const { text, stats } = redactSensitive(csv);
+    logRedactionSummary(stats, 'nikto-csv');
+    const blob = new Blob([text], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -179,6 +186,7 @@ const NiktoApp = () => {
             className="w-full p-2 rounded text-black"
             value={host}
             onChange={(e) => setHost(e.target.value)}
+            aria-label="Target host"
           />
         </div>
         <div>
@@ -191,6 +199,7 @@ const NiktoApp = () => {
             className="w-full p-2 rounded text-black"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            aria-label="Target port"
           />
         </div>
         <div className="flex items-center mt-2">
@@ -200,6 +209,7 @@ const NiktoApp = () => {
             className="mr-2"
             checked={ssl}
             onChange={(e) => setSsl(e.target.checked)}
+            aria-label="Enable SSL"
           />
           <label htmlFor="nikto-ssl" className="text-sm">
             SSL
@@ -250,6 +260,7 @@ const NiktoApp = () => {
             type="button"
             onClick={() => setSelected(null)}
             className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
+            aria-label="Close finding details"
           >
             Close
           </button>
@@ -274,6 +285,7 @@ const NiktoApp = () => {
             type="button"
             onClick={copyReport}
             className="px-2 py-1 bg-blue-600 rounded text-sm"
+            aria-label="Copy HTML report"
           >
             Copy HTML
           </button>
@@ -281,6 +293,7 @@ const NiktoApp = () => {
             type="button"
             onClick={exportReport}
             className="px-2 py-1 bg-blue-600 rounded text-sm"
+            aria-label="Download HTML report"
           >
             Export HTML
           </button>
@@ -310,12 +323,14 @@ const NiktoApp = () => {
                 value={filterHost}
                 onChange={(e) => setFilterHost(e.target.value)}
                 className="p-1 rounded text-black flex-1"
+                aria-label="Filter entries by host"
               />
               <input
                 placeholder="Filter path"
                 value={filterPath}
                 onChange={(e) => setFilterPath(e.target.value)}
                 className="p-1 rounded text-black flex-1"
+                aria-label="Filter entries by path"
               />
               <select
                 aria-label="Filter severity"
@@ -335,6 +350,7 @@ const NiktoApp = () => {
                 type="button"
                 onClick={exportCsv}
                 className="px-2 py-1 bg-blue-600 rounded text-sm"
+                aria-label="Export parsed report to CSV"
               >
                 Export CSV
               </button>

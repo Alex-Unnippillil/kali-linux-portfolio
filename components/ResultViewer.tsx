@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
+import { logRedactionSummary, redactSensitive } from '@/lib/redact';
 
 interface ViewerProps {
   data: any[];
@@ -40,7 +41,9 @@ export default function ResultViewer({ data }: ViewerProps) {
 
   const exportCsv = () => {
     const csv = [keys.join(','), ...data.map((row) => keys.map((k) => JSON.stringify(row[k] ?? '')).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const { text, stats } = redactSensitive(csv);
+    logRedactionSummary(stats, 'result-viewer');
+    const blob = new Blob([text], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -66,16 +69,25 @@ export default function ResultViewer({ data }: ViewerProps) {
       {tab === 'parsed' && (
         <div>
           <div className="mb-2">
-            <label>
-              Filter:
-              <input value={filter} onChange={(e) => setFilter(e.target.value)} className="border p-1 text-black ml-1" />
-            </label>
+            <label htmlFor="result-filter">Filter:</label>
+            <input
+              id="result-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="border p-1 text-black ml-1"
+              aria-label="Filter rows"
+            />
             {keys.map((k) => (
               <button key={k} onClick={() => setSortKey(k)} className="px-2 py-1 bg-ub-cool-grey text-white ml-2">
                 {k}
               </button>
             ))}
-            <button onClick={exportCsv} className="px-2 py-1 bg-ub-green text-black ml-2" type="button">
+            <button
+              onClick={exportCsv}
+              className="px-2 py-1 bg-ub-green text-black ml-2"
+              type="button"
+              aria-label="Export filtered rows to CSV"
+            >
               CSV
             </button>
           </div>

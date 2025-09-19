@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
+import { logRedactionSummary, redactSensitive } from '@/lib/redact';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -414,7 +415,10 @@ const ReconNG = () => {
     Object.entries(currentWorkspace.entities).forEach(([type, set]) => {
       data[type] = Array.from(set);
     });
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const payload = JSON.stringify(data, null, 2);
+    const { text, stats } = redactSensitive(payload);
+    logRedactionSummary(stats, 'reconng-json');
+    const blob = new Blob([text], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -430,7 +434,9 @@ const ReconNG = () => {
         csv += `${type},${label}\n`;
       });
     });
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const { text, stats } = redactSensitive(csv);
+    logRedactionSummary(stats, 'reconng-csv');
+    const blob = new Blob([text], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -475,6 +481,7 @@ const ReconNG = () => {
           type="button"
           onClick={() => setView('reports')}
           className={`px-2 py-1 ${view === 'reports' ? 'bg-blue-600' : 'bg-gray-800'}`}
+          aria-label="Show reports view"
         >
           Reports
         </button>
@@ -482,6 +489,7 @@ const ReconNG = () => {
           type="button"
           onClick={() => setView('settings')}
           className={`px-2 py-1 ${view === 'settings' ? 'bg-blue-600' : 'bg-gray-800'}`}
+          aria-label="Show settings view"
         >
           Settings
         </button>
@@ -489,6 +497,7 @@ const ReconNG = () => {
           type="button"
           onClick={() => setView('marketplace')}
           className={`px-2 py-1 ${view === 'marketplace' ? 'bg-blue-600' : 'bg-gray-800'}`}
+          aria-label="Show marketplace view"
         >
           Marketplace
         </button>
@@ -496,10 +505,15 @@ const ReconNG = () => {
       {view === 'run' && (
         <>
           <div className="flex gap-2 mb-2">
+            <label className="sr-only" htmlFor="recon-module">
+              Recon module
+            </label>
             <select
+              id="recon-module"
               value={selectedModule}
               onChange={(e) => setSelectedModule(e.target.value)}
               className="bg-gray-800 px-2 py-1"
+              aria-label="Select recon module"
             >
               {allModules.map((m) => (
                 <option key={m} value={m}>
@@ -507,18 +521,24 @@ const ReconNG = () => {
                 </option>
               ))}
             </select>
+            <label className="sr-only" htmlFor="recon-target">
+              Target input
+            </label>
             <input
+              id="recon-target"
               type="text"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               placeholder="Target"
               className="flex-1 bg-gray-800 px-2 py-1"
+              aria-label="Target input"
             />
             <label className="flex items-center gap-1 text-xs">
               <input
                 type="checkbox"
                 checked={useLiveData}
                 onChange={(e) => setUseLiveData(e.target.checked)}
+                aria-label="Use live data"
               />
               Live fetch
             </label>
@@ -526,6 +546,7 @@ const ReconNG = () => {
               type="button"
               onClick={runModule}
               className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
+              aria-label="Run selected module"
             >
               Run
             </button>
@@ -566,10 +587,20 @@ const ReconNG = () => {
           ))}
           {currentWorkspace.graph.length > 0 && (
             <div className="flex gap-2 mt-2">
-              <button type="button" onClick={exportCSV} className="bg-gray-800 px-2 py-1">
+              <button
+                type="button"
+                onClick={exportCSV}
+                className="bg-gray-800 px-2 py-1"
+                aria-label="Export entities as CSV"
+              >
                 Export CSV
               </button>
-              <button type="button" onClick={exportJSON} className="bg-gray-800 px-2 py-1">
+              <button
+                type="button"
+                onClick={exportJSON}
+                className="bg-gray-800 px-2 py-1"
+                aria-label="Export entities as JSON"
+              >
                 Export JSON
               </button>
             </div>
@@ -585,6 +616,7 @@ const ReconNG = () => {
             type="button"
             onClick={runChain}
             className="mb-2 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
+            aria-label="Run selected chain"
           >
             Run Chain
           </button>
@@ -602,14 +634,18 @@ const ReconNG = () => {
         <div className="flex-1 overflow-auto">
           {allModules.map((m) => (
             <div key={m} className="mb-2">
-              <label className="block mb-1">{`${m} API Key`}</label>
+              <label className="block mb-1" htmlFor={`recon-api-${m}`}>
+                {`${m} API Key`}
+              </label>
               <div className="flex">
                 <input
+                  id={`recon-api-${m}`}
                   type={showApiKeys[m] ? 'text' : 'password'}
                   value={apiKeys[m] || ''}
                   onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
                   className="flex-1 bg-gray-800 px-2 py-1"
                   placeholder={`${m} API Key`}
+                  aria-label={`${m} API key input`}
                 />
                 <button
                   type="button"
@@ -617,6 +653,7 @@ const ReconNG = () => {
                     setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
                   }
                   className="ml-2 px-2 py-1 bg-gray-700"
+                  aria-label={`${showApiKeys[m] ? 'Hide' : 'Show'} ${m} API key`}
                 >
                   {showApiKeys[m] ? 'Hide' : 'Show'}
                 </button>
