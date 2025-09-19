@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "globalDependencies": [
+    "package.json",
+    "yarn.lock",
+    "turbo.json",
+    "tsconfig.json",
+    "tsconfig.gamepad.json"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        ".next/**",
+        "public/sw.js",
+        "public/workbox-*.js",
+        "utils/gamepad.js",
+        "tsconfig.gamepad.tsbuildinfo",
+        "tsconfig.tsbuildinfo"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^lint"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
+    }
+  }
+}
