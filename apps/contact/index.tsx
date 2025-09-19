@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
-import Toast from "../../components/ui/Toast";
+import { useNotifications } from "../../components/ui/ToastProvider";
 import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
@@ -29,11 +29,11 @@ const ContactApp: React.FC = () => {
   const [message, setMessage] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const { notify } = useNotifications();
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -101,7 +101,7 @@ const ContactApp: React.FC = () => {
         recaptchaToken,
       });
       if (result.success) {
-        setToast("Message sent");
+        void notify({ message: "Message sent" });
         setName("");
         setEmail("");
         setMessage("");
@@ -261,7 +261,6 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );
 };
