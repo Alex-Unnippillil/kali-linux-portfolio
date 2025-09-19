@@ -1,0 +1,25 @@
+{
+  "common": {
+    "skipToAppGrid": "Skip to app grid"
+  },
+  "announcements": {
+    "copied": "Copied to clipboard",
+    "cut": "Cut to clipboard",
+    "pasted": "Pasted from clipboard"
+  },
+  "quickSettings": {
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "sound": "Sound",
+    "network": "Network",
+    "reduceMotion": "Reduced motion",
+    "language": "Language",
+    "loadingLocale": "Loading language…"
+  },
+  "localeNames": {
+    "en": "English",
+    "es": "Spanish",
+    "fr": "French"
+  }
+}

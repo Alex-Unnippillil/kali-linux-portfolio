@@ -1,0 +1,25 @@
+{
+  "common": {
+    "skipToAppGrid": "Aller au lanceur d'applications"
+  },
+  "announcements": {
+    "copied": "Copié dans le presse-papiers",
+    "cut": "Coupé dans le presse-papiers",
+    "pasted": "Collé depuis le presse-papiers"
+  },
+  "quickSettings": {
+    "theme": "Thème",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "sound": "Son",
+    "network": "Réseau",
+    "reduceMotion": "Réduire les animations",
+    "language": "Langue",
+    "loadingLocale": "Chargement de la langue…"
+  },
+  "localeNames": {
+    "en": "Anglais",
+    "es": "Espagnol",
+    "fr": "Français"
+  }
+}

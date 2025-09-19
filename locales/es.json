@@ -1,0 +1,25 @@
+{
+  "common": {
+    "skipToAppGrid": "Ir al menú de aplicaciones"
+  },
+  "announcements": {
+    "copied": "Copiado al portapapeles",
+    "cut": "Cortado al portapapeles",
+    "pasted": "Pegado desde el portapapeles"
+  },
+  "quickSettings": {
+    "theme": "Tema",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "sound": "Sonido",
+    "network": "Red",
+    "reduceMotion": "Reducir movimiento",
+    "language": "Idioma",
+    "loadingLocale": "Cargando idioma…"
+  },
+  "localeNames": {
+    "en": "Inglés",
+    "es": "Español",
+    "fr": "Francés"
+  }
+}
