@@ -9,6 +9,7 @@ import {
 } from 'react';
 import DOMPurify from 'dompurify';
 import Script from 'next/script';
+import { CDN_SCRIPT_URLS, getCdnScriptIntegrity } from '../../utils/cdnSri';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
@@ -63,6 +64,9 @@ const IconBadge = (props: SVGProps<SVGSVGElement>) => (
     <path d="M9 12l2 2 4-4" />
   </svg>
 );
+
+const TWITTER_WIDGETS_SRC = CDN_SCRIPT_URLS.twitterWidgets;
+const TWITTER_WIDGETS_INTEGRITY = getCdnScriptIntegrity(TWITTER_WIDGETS_SRC);
 
 export default function XTimeline() {
   const { accent } = useSettings();
@@ -293,8 +297,10 @@ export default function XTimeline() {
         </div>
       )}
       <Script
-        src="https://platform.twitter.com/widgets.js"
+        src={TWITTER_WIDGETS_SRC}
         strategy="lazyOnload"
+        integrity={TWITTER_WIDGETS_INTEGRITY}
+        crossOrigin="anonymous"
         onLoad={() => {
           setScriptLoaded(true);
           if (loaded) loadTimeline();

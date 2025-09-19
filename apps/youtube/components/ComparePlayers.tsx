@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { CDN_SCRIPT_IDS, createSriScript } from '../../../utils/cdnSri';
 
 function parseVideoId(input: string): string {
   try {
@@ -31,8 +32,7 @@ const ComparePlayers = () => {
       setReady(true);
       return;
     }
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
+    const tag = createSriScript(CDN_SCRIPT_IDS.youtubeIframeApi);
     window.onYouTubeIframeAPIReady = () => setReady(true);
     document.body.appendChild(tag);
   }, []);

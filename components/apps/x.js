@@ -1,4 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {
+  CDN_SCRIPT_IDS,
+  CDN_SCRIPT_URLS,
+  applySriToScript,
+  createSriScript,
+} from '../../utils/cdnSri';
 
 const sanitizeHandle = (handle) =>
   handle.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
@@ -64,7 +70,7 @@ export default function XApp() {
   // Load timeline script and render timeline
   useEffect(() => {
     if (!shouldLoad) return;
-    const src = 'https://platform.twitter.com/widgets.js';
+    const src = CDN_SCRIPT_URLS.twitterWidgets;
     let script = document.querySelector(`script[src="${src}"]`);
     let timeout;
     const handleError = () => {
@@ -86,12 +92,14 @@ export default function XApp() {
         .then(() => setTimelineLoaded(true))
         .catch(() => setScriptError(true));
     };
+    if (script instanceof HTMLScriptElement) {
+      applySriToScript(script, CDN_SCRIPT_IDS.twitterWidgets);
+    }
     if (script && window.twttr) {
       loadTimeline();
     } else {
       if (!script) {
-        script = document.createElement('script');
-        script.src = src;
+        script = createSriScript(CDN_SCRIPT_IDS.twitterWidgets);
         script.async = true;
         document.body.appendChild(script);
       }

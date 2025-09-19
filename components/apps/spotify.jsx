@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { CDN_SCRIPT_IDS, createSriScript } from '../../utils/cdnSri';
 
 const SAMPLE_TRACKS = [
   { title: 'Song 1', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
@@ -16,8 +17,7 @@ export default function SpotifyApp() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('spotify-token') : null;
     if (!token) return;
 
-    const script = document.createElement('script');
-    script.src = 'https://sdk.scdn.co/spotify-player.js';
+    const script = createSriScript(CDN_SCRIPT_IDS.spotifySdk);
     script.async = true;
     document.body.appendChild(script);
 

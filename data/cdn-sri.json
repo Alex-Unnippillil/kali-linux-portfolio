@@ -1,0 +1,29 @@
+{
+  "scripts": [
+    {
+      "id": "youtubeIframeApi",
+      "url": "https://www.youtube.com/iframe_api",
+      "integrity": "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+    },
+    {
+      "id": "youtubeNoCookieIframeApi",
+      "url": "https://www.youtube-nocookie.com/iframe_api",
+      "integrity": "sha384-TNzG08OhOzNaH7Jnil9q1JrYK8iZ1hAzL/HKK1eI9RRd3Hgb9pgBt0iNX7U3dx2h"
+    },
+    {
+      "id": "spotifySdk",
+      "url": "https://sdk.scdn.co/spotify-player.js",
+      "integrity": "sha384-b1TGCL2Q1IobBdyOJ7iYgznPDqAAbhjCmeubCAgn9aMtT0Gg52OvAoaX39HfrS7P"
+    },
+    {
+      "id": "mathjsBrowser",
+      "url": "https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js",
+      "integrity": "sha384-P1Eisg1eZurPwW5GPPxxaNongEvntJm7UFQ0eHdveXaaaK3SRHUkF78Y1OvBYwAY"
+    },
+    {
+      "id": "twitterWidgets",
+      "url": "https://platform.twitter.com/widgets.js",
+      "integrity": "sha384-2tybKFlI8VO9WeecxiJMRsCpfm6xp0mNzAuAFOxtqzenagQgy+bKmARu8EXVJhPu"
+    }
+  ]
+}

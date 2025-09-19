@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import copyToClipboard from '../../../utils/clipboard';
+import { CDN_SCRIPT_IDS, createSriScript } from '../../../utils/cdnSri';
 
 function extractVideoId(input: string): string {
   try {
@@ -27,8 +28,7 @@ export default function ClipMaker() {
       setReady(true);
       return;
     }
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
+    const tag = createSriScript(CDN_SCRIPT_IDS.youtubeIframeApi);
     document.body.appendChild(tag);
     window.onYouTubeIframeAPIReady = () => setReady(true);
     return () => {
