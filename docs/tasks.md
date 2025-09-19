@@ -129,4 +129,5 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- When modifying privacy settings flows, update `playwright/privacy.spec.ts` so consent toggles, export/download paths, and reset actions stay in sync with the UI.
 

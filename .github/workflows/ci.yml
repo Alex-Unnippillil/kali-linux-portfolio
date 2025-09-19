@@ -38,6 +38,18 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: npm run tsc -- --noEmit
 
+  build:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+
   test:
     runs-on: ubuntu-latest
     needs: install
@@ -61,6 +73,29 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
+
+  playwright:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: npx playwright install --with-deps
+      - run: yarn build
+      - name: Run Playwright tests
+        run: |
+          yarn start --hostname 0.0.0.0 -p 3000 &
+          SERVER_PID=$!
+          npx wait-on http://127.0.0.1:3000
+          npx playwright test
+          kill $SERVER_PID || true
 
   vercel-preview:
     runs-on: ubuntu-latest
