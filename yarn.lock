@@ -4959,7 +4959,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axe-core@npm:^4.10.0, axe-core@npm:~4.10.3":
+"axe-core@npm:^4.10.0, axe-core@npm:^4.10.3, axe-core@npm:~4.10.3":
   version: 4.10.3
   resolution: "axe-core@npm:4.10.3"
   checksum: 10c0/1b1c24f435b2ffe89d76eca0001cbfff42dbf012ad9bd37398b70b11f0d614281a38a28bc3069e8972e3c90ec929a8937994bd24b0ebcbaab87b8d1e241ab0c7
@@ -13894,6 +13894,7 @@ __metadata:
     aframe: "npm:^1.5.0"
     antd: "npm:5.27.2"
     autoprefixer: "npm:^10.4.13"
+    axe-core: "npm:^4.10.3"
     bad-words: "npm:^3.0.4"
     canvas-confetti: "npm:1.9.3"
     capstone-wasm: "npm:^1.0.3"
