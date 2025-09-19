@@ -79,3 +79,105 @@ jobs:
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: install
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+      - name: Start Next server
+        run: |
+          yarn start -p 3000 > .lhci-server.log 2>&1 &
+          echo $! > .lhci-server.pid
+      - name: Wait for Next server
+        run: npx wait-on http://127.0.0.1:3000
+      - name: Collect Lighthouse results
+        run: npx lhci collect --config=./lighthouserc.json
+      - name: Stop Next server
+        if: always()
+        run: |
+          if [ -f .lhci-server.pid ]; then
+            kill "$(cat .lhci-server.pid)" || true
+          fi
+      - name: Evaluate Lighthouse assertions
+        id: lhci_assert
+        run: npx lhci assert --config=./lighthouserc.json
+        continue-on-error: true
+      - name: Store Lighthouse reports
+        if: always()
+        run: npx lhci upload --config=./lighthouserc.json
+      - name: Prepare Lighthouse summary
+        id: lhci_summary
+        if: always()
+        env:
+          LHCI_ASSERT_OUTCOME: ${{ steps.lhci_assert.outcome }}
+        run: node scripts/ci/prepare-lhci-report.mjs .lighthouseci/manifest.json .lighthouseci/assertion-results.json lhci-summary.md
+      - name: Upload Lighthouse artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-traces
+          path: |
+            .lighthouseci
+            lhci-report
+          if-no-files-found: warn
+      - name: Comment Lighthouse summary
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        env:
+          LHCI_COMMENT: ${{ steps.lhci_summary.outputs.comment }}
+        with:
+          script: |
+            const marker = '<!-- lhci-reference-summary -->';
+            const body = `${marker}\n${process.env.LHCI_COMMENT || ''}`;
+            const {owner, repo} = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) =>
+              comment.body?.includes(marker) && comment.user?.type === 'Bot'
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
+      - name: Fail on Lighthouse regressions
+        if: always()
+        run: |
+          status=0
+          if [ "${{ steps.lhci_assert.outcome }}" = "failure" ]; then
+            echo 'Lighthouse assertions failed.'
+            status=1
+          fi
+          warnings="${{ steps.lhci_summary.outputs.had_warnings }}"
+          if [ "${warnings:-false}" = "true" ]; then
+            echo 'Lighthouse warnings detected.'
+            status=1
+          fi
+          if [ "$status" -ne 0 ]; then
+            exit 1
+          fi
