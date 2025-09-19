@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { undoManager } from '../hooks/useUndoManager';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -115,6 +116,58 @@ describe('Window snapping preview', () => {
     });
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
+  });
+});
+
+describe('Window undo shortcuts', () => {
+  it('sends ctrl+z to the undo manager', () => {
+    const undoSpy = jest.spyOn(undoManager, 'undoApp').mockReturnValue(true);
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const win = screen.getByRole('dialog', { name: 'Test' });
+    fireEvent.keyDown(win, { key: 'z', ctrlKey: true });
+
+    expect(undoSpy).toHaveBeenCalledWith('test-window');
+    undoSpy.mockRestore();
+  });
+
+  it('ignores ctrl+z when the active target is editable', () => {
+    const undoSpy = jest.spyOn(undoManager, 'undoApp').mockReturnValue(true);
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => (
+          <div>
+            <input aria-label="Editor" />
+          </div>
+        )}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const input = screen.getByLabelText('Editor');
+    fireEvent.keyDown(input, { key: 'z', ctrlKey: true });
+
+    expect(undoSpy).not.toHaveBeenCalled();
+    undoSpy.mockRestore();
   });
 });
 

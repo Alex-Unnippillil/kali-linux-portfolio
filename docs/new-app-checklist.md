@@ -35,3 +35,26 @@ test('My App launches', async ({ page }) => {
   await expect(page.locator('[data-testid="my-app"]')).toBeVisible();
 });
 ```
+
+## Undo history hooks
+
+- Register undoable actions with the journal so the desktop can surface them
+  for <kbd>Ctrl</kbd>+<kbd>Z</kbd> inside the app window and
+  <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Z</kbd> globally.
+- Import helpers from `utils/journal`:
+
+```ts
+import { recordJournalEntry, clearJournal } from '../../utils/journal';
+
+recordJournalEntry({
+  appId: 'my-app',
+  description: 'Added note',
+  undo: () => removeNote(id),
+});
+
+// Call when the app resets state (e.g. on restart) so stale undo stacks clear
+clearJournal('my-app');
+```
+
+- The window component automatically clears an app's stack on unmount, but
+  explicit `clearJournal` calls keep the history accurate after internal resets.

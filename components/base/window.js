@@ -6,6 +6,8 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { undoManager } from '../../hooks/useUndoManager';
+import { isEditableElement } from '../../utils/dom';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -68,6 +70,9 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this.id) {
+            undoManager.clearApp(this.id);
         }
     }
 
@@ -542,6 +547,14 @@ export class Window extends Component {
                 this.snapWindow('top');
             }
             this.focusWindow();
+        } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key?.toLowerCase?.() === 'z')) {
+            if (!isEditableElement(e.target)) {
+                const undone = undoManager.undoApp(this.id);
+                if (undone) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
