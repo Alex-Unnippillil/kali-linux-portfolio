@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { ACTION_TYPES, recordAction } from '../../utils/actionJournal';
 
 export class Desktop extends Component {
     constructor() {
@@ -541,6 +542,12 @@ export class Desktop extends Component {
     }
 
     hasMinimised = (objId) => {
+        if (objId) {
+            recordAction({
+                type: ACTION_TYPES.desktop.minimize,
+                payload: { appId: objId },
+            });
+        }
         let minimized_windows = this.state.minimized_windows;
         var focused_windows = this.state.focused_windows;
 
@@ -593,6 +600,28 @@ export class Desktop extends Component {
 
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
+
+        if (objId) {
+            const wasOpen = this.state.closed_windows[objId] === false;
+            if (wasOpen) {
+                if (this.state.minimized_windows[objId]) {
+                    recordAction({
+                        type: ACTION_TYPES.desktop.restore,
+                        payload: { appId: objId },
+                    });
+                } else {
+                    recordAction({
+                        type: ACTION_TYPES.desktop.focus,
+                        payload: { appId: objId },
+                    });
+                }
+            } else {
+                recordAction({
+                    type: ACTION_TYPES.desktop.open,
+                    payload: { appId: objId },
+                });
+            }
+        }
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
@@ -657,6 +686,12 @@ export class Desktop extends Component {
     }
 
     closeApp = async (objId) => {
+        if (objId) {
+            recordAction({
+                type: ACTION_TYPES.desktop.close,
+                payload: { appId: objId },
+            });
+        }
 
         // capture window snapshot
         let image = null;
@@ -733,8 +768,14 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
+        if (objId && !this.state.focused_windows[objId]) {
+            recordAction({
+                type: ACTION_TYPES.desktop.focus,
+                payload: { appId: objId },
+            });
+        }
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
         for (let key in focused_windows) {
