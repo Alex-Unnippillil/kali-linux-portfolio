@@ -29,6 +29,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    keyboardMode,
+    setKeyboardMode,
     theme,
     setTheme,
   } = useSettings();
@@ -79,6 +81,8 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.keyboardMode !== undefined)
+        setKeyboardMode(parsed.keyboardMode);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -100,6 +104,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setKeyboardMode(defaults.keyboardMode);
     setTheme("default");
   };
 
@@ -258,6 +263,14 @@ export default function Settings() {
               checked={haptics}
               onChange={setHaptics}
               ariaLabel="Haptics"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Keyboard-only Mode:</span>
+            <ToggleSwitch
+              checked={keyboardMode}
+              onChange={setKeyboardMode}
+              ariaLabel="Keyboard-only mode"
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
