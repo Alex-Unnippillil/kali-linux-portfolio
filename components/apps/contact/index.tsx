@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import FormError from '../../ui/FormError';
+import Input from '../../ui/Input';
+import Textarea from '../../ui/Textarea';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
@@ -299,70 +301,40 @@ const ContactApp: React.FC = () => {
         </p>
       )}
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
-        <div className="relative">
-          <input
-            id="contact-name"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder=" "
-          />
-          <label
-            htmlFor="contact-name"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
-          >
-            Name
-          </label>
-        </div>
-        <div className="relative">
-          <input
-            id="contact-email"
-            type="email"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            aria-invalid={!!emailError}
-            aria-describedby={emailError ? 'contact-email-error' : undefined}
-            placeholder=" "
-          />
-          <label
-            htmlFor="contact-email"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
-          >
-            Email
-          </label>
-          {emailError && (
-            <FormError id="contact-email-error" className="mt-3">
-              {emailError}
-            </FormError>
-          )}
-        </div>
-        <div className="relative">
-          <textarea
-            id="contact-message"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-            rows={4}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            required
-            aria-invalid={!!messageError}
-            aria-describedby={messageError ? 'contact-message-error' : undefined}
-            placeholder=" "
-          />
-          <label
-            htmlFor="contact-message"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
-          >
-            Message
-          </label>
-          {messageError && (
-            <FormError id="contact-message-error" className="mt-3">
-              {messageError}
-            </FormError>
-          )}
-        </div>
+        <Input
+          id="contact-name"
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          containerClassName="text-sm text-white"
+          fieldClassName="border border-gray-700 bg-gray-800"
+          className="text-white"
+        />
+        <Input
+          id="contact-email"
+          type="email"
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          errorText={emailError}
+          containerClassName="text-sm text-white"
+          fieldClassName="border border-gray-700 bg-gray-800"
+          className="text-white"
+        />
+        <Textarea
+          id="contact-message"
+          label="Message"
+          rows={4}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+          errorText={messageError}
+          containerClassName="text-sm text-white"
+          fieldClassName="border border-gray-700 bg-gray-800"
+          className="text-white"
+        />
         <AttachmentUploader
           attachments={attachments}
           setAttachments={setAttachments}

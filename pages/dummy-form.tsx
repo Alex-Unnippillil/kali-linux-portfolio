@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+import Input from '../components/ui/Input';
+import Textarea from '../components/ui/Textarea';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -92,28 +94,34 @@ const DummyForm: React.FC = () => {
         {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
         {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
-        <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
-        <input
+        <Input
           id="name"
-          className="mb-4 w-full rounded border p-2"
-          type="text"
+          label="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          required
+          fieldClassName="border border-gray-300 bg-white"
+          className="text-gray-900"
         />
-        <label className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
-        <input
+        <Input
           id="email"
-          className="mb-4 w-full rounded border p-2"
           type="email"
+          label="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
+          fieldClassName="border border-gray-300 bg-white"
+          className="text-gray-900"
         />
-        <label className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
-        <textarea
+        <Textarea
           id="message"
-          className="mb-4 w-full rounded border p-2"
+          label="Message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          rows={4}
+          required
+          fieldClassName="border border-gray-300 bg-white"
+          className="text-gray-900"
         />
         <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
         <p className="mt-4 text-xs text-gray-500">

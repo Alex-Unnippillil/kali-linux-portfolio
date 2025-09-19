@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Input from '../ui/Input';
+import Select from '../ui/Select';
+import Switch from '../ui/Switch';
 import usePersistentState from '../../hooks/usePersistentState';
 import type {
   SimulatorParserRequest,
@@ -126,8 +129,15 @@ const Simulator: React.FC = () => {
       title: 'Parsed',
       content: (
         <div className="p-2 space-y-2">
-          <div className="flex items-center space-x-2">
-            <input aria-label="Filter rows" className="border p-1 flex-grow" value={filter} onChange={(e)=>setFilter(e.target.value)} />
+          <div className="flex items-center gap-2">
+            <Input
+              aria-label="Filter rows"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              containerClassName="flex-1 text-sm text-gray-800"
+              fieldClassName="border border-gray-300 bg-white"
+              className="text-gray-900"
+            />
             <button className="px-2 py-1 bg-gray-200" onClick={exportCSV} aria-label="Export CSV">CSV</button>
           </div>
           <div className="overflow-auto" style={{ maxHeight: 200 }}>
@@ -159,25 +169,57 @@ const Simulator: React.FC = () => {
 
   return (
     <div className="space-y-4" aria-label="Simulator">
-      <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
-        <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
-      </div>
+      <Switch
+        id="labmode"
+        label="Lab Mode"
+        checked={labMode}
+        onChange={(e) => setLabMode(e.target.checked)}
+        containerClassName="text-sm text-gray-800"
+      />
       {!labMode && (
         <div className="bg-yellow-100 text-yellow-800 p-2" role="alert">
           {LAB_BANNER}
         </div>
       )}
       <div className="space-y-2" aria-label="Command builder">
-        <input aria-label="Command input" className="border p-1 w-full" value={command} onChange={e=>setCommand(e.target.value)} />
+        <Input
+          label="Command"
+          aria-label="Command input"
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          containerClassName="text-sm text-gray-800"
+          fieldClassName="border border-gray-300 bg-white"
+          className="text-gray-900"
+        />
         <button className="px-2 py-1 bg-blue-600 text-white" onClick={copyCommand} aria-label="Copy command">Copy</button>
       </div>
       <div className="space-y-2" aria-label="Fixture loader">
-        <select onChange={onSampleChange} value={prefs.scenario} aria-label="Sample fixtures">
+        <Select
+          onChange={onSampleChange}
+          value={prefs.scenario}
+          label="Sample fixtures"
+          aria-label="Sample fixtures"
+          containerClassName="text-sm text-gray-800"
+          fieldClassName="border border-gray-300 bg-white"
+          className="text-gray-900"
+        >
           <option value="">Select sample</option>
-          {Object.keys(samples).map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
-        <input type="file" accept=".txt,.json" onChange={onFile} aria-label="Load file" />
+          {Object.keys(samples).map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </Select>
+        <Input
+          type="file"
+          accept=".txt,.json"
+          onChange={onFile}
+          label="Load file"
+          aria-label="Load file"
+          containerClassName="text-sm text-gray-800"
+          fieldClassName="border border-gray-300 bg-white"
+          className="text-gray-900 file:text-gray-900"
+        />
       </div>
       {fixtureText && (
         <div className="border rounded" aria-label="Results">
