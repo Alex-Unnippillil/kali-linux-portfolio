@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import NoPrefetchLink from '@/app/ui/NoPrefetchLink';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -41,7 +41,7 @@ const AppsPage = () => {
         className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
       >
         {filteredApps.map((app) => (
-          <Link
+          <NoPrefetchLink
             key={app.id}
             href={`/apps/${app.id}`}
             className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
@@ -58,7 +58,7 @@ const AppsPage = () => {
               />
             )}
             <span className="mt-2">{app.title}</span>
-          </Link>
+          </NoPrefetchLink>
         ))}
       </div>
     </div>
