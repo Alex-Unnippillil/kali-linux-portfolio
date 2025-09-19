@@ -354,6 +354,20 @@ yarn test:watch
 yarn lint
 ```
 
+### Property-based suite
+
+`fast-check` powers fuzz tests for the calculator evaluator and the subnet parsing utilities.
+Run the property suite in isolation with:
+
+```bash
+yarn test --runTestsByPath __tests__/calculator/parser.test.ts __tests__/modules/subnet.test.ts
+```
+
+When a property fails, Jest prints the shrunk counterexample alongside the `Seed` and `Path`
+used by `fast-check`. Use the reported expression or IP/CIDR pair to reproduce the bug in a
+focused unit test, or temporarily pass the `seed`/`path` to `fc.assert` while debugging to
+replay the minimal failing case.
+
 ---
 
 ## Feature Overview
