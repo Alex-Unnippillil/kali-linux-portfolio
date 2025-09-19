@@ -22,14 +22,14 @@ Always test inside controlled labs and obtain written permission before performi
 ## Setup
 
 ### Requirements
-- **Node.js 20.19.5** (repo includes `.nvmrc`; run `nvm use`)
+- **Node.js 22.5.1** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
 cp .env.local.example .env.local  # populate with required keys
-nvm install  # installs Node 20.19.5 from .nvmrc if needed
+nvm install  # installs Node 22.5.1 from .nvmrc if needed
 nvm use
 yarn install
 yarn dev
@@ -269,7 +269,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 ### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
  - Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
- - Uses **Node 20.19.5** to match `package.json`.
+ - Uses **Node 22.5.1** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -302,15 +302,15 @@ Workflow: `.github/workflows/gh-deploy.yml`:
 
 ### Docker image build/run
 ```Dockerfile
-# node:20-alpine
-FROM node:20-alpine AS build
+# node:22-alpine
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 COPY . .
 RUN yarn build
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app ./
@@ -483,7 +483,7 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Production Hardening Checklist
 
-- [x] **Pin Node to 20.19.5** across runtime and CI.
+- [x] **Pin Node to 22.5.1** across runtime and CI.
 - [ ] **Track Node.js `DEP0170` deprecation** for custom protocol URLs; update tooling/dependencies when Node fully removes support and ensure `yarn install` runs without related warnings.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
