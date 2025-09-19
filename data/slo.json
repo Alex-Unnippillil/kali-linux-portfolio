@@ -1,0 +1,44 @@
+[
+  {
+    "id": "api-availability",
+    "title": "API Availability",
+    "indicator": "availability",
+    "target": 99.95,
+    "direction": "gte",
+    "unit": "%",
+    "precision": 2,
+    "description": "Percentage of requests returning success codes.",
+    "notes": [
+      "Derived from the fetch proxy history stored on this desktop."
+    ],
+    "breachNote": "Investigate downtime over the last 24 hours and alert the on-call engineer."
+  },
+  {
+    "id": "p95-latency",
+    "title": "P95 Latency",
+    "indicator": "latency",
+    "target": 300,
+    "direction": "lte",
+    "unit": "ms",
+    "precision": 0,
+    "description": "95th percentile response latency for recorded requests.",
+    "notes": [
+      "Latency targets follow the synthetic canary benchmarks."
+    ],
+    "breachNote": "Latency regression detected — check caches and downstream dependencies."
+  },
+  {
+    "id": "error-budget",
+    "title": "Error Budget Burn",
+    "indicator": "errorRate",
+    "target": 1,
+    "direction": "lte",
+    "unit": "%",
+    "precision": 2,
+    "description": "Percentage of requests returning 5xx responses or network errors.",
+    "notes": [
+      "Budget burn is simulated from local network activity."
+    ],
+    "breachNote": "Error budget exhausted — initiate the incident review checklist."
+  }
+]

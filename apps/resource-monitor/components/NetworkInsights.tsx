@@ -2,28 +2,34 @@
 
 import React, { useEffect, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import {
-  onFetchProxy,
-  getActiveFetches,
-  FetchEntry,
-} from '../../../lib/fetchProxy';
+import { onFetchProxy, getActiveFetches, FetchEntry } from '../../../lib/fetchProxy';
 import { exportMetrics } from '../export';
+import {
+  HISTORY_KEY,
+  HistoryEntry,
+  ensureHistoryEntry,
+  normalizeHistory,
+} from './history';
 import RequestChart from './RequestChart';
-
-const HISTORY_KEY = 'network-insights-history';
+import SloDashboard from './SloDashboard';
 
 const formatBytes = (bytes?: number) =>
   typeof bytes === 'number' ? `${(bytes / 1024).toFixed(1)} kB` : '—';
 
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
-  const [history, setHistory] = usePersistentState<FetchEntry[]>(HISTORY_KEY, []);
+  const [history, setHistory] = usePersistentState<HistoryEntry[]>(HISTORY_KEY, []);
+
+  useEffect(() => {
+    setHistory((entries) => normalizeHistory(entries));
+  }, [setHistory]);
 
   useEffect(() => {
     const unsubStart = onFetchProxy('start', () => setActive(getActiveFetches()));
     const unsubEnd = onFetchProxy('end', (e: CustomEvent<FetchEntry>) => {
       setActive(getActiveFetches());
-      setHistory((h) => [...h, e.detail]);
+      const entry = ensureHistoryEntry(e.detail);
+      setHistory((h) => [...h, entry]);
     });
     return () => {
       unsubStart();
@@ -78,6 +84,7 @@ export default function NetworkInsights() {
           label="Request duration (ms)"
         />
       </div>
+      <SloDashboard entries={history} />
     </div>
   );
 }
