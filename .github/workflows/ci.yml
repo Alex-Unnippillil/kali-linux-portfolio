@@ -38,6 +38,97 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: npm run tsc -- --noEmit
 
+  lighthouse-pwa:
+    name: Lighthouse PWA
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - uses: browser-actions/setup-chrome@v1
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+      - name: Run Lighthouse PWA audit
+        run: npx lhci autorun --config=./lighthouserc.js
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-pwa-report
+          path: .lighthouseci
+          if-no-files-found: error
+      - name: Comment Lighthouse summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const core = require('@actions/core');
+            const fs = require('fs');
+            const path = require('path');
+            const marker = '<!-- lighthouse-pwa-report -->';
+            const manifestPath = path.join(process.cwd(), '.lighthouseci', 'manifest.json');
+            if (!fs.existsSync(manifestPath)) {
+              core.setFailed('Lighthouse manifest not found.');
+            }
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            if (!Array.isArray(manifest) || manifest.length === 0) {
+              core.setFailed('Lighthouse manifest is empty.');
+            }
+            const run = manifest[manifest.length - 1];
+            if (!run?.lhrPath) {
+              core.setFailed('Lighthouse run did not contain an LHR path.');
+            }
+            const lhrPath = path.join(process.cwd(), '.lighthouseci', run.lhrPath);
+            const lhr = JSON.parse(fs.readFileSync(lhrPath, 'utf8'));
+            const summary = run.summary || {};
+            const formatScore = (score) =>
+              typeof score === 'number' ? `${Math.round(score * 100)} / 100` : 'n/a';
+            const audits = lhr.audits || {};
+            const manifestAudit = audits['installable-manifest'];
+            const swAudit = audits['service-worker'];
+            const manifestStatus = manifestAudit?.score === 1 ? '✅' : '❌';
+            const swStatus = swAudit?.score === 1 ? '✅' : '❌';
+            const body = `${marker}\n` +
+              `⚡ **Lighthouse PWA audit**\n\n` +
+              `| Metric | Result |\n` +
+              `| --- | --- |\n` +
+              `| PWA score | ${formatScore(summary.pwa)} |\n` +
+              `| Installable manifest | ${manifestStatus} ${manifestAudit?.title ?? ''} |\n` +
+              `| Service worker | ${swStatus} ${swAudit?.title ?? ''} |`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find(
+              (comment) => comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker),
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
+
   test:
     runs-on: ubuntu-latest
     needs: install
