@@ -6,6 +6,9 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  wallpaperBlur: 0,
+  wallpaperBrightness: 1,
+  wallpaperAccent: '#1793d1',
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -34,6 +37,28 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+export async function getWallpaperBlur() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaperBlur;
+  const stored = window.localStorage.getItem('wallpaper-blur');
+  return stored ? Number(stored) : DEFAULT_SETTINGS.wallpaperBlur;
+}
+
+export async function setWallpaperBlur(blur) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('wallpaper-blur', String(blur));
+}
+
+export async function getWallpaperBrightness() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaperBrightness;
+  const stored = window.localStorage.getItem('wallpaper-brightness');
+  return stored ? Number(stored) : DEFAULT_SETTINGS.wallpaperBrightness;
+}
+
+export async function setWallpaperBrightness(brightness) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('wallpaper-brightness', String(brightness));
 }
 
 export async function getDensity() {
@@ -123,6 +148,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getWallpaperAccent() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
+  return window.localStorage.getItem('wallpaper-accent') || DEFAULT_SETTINGS.accent;
+}
+
+export async function setWallpaperAccent(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('wallpaper-accent', value);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,12 +172,18 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('wallpaper-blur');
+  window.localStorage.removeItem('wallpaper-brightness');
+  window.localStorage.removeItem('wallpaper-accent');
 }
 
 export async function exportSettings() {
   const [
     accent,
     wallpaper,
+    wallpaperBlur,
+    wallpaperBrightness,
+    wallpaperAccent,
     density,
     reducedMotion,
     fontScale,
@@ -154,6 +195,9 @@ export async function exportSettings() {
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
+    getWallpaperBlur(),
+    getWallpaperBrightness(),
+    getWallpaperAccent(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -167,6 +211,9 @@ export async function exportSettings() {
   return JSON.stringify({
     accent,
     wallpaper,
+    wallpaperBlur,
+    wallpaperBrightness,
+    wallpaperAccent,
     density,
     reducedMotion,
     fontScale,
@@ -191,6 +238,9 @@ export async function importSettings(json) {
   const {
     accent,
     wallpaper,
+    wallpaperBlur,
+    wallpaperBrightness,
+    wallpaperAccent,
     density,
     reducedMotion,
     fontScale,
@@ -203,6 +253,9 @@ export async function importSettings(json) {
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (wallpaperBlur !== undefined) await setWallpaperBlur(wallpaperBlur);
+  if (wallpaperBrightness !== undefined) await setWallpaperBrightness(wallpaperBrightness);
+  if (wallpaperAccent !== undefined) await setWallpaperAccent(wallpaperAccent);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);

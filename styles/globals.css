@@ -9,6 +9,7 @@
   --color-primary: #1793d1; /* kali blue accent */
   --color-secondary: #1a1f26; /* complementary dark */
   --color-accent: #1793d1; /* accent matches primary */
+  --color-wallpaper-accent: var(--color-accent);
   /* Utility colors */
   --color-muted: #2a2e36; /* muted surfaces */
   --color-surface: #1a1f26; /* panel surfaces */
@@ -16,7 +17,7 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
-  --color-focus-ring: var(--color-accent);
+  --color-focus-ring: var(--color-wallpaper-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
