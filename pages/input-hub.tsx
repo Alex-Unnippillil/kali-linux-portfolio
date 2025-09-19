@@ -3,6 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import Toast from '../components/ui/Toast';
+import useFormSubmission, {
+  type FormSubmissionResult,
+} from '../hooks/useFormSubmission';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -33,6 +37,67 @@ const InputHub = () => {
   const [status, setStatus] = useState('');
   const [useCaptcha, setUseCaptcha] = useState(false);
   const [emailjsReady, setEmailjsReady] = useState(false);
+  const {
+    pending,
+    handleSubmit,
+    spinner,
+    toast,
+    dismissToast,
+    submitProps,
+  } = useFormSubmission<React.FormEvent<HTMLFormElement>>({
+    onSubmit: async (e) => {
+      e.preventDefault();
+      if (!emailjsReady) {
+        setStatus('Email service unavailable');
+        return {
+          status: 'error',
+          message: 'Email service unavailable',
+        } as FormSubmissionResult;
+      }
+      const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
+      const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+      if (!navigator.onLine) {
+        enqueueMessage({ name, email, subject, message, useCaptcha });
+        setStatus('Message queued; will send when online.');
+        setName('');
+        setEmail('');
+        setMessage('');
+        return {
+          status: 'success',
+          message: 'Message queued; will send when online.',
+        } as FormSubmissionResult;
+      }
+      const token = useCaptcha ? await getRecaptchaToken(siteKey) : '';
+      setStatus('Sending...');
+      try {
+        await emailjs.send(serviceId, templateId, {
+          name,
+          email,
+          subject,
+          message,
+          'g-recaptcha-response': token,
+        });
+        setStatus('Message sent!');
+        setName('');
+        setEmail('');
+        setMessage('');
+        return {
+          status: 'success',
+          message: 'Message sent!',
+        } as FormSubmissionResult;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to send message';
+        setStatus(msg);
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error(msg);
+      }
+    },
+    errorMessage: (error) =>
+      error instanceof Error ? error.message : 'Failed to send message',
+  });
 
   useEffect(() => {
     const { preset, title, text, url, files } = router.query;
@@ -132,42 +197,6 @@ const InputHub = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailjsReady) {
-      setStatus('Email service unavailable');
-      return;
-    }
-    const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
-    const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
-    if (!navigator.onLine) {
-      enqueueMessage({ name, email, subject, message, useCaptcha });
-      setStatus('Message queued; will send when online.');
-      setName('');
-      setEmail('');
-      setMessage('');
-      return;
-    }
-    const token = useCaptcha ? await getRecaptchaToken(siteKey) : '';
-    setStatus('Sending...');
-    try {
-      await emailjs.send(serviceId, templateId, {
-        name,
-        email,
-        subject,
-        message,
-        'g-recaptcha-response': token,
-      });
-      setStatus('Message sent!');
-      setName('');
-      setEmail('');
-      setMessage('');
-    } catch {
-      setStatus('Failed to send message');
-    }
-  };
-
   return (
     <div className="p-4 text-black max-w-md mx-auto">
       <div className="mb-4">
@@ -221,14 +250,35 @@ const InputHub = () => {
           />
           <span>Use reCAPTCHA</span>
         </label>
-        <button type="submit" className="bg-blue-500 text-white px-2 py-1">
-          Send
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-2 py-1 disabled:opacity-70"
+          {...submitProps}
+        >
+          {pending ? (
+            <span className="flex items-center justify-center gap-2">
+              {spinner}
+              <span>Sending…</span>
+            </span>
+          ) : (
+            'Send'
+          )}
         </button>
       </form>
       {status && (
         <div role="status" aria-live="polite" className="mt-2 text-sm">
           {status}
         </div>
+      )}
+      {toast && (
+        <Toast
+          message={
+            toast.status === 'error'
+              ? `Error: ${toast.message}`
+              : toast.message
+          }
+          onClose={dismissToast}
+        />
       )}
     </div>
   );

@@ -4,6 +4,8 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
+import Toast from '../../ui/Toast';
+import useFormSubmission from '../../../hooks/useFormSubmission';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -56,6 +58,47 @@ const Nessus = () => {
   const [parseError, setParseError] = useState('');
   const [selected, setSelected] = useState(null);
   const parserWorkerRef = useRef(null);
+  const {
+    pending: loggingIn,
+    handleSubmit: handleLogin,
+    spinner: loginSpinner,
+    toast,
+    dismissToast,
+    submitProps: loginSubmitProps,
+  } = useFormSubmission({
+    onSubmit: async (e) => {
+      e.preventDefault();
+      setError('');
+      if (!username || !password) {
+        setError('Username and password are required');
+        return { status: 'error', suppressToast: true };
+      }
+      try {
+        const res = await fetch(`${url}/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.token) {
+          throw new Error(data?.error || 'Authentication failed');
+        }
+        setToken(data.token);
+        fetchScans(data.token, url);
+        return { status: 'success', message: 'Logged in successfully' };
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Authentication failed';
+        setError(message);
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error(message);
+      }
+    },
+    errorMessage: (error) =>
+      error instanceof Error ? error.message : 'Authentication failed',
+  });
 
   const hostData = useMemo(
     () =>
@@ -122,24 +165,6 @@ const Nessus = () => {
     URL.revokeObjectURL(url);
   };
 
-  const login = async (e) => {
-    e.preventDefault();
-    setError('');
-    try {
-      const res = await fetch(`${url}/session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) throw new Error('Authentication failed');
-      const data = await res.json();
-      setToken(data.token);
-      fetchScans(data.token, url);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
   const fetchScans = async (tkn = token, baseUrl = url) => {
     try {
       const res = await fetch(`${baseUrl}/scans`, {
@@ -181,7 +206,7 @@ const Nessus = () => {
   if (!token) {
     return (
       <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
-        <form onSubmit={login} className="space-y-2 p-4 w-64">
+        <form onSubmit={handleLogin} className="space-y-2 p-4 w-64">
           <label htmlFor="nessus-url" className="block text-sm">
             Nessus URL
           </label>
@@ -217,11 +242,32 @@ const Nessus = () => {
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
           />
-          <button type="submit" className="w-full bg-blue-600 py-2 rounded">
-            Login
+          <button
+            type="submit"
+            className="w-full rounded bg-blue-600 py-2 text-white disabled:opacity-70"
+            {...loginSubmitProps}
+          >
+            {loggingIn ? (
+              <span className="flex items-center justify-center gap-2">
+                {loginSpinner}
+                <span>Signing in…</span>
+              </span>
+            ) : (
+              'Login'
+            )}
           </button>
           {error && <FormError id="nessus-error">{error}</FormError>}
         </form>
+        {toast && (
+          <Toast
+            message={
+              toast.status === 'error'
+                ? `Error: ${toast.message}`
+                : toast.message
+            }
+            onClose={dismissToast}
+          />
+        )}
       </div>
     );
   }
@@ -417,6 +463,16 @@ const Nessus = () => {
             {selected.solution || 'No solution provided.'}
           </p>
         </div>
+      )}
+      {toast && (
+        <Toast
+          message={
+            toast.status === 'error'
+              ? `Error: ${toast.message}`
+              : toast.message
+          }
+          onClose={dismissToast}
+        />
       )}
     </div>
   );
