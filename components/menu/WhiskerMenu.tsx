@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import { useAppUsage } from '../../hooks/useAppUsage';
+import { rankApps } from '../../utils/appUsage';
 
 type AppMeta = {
   id: string;
@@ -29,15 +30,16 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const allApps: AppMeta[] = apps as any;
+  const { usage } = useAppUsage();
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
-    } catch {
-      return [];
-    }
-  }, [allApps, open]);
+    const sorted = Object.entries(usage)
+      .filter(([, record]) => record.lastOpened > 0)
+      .sort((a, b) => b[1].lastOpened - a[1].lastOpened)
+      .map(([id]) => allApps.find(a => a.id === id))
+      .filter((app): app is AppMeta => Boolean(app));
+    return sorted.slice(0, 10);
+  }, [usage, allApps]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
@@ -59,12 +61,15 @@ const WhiskerMenu: React.FC = () => {
       default:
         list = allApps;
     }
+    const working = [...list];
     if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+      return rankApps(working, query, usage);
     }
-    return list;
-  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+    if (category === 'recent') {
+      return working;
+    }
+    return rankApps(working, '', usage);
+  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps, usage]);
 
   useEffect(() => {
     if (!open) return;
