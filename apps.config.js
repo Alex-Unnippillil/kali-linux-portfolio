@@ -65,6 +65,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+const OpsDashboardApp = createDynamicApp('ops-dashboard', 'Ops Dashboard');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -156,6 +157,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
+const displayOpsDashboard = createDisplay(OpsDashboardApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
@@ -720,6 +722,17 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'ops-dashboard',
+    title: 'Ops Dashboard',
+    icon: '/themes/Yaru/apps/ops-dashboard.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayOpsDashboard,
+    defaultWidth: 70,
+    defaultHeight: 60,
   },
   {
     id: 'screen-recorder',

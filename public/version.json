@@ -1,0 +1,7 @@
+{
+  "version": "2024.05.17",
+  "build": "ops-dashboard-demo",
+  "commit": "opsdemo123",
+  "releasedAt": "2024-05-17T08:00:00.000Z",
+  "notes": "Mock build metadata served to the Ops Dashboard for demo purposes."
+}
