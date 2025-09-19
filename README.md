@@ -35,6 +35,27 @@ yarn install
 yarn dev
 ```
 
+### Local HTTPS & Secure Context Testing
+
+Some desktop integrations (service workers, Notification API demos, future Bluetooth experiments) require a secure context.
+Run your local dev server over HTTPS with a trusted mkcert certificate:
+
+1. [Install `mkcert`](https://github.com/FiloSottile/mkcert#installation) for your OS.
+2. Run `mkcert -install` once to create and trust the local CA.
+3. Generate certificates (stored in `./.certs/` and ignored by git):
+   ```bash
+   yarn cert:local
+   ```
+4. Start the HTTPS dev server, which also opts into service-worker registration in development:
+   ```bash
+   yarn dev:https
+   ```
+5. Visit `https://localhost:3000` and open **Application → Service Workers** in DevTools to confirm `/sw.js` is registered.
+   You can now verify PWA installability and APIs that require secure contexts.
+
+Regenerate certificates with `LOCAL_DEV_CERT_FORCE=true yarn cert:local`. Customize hostnames by exporting
+`LOCAL_DEV_CERT_HOSTS="localhost,127.0.0.1,::1,my-dev.host"` before running the script.
+
 ### Production Build
 Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
@@ -77,6 +98,7 @@ To send text or links directly into the Sticky Notes app:
 Copy `.env.local.example` to `.env.local` and fill in required API keys:
 
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
+- `NEXT_PUBLIC_ENABLE_DEV_SW` – allow registering the PWA service worker in development when served over HTTPS.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
@@ -89,9 +111,11 @@ See `.env.local.example` for the full list.
 
 - `yarn install` – install project dependencies.
 - `yarn dev` – start the development server with hot reloading.
+- `yarn dev:https` – start the dev server over HTTPS using the mkcert certificates in `.certs/`.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn cert:local` – generate or refresh trusted local development certificates via mkcert.
 
 ---
 
