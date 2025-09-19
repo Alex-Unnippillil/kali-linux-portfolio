@@ -91,13 +91,29 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn lint:boundaries` – detect circular imports with Madge and enforce high-level module boundaries with ESLint.
 - `yarn export` – generate a static export in the `out/` directory.
 
 ---
 
+### Dependency Guardrails
+
+The repo includes an additional dependency gate that can be run locally and is enforced in CI:
+
+```bash
+yarn lint:boundaries
+```
+
+This script performs two checks:
+
+1. **Madge** (`madge --circular`) scans key source directories for circular dependencies. A known dynamic import loop between `apps.config.js` and the Chrome app is excluded from the scan.
+2. **ESLint Boundaries** (`eslint --rule 'boundaries/element-types: …'`) applies the [`eslint-plugin-boundaries`](https://github.com/javierbrea/eslint-plugin-boundaries) rule set defined in `eslint.boundaries.config.mjs` to ensure feature areas don’t import from the Next.js `pages/` or `app/` directories.
+
+The GitHub Actions `CI` workflow runs `yarn lint:boundaries`, so any violation will fail the pipeline. Run the command locally before pushing to catch issues early.
+
 ## Local Development Tips
 
-- Run `yarn lint` and `yarn test` before committing changes.
+- Run `yarn lint`, `yarn lint:boundaries`, and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
 ---
