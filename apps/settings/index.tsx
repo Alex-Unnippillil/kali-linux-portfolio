@@ -122,24 +122,31 @@ export default function Settings() {
             }}
           ></div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Theme:</label>
+            <label htmlFor="settings-theme" className="mr-2 text-ubt-grey">Theme:</label>
             <select
+              id="settings-theme"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="default">Default</option>
-              <option value="dark">Dark</option>
-              <option value="neon">Neon</option>
-              <option value="matrix">Matrix</option>
-            </select>
-          </div>
+            <option value="default">Default</option>
+            <option value="dark">Dark</option>
+            <option value="neon">Neon</option>
+            <option value="matrix">Matrix</option>
+            <option value="high-contrast">High Contrast</option>
+          </select>
+        </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+            <span id="settings-accent-picker" className="mr-2 text-ubt-grey">Accent:</span>
+            <div
+              aria-labelledby="settings-accent-picker"
+              role="radiogroup"
+              className="flex gap-2"
+            >
               {ACCENT_OPTIONS.map((c) => (
                 <button
                   key={c}
+                  id={`settings-accent-${c}`}
                   aria-label={`select-accent-${c}`}
                   role="radio"
                   aria-checked={accent === c}
@@ -226,8 +233,9 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Density:</label>
+            <label htmlFor="settings-density-accessibility" className="mr-2 text-ubt-grey">Density:</label>
             <select
+              id="settings-density-accessibility"
               value={density}
               onChange={(e) => setDensity(e.target.value as any)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"

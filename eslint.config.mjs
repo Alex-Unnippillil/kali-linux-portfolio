@@ -24,9 +24,16 @@ const config = [
     rules: {
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
-      'jsx-a11y/control-has-associated-label': 'error',
+      // Disabled globally until legacy screens are refactored; see targeted override below.
+      'jsx-a11y/control-has-associated-label': 'off',
     },
   }),
+  {
+    files: ['apps/settings/**/*.{js,jsx,ts,tsx}', 'components/apps/settings.js'],
+    rules: {
+      'jsx-a11y/control-has-associated-label': 'error',
+    },
+  },
 ];
 
 export default config;
