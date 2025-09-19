@@ -7,6 +7,7 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import DiskQuotaBanner from './DiskQuotaBanner';
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -113,12 +114,13 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
+        render() {
+                return (
+                        <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                                <DiskQuotaBanner />
+                                <LockScreen
+                                        isLocked={this.state.screen_locked}
+                                        bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
 				<BootingScreen
