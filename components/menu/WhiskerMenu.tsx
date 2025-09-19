@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
@@ -20,6 +20,11 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
+type DesktopOpenRequest = {
+  id: string;
+  spawnNew?: boolean;
+};
+
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('all');
@@ -27,6 +32,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -69,12 +75,41 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
+    const handle = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(handle);
   }, [open, category, query]);
 
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setOpen(false);
-  };
+  const sendOpenApp = useCallback(
+    (id: string, options?: { closeOverlay?: boolean; spawnNew?: boolean }) => {
+      const detail: DesktopOpenRequest = { id };
+      if (options?.spawnNew) {
+        detail.spawnNew = true;
+      }
+      window.dispatchEvent(new CustomEvent('open-app', { detail }));
+      if (options?.closeOverlay) {
+        setOpen(false);
+      } else {
+        searchInputRef.current?.focus();
+      }
+    },
+    [setOpen]
+  );
+
+  const openSelectedApp = useCallback(
+    (id: string) => {
+      sendOpenApp(id, { closeOverlay: true });
+    },
+    [sendOpenApp]
+  );
+
+  const pinApp = useCallback((id: string) => {
+    window.dispatchEvent(
+      new CustomEvent('desktop-pin-app', { detail: { id } })
+    );
+    searchInputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -100,7 +135,7 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, currentApps, highlight]);
+  }, [open, currentApps, highlight, openSelectedApp]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -136,6 +171,8 @@ const WhiskerMenu: React.FC = () => {
           ref={menuRef}
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}
+          role="dialog"
+          aria-label="Application search"
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
@@ -159,11 +196,15 @@ const WhiskerMenu: React.FC = () => {
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
+              ref={searchInputRef}
               autoFocus
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
+                <div
+                  key={app.id}
+                  className={`rounded p-1 ${idx === highlight ? 'ring-2 ring-ubb-orange' : ''}`}
+                >
                   <UbuntuApp
                     id={app.id}
                     icon={app.icon}
@@ -171,6 +212,37 @@ const WhiskerMenu: React.FC = () => {
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
                   />
+                  {query && (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => sendOpenApp(app.id)}
+                        disabled={app.disabled}
+                        className="px-2 py-1 bg-black bg-opacity-40 rounded hover:bg-opacity-60 disabled:opacity-40"
+                        aria-label={`Open ${app.title}`}
+                      >
+                        Open
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => sendOpenApp(app.id, { spawnNew: true })}
+                        disabled={app.disabled}
+                        className="px-2 py-1 bg-black bg-opacity-40 rounded hover:bg-opacity-60 disabled:opacity-40"
+                        aria-label={`Open new window for ${app.title}`}
+                      >
+                        Open new window
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => pinApp(app.id)}
+                        disabled={app.disabled}
+                        className="px-2 py-1 bg-black bg-opacity-40 rounded hover:bg-opacity-60 disabled:opacity-40"
+                        aria-label={`Pin ${app.title}`}
+                      >
+                        Pin
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

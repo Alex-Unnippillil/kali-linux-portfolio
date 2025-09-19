@@ -89,6 +89,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('desktop-pin-app', this.handlePinAppEvent);
     }
 
     componentWillUnmount() {
@@ -96,6 +97,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('desktop-pin-app', this.handlePinAppEvent);
     }
 
     checkForNewFolders = () => {
@@ -576,11 +578,36 @@ export class Desktop extends Component {
         return result;
     }
 
-    handleOpenAppEvent = (e) => {
-        const id = e.detail;
-        if (id) {
+    handleOpenAppEvent = async (e) => {
+        const detail = e.detail;
+        if (!detail) return;
+        if (typeof detail === 'string') {
+            this.openApp(detail);
+            return;
+        }
+        const { id, spawnNew } = detail;
+        if (!id) return;
+        if (spawnNew) {
+            await this.openNewWindow(id);
+        } else {
             this.openApp(id);
         }
+    }
+
+    handlePinAppEvent = (e) => {
+        const detail = e.detail;
+        if (!detail) return;
+        const id = typeof detail === 'string' ? detail : detail.id;
+        if (id) {
+            this.pinApp(id);
+        }
+    }
+
+    openNewWindow = async (id) => {
+        if (this.state.closed_windows[id] === false) {
+            await this.closeApp(id);
+        }
+        this.openApp(id);
     }
 
     openApp = (objId) => {
