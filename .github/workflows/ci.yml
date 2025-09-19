@@ -13,6 +13,10 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
+      - name: Validate lockfile stability
+        run: |
+          yarn dedupe --check
+          git diff --exit-code yarn.lock
 
   lint:
     runs-on: ubuntu-latest
