@@ -50,6 +50,41 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn test --coverage
 
+  playwright:
+    runs-on: ubuntu-latest
+    needs: install
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: npx playwright install --with-deps
+      - run: yarn build
+      - run: |
+          yarn start --hostname 0.0.0.0 --port 3000 &
+          npx wait-on http://127.0.0.1:3000
+      - name: Run Playwright tests
+        env:
+          BASE_URL: http://127.0.0.1:3000
+        run: npx playwright test
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: warn
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: playwright-results
+          if-no-files-found: warn
+
   security:
     runs-on: ubuntu-latest
     needs: install
