@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Yarn Dev Server",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "yarn dev"
+        },
+        {
+            "name": "Yarn Test Suite",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "yarn test"
+        },
+        {
+            "name": "Playwright: Debug Tests",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx playwright test --debug"
+        },
+        {
+            "name": "Playwright: UI Mode",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx playwright test --ui"
+        }
+    ]
+}
