@@ -7,7 +7,11 @@ import {
   getActiveFetches,
   FetchEntry,
 } from '../../../lib/fetchProxy';
-import { exportMetrics } from '../export';
+import {
+  captureResourceSnapshot,
+  serializeResourceSnapshot,
+} from '../../../lib/resourceSnapshot';
+import { downloadJson, exportMetrics } from '../export';
 import RequestChart from './RequestChart';
 
 const HISTORY_KEY = 'network-insights-history';
@@ -18,6 +22,8 @@ const formatBytes = (bytes?: number) =>
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
   const [history, setHistory] = usePersistentState<FetchEntry[]>(HISTORY_KEY, []);
+  const [snapshotMessage, setSnapshotMessage] = useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   useEffect(() => {
     const unsubStart = onFetchProxy('start', () => setActive(getActiveFetches()));
@@ -30,6 +36,40 @@ export default function NetworkInsights() {
       unsubEnd();
     };
   }, [setHistory]);
+
+  const handleSnapshot = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    setSnapshotMessage(null);
+    try {
+      const snapshot = await captureResourceSnapshot({
+        network: { active, history },
+      });
+      const serialized = serializeResourceSnapshot(snapshot);
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, '-');
+      downloadJson(serialized, `diagnostics-snapshot-${timestamp}.json`);
+      let message = 'Snapshot downloaded.';
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(serialized);
+          message = 'Snapshot copied to clipboard and downloaded.';
+        } catch {
+          message = 'Snapshot downloaded. Clipboard copy failed.';
+        }
+      }
+      setSnapshotMessage(message);
+    } catch (err) {
+      console.error('Failed to capture diagnostics snapshot', err);
+      setSnapshotMessage('Failed to capture diagnostics snapshot.');
+    } finally {
+      setIsCapturing(false);
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => setSnapshotMessage(null), 4000);
+      }
+    }
+  };
 
   return (
     <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
@@ -55,7 +95,22 @@ export default function NetworkInsights() {
         >
           Export
         </button>
+        <button
+          onClick={handleSnapshot}
+          disabled={isCapturing}
+          className="ml-2 px-2 py-1 rounded bg-[var(--kali-panel)] disabled:opacity-50"
+        >
+          {isCapturing ? 'Capturing…' : 'Snapshot'}
+        </button>
       </div>
+      {snapshotMessage && (
+        <div
+          aria-live="polite"
+          className="mb-2 text-[var(--kali-accent,#a8e0ff)]"
+        >
+          {snapshotMessage}
+        </div>
+      )}
       <ul className="divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {history.length === 0 && <li className="p-1 text-gray-400">No requests</li>}
         {history.map((f) => (
