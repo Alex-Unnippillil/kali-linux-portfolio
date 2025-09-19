@@ -20,6 +20,7 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
+    "analyze:treemap": "ANALYZE=true yarn build && node scripts/capture-bundle-analyzer.mjs",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs"
   },
@@ -142,6 +143,7 @@
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
+    "webpack-bundle-analyzer": "^4.10.2",
     "workbox-build": "7.1.1",
     "ws": "^8.18.0"
   },

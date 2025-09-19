@@ -62,6 +62,52 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
 
+  bundle-analyzer:
+    runs-on: ubuntu-latest
+    needs: install
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Install Playwright dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Build with bundle analyzer
+        run: yarn analyze:treemap
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+      - name: Upload bundle analyzer artifacts
+        id: upload-bundle-analyzer
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analyzer
+          path: bundle-analyzer
+          if-no-files-found: error
+          retention-days: 30
+      - name: Build PR comment
+        run: node scripts/build-bundle-analyzer-comment.mjs
+        env:
+          ANALYZER_ARTIFACT_URL: ${{ steps.upload-bundle-analyzer.outputs.artifact-url }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+      - name: Publish job summary
+        run: cat bundle-analyzer/comment.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Update PR with bundle analyzer results
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: bundle-analyzer/comment.md
+          edit-mode: replace
+          comment-identifier: bundle-analyzer
+
   vercel-preview:
     runs-on: ubuntu-latest
     needs: install
