@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FormError from '../ui/FormError';
+import usePermissions from '../../hooks/usePermissions';
 
 interface SerialPort {
   readonly readable: ReadableStream<Uint8Array> | null;
@@ -56,23 +57,46 @@ const SerialTerminalApp: React.FC = () => {
     }
   };
 
+  const { requestPermission } = usePermissions();
+
   const connect = async () => {
     if (!supported) return;
     setError('');
-    try {
-      const p = await (navigator as NavigatorSerial).serial.requestPort();
-      await p.open({ baudRate: 9600 });
-      setPort(p);
-      readLoop(p);
-    } catch (err) {
-      const e = err as DOMException;
-      if (e.name === 'NotAllowedError') {
-        setError('Permission to access serial port was denied.');
-      } else if (e.name === 'NotFoundError') {
-        setError('No port selected.');
-      } else {
-        setError(e.message || 'Failed to open serial port.');
-      }
+    const granted = await requestPermission({
+      permission: 'serial',
+      appName: 'Serial Terminal',
+      title: 'Serial port access',
+      message: 'Allow Serial Terminal to connect to a serial device you select.',
+      details: [
+        'Connections are established only with the device you choose.',
+        'Permission is stored until you revoke it from Settings.',
+      ],
+      successMessage: 'Serial connection established.',
+      failureMessage: 'Serial port connection was cancelled or denied.',
+      request: async () => {
+        try {
+          const p = await (navigator as NavigatorSerial).serial.requestPort();
+          await p.open({ baudRate: 9600 });
+          setPort(p);
+          readLoop(p);
+          return true;
+        } catch (err) {
+          const e = err as DOMException;
+          if (e.name === 'NotAllowedError') {
+            setError('Permission to access serial port was denied.');
+            return false;
+          }
+          if (e.name === 'NotFoundError') {
+            setError('No port selected.');
+            return false;
+          }
+          setError(e.message || 'Failed to open serial port.');
+          throw err;
+        }
+      },
+    });
+    if (!granted) {
+      setPort(null);
     }
   };
 

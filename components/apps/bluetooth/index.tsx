@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import FormError from "../../ui/FormError";
+import usePermissions from "../../hooks/usePermissions";
 
 interface DeviceInfo {
   address: string;
@@ -29,8 +30,7 @@ const BluetoothApp: React.FC = () => {
   const [error, setError] = useState("");
   const [rssiFilter, setRssiFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [permissionGranted, setPermissionGranted] = useState(false);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const { requestPermission, getStatus } = usePermissions();
   const [pairingDevice, setPairingDevice] = useState<DeviceInfo | null>(null);
   const [pairedDevice, setPairedDevice] = useState("");
   const [knownDevices, setKnownDevices] = useState<string[]>([]);
@@ -61,12 +61,27 @@ const BluetoothApp: React.FC = () => {
     }
   };
 
-  const handleScan = () => {
-    if (!permissionGranted) {
-      setShowPermissionModal(true);
-    } else {
-      loadData();
+  const handleScan = async () => {
+    setError("");
+    const granted = await requestPermission({
+      permission: "bluetooth",
+      appName: "Bluetooth Scanner",
+      title: "Bluetooth device scan",
+      message:
+        "Allow Bluetooth Scanner to simulate a search for nearby Bluetooth devices.",
+      details: [
+        "Scans use bundled demo data only; no hardware access occurs.",
+        "The decision is remembered until you revoke it in Settings.",
+      ],
+      successMessage: "Bluetooth scan enabled.",
+      denyMessage: "Bluetooth scan cancelled.",
+      failureMessage: "Bluetooth scan was denied.",
+    });
+    if (!granted) {
+      setError("Permission denied.");
+      return;
     }
+    await loadData();
   };
 
   const filtered = devices.filter((d) => {
@@ -96,6 +111,11 @@ const BluetoothApp: React.FC = () => {
           {pairedDevice ? "Paired" : "Not paired"}
         </span>
       </div>
+      {getStatus("bluetooth") !== "granted" && (
+        <p className="mb-2 text-sm text-gray-300">
+          Grant Bluetooth access to enable simulated scans.
+        </p>
+      )}
       <div className="mb-4 flex items-center gap-4">
         <button onClick={handleScan} className="rounded bg-blue-600 px-3 py-1">
           Scan for Devices
@@ -150,34 +170,6 @@ const BluetoothApp: React.FC = () => {
           </div>
         ))}
       </div>
-      {showPermissionModal && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-          <div className="w-64 rounded bg-gray-800 p-4 text-center">
-            <p className="mb-4">Allow access to Bluetooth devices?</p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setShowPermissionModal(false);
-                  setError("Permission denied.");
-                }}
-                className="w-[90px] rounded bg-gray-600 px-2 py-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setPermissionGranted(true);
-                  setShowPermissionModal(false);
-                  loadData();
-                }}
-                className="w-[90px] rounded bg-blue-600 px-2 py-1"
-              >
-                Allow
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {pairingDevice && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
           <div className="w-64 rounded bg-gray-800 p-4 text-center">

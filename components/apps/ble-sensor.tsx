@@ -10,6 +10,7 @@ import {
   ServiceData,
   CharacteristicData,
 } from '../../utils/bleProfiles';
+import usePermissions from '../../hooks/usePermissions';
 
 type BluetoothDevice = any;
 type BluetoothRemoteGATTServer = any;
@@ -28,6 +29,7 @@ const BleSensor: React.FC = () => {
   const bcRef = useRef<BroadcastChannel | null>(null);
 
   const refreshProfiles = async () => setProfiles(await loadProfiles());
+  const { requestPermission } = usePermissions();
 
   useEffect(() => {
     refreshProfiles();
@@ -62,11 +64,22 @@ const BleSensor: React.FC = () => {
     setError('');
     setBusy(true);
 
-    const consent = window.confirm(
-      'This application will request access to nearby Bluetooth devices. Continue?'
-    );
-    if (!consent) {
+    const granted = await requestPermission({
+      permission: 'bluetooth',
+      appName: 'BLE Sensor',
+      title: 'Bluetooth device access',
+      message:
+        'Allow BLE Sensor to request information from a nearby Bluetooth Low Energy device.',
+      details: [
+        'This simulation captures demo data for inspection—no real hardware access is attempted.',
+        'Your decision is cached until it is revoked from Settings.',
+      ],
+      successMessage: 'Bluetooth access granted for BLE Sensor.',
+      failureMessage: 'Bluetooth access was denied.',
+    });
+    if (!granted) {
       setBusy(false);
+      setError('Permission to access Bluetooth was denied.');
       return;
     }
 

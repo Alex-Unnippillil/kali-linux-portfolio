@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import usePersistentState from "../../../hooks/usePersistentState";
+import usePermissions from "../../../hooks/usePermissions";
 
 interface AlertsProps {
   latitude: number;
@@ -27,12 +28,14 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
     0,
     isNumber,
   );
+  const { requestPermission, getStatus } = usePermissions();
+  const notificationsGranted = getStatus("notifications") === "granted";
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
-    if ("Notification" in window && Notification.permission === "default") {
-      void Notification.requestPermission();
-    }
+    if (!("Notification" in window)) return;
+
+    let cancelled = false;
 
     let timer: number | undefined;
 
@@ -73,17 +76,60 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
     const handleFocus = () => start();
     const handleBlur = () => stop();
 
-    if (document.hasFocus()) start();
+    const init = async () => {
+      let granted = notificationsGranted;
+      if (!granted) {
+        granted = await requestPermission({
+          permission: "notifications",
+          appName: "Weather Alerts",
+          title: "Weather alert notifications",
+          message:
+            "Allow Weather Alerts to notify you when forecast temperatures cross your thresholds.",
+          details: [
+            "Alerts trigger at most every five minutes while this window is open.",
+            "You can revoke notification access from Settings at any time.",
+          ],
+          successMessage: "Weather alerts enabled.",
+          failureMessage: "Weather alerts will stay disabled without notifications.",
+          request: async () => {
+            const res = await Notification.requestPermission();
+            return res === "granted";
+          },
+        });
+      }
 
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("blur", handleBlur);
+      if (cancelled) return;
+      if (!granted) {
+        setEnabled(false);
+        return;
+      }
+
+      if (document.hasFocus()) start();
+
+      window.addEventListener("focus", handleFocus);
+      window.addEventListener("blur", handleBlur);
+    };
+
+    init().catch(() => {
+      if (!cancelled) setEnabled(false);
+    });
 
     return () => {
+      cancelled = true;
       stop();
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [enabled, high, low, latitude, longitude]);
+  }, [
+    enabled,
+    high,
+    low,
+    latitude,
+    longitude,
+    notificationsGranted,
+    requestPermission,
+    setEnabled,
+  ]);
 
   return (
     <div className="space-y-2 p-2">
