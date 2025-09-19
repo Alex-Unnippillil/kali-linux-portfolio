@@ -6,10 +6,13 @@ export type EventName =
   | 'outbound_link_click'
   | 'download_click';
 
+import { isTelemetryEnabled } from '@/utils/privacyControls';
+
 export function trackEvent(
   name: EventName,
   props?: Record<string, string | number | boolean>,
 ) {
+  if (!isTelemetryEnabled()) return;
   try {
     // Dynamically require to avoid ESM issues in test environment
     // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires

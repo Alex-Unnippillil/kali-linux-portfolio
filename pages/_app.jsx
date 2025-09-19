@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -10,7 +10,7 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
-import { SettingsProvider } from '../hooks/useSettings';
+import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -33,17 +33,6 @@ function MyApp(props) {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }
-    const initAnalytics = async () => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
-    };
-    initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
-
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
@@ -161,16 +150,7 @@ function MyApp(props) {
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
-
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            <AnalyticsManager />
           </PipPortalProvider>
         </SettingsProvider>
       </div>
@@ -183,4 +163,42 @@ function MyApp(props) {
 export default MyApp;
 
 export { reportWebVitalsUtil as reportWebVitals };
+
+function AnalyticsManager() {
+  const { analyticsConsent, telemetryConsent } = useSettings();
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!analyticsConsent || initializedRef.current) return;
+    const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+    if (!trackingId) return;
+    (async () => {
+      try {
+        const { default: ReactGA } = await import('react-ga4');
+        ReactGA.initialize(trackingId);
+        initializedRef.current = true;
+      } catch (err) {
+        console.error('Analytics initialization failed', err);
+      }
+    })();
+  }, [analyticsConsent]);
+
+  if (!telemetryConsent) {
+    return null;
+  }
+
+  return (
+    <>
+      <Analytics
+        beforeSend={(e) => {
+          if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+          const evt = e;
+          if (evt.metadata?.email) delete evt.metadata.email;
+          return e;
+        }}
+      />
+      {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+    </>
+  );
+}
 
