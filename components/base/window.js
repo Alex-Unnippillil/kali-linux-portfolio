@@ -1,12 +1,14 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useCallback, useEffect, useMemo, useState } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import ErrorBoundary, { ErrorIdDisplay } from '../core/ErrorBoundary';
+import { buildBugReportURL } from '../../utils/bugReport';
 
 export class Window extends Component {
     constructor(props) {
@@ -612,6 +614,13 @@ export class Window extends Component {
     }
 
     render() {
+        const isSettings = this.props.id === "settings";
+        const renderScreen = (addFolder, openApp) => {
+            if (isSettings) {
+                return <Settings />;
+            }
+            return this.props.screen(addFolder, openApp);
+        };
         return (
             <>
                 {this.state.snapPreview && (
@@ -657,13 +666,15 @@ export class Window extends Component {
                             close={this.closeWindow}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            pip={() => renderScreen(this.props.addFolder, this.props.openApp)}
                         />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                        <WindowMainScreen
+                            screen={renderScreen}
+                            title={this.props.title}
+                            appId={this.props.id}
+                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                            openApp={this.props.openApp}
+                        />
                     </div>
                 </Draggable >
             </>
@@ -673,6 +684,88 @@ export class Window extends Component {
 
 export default Window
 
+
+
+const AppContentBoundary = ({ screen, addFolder, openApp, title, appId }) => {
+    const [retryKey, setRetryKey] = useState(0);
+
+    useEffect(() => {
+        setRetryKey(0);
+    }, [screen, appId, title]);
+
+    const renderContent = useCallback(() => screen(addFolder, openApp), [screen, addFolder, openApp]);
+    const context = useMemo(() => {
+        if (appId) return `app:${appId}`;
+        if (title) return `app:${title}`;
+        return 'app';
+    }, [appId, title]);
+    const resolvedTitle = title || 'this app';
+
+    return (
+        <ErrorBoundary
+            context={context}
+            fallback={({ errorId, reset }) => {
+                const bugReportUrl = buildBugReportURL({
+                    errorId,
+                    appId: appId ?? undefined,
+                    appTitle: title ?? undefined,
+                    context,
+                    currentUrl:
+                        typeof window !== 'undefined' && typeof window.location?.href === 'string'
+                            ? window.location.href
+                            : undefined,
+                });
+                return (
+                    <AppErrorFallback
+                        appTitle={resolvedTitle}
+                        errorId={errorId}
+                        onReload={() => {
+                            setRetryKey((key) => key + 1);
+                            reset();
+                        }}
+                        bugReportUrl={bugReportUrl}
+                    />
+                );
+            }}
+        >
+            <AppContent key={retryKey} renderContent={renderContent} />
+        </ErrorBoundary>
+    );
+};
+
+const AppContent = ({ renderContent }) => renderContent();
+
+const AppErrorFallback = ({ appTitle, errorId, onReload, bugReportUrl }) => (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-ub-cool-grey p-4 text-center text-white">
+        <h2 className="text-lg font-semibold">{appTitle} crashed</h2>
+        <p className="text-sm opacity-80">
+            Try reloading the app. If the issue persists, include the error ID in your bug report.
+        </p>
+        <ErrorIdDisplay
+            errorId={errorId}
+            className="flex flex-col items-center gap-1"
+            buttonClassName="rounded bg-white px-3 py-1 text-xs font-medium text-black transition hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-white/60"
+            codeClassName="rounded bg-black/40 px-2 py-1 font-mono text-xs"
+        />
+        <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+                type="button"
+                onClick={onReload}
+                className="rounded bg-white px-3 py-1 text-sm font-medium text-black transition hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-white/60"
+            >
+                Reload {appTitle}
+            </button>
+            <a
+                href={bugReportUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded border border-white/60 px-3 py-1 text-sm transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/60"
+            >
+                Report bug
+            </a>
+        </div>
+    </div>
+);
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
@@ -839,7 +932,13 @@ export class WindowMainScreen extends Component {
     render() {
         return (
             <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+                <AppContentBoundary
+                    screen={this.props.screen}
+                    addFolder={this.props.addFolder}
+                    openApp={this.props.openApp}
+                    title={this.props.title}
+                    appId={this.props.appId}
+                />
             </div>
         )
     }
