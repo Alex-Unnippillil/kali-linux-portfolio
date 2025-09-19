@@ -31,6 +31,10 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    taskbarAlignment,
+    setTaskbarAlignment,
+    taskbarCompact,
+    setTaskbarCompact,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +83,10 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.taskbarAlignment !== undefined)
+        setTaskbarAlignment(parsed.taskbarAlignment);
+      if (parsed.taskbarCompact !== undefined)
+        setTaskbarCompact(parsed.taskbarCompact);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -100,6 +108,8 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setTaskbarAlignment(defaults.taskbarAlignment as any);
+    setTaskbarCompact(defaults.taskbarCompact);
     setTheme("default");
   };
 
@@ -235,6 +245,26 @@ export default function Settings() {
               <option value="regular">Regular</option>
               <option value="compact">Compact</option>
             </select>
+          </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Taskbar Alignment:</label>
+            <select
+              value={taskbarAlignment}
+              onChange={(e) => setTaskbarAlignment(e.target.value as any)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Compact Taskbar:</span>
+            <ToggleSwitch
+              checked={taskbarCompact}
+              onChange={setTaskbarCompact}
+              ariaLabel="Compact taskbar icons"
+            />
           </div>
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
