@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -254,18 +255,22 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         </div>
       )}
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
+        {filtered.map((project, index) => (
           <div
             key={project.id}
             className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
           >
             <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
+              <div className="relative w-full md:w-1/2 h-48">
+                <Image
+                  src={project.thumbnail}
+                  alt={project.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1280px) 20vw, 15vw"
+                  priority={index === 0}
+                />
+              </div>
               <div className="w-full md:w-1/2 h-48">
                 <Editor
                   height="100%"
