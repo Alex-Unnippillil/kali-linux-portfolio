@@ -40,7 +40,14 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_workspaces: {},
             desktop_apps: [],
+            workspaces: [
+                { id: 'workspace-1', name: 'Workspace 1' },
+                { id: 'workspace-2', name: 'Workspace 2' },
+                { id: 'workspace-3', name: 'Workspace 3' },
+            ],
+            active_workspace: 'workspace-1',
             context_menus: {
                 desktop: false,
                 default: false,
@@ -645,9 +652,14 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
             setTimeout(() => {
+                const workspaceId = this.state.window_workspaces[objId] || this.state.active_workspace;
+                const window_workspaces = {
+                    ...this.state.window_workspaces,
+                    [objId]: workspaceId,
+                };
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, window_workspaces }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -701,7 +713,22 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        let window_workspaces = { ...this.state.window_workspaces };
+        delete window_workspaces[objId];
+
+        this.setState({ closed_windows, favourite_apps, window_workspaces }, this.saveSession);
+    }
+
+    moveWindowToWorkspace = (id, workspaceId) => {
+        if (!id || !workspaceId) return;
+        const exists = this.state.workspaces.some(ws => ws.id === workspaceId);
+        if (!exists) return;
+        this.setState(prev => ({
+            window_workspaces: {
+                ...prev.window_workspaces,
+                [id]: workspaceId,
+            }
+        }), this.saveSession);
     }
 
     pinApp = (id) => {
@@ -964,8 +991,21 @@ export class Desktop extends Component {
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
+                        minimizedMap={this.state.minimized_windows}
+                        windowWorkspaces={this.state.window_workspaces}
+                        workspaces={this.state.workspaces}
                         onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                        onClose={this.closeWindowSwitcher}
+                        onCloseWindow={(id) => { if (id) this.closeApp(id); }}
+                        onToggleMinimize={(id) => {
+                            if (!id) return;
+                            if (this.state.minimized_windows[id]) {
+                                this.openApp(id);
+                            } else {
+                                this.hasMinimised(id);
+                            }
+                        }}
+                        onMoveWindow={(id, workspaceId) => this.moveWindowToWorkspace(id, workspaceId)} /> : null}
 
             </main>
         )
