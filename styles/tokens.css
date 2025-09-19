@@ -26,6 +26,15 @@
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
+  --menu-bg: rgba(15, 19, 23, 0.92);
+  --menu-bg-glass: color-mix(in srgb, var(--color-bg), transparent 60%);
+  --menu-border: rgba(255, 255, 255, 0.08);
+  --menu-hover-bg: rgba(255, 255, 255, 0.12);
+  --menu-foreground: var(--color-text);
+  --menu-muted: rgba(255, 255, 255, 0.56);
+  --menu-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+  --menu-separator: rgba(255, 255, 255, 0.12);
+  --menu-checkmark-color: var(--color-ubt-blue);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -77,6 +86,15 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --menu-bg: #000000;
+  --menu-bg-glass: #000000;
+  --menu-border: #ffffff;
+  --menu-hover-bg: #333333;
+  --menu-foreground: #ffffff;
+  --menu-muted: #cccccc;
+  --menu-shadow: none;
+  --menu-separator: #ffffff;
+  --menu-checkmark-color: #ffff00;
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +134,9 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --menu-border: #ffffff;
+    --menu-hover-bg: rgba(255, 255, 255, 0.25);
+    --menu-muted: #f5f5f5;
+    --menu-shadow: none;
   }
 }

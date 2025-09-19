@@ -365,18 +365,112 @@ dialog {
 }
 
 /* Context Menu & Panels */
-.context-menu-bg,
+.context-menu {
+    position: absolute;
+    z-index: 50;
+    background-color: var(--menu-bg);
+    color: var(--menu-foreground);
+    border: 1px solid var(--menu-border);
+    border-radius: var(--radius-md);
+    padding: calc(var(--space-1) + 2px) 0;
+    box-shadow: var(--menu-shadow);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    min-width: 10rem;
+}
+
+.context-menu-bg {
+    background-color: var(--menu-bg);
+    color: var(--menu-foreground);
+    border-color: var(--menu-border);
+}
+
 .windowMainScreen {
-    background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
+    background-color: color-mix(in srgb, var(--color-bg), transparent 15%);
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
-    .context-menu-bg,
+    .context-menu {
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        background-color: var(--menu-bg-glass);
+    }
+
+    .context-menu-bg {
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        background-color: var(--menu-bg-glass);
+    }
+
     .windowMainScreen {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
         background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
     }
+}
+
+.context-menu__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: var(--hit-area);
+    padding: calc(var(--space-1) + 2px) var(--space-4);
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.context-menu__item:hover,
+.context-menu__item:focus-visible {
+    outline: none;
+    background-color: var(--menu-hover-bg);
+}
+
+.context-menu__item--disabled,
+.context-menu__item--disabled:hover,
+.context-menu__item--disabled:focus-visible {
+    cursor: not-allowed;
+    color: var(--menu-muted);
+    background: transparent;
+}
+
+.context-menu__check {
+    width: 1.5rem;
+    display: inline-flex;
+    justify-content: center;
+    color: var(--menu-checkmark-color);
+    flex-shrink: 0;
+}
+
+.context-menu__icon {
+    width: 1.25rem;
+    display: inline-flex;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.context-menu__label {
+    flex: 1;
+    min-width: 0;
+}
+
+.context-menu__shortcut {
+    margin-left: var(--space-3);
+    color: var(--menu-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.context-menu__separator {
+    height: 1px;
+    margin: var(--space-2) var(--space-3);
+    background-color: var(--menu-separator);
 }
 
 .emoji-list>li {

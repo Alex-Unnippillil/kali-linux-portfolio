@@ -172,7 +172,7 @@ __tests__/
 
 **Windowing model.** The desktop (`components/screen/desktop.js`) manages:
 - z-ordering and focus of windows
-- global context menus (`components/context-menus/`)
+- global context menus via the shared primitive in `components/common/ContextMenu.tsx`
 - favorites vs “All Applications” grid
 - analytics events for user actions
 

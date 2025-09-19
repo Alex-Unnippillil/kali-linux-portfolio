@@ -11,7 +11,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 
 2. **Window size presets**
    - **Accept:** Context menu offers sizes: 960×600, 1200×800, 1440×900.
-   - **Where:** `components/context-menus/*`, window component.
+   - **Where:** `components/common/ContextMenu.tsx`, window component menu config.
 
 3. **GNOME-like maximize on titlebar double-click**
    - **Accept:** Double-click titlebar toggles maximize.
@@ -40,7 +40,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 
 9. **Dock context menu**
    - **Accept:** Right-click dock icon shows Quit, Hide, New Window, Unpin.
-   - **Where:** `components/context-menus/*`.
+   - **Where:** `components/common/ContextMenu.tsx`.
 
 10. **Window controls hit area**
     - **Accept:** Close, Minimize, Maximize hit targets ≥ 40×40 CSS px, with hover and pressed states.
