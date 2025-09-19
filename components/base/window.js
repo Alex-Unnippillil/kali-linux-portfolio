@@ -33,10 +33,14 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            debugOverlayEnabled: false,
+            cursorPosition: { x: 0, y: 0 },
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._cursorRaf = null;
+        this._cursorCoords = { x: 0, y: 0 };
     }
 
     componentDidMount() {
@@ -53,8 +57,13 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        window.addEventListener('keydown', this.handleDebugOverlayShortcut);
+        window.addEventListener('mousemove', this.updateCursorPosition);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
+        }
+        if (this.shouldEnableDebugOverlay()) {
+            this.setState({ debugOverlayEnabled: true });
         }
     }
 
@@ -66,8 +75,14 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        window.removeEventListener('keydown', this.handleDebugOverlayShortcut);
+        window.removeEventListener('mousemove', this.updateCursorPosition);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._cursorRaf) {
+            cancelAnimationFrame(this._cursorRaf);
+            this._cursorRaf = null;
         }
     }
 
@@ -375,6 +390,92 @@ export class Window extends Component {
         }
     }
 
+    shouldEnableDebugOverlay = () => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        const envFlag = (process.env.NEXT_PUBLIC_WINDOW_DEBUG || '').toLowerCase();
+        const envEnabled = envFlag === '1' || envFlag === 'true';
+        const params = new URLSearchParams(window.location.search);
+        const queryFlag = (params.get('snap-debug') || '').toLowerCase();
+        const queryEnabled = queryFlag === '1' || queryFlag === 'true';
+        return envEnabled || queryEnabled;
+    }
+
+    handleDebugOverlayShortcut = (event) => {
+        const key = event.key || '';
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && (key === 'd' || key === 'D')) {
+            event.preventDefault();
+            this.setState((prev) => ({ debugOverlayEnabled: !prev.debugOverlayEnabled }));
+        }
+    }
+
+    updateCursorPosition = (event) => {
+        if (!this.state.debugOverlayEnabled) return;
+        this._cursorCoords = {
+            x: Math.round(event.clientX),
+            y: Math.round(event.clientY)
+        };
+        if (this._cursorRaf) return;
+        this._cursorRaf = window.requestAnimationFrame(() => {
+            this._cursorRaf = null;
+            if (!this.state.debugOverlayEnabled) return;
+            this.setState({ cursorPosition: this._cursorCoords });
+        });
+    }
+
+    renderDebugOverlay = () => {
+        if (!this.state.debugOverlayEnabled) {
+            return null;
+        }
+
+        const zones = [
+            { id: 'left', label: 'Snap Left', style: { left: 0, top: 0, width: '50%', height: '100%' } },
+            { id: 'right', label: 'Snap Right', style: { left: '50%', top: 0, width: '50%', height: '100%' } },
+            { id: 'top', label: 'Snap Top', style: { left: 0, top: 0, width: '100%', height: '50%' } },
+        ];
+
+        return (
+            <div className="pointer-events-none fixed inset-0 z-50">
+                <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white text-xs font-mono px-3 py-2 rounded shadow-lg space-y-1">
+                    <div className="text-[0.75rem] font-semibold">Window Debug</div>
+                    <div>Cursor: {this.state.cursorPosition.x}, {this.state.cursorPosition.y}</div>
+                    <div>Snap preview: {this.state.snapPosition ?? 'none'}</div>
+                    <div>Snapped: {this.state.snapped ?? 'none'}</div>
+                    {this.state.snapPreview && (
+                        <div>
+                            Preview rect:
+                            {' '}
+                            {this.state.snapPreview.left ?? '0'},
+                            {this.state.snapPreview.top ?? '0'} →
+                            {' '}
+                            {this.state.snapPreview.width ?? '0'} × {this.state.snapPreview.height ?? '0'}
+                        </div>
+                    )}
+                    <div className="text-[0.65rem] uppercase tracking-wide text-gray-300">Ctrl+Shift+D to toggle</div>
+                </div>
+                {zones.map((zone) => {
+                    const isActive = this.state.snapPosition === zone.id;
+                    const isSnapped = this.state.snapped === zone.id;
+                    const baseClasses = 'absolute border border-dashed rounded-sm';
+                    const activeClass = isActive ? ' border-green-400 bg-green-400/10' : ' border-sky-400 bg-sky-400/5';
+                    const snappedClass = isSnapped ? ' border-emerald-500 bg-emerald-500/10' : '';
+                    return (
+                        <div
+                            key={zone.id}
+                            className={`${baseClasses}${activeClass}${snappedClass}`}
+                            style={zone.style}
+                        >
+                            <div className="absolute top-1 left-1 text-[0.6rem] font-semibold text-white drop-shadow pointer-events-none">
+                                {zone.label}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
     focusWindow = () => {
         this.props.focus(this.id);
     }
@@ -621,6 +722,7 @@ export class Window extends Component {
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
+                {this.renderDebugOverlay()}
                 <Draggable
                     axis="both"
                     handle=".bg-ub-window-title"
