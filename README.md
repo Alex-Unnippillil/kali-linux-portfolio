@@ -95,6 +95,32 @@ See `.env.local.example` for the full list.
 
 ---
 
+## Dependency overrides
+
+Yarn resolutions and package extensions keep noisy sub-dependencies quiet and patched. Each line below mirrors the format used in
+`package.json`/`.yarnrc.yml`, with `//` comments explaining when it is safe to delete the override.
+
+### `package.json#resolutions`
+
+```text
+source-map@^0.7.6 // Hold every consumer on a build patched for CVE-2021-23424 until upstream packages drop the vulnerable range. https://www.cve.org/CVERecord?id=CVE-2021-23424
+test-exclude@7.0.1 // Force babel-plugin-istanbul to pick up the 7.x line that removes deprecated inflight; waiting on istanbuljs/babel-plugin-istanbul#300.
+webpack@^5.92.0 // Keep local tooling aligned with Next.js’ Webpack 5 pipeline so we don’t install a second major (see https://github.com/vercel/next.js/blob/v15.5.2/packages/next/package.json).
+glob@npm:^7.1.6 -> npm:glob@^9.3.5 // Quiet npm/yarn deprecation warnings while rc-resize-observer ships its glob@10 upgrade (https://github.com/react-component/resize-observer/pull/194).
+workbox-build@npm:7.1.0 -> npm:workbox-build@7.1.1 // Pull in the 7.1.1 regression fix for 7.1.0 breaking changes reported in GoogleChrome/workbox#3357.
+```
+
+### Yarn `packageExtensions`
+
+```text
+3d-force-graph-ar@* -> peer aframe@*, three@* // Declare the peers until upstream follows through on vasturiano/react-force-graph#147.
+3d-force-graph-vr@* -> peer three@* // VR wrapper already declares aframe but still omits three (vasturiano/react-force-graph#147).
+aframe-forcegraph-component@* -> peer three@* // Bundle uses three-forcegraph but omits the peer declaration in vasturiano/aframe-forcegraph-component@3.3.0.
+react-force-graph@* -> peer aframe@*, three@* // React bindings rely on the 3D/VR layers that expect aframe and three (see vasturiano/react-force-graph#147).
+```
+
+---
+
 ## Local Development Tips
 
 - Run `yarn lint` and `yarn test` before committing changes.
