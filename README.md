@@ -91,6 +91,7 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn typecheck` – run the TypeScript compiler with library checks enabled (no emit).
 - `yarn export` – generate a static export in the `out/` directory.
 
 ---
@@ -98,7 +99,12 @@ See `.env.local.example` for the full list.
 ## Local Development Tips
 
 - Run `yarn lint` and `yarn test` before committing changes.
+- Run `yarn typecheck` as part of your pre-commit routine. The base `tsconfig` keeps `skipLibCheck` disabled, so fix upstream typings (via declarations under `types/`) instead of re-enabling the flag when vendor packages regress.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+
+### Typed Route Definitions
+
+- Typed routes live in [`types/next-routes.d.ts`](./types/next-routes.d.ts). If you add or remove a page or API handler, run `yarn build` (or `next build`) once and copy `.next/types/routes.d.ts` over to keep the fallback file in sync for `yarn typecheck`.
 
 ---
 
