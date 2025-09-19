@@ -28,12 +28,15 @@ Always test inside controlled labs and obtain written permission before performi
 
 ### Install & Run (Dev)
 ```bash
-cp .env.local.example .env.local  # populate with required keys
+cp .env.local.example .env.local  # copy and then fill per the inline comments
 nvm install  # installs Node 20.19.5 from .nvmrc if needed
 nvm use
 yarn install
 yarn dev
 ```
+
+`.env.local` is git-ignored. Use the annotated `.env.local.example` file as the
+source of truth for required keys, default values, and feature toggles.
 
 ### Production Build
 Serverful deployments run the built Next.js server so all API routes are available.
@@ -74,14 +77,22 @@ To send text or links directly into the Sticky Notes app:
 
 ## Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill in required API keys:
+Copy `.env.local.example` to `.env.local`. The example file includes inline
+comments that describe defaults, required values, and which features are
+disabled when a key is left blank. Populate only the services you plan to use.
 
-- `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
+Key values to review:
+
+- `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to
+  `true`.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
-- `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
+- `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form
+  spam protection.
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`,
+  `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase
+  credentials. When unset, Supabase-backed APIs and features are disabled.
 
-See `.env.local.example` for the full list.
+See `.env.local.example` for the full annotated list.
 
 ---
 
@@ -194,7 +205,21 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 
 ## Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill in required values.
+`.env.local` remains untracked; configure it per the inline guidance in
+`.env.local.example`. The tables below summarise the key groups.
+
+### Public browser toggles
+
+| Name | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | Enable GA4 + Vercel Analytics events from the client when set to `true`. |
+| `NEXT_PUBLIC_VERCEL_ENV` | Optional label for the active deployment (`development`, `preview`, `production`). |
+| `NEXT_PUBLIC_DEMO_MODE` | Swaps sensitive flows for canned demo content when `true`. |
+| `NEXT_PUBLIC_UI_EXPERIMENTS` | Opt-in gate for experimental UI variations. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `true` during `yarn export` so the UI hides API-dependent features. |
+| `NEXT_PUBLIC_SHOW_BETA` | Display a beta badge when set (use `true` or `1`). |
+
+### Client integrations (public keys)
 
 | Name | Purpose |
 | --- | --- |
@@ -202,23 +227,30 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
 | `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
 | `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
-| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
-| `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key rendered in the contact form. |
+| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Enables live search in the YouTube app; fallback demo data is used when empty. |
+| `NEXT_PUBLIC_CURRENCY_API_URL` | Optional REST endpoint for currency conversion rates. |
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
-| `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
-| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
+| `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a self-hosted Ghidra WebAssembly build. |
+
+### Feature flags
+
+| Name | Purpose |
+| --- | --- |
+| `FEATURE_TOOL_APIS` | Enable simulated tool API routes (`enabled` or `disabled`). |
+| `FEATURE_HYDRA` | Allow the Hydra password-auditing demo API; requires `FEATURE_TOOL_APIS`. |
+
+### Server-side secrets and backend credentials
+
+| Name | Purpose |
+| --- | --- |
+| `RECAPTCHA_SECRET` | Server secret for ReCAPTCHA verification. |
+| `ADMIN_READ_KEY` | Shared secret required to read admin messages through `/api/admin/messages`. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL exposed to the client. Leave blank to disable Supabase features. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used by the client. |
 | `SUPABASE_URL` | Supabase project URL for server-side access. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
 | `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL exposed to the client. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
-| `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
-| `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
-| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
-| `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
-| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
-| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
