@@ -11,7 +11,7 @@ export default function FixturesLoader({ onData }: LoaderProps) {
   const [worker, setWorker] = useState<Worker | null>(null);
 
   useEffect(() => {
-    const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
+    const w = new Worker(new URL('../workers/fixturesParser.mts', import.meta.url));
     w.onmessage = (e) => {
       const { type, payload } = e.data;
       if (type === 'progress') setProgress(payload);

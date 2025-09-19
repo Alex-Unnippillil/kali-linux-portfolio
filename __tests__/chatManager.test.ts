@@ -1,5 +1,5 @@
 import { getChatId } from '../src/chat/chatManager';
-import { createLogger } from '../lib/logger';
+import { createLogger } from '../lib/logger.mts';
 
 describe('getChatId', () => {
   it('throws and logs when chat is undefined', () => {

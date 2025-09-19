@@ -7,7 +7,7 @@ import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
-import { trackEvent } from "@/lib/analytics-client";
+import { trackEvent } from "@/lib/analytics-client.mts";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";

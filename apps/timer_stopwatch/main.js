@@ -51,7 +51,7 @@ function startTimer() {
   timerRemaining = mins * 60 + secs;
   timerEndTime = Date.now() + timerRemaining * 1000;
   updateTimerDisplay();
-  timerWorker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
+  timerWorker = new Worker(new URL('../../workers/timer.worker.mts', import.meta.url));
   timerWorker.onmessage = () => {
     timerRemaining = Math.max(0, Math.ceil((timerEndTime - Date.now()) / 1000));
     updateTimerDisplay();
@@ -86,7 +86,7 @@ function updateStopwatchDisplay() {
 function startWatch() {
   if (stopwatchWorker || typeof Worker !== 'function') return;
   stopwatchStartTime = Date.now() - stopwatchElapsed * 1000;
-  stopwatchWorker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
+  stopwatchWorker = new Worker(new URL('../../workers/timer.worker.mts', import.meta.url));
   stopwatchWorker.onmessage = () => {
     stopwatchElapsed = Math.floor((Date.now() - stopwatchStartTime) / 1000);
     updateStopwatchDisplay();

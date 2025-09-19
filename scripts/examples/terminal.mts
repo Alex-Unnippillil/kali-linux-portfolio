@@ -2,7 +2,7 @@
 
 export function uppercaseExample() {
   if (typeof Worker !== 'function') return;
-  const worker = new Worker(new URL('../../workers/terminal-worker.ts', import.meta.url));
+  const worker = new Worker(new URL('../../workers/terminal-worker.mts', import.meta.url));
   worker.onmessage = (e: MessageEvent<any>) => {
     const { type, chunk } = e.data || {};
     if (type === 'data') {
@@ -14,7 +14,7 @@ export function uppercaseExample() {
 
 export function lineCountExample() {
   if (typeof Worker !== 'function') return;
-  const worker = new Worker(new URL('../../workers/terminal-worker.ts', import.meta.url));
+  const worker = new Worker(new URL('../../workers/terminal-worker.mts', import.meta.url));
   const big = Array.from({ length: 1000 }, (_, i) => `line ${i}`).join('\n');
   worker.onmessage = (e: MessageEvent<any>) => {
     const { type, chunk } = e.data || {};

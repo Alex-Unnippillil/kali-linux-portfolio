@@ -1,5 +1,5 @@
 import { generateSudoku, isValidPlacement } from '../apps/games/sudoku';
-import { solve } from '../workers/sudokuSolver';
+import { solve } from '../workers/sudokuSolver.mts';
 
 describe('sudoku generator and validator', () => {
   test('generates solvable puzzle', () => {

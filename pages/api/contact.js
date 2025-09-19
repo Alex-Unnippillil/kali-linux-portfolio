@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
-import { validateServerEnv } from '../../lib/validate';
-import { getServiceSupabase } from '../../lib/supabase';
+import { validateServerEnv } from '../../lib/validate.mts';
+import { getServiceSupabase } from '../../lib/supabase.mts';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;

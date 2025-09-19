@@ -1,4 +1,4 @@
-import { solve } from '../../../workers/sudokuSolver';
+import { solve } from '../../../workers/sudokuSolver.mts';
 
 export const SIZE = 9;
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);

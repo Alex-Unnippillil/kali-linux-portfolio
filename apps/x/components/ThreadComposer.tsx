@@ -42,7 +42,7 @@ export default function ThreadComposer() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const worker = new Worker(
-      new URL('../../../workers/postPublisher.ts', import.meta.url),
+      new URL('../../../workers/postPublisher.mts', import.meta.url),
     );
     worker.onmessage = ({ data }) => {
       if (data.action === 'publish') {

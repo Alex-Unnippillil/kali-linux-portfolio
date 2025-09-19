@@ -73,7 +73,7 @@ const Nessus = () => {
     setJobs(loadJobDefinitions());
     setFalsePositives(loadFalsePositives());
     parserWorkerRef.current = new Worker(
-      new URL('../../../workers/nessus-parser.ts', import.meta.url)
+      new URL('../../../workers/nessus-parser.mts', import.meta.url)
     );
       parserWorkerRef.current.onmessage = (e) => {
       const { findings: parsed = [], error: err } = e.data || {};
