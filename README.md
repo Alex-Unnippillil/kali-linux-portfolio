@@ -340,6 +340,23 @@ docker run -p 3000:3000 \
 
 ---
 
+## Repository Stats & Linguist Overrides
+
+GitHub language statistics are tuned via `.gitattributes` so the numbers reflect the
+hand-written application code instead of large generated bundles:
+
+- `*.css` files are marked with `linguist-detectable=false` because many of the app
+  demos ship prebuilt styles under `public/apps/`. Excluding them keeps GitHub from
+  counting vendor CSS as primary source.
+- The service worker bundle emitted by `@ducanh2912/next-pwa` (`public/sw.js` and its
+  source map) is tagged as `linguist-generated` so generated build artefacts do not
+  skew the language mix.
+
+Line endings are normalized to LF across the repository to avoid CRLF churn in future
+commits.
+
+---
+
 ## Testing
 
 Jest is configured via `jest.config.js` with a **jsdom** environment and helpers in `jest.setup.ts`:

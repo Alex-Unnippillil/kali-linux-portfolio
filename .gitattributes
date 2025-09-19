@@ -1,1 +1,65 @@
+# Normalize text files and enforce LF endings
+* text=auto eol=lf
+
+# Explicit text patterns that should never gain CRLF endings
+*.css text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.markdown text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.html text eol=lf
+*.htm text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.c text eol=lf
+*.cc text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.sql text eol=lf
+*.py text eol=lf
+*.svg text eol=lf
+*.txt text eol=lf
+*.csv text eol=lf
+*.pgn text eol=lf
+*.properties text eol=lf
+*.lock text eol=lf
+*.tsbuildinfo text eol=lf
+*.webmanifest text eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.bcmap binary
+*.pfb binary
+*.icc binary
+*.bin binary
+*.pcap binary
+*.gz binary
+*.tgz binary
+*.wasm binary
+*.node binary
+*.snap binary
+*.nnue binary
+
+# GitHub Linguist overrides for repository statistics
 *.css linguist-detectable=false
+public/sw.js linguist-generated=true
+public/sw.js.map linguist-generated=true
