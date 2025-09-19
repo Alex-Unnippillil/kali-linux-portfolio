@@ -4,6 +4,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
+import Image from 'next/image';
 import rawMilestones from '../data/milestones.json';
 
 interface Milestone {
@@ -126,11 +127,16 @@ const ScrollableTimeline: React.FC = () => {
                       className="text-left w-full focus:outline-none"
                     >
                       <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
-                      <img
-                        src={first.image}
-                        alt={first.title}
-                        className="w-full h-32 object-cover mb-2 rounded"
-                      />
+                      <div className="relative w-full h-32 mb-2 overflow-hidden rounded">
+                        <Image
+                          src={first.image}
+                          alt={first.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 70vw, 16rem"
+                          priority={index === 0}
+                        />
+                      </div>
                       <p className="text-sm md:text-base mb-2">{first.title}</p>
                       {renderTags(first.tags)}
                     </button>
@@ -155,11 +161,15 @@ const ScrollableTimeline: React.FC = () => {
                     rel="noopener noreferrer"
                     className="block mb-2"
                   >
-                    <img
-                      src={m.image}
-                      alt={m.title}
-                      className="w-full h-32 object-cover mb-2 rounded"
-                    />
+                    <div className="relative w-full h-32 mb-2 overflow-hidden rounded">
+                      <Image
+                        src={m.image}
+                        alt={m.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 70vw, 16rem"
+                      />
+                    </div>
                     <p className="text-sm md:text-base">{m.title}</p>
                   </a>
                   {renderTags(m.tags)}
