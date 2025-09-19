@@ -32,3 +32,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 - `yarn why bare-fs` shows the module is required by `tar-fs@3.1.0` via `@puppeteer/browsers@2.10.7`.
 - Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
 - `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
+
+## Accessibility QA (2025-09-18)
+
+- `yarn lint` — **fails**; legacy code in `chrome-extension/`, classic game bundles under `public/apps/`, and older React apps still violate `no-top-level-window` and hooks rules. Accessibility-specific checks under `app/**/*` and `playwright/**/*` run, but the broader lint task continues to surface these historical errors.
+- `yarn build` — **passes** via `CI=1 yarn build`, generating the PWA service worker and full static export manifest.
+- `npx playwright test playwright/keyboard.gate.spec.ts` — **blocked** locally; Chromium launches now download successfully, but the container image is missing required system libraries (Playwright recommends `npx playwright install-deps`), so the keyboard-only navigation spec cannot execute.
