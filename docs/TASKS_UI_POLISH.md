@@ -107,7 +107,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Where:** CSS tokens.
 
 25. **Accent color setting**
-    - **Accept:** Choose from 6 accents; applies to focus, selection, controls; stored persistently.
+    - **Accept:** Palette plus custom picker with WCAG 4.5:1 text and 3:1 focus contrast validation; updates focus, selection, controls, and `--color-on-accent`; persists across themes/wallpapers.
     - **Where:** Settings app + CSS variables.
 
 26. **Wallpaper fit and blur**

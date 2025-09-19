@@ -22,6 +22,7 @@
   --color-ubt-gedit-blue: #50B6C6;
   --color-ubt-gedit-dark: #003B70;
   --color-ub-border-orange: #1793d1;
+  --color-on-accent: #000000;
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
@@ -73,6 +74,7 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --color-on-accent: #000000;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;

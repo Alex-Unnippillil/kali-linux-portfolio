@@ -29,7 +29,7 @@ export default function Tabs<T extends string>({
           tabIndex={active === t.id ? 0 : -1}
           onClick={() => onChange(t.id)}
           className={`px-4 py-2 focus:outline-none ${
-            active === t.id ? "bg-ub-orange text-white" : "text-ubt-grey"
+            active === t.id ? "bg-ub-orange" : "text-ubt-grey"
           }`}
         >
           {t.label}

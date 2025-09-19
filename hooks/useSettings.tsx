@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -23,6 +31,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { getPreferredTextColor, normalizeHex } from '../utils/color';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -102,7 +111,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
+  const [accent, setAccentState] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
@@ -114,6 +123,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+
+  const setAccent = useCallback(
+    (value: string) => {
+      const normalized = normalizeHex(value) ?? defaults.accent;
+      setAccentState(normalized);
+    },
+    [],
+  );
 
   useEffect(() => {
     (async () => {
@@ -129,27 +146,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
-  }, []);
+  }, [setAccent]);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const normalizedAccent = normalizeHex(accent) ?? defaults.accent;
+    const border = shadeColor(normalizedAccent, -0.2);
+    const { text: onAccent } = getPreferredTextColor(normalizedAccent);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
+      '--color-ub-orange': normalizedAccent,
       '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
+      '--color-primary': normalizedAccent,
+      '--color-accent': normalizedAccent,
+      '--color-focus-ring': normalizedAccent,
+      '--color-selection': normalizedAccent,
+      '--color-control-accent': normalizedAccent,
+      '--color-on-accent': onAccent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
+    saveAccent(normalizedAccent);
   }, [accent]);
 
   useEffect(() => {

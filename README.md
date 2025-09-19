@@ -379,6 +379,10 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
 
+### Personalization
+
+The **Settings** app centralizes themes, wallpapers, and accessibility options. Accent colors come from an accessible palette or a custom picker that enforces WCAG contrast: 4.5:1 for text placed on the accent surface and 3:1 against the desktop background for focus rings and outlines. Every saved accent updates the global design tokens (`--color-ub-orange`, `--color-focus-ring`, `--color-on-accent`, etc.), so buttons, toggles, and selection highlights refresh immediately without reloading. Accent choices persist independently of theme and wallpaper selections—switching between Default, Dark, Neon, or Matrix keeps your chosen accent while wallpapers continue to rotate or stay pinned according to your selection. Resetting the desktop (or importing an older settings file) restores the defaults.
+
 The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
 add, reorder, or delete moods; selections persist in the browser's Origin Private File
 System so your choices restore on load. The last mood played is remembered, and

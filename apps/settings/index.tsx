@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,15 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import {
+  contrastRatio,
+  getPreferredTextColor,
+  normalizeHex,
+  MIN_ACCENT_CONTRAST,
+} from "../../utils/color";
+
+const DESKTOP_BACKGROUND = "#0f1317";
+const MIN_FOCUS_CONTRAST = 3;
 
 export default function Settings() {
   const {
@@ -33,6 +42,51 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const liveRegionRef = useRef<HTMLSpanElement>(null);
+  const [customAccent, setCustomAccent] = useState(accent);
+
+  const accentStatus = useMemo<AccentStatus>(() => {
+    const normalized = normalizeHex(customAccent);
+    if (!normalized) {
+      return {
+        normalized: null,
+        contrast: null,
+        textColor: "#ffffff",
+        passes: false,
+        backgroundContrast: null,
+        backgroundPass: false,
+      };
+    }
+    const { text, contrast } = getPreferredTextColor(normalized);
+    const backgroundContrast = contrastRatio(normalized, DESKTOP_BACKGROUND);
+    const backgroundPass = backgroundContrast >= MIN_FOCUS_CONTRAST;
+    const passes = contrast >= MIN_ACCENT_CONTRAST && backgroundPass;
+    return {
+      normalized,
+      contrast,
+      textColor: text,
+      passes,
+      backgroundContrast,
+      backgroundPass,
+    };
+  }, [customAccent]);
+
+  useEffect(() => {
+    setCustomAccent(accent);
+  }, [accent]);
+
+  useEffect(() => {
+    if (!liveRegionRef.current) return;
+    const { normalized, contrast, backgroundContrast, textColor, backgroundPass } = accentStatus;
+    if (!normalized || contrast === null || backgroundContrast === null) {
+      liveRegionRef.current.textContent = 'Select an accent color to preview contrast';
+      return;
+    }
+    const textStatus = contrast >= MIN_ACCENT_CONTRAST ? 'passes' : 'fails';
+    const focusStatus = backgroundPass ? 'passes' : 'fails';
+    const textLabel = textColor === '#000000' ? 'black' : 'white';
+    liveRegionRef.current.textContent = `Text contrast ${contrast.toFixed(2)} to 1 with ${textLabel} ${textStatus}; focus contrast ${backgroundContrast.toFixed(2)} to 1 ${focusStatus}`;
+  }, [accentStatus]);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -40,6 +94,14 @@ export default function Settings() {
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
+  type AccentStatus = {
+    normalized: string | null;
+    contrast: number | null;
+    textColor: "#000000" | "#ffffff";
+    passes: boolean;
+    backgroundContrast: number | null;
+    backgroundPass: boolean;
+  };
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
   const wallpapers = [
@@ -54,6 +116,59 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const handleAccentSelect = (value: string) => {
+    setCustomAccent(value);
+    const normalized = normalizeHex(value);
+    if (!normalized) return;
+    const { contrast } = getPreferredTextColor(normalized);
+    const backgroundContrast = contrastRatio(normalized, DESKTOP_BACKGROUND);
+    if (contrast >= MIN_ACCENT_CONTRAST && backgroundContrast >= MIN_FOCUS_CONTRAST) {
+      setAccent(normalized);
+    }
+  };
+
+  const handleCustomAccentChange = (value: string) => {
+    setCustomAccent(value);
+    const normalized = normalizeHex(value);
+    if (!normalized) return;
+    const { contrast } = getPreferredTextColor(normalized);
+    const backgroundContrast = contrastRatio(normalized, DESKTOP_BACKGROUND);
+    if (contrast >= MIN_ACCENT_CONTRAST && backgroundContrast >= MIN_FOCUS_CONTRAST) {
+      setAccent(normalized);
+    }
+  };
+
+  const contrastSummary = (() => {
+    if (
+      !accentStatus.normalized ||
+      accentStatus.contrast === null ||
+      accentStatus.backgroundContrast === null
+    ) {
+      return "Pick a color to preview contrast. Accessible choices apply automatically.";
+    }
+    const textLabel = accentStatus.textColor === "#000000" ? "black" : "white";
+    const textPart = `Text contrast ${accentStatus.contrast.toFixed(2)}:1 with ${textLabel} ${
+      accentStatus.contrast >= MIN_ACCENT_CONTRAST
+        ? `meets the ${MIN_ACCENT_CONTRAST}:1 requirement.`
+        : `is below the ${MIN_ACCENT_CONTRAST}:1 requirement.`
+    }`;
+    const focusPart = `Focus contrast ${accentStatus.backgroundContrast.toFixed(2)}:1 ${
+      accentStatus.backgroundPass
+        ? `meets the ${MIN_FOCUS_CONTRAST}:1 non-text requirement.`
+        : `is below the ${MIN_FOCUS_CONTRAST}:1 non-text requirement.`
+    }`;
+    if (accentStatus.passes) {
+      return `${textPart} ${focusPart}`;
+    }
+    return `${textPart} ${focusPart} Choose a color that passes both checks.`;
+  })();
+
+  const contrastSummaryClass = accentStatus.normalized
+    ? accentStatus.passes
+      ? "text-green-400"
+      : "text-red-400"
+    : "text-ubt-grey";
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -134,20 +249,70 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
-              {ACCENT_OPTIONS.map((c) => (
-                <button
-                  key={c}
-                  aria-label={`select-accent-${c}`}
-                  role="radio"
-                  aria-checked={accent === c}
-                  onClick={() => setAccent(c)}
-                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
+          <div className="flex flex-col items-center gap-4 my-4 text-ubt-grey">
+            <div className="flex flex-col items-center gap-2">
+              <span id="accent-options-label">Accent palette</span>
+              <div
+                aria-labelledby="accent-options-label"
+                role="radiogroup"
+                className="flex gap-2"
+              >
+                {ACCENT_OPTIONS.map((c) => (
+                  <button
+                    key={c}
+                    aria-label={`select-accent-${c.replace('#', '')}`}
+                    role="radio"
+                    aria-checked={accent === c}
+                    onClick={() => handleAccentSelect(c)}
+                    className={`h-8 w-8 rounded-full border-2 ${
+                      accent === c ? "border-white" : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <label htmlFor="custom-accent" className="text-ubt-grey">
+                Custom accent
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  id="custom-accent"
+                  type="color"
+                  value={customAccent}
+                  onChange={(e) => handleCustomAccentChange(e.target.value)}
+                  aria-describedby="accent-contrast-hint"
+                  aria-invalid={accentStatus.passes ? undefined : true}
+                  className={`h-10 w-16 cursor-pointer rounded border bg-ub-cool-grey ${
+                    accentStatus.passes || !accentStatus.normalized
+                      ? "border-ubt-cool-grey"
+                      : "border-red-500"
+                  }`}
                 />
-              ))}
+                <span id="accent-contrast-hint" className="text-xs text-ubt-grey">
+                  Needs ≥ {MIN_ACCENT_CONTRAST}:1 contrast. Text color adjusts automatically.
+                </span>
+              </div>
+            </div>
+            <div className="w-full max-w-sm rounded bg-ub-grey p-4 text-left text-ubt-grey">
+              <div className="flex items-center justify-between">
+                <span>Preview</span>
+                <code>{(accentStatus.normalized ?? customAccent).toUpperCase()}</code>
+              </div>
+              <button
+                type="button"
+                className="mt-3 w-full rounded px-3 py-2 text-sm transition-colors motion-reduce:transition-none"
+                style={{
+                  backgroundColor: accentStatus.normalized ?? customAccent,
+                  color: accentStatus.textColor,
+                }}
+                aria-hidden="true"
+              >
+                Accent sample
+              </button>
+              <p className={`mt-3 text-xs ${contrastSummaryClass}`}>{contrastSummary}</p>
+              <span ref={liveRegionRef} role="status" aria-live="polite" className="sr-only"></span>
             </div>
           </div>
           <div className="flex justify-center my-4">
@@ -202,7 +367,7 @@ export default function Settings() {
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={handleReset}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange"
             >
               Reset Desktop
             </button>
@@ -263,7 +428,7 @@ export default function Settings() {
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange"
             >
               Edit Shortcuts
             </button>
@@ -275,13 +440,13 @@ export default function Settings() {
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange"
             >
               Export Settings
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange"
             >
               Import Settings
             </button>
