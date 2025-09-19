@@ -9,6 +9,7 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import ReleaseChannelPanel from '../../common/ReleaseChannelPanel';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -338,6 +339,9 @@ function Education() {
           <div className="text-sm text-gray-300 font-bold mt-1"> </div>
         </li>
       </ul>
+      <div className="w-5/6 md:w-3/4 mt-6">
+        <ReleaseChannelPanel variant="compact" />
+      </div>
     </>
   );
 }
@@ -349,13 +353,14 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   return (
     <div className="px-2 w-full">
       <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <input
+          type="text"
+          placeholder="Filter..."
+          aria-label="Filter skills"
+          className="mt-2 w-full px-2 py-1 rounded text-black"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
           <img

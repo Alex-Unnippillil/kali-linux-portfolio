@@ -11,6 +11,7 @@
     "postbuild": "node scripts/safe-copy.mjs",
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
+    "postexport": "node scripts/update-release-metadata.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint . --max-warnings=0",

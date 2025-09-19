@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { getStoredOverride } from '../utils/releases';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -30,6 +31,21 @@ function MyApp(props) {
 
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const override = getStoredOverride();
+        if (override?.targetUrl) {
+          const target = new URL(override.targetUrl, window.location.href).toString();
+          if (window.location.href !== target) {
+            window.location.replace(target);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Release override failed', err);
+      }
+    }
+
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }

@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import ReleaseChannelPanel from "../../components/common/ReleaseChannelPanel";
 
 export default function Settings() {
   const {
@@ -38,6 +39,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "about", label: "About" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -287,6 +289,13 @@ export default function Settings() {
             </button>
           </div>
         </>
+      )}
+      {activeTab === "about" && (
+        <div className="px-4 py-6 flex justify-center">
+          <div className="w-full max-w-xl">
+            <ReleaseChannelPanel />
+          </div>
+        </div>
       )}
         <input
           type="file"

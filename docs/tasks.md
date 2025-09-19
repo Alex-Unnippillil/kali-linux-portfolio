@@ -129,4 +129,15 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- Document and verify the release rollback workflow using `public/releases.json` and the deployment scripts.
+
+## Release Management
+- After each `yarn export`, `scripts/update-release-metadata.mjs` snapshots the build into `public/releases.json` and writes
+  channel-specific metadata under `public/releases/<channel>/<buildId>.json`.
+- Set `NEXT_PUBLIC_RELEASE_CHANNEL` (and optionally `RELEASE_CHANNEL`) per deployment so settings/About can fetch the proper
+  channel. `RELEASE_BASE_URL` and `RELEASE_BUILD_ID` may be provided to override defaults when rolling back from a CDN path.
+- The manifest keeps the latest and previous builds accessible for rollback; do not delete the per-channel metadata files so
+  prior assets remain discoverable.
+- To roll back, use the Settings → About tab or the About window rollout button. Both invoke the shared rollback helper which
+  purges caches, logs the analytics event, stores the override, and reloads the page.
 
