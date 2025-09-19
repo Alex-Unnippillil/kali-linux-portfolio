@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import {
+  parseAdminMessagesResponse,
+  type AdminMessagesResponseData,
+} from '../../lib/contracts';
 
 export default function AdminMessages() {
   const [key, setKey] = useState('');
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AdminMessagesResponseData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMessages = async () => {
@@ -14,11 +18,15 @@ export default function AdminMessages() {
           'x-admin-key': key,
         },
       });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Request failed');
+      const payload = await res.json();
+      const parsed = parseAdminMessagesResponse(payload);
+      if ('error' in parsed) {
+        throw new Error(parsed.error || 'Request failed');
       }
-      setData(json);
+      if (!res.ok) {
+        throw new Error('Request failed');
+      }
+      setData(parsed);
     } catch (err: any) {
       setError(err.message);
     }

@@ -1,4 +1,5 @@
 import { processContactForm } from '../components/apps/contact';
+import { createContactSubmitRequest } from '../lib/contracts';
 
 describe('contact form', () => {
   it('invalid email blocked', async () => {
@@ -19,7 +20,10 @@ describe('contact form', () => {
   });
 
   it('success posts to api', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ v: 1, data: { ok: true } }),
+    });
     const result = await processContactForm(
       {
         name: 'Alex',
@@ -37,6 +41,16 @@ describe('contact form', () => {
         method: 'POST',
         headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf' }),
       })
+    );
+    const [, options] = fetchMock.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual(
+      createContactSubmitRequest({
+        name: 'Alex',
+        email: 'alex@example.com',
+        message: 'Hello',
+        honeypot: '',
+        recaptchaToken: 'rc',
+      }),
     );
     expect(result.success).toBe(true);
   });
