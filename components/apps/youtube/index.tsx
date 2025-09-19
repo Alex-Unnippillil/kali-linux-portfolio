@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
+import { CDN_SCRIPT_IDS, createSriScript } from '../../../utils/cdnSri';
 
 type Video = WatchLaterVideo;
 
@@ -335,8 +336,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     if (window.YT && window.YT.Player) {
       initPlayer();
     } else {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
+      const tag = createSriScript(CDN_SCRIPT_IDS.youtubeIframeApi);
       window.onYouTubeIframeAPIReady = initPlayer;
       document.body.appendChild(tag);
     }

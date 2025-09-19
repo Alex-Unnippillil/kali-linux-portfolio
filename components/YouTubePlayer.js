@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
+import { CDN_SCRIPT_IDS, createSriScript } from '../utils/cdnSri';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
@@ -63,8 +64,7 @@ export default function YouTubePlayer({ videoId }) {
     if (typeof window !== 'undefined') {
       // Load the IFrame Player API script only after user interaction
       if (!window.YT) {
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube-nocookie.com/iframe_api';
+        const tag = createSriScript(CDN_SCRIPT_IDS.youtubeNoCookieIframeApi);
         tag.async = true;
         window.onYouTubeIframeAPIReady = createPlayer;
         document.body.appendChild(tag);

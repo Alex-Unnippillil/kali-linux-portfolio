@@ -5,6 +5,7 @@ import ModeSwitcher from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
 import FormulaEditor from './components/FormulaEditor';
 import Tape from './components/Tape';
+import { CDN_SCRIPT_IDS, createSriScript } from '../../utils/cdnSri';
 
 export default function Calculator() {
   const HISTORY_LIMIT = 10;
@@ -37,10 +38,8 @@ export default function Calculator() {
     const load = async () => {
       if (typeof window !== 'undefined' && !(window as any).math) {
         await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src =
-            'https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js';
-          script.onload = resolve as any;
+          const script = createSriScript(CDN_SCRIPT_IDS.mathjsBrowser);
+          script.addEventListener('load', resolve as any, { once: true });
           document.body.appendChild(script);
         });
       }
