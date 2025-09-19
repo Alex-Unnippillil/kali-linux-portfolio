@@ -77,6 +77,7 @@ const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
+const HistoryApp = createDynamicApp('history', 'History');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
 
@@ -162,6 +163,7 @@ const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
+const displayHistory = createDisplay(HistoryApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
@@ -720,6 +722,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'history',
+    title: 'History',
+    icon: '/themes/Yaru/apps/history.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHistory,
   },
   {
     id: 'screen-recorder',
