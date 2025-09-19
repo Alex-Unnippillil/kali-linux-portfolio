@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import Input from '../../ui/Input';
+import Textarea from '../../ui/Textarea';
 import LabMode from '../../LabMode';
 import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
@@ -130,11 +132,15 @@ export default function SecurityTools() {
     <LabMode>
       <div className="w-full h-full bg-ub-dark text-white p-2 overflow-auto flex">
         <div className="flex-1 pr-2">
-          <input
+          <Input
+            label="Search all tools"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search all tools"
-            className="w-full mb-2 p-1 text-black text-xs"
+            aria-label="Search all tools"
+            containerClassName="text-xs text-white"
+            fieldClassName="border border-gray-700 bg-gray-900"
+            className="text-white text-xs placeholder-gray-400"
           />
           {query ? (
             <div className="text-xs">
@@ -238,9 +244,24 @@ export default function SecurityTools() {
             {active === 'yara' && (
             <div>
               <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
-              <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
-              <div className="text-xs mt-2 mb-1">Sample file:</div>
-              <textarea value={sampleText} readOnly className="w-full h-24 text-black p-1" />
+              <Textarea
+                label="YARA rule"
+                value={yaraRule}
+                onChange={(e) => setYaraRule(e.target.value)}
+                rows={6}
+                containerClassName="text-xs text-white"
+                fieldClassName="border border-gray-700 bg-gray-900"
+                className="text-white text-xs"
+              />
+              <Textarea
+                label="Sample file"
+                value={sampleText}
+                readOnly
+                rows={6}
+                containerClassName="text-xs text-white mt-2"
+                fieldClassName="border border-gray-700 bg-gray-900"
+                className="text-white text-xs"
+              />
               <button onClick={runYara} className="mt-2 px-2 py-1 bg-ub-green text-black text-xs">Scan</button>
               {yaraResult && <div className="mt-2 text-xs">{yaraResult}</div>}
             </div>
