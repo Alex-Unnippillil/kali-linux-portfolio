@@ -354,6 +354,18 @@ yarn test:watch
 yarn lint
 ```
 
+## Contributing
+
+- The `state-gate` CI job runs `yarn test:schema`, `yarn tsc --noEmit`, and the Playwright smoke suite in sequence. Run the same commands locally before opening a pull request so schema fixtures, type safety, and end-to-end state flows stay in sync.
+- Start the dev server (`yarn dev --hostname 0.0.0.0 --port 3000`) in a separate terminal before executing `npx playwright test tests/apps.smoke.spec.ts`. The smoke spec now fails if the browser console emits warnings or errors, which protects the shared window/state managers from silent regressions.
+- Keep the rest of the quality gates—`yarn lint`, `yarn test`, and manual app verification—green.
+
+## Release Process
+
+1. Confirm the `state-gate` workflow is green on the release branch. It runs `yarn test:schema`, `yarn tsc --noEmit`, installs Playwright browsers, and executes `npx playwright test tests/apps.smoke.spec.ts` against a dev server.
+2. Re-run the same commands locally before tagging so schema fixtures, TypeScript types, and the desktop state manager stay in sync. The smoke suite fails immediately if any browser console warning or error appears—fix those regressions before promoting a build.
+3. After the gate passes, complete the usual `yarn lint`, `yarn test`, and build/export checks documented above, then tag and publish.
+
 ---
 
 ## Feature Overview

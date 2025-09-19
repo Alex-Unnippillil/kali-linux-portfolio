@@ -1,6 +1,6 @@
 import modules from '../modules/metadata';
 
-describe('modules metadata', () => {
+describe('module metadata schema', () => {
   it('matches the current module metadata', () => {
     expect(modules).toEqual([
       {
