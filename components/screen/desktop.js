@@ -14,6 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import DesktopMarquee from './desktop/desktop-marquee';
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -30,6 +31,11 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.desktopRef = React.createRef();
+        this.iconRectCache = [];
+        this.desktopOrderMap = new Map();
+        this.marqueeBaseSelection = [];
+        this.marqueeAnchor = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +58,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            selectedDesktopIds: [],
+            selectionAnchor: null,
         }
     }
 
@@ -243,6 +251,7 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
+                this.setDesktopSelection([]);
                 this.showContextMenu(e, "desktop");
                 break;
             case "app":
@@ -250,6 +259,9 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened App Context Menu`
                 });
+                if (appId && !this.state.selectedDesktopIds.includes(appId)) {
+                    this.setDesktopSelection([appId], appId);
+                }
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
             case "taskbar":
@@ -280,10 +292,14 @@ export class Desktop extends Component {
         switch (context) {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
+                this.setDesktopSelection([]);
                 this.showContextMenu(fakeEvent, "desktop");
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
+                if (appId && !this.state.selectedDesktopIds.includes(appId)) {
+                    this.setDesktopSelection([appId], appId);
+                }
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
                 break;
             case "taskbar":
@@ -342,6 +358,239 @@ export class Desktop extends Component {
         }
     }
 
+    refreshDesktopOrderMap = () => {
+        this.desktopOrderMap = new Map();
+        this.state.desktop_apps.forEach((id, index) => {
+            this.desktopOrderMap.set(id, index);
+        });
+        this.iconRectCache = [];
+        this.pruneDesktopSelection();
+    }
+
+    pruneDesktopSelection = () => {
+        if (!this.desktopOrderMap || this.desktopOrderMap.size === 0) return;
+        const valid = this.state.selectedDesktopIds.filter(id => this.desktopOrderMap.has(id));
+        this.setDesktopSelection(valid, undefined, { preserveAnchor: true });
+    }
+
+    areSelectionsEqual = (a, b) => {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i += 1) {
+            if (a[i] !== b[i]) return false;
+        }
+        return true;
+    }
+
+    setDesktopSelection = (ids, anchor, options = {}) => {
+        const orderMap = this.desktopOrderMap;
+        if (!orderMap || orderMap.size === 0) {
+            this.setState(prev => {
+                if (prev.selectedDesktopIds.length === 0 && prev.selectionAnchor === null) {
+                    return null;
+                }
+                return { selectedDesktopIds: [], selectionAnchor: null };
+            });
+            return;
+        }
+
+        const unique = [];
+        const seen = new Set();
+        ids.forEach(id => {
+            if (!orderMap.has(id) || seen.has(id)) return;
+            seen.add(id);
+            unique.push(id);
+        });
+        unique.sort((a, b) => orderMap.get(a) - orderMap.get(b));
+
+        this.setState(prev => {
+            const prevAnchor = prev.selectionAnchor;
+            const preserveAnchor = Boolean(options.preserveAnchor);
+            let nextAnchor;
+            if (anchor === undefined) {
+                if (preserveAnchor && prevAnchor && orderMap.has(prevAnchor)) {
+                    nextAnchor = prevAnchor;
+                } else {
+                    nextAnchor = unique.length ? unique[unique.length - 1] : null;
+                }
+            } else {
+                nextAnchor = orderMap.has(anchor) ? anchor : (unique.length ? unique[unique.length - 1] : null);
+            }
+            if (this.areSelectionsEqual(prev.selectedDesktopIds, unique) && nextAnchor === prevAnchor) {
+                return null;
+            }
+            return { selectedDesktopIds: unique, selectionAnchor: nextAnchor };
+        });
+    }
+
+    getSelectionTargets = (id) => {
+        if (!id) return [];
+        const orderMap = this.desktopOrderMap;
+        if (!orderMap || !orderMap.has(id)) return [];
+        const selection = this.state.selectedDesktopIds.filter(target => orderMap.has(target));
+        if (selection.length > 1 && selection.includes(id)) {
+            return selection;
+        }
+        return [id];
+    }
+
+    handleDesktopIconSelect = (event, id) => {
+        if (!id) return;
+        const orderMap = this.desktopOrderMap;
+        if (!orderMap || !orderMap.has(id)) return;
+        const ctrlKey = Boolean(event && (event.metaKey || event.ctrlKey));
+        const shiftKey = Boolean(event && event.shiftKey);
+
+        if (shiftKey) {
+            const currentAnchor = (this.state.selectionAnchor && orderMap.has(this.state.selectionAnchor))
+                ? this.state.selectionAnchor
+                : (this.state.selectedDesktopIds.length
+                    ? this.state.selectedDesktopIds[this.state.selectedDesktopIds.length - 1]
+                    : id);
+            if (!orderMap.has(currentAnchor)) {
+                this.setDesktopSelection([id], id);
+                return;
+            }
+            const anchorIndex = orderMap.get(currentAnchor);
+            const targetIndex = orderMap.get(id);
+            const start = Math.min(anchorIndex, targetIndex);
+            const end = Math.max(anchorIndex, targetIndex);
+            const range = this.state.desktop_apps.slice(start, end + 1);
+            this.setDesktopSelection(range, currentAnchor);
+            return;
+        }
+
+        if (ctrlKey) {
+            const set = new Set(this.state.selectedDesktopIds.filter(item => orderMap.has(item)));
+            const wasSelected = set.has(id);
+            if (wasSelected) {
+                set.delete(id);
+            } else {
+                set.add(id);
+            }
+            const next = Array.from(set);
+            if (!wasSelected && !this.state.selectionAnchor) {
+                this.setDesktopSelection(next, id);
+            } else {
+                this.setDesktopSelection(next, undefined, { preserveAnchor: true });
+            }
+            return;
+        }
+
+        this.setDesktopSelection([id], id);
+    }
+
+    measureIconRects = () => {
+        if (typeof document === 'undefined') {
+            this.iconRectCache = [];
+            return;
+        }
+        const rects = [];
+        const orderMap = this.desktopOrderMap;
+        if (!orderMap || orderMap.size === 0) {
+            this.iconRectCache = rects;
+            return;
+        }
+        this.state.desktop_apps.forEach((id) => {
+            if (!orderMap.has(id)) return;
+            const node = document.getElementById(`app-${id}`);
+            if (!node) return;
+            const rect = node.getBoundingClientRect();
+            rects.push({
+                id,
+                rect: {
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height,
+                }
+            });
+        });
+        this.iconRectCache = rects;
+    }
+
+    getCachedIconRects = () => this.iconRectCache || [];
+
+    handleMarqueeStart = ({ ctrlKey, shiftKey }) => {
+        this.marqueeBaseSelection = [...this.state.selectedDesktopIds];
+        this.marqueeAnchor = this.state.selectionAnchor || (this.state.selectedDesktopIds.length
+            ? this.state.selectedDesktopIds[this.state.selectedDesktopIds.length - 1]
+            : null);
+        if (!ctrlKey && !shiftKey) {
+            this.setDesktopSelection([]);
+        }
+    }
+
+    handleMarqueeChange = (ids, { ctrlKey, shiftKey }) => {
+        const orderMap = this.desktopOrderMap;
+        if (!orderMap || orderMap.size === 0) return;
+        const normalizedHits = ids.filter(id => orderMap.has(id));
+        const order = this.state.desktop_apps;
+
+        if (shiftKey) {
+            const anchorId = (this.marqueeAnchor && orderMap.has(this.marqueeAnchor))
+                ? this.marqueeAnchor
+                : (this.marqueeBaseSelection.find(id => orderMap.has(id)) || normalizedHits[0] || null);
+            if (!anchorId) {
+                this.setDesktopSelection(normalizedHits);
+                return;
+            }
+            const anchorIndex = orderMap.get(anchorId);
+            let minIndex = anchorIndex;
+            let maxIndex = anchorIndex;
+            normalizedHits.forEach(id => {
+                const idx = orderMap.get(id);
+                if (idx < minIndex) minIndex = idx;
+                if (idx > maxIndex) maxIndex = idx;
+            });
+            const start = Math.min(minIndex, anchorIndex);
+            const end = Math.max(maxIndex, anchorIndex);
+            const range = new Set();
+            for (let i = start; i <= end; i += 1) {
+                range.add(order[i]);
+            }
+            if (ctrlKey) {
+                this.marqueeBaseSelection.forEach(id => {
+                    if (orderMap.has(id)) range.add(id);
+                });
+            }
+            this.setDesktopSelection(Array.from(range), anchorId, { preserveAnchor: true });
+            return;
+        }
+
+        if (ctrlKey) {
+            const base = this.marqueeBaseSelection.filter(id => orderMap.has(id));
+            const merged = new Set(base);
+            normalizedHits.forEach(id => merged.add(id));
+            const anchor = (this.marqueeAnchor && orderMap.has(this.marqueeAnchor))
+                ? this.marqueeAnchor
+                : (base.length
+                    ? base[base.length - 1]
+                    : (normalizedHits.length ? normalizedHits[normalizedHits.length - 1] : null));
+            this.setDesktopSelection(Array.from(merged), anchor, { preserveAnchor: true });
+            return;
+        }
+
+        this.setDesktopSelection(normalizedHits);
+    }
+
+    handleMarqueeEnd = ({ moved, ctrlKey, shiftKey }) => {
+        if (!moved && !ctrlKey && !shiftKey) {
+            this.setDesktopSelection([]);
+        }
+        this.marqueeBaseSelection = [];
+        this.marqueeAnchor = null;
+    }
+
+    isMarqueeInteractionAllowed = () => {
+        if (this.state.showWindowSwitcher) return false;
+        if (this.state.showShortcutSelector) return false;
+        if (this.state.showNameBar) return false;
+        if (this.state.allAppsView) return false;
+        return !Object.values(this.state.context_menus).some(Boolean);
+    }
+
     fetchAppsData = (callback) => {
         let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
@@ -389,6 +638,7 @@ export class Desktop extends Component {
             minimized_windows,
             desktop_apps
         }, () => {
+            this.refreshDesktopOrderMap();
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
@@ -427,13 +677,14 @@ export class Desktop extends Component {
             minimized_windows,
             favourite_apps,
             desktop_apps
-        });
+        }, this.refreshDesktopOrderMap);
         this.initFavourite = { ...favourite_apps };
     }
 
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
+        const selectedSet = new Set(this.state.selectedDesktopIds);
         apps.forEach((app, index) => {
             if (this.state.desktop_apps.includes(app.id)) {
 
@@ -444,6 +695,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    selected: selectedSet.has(app.id),
+                    onSelect: this.handleDesktopIconSelect,
                 }
 
                 appsJsx.push(
@@ -705,29 +958,39 @@ export class Desktop extends Component {
     }
 
     pinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
-        this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = true
+        const targets = this.getSelectionTargets(id);
+        if (!targets.length) return;
+        let favourite_apps = { ...this.state.favourite_apps };
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const pinnedSet = new Set(pinnedApps);
+        targets.forEach(targetId => {
+            favourite_apps[targetId] = true;
+            this.initFavourite[targetId] = true;
+            const app = apps.find(a => a.id === targetId);
+            if (app) app.favourite = true;
+            pinnedSet.add(targetId);
+        });
+        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(Array.from(pinnedSet)));
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
 
     unpinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
-        this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = false
+        const targets = this.getSelectionTargets(id);
+        if (!targets.length) return;
+        let favourite_apps = { ...this.state.favourite_apps };
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const pinnedSet = new Set(pinnedApps);
+        targets.forEach(targetId => {
+            if (this.state.closed_windows[targetId]) favourite_apps[targetId] = false;
+            this.initFavourite[targetId] = false;
+            const app = apps.find(a => a.id === targetId);
+            if (app) app.favourite = false;
+            pinnedSet.delete(targetId);
+        });
+        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(Array.from(pinnedSet)));
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -865,7 +1128,7 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main ref={this.desktopRef} id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
                 {/* Window Area */}
                 <div
@@ -904,6 +1167,16 @@ export class Desktop extends Component {
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
+
+                <DesktopMarquee
+                    containerRef={this.desktopRef}
+                    getItems={this.getCachedIconRects}
+                    isEnabled={this.isMarqueeInteractionAllowed}
+                    measureItems={this.measureIconRects}
+                    onSelectionStart={this.handleMarqueeStart}
+                    onSelectionChange={this.handleMarqueeChange}
+                    onSelectionEnd={this.handleMarqueeEnd}
+                />
 
                 {/* Context Menus */}
                 <DesktopMenu
