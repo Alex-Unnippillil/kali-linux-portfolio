@@ -8,6 +8,7 @@
 !.yarn/plugins
 !.yarn/sdks
 !.yarn/versions
+!.yarn/constraints.pro
 /.pnp
 .pnp.cjs
 .pnp.loader.mjs
