@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NmapNSEApp from '../components/apps/nmap-nse';
+import { LiveRegionProvider } from '../hooks/useLiveRegion';
 
 describe('NmapNSEApp', () => {
   it('shows example output for selected script', async () => {
@@ -18,7 +19,11 @@ describe('NmapNSEApp', () => {
         })
       );
 
-    render(<NmapNSEApp />);
+    render(
+      <LiveRegionProvider>
+        <NmapNSEApp />
+      </LiveRegionProvider>
+    );
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
 
     await userEvent.click(screen.getByLabelText(/ftp-anon/i));
@@ -44,7 +49,11 @@ describe('NmapNSEApp', () => {
     // @ts-ignore
     navigator.clipboard = { writeText };
 
-    render(<NmapNSEApp />);
+    render(
+      <LiveRegionProvider>
+        <NmapNSEApp />
+      </LiveRegionProvider>
+    );
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
     await userEvent.click(
       screen.getByRole('button', { name: /copy command/i })
@@ -73,7 +82,11 @@ describe('NmapNSEApp', () => {
     // @ts-ignore
     navigator.clipboard = { writeText };
 
-    render(<NmapNSEApp />);
+    render(
+      <LiveRegionProvider>
+        <NmapNSEApp />
+      </LiveRegionProvider>
+    );
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
 
     await userEvent.click(
@@ -120,7 +133,11 @@ describe('NmapNSEApp', () => {
         })
       );
 
-    render(<NmapNSEApp />);
+    render(
+      <LiveRegionProvider>
+        <NmapNSEApp />
+      </LiveRegionProvider>
+    );
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
 
     const hostNode = await screen.findByText('192.0.2.1');
