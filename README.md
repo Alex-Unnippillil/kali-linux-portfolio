@@ -116,7 +116,7 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 ## Tech Stack
 
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
-- **Tailwind CSS** with custom Ubuntu/Kali theme tokens (`styles/index.css`, `tailwind.config.js`)
+- **Tailwind CSS 3.4.17** + **PostCSS 8.5.6** + **Autoprefixer 10.4.21** with custom Ubuntu/Kali theme tokens (`styles/index.css`, `tailwind.config.js`)
 - **React GA4** via a thin wrapper in `utils/analytics.ts`
 - **Vercel Analytics** (`@vercel/analytics`)
 - **EmailJS** for the contact (“Gedit”) app

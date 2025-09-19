@@ -2,12 +2,26 @@ const plugin = require('tailwindcss/plugin');
 
 module.exports = {
   darkMode: 'class',
-  mode: 'jit',
   content: [
-    './pages/**/*.{js,ts,jsx,tsx}',
-    './components/**/*.{js,ts,jsx,tsx}',
+    './__mocks__/**/*.{js,ts,jsx,tsx}',
+    './__tests__/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}',
     './apps/**/*.{js,ts,jsx,tsx}',
+    './calc/**/*.{js,ts,jsx,tsx}',
+    './chrome-extension/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './filters/**/*.{js,ts,jsx,tsx}',
+    './games/**/*.{js,ts,jsx,tsx}',
     './hooks/**/*.{js,ts,jsx,tsx}',
+    './modules/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './player/**/*.{js,ts,jsx,tsx}',
+    './src/**/*.{js,ts,jsx,tsx}',
+    './templates/**/*.{js,ts,jsx,tsx}',
+    './tests/**/*.{js,ts,jsx,tsx}',
+    './utils/**/*.{js,ts,jsx,tsx}',
+    './workers/**/*.{js,ts,jsx,tsx}',
+    './styles/**/*.{css,scss}',
   ],
   theme: {
     extend: {
