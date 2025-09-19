@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import BeefApp from '../../components/apps/beef';
+import { CloseIcon, MinimizeIcon } from '../../components/ui/icons';
 
 type Severity = 'Low' | 'Medium' | 'High';
 
@@ -38,16 +39,8 @@ const BeefPage: React.FC = () => {
           <h1 className="text-xl">BeEF Demo</h1>
         </div>
         <div className="flex gap-2">
-          <img
-            src="/themes/Yaru/window/window-minimize-symbolic.svg"
-            alt="minimize"
-            className="w-6 h-6"
-          />
-          <img
-            src="/themes/Yaru/window/window-close-symbolic.svg"
-            alt="close"
-            className="w-6 h-6"
-          />
+          <MinimizeIcon className="w-6 h-6" size={24} aria-hidden />
+          <CloseIcon className="w-6 h-6" size={24} aria-hidden />
         </div>
       </header>
 
