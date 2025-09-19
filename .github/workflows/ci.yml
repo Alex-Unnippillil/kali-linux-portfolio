@@ -62,6 +62,24 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
 
+  license-compliance:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn licenses:check
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: reports/license-report.json
+
   vercel-preview:
     runs-on: ubuntu-latest
     needs: install
