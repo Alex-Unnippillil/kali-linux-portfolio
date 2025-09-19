@@ -1,0 +1,45 @@
+{
+  "catalogPath": "i18n",
+  "sourceGlobs": [
+    "app/**/*.{js,jsx,ts,tsx}",
+    "apps/**/*.{js,jsx,ts,tsx}",
+    "components/**/*.{js,jsx,ts,tsx}",
+    "hooks/**/*.{js,jsx,ts,tsx}",
+    "lib/**/*.{js,jsx,ts,tsx}",
+    "modules/**/*.{js,jsx,ts,tsx}",
+    "pages/**/*.{js,jsx,ts,tsx}",
+    "src/**/*.{js,jsx,ts,tsx}",
+    "utils/**/*.{js,jsx,ts,tsx}",
+    "workers/**/*.{js,jsx,ts,tsx}"
+  ],
+  "ignoreGlobs": [
+    "**/__tests__/**",
+    "**/__mocks__/**",
+    "**/__generated__/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "functions": [
+    "t",
+    "i18n.t"
+  ],
+  "components": [
+    {
+      "name": "Trans",
+      "prop": "i18nKey",
+      "defaultProp": "defaultValue"
+    }
+  ],
+  "locales": [
+    "en",
+    "fr"
+  ],
+  "defaultLocale": "en",
+  "requiredLocales": [
+    "en"
+  ],
+  "pluralForms": {
+    "en": "nplurals=2; plural=(n != 1);",
+    "fr": "nplurals=2; plural=(n > 1);"
+  }
+}
