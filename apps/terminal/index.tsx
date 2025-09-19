@@ -11,6 +11,10 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import {
+  createTerminalRunRequest,
+  parseTerminalWorkerResponse,
+} from '../../lib/contracts';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -173,19 +177,27 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       }
       await new Promise<void>((resolve) => {
         worker.onmessage = ({ data }: MessageEvent<any>) => {
-          if (data.type === 'data') {
-            for (const line of String(data.chunk).split('\n')) {
+          let message;
+          try {
+            message = parseTerminalWorkerResponse(data);
+          } catch {
+            return;
+          }
+          if (message.type === 'data') {
+            for (const line of String(message.chunk).split('\n')) {
               if (line) writeLine(line);
             }
-          } else if (data.type === 'end') {
+          } else if (message.type === 'end') {
             resolve();
           }
         };
-        worker.postMessage({
-          action: 'run',
-          command,
-          files: filesRef.current,
-        });
+        worker.postMessage(
+          createTerminalRunRequest({
+            action: 'run',
+            command,
+            files: filesRef.current,
+          }),
+        );
       });
     },
     [writeLine],

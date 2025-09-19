@@ -5,6 +5,11 @@ import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
+import {
+  createContactSubmitRequest,
+  parseContactResponse,
+  type ContactResponseData,
+} from '../../../lib/contracts';
 import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
@@ -48,20 +53,29 @@ export const processContactForm = async (
         'Content-Type': 'application/json',
         'X-CSRF-Token': parsed.csrfToken,
       },
-      body: JSON.stringify({
-        name: sanitize(parsed.name),
-        email: parsed.email,
-        message: sanitize(parsed.message),
-        honeypot: parsed.honeypot,
-        recaptchaToken: parsed.recaptchaToken,
-      }),
+      body: JSON.stringify(
+        createContactSubmitRequest({
+          name: sanitize(parsed.name),
+          email: parsed.email,
+          message: sanitize(parsed.message),
+          honeypot: parsed.honeypot,
+          recaptchaToken: parsed.recaptchaToken,
+        }),
+      ),
     });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
+    let parsedResponse: ContactResponseData | null = null;
+    try {
+      const payload = await res.json();
+      parsedResponse = parseContactResponse(payload);
+    } catch {
+      parsedResponse = null;
+    }
+    if (!res.ok || !parsedResponse?.ok) {
+      const code = parsedResponse?.code;
       return {
         success: false,
-        error: errorMap[body.code as string] || 'Submission failed',
-        code: body.code as string,
+        error: (code && errorMap[code]) || 'Submission failed',
+        code,
       };
     }
     return { success: true };

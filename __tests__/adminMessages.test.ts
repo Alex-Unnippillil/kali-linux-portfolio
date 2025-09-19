@@ -24,6 +24,7 @@ describe('admin messages api', () => {
     expect(spy).toHaveBeenCalled();
     const log = JSON.parse(spy.mock.calls[0][0]);
     expect(log.message).toMatch(/unauthorized/);
+    expect(res._getJSONData()).toEqual({ v: 1, data: { error: 'Unauthorized' } });
     spy.mockRestore();
   });
 });

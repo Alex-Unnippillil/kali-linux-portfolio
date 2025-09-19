@@ -1,23 +1,10 @@
+import {
+  parseTerminalWorkerRequest,
+  createTerminalWorkerResponse,
+  type TerminalRunRequestData,
+} from '../lib/contracts';
+
 const CHUNK_SIZE = 64 * 1024; // 64KB
-
-export interface RunMessage {
-  action: 'run';
-  command: string;
-  files?: Record<string, string>;
-}
-
-export type TerminalWorkerRequest = RunMessage;
-
-export interface DataResponse {
-  type: 'data';
-  chunk: string;
-}
-
-export interface EndResponse {
-  type: 'end';
-}
-
-export type TerminalWorkerResponse = DataResponse | EndResponse;
 
 type Stream = AsyncGenerator<string>;
 
@@ -139,14 +126,22 @@ function buildPipeline(command: string, ctx: Context): Stream {
   return stream;
 }
 
-self.onmessage = async ({ data }: MessageEvent<TerminalWorkerRequest>) => {
-  if (data.action === 'run') {
-    const ctx: Context = { files: data.files || {} };
-    const stream = buildPipeline(data.command, ctx);
+self.onmessage = async ({ data }: MessageEvent<unknown>) => {
+  let request: TerminalRunRequestData;
+  try {
+    request = parseTerminalWorkerRequest(data);
+  } catch {
+    return;
+  }
+  if (request.action === 'run') {
+    const ctx: Context = { files: request.files || {} };
+    const stream = buildPipeline(request.command, ctx);
     for await (const chunk of stream) {
-      (self as any).postMessage({ type: 'data', chunk } as DataResponse);
+      (self as any).postMessage(
+        createTerminalWorkerResponse({ type: 'data', chunk }),
+      );
     }
-    (self as any).postMessage({ type: 'end' } as EndResponse);
+    (self as any).postMessage(createTerminalWorkerResponse({ type: 'end' }));
   }
 };
 
