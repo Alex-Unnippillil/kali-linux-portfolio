@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import InputRemap from "./Games/common/input-remap/InputRemap";
 import useInputMapping from "./Games/common/input-remap/useInputMapping";
 
@@ -167,25 +167,42 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
 };
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
-  const info = GAME_INSTRUCTIONS[gameId];
+  const instructionKey =
+    GAME_INSTRUCTIONS[gameId] !== undefined
+      ? gameId
+      : gameId.replace(/_/g, '-');
+  const info = GAME_INSTRUCTIONS[instructionKey];
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
   const noop = () => null;
+  const headingId = useId();
 
   useEffect(() => {
     if (!overlayRef.current) return;
     prevFocus.current = document.activeElement as HTMLElement | null;
     const selectors =
       'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
-    const focusables = Array.from(
-      overlayRef.current.querySelectorAll<HTMLElement>(selectors),
-    );
-    focusables[0]?.focus();
+
+    const getFocusables = () =>
+      Array.from(overlayRef.current?.querySelectorAll<HTMLElement>(selectors) ?? []);
+
+    const focusables = getFocusables();
+    if (focusables.length > 0) {
+      focusables[0].focus();
+    } else {
+      overlayRef.current.focus();
+    }
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Tab" && focusables.length > 0) {
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+      if (e.key === "Tab") {
+        const elements = getFocusables();
+        if (elements.length === 0) {
+          e.preventDefault();
+          overlayRef.current?.focus();
+          return;
+        }
+        const first = elements[0];
+        const last = elements[elements.length - 1];
         if (e.shiftKey) {
           if (document.activeElement === first) {
             e.preventDefault();
@@ -215,9 +232,13 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={headingId}
+      tabIndex={-1}
     >
       <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
-        <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
+        <h2 id={headingId} className="text-xl font-bold mb-2">
+          {gameId} Help
+        </h2>
         <p className="mb-2">
           <strong>Objective:</strong> {info.objective}
         </p>

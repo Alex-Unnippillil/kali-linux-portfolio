@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import useKeymap from '../keymapRegistry';
 
 interface KeymapOverlayProps {
@@ -19,9 +19,26 @@ const formatEvent = (e: KeyboardEvent) => {
   return parts.filter(Boolean).join('+');
 };
 
+const FOCUSABLE_SELECTORS = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
   const { shortcuts, updateShortcut } = useKeymap();
   const [rebinding, setRebinding] = useState<string | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const headingId = 'settings-keymap-overlay-title';
+
+  const closeOverlay = useCallback(() => {
+    setRebinding(null);
+    onClose();
+  }, [onClose, setRebinding]);
 
   useEffect(() => {
     if (!rebinding) return;
@@ -34,6 +51,75 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
     window.addEventListener('keydown', handler, { once: true });
     return () => window.removeEventListener('keydown', handler);
   }, [rebinding, updateShortcut]);
+
+  useEffect(() => {
+    if (!open) {
+      setRebinding(null);
+      if (triggerRef.current) {
+        triggerRef.current.focus();
+        triggerRef.current = null;
+      }
+      return;
+    }
+
+    const node = overlayRef.current;
+    if (!node) return;
+
+    triggerRef.current = document.activeElement as HTMLElement | null;
+
+    const focusFirst = () => {
+      const elements = Array.from(
+        node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
+      );
+      if (elements.length > 0) {
+        elements[0].focus();
+      } else {
+        node.focus();
+      }
+    };
+
+    focusFirst();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeOverlay();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const elements = Array.from(
+        node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
+      );
+
+      if (elements.length === 0) {
+        event.preventDefault();
+        node.focus();
+        return;
+      }
+
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      const isOutside = active ? !node.contains(active) : true;
+
+      if (event.shiftKey) {
+        if (isOutside || active === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (isOutside || active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    node.addEventListener('keydown', handleKeyDown);
+    return () => {
+      node.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, closeOverlay]);
 
   if (!open) return null;
 
@@ -52,16 +138,18 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={headingId}
+      ref={overlayRef}
+      tabIndex={-1}
     >
       <div className="max-w-lg w-full space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
+          <h2 id={headingId} className="text-xl font-bold">
+            Keyboard Shortcuts
+          </h2>
           <button
             type="button"
-            onClick={() => {
-              setRebinding(null);
-              onClose();
-            }}
+            onClick={closeOverlay}
             className="text-sm underline"
           >
             Close
