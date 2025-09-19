@@ -91,6 +91,8 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn typecheck` – run the client composite project (pulls in server refs) for fast type feedback.
+- `yarn typecheck:all` – run `tsc -b` across server and client composites.
 - `yarn export` – generate a static export in the `out/` directory.
 
 ---
@@ -98,7 +100,9 @@ See `.env.local.example` for the full list.
 ## Local Development Tips
 
 - Run `yarn lint` and `yarn test` before committing changes.
+- Use `yarn typecheck:all` to run the full composite type check before opening a PR; it ensures server utilities build before the client bundle types are emitted.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- Configure your editor's TypeScript service to use `tsconfig.client.json` for day-to-day work; open `tsconfig.server.json` when editing API routes or middleware so diagnostics stay accurate.
 
 ---
 

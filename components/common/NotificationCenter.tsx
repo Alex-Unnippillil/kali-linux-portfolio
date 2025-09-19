@@ -6,7 +6,7 @@ export interface AppNotification {
   date: number;
 }
 
-interface NotificationsContextValue {
+export interface NotificationsContextValue {
   notifications: Record<string, AppNotification[]>;
   pushNotification: (appId: string, message: string) => void;
   clearNotifications: (appId?: string) => void;

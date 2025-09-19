@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": true,
+    "outDir": "./.tsbuild/server",
+    "tsBuildInfoFile": "./.tsbuild/server.tsbuildinfo"
+  },
+  "include": [
+    "next-env.d.ts",
+    "app/api/**/*.ts",
+    "app/api/**/*.tsx",
+    "lib/**/*.ts",
+    "middleware.ts",
+    "pages/api/**/*.ts",
+    "public/quotes/**/*.json",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "**/__tests__/**",
+    "components/apps/archive",
+    "components/apps/kismet",
+    ".next",
+    "out",
+    "dist",
+    ".tsbuild",
+    ".tsbuild/**/*"
+  ]
+}

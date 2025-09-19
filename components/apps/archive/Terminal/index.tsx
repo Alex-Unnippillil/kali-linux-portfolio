@@ -548,7 +548,9 @@ const TerminalPaneInner = (
     );
 };
 
-const TerminalPane = forwardRef(TerminalPaneInner as any);
+const TerminalPane = forwardRef<any, { onSplit: () => void; onClose: () => void; onFocus: () => void }>(
+  TerminalPaneInner as any,
+);
 TerminalPane.displayName = 'TerminalPane';
 
 const Terminal = forwardRef<any, any>((props, ref) => {
