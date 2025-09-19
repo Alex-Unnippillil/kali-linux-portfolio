@@ -1,19 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FormError from '../ui/FormError';
 
-interface SerialPort {
-  readonly readable: ReadableStream<Uint8Array> | null;
-  open(options: { baudRate: number }): Promise<void>;
-  close(): Promise<void>;
-}
-
-interface Serial {
-  requestPort(): Promise<SerialPort>;
-  addEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-  removeEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-}
-
-type NavigatorSerial = Navigator & { serial: Serial };
+// TODO: Remove Web Serial ambient declarations when
+// https://github.com/WICG/serial/issues/200 is addressed and types ship.
 
 const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
@@ -24,16 +13,17 @@ const SerialTerminalApp: React.FC = () => {
 
   useEffect(() => {
     if (!supported) return;
+    const serial = navigator.serial;
+    if (!serial) return;
     const handleDisconnect = (e: Event & { readonly target: SerialPort }) => {
       if (e.target === port) {
         setError('Device disconnected.');
         setPort(null);
       }
     };
-    const nav = navigator as NavigatorSerial;
-    nav.serial.addEventListener('disconnect', handleDisconnect);
+    serial.addEventListener('disconnect', handleDisconnect);
     return () => {
-      nav.serial.removeEventListener('disconnect', handleDisconnect);
+      serial.removeEventListener('disconnect', handleDisconnect);
     };
   }, [supported, port]);
 
@@ -60,7 +50,12 @@ const SerialTerminalApp: React.FC = () => {
     if (!supported) return;
     setError('');
     try {
-      const p = await (navigator as NavigatorSerial).serial.requestPort();
+      const serial = navigator.serial;
+      if (!serial) {
+        throw new Error('Web Serial API unavailable.');
+      }
+
+      const p = await serial.requestPort();
       await p.open({ baudRate: 9600 });
       setPort(p);
       readLoop(p);
