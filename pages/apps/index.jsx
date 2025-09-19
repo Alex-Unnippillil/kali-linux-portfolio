@@ -1,69 +1,33 @@
-import Image from 'next/image';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useCallback } from 'react';
+import { useRouter } from 'next/router';
+
+const AppGrid = dynamic(() => import('../../components/apps/app-grid'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-screen items-center justify-center bg-ub-grey text-white">
+      Loading applications…
+    </div>
+  ),
+});
 
 const AppsPage = () => {
-  const [apps, setApps] = useState([]);
-  const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    let isMounted = true;
-    import('../../apps.config').then((mod) => {
-      if (isMounted) {
-        setApps(mod.default);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const filteredApps = apps.filter(
-    (app) => !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
+  const router = useRouter();
+  const handleOpenApp = useCallback(
+    (id) => {
+      if (!id) return;
+      void router.push(`/apps/${id}`);
+    },
+    [router]
   );
 
   return (
-    <div className="p-4">
-      <label htmlFor="app-search" className="sr-only">
-        Search apps
-      </label>
-      <input
-        id="app-search"
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search apps"
-        className="mb-4 w-full rounded border p-2"
-      />
-      <div
-        id="app-grid"
-        tabIndex="-1"
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
-      >
-        {filteredApps.map((app) => (
-          <Link
-            key={app.id}
-            href={`/apps/${app.id}`}
-            className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
-            aria-label={app.title}
-          >
-            {app.icon && (
-              <Image
-                src={app.icon}
-                alt=""
-                width={64}
-                height={64}
-                sizes="64px"
-                className="h-16 w-16"
-              />
-            )}
-            <span className="mt-2">{app.title}</span>
-          </Link>
-        ))}
-      </div>
+    <div className="flex min-h-screen flex-col bg-ub-grey text-white">
+      <main className="flex flex-1 flex-col">
+        <AppGrid openApp={handleOpenApp} />
+      </main>
     </div>
   );
 };
 
 export default AppsPage;
-

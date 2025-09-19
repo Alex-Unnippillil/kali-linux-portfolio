@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getAppGridCategory as loadAppGridCategory,
+  setAppGridCategory as saveAppGridCategory,
+  getAppGridPage as loadAppGridPage,
+  setAppGridPage as saveAppGridPage,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +67,9 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  appGridCategory: string;
+  appGridPage: number;
+  hydrated: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +81,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setAppGridCategory: (value: string) => void;
+  setAppGridPage: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +97,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  appGridCategory: defaults.appGridCategory,
+  appGridPage: defaults.appGridPage,
+  hydrated: false,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +111,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setAppGridCategory: () => {},
+  setAppGridPage: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,27 +127,50 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [appGridCategory, setAppGridCategory] = useState<string>(defaults.appGridCategory);
+  const [appGridPage, setAppGridPage] = useState<number>(defaults.appGridPage);
+  const [hydrated, setHydrated] = useState<boolean>(false);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      const apply = <T,>(setter: (value: T) => void, value: T) => {
+        if (!cancelled) setter(value);
+      };
+      apply(setAccent, await loadAccent());
+      apply(setWallpaper, await loadWallpaper());
+      apply(setDensity, (await loadDensity()) as Density);
+      apply(setReducedMotion, await loadReducedMotion());
+      apply(setFontScale, await loadFontScale());
+      apply(setHighContrast, await loadHighContrast());
+      apply(setLargeHitAreas, await loadLargeHitAreas());
+      apply(setPongSpin, await loadPongSpin());
+      apply(setAllowNetwork, await loadAllowNetwork());
+      apply(setHaptics, await loadHaptics());
+      apply(setTheme, loadTheme());
+      apply(setAppGridCategory, await loadAppGridCategory());
+      apply(setAppGridPage, await loadAppGridPage());
+      if (!cancelled) setHydrated(true);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveAppGridCategory(appGridCategory);
+  }, [appGridCategory, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveAppGridPage(appGridPage);
+  }, [appGridPage, hydrated]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -250,6 +287,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        appGridCategory,
+        appGridPage,
+        hydrated,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +301,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setAppGridCategory,
+        setAppGridPage,
       }}
     >
       {children}

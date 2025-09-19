@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  appGridCategory: 'all',
+  appGridPage: 0,
 };
 
 export async function getAccent() {
@@ -123,6 +125,29 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getAppGridCategory() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.appGridCategory;
+  return window.localStorage.getItem('app-grid-category') || DEFAULT_SETTINGS.appGridCategory;
+}
+
+export async function setAppGridCategory(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('app-grid-category', value);
+}
+
+export async function getAppGridPage() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.appGridPage;
+  const stored = window.localStorage.getItem('app-grid-page');
+  const page = stored === null ? DEFAULT_SETTINGS.appGridPage : parseInt(stored, 10);
+  return Number.isNaN(page) ? DEFAULT_SETTINGS.appGridPage : page;
+}
+
+export async function setAppGridPage(value) {
+  if (typeof window === 'undefined') return;
+  const safeValue = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+  window.localStorage.setItem('app-grid-page', String(safeValue));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +162,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('app-grid-category');
+  window.localStorage.removeItem('app-grid-page');
 }
 
 export async function exportSettings() {
@@ -151,6 +178,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    appGridCategory,
+    appGridPage,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +191,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getAppGridCategory(),
+    getAppGridPage(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +207,8 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    appGridCategory,
+    appGridPage,
   });
 }
 
@@ -200,6 +233,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    appGridCategory,
+    appGridPage,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -211,6 +246,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (appGridCategory !== undefined) await setAppGridCategory(appGridCategory);
+  if (appGridPage !== undefined) await setAppGridPage(appGridPage);
   if (theme !== undefined) setTheme(theme);
 }
 
