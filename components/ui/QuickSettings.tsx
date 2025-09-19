@@ -2,12 +2,13 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { useIdleHydration } from '../../hooks/useIdleHydration';
 
 interface Props {
   open: boolean;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettingsPanel = ({ open }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -54,6 +55,24 @@ const QuickSettings = ({ open }: Props) => {
       </div>
     </div>
   );
+};
+
+const QuickSettings = ({ open }: Props) => {
+  const hydrated = useIdleHydration({ timeout: 2000 });
+
+  if (!hydrated) {
+    return (
+      <div
+        className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+          open ? '' : 'hidden'
+        }`}
+        aria-hidden="true"
+        data-hydration="deferred"
+      />
+    );
+  }
+
+  return <QuickSettingsPanel open={open} />;
 };
 
 export default QuickSettings;

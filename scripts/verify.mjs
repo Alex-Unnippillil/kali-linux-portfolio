@@ -54,6 +54,8 @@ const getPort = () =>
       console.log(`✓ ${route}`);
     }
 
+    await run('node', ['scripts/collect-long-tasks.mjs', `http://localhost:${port}/`]);
+
     console.log('verify: PASS');
     server.kill();
   } catch (err) {

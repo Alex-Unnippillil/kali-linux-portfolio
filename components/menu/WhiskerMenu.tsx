@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useIdleHydration } from '../../hooks/useIdleHydration';
 
 type AppMeta = {
   id: string;
@@ -20,7 +21,7 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
-const WhiskerMenu: React.FC = () => {
+const WhiskerMenuInner: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
@@ -179,6 +180,34 @@ const WhiskerMenu: React.FC = () => {
       )}
     </div>
   );
+};
+
+const WhiskerMenu: React.FC = () => {
+  const hydrated = useIdleHydration({ timeout: 2000 });
+
+  if (!hydrated) {
+    return (
+      <div className="relative" data-hydration="deferred">
+        <button
+          type="button"
+          className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1 opacity-70"
+          aria-disabled="true"
+          disabled
+        >
+          <Image
+            src="/themes/Yaru/status/decompiler-symbolic.svg"
+            alt="Menu"
+            width={16}
+            height={16}
+            className="inline mr-1"
+          />
+          Applications
+        </button>
+      </div>
+    );
+  }
+
+  return <WhiskerMenuInner />;
 };
 
 export default WhiskerMenu;
