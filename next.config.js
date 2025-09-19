@@ -105,6 +105,51 @@ function configureWebpack(config, { isServer }) {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
   };
+  config.module = config.module || {};
+  config.module.rules = config.module.rules || [];
+  const fileLoaderRule = config.module.rules.find(
+    (rule) => typeof rule?.test === 'object' && rule.test?.test?.('.svg'),
+  );
+  if (fileLoaderRule) {
+    fileLoaderRule.exclude = /\.svg$/i;
+  }
+  config.module.rules.push({
+    test: /\.svg$/i,
+    oneOf: [
+      {
+        resourceQuery: /url/,
+        type: 'asset/resource',
+      },
+      {
+        issuer: /\.[jt]sx?$/,
+        use: [
+          {
+            loader: '@svgr/webpack',
+            options: {
+              svgo: true,
+              svgoConfig: {
+                plugins: [
+                  {
+                    name: 'preset-default',
+                    params: {
+                      overrides: {
+                        removeViewBox: false,
+                      },
+                    },
+                  },
+                  'removeDimensions',
+                ],
+              },
+              titleProp: true,
+            },
+          },
+        ],
+      },
+      {
+        type: 'asset/resource',
+      },
+    ],
+  });
   if (isProd) {
     config.optimization = {
       ...(config.optimization || {}),
