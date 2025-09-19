@@ -6,6 +6,8 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
+import { undoManager } from '../hooks/useUndoManager';
+import { isEditableElement } from '../utils/dom';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
@@ -19,9 +21,26 @@ export default class Ubuntu extends Component {
 		};
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                window.addEventListener('keydown', this.handleGlobalUndo);
+        }
+
+        componentWillUnmount() {
+                window.removeEventListener('keydown', this.handleGlobalUndo);
+        }
+
+        handleGlobalUndo = (event) => {
+                if (!event) return;
+                const key = event.key?.toLowerCase?.();
+                if (!(event.ctrlKey || event.metaKey) || !event.altKey || key !== 'z') return;
+                if (event.shiftKey) return;
+                if (isEditableElement(event.target)) return;
+                if (undoManager.undoGlobal()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                }
+        };
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {

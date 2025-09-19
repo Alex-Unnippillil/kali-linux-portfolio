@@ -1,6 +1,7 @@
 import React, { act } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Ubuntu from '../components/ubuntu';
+import { undoManager } from '../hooks/useUndoManager';
 
 jest.mock('../components/screen/desktop', () => function DesktopMock() {
   return <div data-testid="desktop" />;
@@ -56,5 +57,15 @@ describe('Ubuntu component', () => {
       instance!.shutDown();
     });
     expect(instance!.state.shutDownScreen).toBe(true);
+  });
+
+  it('routes ctrl+alt+z to the global undo stack', () => {
+    const spy = jest.spyOn(undoManager, 'undoGlobal').mockReturnValue(true);
+    render(<Ubuntu />);
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true, altKey: true });
+
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
