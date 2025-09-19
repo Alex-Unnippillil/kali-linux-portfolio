@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import Meta from '../components/SEO/Meta';
 
