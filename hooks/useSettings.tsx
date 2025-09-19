@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,10 +27,18 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getOpsRoute as loadOpsRoute,
+  setOpsRoute as saveOpsRoute,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+export const OPS_ROUTES = ['global', 'network', 'security'] as const;
+export type OpsRoute = (typeof OPS_ROUTES)[number];
+
+const isOpsRoute = (value: string): value is OpsRoute =>
+  (OPS_ROUTES as readonly string[]).includes(value);
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +78,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  opsRoute: OpsRoute;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +90,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setOpsRoute: (value: OpsRoute) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +105,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  opsRoute: OPS_ROUTES[0],
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +117,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setOpsRoute: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +132,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [opsRoute, setOpsRouteState] = useState<OpsRoute>(() =>
+    defaults.opsRoute && isOpsRoute(defaults.opsRoute)
+      ? (defaults.opsRoute as OpsRoute)
+      : OPS_ROUTES[0],
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +152,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      const storedOpsRoute = await loadOpsRoute();
+      setOpsRouteState(isOpsRoute(storedOpsRoute) ? storedOpsRoute : OPS_ROUTES[0]);
     })();
   }, []);
 
@@ -236,6 +262,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    void saveOpsRoute(opsRoute);
+  }, [opsRoute]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +280,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        opsRoute,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +292,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setOpsRoute: setOpsRouteState,
       }}
     >
       {children}
