@@ -226,7 +226,7 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 
 ## Security Headers & CSP
 
-Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) for allowed hostnames:
+Defined in `next.config.ts`. See [CSP External Domains](#csp-external-domains) for allowed hostnames:
 
 - **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
@@ -236,7 +236,7 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 
 ### CSP External Domains
 
-These external domains are whitelisted in the default CSP. Update this list whenever `next.config.js` changes.
+These external domains are whitelisted in the default CSP. Update this list whenever `next.config.ts` changes.
 
 | Domain | Purpose |
 | --- | --- |
@@ -477,7 +477,7 @@ play/pause and track controls include keyboard hotkeys.
    ```
 3. Add metadata (icon, title) where appropriate.
 4. If the app needs persistent state, use `usePersistentState(key, initial, validator)`.
-5. If the app embeds external sites, **whitelist** the domain in `next.config.js` CSP (`connect-src`, `frame-src`, `img-src`) and `images.domains`.
+5. If the app embeds external sites, **whitelist** the domain in `next.config.ts` CSP (`connect-src`, `frame-src`, `img-src`) and `images.domains`.
 
 ---
 

@@ -24,7 +24,7 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 ## Serverful and Static modes (2025-02-13)
 
 - `yarn build` failed: Module not found: Can't resolve '../../ui/FormError' in `components/apps/serial-terminal.tsx`.
-- `yarn export` now uses `output: 'export'` in `next.config.js` to generate a static build.
+- `yarn export` now uses `output: 'export'` in `next.config.ts` to generate a static build.
 - `yarn test` reported failing tests: `hashcat.test.tsx`, `beef.test.tsx`, `mimikatz.test.ts`.
 
 ## bare-fs warning (2025-08-29)
