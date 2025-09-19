@@ -180,3 +180,29 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+const shouldRunFlaky = process.env.RUN_FLAKY === 'true';
+
+const wrapWithSkip = <T extends (...args: any[]) => any>(fn: T): T => {
+  if (shouldRunFlaky || typeof (fn as any).skip !== 'function') {
+    return fn;
+  }
+
+  const skipped = ((...args: Parameters<T>) => (fn as any).skip(...args)) as unknown as T;
+
+  const mirroredKeys: Array<keyof typeof fn> = ['skip', 'only', 'todo', 'each', 'concurrent'] as any;
+  for (const key of mirroredKeys) {
+    if (key in fn && typeof (fn as any)[key] === 'function') {
+      (skipped as any)[key] = (fn as any)[key].bind(fn);
+    }
+  }
+
+  return skipped;
+};
+
+// @ts-ignore -- Provide globals for tagging quarantined suites
+globalThis.testFlaky = wrapWithSkip(test);
+// @ts-ignore -- Provide globals for tagging quarantined suites
+globalThis.itFlaky = wrapWithSkip(it);
+// @ts-ignore -- Provide globals for tagging quarantined suites
+globalThis.describeFlaky = wrapWithSkip(describe);
