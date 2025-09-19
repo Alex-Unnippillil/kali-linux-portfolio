@@ -43,6 +43,7 @@ const StrategyTrainer: React.FC = () => {
           value={parallelism}
           onChange={(e) => setParallelism(Number(e.target.value))}
           className="w-full"
+          aria-label="Parallelism"
         />
       </div>
       <div className="mb-4">
@@ -56,6 +57,7 @@ const StrategyTrainer: React.FC = () => {
           value={lockout}
           onChange={(e) => setLockout(Number(e.target.value))}
           className="w-full"
+          aria-label="Lockout threshold"
         />
       </div>
       <svg width={WIDTH} height={HEIGHT} className="bg-black">

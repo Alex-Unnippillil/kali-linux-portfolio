@@ -92,12 +92,14 @@ const RulesSandbox: React.FC<Props> = ({ savedSets, onChange, setRuleSet }) => {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Rule set name"
+        aria-label="Rule set name"
       />
       <textarea
         className="w-full h-32 text-black p-2 font-mono"
         value={rules}
         onChange={(e) => setRules(e.target.value)}
         placeholder="Enter hashcat rules, one per line"
+        aria-label="Hashcat rules"
       />
       {errors.length > 0 && (
         <div className="text-red-400 text-sm">{errors[0]}</div>

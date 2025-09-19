@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
 import MimikatzApp from '../../components/apps/mimikatz';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import ExposureExplainer from './components/ExposureExplainer';
 
 const disclaimerUrl = 'https://www.kali.org/docs/policy/disclaimer/';
 
-const MimikatzPage: React.FC = () => {
+const MimikatzPageContent: React.FC = () => {
   const [confirmed, setConfirmed] = useState(false);
 
   if (!confirmed) {
@@ -52,6 +54,16 @@ const MimikatzPage: React.FC = () => {
     </>
   );
 };
+
+const MimikatzPage: React.FC = () => (
+  <KillSwitchGate
+    appId="mimikatz"
+    appTitle="Mimikatz"
+    killSwitchId={KILL_SWITCH_IDS.mimikatz}
+  >
+    {() => <MimikatzPageContent />}
+  </KillSwitchGate>
+);
 
 export default MimikatzPage;
 

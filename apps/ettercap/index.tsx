@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import FilterEditor from './components/FilterEditor';
 import LogPane, { LogEntry } from './components/LogPane';
 import ArpDiagram from './components/ArpDiagram';
 
 const MODES = ['Unified', 'Sniff', 'ARP'];
 
-export default function EttercapPage() {
+const EttercapPageContent: React.FC = () => {
   const [mode, setMode] = useState('Unified');
   const [started, setStarted] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -57,5 +59,17 @@ export default function EttercapPage() {
       <FilterEditor />
     </div>
   );
-}
+};
+
+const EttercapPage: React.FC = () => (
+  <KillSwitchGate
+    appId="ettercap"
+    appTitle="Ettercap"
+    killSwitchId={KILL_SWITCH_IDS.ettercap}
+  >
+    {() => <EttercapPageContent />}
+  </KillSwitchGate>
+);
+
+export default EttercapPage;
 

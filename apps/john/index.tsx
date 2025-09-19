@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import AuditSimulator from './components/AuditSimulator';
 
 interface HashItem {
@@ -44,7 +46,7 @@ const generateIncremental = (length: number, limit = 100) => {
   return results;
 };
 
-const JohnApp: React.FC = () => {
+const JohnAppContent: React.FC = () => {
   const [mode, setMode] = useState<'single' | 'incremental' | 'wordlist'>('wordlist');
   const [wordlist, setWordlist] = useState(DEFAULT_WORDLIST);
   const [singleValue, setSingleValue] = useState('password');
@@ -191,17 +193,19 @@ const JohnApp: React.FC = () => {
           />
         )}
         {mode === 'incremental' && (
-          <label className="flex items-center gap-2">
-            Length:
+          <div className="flex items-center gap-2">
+            <label htmlFor="john-incremental-length">Length:</label>
             <input
+              id="john-incremental-length"
               type="number"
               min={1}
               max={5}
               value={incLength}
               onChange={(e) => setIncLength(parseInt(e.target.value, 10) || 1)}
               className="w-16 text-black px-1 py-0.5 rounded"
+              aria-label="Incremental length"
             />
-          </label>
+          </div>
         )}
         <button
           type="button"
@@ -270,6 +274,16 @@ const JohnApp: React.FC = () => {
     </div>
   );
 };
+
+const JohnApp: React.FC = () => (
+  <KillSwitchGate
+    appId="john"
+    appTitle="John the Ripper"
+    killSwitchId={KILL_SWITCH_IDS.john}
+  >
+    {() => <JohnAppContent />}
+  </KillSwitchGate>
+);
 
 export default JohnApp;
 

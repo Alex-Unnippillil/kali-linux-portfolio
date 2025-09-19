@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import PcapViewer from './components/PcapViewer';
 
-const WiresharkPage: React.FC = () => {
+const WiresharkPageContent: React.FC = () => {
   const [showLegend, setShowLegend] = useState(true);
 
   return (
@@ -20,5 +22,15 @@ const WiresharkPage: React.FC = () => {
     </div>
   );
 };
+
+const WiresharkPage: React.FC = () => (
+  <KillSwitchGate
+    appId="wireshark"
+    appTitle="Wireshark"
+    killSwitchId={KILL_SWITCH_IDS.wireshark}
+  >
+    {() => <WiresharkPageContent />}
+  </KillSwitchGate>
+);
 
 export default WiresharkPage;

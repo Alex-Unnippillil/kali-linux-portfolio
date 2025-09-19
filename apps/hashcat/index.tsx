@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
@@ -28,7 +30,7 @@ const defaultRuleSets: RuleSets = {
   quick: ['l', 'u', 'c', 'd'],
 };
 
-const Hashcat: React.FC = () => {
+const HashcatContent: React.FC = () => {
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
   const appendMask = (token: string) => setMask((m) => m + token);
@@ -193,12 +195,16 @@ const Hashcat: React.FC = () => {
 
       {showMask && (
         <div>
-          <label className="block mb-1">Mask</label>
+          <label className="block mb-1" htmlFor="hashcat-mask">
+            Mask
+          </label>
           <input
             type="text"
             value={mask}
             onChange={(e) => setMask(e.target.value)}
             className="text-black p-1 w-full font-mono mb-2"
+            id="hashcat-mask"
+            aria-label="Mask pattern"
           />
           <div className="space-x-2">
             {['?l', '?u', '?d', '?s', '?a'].map((t) => (
@@ -225,7 +231,9 @@ const Hashcat: React.FC = () => {
       )}
 
       <div>
-        <label className="block mb-1">Hash</label>
+        <label className="block mb-1" htmlFor="hashcat-hash">
+          Hash
+        </label>
         <div className="flex space-x-2">
           <input
             type={showHash ? 'text' : 'password'}
@@ -233,6 +241,8 @@ const Hashcat: React.FC = () => {
             onChange={(e) => setHashInput(e.target.value)}
             className="text-black p-1 w-full font-mono"
             placeholder="Paste hash here"
+            id="hashcat-hash"
+            aria-label="Hash input"
           />
           <button
             type="button"
@@ -246,7 +256,9 @@ const Hashcat: React.FC = () => {
       </div>
 
       <div>
-        <label className="block mb-1">Dictionaries</label>
+        <label className="block mb-1" htmlFor="hashcat-dictionary">
+          Dictionaries
+        </label>
         <div className="flex space-x-2 mb-2">
           <input
             type="text"
@@ -254,6 +266,8 @@ const Hashcat: React.FC = () => {
             onChange={(e) => setDictInput(e.target.value)}
             className="text-black p-1 flex-1"
             placeholder="rockyou.txt"
+            id="hashcat-dictionary"
+            aria-label="Dictionary path"
           />
           <button
             type="button"
@@ -274,6 +288,7 @@ const Hashcat: React.FC = () => {
                 type="button"
                 onClick={() => removeDictionary(d)}
                 className="ml-1"
+                aria-label={`Remove dictionary ${d}`}
               >
                 ×
               </button>
@@ -283,11 +298,14 @@ const Hashcat: React.FC = () => {
       </div>
 
       <div>
-        <label className="block mb-1">Rule Set</label>
+        <label className="block mb-1" htmlFor="hashcat-rule-set">
+          Rule Set
+        </label>
         <select
           value={ruleSet}
           onChange={(e) => setRuleSet(e.target.value)}
           className="text-black p-1 rounded"
+          id="hashcat-rule-set"
         >
           {ruleOptions.map((r) => (
             <option key={r} value={r}>
@@ -334,6 +352,16 @@ const Hashcat: React.FC = () => {
     </div>
   );
 };
+
+const Hashcat: React.FC = () => (
+  <KillSwitchGate
+    appId="hashcat"
+    appTitle="Hashcat"
+    killSwitchId={KILL_SWITCH_IDS.hashcat}
+  >
+    {() => <HashcatContent />}
+  </KillSwitchGate>
+);
 
 export default Hashcat;
 

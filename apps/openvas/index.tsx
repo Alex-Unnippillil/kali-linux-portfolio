@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import ResultDiff from './components/ResultDiff';
 
 interface Vulnerability {
@@ -71,7 +73,7 @@ const cvssColor = (score: number) => {
   return 'bg-green-700';
 };
 
-const OpenVASReport: React.FC = () => {
+const OpenVASReportContent: React.FC = () => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const remediationTags = useMemo(() => {
@@ -195,6 +197,7 @@ const OpenVASReport: React.FC = () => {
         <table className="w-full text-left text-sm">
           <thead>
             <tr>
+              <th className="p-2 w-12 text-left">Details</th>
               <th className="p-2">Host</th>
               <th className="p-2">Vulnerability</th>
               <th className="p-2">CVSS</th>
@@ -205,14 +208,26 @@ const OpenVASReport: React.FC = () => {
               const key = `${f.host}-${f.id}`;
               return (
                 <React.Fragment key={key}>
-                  <tr
-                    className="cursor-pointer hover:bg-gray-800"
-                    onClick={() => toggle(key)}
-                  >
+                  <tr className="hover:bg-gray-800">
+                    <td className="p-2 align-middle">
+                      <button
+                        type="button"
+                        onClick={() => toggle(key)}
+                        className="px-2 py-1 rounded bg-gray-700 text-xs"
+                        aria-expanded={Boolean(expanded[key])}
+                        aria-label={`Toggle details for ${f.name}`}
+                      >
+                        {expanded[key] ? 'Hide' : 'Show'}
+                      </button>
+                    </td>
                     <td className="p-2">{f.host}</td>
                     <td className="p-2">{f.name}</td>
                     <td className="p-2">
-                      <div className="w-full bg-gray-700 rounded h-3">
+                      <div
+                        className="w-full bg-gray-700 rounded h-3"
+                        role="img"
+                        aria-label={`CVSS ${f.cvss}`}
+                      >
                         <div
                           className={`${cvssColor(f.cvss)} h-3 rounded`}
                           style={{ width: `${(f.cvss / 10) * 100}%` }}
@@ -220,14 +235,14 @@ const OpenVASReport: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                  {expanded[key] && (
-                    <tr>
-                      <td colSpan={3} className="p-2 bg-gray-800">
-                        <p className="text-sm mb-1">{f.description}</p>
-                        <p className="text-xs text-yellow-300">{f.remediation}</p>
-                      </td>
-                    </tr>
-                  )}
+                    {expanded[key] && (
+                      <tr aria-label={`Details for ${f.name}`}>
+                        <td colSpan={4} className="p-2 bg-gray-800">
+                          <p className="text-sm mb-1">{f.description}</p>
+                          <p className="text-xs text-yellow-300">{f.remediation}</p>
+                        </td>
+                      </tr>
+                    )}
                 </React.Fragment>
               );
             })}
@@ -257,6 +272,16 @@ const OpenVASReport: React.FC = () => {
     </div>
   );
 };
+
+const OpenVASReport: React.FC = () => (
+  <KillSwitchGate
+    appId="openvas"
+    appTitle="OpenVAS"
+    killSwitchId={KILL_SWITCH_IDS.openvas}
+  >
+    {() => <OpenVASReportContent />}
+  </KillSwitchGate>
+);
 
 export default OpenVASReport;
 

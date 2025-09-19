@@ -308,6 +308,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Load capture file"
         />
         <select
           onChange={(e) => {
@@ -315,6 +316,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             e.target.value = '';
           }}
           className="text-sm bg-gray-700 text-white rounded"
+          aria-label="Open sample capture"
         >
           <option value="">Open sample</option>
           {samples.map(({ label, path }) => (
@@ -355,6 +357,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 }`}
                 title={label}
                 type="button"
+                aria-label={`Apply ${label} filter`}
               />
             ))}
           </div>

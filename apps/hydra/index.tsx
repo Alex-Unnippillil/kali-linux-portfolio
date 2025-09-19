@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useRef } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import HydraApp from '../../components/apps/hydra';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import StrategyTrainer from './components/StrategyTrainer';
 
-const HydraPreview: React.FC = () => {
+const HydraPreviewContent: React.FC = () => {
   const countRef = useRef(1);
 
   const createTab = (): TabDefinition => {
@@ -24,5 +26,15 @@ const HydraPreview: React.FC = () => {
     </div>
   );
 };
+
+const HydraPreview: React.FC = () => (
+  <KillSwitchGate
+    appId="hydra"
+    appTitle="Hydra"
+    killSwitchId={KILL_SWITCH_IDS.hydra}
+  >
+    {() => <HydraPreviewContent />}
+  </KillSwitchGate>
+);
 
 export default HydraPreview;

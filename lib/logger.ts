@@ -63,3 +63,15 @@ function generateCorrelationId(): string {
 export function createLogger(correlationId: string = generateCorrelationId()): Logger {
   return new ConsoleLogger(correlationId);
 }
+
+interface KillSwitchLogMeta {
+  killSwitchId: string;
+  appId: string;
+  appTitle: string;
+  reason?: string;
+}
+
+export function logKillSwitchActivation(meta: KillSwitchLogMeta) {
+  const logger = createLogger();
+  logger.warn('Kill switch activated', meta);
+}

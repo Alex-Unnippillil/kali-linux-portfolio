@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import modules from './modules.json';
 import privTree from './priv-esc.json';
 import RemediationTable from './components/RemediationTable';
@@ -135,13 +137,20 @@ const EvidenceVault: React.FC = () => {
         placeholder="Note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
+        aria-label="Evidence note"
       />
-      <input type="file" className="mb-2" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+      <input
+        type="file"
+        className="mb-2"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        aria-label="Attach file"
+      />
       <input
         className="w-full p-2 mb-2 text-black"
         placeholder="Tags (comma separated)"
         value={tags}
         onChange={(e) => setTags(e.target.value)}
+        aria-label="Evidence tags"
       />
       <button onClick={addItem} className="px-3 py-1 bg-blue-600 rounded">Add</button>
       <ul className="mt-4 list-disc pl-6">
@@ -159,7 +168,7 @@ const EvidenceVault: React.FC = () => {
   );
 };
 
-const MetasploitPost: React.FC = () => {
+const MetasploitPostContent: React.FC = () => {
   const [selected, setSelected] = useState<ModuleEntry | null>(null);
   const [params, setParams] = useState<Record<string, string>>({});
   const [steps, setSteps] = useState([
@@ -297,16 +306,17 @@ const MetasploitPost: React.FC = () => {
             <div>
               <h2 className="font-semibold mb-2">{selected.path}</h2>
               <p className="mb-2 text-sm text-gray-300">{selected.description}</p>
-              {selected.options?.map((o) => (
-                <label key={o.name} className="block mb-2">
-                  {o.label}
-                  <input
-                    className="w-full p-1 bg-gray-800 rounded mt-1"
-                    value={params[o.name] || ''}
-                    onChange={(e) => handleParamChange(o.name, e.target.value)}
-                  />
-                </label>
-              ))}
+                {selected.options?.map((o) => (
+                  <label key={o.name} className="block mb-2">
+                    {o.label}
+                    <input
+                      className="w-full p-1 bg-gray-800 rounded mt-1"
+                      value={params[o.name] || ''}
+                      onChange={(e) => handleParamChange(o.name, e.target.value)}
+                      aria-label={o.label}
+                    />
+                  </label>
+                ))}
               <button onClick={run} className="mt-2 px-3 py-1 bg-green-600 rounded">
                 Run
               </button>
@@ -334,6 +344,7 @@ const MetasploitPost: React.FC = () => {
                   placeholder="Set name"
                   value={setName}
                   onChange={(e) => setSetName(e.target.value)}
+                  aria-label="Saved set name"
                 />
                 <button onClick={saveSet} className="px-3 py-1 bg-blue-600 rounded">
                   Save Set
@@ -398,5 +409,15 @@ const MetasploitPost: React.FC = () => {
     </div>
   );
 };
+
+const MetasploitPost: React.FC = () => (
+  <KillSwitchGate
+    appId="msf-post"
+    appTitle="Metasploit Post"
+    killSwitchId={KILL_SWITCH_IDS.metasploitPost}
+  >
+    {() => <MetasploitPostContent />}
+  </KillSwitchGate>
+);
 
 export default MetasploitPost;

@@ -93,6 +93,7 @@ const WordlistAtelier: React.FC = () => {
         value={baseWords}
         onChange={(e) => setBaseWords(e.target.value)}
         placeholder="One word per line"
+        aria-label="Base words"
       />
       <div className="space-x-4">
         <label>
@@ -101,6 +102,7 @@ const WordlistAtelier: React.FC = () => {
             checked={upper}
             onChange={(e) => setUpper(e.target.checked)}
             className="mr-1"
+            aria-label="Toggle uppercase"
           />
           Uppercase
         </label>
@@ -110,6 +112,7 @@ const WordlistAtelier: React.FC = () => {
             checked={leet}
             onChange={(e) => setLeet(e.target.checked)}
             className="mr-1"
+            aria-label="Toggle leet substitutions"
           />
           Leet
         </label>
@@ -119,6 +122,7 @@ const WordlistAtelier: React.FC = () => {
             checked={digits}
             onChange={(e) => setDigits(e.target.checked)}
             className="mr-1"
+            aria-label="Toggle append digits"
           />
           Append 0-9
         </label>

@@ -66,6 +66,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           onKeyDown={handleKeyDown}
           className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
           placeholder="Search windows"
+          aria-label="Search windows"
         />
         <ul>
           {filtered.map((w, i) => (

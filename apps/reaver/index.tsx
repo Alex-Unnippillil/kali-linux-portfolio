@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
@@ -259,6 +261,7 @@ const ReaverPanel: React.FC = () => {
               value={rate}
               onChange={(e) => setRate(Number(e.target.value) || 1)}
               className="w-20 p-1 bg-gray-800 rounded text-white"
+              aria-label="Attempts per second"
             />
             <button
               type="button"
@@ -350,16 +353,16 @@ const ReaverPanel: React.FC = () => {
   );
 };
 
-const ReaverApp: React.FC = () => {
+const ReaverAppContent: React.FC = () => {
   return <ReaverPanel />;
 };
 
-const ReaverPage: React.FC = () => {
+const ReaverPageContent: React.FC = () => {
   const countRef = useRef(1);
 
   const createTab = (): TabDefinition => {
     const id = Date.now().toString();
-    return { id, title: `Session ${countRef.current++}`, content: <ReaverApp /> };
+    return { id, title: `Session ${countRef.current++}`, content: <ReaverAppContent /> };
   };
 
   return (
@@ -370,6 +373,16 @@ const ReaverPage: React.FC = () => {
     />
   );
 };
+
+const ReaverPage: React.FC = () => (
+  <KillSwitchGate
+    appId="reaver"
+    appTitle="Reaver"
+    killSwitchId={KILL_SWITCH_IDS.reaver}
+  >
+    {() => <ReaverPageContent />}
+  </KillSwitchGate>
+);
 
 export default ReaverPage;
 

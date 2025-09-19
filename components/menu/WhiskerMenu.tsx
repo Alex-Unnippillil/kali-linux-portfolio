@@ -37,7 +37,7 @@ const WhiskerMenu: React.FC = () => {
     } catch {
       return [];
     }
-  }, [allApps, open]);
+  }, [allApps]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 

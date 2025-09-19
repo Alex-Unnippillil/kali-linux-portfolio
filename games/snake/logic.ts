@@ -75,9 +75,11 @@ export const step = (
   return { state: { ...state, snake, food }, gameOver: false, ate };
 };
 
-export default {
+const snakeLogic = {
   DEFAULT_GRID_SIZE,
   randomFood,
   createState,
   step,
 };
+
+export default snakeLogic;

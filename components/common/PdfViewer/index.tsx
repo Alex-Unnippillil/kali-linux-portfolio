@@ -102,10 +102,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"
+          aria-label="Search PDF"
         />
         <button onClick={search}>Search</button>
       </div>
-      <canvas ref={canvasRef} data-testid="pdf-canvas" />
+      <div className="sr-only" aria-live="polite">{`Viewing page ${page}`}</div>
+      <canvas ref={canvasRef} data-testid="pdf-canvas" aria-hidden="true" />
       <div
         className="flex gap-2 overflow-x-auto mt-2"
         role="listbox"
@@ -118,6 +120,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
             role="option"
             tabIndex={page === i + 1 ? 0 : -1}
             aria-selected={page === i + 1}
+            aria-label={`Page ${i + 1}`}
             data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
             onFocus={() => setPage(i + 1)}

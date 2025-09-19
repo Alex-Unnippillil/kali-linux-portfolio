@@ -68,6 +68,7 @@ export default function PayloadBuilder() {
         readOnly
         rows={6}
         className="w-full text-black p-1 rounded"
+        aria-label="Generated payload markup"
       />
       <div className="border h-48">
         <iframe

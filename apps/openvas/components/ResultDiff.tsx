@@ -61,6 +61,7 @@ export default function ResultDiff() {
             accept="application/json"
             onChange={(e) => loadFile(e, setLeft)}
             className="block w-full text-black"
+            aria-label="Import report A"
           />
         </label>
         <label className="flex-1 text-sm">
@@ -70,6 +71,7 @@ export default function ResultDiff() {
             accept="application/json"
             onChange={(e) => loadFile(e, setRight)}
             className="block w-full text-black"
+            aria-label="Import report B"
           />
         </label>
       </div>
@@ -80,6 +82,7 @@ export default function ResultDiff() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="ml-2 p-1 rounded text-black"
+            aria-label="Filter results"
           />
         </label>
       </div>

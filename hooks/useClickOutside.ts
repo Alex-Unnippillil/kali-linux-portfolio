@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 type AnyRef = { current: HTMLElement | null } | null;
 
@@ -14,6 +14,7 @@ export function useClickOutside(
   opts: Options = {}
 ) {
   const { enabled = true, events = ['pointerdown'], onEscape = true } = opts;
+  const eventList = useMemo(() => [...events], [events]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -35,12 +36,12 @@ export function useClickOutside(
       if (!isInside(t)) handler(evt);
     };
 
-    events.forEach(e => document.addEventListener(e, onDoc, true));
+    eventList.forEach(e => document.addEventListener(e, onDoc, true));
     if (onEscape) document.addEventListener('keydown', onDoc, true);
 
     return () => {
-      events.forEach(e => document.removeEventListener(e, onDoc, true));
+      eventList.forEach(e => document.removeEventListener(e, onDoc, true));
       if (onEscape) document.removeEventListener('keydown', onDoc, true);
     };
-  }, [refs, handler, enabled, events.join('|'), onEscape]);
+  }, [refs, handler, enabled, eventList, onEscape]);
 }

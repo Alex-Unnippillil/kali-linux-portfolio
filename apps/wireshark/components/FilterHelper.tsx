@@ -114,9 +114,11 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         Share
       </button>
       <datalist id="display-filter-suggestions">
-        {suggestions.map((f) => (
-          <option key={f} value={f} />
-        ))}
+          {suggestions.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
       </datalist>
     </>
   );
