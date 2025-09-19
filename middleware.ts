@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { TRUSTED_TYPES_POLICY_NAME } from './utils/trustedTypes';
 
 function nonce() {
   const arr = new Uint8Array(16);
@@ -19,7 +20,9 @@ export function middleware(req: NextRequest) {
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
+    `trusted-types ${TRUSTED_TYPES_POLICY_NAME} nextjs`,
+    "require-trusted-types-for 'script'",
   ].join('; ');
 
   const res = NextResponse.next();

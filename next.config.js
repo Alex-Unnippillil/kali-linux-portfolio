@@ -4,6 +4,8 @@
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
+const TRUSTED_TYPES_POLICY = 'kali-portfolio#html';
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Prevent injection of external base URIs
@@ -29,6 +31,8 @@ const ContentSecurityPolicy = [
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
+  `trusted-types ${TRUSTED_TYPES_POLICY} nextjs`,
+  "require-trusted-types-for 'script'",
   // Enforce HTTPS for all requests
   'upgrade-insecure-requests',
 ].join('; ');

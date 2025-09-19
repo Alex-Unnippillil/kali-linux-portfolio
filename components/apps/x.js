@@ -76,7 +76,7 @@ export default function XApp() {
       if (!timelineRef.current || !window.twttr) return;
       setScriptError(false);
       setTimelineLoaded(false);
-      timelineRef.current.innerHTML = '';
+    timelineRef.current.replaceChildren();
       window.twttr.widgets
         .createTimeline(
           { sourceType: 'profile', screenName: feedUser },

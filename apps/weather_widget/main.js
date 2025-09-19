@@ -28,7 +28,7 @@ unitToggle.value = unit;
 let savedCities = JSON.parse(safeLocalStorage?.getItem('savedCities') || '[]');
 
 function updateDatalist() {
-  datalist.innerHTML = '';
+  datalist.replaceChildren();
   savedCities.forEach((c) => {
     const option = document.createElement('option');
     option.value = c;
@@ -75,15 +75,23 @@ function renderWeather(data) {
         iconEl.className = 'icon animated-icon';
       }
       forecastEl.textContent = data.condition;
+      dailyEl.replaceChildren();
       if (data.forecast) {
-        dailyEl.innerHTML = data.forecast
-          .map(
-            (d) =>
-              `<div class="day"><img class="forecast-icon animated-icon" src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.condition}"><div>${d.day} ${Math.round(
-                convertTemp(d.tempC)
-              )}°${unit === 'metric' ? 'C' : 'F'}</div></div>`
-          )
-          .join('');
+        data.forecast.forEach((d) => {
+          const day = document.createElement('div');
+          day.className = 'day';
+          const img = document.createElement('img');
+          img.className = 'forecast-icon animated-icon';
+          img.src = `https://openweathermap.org/img/wn/${d.icon}.png`;
+          img.alt = d.condition;
+          const label = document.createElement('div');
+          label.textContent = `${d.day} ${Math.round(convertTemp(d.tempC))}°${
+            unit === 'metric' ? 'C' : 'F'
+          }`;
+          day.appendChild(img);
+          day.appendChild(label);
+          dailyEl.appendChild(day);
+        });
       }
       sunriseEl.textContent = `Sunrise: ${formatTime(data.sunrise)}`;
       sunsetEl.textContent = `Sunset: ${formatTime(data.sunset)}`;

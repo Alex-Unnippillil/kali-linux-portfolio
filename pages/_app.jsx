@@ -16,6 +16,10 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import {
+  attachTrustedTypesViolationLogger,
+  ensureTrustedTypesPolicy,
+} from '../utils/trustedTypes';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -24,9 +28,19 @@ const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
 });
 
+ensureTrustedTypesPolicy();
+
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+
+
+  useEffect(() => {
+    const detachLogger = attachTrustedTypesViolationLogger();
+    return () => {
+      detachLogger?.();
+    };
+  }, []);
 
 
   useEffect(() => {

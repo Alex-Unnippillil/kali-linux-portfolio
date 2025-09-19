@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 interface Payload {
   name: string;
@@ -21,6 +22,7 @@ export default function PayloadBuilder() {
   const [copied, setCopied] = useState(false);
 
   const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Payload</title></head><body><script>${selected.code}</script></body></html>`;
+  const preview = createTrustedHTML(page);
 
   const copyPage = async () => {
     try {
@@ -73,7 +75,7 @@ export default function PayloadBuilder() {
         <iframe
           title="preview"
           sandbox="allow-scripts"
-          srcDoc={page}
+          srcDoc={preview as unknown as string}
           className="w-full h-full border-0"
         />
       </div>

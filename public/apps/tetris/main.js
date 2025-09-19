@@ -528,12 +528,17 @@ function saveLeaderboard(type, value){
 function showLeaderboard(type){
   const key = `tetris-${type}`;
   const data = JSON.parse(localStorage.getItem(key) || '[]');
-  let html = `<h3>${type==='sprint'?'Sprint':'Marathon'} Leaderboard</h3><ol>`;
+  leaderboardDiv.replaceChildren();
+  const heading = document.createElement('h3');
+  heading.textContent = `${type==='sprint'?'Sprint':'Marathon'} Leaderboard`;
+  const list = document.createElement('ol');
   for(const v of data){
-    html += `<li>${type==='sprint'?v.toFixed(2)+'s':v}</li>`;
+    const item = document.createElement('li');
+    item.textContent = type==='sprint'?`${v.toFixed(2)}s`:`${v}`;
+    list.appendChild(item);
   }
-  html += '</ol>';
-  leaderboardDiv.innerHTML = html;
+  leaderboardDiv.appendChild(heading);
+  leaderboardDiv.appendChild(list);
 }
 
 document.getElementById('mode-sprint').addEventListener('click', ()=>{mode=null;showLeaderboard('sprint');startSprint();});

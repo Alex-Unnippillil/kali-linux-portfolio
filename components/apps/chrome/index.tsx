@@ -8,6 +8,7 @@ import React, {
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
 
@@ -776,7 +777,11 @@ const Chrome: React.FC = () => {
           ) : articles[activeId] ? (
             <main
               style={{ maxInlineSize: '60ch', margin: 'auto' }}
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articles[activeId] ?? '') }}
+              dangerouslySetInnerHTML={{
+                __html: createTrustedHTML(
+                  DOMPurify.sanitize(articles[activeId] ?? ''),
+                ),
+              }}
             />
           ) : activeTab.blocked ? (
             blockedView

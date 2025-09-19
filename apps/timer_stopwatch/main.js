@@ -107,7 +107,7 @@ function resetWatch() {
   stopwatchElapsed = 0;
   lapNumber = 1;
   updateStopwatchDisplay();
-  lapsList.innerHTML = '';
+  lapsList.replaceChildren();
 }
 
 function lapWatch() {

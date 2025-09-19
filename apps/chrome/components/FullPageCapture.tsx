@@ -27,8 +27,7 @@ export default function FullPageCapture() {
         backgroundColor: '#ffffff',
       });
       if (canvasContainer.current) {
-        canvasContainer.current.innerHTML = '';
-        canvasContainer.current.appendChild(canvas);
+        canvasContainer.current.replaceChildren(canvas);
       }
       const imgData = canvas.toDataURL('image/png');
       if (type === 'png') {
