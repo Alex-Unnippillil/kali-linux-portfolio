@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import apps from "../../apps.config";
 
 export default function Settings() {
   const {
@@ -31,16 +32,67 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    notificationPreferences,
+    getNotificationPreference,
+    updateNotificationPreference,
+    resetNotificationPreference,
+    setNotificationPreferences,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "notifications", label: "Notifications" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+
+  type AppOption = { id: string; title: string };
+  const appOptions = useMemo<AppOption[]>(() => {
+    const base: AppOption[] = apps.map(app => ({ id: app.id, title: app.title }));
+    const stored = Object.keys(notificationPreferences).map<AppOption>(id => {
+      const existing = base.find(option => option.id === id);
+      return existing ?? { id, title: id };
+    });
+    const merged = [...base, ...stored];
+    const unique = new Map<string, AppOption>();
+    merged.forEach(option => {
+      if (!unique.has(option.id)) {
+        unique.set(option.id, option);
+      }
+    });
+    return Array.from(unique.values()).sort((a, b) =>
+      a.title.localeCompare(b.title),
+    );
+  }, [notificationPreferences]);
+
+  const [selectedApp, setSelectedApp] = useState<string>("");
+
+  useEffect(() => {
+    if (appOptions.length === 0) {
+      setSelectedApp("");
+      return;
+    }
+    if (!selectedApp || !appOptions.some(option => option.id === selectedApp)) {
+      setSelectedApp(appOptions[0].id);
+    }
+  }, [appOptions, selectedApp]);
+
+  const currentNotificationPref = selectedApp
+    ? getNotificationPreference(selectedApp)
+    : getNotificationPreference("");
+
+  const isDefaultNotificationPref =
+    currentNotificationPref.banners &&
+    currentNotificationPref.sounds &&
+    currentNotificationPref.badges;
+
+  const updatePref = (updates: Partial<typeof currentNotificationPref>) => {
+    if (!selectedApp) return;
+    updateNotificationPreference(selectedApp, updates);
+  };
 
   const wallpapers = [
     "wall-1",
@@ -80,6 +132,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.notificationPreferences !== undefined)
+        setNotificationPreferences(parsed.notificationPreferences);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +155,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    resetNotificationPreference();
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -270,6 +325,91 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "notifications" && (
+        <div className="p-6 space-y-6">
+          <div>
+            <label
+              htmlFor="notification-app-select"
+              className="block text-sm font-medium text-ubt-grey mb-2"
+            >
+              Application
+            </label>
+            <select
+              id="notification-app-select"
+              value={selectedApp}
+              onChange={(event) => setSelectedApp(event.target.value)}
+              className="w-full bg-ub-cool-grey text-ubt-grey px-3 py-2 rounded border border-ubt-cool-grey"
+            >
+              {appOptions.map(option => (
+                <option key={option.id} value={option.id}>
+                  {option.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedApp ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-ubt-grey font-medium">Banners</p>
+                  <p className="text-xs text-ubt-grey opacity-80">
+                    Show heads-up alerts for new activity.
+                  </p>
+                </div>
+                <ToggleSwitch
+                  checked={currentNotificationPref.banners}
+                  onChange={(checked) => updatePref({ banners: checked })}
+                  ariaLabel="Toggle notification banners"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-ubt-grey font-medium">Sounds</p>
+                  <p className="text-xs text-ubt-grey opacity-80">
+                    Play an audible chime for each alert.
+                  </p>
+                </div>
+                <ToggleSwitch
+                  checked={currentNotificationPref.sounds}
+                  onChange={(checked) => updatePref({ sounds: checked })}
+                  ariaLabel="Toggle notification sounds"
+                  disabled={!currentNotificationPref.banners}
+                />
+              </div>
+              {!currentNotificationPref.banners && (
+                <p className="text-xs text-ub-orange">Enable banners to allow sounds.</p>
+              )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-ubt-grey font-medium">Badges</p>
+                  <p className="text-xs text-ubt-grey opacity-80">
+                    Update dock counts when alerts arrive.
+                  </p>
+                </div>
+                <ToggleSwitch
+                  checked={currentNotificationPref.badges}
+                  onChange={(checked) => updatePref({ badges: checked })}
+                  ariaLabel="Toggle notification badges"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => selectedApp && resetNotificationPreference(selectedApp)}
+                disabled={isDefaultNotificationPref}
+                className={`px-4 py-2 rounded border border-ubt-cool-grey text-ubt-grey transition-colors ${
+                  isDefaultNotificationPref
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-ubt-cool-grey/30"
+                }`}
+              >
+                Restore defaults
+              </button>
+            </>
+          ) : (
+            <p className="text-ubt-grey">No applications available.</p>
+          )}
+        </div>
+      )}
       {activeTab === "privacy" && (
         <>
           <div className="flex justify-center my-4 space-x-4">
@@ -288,18 +428,18 @@ export default function Settings() {
           </div>
         </>
       )}
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          aria-label="Import settings file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handleImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        aria-label="Import settings file"
+        onChange={(e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) handleImport(file);
+          e.target.value = "";
+        }}
+        className="hidden"
+      />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );

@@ -14,6 +14,41 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  notificationPreferences: {},
+};
+
+const DEFAULT_NOTIFICATION_PREFERENCE = {
+  banners: true,
+  sounds: true,
+  badges: true,
+};
+
+const NOTIFICATION_PREFERENCES_KEY = 'notification-preferences';
+
+const sanitizeNotificationPreference = (pref = {}) => {
+  const normalized = {
+    banners: typeof pref.banners === 'boolean' ? pref.banners : DEFAULT_NOTIFICATION_PREFERENCE.banners,
+    sounds: typeof pref.sounds === 'boolean' ? pref.sounds : DEFAULT_NOTIFICATION_PREFERENCE.sounds,
+    badges: typeof pref.badges === 'boolean' ? pref.badges : DEFAULT_NOTIFICATION_PREFERENCE.badges,
+  };
+  if (!normalized.banners) {
+    normalized.sounds = false;
+  }
+  return normalized;
+};
+
+const isDefaultNotificationPreference = pref =>
+  pref.banners === true && pref.sounds === true && pref.badges === true;
+
+const normalizePreferencesMap = (prefs = {}) => {
+  const result = {};
+  Object.entries(prefs).forEach(([appId, value]) => {
+    const normalized = sanitizeNotificationPreference(value || {});
+    if (!isDefaultNotificationPreference(normalized)) {
+      result[appId] = normalized;
+    }
+  });
+  return result;
 };
 
 export async function getAccent() {
@@ -123,6 +158,32 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getNotificationPreferences() {
+  if (typeof window === 'undefined') return {};
+  const stored = window.localStorage.getItem(NOTIFICATION_PREFERENCES_KEY);
+  if (!stored) return {};
+  try {
+    const parsed = JSON.parse(stored);
+    return normalizePreferencesMap(parsed);
+  } catch (e) {
+    console.error('Failed to parse notification preferences', e);
+    return {};
+  }
+}
+
+export async function setNotificationPreferences(preferences) {
+  if (typeof window === 'undefined') return;
+  const normalized = normalizePreferencesMap(preferences);
+  if (Object.keys(normalized).length === 0) {
+    window.localStorage.removeItem(NOTIFICATION_PREFERENCES_KEY);
+    return;
+  }
+  window.localStorage.setItem(
+    NOTIFICATION_PREFERENCES_KEY,
+    JSON.stringify(normalized),
+  );
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +198,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(NOTIFICATION_PREFERENCES_KEY);
 }
 
 export async function exportSettings() {
@@ -151,6 +213,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    notificationPreferences,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +225,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getNotificationPreferences(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +239,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    notificationPreferences,
     theme,
   });
 }
@@ -199,6 +264,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    notificationPreferences,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,7 +277,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (notificationPreferences !== undefined) await setNotificationPreferences(notificationPreferences);
   if (theme !== undefined) setTheme(theme);
 }
 
 export const defaults = DEFAULT_SETTINGS;
+export const defaultNotificationPreference = DEFAULT_NOTIFICATION_PREFERENCE;
