@@ -25,6 +25,7 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: npm run lint
+      - run: npm run lint:boundaries
 
   typecheck:
     runs-on: ubuntu-latest
