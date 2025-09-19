@@ -1,0 +1,17 @@
+.window {
+  container-type: inline-size;
+}
+
+.window .icon-only {
+  display: none;
+}
+
+@container (max-width: 420px) {
+  .window .text-label {
+    display: none;
+  }
+
+  .window .icon-only {
+    display: inline-flex;
+  }
+}
