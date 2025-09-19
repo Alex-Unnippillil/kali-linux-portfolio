@@ -11,6 +11,7 @@ const publicEnvSchema = z.object({
   NEXT_PUBLIC_CURRENCY_API_URL: z.string().optional(),
   NEXT_PUBLIC_DEMO_MODE: z.string().optional(),
   NEXT_PUBLIC_UI_EXPERIMENTS: z.string().optional(),
+  NEXT_PUBLIC_ENABLE_STATE_PROFILER: z.string().optional(),
   NEXT_PUBLIC_GHIDRA_WASM: z.string().optional(),
   NEXT_PUBLIC_GHIDRA_URL: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),

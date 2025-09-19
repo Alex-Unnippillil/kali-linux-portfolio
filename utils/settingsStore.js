@@ -1,6 +1,7 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import { profileSelector } from './stateProfiler';
 import { getTheme, setTheme } from './theme';
 
 const DEFAULT_SETTINGS = {
@@ -17,8 +18,14 @@ const DEFAULT_SETTINGS = {
 };
 
 export async function getAccent() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
-  return (await get('accent')) || DEFAULT_SETTINGS.accent;
+  return profileSelector(
+    'settingsStore.getAccent',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
+      return (await get('accent')) || DEFAULT_SETTINGS.accent;
+    },
+    { metadata: { store: 'idb', key: 'accent' } },
+  );
 }
 
 export async function setAccent(accent) {
@@ -27,8 +34,14 @@ export async function setAccent(accent) {
 }
 
 export async function getWallpaper() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  return profileSelector(
+    'settingsStore.getWallpaper',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
+      return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+    },
+    { metadata: { store: 'idb', key: 'bg-image' } },
+  );
 }
 
 export async function setWallpaper(wallpaper) {
@@ -37,8 +50,18 @@ export async function setWallpaper(wallpaper) {
 }
 
 export async function getDensity() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  return profileSelector(
+    'settingsStore.getDensity',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
+      try {
+        return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+      } catch {
+        return DEFAULT_SETTINGS.density;
+      }
+    },
+    { metadata: { store: 'localStorage', key: 'density' } },
+  );
 }
 
 export async function setDensity(density) {
@@ -47,12 +70,25 @@ export async function setDensity(density) {
 }
 
 export async function getReducedMotion() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
-  if (stored !== null) {
-    return stored === 'true';
-  }
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return profileSelector(
+    'settingsStore.getReducedMotion',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
+      try {
+        const stored = window.localStorage.getItem('reduced-motion');
+        if (stored !== null) {
+          return stored === 'true';
+        }
+      } catch {
+        return DEFAULT_SETTINGS.reducedMotion;
+      }
+      return (
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ??
+        DEFAULT_SETTINGS.reducedMotion
+      );
+    },
+    { metadata: { store: 'localStorage', key: 'reduced-motion' } },
+  );
 }
 
 export async function setReducedMotion(value) {
@@ -61,9 +97,19 @@ export async function setReducedMotion(value) {
 }
 
 export async function getFontScale() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
-  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+  return profileSelector(
+    'settingsStore.getFontScale',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
+      try {
+        const stored = window.localStorage.getItem('font-scale');
+        return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+      } catch {
+        return DEFAULT_SETTINGS.fontScale;
+      }
+    },
+    { metadata: { store: 'localStorage', key: 'font-scale' } },
+  );
 }
 
 export async function setFontScale(scale) {
@@ -72,8 +118,18 @@ export async function setFontScale(scale) {
 }
 
 export async function getHighContrast() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  return profileSelector(
+    'settingsStore.getHighContrast',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
+      try {
+        return window.localStorage.getItem('high-contrast') === 'true';
+      } catch {
+        return DEFAULT_SETTINGS.highContrast;
+      }
+    },
+    { metadata: { store: 'localStorage', key: 'high-contrast' } },
+  );
 }
 
 export async function setHighContrast(value) {
@@ -82,8 +138,18 @@ export async function setHighContrast(value) {
 }
 
 export async function getLargeHitAreas() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  return profileSelector(
+    'settingsStore.getLargeHitAreas',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
+      try {
+        return window.localStorage.getItem('large-hit-areas') === 'true';
+      } catch {
+        return DEFAULT_SETTINGS.largeHitAreas;
+      }
+    },
+    { metadata: { store: 'localStorage', key: 'large-hit-areas' } },
+  );
 }
 
 export async function setLargeHitAreas(value) {
@@ -92,9 +158,19 @@ export async function setLargeHitAreas(value) {
 }
 
 export async function getHaptics() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
-  return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
+  return profileSelector(
+    'settingsStore.getHaptics',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
+      try {
+        const val = window.localStorage.getItem('haptics');
+        return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
+      } catch {
+        return DEFAULT_SETTINGS.haptics;
+      }
+    },
+    { metadata: { store: 'localStorage', key: 'haptics' } },
+  );
 }
 
 export async function setHaptics(value) {
@@ -103,9 +179,19 @@ export async function setHaptics(value) {
 }
 
 export async function getPongSpin() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
-  return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
+  return profileSelector(
+    'settingsStore.getPongSpin',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
+      try {
+        const val = window.localStorage.getItem('pong-spin');
+        return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
+      } catch {
+        return DEFAULT_SETTINGS.pongSpin;
+      }
+    },
+    { metadata: { store: 'localStorage', key: 'pong-spin' } },
+  );
 }
 
 export async function setPongSpin(value) {
@@ -114,8 +200,18 @@ export async function setPongSpin(value) {
 }
 
 export async function getAllowNetwork() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  return profileSelector(
+    'settingsStore.getAllowNetwork',
+    async () => {
+      if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
+      try {
+        return window.localStorage.getItem('allow-network') === 'true';
+      } catch {
+        return DEFAULT_SETTINGS.allowNetwork;
+      }
+    },
+    { metadata: { store: 'localStorage', key: 'allow-network' } },
+  );
 }
 
 export async function setAllowNetwork(value) {

@@ -1,4 +1,5 @@
 import usePersistentState from '../../hooks/usePersistentState';
+import { profileSelector } from '../../utils/stateProfiler';
 
 export const VARS_KEY = 'calc-vars';
 
@@ -15,21 +16,27 @@ export function useVariables() {
 }
 
 export function loadVariables(): VarMap {
-  if (typeof window === 'undefined') return {};
-  try {
-    const stored = window.localStorage.getItem(VARS_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (
-        typeof parsed === 'object' &&
-        parsed !== null &&
-        !Array.isArray(parsed)
-      ) {
-        return parsed as VarMap;
+  return profileSelector(
+    'calculator.loadVariables',
+    () => {
+      if (typeof window === 'undefined') return {};
+      try {
+        const stored = window.localStorage.getItem(VARS_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (
+            typeof parsed === 'object' &&
+            parsed !== null &&
+            !Array.isArray(parsed)
+          ) {
+            return parsed as VarMap;
+          }
+        }
+      } catch {
+        // ignore
       }
-    }
-  } catch {
-    // ignore
-  }
-  return {};
+      return {};
+    },
+    { metadata: { store: 'localStorage', key: VARS_KEY } },
+  );
 }

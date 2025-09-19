@@ -99,6 +99,8 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- Enable the [selector profiler](./docs/state-profiler.md) when investigating slow
+  state hydration in development builds.
 
 ---
 

@@ -1,3 +1,5 @@
+import { profileSelector } from './stateProfiler';
+
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
@@ -13,19 +15,24 @@ const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
 export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
 
-export const getTheme = (): string => {
-  if (typeof window === 'undefined') return 'default';
-  try {
-    const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored) return stored;
-    const prefersDark = window.matchMedia?.(
-      '(prefers-color-scheme: dark)'
-    ).matches;
-    return prefersDark ? 'dark' : 'default';
-  } catch {
-    return 'default';
-  }
-};
+export const getTheme = (): string =>
+  profileSelector(
+    'theme.getTheme',
+    () => {
+      if (typeof window === 'undefined') return 'default';
+      try {
+        const stored = window.localStorage.getItem(THEME_KEY);
+        if (stored) return stored;
+        const prefersDark = window.matchMedia?.(
+          '(prefers-color-scheme: dark)'
+        ).matches;
+        return prefersDark ? 'dark' : 'default';
+      } catch {
+        return 'default';
+      }
+    },
+    { metadata: { store: 'localStorage', key: THEME_KEY } },
+  );
 
 export const setTheme = (theme: string): void => {
   if (typeof window === 'undefined') return;
