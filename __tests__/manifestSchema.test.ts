@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-describe('web manifest', () => {
+describe('web manifest schema', () => {
   const manifestPath = path.join(process.cwd(), 'public', 'manifest.webmanifest');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 

@@ -50,6 +50,33 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn test --coverage
 
+  state-gate:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Run schema unit tests
+        run: yarn test:schema
+      - name: Type check
+        run: yarn tsc --noEmit
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Start dev server
+        run: |
+          yarn dev --hostname 0.0.0.0 --port 3000 &
+          npx wait-on http://127.0.0.1:3000
+      - name: Run smoke tests
+        run: npx playwright test tests/apps.smoke.spec.ts
+      - name: Stop dev server
+        if: always()
+        run: |
+          kill $(jobs -p) 2>/dev/null || true
+
   security:
     runs-on: ubuntu-latest
     needs: install

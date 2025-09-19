@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type ConsoleMessage } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
@@ -24,8 +24,43 @@ const routes = getRoutes(appDir)
 
 for (const route of routes) {
   test(`loads ${route}`, async ({ page }) => {
-    await page.goto('/apps');
-    await page.locator(`a[href="${route}"]`).click();
-    await expect(page.locator('main')).toBeVisible();
+    const consoleMessages: string[] = [];
+    const pageErrors: string[] = [];
+
+    const consoleListener = (message: ConsoleMessage) => {
+      const type = message.type();
+      if (type === 'warning' || type === 'error') {
+        const location = message.location();
+        const locationSuffix = location.url
+          ? ` (${location.url}${
+              location.lineNumber !== undefined ? `:${location.lineNumber}` : ''
+            })`
+          : '';
+        consoleMessages.push(`${type.toUpperCase()}: ${message.text()}${locationSuffix}`);
+      }
+    };
+
+    const errorListener = (error: Error) => {
+      pageErrors.push(`PAGE ERROR: ${error.message}`);
+    };
+
+    page.on('console', consoleListener);
+    page.on('pageerror', errorListener);
+
+    try {
+      await page.goto('/apps');
+      await page.locator(`a[href="${route}"]`).click();
+      await expect(page.locator('main')).toBeVisible();
+
+      if (pageErrors.length > 0 || consoleMessages.length > 0) {
+        const issues = [...pageErrors, ...consoleMessages].join('\n');
+        throw new Error(
+          `Console warnings or errors detected while loading ${route}:\n${issues}`
+        );
+      }
+    } finally {
+      page.off('console', consoleListener);
+      page.off('pageerror', errorListener);
+    }
   });
 }
