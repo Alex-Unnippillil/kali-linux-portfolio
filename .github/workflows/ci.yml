@@ -50,6 +50,46 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn test --coverage
 
+  next-build:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Run next build
+        run: |
+          set -o pipefail
+          NEXT_TELEMETRY_DISABLED=1 npx next build 2>&1 | tee next-build.log
+      - name: Fail on WebAssembly warnings
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          log_path = pathlib.Path('next-build.log')
+          text = log_path.read_text(errors='ignore')
+          clean = re.sub(r'\x1B\[[0-9;]*[A-Za-z]', '', text)
+          pattern = re.compile(r'(?i)(warn(?:ing)?[^\n]*wasm|wasm[^\n]*warn)')
+          matches = [line for line in clean.splitlines() if pattern.search(line)]
+          if matches:
+            print('WebAssembly-related warnings detected during next build:')
+            for line in matches:
+              print(line)
+            sys.exit(1)
+          print('No WebAssembly warnings detected in next build output.')
+          PY
+      - name: Upload Next build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build-log
+          path: next-build.log
+
   security:
     runs-on: ubuntu-latest
     needs: install
