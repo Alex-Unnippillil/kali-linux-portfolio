@@ -1,0 +1,27 @@
+[
+  {
+    "id": "launcher-shortcut",
+    "title": "Need something fast?",
+    "body": "Press the Super key (or click the Kali logo) to open the launcher and search every app at once."
+  },
+  {
+    "id": "workspace-drag",
+    "title": "Rearrange your workspace",
+    "body": "Drag windows by their title bar to snap them side-by-side and keep your toolkit tidy."
+  },
+  {
+    "id": "lock-screen",
+    "title": "Step away securely",
+    "body": "Use the power icon in the top bar to lock the desktop before you step away from the keyboard."
+  },
+  {
+    "id": "wallpaper-chooser",
+    "title": "Personalize the desktop",
+    "body": "Right-click the desktop to swap wallpapers and set the mood for your session."
+  },
+  {
+    "id": "terminal-shortcut",
+    "title": "Terminal on demand",
+    "body": "Hit Ctrl+Alt+T inside any workspace to pop open a fresh terminal window instantly."
+  }
+]
