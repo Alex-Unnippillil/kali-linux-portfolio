@@ -2,12 +2,54 @@ import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
 
+function createWindowArea() {
+  const area = document.createElement('div');
+  area.id = 'window-area';
+  area.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    right: 1024,
+    bottom: 768,
+    width: 1024,
+    height: 768,
+    x: 0,
+    y: 0,
+    toJSON: () => ({})
+  });
+  document.body.appendChild(area);
+  return area;
+}
+
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
+
+let rafSpy: jest.SpyInstance<number, [FrameRequestCallback]>;
+
+beforeAll(() => {
+  if (!window.requestAnimationFrame) {
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      cb(0);
+      return 0;
+    }) as any;
+  }
+});
+
+beforeEach(() => {
+  rafSpy = jest
+    .spyOn(window, 'requestAnimationFrame')
+    .mockImplementation((cb: FrameRequestCallback) => {
+      cb(0);
+      return 0;
+    });
+});
+
+afterEach(() => {
+  rafSpy?.mockRestore();
+});
 
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
@@ -44,6 +86,7 @@ describe('Window lifecycle', () => {
 
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
+    const area = createWindowArea();
     const ref = React.createRef<Window>();
     render(
       <Window
@@ -74,13 +117,15 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      (ref.current as any).updateSnapPreviewFromNode(winEl);
     });
 
     expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
+    document.body.removeChild(area);
   });
 
   it('hides preview when away from edge', () => {
+    const area = createWindowArea();
     const ref = React.createRef<Window>();
     render(
       <Window
@@ -111,15 +156,17 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      (ref.current as any).updateSnapPreviewFromNode(winEl);
     });
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
+    document.body.removeChild(area);
   });
 });
 
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
+    const area = createWindowArea();
     const ref = React.createRef<Window>();
     render(
       <Window
@@ -149,18 +196,22 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      (ref.current as any).updateSnapPreviewFromNode(winEl);
     });
     act(() => {
       ref.current!.handleStop();
     });
 
     expect(ref.current!.state.snapped).toBe('left');
-    expect(ref.current!.state.width).toBe(50);
-    expect(ref.current!.state.height).toBe(96.3);
+    expect(ref.current!.state.width).toBeCloseTo(50, 5);
+    expect(ref.current!.state.height).toBeCloseTo(100, 5);
+    const node = document.getElementById('test-window');
+    expect(node).toHaveAttribute('data-snap-position', 'left');
+    document.body.removeChild(area);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
+    const area = createWindowArea();
     const ref = React.createRef<Window>();
     render(
       <Window
@@ -190,7 +241,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      (ref.current as any).updateSnapPreviewFromNode(winEl);
     });
     act(() => {
       ref.current!.handleStop();
@@ -199,15 +250,22 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+    document.body.removeChild(area);
   });
 
   it('releases snap when starting drag', () => {
+    const area = createWindowArea();
     const ref = React.createRef<Window>();
     render(
       <Window
@@ -237,7 +295,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      (ref.current as any).updateSnapPreviewFromNode(winEl);
     });
     act(() => {
       ref.current!.handleStop();
@@ -252,6 +310,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+    document.body.removeChild(area);
   });
 });
 
