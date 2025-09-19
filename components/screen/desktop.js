@@ -23,6 +23,15 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import TilingOverlay from './tiling-overlay';
+
+const TILING_TEMPLATES = {
+    '2x2': { id: '2x2', rows: 2, cols: 2, label: '2 × 2' },
+    '1x3': { id: '1x3', rows: 1, cols: 3, label: '1 × 3' },
+    '2x3': { id: '2x3', rows: 2, cols: 3, label: '2 × 3' },
+};
+
+const TILING_STORAGE_KEY = 'window-tiling-templates';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +39,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this._tilingCommandVersion = 0;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,12 +62,18 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            tilingOverlay: { visible: false, windowId: null },
+            tilingTemplates: {},
+            tilingAssignments: {},
+            tilingCommands: {},
         }
     }
 
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        this.loadTilingState();
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -144,6 +160,203 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    loadTilingState = () => {
+        const stored = safeLocalStorage?.getItem(TILING_STORAGE_KEY);
+        if (!stored) return;
+        try {
+            const parsed = JSON.parse(stored);
+            if (!parsed || typeof parsed !== 'object') return;
+            const templates = {};
+            if (parsed.templates && typeof parsed.templates === 'object') {
+                Object.entries(parsed.templates).forEach(([key, value]) => {
+                    const def = TILING_TEMPLATES[key];
+                    if (!def) return;
+                    const rows = typeof value.rows === 'number' ? value.rows : def.rows;
+                    const cols = typeof value.cols === 'number' ? value.cols : def.cols;
+                    const expectedLength = rows * cols;
+                    let assignments = Array.isArray(value.assignments) ? value.assignments.slice(0, expectedLength) : [];
+                    while (assignments.length < expectedLength) {
+                        assignments.push(null);
+                    }
+                    templates[key] = { rows, cols, assignments };
+                });
+            }
+            const assignments = {};
+            if (parsed.assignments && typeof parsed.assignments === 'object') {
+                Object.entries(parsed.assignments).forEach(([windowId, info]) => {
+                    if (!info || typeof info !== 'object') return;
+                    const templateId = info.templateId;
+                    const cell = info.cell;
+                    if (typeof templateId !== 'string' || typeof cell !== 'number') return;
+                    if (!TILING_TEMPLATES[templateId]) return;
+                    assignments[windowId] = { templateId, cell };
+                });
+            }
+            if (Object.keys(templates).length || Object.keys(assignments).length) {
+                this.setState({ tilingTemplates: templates, tilingAssignments: assignments });
+            }
+        } catch (e) {
+            // ignore storage corruption
+        }
+    }
+
+    persistTilingState = () => {
+        try {
+            safeLocalStorage?.setItem(TILING_STORAGE_KEY, JSON.stringify({
+                templates: this.state.tilingTemplates,
+                assignments: this.state.tilingAssignments,
+            }));
+        } catch (e) {
+            // ignore storage errors
+        }
+    }
+
+    openTilingOverlayForWindow = (windowId) => {
+        if (!windowId) return;
+        this.setState({ tilingOverlay: { visible: true, windowId } });
+    }
+
+    cancelTilingOverlay = () => {
+        this.setState({ tilingOverlay: { visible: false, windowId: null } });
+    }
+
+    handleTilingOption = (option) => {
+        if (!option) {
+            this.cancelTilingOverlay();
+            return;
+        }
+        this.applyTilingTemplate(option.id);
+    }
+
+    computeTilingRect = (template, cellIndex) => {
+        if (!template) {
+            return { x: 0, y: 0, widthPercent: 100, heightPercent: 100, widthPx: 0, heightPx: 0 };
+        }
+        const gridSize = this.props.snapEnabled ? 8 : 1;
+        const snap = (value) => {
+            if (gridSize <= 1) return value;
+            return Math.round(value / gridSize) * gridSize;
+        };
+        const area = typeof window !== 'undefined' ? document.getElementById('window-area') : null;
+        const areaRect = area ? area.getBoundingClientRect() : null;
+        const areaWidth = areaRect ? areaRect.width : (typeof window !== 'undefined' ? window.innerWidth : 0);
+        const areaHeight = areaRect ? areaRect.height : (typeof window !== 'undefined' ? window.innerHeight : 0);
+        const totalWidth = typeof window !== 'undefined' ? window.innerWidth : areaWidth;
+        const totalHeight = typeof window !== 'undefined' ? window.innerHeight : areaHeight;
+        const col = template.cols ? cellIndex % template.cols : 0;
+        const row = template.cols ? Math.floor(cellIndex / template.cols) : 0;
+        const cellWidth = template.cols ? areaWidth / template.cols : areaWidth;
+        const cellHeight = template.rows ? areaHeight / template.rows : areaHeight;
+        const snappedWidth = snap(cellWidth);
+        const snappedHeight = snap(cellHeight);
+        let x = snap(col * cellWidth);
+        let y = snap(row * cellHeight);
+        const maxX = Math.max(areaWidth - snappedWidth, 0);
+        const maxY = Math.max(areaHeight - snappedHeight, 0);
+        if (x > maxX) x = snap(maxX);
+        if (y > maxY) y = snap(maxY);
+        const widthPercent = totalWidth ? (snappedWidth / totalWidth) * 100 : 0;
+        const heightPercent = totalHeight ? (snappedHeight / totalHeight) * 100 : 0;
+        return {
+            x,
+            y,
+            widthPercent: Number(widthPercent.toFixed(2)),
+            heightPercent: Number(heightPercent.toFixed(2)),
+            widthPx: snappedWidth,
+            heightPx: snappedHeight,
+        };
+    }
+
+    applyTilingTemplate = (templateId) => {
+        const currentOverlay = this.state.tilingOverlay;
+        const windowId = currentOverlay.windowId;
+        const template = TILING_TEMPLATES[templateId];
+        if (!windowId || !template) {
+            this.cancelTilingOverlay();
+            return;
+        }
+        this.setState(prev => {
+            const templates = { ...prev.tilingTemplates };
+            const cleanedTemplates = {};
+            Object.entries(templates).forEach(([key, entry]) => {
+                const assignments = entry.assignments.map(cell => (cell === windowId ? null : cell));
+                cleanedTemplates[key] = assignments === entry.assignments ? entry : { ...entry, assignments };
+            });
+            const cellCount = template.rows * template.cols;
+            let entry = cleanedTemplates[templateId];
+            if (!entry || entry.rows !== template.rows || entry.cols !== template.cols) {
+                entry = { rows: template.rows, cols: template.cols, assignments: Array(cellCount).fill(null) };
+            } else {
+                entry = { ...entry, assignments: [...entry.assignments] };
+            }
+            let cellIndex = entry.assignments.indexOf(windowId);
+            if (cellIndex === -1) {
+                cellIndex = entry.assignments.findIndex(cell => cell === null);
+                if (cellIndex === -1) {
+                    cellIndex = cellCount - 1;
+                }
+            }
+            entry.assignments[cellIndex] = windowId;
+            cleanedTemplates[templateId] = entry;
+
+            const rect = this.computeTilingRect(template, cellIndex);
+            const version = ++this._tilingCommandVersion;
+            const tilingCommands = {
+                ...prev.tilingCommands,
+                [windowId]: { templateId, cell: cellIndex, rect, version },
+            };
+            const tilingAssignments = { ...prev.tilingAssignments, [windowId]: { templateId, cell: cellIndex } };
+            const window_positions = { ...prev.window_positions, [windowId]: { x: rect.x, y: rect.y } };
+
+            return {
+                tilingTemplates: cleanedTemplates,
+                tilingAssignments,
+                tilingCommands,
+                window_positions,
+                tilingOverlay: { visible: false, windowId: null },
+            };
+        }, () => {
+            this.persistTilingState();
+            this.focus(windowId);
+            this.saveSession();
+        });
+    }
+
+    removeTilingForWindow = (windowId) => {
+        if (!windowId) return;
+        this.setState(prev => {
+            let templateChanged = false;
+            const templates = {};
+            Object.entries(prev.tilingTemplates).forEach(([key, entry]) => {
+                const nextAssignments = entry.assignments.map(cell => (cell === windowId ? null : cell));
+                if (nextAssignments.some((value, index) => value !== entry.assignments[index])) {
+                    templateChanged = true;
+                    templates[key] = { ...entry, assignments: nextAssignments };
+                } else {
+                    templates[key] = entry;
+                }
+            });
+            const tilingAssignments = { ...prev.tilingAssignments };
+            const hadAssignment = Boolean(tilingAssignments[windowId]);
+            if (hadAssignment) {
+                delete tilingAssignments[windowId];
+            }
+            const tilingCommands = { ...prev.tilingCommands };
+            const hadCommand = Boolean(tilingCommands[windowId]);
+            if (hadCommand) {
+                delete tilingCommands[windowId];
+            }
+            if (!templateChanged && !hadAssignment && !hadCommand) {
+                return null;
+            }
+            return {
+                tilingTemplates: templates,
+                tilingAssignments,
+                tilingCommands,
+            };
+        }, this.persistTilingState);
     }
 
     handleGlobalShortcut = (e) => {
@@ -480,6 +693,8 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    onRequestTiling: this.openTilingOverlayForWindow,
+                    tilingCommand: this.state.tilingCommands[app.id],
                 }
 
                 windowsJsx.push(
@@ -694,6 +909,8 @@ export class Desktop extends Component {
 
         this.hideSideBar(null, false);
 
+        this.removeTilingForWindow(objId);
+
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
@@ -864,6 +1081,9 @@ export class Desktop extends Component {
     }
 
     render() {
+        const activeTilingTemplateId = this.state.tilingOverlay.windowId
+            ? (this.state.tilingAssignments[this.state.tilingOverlay.windowId]?.templateId || null)
+            : null;
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -966,6 +1186,13 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <TilingOverlay
+                    visible={this.state.tilingOverlay.visible}
+                    onSelect={this.handleTilingOption}
+                    onCancel={this.cancelTilingOverlay}
+                    activeTemplateId={activeTilingTemplateId}
+                />
 
             </main>
         )
