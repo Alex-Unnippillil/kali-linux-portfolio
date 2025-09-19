@@ -20,13 +20,13 @@ jobs:
         run: yarn install --immutable
 
       - name: Test
-        run: yarn jest -w=1
+        run: yarn test --runInBand
 
       - name: Lint
         run: yarn lint
 
       - name: Type Check
-        run: yarn tsc --noEmit
+        run: yarn typecheck
 
       - name: Building
         run: yarn build
