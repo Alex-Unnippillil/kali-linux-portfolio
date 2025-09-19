@@ -113,6 +113,7 @@ const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
+const StartupTimelineDevApp = createDynamicApp('devtools/StartupTimeline', 'Startup Timeline');
 
 
 
@@ -199,8 +200,36 @@ const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
+const displayStartupTimeline = createDisplay(StartupTimelineDevApp);
 
 const displayHashcat = createDisplay(HashcatApp);
+
+const devtoolsEnabled = (() => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('devtools') === '1';
+  } catch (err) {
+    return false;
+  }
+})();
+
+const devtoolsApps = devtoolsEnabled
+  ? [
+      {
+        id: 'startup-timeline',
+        title: 'Startup Timeline',
+        icon: '/themes/Yaru/apps/resource-monitor.svg',
+        disabled: false,
+        favourite: false,
+        desktop_shortcut: false,
+        screen: displayStartupTimeline,
+        devOnly: true,
+      },
+    ]
+  : [];
 
 const displayKismet = createDisplay(KismetApp);
 
@@ -1062,6 +1091,7 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
+  ...devtoolsApps,
   // Utilities are grouped separately
   ...utilities,
   // Games are included so they appear alongside apps
