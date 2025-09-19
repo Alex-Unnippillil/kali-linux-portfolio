@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
+import { IS_STATIC_EXPORT } from '@/env.client';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -232,7 +233,7 @@ const Pacman = () => {
   };
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') return;
+    if (IS_STATIC_EXPORT) return;
     const load = async () => {
       try {
         const res = await fetch('/api/pacman/leaderboard');
@@ -247,7 +248,7 @@ const Pacman = () => {
 
   const submitScore = useCallback(
     async (finalScore) => {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') return;
+      if (IS_STATIC_EXPORT) return;
       try {
         const name = window.prompt('Enter your name', 'Player');
         if (!name) return;

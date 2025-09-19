@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import { IS_DEMO_MODE, IS_STATIC_EXPORT } from '@/env.client';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -18,7 +19,7 @@ const timelineSteps = 5;
 const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
 
 const MetasploitApp = ({
-  demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
+  demoMode = IS_DEMO_MODE,
   onLoadingChange = () => {},
 } = {}) => {
   const [command, setCommand] = useState('');
@@ -146,7 +147,7 @@ const MetasploitApp = ({
     if (!cmd) return;
     setLoading(true);
     try {
-      if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
+      if (demoMode || IS_STATIC_EXPORT) {
         setOutput(
           (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
         );

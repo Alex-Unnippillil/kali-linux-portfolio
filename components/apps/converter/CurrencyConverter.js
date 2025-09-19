@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { CURRENCY_API_URL } from '@/env.client';
 
-const apiBase = process.env.NEXT_PUBLIC_CURRENCY_API_URL || 'https://api.exchangerate.host/latest';
-const isDemo = !process.env.NEXT_PUBLIC_CURRENCY_API_URL;
+const apiBase = CURRENCY_API_URL || 'https://api.exchangerate.host/latest';
+const isDemo = !CURRENCY_API_URL;
 
 const CurrencyConverter = () => {
   const [rates, setRates] = useState({});

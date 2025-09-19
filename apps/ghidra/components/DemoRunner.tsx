@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import GhidraApp from '../../../components/apps/ghidra';
+import { GHIDRA_WASM_URL } from '@/env.client';
 
 export default function DemoRunner() {
-  const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;
+  const wasmUrl = GHIDRA_WASM_URL;
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {

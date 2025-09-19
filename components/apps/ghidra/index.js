@@ -4,6 +4,7 @@ import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
+import { GHIDRA_WASM_URL } from '@/env.client';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -99,7 +100,7 @@ export default function GhidraApp() {
   }, []);
 
   useEffect(() => {
-    const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WASM;
+    const wasmUrl = GHIDRA_WASM_URL || DEFAULT_WASM;
     if (typeof WebAssembly === 'undefined') {
       setEngine('capstone');
       ensureCapstone();

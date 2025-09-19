@@ -8,6 +8,7 @@ import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import { RECAPTCHA_SITE_KEY } from "@/env.client";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -82,7 +83,7 @@ const ContactApp: React.FC = () => {
       return;
     }
 
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+    const siteKey = RECAPTCHA_SITE_KEY;
     const recaptchaToken = await getRecaptchaToken(siteKey);
     if (!recaptchaToken) {
       setError("Captcha verification failed. Please try again.");
