@@ -183,7 +183,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [density]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    const root = document.documentElement;
+    root.dataset.motion = reducedMotion ? 'reduced' : 'standard';
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
@@ -193,7 +194,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [fontScale]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('high-contrast', highContrast);
+    const root = document.documentElement;
+    root.dataset.contrast = highContrast ? 'high' : 'standard';
     saveHighContrast(highContrast);
   }, [highContrast]);
 

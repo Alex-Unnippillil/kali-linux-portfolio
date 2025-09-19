@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { getMotionDuration } from '../../utils/motion';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -391,18 +392,17 @@ export class Window extends Component {
 
         const node = document.querySelector("#" + this.id);
         const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (prefersReducedMotion) {
+        const duration = getMotionDuration('--motion-medium', 300);
+        const startTransform = node.style.transform;
+        if (duration <= 0) {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
             return;
         }
 
-        const startTransform = node.style.transform;
         this._dockAnimation = node.animate(
             [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+            { duration, easing: 'ease-in-out', fill: 'forwards' }
         );
         this._dockAnimation.onfinish = () => {
             node.style.transform = endTransform;
@@ -419,15 +419,7 @@ export class Window extends Component {
         let posy = node.style.getPropertyValue("--window-transform-y");
         const startTransform = node.style.transform;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
-            this.setState({ maximized: false });
-            this.checkOverlap();
-            return;
-        }
-
+        const duration = getMotionDuration('--motion-medium', 300);
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
@@ -435,18 +427,32 @@ export class Window extends Component {
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
-            this._dockAnimation.reverse();
-        } else {
-            this._dockAnimation = node.animate(
-                [{ transform: startTransform }, { transform: endTransform }],
-                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
-            );
-            this._dockAnimation.onfinish = () => {
+            if (duration > 0) {
+                this._dockAnimation.updateTiming({ duration });
+                this._dockAnimation.reverse();
+            } else {
+                this._dockAnimation.cancel();
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
                 this.checkOverlap();
-                this._dockAnimation.onfinish = null;
-            };
+            }
+        } else {
+            if (duration <= 0) {
+                node.style.transform = endTransform;
+                this.setState({ maximized: false });
+                this.checkOverlap();
+            } else {
+                this._dockAnimation = node.animate(
+                    [{ transform: startTransform }, { transform: endTransform }],
+                    { duration, easing: 'ease-in-out', fill: 'forwards' }
+                );
+                this._dockAnimation.onfinish = () => {
+                    node.style.transform = endTransform;
+                    this.setState({ maximized: false });
+                    this.checkOverlap();
+                    this._dockAnimation.onfinish = null;
+                };
+            }
         }
     }
 
@@ -471,9 +477,10 @@ export class Window extends Component {
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
+            const closeDelay = Math.max(getMotionDuration('--motion-medium', 300), 0);
             setTimeout(() => {
                 this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            }, closeDelay) // after animation this window will be unmounted from parent (Desktop)
         });
     }
 
@@ -635,7 +642,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-[var(--motion-medium)] rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-[var(--motion-fast)] " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
