@@ -1,40 +1,8 @@
 import React, { useState } from 'react';
 import FormError from '../ui/FormError';
 
-interface USBEndpoint {
-  direction: 'in' | 'out';
-  endpointNumber: number;
-}
-
-interface USBAlternateInterface {
-  endpoints: USBEndpoint[];
-}
-
-interface USBInterface {
-  alternates: USBAlternateInterface[];
-}
-
-interface USBConfiguration {
-  interfaces: USBInterface[];
-}
-
-interface USBDevice {
-  productName?: string;
-  configuration: USBConfiguration | null;
-  open(): Promise<void>;
-  close(): Promise<void>;
-  selectConfiguration(value: number): Promise<void>;
-  claimInterface(index: number): Promise<void>;
-  transferOut(endpointNumber: number, data: BufferSource): Promise<void>;
-  transferIn(endpointNumber: number, length: number): Promise<{ data?: DataView }>;
-  addEventListener(type: 'disconnect', listener: () => void): void;
-}
-
-interface USB {
-  requestDevice(options: { filters: any[] }): Promise<USBDevice>;
-}
-
-type NavigatorUSB = Navigator & { usb: USB };
+// TODO: Drop the stopgap WebUSB ambient declarations when
+// https://github.com/WICG/webusb/issues/213 is resolved upstream.
 
 const WebUSBApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'usb' in navigator;
@@ -54,7 +22,12 @@ const WebUSBApp: React.FC = () => {
       return;
     }
     try {
-      const d = await (navigator as NavigatorUSB).usb.requestDevice({ filters: [] });
+      const usb = navigator.usb;
+      if (!usb) {
+        throw new Error('WebUSB not available on this navigator.');
+      }
+
+      const d = await usb.requestDevice({ filters: [] });
       await d.open();
       if (d.configuration === null) {
         await d.selectConfiguration(1);
@@ -116,7 +89,8 @@ const WebUSBApp: React.FC = () => {
       const decoder = new TextDecoder();
       await device.transferOut(outEndpoint, encoder.encode(message + '\n'));
       const result = await device.transferIn(inEndpoint, 64);
-      const text = decoder.decode(result.data);
+      const dataView = result.data ?? new DataView(new ArrayBuffer(0));
+      const text = decoder.decode(dataView);
       setLog((l) => [...l, `> ${message}`, `< ${text.trim()}`]);
       setMessage('');
     } catch (err) {
