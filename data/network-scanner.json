@@ -1,0 +1,124 @@
+[
+  {
+    "host": "web-01.internal",
+    "ip": "10.42.1.15",
+    "scanProfile": "T4 TCP Connect",
+    "scanTime": "2024-05-10T14:23:00Z",
+    "summary": {
+      "open": 4,
+      "filtered": 1,
+      "closed": 0
+    },
+    "ports": [
+      {
+        "port": 22,
+        "protocol": "tcp",
+        "state": "open",
+        "service": "ssh",
+        "banner": "OpenSSH 8.6p1 (Ubuntu)",
+        "recommendation": "Restrict SSH to administration networks and enforce key-based authentication."
+      },
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "state": "open",
+        "service": "http",
+        "banner": "nginx 1.23.3",
+        "recommendation": "Enable HSTS and keep the reverse proxy patched."
+      },
+      {
+        "port": 443,
+        "protocol": "tcp",
+        "state": "open",
+        "service": "https",
+        "banner": "nginx 1.23.3 (TLSv1.3)",
+        "recommendation": "Review TLS certificate rotation schedule."
+      },
+      {
+        "port": 3306,
+        "protocol": "tcp",
+        "state": "filtered",
+        "service": "mysql",
+        "banner": "Filtered by firewall",
+        "recommendation": "Confirm database access is limited to application subnets."
+      },
+      {
+        "port": 8080,
+        "protocol": "tcp",
+        "state": "open",
+        "service": "http-proxy",
+        "banner": "Gunicorn 20.1.0",
+        "recommendation": "Require authentication and restrict IP ranges for management endpoints."
+      }
+    ],
+    "notes": [
+      "Host responded to ICMP echo requests.",
+      "HTTP service exposes a sample landing page with no login."
+    ]
+  },
+  {
+    "host": "files-02.lab",
+    "ip": "10.42.2.8",
+    "scanProfile": "UDP top 100 & TCP SYN",
+    "scanTime": "2024-05-10T14:25:00Z",
+    "summary": {
+      "open": 4,
+      "filtered": 1,
+      "closed": 1
+    },
+    "ports": [
+      {
+        "port": 21,
+        "protocol": "tcp",
+        "state": "closed",
+        "service": "ftp",
+        "banner": "Connection refused",
+        "recommendation": "Legacy FTP service removed; monitor for reappearance."
+      },
+      {
+        "port": 53,
+        "protocol": "udp",
+        "state": "open",
+        "service": "dns",
+        "banner": "BIND 9.18.12",
+        "recommendation": "Limit recursion to internal networks."
+      },
+      {
+        "port": 111,
+        "protocol": "tcp",
+        "state": "open",
+        "service": "rpcbind",
+        "banner": "rpcbind 2 (rpc #100000)",
+        "recommendation": "Restrict RPC services to management hosts."
+      },
+      {
+        "port": 139,
+        "protocol": "tcp",
+        "state": "open",
+        "service": "netbios-ssn",
+        "banner": "Samba smbd 4.17.5",
+        "recommendation": "Disable SMBv1 and enforce signing on all shares."
+      },
+      {
+        "port": 445,
+        "protocol": "tcp",
+        "state": "open",
+        "service": "microsoft-ds",
+        "banner": "Samba smbd 4.17.5",
+        "recommendation": "Require Kerberos authentication and regular patching."
+      },
+      {
+        "port": 2049,
+        "protocol": "tcp",
+        "state": "filtered",
+        "service": "nfs",
+        "banner": "Filtered by firewall",
+        "recommendation": "Verify NFS exports require authentication."
+      }
+    ],
+    "notes": [
+      "SMB shares advertise the LAB-OPS domain.",
+      "NFS probe returned filtered; review firewall allow list."
+    ]
+  }
+]
