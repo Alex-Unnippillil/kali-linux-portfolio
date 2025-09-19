@@ -50,6 +50,29 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn test --coverage
 
+  e2e:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: npx playwright install --with-deps
+      - name: Run Playwright end-to-end tests
+        run: |
+          set -euxo pipefail
+          yarn dev &
+          DEV_PID=$!
+          trap "kill $DEV_PID" EXIT
+          npx wait-on http://127.0.0.1:3000
+          npx playwright test
+
   security:
     runs-on: ubuntu-latest
     needs: install
@@ -62,9 +85,42 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
 
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+      - name: Run Lighthouse audits
+        run: |
+          set -euxo pipefail
+          yarn start -p 3000 &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID" EXIT
+          npx wait-on http://127.0.0.1:3000
+          npx @lhci/cli@0.14.0 collect \
+            --url=http://127.0.0.1:3000/ \
+            --numberOfRuns=1 \
+            --settings.chromeFlags="--headless --no-sandbox"
+          npx @lhci/cli@0.14.0 assert --preset=lighthouse:recommended
+
   vercel-preview:
     runs-on: ubuntu-latest
-    needs: install
+    needs:
+      - lint
+      - typecheck
+      - test
+      - security
+      - e2e
+      - lighthouse
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

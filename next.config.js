@@ -124,11 +124,6 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
-
-    // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
-    eslint: {
-      ignoreDuringBuilds: true,
-    },
     images: {
       unoptimized: true,
       domains: [

@@ -1,47 +1,42 @@
-name: Node.js CI
+name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
 
 jobs:
-  build:
+  deploy:
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'yarn'
-          cache-dependency-path: 'yarn.lock'
-      - name: Installing Packages
+          cache: yarn
+          cache-dependency-path: yarn.lock
+      - name: Install dependencies
         run: yarn install --immutable
-
-      - name: Test
-        run: yarn jest -w=1
-
-      - name: Lint
-        run: yarn lint
-
-      - name: Type Check
-        run: yarn tsc --noEmit
-
-      - name: Building
+      - name: Build production bundle
         run: yarn build
         env:
           NEXT_PUBLIC_TRACKING_ID: ${{ secrets.NEXT_PUBLIC_TRACKING_ID }}
           NEXT_PUBLIC_SERVICE_ID: ${{ secrets.NEXT_PUBLIC_SERVICE_ID }}
           NEXT_PUBLIC_TEMPLATE_ID: ${{ secrets.NEXT_PUBLIC_TEMPLATE_ID }}
           NEXT_PUBLIC_USER_ID: ${{ secrets.NEXT_PUBLIC_USER_ID }}
-
-      - name: Exporting Bundle File
+      - name: Export static output
         run: yarn export
       - run: touch ./out/.nojekyll
-
-      - name: Deploy to Github-Pages 
+      - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.5
         with:
-          branch: gh-pages 
-          folder: out 
+          branch: gh-pages
+          folder: out
