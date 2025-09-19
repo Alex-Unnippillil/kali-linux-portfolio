@@ -60,3 +60,17 @@ export const useSnapSetting = () =>
     true,
     (v): v is boolean => typeof v === 'boolean',
   );
+
+export const useSnapAssistSetting = () =>
+  usePersistentState<boolean>(
+    'snap-assist-enabled',
+    true,
+    (v): v is boolean => typeof v === 'boolean',
+  );
+
+export const useSnapCornerSetting = () =>
+  usePersistentState<boolean>(
+    'snap-corners-enabled',
+    true,
+    (v): v is boolean => typeof v === 'boolean',
+  );

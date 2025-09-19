@@ -4,6 +4,10 @@ import logger from '../../utils/logger'
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const tilingEnabled = props.snapEnabled !== false
+    const snapAssistEnabled = props.snapAssistEnabled !== false
+    const snapCornerEnabled = props.snapCornerEnabled !== false
+    const showTilingControls = Boolean(props.onToggleSnap || props.onToggleSnapAssist || props.onToggleSnapCorner)
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -118,6 +122,47 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
+            {showTilingControls && (
+                <>
+                    <Devider />
+                    {props.onToggleSnap && (
+                        <button
+                            onClick={props.onToggleSnap}
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-label="Toggle window snapping"
+                            aria-checked={tilingEnabled}
+                            className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                        >
+                            <span className="ml-5">Snap windows</span>
+                        </button>
+                    )}
+                    {props.onToggleSnapAssist && (
+                        <button
+                            onClick={props.onToggleSnapAssist}
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-label="Toggle snap target overlays"
+                            aria-checked={snapAssistEnabled}
+                            className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                        >
+                            <span className="ml-9">Show snap targets</span>
+                        </button>
+                    )}
+                    {props.onToggleSnapCorner && (
+                        <button
+                            onClick={props.onToggleSnapCorner}
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-label="Toggle quadrant snapping"
+                            aria-checked={snapCornerEnabled}
+                            className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                        >
+                            <span className="ml-9">Enable quadrant snaps</span>
+                        </button>
+                    )}
+                </>
+            )}
             <Devider />
             <button
                 onClick={props.clearSession}
