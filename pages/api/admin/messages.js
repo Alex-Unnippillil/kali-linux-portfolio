@@ -1,5 +1,5 @@
-import { getServiceClient } from '../../../lib/service-client';
-import { createLogger } from '../../../lib/logger';
+import { getServiceClient } from '../../../lib/server/service-client';
+import { createLogger } from '../../../lib/server/logger';
 
 export default async function handler(
   req,
