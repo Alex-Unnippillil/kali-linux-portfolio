@@ -17,6 +17,10 @@ This repository showcases **static, non-operational simulations** of security to
 
 Always test inside controlled labs and obtain written permission before performing any security assessment.
 
+## Security Policy
+
+Review [SECURITY.md](./SECURITY.md) for in-scope components, coordinated disclosure guidelines, and expected response timelines when reporting vulnerabilities.
+
 ---
 
 ## Setup
