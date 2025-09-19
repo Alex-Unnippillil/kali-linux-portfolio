@@ -1,3 +1,5 @@
+import { recordTelemetry } from './telemetry';
+
 const SENSITIVE_KEYS = new Set(['password', 'secret', 'token', 'key']);
 
 export interface Logger {
@@ -24,6 +26,19 @@ class ConsoleLogger implements Logger {
       ...safeMeta,
     };
     console.log(JSON.stringify(entry));
+    try {
+      recordTelemetry({
+        timestamp: Date.now(),
+        level,
+        message,
+        meta: {
+          correlationId: this.correlationId,
+          ...safeMeta,
+        },
+      });
+    } catch {
+      // ignore telemetry failures
+    }
   }
 
   info(message: string, meta?: Record<string, any>) {
