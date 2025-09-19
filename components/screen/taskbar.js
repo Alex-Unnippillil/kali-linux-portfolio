@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import Button from '../ui/Button';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
@@ -18,15 +19,16 @@ export default function Taskbar(props) {
     return (
         <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
             {runningApps.map(app => (
-                <button
+                <Button
                     key={app.id}
-                    type="button"
                     aria-label={app.title}
                     data-context="taskbar"
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}
-                    className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
-                        'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
+                    variant="ghost"
+                    size="sm"
+                    className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? 'bg-white/20 ' : '') +
+                        'relative mx-1 flex items-center gap-1 px-2 py-1 text-white hover:bg-white/10 justify-start'}
                 >
                     <Image
                         width={24}
@@ -40,7 +42,7 @@ export default function Taskbar(props) {
                     {!props.focused_windows[app.id] && !props.minimized_windows[app.id] && (
                         <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded" />
                     )}
-                </button>
+                </Button>
             ))}
         </div>
     );

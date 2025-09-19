@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import Button from '../ui/Button';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -51,8 +52,11 @@ export function AllApps(props) {
     const [title, setTitle] = useState(false);
 
     return (
-        <div
-            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
+        <Button
+            aria-label="Show Applications"
+            variant="ghost"
+            size="sm"
+            className="m-1 flex h-10 w-10 items-center justify-center gap-0 p-0 hover:bg-white/10 transition-hover transition-active"
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
                 setTitle(true);
@@ -80,6 +84,6 @@ export function AllApps(props) {
                     Show Applications
                 </div>
             </div>
-        </div>
+        </Button>
     );
 }

@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import Image from 'next/image';
 import { toCanvas } from 'html-to-image';
+import Button from '../ui/Button';
 
 export class SideBarApp extends Component {
     constructor() {
@@ -87,8 +88,7 @@ export class SideBarApp extends Component {
 
     render() {
         return (
-            <button
-                type="button"
+            <Button
                 aria-label={this.props.title}
                 data-context="app"
                 data-app-id={this.props.id}
@@ -100,8 +100,10 @@ export class SideBarApp extends Component {
                 onMouseLeave={() => {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                variant="ghost"
+                size="sm"
+                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white/10 " : "") +
+                    "relative m-1 flex h-auto w-auto items-center gap-0 p-2 hover:bg-white/10 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
             >
                 <Image
@@ -153,7 +155,7 @@ export class SideBarApp extends Component {
                 >
                     {this.props.title}
                 </div>
-            </button>
+            </Button>
         );
     }
 }
