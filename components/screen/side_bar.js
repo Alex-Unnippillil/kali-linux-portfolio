@@ -27,20 +27,27 @@ export default function SideBar(props) {
 
     return (
         <>
-            <nav
-                aria-label="Dock"
+            <aside
+                id="desktop-dock"
+                aria-label="Desktop dock"
                 className={(props.hide ? " -translate-x-full " : "") +
-                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
+                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
             >
-                {
-                    (
-                        Object.keys(props.closed_windows).length !== 0
-                            ? renderApps(props)
-                            : null
-                    )
-                }
-                <AllApps showApps={props.showAllApps} />
-            </nav>
+                <nav
+                    id="desktop-dock-nav"
+                    aria-label="Dock"
+                    className="flex flex-col justify-start items-center h-full w-full"
+                >
+                    {
+                        (
+                            Object.keys(props.closed_windows).length !== 0
+                                ? renderApps(props)
+                                : null
+                        )
+                    }
+                    <AllApps showApps={props.showAllApps} />
+                </nav>
+            </aside>
             <div onMouseEnter={showSideBar} onMouseLeave={hideSideBar} className={"w-1 h-full absolute top-0 left-0 bg-transparent z-50"}></div>
         </>
     )

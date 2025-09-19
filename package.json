@@ -133,6 +133,7 @@
     "fake-indexeddb": "^6.1.0",
     "fast-glob": "^3.3.3",
     "jest": "30.0.5",
+    "jest-axe": "^10.0.0",
     "jest-environment-jsdom": "30.0.5",
     "magic-string": "0.30.18",
     "node-mocks-http": "1.17.2",

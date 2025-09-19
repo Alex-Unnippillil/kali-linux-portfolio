@@ -28,6 +28,14 @@ const ubuntu = Ubuntu({
 function MyApp(props) {
   const { Component, pageProps } = props;
 
+  const handleSkipToMain = (event) => {
+    const main = document.getElementById('desktop-main');
+    if (main) {
+      event.preventDefault();
+      main.focus();
+    }
+  };
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
@@ -148,14 +156,15 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
-      <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
-          href="#app-grid"
+          href="#desktop-main"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+          onClick={handleSkipToMain}
         >
-          Skip to app grid
+          Skip to main content
         </a>
+        <Script src="/a2hs.js" strategy="beforeInteractive" />
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
