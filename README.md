@@ -54,6 +54,26 @@ yarn export && npx serve out
 ```
 Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
+### Bundle Analyzer Treemap
+
+Generate an updated bundle report (HTML + PNG) before large dependency changes to track bundle growth.
+
+```bash
+# Install the Playwright browser once per machine
+npx playwright install chromium
+
+# Build with ANALYZE enabled and capture the treemap screenshot
+yarn analyze:treemap
+```
+
+The outputs are written to `bundle-analyzer/`:
+
+- `client.html` / `server.html` – interactive webpack-bundle-analyzer reports.
+- `client-stats.json` / `server-stats.json` – raw stats for historical diffing.
+- `client-treemap.png` – static treemap used in CI comments.
+
+The CI workflow uploads the entire folder as an artifact on every pull request so you can download and compare it across runs.
+
 ### Install as PWA for Sharing
 
 To send text or links directly into the Sticky Notes app:
