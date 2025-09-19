@@ -130,6 +130,7 @@
     "@types/wicg-file-system-access": "^2023.10.6",
     "eslint": "^9.13.0",
     "eslint-config-next": "15.5.2",
+    "eslint-plugin-boundaries": "^5.0.1",
     "fake-indexeddb": "^6.1.0",
     "fast-glob": "^3.3.3",
     "jest": "30.0.5",
