@@ -8,6 +8,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
+import { displaySystemCheck } from './components/apps/diagnostics/SystemCheck';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
@@ -232,6 +233,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'system-check',
+    title: 'System Check',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySystemCheck,
   },
   {
     id: 'figlet',
