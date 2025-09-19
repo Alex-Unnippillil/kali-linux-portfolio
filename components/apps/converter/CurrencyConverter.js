@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useIntl } from '../../../lib/i18n/intl';
+import { messageIds } from '../../../lib/i18n/messages';
 
 const apiBase = process.env.NEXT_PUBLIC_CURRENCY_API_URL || 'https://api.exchangerate.host/latest';
 const isDemo = !process.env.NEXT_PUBLIC_CURRENCY_API_URL;
@@ -8,7 +10,7 @@ const CurrencyConverter = () => {
   const [base, setBase] = useState('USD');
   const [quote, setQuote] = useState('EUR');
   const [amount, setAmount] = useState('');
-  const [result, setResult] = useState('');
+  const [result, setResult] = useState(null);
   const [lastUpdated, setLastUpdated] = useState('');
   const [history, setHistory] = useState([]);
 
@@ -63,23 +65,23 @@ const CurrencyConverter = () => {
     }
   }, [base, quote, lastUpdated]);
 
+  const intl = useIntl();
+
   useEffect(() => {
     if (!amount || !rates[quote]) {
-      setResult('');
+      setResult(null);
       return;
     }
-    const converted = parseFloat(amount) * rates[quote];
-    const formatted = new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: quote,
-    }).format(converted);
-    setResult(formatted);
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount)) {
+      setResult(null);
+      return;
+    }
+    const converted = parsedAmount * rates[quote];
+    setResult({ base: parsedAmount, converted });
   }, [amount, quote, rates]);
 
   const currencyOptions = [base, ...Object.keys(rates)].sort();
-
-  const formatAmount = (val, curr) =>
-    new Intl.NumberFormat(undefined, { style: 'currency', currency: curr }).format(val);
 
   const chartPoints = useMemo(() => {
     if (history.length < 2) return '';
@@ -96,10 +98,16 @@ const CurrencyConverter = () => {
 
   return (
     <div className="bg-gray-700 p-4 rounded flex flex-col gap-2">
-      <h2 className="text-xl mb-2">Currency Converter</h2>
-      {isDemo && <div className="text-xs text-yellow-300">Demo rates</div>}
+      <h2 className="text-xl mb-2">
+        {intl.formatMessage({ id: messageIds.currencyConverter.title })}
+      </h2>
+      {isDemo && (
+        <div className="text-xs text-yellow-300">
+          {intl.formatMessage({ id: messageIds.currencyConverter.demoNotice })}
+        </div>
+      )}
       <label className="flex flex-col">
-        Amount
+        {intl.formatMessage({ id: messageIds.currencyConverter.amountLabel })}
         <input
           className="text-black p-1 rounded"
           type="number"
@@ -109,7 +117,7 @@ const CurrencyConverter = () => {
       </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col">
-          Base
+          {intl.formatMessage({ id: messageIds.currencyConverter.baseLabel })}
           <select
             className="text-black p-1 rounded"
             value={base}
@@ -123,7 +131,7 @@ const CurrencyConverter = () => {
           </select>
         </label>
         <label className="flex flex-col">
-          Quote
+          {intl.formatMessage({ id: messageIds.currencyConverter.quoteLabel })}
           <select
             className="text-black p-1 rounded"
             value={quote}
@@ -138,18 +146,42 @@ const CurrencyConverter = () => {
         </label>
       </div>
       <div data-testid="currency-result" className="mt-2">
-        {result && `${formatAmount(amount, base)} = ${result}`}
+        {result &&
+          intl.formatMessage(
+            { id: messageIds.currencyConverter.result },
+            {
+              baseAmount: intl.formatNumber(result.base, {
+                style: 'currency',
+                currency: base,
+              }),
+              quoteAmount: intl.formatNumber(result.converted, {
+                style: 'currency',
+                currency: quote,
+              }),
+            },
+          )}
       </div>
       {lastUpdated && (
-        <div className="text-xs">Last updated: {new Date(lastUpdated).toLocaleString()}</div>
+        <div className="text-xs">
+          {intl.formatMessage(
+            { id: messageIds.currencyConverter.lastUpdated },
+            { timestamp: new Date(lastUpdated) },
+          )}
+        </div>
       )}
+      <div className="text-xs" data-testid="history-count">
+        {intl.formatMessage(
+          { id: messageIds.currencyConverter.historyCount },
+          { count: history.length },
+        )}
+      </div>
       {chartPoints && (
         <svg
           className="mt-2"
           width="100%"
           height="100"
           role="img"
-          aria-label="exchange rate chart"
+          aria-label={intl.formatMessage({ id: messageIds.currencyConverter.chartLabel })}
         >
           <polyline
             fill="none"

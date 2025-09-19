@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +16,8 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { IntlProvider } from '../lib/i18n/intl';
+import { DEFAULT_LOCALE, resolveLocale } from '../lib/i18n/messages';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,6 +29,22 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+
+  const [locale, setLocale] = useState(DEFAULT_LOCALE);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const docLanguage = typeof document !== 'undefined' ? document.documentElement.lang : undefined;
+    const navigatorLanguage = window.navigator?.language;
+    const resolved = resolveLocale(docLanguage || navigatorLanguage);
+    setLocale(resolved);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = locale;
+  }, [locale]);
 
 
   useEffect(() => {
@@ -156,23 +174,25 @@ function MyApp(props) {
         >
           Skip to app grid
         </a>
-        <SettingsProvider>
-          <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
-            <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
+        <IntlProvider locale={locale}>
+          <SettingsProvider>
+            <PipPortalProvider>
+              <div aria-live="polite" id="live-region" />
+              <Component {...pageProps} />
+              <ShortcutOverlay />
+              <Analytics
+                beforeSend={(e) => {
+                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                  const evt = e;
+                  if (evt.metadata?.email) delete evt.metadata.email;
+                  return e;
+                }}
+              />
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-          </PipPortalProvider>
-        </SettingsProvider>
+              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            </PipPortalProvider>
+          </SettingsProvider>
+        </IntlProvider>
       </div>
     </ErrorBoundary>
 
