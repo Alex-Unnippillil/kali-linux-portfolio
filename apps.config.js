@@ -73,6 +73,7 @@ const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery')
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
+const DiagnosticsApp = createDynamicApp('diagnostics', 'Diagnostics Toolbox');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -167,6 +168,7 @@ const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 const displaySubnetCalculator = createDisplay(SubnetCalculatorApp);
+const displayDiagnostics = createDisplay(DiagnosticsApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -268,6 +270,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'diagnostics',
+    title: 'Diagnostics Toolbox',
+    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDiagnostics,
   },
   {
     id: 'subnet-calculator',
