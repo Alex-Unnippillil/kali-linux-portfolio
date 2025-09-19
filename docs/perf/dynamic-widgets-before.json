@@ -1,0 +1,42 @@
+[
+  {
+    "url": "http://localhost:3000/profile",
+    "measuredAt": "2025-09-19T00:54:11.540Z",
+    "profile": {
+      "label": "Fast 3G",
+      "latency": 150,
+      "downloadKbps": 1600,
+      "uploadKbps": 750,
+      "cpuSlowdown": 4
+    },
+    "firstPaint": 241.80000000004657,
+    "firstContentfulPaint": 241.80000000004657,
+    "largestContentfulPaint": 12689,
+    "navigationTiming": {
+      "domContentLoaded": 12689,
+      "load": 12689.699999999953,
+      "responseStart": 241.80000000004657
+    },
+    "totalElapsedMs": 19215
+  },
+  {
+    "url": "http://localhost:3000/apps/john",
+    "measuredAt": "2025-09-19T00:54:30.959Z",
+    "profile": {
+      "label": "Fast 3G",
+      "latency": 150,
+      "downloadKbps": 1600,
+      "uploadKbps": 750,
+      "cpuSlowdown": 4
+    },
+    "firstPaint": 239.90000000002328,
+    "firstContentfulPaint": 239.90000000002328,
+    "largestContentfulPaint": 12741,
+    "navigationTiming": {
+      "domContentLoaded": 12741,
+      "load": 12741.5,
+      "responseStart": 239.90000000002328
+    },
+    "totalElapsedMs": 19252
+  }
+]

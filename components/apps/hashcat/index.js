@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import progressInfo from './progress.json';
-import StatsChart from '../../StatsChart';
+import ChartSkeleton from '../../skeletons/ChartSkeleton';
+const StatsChart = dynamic(() => import('../../StatsChart'), {
+  ssr: false,
+  loading: () => <ChartSkeleton />,
+});
+
 
 export const hashTypes = [
   {
