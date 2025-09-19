@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import displayManager, { type DisplayInfo } from "../../modules/displayManager";
 
 export default function Settings() {
   const {
@@ -31,16 +32,30 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    activeDisplayId,
+    setActiveDisplayId,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [displays, setDisplays] = useState<DisplayInfo[]>(() => displayManager.getDisplays());
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "display", label: "Display" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+
+  useEffect(() => {
+    const unsubscribe = displayManager.subscribe(({ displays: items }) => {
+      setDisplays(items);
+    });
+    return unsubscribe;
+  }, []);
+
+  const formatScale = (scale: number) =>
+    Number.isInteger(scale) ? scale.toFixed(0) : scale.toFixed(1);
 
   const wallpapers = [
     "wall-1",
@@ -80,6 +95,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.activeDisplay !== undefined)
+        setActiveDisplayId(parsed.activeDisplay);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +118,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setActiveDisplayId(defaults.activeDisplay);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -208,6 +226,55 @@ export default function Settings() {
             </button>
           </div>
         </>
+      )}
+      {activeTab === "display" && (
+        <div className="p-4 space-y-4">
+          <fieldset className="border border-gray-900 rounded-lg p-4">
+            <legend className="px-2 text-ubt-grey">Active display</legend>
+            {displays.length === 0 ? (
+              <p className="text-sm text-ubt-grey">No displays detected.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {displays.map((display) => {
+                  const resolution = `${display.bounds.width}×${display.bounds.height}`;
+                  const scale = formatScale(display.scaleFactor);
+                  return (
+                    <label
+                      key={display.id}
+                      className={`flex items-center justify-between rounded px-3 py-2 border transition-colors bg-ub-cool-grey bg-opacity-60 ${
+                        activeDisplayId === display.id
+                          ? "border-ub-orange"
+                          : "border-transparent"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="active-display"
+                          value={display.id}
+                          checked={activeDisplayId === display.id}
+                          onChange={() => setActiveDisplayId(display.id)}
+                          className="accent-ub-orange"
+                        />
+                        <span className="text-ubt-grey font-medium">
+                          {display.label}
+                          {display.isPrimary ? " (Primary)" : ""}
+                        </span>
+                      </span>
+                      <span className="text-xs text-ubt-grey">
+                        {resolution} @ {scale}x
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+          <p className="text-xs text-ubt-grey leading-relaxed">
+            Windows open on the selected display. When switching displays the desktop
+            clamps existing windows inside the new bounds so they never spawn off-screen.
+          </p>
+        </div>
       )}
       {activeTab === "accessibility" && (
         <>
