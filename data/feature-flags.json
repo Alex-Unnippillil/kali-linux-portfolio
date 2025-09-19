@@ -1,0 +1,20 @@
+[
+  {
+    "id": "beta_badge",
+    "type": "boolean",
+    "default": false,
+    "description": "Displays the floating beta badge in the desktop shell."
+  },
+  {
+    "id": "ui_experiments",
+    "type": "boolean",
+    "default": false,
+    "description": "Enables adaptive window layout experiments for the shell."
+  },
+  {
+    "id": "metasploit_demo_mode",
+    "type": "boolean",
+    "default": false,
+    "description": "Preloads mock Metasploit loot and disables destructive commands."
+  }
+]

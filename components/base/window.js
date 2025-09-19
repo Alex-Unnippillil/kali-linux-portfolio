@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { getFeatureFlagValue } from '../../hooks/useFeatureFlags';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -35,7 +36,7 @@ export class Window extends Component {
             grabbed: false,
         }
         this._usageTimeout = null;
-        this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        this._uiExperiments = getFeatureFlagValue('ui_experiments');
         this._menuOpener = null;
     }
 

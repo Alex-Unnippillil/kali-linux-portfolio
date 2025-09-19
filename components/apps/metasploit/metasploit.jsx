@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
+import { useFeatureFlag } from '../../../hooks/useFeatureFlags';
 import ConsolePane from './ConsolePane';
 
 const severities = ['critical', 'high', 'medium', 'low'];
@@ -18,9 +19,11 @@ const timelineSteps = 5;
 const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
 
 const MetasploitApp = ({
-  demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
+  demoMode: demoModeOverride,
   onLoadingChange = () => {},
 } = {}) => {
+  const featureDemoMode = useFeatureFlag('metasploit_demo_mode');
+  const demoMode = demoModeOverride ?? featureDemoMode;
   const [command, setCommand] = useState('');
   const [output, setOutput] = usePersistentState('metasploit-history', banner);
   const [loading, setLoading] = useState(false);
