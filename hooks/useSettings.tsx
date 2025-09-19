@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -23,7 +31,18 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import settingsSync, {
+  resolveConflictSelection,
+  type SettingsConflict,
+  type SettingsMergeOption,
+  type SettingsMergeOptionId,
+  type SettingsPayload,
+  type SettingsSnapshot,
+  type SyncStrategy,
+} from '../utils/settingsSync';
+
 type Density = 'regular' | 'compact';
+type SettingsSyncStatus = 'idle' | 'syncing' | 'conflict' | 'error';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -74,9 +93,19 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  syncStatus: SettingsSyncStatus;
+  syncError: string | null;
+  syncConflict: SettingsConflict | null;
+  syncOptions: SettingsMergeOption[];
+  lastSyncedAt: number | null;
+  resolveSyncConflict: (
+    optionId: SettingsMergeOptionId,
+    overrides?: Partial<SettingsPayload>,
+  ) => Promise<void>;
+  forceSync: (strategy?: SyncStrategy) => Promise<void>;
 }
 
-export const SettingsContext = createContext<SettingsContextValue>({
+const defaultContextValue: SettingsContextValue = {
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
@@ -99,21 +128,127 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
-});
+  syncStatus: 'idle',
+  syncError: null,
+  syncConflict: null,
+  syncOptions: [],
+  lastSyncedAt: null,
+  resolveSyncConflict: async () => {},
+  forceSync: async () => {},
+};
+
+export const SettingsContext = createContext<SettingsContextValue>(
+  defaultContextValue,
+);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const initialTheme = useRef<string>(loadTheme()).current;
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [reducedMotion, setReducedMotion] = useState<boolean>(
+    defaults.reducedMotion,
+  );
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
+  const [highContrast, setHighContrast] = useState<boolean>(
+    defaults.highContrast,
+  );
+  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(
+    defaults.largeHitAreas,
+  );
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [allowNetwork, setAllowNetwork] = useState<boolean>(
+    defaults.allowNetwork,
+  );
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setTheme] = useState<string>(initialTheme);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const baseSnapshotRef = useRef<SettingsSnapshot | null>(null);
+  const skipNextSyncRef = useRef(false);
+  const latestSettingsRef = useRef<SettingsPayload>({
+    accent: defaults.accent,
+    wallpaper: defaults.wallpaper,
+    density: defaults.density as Density,
+    reducedMotion: defaults.reducedMotion,
+    fontScale: defaults.fontScale,
+    highContrast: defaults.highContrast,
+    largeHitAreas: defaults.largeHitAreas,
+    pongSpin: defaults.pongSpin,
+    allowNetwork: defaults.allowNetwork,
+    haptics: defaults.haptics,
+    theme: initialTheme,
+  });
+  const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const isMountedRef = useRef(true);
+  const [syncStatus, setSyncStatus] = useState<SettingsSyncStatus>('syncing');
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncConflict, setSyncConflict] = useState<SettingsConflict | null>(
+    null,
+  );
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+
+  useEffect(() => () => {
+    isMountedRef.current = false;
+  }, []);
+
+  const applySettings = useCallback(
+    (payload: SettingsPayload) => {
+      skipNextSyncRef.current = true;
+      latestSettingsRef.current = { ...payload };
+      setAccent(payload.accent);
+      setWallpaper(payload.wallpaper);
+      setDensity(payload.density as Density);
+      setReducedMotion(payload.reducedMotion);
+      setFontScale(payload.fontScale);
+      setHighContrast(payload.highContrast);
+      setLargeHitAreas(payload.largeHitAreas);
+      setPongSpin(payload.pongSpin);
+      setAllowNetwork(payload.allowNetwork);
+      setHaptics(payload.haptics);
+      setTheme(payload.theme);
+    },
+    [],
+  );
+
+  const syncWithRemote = useCallback(
+    async (
+      strategy: SyncStrategy = 'manual',
+      explicitData?: SettingsPayload,
+      explicitBase?: SettingsSnapshot,
+    ) => {
+      syncQueueRef.current = syncQueueRef.current.then(async () => {
+        const baseSnapshot = explicitBase ?? baseSnapshotRef.current;
+        if (!baseSnapshot) return;
+        const data = explicitData ?? latestSettingsRef.current;
+        if (strategy !== 'manual' || !syncConflict) {
+          setSyncStatus('syncing');
+        }
+        setSyncError(null);
+        try {
+          const result = await settingsSync.save(data, {
+            strategy,
+            baseSnapshot,
+          });
+          if (!isMountedRef.current) return;
+          if (result.ok) {
+            baseSnapshotRef.current = result.snapshot;
+            setLastSyncedAt(result.snapshot.updatedAt);
+            setSyncConflict(null);
+            setSyncStatus('idle');
+          } else {
+            setSyncConflict(result.conflict);
+            setSyncStatus('conflict');
+          }
+        } catch (error) {
+          if (!isMountedRef.current) return;
+          setSyncError(error instanceof Error ? error.message : 'Sync failed');
+          setSyncStatus('error');
+        }
+      });
+      return syncQueueRef.current;
+    },
+    [syncConflict],
+  );
 
   useEffect(() => {
     (async () => {
@@ -130,6 +265,40 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setTheme(loadTheme());
     })();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const initialise = async () => {
+      try {
+        const snapshot = await settingsSync.load();
+        if (cancelled) return;
+        baseSnapshotRef.current = snapshot;
+        setLastSyncedAt(snapshot.updatedAt);
+        applySettings(snapshot.data);
+        setSyncStatus('idle');
+      } catch (error) {
+        if (cancelled) return;
+        setSyncError(error instanceof Error ? error.message : 'Sync failed');
+        setSyncStatus('error');
+      }
+    };
+
+    initialise();
+
+    const unsubscribe = settingsSync.subscribe((snapshot) => {
+      if (cancelled) return;
+      baseSnapshotRef.current = snapshot;
+      setLastSyncedAt(snapshot.updatedAt);
+      applySettings(snapshot.data);
+      setSyncConflict(null);
+      setSyncStatus('idle');
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [applySettings]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -188,7 +357,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    document.documentElement.style.setProperty(
+      '--font-multiplier',
+      fontScale.toString(),
+    );
     saveFontScale(fontScale);
   }, [fontScale]);
 
@@ -236,6 +408,76 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    const payload: SettingsPayload = {
+      accent,
+      wallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+    };
+
+    latestSettingsRef.current = payload;
+
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
+
+    if (!baseSnapshotRef.current || syncConflict) {
+      return;
+    }
+
+    void syncWithRemote('manual');
+  }, [
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+    syncConflict,
+    syncWithRemote,
+  ]);
+
+  const resolveSyncConflict = useCallback(
+    async (
+      optionId: SettingsMergeOptionId,
+      overrides?: Partial<SettingsPayload>,
+    ) => {
+      if (!syncConflict) return;
+      const conflict = syncConflict;
+      try {
+        const resolved = resolveConflictSelection(conflict, optionId, overrides);
+        applySettings(resolved);
+        setSyncConflict(null);
+        await syncWithRemote('manual', resolved, conflict.remote);
+      } catch (error) {
+        setSyncError(error instanceof Error ? error.message : 'Sync failed');
+        setSyncStatus('error');
+      }
+    },
+    [applySettings, syncConflict, syncWithRemote],
+  );
+
+  const forceSync = useCallback(
+    async (strategy: SyncStrategy = 'last-write-wins') => {
+      await syncWithRemote(strategy);
+    },
+    [syncWithRemote],
+  );
+
   return (
     <SettingsContext.Provider
       value={{
@@ -261,6 +503,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        syncStatus,
+        syncError,
+        syncConflict,
+        syncOptions: syncConflict?.options ?? [],
+        lastSyncedAt,
+        resolveSyncConflict,
+        forceSync,
       }}
     >
       {children}
@@ -269,4 +518,3 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 }
 
 export const useSettings = () => useContext(SettingsContext);
-
