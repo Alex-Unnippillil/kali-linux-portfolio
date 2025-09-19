@@ -1,0 +1,7 @@
+# This file controls the default reviewers requested by GitHub.
+# Maintainers: please confirm these assignments and keep them aligned with the current leads for each area.
+
+/apps/          @Alex-Unnippillil
+/components/    @Alex-Unnippillil
+/lib/           @Alex-Unnippillil
+/configs/       @Alex-Unnippillil
