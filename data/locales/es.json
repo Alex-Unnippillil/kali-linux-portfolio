@@ -1,0 +1,37 @@
+{
+  "quickSettings": {
+    "panelLabel": "Ajustes rápidos",
+    "theme": "Tema",
+    "themeValue": {
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "sound": "Sonido",
+    "network": "Red",
+    "reducedMotion": "Reducir movimiento",
+    "locale": {
+      "label": "Idioma",
+      "placeholder": "Selecciona un idioma"
+    }
+  },
+  "locale": {
+    "en": "Inglés",
+    "es": "Español"
+  },
+  "whisker": {
+    "buttonLabel": "Aplicaciones",
+    "searchPlaceholder": "Buscar",
+    "categories": {
+      "all": "Todas",
+      "favorites": "Favoritas",
+      "recent": "Recientes",
+      "utilities": "Utilidades",
+      "games": "Juegos"
+    }
+  },
+  "status": {
+    "online": "En línea",
+    "onlineBlocked": "En línea (solicitudes bloqueadas)",
+    "offline": "Sin conexión"
+  }
+}

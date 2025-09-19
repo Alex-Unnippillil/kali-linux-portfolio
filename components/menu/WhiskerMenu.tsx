@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useLocale } from '../../hooks/useLocale';
 
 type AppMeta = {
   id: string;
@@ -12,17 +13,13 @@ type AppMeta = {
   favourite?: boolean;
 };
 
-const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'favorites', label: 'Favorites' },
-  { id: 'recent', label: 'Recent' },
-  { id: 'utilities', label: 'Utilities' },
-  { id: 'games', label: 'Games' }
-];
+const CATEGORY_IDS = ['all', 'favorites', 'recent', 'utilities', 'games'] as const;
+type CategoryId = (typeof CATEGORY_IDS)[number];
 
 const WhiskerMenu: React.FC = () => {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState('all');
+  const [category, setCategory] = useState<CategoryId>('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -65,6 +62,15 @@ const WhiskerMenu: React.FC = () => {
     }
     return list;
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+
+  const categories = useMemo(
+    () =>
+      CATEGORY_IDS.map((id) => ({
+        id,
+        label: t(`whisker.categories.${id}`),
+      })),
+    [t],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -124,12 +130,12 @@ const WhiskerMenu: React.FC = () => {
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
+          alt={t('whisker.buttonLabel')}
           width={16}
           height={16}
           className="inline mr-1"
         />
-        Applications
+        {t('whisker.buttonLabel')}
       </button>
       {open && (
         <div
@@ -143,7 +149,7 @@ const WhiskerMenu: React.FC = () => {
           }}
         >
           <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat.id}
                 className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
@@ -156,7 +162,8 @@ const WhiskerMenu: React.FC = () => {
           <div className="p-3">
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
+              placeholder={t('whisker.searchPlaceholder')}
+              aria-label={t('whisker.searchPlaceholder')}
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus

@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import { useLocale } from '../../hooks/useLocale';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
+  const { t } = useLocale();
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -42,13 +44,19 @@ export default function Status() {
     <div className="flex justify-center items-center">
       <span
         className="mx-1.5 relative"
-        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
+        title={
+          online
+            ? allowNetwork
+              ? t('status.online')
+              : t('status.onlineBlocked')
+            : t('status.offline')
+        }
       >
         <Image
           width={16}
           height={16}
           src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
-          alt={online ? "online" : "offline"}
+          alt={online ? t('status.online') : t('status.offline')}
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />
