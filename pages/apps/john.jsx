@@ -1,11 +1,11 @@
 import dynamic from 'next/dynamic';
+import SimulatorSkeleton from '../../components/skeletons/SimulatorSkeleton';
 
 const John = dynamic(() => import('../../apps/john'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  loading: () => <SimulatorSkeleton />,
 });
 
 export default function JohnPage() {
   return <John />;
 }
-

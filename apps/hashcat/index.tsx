@@ -1,9 +1,20 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
-import StatsChart from '../../components/StatsChart';
+import ChartSkeleton from '../../components/skeletons/ChartSkeleton';
+
+type StatsChartProps = {
+  count: number;
+  time: number;
+};
+
+const StatsChart = dynamic<StatsChartProps>(() => import('../../components/StatsChart'), {
+  ssr: false,
+  loading: () => <ChartSkeleton />,
+});
 
 interface Preset {
   value: string;

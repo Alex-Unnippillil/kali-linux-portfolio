@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import AuditSimulator from './components/AuditSimulator';
+import dynamic from 'next/dynamic';
+import SimulatorSkeleton from '../../components/skeletons/SimulatorSkeleton';
+
+const AuditSimulator = dynamic(() => import('./components/AuditSimulator'), {
+  ssr: false,
+  loading: () => <SimulatorSkeleton />,
+});
 
 interface HashItem {
   hash: string;
