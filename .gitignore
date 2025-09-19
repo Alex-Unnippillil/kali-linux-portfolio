@@ -27,6 +27,7 @@ dist
 # misc
 .DS_Store
 *.pem
+artifacts/
 
 # debug
 npm-debug.log*
