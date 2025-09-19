@@ -2,7 +2,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
-const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { assertServerEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -114,21 +114,13 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
-try {
-  validateEnv?.(process.env);
-} catch {
-  console.warn('Missing env vars; running without validation');
-}
+assertServerEnv(process.env);
 
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
 
-    // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
-    eslint: {
-      ignoreDuringBuilds: true,
-    },
     images: {
       unoptimized: true,
       domains: [

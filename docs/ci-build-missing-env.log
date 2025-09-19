@@ -1,0 +1,7 @@
+ ⨯ Failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-error
+
+> Build error occurred
+Error: Invalid environment configuration:
+  - RECAPTCHA_SECRET: RECAPTCHA_SECRET is required
+    at assertServerEnv (lib/validate.js:62:15)
+    at Object.<anonymous> (next.config.js:117:1)
