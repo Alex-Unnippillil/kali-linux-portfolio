@@ -140,7 +140,7 @@
     "playwright-core": "^1.55.0",
     "test-exclude": "7.0.1",
     "typescript": "5.8.2",
-    "wait-on": "^8.0.4",
+    "wait-on": "^9.0.0",
     "webpack": "^5.92.0",
     "workbox-build": "7.1.1",
     "ws": "^8.18.0"
@@ -150,7 +150,8 @@
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
     "glob@npm:^7.1.6": "npm:glob@^9.3.5",
-    "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1"
+    "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1",
+    "path-to-regexp": "6.3.0"
   },
   "packageManager": "yarn@4.9.2"
 }
