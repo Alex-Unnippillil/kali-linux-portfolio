@@ -1,0 +1,13 @@
+{
+  "retryOn429": true,
+  "retryCount": 3,
+  "fallbackRetryDelay": "exponential",
+  "timeout": "15s",
+  "aliveStatusCodes": [200, 206, 301, 302, 403, 429],
+  "ignorePatterns": [
+    { "pattern": "^mailto:" },
+    { "pattern": "^tel:" },
+    { "pattern": "^sms:" },
+    { "pattern": "^geo:" }
+  ]
+}

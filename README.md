@@ -92,6 +92,9 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn docs:typedoc` – generate markdown API reference in `docs/reference/` using TypeDoc.
+- `yarn docs:links` – run the markdown link checker (`markdown-link-check`) against project docs.
+- `yarn docs:qa` – build the docs and run link validation in a single command.
 
 ---
 
@@ -99,6 +102,16 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- Run `yarn docs:qa` to regenerate the documentation and catch broken links before you push.
+
+## Contributor Guidelines
+
+### Documentation QA
+
+- Generated documentation lives under `docs/reference/` and is ignored by Git. Use `yarn docs:typedoc` locally when you need to inspect the TypeScript API reference.
+- Always run `yarn docs:qa` before opening a pull request. It treats TypeDoc warnings as build failures and verifies every Markdown link using the shared `markdown-link-check.json` config.
+- When you only touch a subset of docs, you can pass additional globs to the link checker. For example, `yarn docs:links docs/new-app-checklist.md` limits validation to that file.
+- Fix broken links or TypeDoc warnings as part of your change—CI fails on these checks.
 
 ---
 
