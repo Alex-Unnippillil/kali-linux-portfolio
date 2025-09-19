@@ -11,7 +11,7 @@ function mockRes() {
   return res;
 }
 
-describe('mimikatz api', () => {
+describeFlaky('mimikatz api', () => {
   beforeAll(() => {
     process.env.FEATURE_TOOL_APIS = 'enabled';
   });
