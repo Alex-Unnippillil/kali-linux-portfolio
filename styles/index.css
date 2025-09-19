@@ -399,6 +399,45 @@ dialog {
     list-style: "🌟";
 }
 
+@media (display-mode: standalone) {
+    :root {
+        --pwa-safe-area-top: env(safe-area-inset-top, 0px);
+        --pwa-safe-area-right: env(safe-area-inset-right, 0px);
+        --pwa-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        --pwa-safe-area-left: env(safe-area-inset-left, 0px);
+    }
+
+    #desktop {
+        padding-top: calc(var(--pwa-safe-area-top, 0px) + 2rem);
+        padding-right: calc(var(--pwa-safe-area-right, 0px) + 0.5rem);
+        padding-bottom: calc(var(--pwa-safe-area-bottom, 0px) + 0.5rem);
+        padding-left: calc(var(--pwa-safe-area-left, 0px) + 0.5rem);
+    }
+
+    .main-navbar-vp {
+        padding-top: max(var(--pwa-safe-area-top, 0px), 0.75rem);
+        padding-right: calc(var(--pwa-safe-area-right, 0px) + 1rem);
+        padding-left: calc(var(--pwa-safe-area-left, 0px) + 1rem);
+    }
+
+    nav.desktop-dock {
+        padding-top: calc(var(--pwa-safe-area-top, 0px) + 1.75rem);
+        padding-bottom: calc(var(--pwa-safe-area-bottom, 0px) + 1.5rem);
+        padding-left: calc(var(--pwa-safe-area-left, 0px) + 0.5rem);
+    }
+
+    .desktop-taskbar {
+        padding-right: calc(var(--pwa-safe-area-right, 0px) + 0.75rem);
+        padding-left: calc(var(--pwa-safe-area-left, 0px) + 0.75rem);
+        padding-bottom: calc(var(--pwa-safe-area-bottom, 0px) + 0.5rem);
+    }
+
+    .pwa-fab-container {
+        right: calc(1rem + var(--pwa-safe-area-right, 0px));
+        bottom: calc(1rem + var(--pwa-safe-area-bottom, 0px));
+    }
+}
+
 .list-arrow {
     list-style: "⇀";
 }
