@@ -60,6 +60,16 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION=8.28.0
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o gitleaks.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          mkdir -p "$HOME/bin"
+          install -m 755 gitleaks "$HOME/bin/gitleaks"
+          rm gitleaks.tar.gz gitleaks
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+      - run: yarn scan:secrets
       - run: yarn npm audit
 
   vercel-preview:

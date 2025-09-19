@@ -1,0 +1,20 @@
+title = "Kali Linux Portfolio Gitleaks Configuration"
+
+[extend]
+  useDefault = true
+
+[allowlist]
+  description = "Allow demo hashes and tokens used in simulated security tools"
+  regexes = [
+    '''5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8''',
+    '''8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92''',
+    '''1c8bfe8f801d79745c4631d09fff36c82aa37fc4cce4fc946683d7b336b63032''',
+    '''5f4dcc3b5aa765d61d8327deb882cf99''',
+    '''e10adc3949ba59abbe56e057f20f883e''',
+    '''ffffffffffffffffffffffffffffffff''',
+    '''0123456789ABCDEF0123456789ABCDEF''',
+    '''FEDCBA9876543210FEDCBA9876543210''',
+    '''5d41402abc4b2a76b9719d911017c592''',
+    '''05000000123456789abcdef''',
+    '''xfce4_shortcuts'''
+  ]

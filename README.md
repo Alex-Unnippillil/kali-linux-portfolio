@@ -92,6 +92,7 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn scan:secrets` – run [Gitleaks](https://github.com/gitleaks/gitleaks) using the repo's `.gitleaks.toml` allowlist.
 
 ---
 
@@ -99,6 +100,14 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+
+## Secret Scanning
+
+1. Install the [Gitleaks CLI](https://github.com/gitleaks/gitleaks/releases) so the `gitleaks` binary is available in your `PATH`.
+   - macOS: `brew install gitleaks`
+   - Linux: `curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tar.gz && tar -xzf gitleaks.tar.gz gitleaks && sudo install gitleaks /usr/local/bin/gitleaks && rm gitleaks.tar.gz gitleaks`
+2. Run `yarn scan:secrets` from the project root. The command redacts output and fails if any leak is detected.
+3. Only extend `.gitleaks.toml` when adding new, intentional demo values. Unexpected findings should be investigated and scrubbed rather than allowlisted.
 
 ---
 
