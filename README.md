@@ -100,6 +100,12 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Contribution & Issue Templates
+
+- Use the [pull request template](.github/PULL_REQUEST_TEMPLATE.md) to document your changes, test coverage, risk assessment, and required gating questions before requesting review.
+- When filing issues, choose the **Bug report** template to capture reproduction steps, expected vs. actual behavior, and environment details.
+- For feature ideas, open an issue with the **Feature request** template to describe the problem, current reproduction flow, and proposed solution.
+
 ---
 
 ## Speed Insights

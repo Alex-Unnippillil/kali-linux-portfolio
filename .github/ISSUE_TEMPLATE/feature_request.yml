@@ -1,0 +1,61 @@
+name: "Feature request"
+description: "Suggest a new capability or improvement"
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share the use case and how the portfolio should behave after this feature ships. Include links to design references if available.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: What is the concise title of this feature?
+      placeholder: "Add dark terminal theme toggle"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What user problem or workflow gap does this feature solve?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Current Behavior / Reproduction
+      description: |
+        Describe the current steps or flows that highlight the gap. Include screenshots, URLs, or commands that reproduce the limitation.
+      placeholder: |
+        1. Open …
+        2. Attempt …
+        3. Observe …
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the change, including affected apps/modules and any feature flags.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Bullet list of conditions that must be met for this feature to be considered complete.
+  - type: checkboxes
+    id: dependencies
+    attributes:
+      label: Dependencies & Risks
+      description: Call out any considerations that could block delivery.
+      options:
+        - label: Requires new environment variables or secrets
+        - label: Impacts analytics, monitoring, or alerting
+        - label: Introduces third-party services or APIs
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Links, mockups, or anything else that will help scope the work.
