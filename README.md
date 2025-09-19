@@ -91,6 +91,7 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn contrast` – run the Playwright contrast audit (requires a dev server on `http://localhost:3000`).
 - `yarn export` – generate a static export in the `out/` directory.
 
 ---
@@ -99,6 +100,20 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+
+---
+
+## Accessibility Developer Overlay
+
+- Append `?devtools=contrast` or `?contrastOverlay=1` to any route (e.g. `http://localhost:3000/?devtools=contrast`) to enable the contrast overlay in supported environments.
+- To persist the overlay locally without a query string, run `localStorage.setItem('kali-devtools', 'contrast')` in the browser console and refresh.
+- Highlight colors:
+  - **Red** outline – text nodes below **4.5:1** contrast, with the DOM path label.
+  - **Orange** outline – UI blocks (backgrounds, interactive surfaces) below **3:1** contrast against their container.
+- The scanner is throttled (~500 ms) and ignores the overlay itself to avoid layout jank.
+- Details are mirrored to the developer console via `console.table` for easier auditing or copy/paste into bug reports.
+
+Run `yarn contrast` after starting `yarn dev` to execute the automated audit over `/` and `/apps` headlessly. The test fails if any <4.5:1 text or <3:1 UI contrast violations remain.
 
 ---
 

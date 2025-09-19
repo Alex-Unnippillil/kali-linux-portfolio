@@ -14,6 +14,7 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import ContrastOverlay from '../components/dev/ContrastOverlay';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
@@ -161,6 +162,7 @@ function MyApp(props) {
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
+            <ContrastOverlay />
             <Analytics
               beforeSend={(e) => {
                 if (e.url.includes('/admin') || e.url.includes('/private')) return null;
