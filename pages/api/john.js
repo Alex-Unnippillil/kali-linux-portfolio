@@ -1,5 +1,5 @@
 import { exec } from 'child_process';
-import { promises as fs } from 'fs';
+import { promises as fs } from '../../lib/server/fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { promisify } from 'util';
