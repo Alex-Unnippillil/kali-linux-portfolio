@@ -7,3 +7,73 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.windowControls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-top: var(--space-1);
+  margin-right: var(--space-1);
+  height: 2.75rem;
+  min-width: 8.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  user-select: none;
+}
+
+.windowControlButton {
+  width: var(--window-control-hit-area, var(--hit-area));
+  height: var(--window-control-hit-area, var(--hit-area));
+  min-width: var(--window-control-hit-area, var(--hit-area));
+  min-height: var(--window-control-hit-area, var(--hit-area));
+  border-radius: var(--radius-round);
+  border: none;
+  background-color: var(--window-control-surface);
+  color: var(--window-control-icon-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+  padding: 0;
+}
+
+.windowControlButton svg {
+  width: var(--window-control-icon-size);
+  height: var(--window-control-icon-size);
+  pointer-events: none;
+}
+
+.windowControlButton:hover {
+  background-color: var(--window-control-surface-hover);
+  color: var(--window-control-icon-hover);
+}
+
+.windowControlButton:active {
+  background-color: var(--window-control-surface-active);
+  color: var(--window-control-icon-active);
+  transform: scale(0.96);
+}
+
+.windowControlButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--focus-outline-width) var(--focus-outline-color);
+  background-color: var(--window-control-surface-focus);
+  color: var(--window-control-icon-focus);
+}
+
+.windowControlButton[data-variant='danger'] {
+  --window-control-surface: var(--window-control-danger-surface);
+  --window-control-surface-hover: var(--window-control-danger-hover);
+  --window-control-surface-active: var(--window-control-danger-active);
+  --window-control-surface-focus: var(--window-control-danger-focus);
+  --window-control-icon-color: var(--window-control-danger-icon);
+  --window-control-icon-hover: var(--window-control-danger-icon-hover);
+  --window-control-icon-active: var(--window-control-danger-icon-active);
+  --window-control-icon-focus: var(--window-control-danger-icon-focus);
+}
