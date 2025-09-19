@@ -203,12 +203,95 @@ export class Desktop extends Component {
     cycleAppWindows = (direction) => {
         const currentId = this.getFocusedWindowId();
         if (!currentId) return;
+
         const base = currentId.split('#')[0];
-        const windows = this.app_stack.filter(id => id.startsWith(base));
-        if (windows.length <= 1) return;
-        let index = windows.indexOf(currentId);
-        let next = (index + direction + windows.length) % windows.length;
-        this.focus(windows[next]);
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+        const matchesBase = (id) => typeof id === 'string' && id.startsWith(base);
+        const seen = new Set();
+        const order = [];
+
+        const addCandidate = (id, force = false) => {
+            if (!id || seen.has(id)) return;
+            if (!force && !matchesBase(id)) return;
+            seen.add(id);
+            order.push(id);
+        };
+
+        this.app_stack.forEach(id => {
+            if (matchesBase(id)) addCandidate(id);
+        });
+
+        const collectGroupIds = (value) => {
+            const ids = [];
+            const visit = (val) => {
+                if (!val) return;
+                if (typeof val === 'string') {
+                    if (matchesBase(val)) ids.push(val);
+                } else if (Array.isArray(val)) {
+                    val.forEach(visit);
+                } else if (val instanceof Map || val instanceof Set) {
+                    val.forEach(visit);
+                } else if (typeof val === 'object') {
+                    Object.values(val).forEach(visit);
+                }
+            };
+            visit(value);
+            return ids;
+        };
+
+        const addFromSource = (source) => {
+            if (!source) return;
+            let value;
+            if (typeof source.get === 'function') {
+                try {
+                    value = source.get(base);
+                } catch (e) {
+                    value = undefined;
+                }
+            } else if (typeof source === 'function') {
+                try {
+                    value = source(base);
+                } catch (e) {
+                    value = undefined;
+                }
+            } else if (typeof source === 'object') {
+                value = source[base];
+            }
+            if (value === undefined) return;
+            collectGroupIds(value).forEach(id => addCandidate(id));
+        };
+
+        [
+            this.tab_groups,
+            this.grouped_tabs,
+            this.groupedTabs,
+            this.tabGroups,
+            this.windowGroups,
+            this.state?.tab_groups,
+            this.state?.grouped_tabs,
+            this.state?.groupedTabs,
+            this.state?.tabGroups,
+        ].forEach(addFromSource);
+
+        addCandidate(currentId, true);
+
+        const total = order.length;
+        if (total <= 1) return;
+
+        let index = order.indexOf(currentId);
+        if (index === -1) index = 0;
+        const step = direction >= 0 ? 1 : -1;
+
+        for (let i = 0; i < total - 1; i++) {
+            index = (index + step + total) % total;
+            const nextId = order[index];
+            if (nextId === currentId) continue;
+            if (closed[nextId] === true) continue;
+            if (minimized[nextId]) continue;
+            this.focus(nextId);
+            return;
+        }
     }
 
     openWindowSwitcher = () => {
