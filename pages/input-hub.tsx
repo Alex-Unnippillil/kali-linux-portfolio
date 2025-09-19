@@ -35,14 +35,30 @@ const InputHub = () => {
   const [emailjsReady, setEmailjsReady] = useState(false);
 
   useEffect(() => {
-    const { preset, title, text, url, files } = router.query;
+    const {
+      preset,
+      title,
+      text,
+      url,
+      files,
+      errorId,
+      context,
+      appId,
+      appTitle,
+    } = router.query;
     if (preset === 'contact') {
       setSubject('General Inquiry');
+    } else if (preset === 'bug-report') {
+      setSubject('Bug Report');
     }
     const parts: string[] = [];
+    if (errorId) parts.push(`Error ID: ${String(errorId)}`);
+    if (appTitle) parts.push(`App: ${String(appTitle)}`);
+    if (appId) parts.push(`App ID: ${String(appId)}`);
+    if (context) parts.push(`Context: ${String(context)}`);
     if (title) parts.push(String(title));
     if (text) parts.push(String(text));
-    if (url) parts.push(String(url));
+    if (url) parts.push(`URL: ${String(url)}`);
     if (files) {
       try {
         const list = JSON.parse(

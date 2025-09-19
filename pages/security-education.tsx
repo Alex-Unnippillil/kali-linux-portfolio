@@ -21,6 +21,8 @@ const InfoFrame = ({ title, link, description }: FrameProps) => (
 
 const SecurityEducation = () => (
   <WindowMainScreen
+    title="Security Education"
+    appId="security-education"
     screen={() => (
       <div>
         <div

@@ -15,6 +15,8 @@ const NessusDashboard: React.FC = () => {
 
   return (
     <WindowMainScreen
+      title="Nessus Dashboard"
+      appId="nessus-dashboard"
       screen={() => (
         <div className="p-4 text-white">
           <h1 className="mb-4 text-2xl">Nessus Dashboard</h1>
