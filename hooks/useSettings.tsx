@@ -114,26 +114,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      try {
+        setAccent(await loadAccent());
+        setWallpaper(await loadWallpaper());
+        setDensity((await loadDensity()) as Density);
+        setReducedMotion(await loadReducedMotion());
+        setFontScale(await loadFontScale());
+        setHighContrast(await loadHighContrast());
+        setLargeHitAreas(await loadLargeHitAreas());
+        setPongSpin(await loadPongSpin());
+        setAllowNetwork(await loadAllowNetwork());
+        setHaptics(await loadHaptics());
+        setTheme(loadTheme());
+      } finally {
+        setHydrated(true);
+      }
     })();
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveTheme(theme);
-  }, [theme]);
+  }, [theme, hydrated]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -149,12 +155,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
+    if (!hydrated) return;
     saveAccent(accent);
-  }, [accent]);
+  }, [accent, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveWallpaper(wallpaper);
-  }, [wallpaper]);
+  }, [wallpaper, hydrated]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -179,34 +187,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
+    if (!hydrated) return;
     saveDensity(density);
-  }, [density]);
+  }, [density, hydrated]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    if (!hydrated) return;
     saveReducedMotion(reducedMotion);
-  }, [reducedMotion]);
+  }, [reducedMotion, hydrated]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    if (!hydrated) return;
     saveFontScale(fontScale);
-  }, [fontScale]);
+  }, [fontScale, hydrated]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
+    if (!hydrated) return;
     saveHighContrast(highContrast);
-  }, [highContrast]);
+  }, [highContrast, hydrated]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
+    if (!hydrated) return;
     saveLargeHitAreas(largeHitAreas);
-  }, [largeHitAreas]);
+  }, [largeHitAreas, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     savePongSpin(pongSpin);
-  }, [pongSpin]);
+  }, [pongSpin, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveAllowNetwork(allowNetwork);
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
@@ -230,11 +245,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       window.fetch = fetchRef.current!;
     }
-  }, [allowNetwork]);
+  }, [allowNetwork, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveHaptics(haptics);
-  }, [haptics]);
+  }, [haptics, hydrated]);
 
   return (
     <SettingsContext.Provider
