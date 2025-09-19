@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import FilterEditor from './components/FilterEditor';
-import LogPane, { LogEntry } from './components/LogPane';
+import LogPane, { type LogEntry } from './components/LogPane';
 import ArpDiagram from './components/ArpDiagram';
 
 const MODES = ['Unified', 'Sniff', 'ARP'];

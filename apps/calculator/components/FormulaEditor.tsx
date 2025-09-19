@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useFormulas, validateFormula, Formula } from '../formulas';
+import { useFormulas, validateFormula, type Formula } from '../formulas';
 
 export default function FormulaEditor() {
   const [formulas, setFormulas] = useFormulas();

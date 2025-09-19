@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow, { type TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
-  RouterProfile,
+  type RouterProfile,
 } from './components/RouterProfiles';
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';

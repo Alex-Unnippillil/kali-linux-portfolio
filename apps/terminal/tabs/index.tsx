@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useRef } from 'react';
-import TabbedWindow, { TabDefinition } from '../../../components/ui/TabbedWindow';
-import Terminal, { TerminalProps } from '..';
+import TabbedWindow, { type TabDefinition } from '../../../components/ui/TabbedWindow';
+import Terminal, { type TerminalProps } from '..';
 
 const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
   const countRef = useRef(1);

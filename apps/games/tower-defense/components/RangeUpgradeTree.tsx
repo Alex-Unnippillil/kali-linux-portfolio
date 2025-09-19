@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { TOWER_TYPES, Tower } from '..';
+import { TOWER_TYPES, type Tower } from '..';
 
 interface RangeUpgradeTreeProps {
   tower: Tower;

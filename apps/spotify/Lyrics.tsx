@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import CrossfadePlayer from './utils/crossfade';
-import { fetchTimedLyrics, LyricLine } from '../../player/lyrics';
+import { fetchTimedLyrics, type LyricLine } from '../../player/lyrics';
 
 interface LyricsProps {
   title: string;

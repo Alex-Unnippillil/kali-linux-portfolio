@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import GameShell from "../../components/games/GameShell";
 import usePersistentState from "../../hooks/usePersistentState";
-import { DEFAULT_GRID_SIZE, createState, step, GameState } from "./logic";
+import { DEFAULT_GRID_SIZE, createState, step, type GameState } from "./logic";
 
 const CELL_SIZE = 16;
 

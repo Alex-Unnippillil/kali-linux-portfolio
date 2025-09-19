@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode, useRef } from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,

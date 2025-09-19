@@ -3,8 +3,8 @@ import {
   useEffect,
   useRef,
   useState,
-  FormEvent,
-  KeyboardEvent,
+  type FormEvent,
+  type KeyboardEvent,
   type SVGProps,
 } from 'react';
 import DOMPurify from 'dompurify';
@@ -12,7 +12,7 @@ import Script from 'next/script';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
-  ScheduledTweet,
+  type ScheduledTweet,
 } from './state/scheduled';
 
 const IconRefresh = (

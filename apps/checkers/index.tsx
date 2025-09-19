@@ -4,8 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
-  Board,
-  Move,
+  type Board,
+  type Move,
   createBoard,
   getPieceMoves,
   applyMove,

@@ -1,6 +1,6 @@
 'use client';
 
-import { TrashItem } from '../state';
+import type { TrashItem } from '../state';
 
 interface Props {
   history: TrashItem[];

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plugin, Severity } from '../types';
+import { type Plugin, type Severity } from '../types';
 
 const colors: Record<Severity, string> = {
   Critical: 'border-red-600',

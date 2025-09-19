@@ -1,6 +1,6 @@
 import {
-  Palette,
-  PaletteColor,
+  type Palette,
+  type PaletteColor,
   defaultPalette,
   protanopiaPalette,
   deuteranopiaPalette,

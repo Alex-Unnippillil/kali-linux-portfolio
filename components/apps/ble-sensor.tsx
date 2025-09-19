@@ -6,9 +6,9 @@ import {
   saveProfile,
   renameProfile,
   deleteProfile,
-  SavedProfile,
-  ServiceData,
-  CharacteristicData,
+  type SavedProfile,
+  type ServiceData,
+  type CharacteristicData,
 } from '../../utils/bleProfiles';
 
 type BluetoothDevice = any;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react';
 import figlet from 'figlet';
 import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';

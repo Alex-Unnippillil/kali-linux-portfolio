@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import runScript, { ScriptController } from '../utils/scriptRunner';
+import runScript, { type ScriptController } from '../utils/scriptRunner';
 
 interface ScriptEntry {
   code: string;

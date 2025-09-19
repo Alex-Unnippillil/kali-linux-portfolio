@@ -5,7 +5,7 @@ import usePersistentState from '../../../hooks/usePersistentState';
 import {
   onFetchProxy,
   getActiveFetches,
-  FetchEntry,
+  type FetchEntry,
 } from '../../../lib/fetchProxy';
 import { exportMetrics } from '../export';
 import RequestChart from './RequestChart';

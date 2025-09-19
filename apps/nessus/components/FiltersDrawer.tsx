@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Severity, severities } from '../types';
+import { type Severity, severities } from '../types';
 
 interface Props {
   open: boolean;

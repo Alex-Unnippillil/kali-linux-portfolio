@@ -6,7 +6,7 @@ import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
 import FindingCard from './components/FindingCard';
 import FiltersDrawer from './components/FiltersDrawer';
-import { Plugin, Severity, Scan, Finding, severities } from './types';
+import { type Plugin, type Severity, type Scan, type Finding, severities } from './types';
 
 const Nessus: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Draggable, { DraggableEvent, DraggableData } from 'react-draggable';
+import Draggable, { type DraggableEvent, type DraggableData } from 'react-draggable';
 
 interface NodeData {
   x: number;

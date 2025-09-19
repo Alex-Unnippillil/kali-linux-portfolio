@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow, { type TabDefinition } from '../../components/ui/TabbedWindow';
 
 const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');

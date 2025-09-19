@@ -1,4 +1,4 @@
-import { lineToClues, Grid, Clue } from './logic';
+import { lineToClues, type Grid, type Clue } from './logic';
 
 export interface Puzzle {
   name: string;

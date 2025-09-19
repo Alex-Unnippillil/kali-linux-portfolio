@@ -7,7 +7,7 @@ import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import GameLayout from '../../components/apps/GameLayout';
 import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext';
-import { PUZZLE_PACKS, PackName } from '../../games/word-search/packs';
+import { PUZZLE_PACKS, type PackName } from '../../games/word-search/packs';
 import ListImport from '../../games/word-search/components/ListImport';
 
 const WORD_COUNT = 5;

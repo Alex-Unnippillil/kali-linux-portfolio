@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useWatchLater, {
-  Video as WatchLaterVideo,
+  type Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
 
 type Video = WatchLaterVideo;

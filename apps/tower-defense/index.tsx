@@ -6,9 +6,9 @@ import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
 import {
   ENEMY_TYPES,
-  Tower,
+  type Tower,
   upgradeTower,
-  Enemy,
+  type Enemy,
   createEnemyPool,
   spawnEnemy,
 } from "../games/tower-defense";

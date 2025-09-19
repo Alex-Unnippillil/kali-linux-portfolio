@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
-import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
+import { LEVEL_PACKS, type LevelPack, parseLevels } from './levels';
 import {
   loadLevel,
   move,
@@ -9,14 +9,14 @@ import {
   reset as resetLevel,
   reachable,
   isSolved,
-  State,
+  type State,
   directionKeys,
   findHint,
   findMinPushes,
   findSolution,
   wouldDeadlock,
-  Position,
-  DirectionKey,
+  type Position,
+  type DirectionKey,
 } from './engine';
 
 const CELL = 32;
