@@ -1,4 +1,6 @@
-# Kali Linux Portfolio 
+# Kali Linux Portfolio
+
+![Type Coverage](https://img.shields.io/badge/type--coverage-min%2090%25-brightgreen)
 
 A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
 
@@ -91,6 +93,7 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn type-coverage` – report static type coverage and fail if it drops below 90%.
 - `yarn export` – generate a static export in the `out/` directory.
 
 ---
