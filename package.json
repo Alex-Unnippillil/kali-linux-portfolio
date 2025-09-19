@@ -12,6 +12,7 @@
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
+    "test:examples": "jest __tests__/examples.test.ts",
     "test:watch": "jest --watch",
     "lint": "eslint . --max-warnings=0",
     "tsc": "tsc",
