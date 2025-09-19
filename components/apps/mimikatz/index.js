@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import WarningBanner from "../../WarningBanner";
+import { logRedactionSummary, redactSensitive } from "@/lib/redact";
 
 // Demo output for each tab
 const demoOutput = {
@@ -51,7 +52,10 @@ const MimikatzApp = () => {
   };
 
   const exportOutput = () => {
-    const blob = new Blob([output.join("\n")], { type: "text/plain" });
+    const joined = output.join("\n");
+    const { text, stats } = redactSensitive(joined);
+    logRedactionSummary(stats, "mimikatz");
+    const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -80,18 +84,21 @@ const MimikatzApp = () => {
         ))}
       </div>
       <div className="p-2 flex-1 overflow-auto">
-        <div className="flex justify-between items-center mb-2 text-xs">
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={showSensitive}
-              onChange={(e) => setShowSensitive(e.target.checked)}
-            />
-            Show tokens
-          </label>
+          <div className="flex justify-between items-center mb-2 text-xs">
+            <label className="flex items-center gap-1" htmlFor="show-tokens">
+              <input
+                id="show-tokens"
+                type="checkbox"
+                checked={showSensitive}
+                onChange={(e) => setShowSensitive(e.target.checked)}
+                aria-label="Toggle sensitive token visibility"
+              />
+              Show tokens
+            </label>
           <button
             className="bg-gray-700 px-2 py-1 rounded"
             onClick={exportOutput}
+            aria-label="Download exported output"
           >
             Export
           </button>
@@ -105,7 +112,7 @@ const MimikatzApp = () => {
               <button
                 className="ml-2 text-gray-400 hover:text-white"
                 onClick={() => copyLine(line)}
-                aria-label="copy line"
+                aria-label="Copy line to clipboard"
               >
                 📋
               </button>

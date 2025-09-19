@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { logRedactionSummary, redactSensitive } from '@/lib/redact';
 
 interface NiktoFinding {
   path: string;
@@ -55,7 +56,10 @@ const NiktoReport: React.FC = () => {
   );
 
   const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(filtered, null, 2)], {
+    const payload = JSON.stringify(filtered, null, 2);
+    const { text, stats } = redactSensitive(payload);
+    logRedactionSummary(stats, 'nikto-json');
+    const blob = new Blob([text], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
@@ -84,7 +88,9 @@ const NiktoReport: React.FC = () => {
         r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
       )
       .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const { text, stats } = redactSensitive(csv);
+    logRedactionSummary(stats, 'nikto-csv');
+    const blob = new Blob([text], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -115,16 +121,26 @@ const NiktoReport: React.FC = () => {
         ))}
       </div>
       <div className="flex space-x-2 mb-4">
+        <label className="sr-only" htmlFor="nikto-path-filter">
+          Filter findings by path
+        </label>
         <input
+          id="nikto-path-filter"
           placeholder="Filter by path"
           className="p-2 rounded text-black"
           value={pathFilter}
           onChange={(e) => setPathFilter(e.target.value)}
+          aria-label="Filter findings by path"
         />
+        <label className="sr-only" htmlFor="nikto-severity-filter">
+          Filter findings by severity
+        </label>
         <select
+          id="nikto-severity-filter"
           className="p-2 rounded text-black"
           value={severity}
           onChange={(e) => setSeverity(e.target.value)}
+          aria-label="Filter findings by severity"
         >
           {['All', 'Info', 'Low', 'Medium', 'High'].map((s) => (
             <option key={s} value={s}>
@@ -138,6 +154,7 @@ const NiktoReport: React.FC = () => {
           className="p-2 bg-blue-600 rounded"
           aria-label="Export JSON"
         >
+          <span className="sr-only">Export JSON</span>
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -158,6 +175,7 @@ const NiktoReport: React.FC = () => {
           className="p-2 bg-blue-600 rounded"
           aria-label="Export CSV"
         >
+          <span className="sr-only">Export CSV</span>
           <svg
             viewBox="0 0 24 24"
             fill="none"

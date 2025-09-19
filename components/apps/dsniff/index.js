@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
+import { logRedactionSummary, redactSensitive } from '@/lib/redact';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
 
@@ -330,8 +331,10 @@ const Dsniff = () => {
       })),
       risk: d.risk,
     }));
+    const { text, stats } = redactSensitive(JSON.stringify(data, null, 2));
+    logRedactionSummary(stats, 'dsniff');
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      navigator.clipboard.writeText(text);
     }
   };
 
@@ -552,6 +555,7 @@ const Dsniff = () => {
             activeTab === 'urlsnarf' ? 'bg-black text-green-500' : 'bg-ub-grey'
           }`}
           onClick={() => setActiveTab('urlsnarf')}
+          aria-label="Show urlsnarf logs"
         >
           urlsnarf
         </button>
@@ -560,6 +564,7 @@ const Dsniff = () => {
             activeTab === 'arpspoof' ? 'bg-black text-green-500' : 'bg-ub-grey'
           }`}
           onClick={() => setActiveTab('arpspoof')}
+          aria-label="Show arpspoof logs"
         >
           arpspoof
         </button>
@@ -578,38 +583,55 @@ const Dsniff = () => {
                   : [...prev, proto]
               )
             }
+            aria-label={`Toggle ${proto} filter`}
           >
             {proto}
           </button>
         ))}
       </div>
       <div className="mb-2">
+        <label className="sr-only" htmlFor="dsniff-search">
+          Search logs
+        </label>
         <input
+          id="dsniff-search"
           className="w-full text-black p-1"
           placeholder="Search logs"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search logs"
         />
       </div>
       <div className="mb-2">
         <div className="flex space-x-2 mb-2">
+          <label className="sr-only" htmlFor="dsniff-field">
+            Filter field
+          </label>
           <select
+            id="dsniff-field"
             value={newField}
             onChange={(e) => setNewField(e.target.value)}
             className="text-black"
+            aria-label="Choose field to filter"
           >
             <option value="host">host</option>
             <option value="protocol">protocol</option>
           </select>
+          <label className="sr-only" htmlFor="dsniff-value">
+            Filter value
+          </label>
           <input
+            id="dsniff-value"
             className="flex-1 text-black p-1"
             placeholder="Value"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
+            aria-label="Filter value"
           />
           <button
             className="bg-ub-blue text-white px-2"
             onClick={addFilter}
+            aria-label="Add search filter"
           >
             Add
           </button>

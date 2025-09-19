@@ -4,6 +4,7 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
+import { logRedactionSummary, redactSensitive } from '@/lib/redact';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -111,7 +112,9 @@ const Nessus = () => {
     const csv = [header, ...rows]
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
       .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const { text, stats } = redactSensitive(csv);
+    logRedactionSummary(stats, 'nessus-app');
+    const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -192,6 +195,7 @@ const Nessus = () => {
             onChange={(e) => setUrl(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Nessus URL"
             placeholder="https://nessus:8834"
           />
           <label htmlFor="nessus-username" className="block text-sm">
@@ -204,6 +208,7 @@ const Nessus = () => {
             onChange={(e) => setUsername(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Nessus username"
           />
           <label htmlFor="nessus-password" className="block text-sm">
             Password
@@ -216,10 +221,15 @@ const Nessus = () => {
             onChange={(e) => setPassword(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Nessus password"
           />
-          <button type="submit" className="w-full bg-blue-600 py-2 rounded">
-            Login
-          </button>
+        <button
+          type="submit"
+          className="w-full bg-blue-600 py-2 rounded"
+          aria-label="Submit Nessus credentials"
+        >
+          Login
+        </button>
           {error && <FormError id="nessus-error">{error}</FormError>}
         </form>
       </div>
@@ -230,12 +240,16 @@ const Nessus = () => {
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl">Scans</h2>
-        <button onClick={logout} className="bg-red-600 px-2 py-1 rounded">
+        <button
+          onClick={logout}
+          className="bg-red-600 px-2 py-1 rounded"
+          aria-label="Sign out of Nessus demo"
+        >
           Logout
         </button>
       </div>
       <div className="mb-4">
-        <label htmlFor="nessus-upload" className="block text-sm mb-1">
+        <label htmlFor="nessus-upload" id="nessus-upload-label" className="block text-sm mb-1">
           Upload Nessus XML
         </label>
         <input
@@ -244,6 +258,7 @@ const Nessus = () => {
           accept=".nessus,.xml"
           onChange={handleFile}
           className="text-black mb-2"
+          aria-labelledby="nessus-upload-label"
         />
         {parseError && <FormError>{parseError}</FormError>}
         {findings.length > 0 && (
@@ -251,6 +266,7 @@ const Nessus = () => {
             <button
               onClick={exportCSV}
               className="bg-green-600 px-2 py-1 rounded mb-2"
+              aria-label="Export parsed findings to CSV"
             >
               Export CSV
             </button>
@@ -281,16 +297,25 @@ const Nessus = () => {
                           <span className="text-xs text-green-400">Marked</span>
                         ) : feedbackId === f.id ? (
                           <form onSubmit={submitFeedback} className="space-y-1">
+                            <label
+                              className="sr-only"
+                              htmlFor={`false-positive-reason-${f.id}`}
+                            >
+                              Reason for marking this finding as a false positive
+                            </label>
                             <input
+                              id={`false-positive-reason-${f.id}`}
                               className="w-full p-1 rounded text-black"
                               value={feedbackText}
                               onChange={(e) => setFeedbackText(e.target.value)}
                               placeholder="Reason"
+                              aria-label="Reason for false positive"
                             />
                             <div className="flex space-x-2">
                               <button
                                 type="submit"
                                 className="bg-green-600 px-2 py-1 rounded text-xs"
+                                aria-label="Submit false positive feedback"
                               >
                                 Submit
                               </button>
@@ -298,6 +323,7 @@ const Nessus = () => {
                                 type="button"
                                 className="bg-gray-600 px-2 py-1 rounded text-xs"
                                 onClick={() => setFeedbackId(null)}
+                                aria-label="Cancel false positive feedback"
                               >
                                 Cancel
                               </button>
@@ -307,6 +333,7 @@ const Nessus = () => {
                           <button
                             className="text-xs bg-yellow-600 px-2 py-1 rounded"
                             onClick={() => setFeedbackId(f.id)}
+                            aria-label="Mark finding as potential false positive"
                           >
                             False Positive
                           </button>
@@ -326,19 +353,33 @@ const Nessus = () => {
       <PluginScoreHeatmap findings={findings} />
       {error && <FormError className="mb-2">{error}</FormError>}
       <form onSubmit={addJob} className="mb-4 space-x-2">
+        <label className="sr-only" htmlFor="scheduled-scan-id">
+          Scheduled scan identifier
+        </label>
         <input
+          id="scheduled-scan-id"
           className="p-1 rounded text-black"
           placeholder="Scan ID"
           value={newJob.scanId}
           onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
+          aria-label="Scheduled scan identifier"
         />
+        <label className="sr-only" htmlFor="scheduled-scan-frequency">
+          Schedule description
+        </label>
         <input
+          id="scheduled-scan-frequency"
           className="p-1 rounded text-black"
           placeholder="Schedule"
           value={newJob.schedule}
           onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
+          aria-label="Schedule description"
         />
-        <button type="submit" className="bg-blue-600 px-2 py-1 rounded">
+        <button
+          type="submit"
+          className="bg-blue-600 px-2 py-1 rounded"
+          aria-label="Add scheduled job"
+        >
           Add Job
         </button>
       </form>
@@ -364,17 +405,26 @@ const Nessus = () => {
               <button
                 className="text-xs bg-yellow-600 px-2 py-1 rounded"
                 onClick={() => setFeedbackId(scan.id)}
+                aria-label="Mark scan as potential false positive"
               >
                 False Positive
               </button>
             </div>
             {feedbackId === scan.id && (
               <form onSubmit={submitFeedback} className="mt-2 space-y-1">
+                <label
+                  className="sr-only"
+                  htmlFor={`false-positive-reason-${scan.id}`}
+                >
+                  Reason for marking this scan as a false positive
+                </label>
                 <input
+                  id={`false-positive-reason-${scan.id}`}
                   className="w-full p-1 rounded text-black"
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="Reason"
+                  aria-label="Reason for false positive"
                 />
                 <div className="flex space-x-2">
                   <button
