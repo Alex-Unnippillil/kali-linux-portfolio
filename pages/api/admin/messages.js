@@ -1,4 +1,4 @@
-import { getServiceClient } from '../../../lib/service-client';
+import { getServiceClient } from '@server/service-client';
 import { createLogger } from '../../../lib/logger';
 
 export default async function handler(

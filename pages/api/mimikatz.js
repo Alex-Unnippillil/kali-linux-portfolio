@@ -1,4 +1,4 @@
-import modules from '../../components/apps/mimikatz/modules.json';
+import modules from '@/data/mimikatz/modules.json';
 
 export default async function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
