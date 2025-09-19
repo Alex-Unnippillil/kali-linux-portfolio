@@ -5,6 +5,12 @@ import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
+import {
+  createFetchCancelToken,
+  fetchWithRetry,
+  type FetchCancelToken,
+  type FetchRetryInfo,
+} from '../../../utils/fetchWithRetry';
 import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
@@ -29,6 +35,13 @@ const errorMap: Record<string, string> = {
 
 };
 
+interface ProcessContactFormOptions {
+  fetchImpl?: typeof fetch;
+  cancelToken?: FetchCancelToken;
+  onRetry?: (info: FetchRetryInfo) => void;
+  retries?: number;
+}
+
 export const processContactForm = async (
   data: {
     name: string;
@@ -38,11 +51,12 @@ export const processContactForm = async (
     csrfToken: string;
     recaptchaToken: string;
   },
-  fetchImpl: typeof fetch = fetch,
+  options: ProcessContactFormOptions = {}
 ) => {
+  const { fetchImpl, cancelToken, onRetry, retries } = options;
   try {
     const parsed = contactSchema.parse(data);
-    const res = await fetchImpl('/api/contact', {
+    const { promise } = fetchWithRetry('/api/contact', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,7 +69,12 @@ export const processContactForm = async (
         honeypot: parsed.honeypot,
         recaptchaToken: parsed.recaptchaToken,
       }),
+      fetcher: fetchImpl,
+      cancelToken,
+      retries,
+      onRetry,
     });
+    const res = await promise;
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       return {
@@ -65,7 +84,10 @@ export const processContactForm = async (
       };
     }
     return { success: true };
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { success: false, error: 'Submission cancelled', code: 'cancelled' };
+    }
     return { success: false, error: 'Submission failed' };
   }
 };
@@ -130,10 +152,11 @@ const uploadAttachments = async (files: File[]) => {
   const form = new FormData();
   files.forEach((f) => form.append('files', f));
   try {
-    await fetch('/api/contact/attachments', {
+    const { promise } = fetchWithRetry('/api/contact/attachments', {
       method: 'POST',
       body: form,
     });
+    await promise;
   } catch {
     /* ignore */
   }
@@ -154,6 +177,8 @@ const ContactApp: React.FC = () => {
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+  const [activeToken, setActiveToken] = useState<FetchCancelToken | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -176,6 +201,11 @@ const ContactApp: React.FC = () => {
     void writeDraft({ name, email, message });
   }, [name, email, message]);
 
+  const handleCancelSubmission = () => {
+    if (!activeToken) return;
+    activeToken.cancel();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -184,6 +214,7 @@ const ContactApp: React.FC = () => {
     setBanner(null);
     setEmailError('');
     setMessageError('');
+    setRetryCount(0);
 
     const emailResult = contactSchema.shape.email.safeParse(email);
     const messageResult = contactSchema.shape.message.safeParse(message);
@@ -228,14 +259,23 @@ const ContactApp: React.FC = () => {
       setSubmitting(false);
       return;
     }
-    const result = await processContactForm({
-      name,
-      email,
-      message,
-      honeypot,
-      csrfToken,
-      recaptchaToken,
-    });
+    const token = createFetchCancelToken();
+    setActiveToken(token);
+    const result = await processContactForm(
+      {
+        name,
+        email,
+        message,
+        honeypot,
+        csrfToken,
+        recaptchaToken,
+      },
+      {
+        cancelToken: token,
+        onRetry: ({ attempt }) => setRetryCount(attempt),
+      }
+    ).finally(() => setActiveToken(null));
+
     if (result.success) {
       setBanner({ type: 'success', message: 'Message sent' });
       setName('');
@@ -245,6 +285,10 @@ const ContactApp: React.FC = () => {
       await uploadAttachments(attachments);
       setAttachments([]);
       void deleteDraft();
+    } else if (result.code === 'cancelled') {
+      const msg = result.error || 'Submission cancelled';
+      setError(msg);
+      setBanner({ type: 'error', message: msg });
     } else {
       const msg = result.error || 'Submission failed';
       setError(msg);
@@ -383,17 +427,33 @@ const ContactApp: React.FC = () => {
           autoComplete="off"
         />
         {error && <FormError className="mt-3">{error}</FormError>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
-        >
-          {submitting ? (
-            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            'Send'
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
+          >
+            {submitting ? (
+              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              'Send'
+            )}
+          </button>
+          {submitting && (
+            <button
+              type="button"
+              onClick={handleCancelSubmission}
+              className="rounded border border-gray-600 px-4 py-2 text-sm text-gray-200 hover:bg-gray-800"
+            >
+              Cancel
+            </button>
           )}
-        </button>
+        </div>
+        {(submitting || retryCount > 0) && (
+          <p className="text-xs text-gray-400" aria-live="polite">
+            Retries attempted: {retryCount}
+          </p>
+        )}
       </form>
     </div>
   );

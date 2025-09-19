@@ -16,7 +16,10 @@ describe.skip('Metasploit app', () => {
   it('does not call module API in demo mode', async () => {
     render(<MetasploitApp demoMode />);
     await screen.findByText('Run Demo');
-    expect(global.fetch).toHaveBeenCalledWith('/fixtures/metasploit_loot.json');
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/fixtures/metasploit_loot.json',
+      expect.objectContaining({ signal: expect.any(Object) })
+    );
     expect(global.fetch).not.toHaveBeenCalledWith('/api/metasploit');
   });
 

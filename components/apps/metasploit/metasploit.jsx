@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import { createFetchCancelToken, fetchWithRetry } from '../../../utils/fetchWithRetry';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -43,6 +44,8 @@ const MetasploitApp = ({
   const [timeline, setTimeline] = useState([]);
   const [replaying, setReplaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const commandTokenRef = useRef(null);
+  const [commandRetries, setCommandRetries] = useState(0);
 
   useEffect(() => {
     onLoadingChange(loading);
@@ -73,9 +76,13 @@ const MetasploitApp = ({
 
   useEffect(() => {
     let active = true;
+    const token = createFetchCancelToken();
     (async () => {
       try {
-        const res = await fetch('/fixtures/metasploit_loot.json');
+        const { promise } = fetchWithRetry('/fixtures/metasploit_loot.json', {
+          cancelToken: token,
+        });
+        const res = await promise;
         const data = await res.json();
         if (active) {
           setLoot(data.loot || []);
@@ -85,6 +92,7 @@ const MetasploitApp = ({
     })();
     return () => {
       active = false;
+      token.cancel();
     };
   }, []);
 
@@ -141,26 +149,50 @@ const MetasploitApp = ({
     return () => cancelAnimationFrame(moduleRaf.current);
   }, [selectedSeverity, reduceMotion]);
 
+  const cancelCommand = () => {
+    if (commandTokenRef.current) {
+      commandTokenRef.current.cancel();
+      commandTokenRef.current = null;
+    }
+    setCommandRetries(0);
+  };
+
   const runCommand = async () => {
     const cmd = command.trim();
     if (!cmd) return;
     setLoading(true);
+    setCommandRetries(0);
     try {
       if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
         setOutput(
           (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
         );
       } else {
-        const res = await fetch('/api/metasploit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: cmd }),
-        });
-        const data = await res.json();
-        setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
+        const token = createFetchCancelToken();
+        commandTokenRef.current = token;
+        try {
+          const { promise } = fetchWithRetry('/api/metasploit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: cmd }),
+            cancelToken: token,
+            onRetry: ({ attempt }) => setCommandRetries(attempt),
+          });
+          const res = await promise;
+          const data = await res.json();
+          setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
+        } finally {
+          if (commandTokenRef.current === token) {
+            commandTokenRef.current = null;
+          }
+        }
       }
     } catch (e) {
-      setOutput((prev) => `${prev}\nError: ${e.message}`);
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n[client] Command cancelled`);
+      } else {
+        setOutput((prev) => `${prev}\nError: ${e.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -292,17 +324,33 @@ const MetasploitApp = ({
         />
         <button
           onClick={runCommand}
-          className="ml-2 px-2 py-1 bg-ub-orange rounded"
+          disabled={loading}
+          className="ml-2 px-2 py-1 bg-ub-orange rounded disabled:opacity-60"
         >
           Run
         </button>
         <button
           onClick={runDemo}
-          className="ml-2 px-2 py-1 bg-green-600 text-black rounded"
+          disabled={loading}
+          className="ml-2 px-2 py-1 bg-green-600 text-black rounded disabled:opacity-60"
         >
           Run Demo
         </button>
+        {loading && (
+          <button
+            type="button"
+            onClick={cancelCommand}
+            className="ml-2 px-2 py-1 border border-ub-orange text-ub-orange rounded"
+          >
+            Cancel
+          </button>
+        )}
       </div>
+      {(loading || commandRetries > 0) && (
+        <p className="px-2 text-xs text-gray-400" aria-live="polite">
+          Command retries attempted: {commandRetries}
+        </p>
+      )}
       <div className="flex p-2">
         <aside
           className="w-40 pr-2 border-r space-y-1.5 text-xs"
