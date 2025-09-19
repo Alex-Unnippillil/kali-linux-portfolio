@@ -2,6 +2,9 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   install:
@@ -48,7 +51,37 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: yarn test --coverage
+      - name: Run Jest stability suite
+        run: |
+          set -euo pipefail
+
+          attempts=1
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            attempts=3
+          fi
+
+          passes=0
+          summary="### Jest stability report\\n\\n"
+          for i in $(seq 1 "$attempts"); do
+            echo "::group::Jest run #$i of $attempts"
+            if yarn test --coverage; then
+              passes=$((passes + 1))
+              summary="${summary}- ✅ Run #$i\\n"
+            else
+              summary="${summary}- ❌ Run #$i\\n"
+              printf '%b' "$summary" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ "$attempts" -gt 1 ]; then
+            summary="${summary}\\nAll ${passes}/${attempts} runs passed. Merge is unblocked."
+          else
+            summary="${summary}\\nMain branch run completed without retries."
+          fi
+
+          printf '%b' "$summary" >> "$GITHUB_STEP_SUMMARY"
 
   security:
     runs-on: ubuntu-latest
@@ -79,3 +112,37 @@ jobs:
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  playwright-main:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: npx playwright install --with-deps
+      - name: Run Playwright (no retries) on main
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report
+        run: |
+          set -euo pipefail
+
+          yarn dev &
+          DEV_PID=$!
+          trap 'kill $DEV_PID' EXIT
+
+          npx wait-on http://127.0.0.1:3000
+
+          summary="### Playwright report (main push)\\n\\n"
+          if npx playwright test --retries=0; then
+            summary="${summary}- ✅ Playwright run passed without retries"
+            printf '%b' "$summary" >> "$GITHUB_STEP_SUMMARY"
+          else
+            summary="${summary}- ❌ Playwright run failed"
+            printf '%b' "$summary" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
