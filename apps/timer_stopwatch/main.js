@@ -4,11 +4,15 @@ if (isBrowser) {
 let mode = 'timer';
 let timerWorker = null;
 let timerRemaining = 30;
+let timerDuration = timerRemaining;
+let timerStartTime = 0;
 let timerEndTime = 0;
 let stopwatchWorker = null;
 let stopwatchElapsed = 0;
 let stopwatchStartTime = 0;
 let lapNumber = 1;
+let lapTimes = [];
+const TIMERS_KEY = '__kaliResourceTimers';
 
 const timerDisplay = document.getElementById('timerDisplay');
 const stopwatchDisplay = document.getElementById('stopwatchDisplay');
@@ -17,6 +21,28 @@ const stopwatchControls = document.getElementById('stopwatchControls');
 const minutesInput = document.getElementById('minutes');
 const secondsInput = document.getElementById('seconds');
 const lapsList = document.getElementById('laps');
+
+function updateTimerMetadata() {
+  const timerStart = timerWorker ? timerStartTime : null;
+  const timerEnd = timerWorker ? timerEndTime : null;
+  window[TIMERS_KEY] = {
+    mode,
+    lastUpdated: Date.now(),
+    timer: {
+      running: !!timerWorker,
+      remainingSeconds: timerRemaining,
+      durationSeconds: timerDuration,
+      startTimestamp: timerStart,
+      endTimestamp: timerEnd,
+    },
+    stopwatch: {
+      running: !!stopwatchWorker,
+      elapsedSeconds: stopwatchElapsed,
+      startTimestamp: stopwatchWorker ? stopwatchStartTime : null,
+      laps: [...lapTimes],
+    },
+  };
+}
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -35,6 +61,7 @@ function switchMode(newMode) {
     timerControls.style.display = 'none';
     stopwatchControls.style.display = 'block';
   }
+  updateTimerMetadata();
 }
 
 document.getElementById('modeTimer').addEventListener('click', () => switchMode('timer'));
@@ -42,6 +69,7 @@ document.getElementById('modeStopwatch').addEventListener('click', () => switchM
 
 function updateTimerDisplay() {
   timerDisplay.textContent = formatTime(timerRemaining);
+  updateTimerMetadata();
 }
 
 function startTimer() {
@@ -49,7 +77,9 @@ function startTimer() {
   const mins = parseInt(minutesInput.value, 10) || 0;
   const secs = parseInt(secondsInput.value, 10) || 0;
   timerRemaining = mins * 60 + secs;
-  timerEndTime = Date.now() + timerRemaining * 1000;
+  timerDuration = timerRemaining;
+  timerStartTime = Date.now();
+  timerEndTime = timerStartTime + timerRemaining * 1000;
   updateTimerDisplay();
   timerWorker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
   timerWorker.onmessage = () => {
@@ -69,6 +99,9 @@ function stopTimer() {
     timerWorker.terminate();
     timerWorker = null;
   }
+  timerStartTime = 0;
+  timerEndTime = 0;
+  updateTimerMetadata();
 }
 
 function resetTimer() {
@@ -76,11 +109,15 @@ function resetTimer() {
   const mins = parseInt(minutesInput.value, 10) || 0;
   const secs = parseInt(secondsInput.value, 10) || 0;
   timerRemaining = mins * 60 + secs;
+  timerDuration = timerRemaining;
+  timerStartTime = 0;
+  timerEndTime = 0;
   updateTimerDisplay();
 }
 
 function updateStopwatchDisplay() {
   stopwatchDisplay.textContent = formatTime(stopwatchElapsed);
+  updateTimerMetadata();
 }
 
 function startWatch() {
@@ -100,12 +137,14 @@ function stopWatch() {
     stopwatchWorker.terminate();
     stopwatchWorker = null;
   }
+  updateTimerMetadata();
 }
 
 function resetWatch() {
   stopWatch();
   stopwatchElapsed = 0;
   lapNumber = 1;
+  lapTimes = [];
   updateStopwatchDisplay();
   lapsList.innerHTML = '';
 }
@@ -114,6 +153,8 @@ function lapWatch() {
   const li = document.createElement('li');
   li.textContent = `Lap ${lapNumber++}: ${formatTime(stopwatchElapsed)}`;
   lapsList.appendChild(li);
+  lapTimes.push(stopwatchElapsed);
+  updateTimerMetadata();
 }
 
 function playSound() {
@@ -145,4 +186,5 @@ document.getElementById('lapWatch').addEventListener('click', lapWatch);
 // Initialize displays
 updateTimerDisplay();
 updateStopwatchDisplay();
+updateTimerMetadata();
 }
