@@ -38,6 +38,18 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: npm run tsc -- --noEmit
 
+  build:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+
   test:
     runs-on: ubuntu-latest
     needs: install
@@ -64,7 +76,9 @@ jobs:
 
   vercel-preview:
     runs-on: ubuntu-latest
-    needs: install
+    needs: build
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -78,4 +92,56 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy preview
+        id: deploy
+        run: |
+          set -euo pipefail
+          deployment_url=$(npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm \
+            | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
+          if [ -z "$deployment_url" ]; then
+            echo "::error::Failed to determine Vercel deployment URL" >&2
+            exit 1
+          fi
+          echo "Preview URL: $deployment_url"
+          echo "preview_url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+  zap-baseline:
+    runs-on: ubuntu-latest
+    needs:
+      - vercel-preview
+      - lint
+      - typecheck
+      - build
+    if: ${{ needs.vercel-preview.outputs.preview_url != '' }}
+    steps:
+      - name: OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ needs.vercel-preview.outputs.preview_url }}
+          cmd_options: '-r zap-baseline-report.html -J zap-baseline-report.json'
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: zap-baseline-report
+      - name: Evaluate ZAP findings
+        run: |
+          set -euo pipefail
+          if [ ! -f zap-baseline-report.json ]; then
+            echo "::error::ZAP JSON report not found" >&2
+            exit 1
+          fi
+          medium_high_count=$(jq '[.site[]? | .alerts[]? | select(((.riskcode // "0") | tonumber) >= 2)] | length' zap-baseline-report.json)
+          if [ "$medium_high_count" -gt 0 ]; then
+            echo "::error::ZAP baseline scan found $medium_high_count medium/high risk alerts"
+            jq -r '.site[]? | .alerts[]? | select(((.riskcode // "0") | tonumber) >= 2) | "- " + (.name // "Unknown alert") + " [" + (.riskdesc // "unknown risk") + "] " + ((.instances[0]?.uri // .url // "n/a"))' zap-baseline-report.json || true
+            exit 1
+          fi
+          echo "No medium/high risk alerts detected."
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: |
+            zap-baseline-report.html
+            zap-baseline-report.json
+          if-no-files-found: warn
