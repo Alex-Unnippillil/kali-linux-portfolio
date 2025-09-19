@@ -1,0 +1,32 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPointStrategy": "expand",
+  "entryPoints": [
+    "./hooks",
+    "./lib",
+    "./utils",
+    "./types"
+  ],
+  "tsconfig": "tsconfig.json",
+  "out": "docs/reference",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "treatWarningsAsErrors": true,
+  "categorizeByGroup": false,
+  "cleanOutputDir": true,
+  "exclude": ["**/*.js", "**/__tests__/**", "**/playwright/**"],
+  "disableSources": true,
+  "intentionallyNotExported": [
+    "SettingsContextValue",
+    "GamepadManager",
+    "AssetLoaderState",
+    "Quote",
+    "NotificationsContextValue",
+    "AssetLoaderOptions",
+    "AnyRef",
+    "Options",
+    "WebVitalMetric",
+    "LetterResult",
+    "Callback"
+  ]
+}
