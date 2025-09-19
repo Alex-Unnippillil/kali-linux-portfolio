@@ -21,7 +21,8 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
-    "verify:all": "node scripts/verify.mjs"
+    "verify:all": "node scripts/verify.mjs",
+    "prepare": "husky"
   },
   "engines": {
     "node": "20.19.5"
@@ -132,8 +133,10 @@
     "eslint-config-next": "15.5.2",
     "fake-indexeddb": "^6.1.0",
     "fast-glob": "^3.3.3",
+    "husky": "^9.1.7",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
+    "lint-staged": "^16.1.6",
     "magic-string": "0.30.18",
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
