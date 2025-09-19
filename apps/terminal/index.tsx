@@ -229,7 +229,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   useEffect(() => {
     if (typeof Worker === 'function') {
       workerRef.current = new Worker(
-        new URL('../../workers/terminal-worker.ts', import.meta.url),
+        new URL('../../workers/terminal-worker.mts', import.meta.url),
       );
     }
     return () => workerRef.current?.terminate();

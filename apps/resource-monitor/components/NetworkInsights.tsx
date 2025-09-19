@@ -6,7 +6,7 @@ import {
   onFetchProxy,
   getActiveFetches,
   FetchEntry,
-} from '../../../lib/fetchProxy';
+} from '../../../lib/fetchProxy.mts';
 import { exportMetrics } from '../export';
 import RequestChart from './RequestChart';
 

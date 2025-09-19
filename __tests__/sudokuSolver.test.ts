@@ -1,4 +1,4 @@
-import { solve, ratePuzzle, getHint } from '../workers/sudokuSolver';
+import { solve, ratePuzzle, getHint } from '../workers/sudokuSolver.mts';
 
 const puzzle: number[][] = [
   [0, 0, 3, 0, 2, 0, 6, 0, 0],

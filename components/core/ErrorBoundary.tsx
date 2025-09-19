@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '../../lib/logger.mts';
 
 interface Props {
   children: ReactNode;

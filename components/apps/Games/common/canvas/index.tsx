@@ -32,7 +32,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       // Prefer OffscreenCanvas with a worker when supported
       if (typeof Worker === 'function' && hasOffscreenCanvas()) {
         const worker = new Worker(
-          new URL('../../../../../workers/game-loop.worker.ts', import.meta.url)
+          new URL('../../../../../workers/game-loop.worker.mts', import.meta.url)
         );
         workerRef.current = worker;
         const offscreen = canvas.transferControlToOffscreen();

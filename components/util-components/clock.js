@@ -15,7 +15,7 @@ export default class Clock extends Component {
         const update = () => this.setState({ current_time: new Date() });
         update();
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
-            this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
+            this.worker = new Worker(new URL('../../workers/timer.worker.mts', import.meta.url));
             this.worker.onmessage = update;
             this.worker.postMessage({ action: 'start', interval: 10 * 1000 });
         } else {
