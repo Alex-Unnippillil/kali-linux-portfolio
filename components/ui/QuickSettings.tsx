@@ -1,25 +1,56 @@
 "use client";
 
-import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
+import {
+  SYSTEM_SETTINGS_EVENT,
+  ThemePreference,
+  SystemSettingChangeDetail,
+  getStoredReduceMotionPreference,
+  getStoredThemePreference,
+  setReduceMotionPreference,
+  setThemePreference,
+} from '../../utils/systemSettings';
 
 interface Props {
   open: boolean;
 }
 
 const QuickSettings = ({ open }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
+  const [theme, setTheme] = usePersistentState<ThemePreference>('qs-theme', getStoredThemePreference);
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
-  const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [reduceMotion, setReduceMotion] = usePersistentState(
+    'qs-reduce-motion',
+    getStoredReduceMotionPreference,
+  );
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
+    setThemePreference(theme, { silent: true });
   }, [theme]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduce-motion', reduceMotion);
+    setReduceMotionPreference(reduceMotion, { silent: true });
   }, [reduceMotion]);
+
+  useEffect(() => {
+    const handleSettingsChange = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as SystemSettingChangeDetail | undefined;
+      if (!detail) return;
+
+      if (detail.setting === 'theme') {
+        setTheme((prev) => (prev === detail.value ? prev : detail.value));
+      } else if (detail.setting === 'reduceMotion') {
+        setReduceMotion((prev) => (prev === detail.value ? prev : detail.value));
+      }
+    };
+
+    window.addEventListener(SYSTEM_SETTINGS_EVENT, handleSettingsChange as EventListener);
+    return () => {
+      window.removeEventListener(SYSTEM_SETTINGS_EVENT, handleSettingsChange as EventListener);
+    };
+  }, [setReduceMotion, setTheme]);
 
   return (
     <div
@@ -30,7 +61,11 @@ const QuickSettings = ({ open }: Props) => {
       <div className="px-4 pb-2">
         <button
           className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          onClick={() => {
+            const next = theme === 'light' ? 'dark' : 'light';
+            setTheme(next);
+            setThemePreference(next);
+          }}
         >
           <span>Theme</span>
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
@@ -49,7 +84,11 @@ const QuickSettings = ({ open }: Props) => {
         <input
           type="checkbox"
           checked={reduceMotion}
-          onChange={() => setReduceMotion(!reduceMotion)}
+          onChange={() => {
+            const next = !reduceMotion;
+            setReduceMotion(next);
+            setReduceMotionPreference(next);
+          }}
         />
       </div>
     </div>

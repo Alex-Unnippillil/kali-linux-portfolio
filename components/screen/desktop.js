@@ -19,6 +19,8 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import CommandPalette from '../ui/CommandPalette';
+import createCommandRegistry from '../../data/commands';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -51,6 +53,7 @@ export class Desktop extends Component {
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
+            showCommandPalette: false,
             switcherWindows: [],
         }
     }
@@ -146,7 +149,41 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    shouldIgnoreShortcut = (event) => {
+        const target = event.target;
+        if (typeof window === 'undefined') return false;
+        if (!(target instanceof HTMLElement)) return false;
+        const tagName = target.tagName ? target.tagName.toLowerCase() : '';
+        if (target.isContentEditable) return true;
+        return ['input', 'textarea', 'select'].includes(tagName);
+    }
+
+    openCommandPalette = () => {
+        this.setState({ showCommandPalette: true });
+    }
+
+    closeCommandPalette = () => {
+        this.setState({ showCommandPalette: false });
+    }
+
     handleGlobalShortcut = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            if (!this.state.showCommandPalette && this.shouldIgnoreShortcut(e)) {
+                return;
+            }
+            e.preventDefault();
+            if (this.state.showCommandPalette) {
+                this.closeCommandPalette();
+            } else {
+                this.openCommandPalette();
+            }
+            return;
+        }
+
+        if (this.state.showCommandPalette) {
+            return;
+        }
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
@@ -966,6 +1003,16 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                { this.state.showCommandPalette ?
+                    <CommandPalette
+                        open={this.state.showCommandPalette}
+                        commands={createCommandRegistry({
+                            openApp: this.openApp,
+                            openShortcutSelector: this.openShortcutSelector,
+                        }, apps)}
+                        onClose={this.closeCommandPalette}
+                    /> : null}
 
             </main>
         )
