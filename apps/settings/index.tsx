@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import usePermissions from "../../hooks/usePermissions";
 
 export default function Settings() {
   const {
@@ -41,6 +42,11 @@ export default function Settings() {
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const { entries: permissionEntries, revokePermission, resetPermissions } =
+    usePermissions();
+  const grantedPermissions = permissionEntries.filter(
+    (entry) => entry.status === "granted",
+  );
 
   const wallpapers = [
     "wall-1",
@@ -285,6 +291,49 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+          <div className="mx-auto my-6 w-full max-w-2xl space-y-3 px-4">
+            <h2 className="text-lg font-semibold text-ubt-grey">
+              Runtime Permissions
+            </h2>
+            {grantedPermissions.length === 0 ? (
+              <p className="text-sm text-ubt-grey">
+                No runtime permissions have been granted yet.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {grantedPermissions.map((permission) => (
+                  <li
+                    key={permission.permission}
+                    className="flex flex-col gap-2 rounded-md border border-gray-800 bg-gray-900/60 p-4 text-white md:flex-row md:items-center md:justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold">{permission.title}</p>
+                      <p className="text-sm text-ubt-grey">{permission.message}</p>
+                      {permission.appNames.length > 0 && (
+                        <p className="text-xs text-ubt-grey">
+                          Used by {permission.appNames.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => revokePermission(permission.permission)}
+                      className="self-start rounded bg-ub-orange px-3 py-1 text-sm font-medium text-white transition hover:bg-ubt-grey md:self-auto"
+                    >
+                      Revoke
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {grantedPermissions.length > 0 && (
+              <button
+                onClick={resetPermissions}
+                className="rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
+              >
+                Revoke All Permissions
+              </button>
+            )}
           </div>
         </>
       )}

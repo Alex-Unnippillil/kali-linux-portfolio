@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import usePermissions from '../../hooks/usePermissions';
 
 export const shouldTilt = (
   acc: DeviceMotionEventAcceleration | null,
@@ -18,6 +19,8 @@ export const useTiltSensor = (
   threshold: number,
   onTilt: () => void,
 ): void => {
+  const { requestPermission } = usePermissions();
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handler = (e: DeviceMotionEvent) => {
@@ -30,14 +33,28 @@ export const useTiltSensor = (
     };
     const D = (window as any).DeviceMotionEvent;
     if (typeof D?.requestPermission === 'function') {
-      D.requestPermission().then((res: string) => {
-        if (res === 'granted') start();
-      });
+      requestPermission({
+        permission: 'motion',
+        appName: 'Pinball',
+        title: 'Motion sensor access',
+        message: 'Allow Pinball to read motion data to detect tilts.',
+        details: [
+          'Only acceleration data is used for tilt detection.',
+          'Permission persists until you revoke it from Settings.',
+        ],
+        successMessage: 'Tilt detection enabled.',
+        failureMessage: 'Motion sensor permission denied.',
+        request: async () => {
+          const res = await D.requestPermission();
+          if (res === 'granted') start();
+          return res === 'granted';
+        },
+      }).catch(() => {});
     } else if (D) {
       start();
     }
     return () => {
       if (listening) window.removeEventListener('devicemotion', handler);
     };
-  }, [threshold, onTilt]);
+  }, [threshold, onTilt, requestPermission]);
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
 import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
+import usePermissions from '../../hooks/usePermissions';
 
 const WIDTH = 300;
 const HEIGHT = 500;
@@ -61,6 +62,7 @@ const LaneRunner = () => {
   const [reset, setReset] = useState(0);
   const [lives, setLives] = useState(3);
   const [curve, setCurve] = usePersistentState('lane-runner:curve', 'linear');
+  const { requestPermission } = usePermissions();
   const gammaRef = useRef(0);
   const fileRef = useRef(null);
 
@@ -96,16 +98,47 @@ const LaneRunner = () => {
 
   useEffect(() => {
     if (control !== 'tilt') return;
-    let active = true;
-    canUseTilt().then((allowed) => {
-      if (!active) return;
-      setTiltAllowed(allowed);
-      if (!allowed) setControl('keys');
+    if (typeof window === 'undefined') return;
+    const D = window.DeviceOrientationEvent;
+    if (!D) {
+      setTiltAllowed(false);
+      setControl('keys');
+      return;
+    }
+    let cancelled = false;
+    const ensurePermission = async () => {
+      const granted = await requestPermission({
+        permission: 'motion',
+        appName: 'Lane Runner',
+        title: 'Motion controls',
+        message: 'Allow Lane Runner to read orientation data for tilt controls.',
+        details: [
+          'Only device orientation is used to steer in-game.',
+          'Permission is stored until you revoke it from Settings.',
+        ],
+        successMessage: 'Tilt controls enabled.',
+        failureMessage: 'Tilt controls unavailable without motion access.',
+        request: async () => {
+          if (typeof D.requestPermission === 'function') {
+            const res = await D.requestPermission();
+            return res === 'granted';
+          }
+          return true;
+        },
+      });
+      if (cancelled) return;
+      setTiltAllowed(granted);
+      if (!granted) setControl('keys');
+    };
+    ensurePermission().catch(() => {
+      if (cancelled) return;
+      setTiltAllowed(false);
+      setControl('keys');
     });
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [control]);
+  }, [control, requestPermission]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

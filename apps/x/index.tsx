@@ -14,6 +14,7 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import usePermissions from '../../hooks/usePermissions';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -66,6 +67,7 @@ const IconBadge = (props: SVGProps<SVGSVGElement>) => (
 
 export default function XTimeline() {
   const { accent } = useSettings();
+  const { requestPermission, getStatus } = usePermissions();
   const [profilePresets, setProfilePresets] = usePersistentState<string[]>(
     'x-profile-presets',
     () => ['AUnnippillil']
@@ -119,19 +121,35 @@ export default function XTimeline() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (
-      typeof window !== 'undefined' &&
+  const notificationsGranted =
+    getStatus('notifications') === 'granted' ||
+    (typeof window !== 'undefined' &&
       'Notification' in window &&
-      Notification.permission === 'default'
-    ) {
-      Notification.requestPermission().catch(() => {});
-    }
+      Notification.permission === 'granted');
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    requestPermission({
+      permission: 'notifications',
+      appName: 'X Scheduler',
+      title: 'Desktop notifications',
+      message: 'Allow X Scheduler to send reminders when scheduled posts are due.',
+      details: [
+        'Reminders trigger only for tweets you schedule in this app.',
+        'You can revoke notification access from Settings at any time.',
+      ],
+      successMessage: 'Notifications enabled for X Scheduler.',
+      failureMessage: 'Notification permission denied—reminders will stay muted.',
+      request: async () => {
+        const res = await Notification.requestPermission();
+        return res === 'granted';
+      },
+    }).catch(() => {});
     const timeouts = timeoutsRef.current;
     return () => {
       Object.values(timeouts).forEach(clearTimeout);
     };
-  }, []);
+  }, [requestPermission]);
 
   useEffect(() => {
     scheduled.forEach((t) => {
@@ -139,10 +157,7 @@ export default function XTimeline() {
         const delay = t.time - Date.now();
         if (delay > 0) {
           timeoutsRef.current[t.id] = window.setTimeout(() => {
-            if (
-              'Notification' in window &&
-              Notification.permission === 'granted'
-            ) {
+            if ('Notification' in window && notificationsGranted) {
               new Notification('Tweet reminder', { body: t.text });
             }
             setScheduled((prev) => prev.filter((s) => s.id !== t.id));
@@ -157,7 +172,7 @@ export default function XTimeline() {
         delete timeoutsRef.current[id];
       }
     });
-  }, [scheduled, setScheduled]);
+  }, [scheduled, setScheduled, notificationsGranted]);
 
   useEffect(() => {
     if (!loaded || !scriptLoaded) return;

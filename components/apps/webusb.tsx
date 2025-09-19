@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import FormError from '../ui/FormError';
+import usePermissions from '../../hooks/usePermissions';
 
 interface USBEndpoint {
   direction: 'in' | 'out';
@@ -47,42 +48,67 @@ const WebUSBApp: React.FC = () => {
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState('');
 
+  const { requestPermission } = usePermissions();
+
   const handleConnect = async () => {
     if (useMock || !supported) {
       setConnected(true);
       setLog((l) => [...l, 'Connected to mock device']);
       return;
     }
-    try {
-      const d = await (navigator as NavigatorUSB).usb.requestDevice({ filters: [] });
-      await d.open();
-      if (d.configuration === null) {
-        await d.selectConfiguration(1);
-      }
-      await d.claimInterface(0);
-      const alt = d.configuration?.interfaces[0].alternates[0];
-      const epIn = alt?.endpoints.find((e) => e.direction === 'in');
-      const epOut = alt?.endpoints.find((e) => e.direction === 'out');
-      setInEndpoint(epIn?.endpointNumber ?? null);
-      setOutEndpoint(epOut?.endpointNumber ?? null);
-      d.addEventListener('disconnect', () => {
-        setConnected(false);
-        setDevice(null);
-        setLog((l) => [...l, 'Device disconnected']);
-      });
-      setDevice(d);
-      setConnected(true);
-      setError('');
-      setLog((l) => [...l, `Connected to ${d.productName ?? 'device'}`]);
-    } catch (err) {
-      const e = err as DOMException;
-      if (e.name === 'NotFoundError') {
-        setError('No device selected.');
-      } else if (e.name === 'NotAllowedError') {
-        setError('Permission to access USB was denied.');
-      } else {
-        setError(e.message || 'An unknown error occurred.');
-      }
+    setError('');
+    const granted = await requestPermission({
+      permission: 'usb',
+      appName: 'WebUSB Terminal',
+      title: 'USB device access',
+      message: 'Allow WebUSB Terminal to communicate with a USB device you choose.',
+      details: [
+        'Only devices you select are accessed and the permission persists until revoked.',
+        'Disconnecting the device ends the session automatically.',
+      ],
+      successMessage: 'USB device ready for WebUSB Terminal.',
+      failureMessage: 'USB device access was cancelled or denied.',
+      request: async () => {
+        try {
+          const d = await (navigator as NavigatorUSB).usb.requestDevice({ filters: [] });
+          await d.open();
+          if (d.configuration === null) {
+            await d.selectConfiguration(1);
+          }
+          await d.claimInterface(0);
+          const alt = d.configuration?.interfaces[0].alternates[0];
+          const epIn = alt?.endpoints.find((e) => e.direction === 'in');
+          const epOut = alt?.endpoints.find((e) => e.direction === 'out');
+          setInEndpoint(epIn?.endpointNumber ?? null);
+          setOutEndpoint(epOut?.endpointNumber ?? null);
+          d.addEventListener('disconnect', () => {
+            setConnected(false);
+            setDevice(null);
+            setLog((l) => [...l, 'Device disconnected']);
+          });
+          setDevice(d);
+          setConnected(true);
+          setError('');
+          setLog((l) => [...l, `Connected to ${d.productName ?? 'device'}`]);
+          return true;
+        } catch (err) {
+          const e = err as DOMException;
+          if (e.name === 'NotFoundError') {
+            setError('No device selected.');
+            return false;
+          }
+          if (e.name === 'NotAllowedError') {
+            setError('Permission to access USB was denied.');
+            return false;
+          }
+          setError(e.message || 'An unknown error occurred.');
+          throw err;
+        }
+      },
+    });
+    if (!granted) {
+      setConnected(false);
+      setDevice(null);
     }
   };
 
