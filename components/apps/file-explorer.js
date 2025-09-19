@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import useUndoQueue from '../../hooks/useUndoQueue';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import Toast from '../ui/Toast';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -115,6 +117,24 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const { entries: undoEntries, enqueue: enqueueUndo, undo: undoAction, remove: removeUndo } =
+    useUndoQueue();
+  const [pendingUndo, setPendingUndo] = useState(null);
+  const [statusToast, setStatusToast] = useState('');
+  const dirRef = useRef(null);
+
+  useEffect(() => {
+    dirRef.current = dirHandle;
+  }, [dirHandle]);
+
+  useEffect(() => {
+    if (!undoEntries.length) {
+      setPendingUndo(null);
+      return;
+    }
+    const latest = undoEntries[undoEntries.length - 1];
+    setPendingUndo(latest);
+  }, [undoEntries]);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -144,6 +164,94 @@ export default function FileExplorer() {
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
+
+  const currentPathLabel = () => {
+    const names = path.map((segment) => segment.name || '').filter(Boolean);
+    if (!names.length) return '/';
+    const segments = names[0] === '/' ? names.slice(1) : names;
+    const joined = segments.join('/');
+    return joined ? `/${joined}` : names[0] === '/' ? '/' : `/${names[0]}`;
+  };
+
+  const handleUndo = async (entry) => {
+    const success = await undoAction(entry.id);
+    if (success) {
+      setStatusToast(`${entry.metadata.fileName} restored`);
+    } else {
+      setStatusToast(`Failed to restore ${entry.metadata.fileName}`);
+    }
+  };
+
+  const deleteFileEntry = async (file) => {
+    if (!dirHandle) return;
+    if (typeof window !== 'undefined' && !window.confirm(`Delete ${file.name}?`)) return;
+
+    try {
+      const directory = dirHandle;
+      const fileHandle = file.handle;
+      const fileData = await fileHandle.getFile();
+      const buffer = await fileData.arrayBuffer();
+      const blob = new Blob([buffer], { type: fileData.type || 'application/octet-stream' });
+      const size = fileData.size;
+      const pathLabel = currentPathLabel();
+
+      await directory.removeEntry(file.name);
+      if (currentFile?.name === file.name) {
+        setCurrentFile(null);
+        setContent('');
+      }
+      if (opfsSupported) await removeBuffer(file.name);
+      await readDir(directory);
+
+      setStatusToast('');
+      enqueueUndo({
+        type: 'file-delete',
+        metadata: {
+          fileName: file.name,
+          path: pathLabel,
+          size,
+          mimeType: fileData.type,
+        },
+        undo: async () => {
+          const restoredHandle = await directory.getFileHandle(file.name, { create: true });
+          const writable = await restoredHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          if (dirRef.current === directory) {
+            await readDir(directory);
+          }
+        },
+      });
+    } catch (error) {
+      console.error('Failed to delete file', error);
+      setStatusToast(`Failed to delete ${file.name}`);
+    }
+  };
+
+  const undoDuration = pendingUndo ? Math.max(pendingUndo.expiresAt - Date.now(), 0) : 0;
+
+  const toastElements = (
+    <>
+      {pendingUndo && (
+        <Toast
+          key={pendingUndo.id}
+          message={`Deleted ${pendingUndo.metadata.fileName}`}
+          actionLabel="Undo"
+          onAction={() => handleUndo(pendingUndo)}
+          onClose={() => removeUndo(pendingUndo.id)}
+          duration={Math.max(undoDuration, 1000)}
+        />
+      )}
+      {statusToast && (
+        <Toast
+          key="file-explorer-status"
+          message={statusToast}
+          onClose={() => setStatusToast('')}
+          duration={4000}
+        />
+      )}
+    </>
+  );
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -261,42 +369,46 @@ export default function FileExplorer() {
 
   if (!supported) {
     return (
-      <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
-        {!currentFile && (
-          <button
-            onClick={() => fallbackInputRef.current?.click()}
-            className="px-2 py-1 bg-black bg-opacity-50 rounded self-start"
-          >
-            Open File
-          </button>
-        )}
-        {currentFile && (
-          <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+      <>
+        <div className="p-4 flex flex-col h-full">
+          <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+          {!currentFile && (
             <button
-              onClick={async () => {
-                const handle = await saveFileDialog({ suggestedName: currentFile.name });
-                const writable = await handle.createWritable();
-                await writable.write(content);
-                await writable.close();
-              }}
-              className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded self-start"
+              onClick={() => fallbackInputRef.current?.click()}
+              className="px-2 py-1 bg-black bg-opacity-50 rounded self-start"
             >
-              Save
+              Open File
             </button>
-          </>
-        )}
-      </div>
+          )}
+          {currentFile && (
+            <>
+              <textarea
+                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+              />
+              <button
+                onClick={async () => {
+                  const handle = await saveFileDialog({ suggestedName: currentFile.name });
+                  const writable = await handle.createWritable();
+                  await writable.write(content);
+                  await writable.close();
+                }}
+                className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded self-start"
+              >
+                Save
+              </button>
+            </>
+          )}
+        </div>
+        {toastElements}
+      </>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    <>
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -338,11 +450,20 @@ export default function FileExplorer() {
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
             <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              key={`${f.name}-${i}`}
+              className="px-2 py-0.5 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center justify-between"
               onClick={() => openFile(f)}
             >
-              {f.name}
+              <span className="truncate">{f.name}</span>
+              <button
+                className="ml-2 text-xs px-1 py-0.5 bg-red-600 bg-opacity-70 rounded hover:bg-opacity-90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteFileEntry(f);
+                }}
+              >
+                Delete
+              </button>
             </div>
           ))}
         </div>
@@ -370,6 +491,8 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      {toastElements}
+    </>
   );
 }
