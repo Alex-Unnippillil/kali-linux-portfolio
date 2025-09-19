@@ -1,12 +1,58 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { flags: featureFlagValues, overrides: remoteFlagOverrides, manualOverrides: manualFlagOverrides, defaults: defaultFlagValues, source: overrideSource, status: flagStatus, error: flagError, setOverrideUrl, refreshOverrides, setFlag: setFeatureFlag, resetFlag: resetFeatureFlag, clearAllFlags: clearManualFlagOverrides } = useFeatureFlags();
+    const [overrideUrlInput, setOverrideUrlInput] = useState(overrideSource || '');
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+
+    useEffect(() => {
+        setOverrideUrlInput(overrideSource || '');
+    }, [overrideSource]);
+
+    const handleApplyOverride = useCallback(() => {
+        void setOverrideUrl(overrideUrlInput || null);
+    }, [overrideUrlInput, setOverrideUrl]);
+
+    const handleLoadMockOverrides = useCallback(() => {
+        setOverrideUrlInput('/mock/flags.json');
+        void setOverrideUrl('/mock/flags.json');
+    }, [setOverrideUrl]);
+
+    const handleClearOverrides = useCallback(() => {
+        setOverrideUrlInput('');
+        void setOverrideUrl(null);
+    }, [setOverrideUrl]);
+
+    const handleRefreshOverrides = useCallback(() => {
+        void refreshOverrides();
+    }, [refreshOverrides]);
+
+    const manualOverrideCount = Object.keys(manualFlagOverrides).length;
+
+    const formatFlagValue = (value) => {
+        if (value === undefined) return '—';
+        if (typeof value === 'string') return value;
+        return `${value}`;
+    };
+
+    let statusClassName = 'text-ubt-grey';
+    if (flagStatus === 'ready') {
+        statusClassName = 'text-green-400';
+    } else if (flagStatus === 'loading') {
+        statusClassName = 'text-blue-400';
+    } else if (flagStatus === 'blocked') {
+        statusClassName = 'text-yellow-300';
+    } else if (flagStatus === 'error') {
+        statusClassName = 'text-red-400';
+    }
+
+    const sortedFlagEntries = Object.entries(featureFlagValues).sort((a, b) => a[0].localeCompare(b[0]));
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -257,6 +303,116 @@ export function Settings() {
                 >
                     Reset Desktop
                 </button>
+            </div>
+            <div className="border-t border-gray-900 mt-8 pt-4 px-4 space-y-4">
+                <div className="flex flex-col gap-1 text-left">
+                    <h2 className="text-white text-base font-semibold">Feature Flags (Debug)</h2>
+                    <p className="text-xs text-ubt-grey">
+                        Load remote overrides and tweak values to experiment with flags during development.
+                    </p>
+                </div>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                    <input
+                        type="text"
+                        value={overrideUrlInput}
+                        onChange={(e) => setOverrideUrlInput(e.target.value)}
+                        placeholder="https://example.com/flags.json"
+                        className="flex-1 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey text-sm"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={handleApplyOverride}
+                            className="px-3 py-1 rounded bg-ub-orange text-white text-sm"
+                        >
+                            Apply URL
+                        </button>
+                        <button
+                            onClick={handleLoadMockOverrides}
+                            className="px-3 py-1 rounded border border-ubt-cool-grey text-sm text-white hover:bg-ub-orange hover:border-ub-orange"
+                        >
+                            Load Mock
+                        </button>
+                        <button
+                            onClick={handleRefreshOverrides}
+                            className="px-3 py-1 rounded border border-ubt-cool-grey text-sm text-white hover:bg-ub-orange hover:border-ub-orange"
+                        >
+                            Refresh
+                        </button>
+                        <button
+                            onClick={handleClearOverrides}
+                            className="px-3 py-1 rounded border border-ubt-cool-grey text-sm text-white hover:bg-ub-orange hover:border-ub-orange"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                <p className={`text-xs ${statusClassName}`}>
+                    Status: {flagStatus}
+                    {flagError ? ` — ${flagError}` : ''}
+                </p>
+                <p className="text-xs text-ubt-grey">
+                    Overrides require network access to be enabled above.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-ubt-grey">
+                    <span>Manual overrides: {manualOverrideCount}</span>
+                    <button
+                        onClick={() => clearManualFlagOverrides()}
+                        disabled={manualOverrideCount === 0}
+                        className={`px-2 py-1 rounded border border-ubt-cool-grey ${manualOverrideCount === 0 ? 'opacity-50 cursor-not-allowed text-ubt-grey' : 'text-white hover:bg-ub-orange hover:border-ub-orange'}`}
+                    >
+                        Reset manual overrides
+                    </button>
+                </div>
+                <div className="space-y-3">
+                    {sortedFlagEntries.map(([key, value]) => {
+                        const manual = Object.prototype.hasOwnProperty.call(manualFlagOverrides, key);
+                        const remoteValue = remoteFlagOverrides[key];
+                        const defaultValue = defaultFlagValues[key];
+                        const sourceLabel = manual ? 'Manual override' : remoteValue !== undefined ? 'Remote override' : 'Default value';
+                        return (
+                            <div key={key} className="rounded border border-gray-800 bg-black bg-opacity-30 p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <span className="font-mono text-sm text-white break-all">{key}</span>
+                                    <div className="flex items-center gap-2">
+                                        {typeof value === 'boolean' ? (
+                                            <label className="flex items-center gap-2 text-ubt-grey">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={value}
+                                                    onChange={(e) => setFeatureFlag(key, e.target.checked)}
+                                                    className="accent-ub-orange"
+                                                />
+                                                <span className="text-xs uppercase tracking-wide">{value ? 'On' : 'Off'}</span>
+                                            </label>
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                value={value === undefined ? '' : `${value}`}
+                                                onChange={(e) => setFeatureFlag(key, e.target.value)}
+                                                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey text-xs"
+                                            />
+                                        )}
+                                        <button
+                                            onClick={() => resetFeatureFlag(key)}
+                                            disabled={!manual}
+                                            className={`px-2 py-1 rounded border border-ubt-cool-grey text-xs ${manual ? 'text-white hover:bg-ub-orange hover:border-ub-orange' : 'opacity-50 cursor-not-allowed text-ubt-grey'}`}
+                                        >
+                                            Reset
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="mt-2 space-y-1 text-[11px] text-ubt-grey break-words">
+                                    <div>Default: {formatFlagValue(defaultValue)}</div>
+                                    <div>Remote: {formatFlagValue(remoteValue)}</div>
+                                    <div>Source: {sourceLabel}</div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {sortedFlagEntries.length === 0 && (
+                        <div className="text-xs text-ubt-grey">No feature flags defined yet.</div>
+                    )}
+                </div>
             </div>
             <input
                 type="file"
