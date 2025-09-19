@@ -17,6 +17,8 @@
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "a11y": "node scripts/a11y.mjs",
+    "qa:desktop-shell:lint": "eslint --max-warnings=0 tests/desktop-shell.gate.spec.ts tests/fixtures/desktopState.ts playwright/global-setup.ts playwright.config.ts",
+    "qa:desktop-shell": "yarn playwright test tests/desktop-shell.gate.spec.ts",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
