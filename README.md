@@ -92,6 +92,8 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn i18n sync` – scan the app for translation keys and update JSON/PO catalogs.
+- `yarn i18n check` – verify catalogs are in sync (run automatically in CI).
 
 ---
 
