@@ -42,17 +42,30 @@ export class Desktop extends Component {
             window_positions: {},
             desktop_apps: [],
             context_menus: {
-                desktop: false,
                 default: false,
                 app: false,
                 taskbar: false,
             },
+            desktopContextMenu: {
+                open: false,
+                anchor: { x: 0, y: 0 },
+                triggerType: null,
+                triggerId: null,
+            },
+            desktopSortOrder: 'asc',
+            desktopViewMode: 'grid',
+            selectedDesktopApps: [],
+            desktopCanPaste: false,
+            desktopPasteContent: '',
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
         }
+        this.desktopFocusOrigin = null
+        this.desktopContextTrigger = null
+        this.desktopMenuRequestToken = 0
     }
 
     componentDidMount() {
@@ -89,6 +102,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('context-menu-request-close', this.handleContextMenuRequestClose);
     }
 
     componentWillUnmount() {
@@ -96,6 +110,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('context-menu-request-close', this.handleContextMenuRequestClose);
     }
 
     checkForNewFolders = () => {
@@ -233,17 +248,17 @@ export class Desktop extends Component {
 
     checkContextMenu = (e) => {
         e.preventDefault();
-        this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
+        const target = e.target instanceof Element ? e.target.closest('[data-context]') : null;
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+        this.hideAllContextMenu();
         switch (context) {
             case "desktop-area":
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
-                this.showContextMenu(e, "desktop");
+                this.showContextMenu(e, "desktop", target);
                 break;
             case "app":
                 ReactGA.event({
@@ -264,23 +279,23 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened Default Context Menu`
                 });
-                this.showContextMenu(e, "default");
+                this.showContextMenu(e, "default", target);
         }
     }
 
     handleContextKey = (e) => {
         if (!(e.shiftKey && e.key === 'F10')) return;
         e.preventDefault();
-        this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
+        const target = e.target instanceof Element ? e.target.closest('[data-context]') : null;
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
+        this.hideAllContextMenu();
         switch (context) {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
+                this.showContextMenu(fakeEvent, "desktop", target);
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
@@ -292,13 +307,18 @@ export class Desktop extends Component {
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
-                this.showContextMenu(fakeEvent, "default");
+                this.showContextMenu(fakeEvent, "default", target);
         }
     }
 
-    showContextMenu = (e, menuName /* context menu name */) => {
+    showContextMenu = (e, menuName /* context menu name */, target = null) => {
+        if (menuName === "desktop") {
+            this.openDesktopContextMenu(e, target);
+            return;
+        }
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
+        if (!contextMenu) return;
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -319,6 +339,7 @@ export class Desktop extends Component {
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
+        this.closeDesktopContextMenu('programmatic');
         this.setState({ context_menus: menus, context_app: null });
     }
 
@@ -340,6 +361,150 @@ export class Desktop extends Component {
         return {
             posx, posy
         }
+    }
+
+    handleContextMenuRequestClose = (event) => {
+        const reason = event?.detail?.reason || 'programmatic'
+        const menus = { ...this.state.context_menus }
+        Object.keys(menus).forEach(key => {
+            menus[key] = false
+        })
+        if (reason !== 'escape') {
+            this.closeDesktopContextMenu(reason)
+        }
+        this.setState({ context_menus: menus, context_app: null })
+    }
+
+    openDesktopContextMenu = (e, target) => {
+        const { posx, posy } = this.getMenuPosition(e)
+        const anchor = { x: posx, y: posy }
+        const triggerType = target ? target.dataset?.context || null : null
+        const triggerId = target ? target.dataset?.appId || null : null
+        this.desktopContextTrigger = target instanceof HTMLElement ? target : null
+        this.desktopFocusOrigin = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        const token = this.desktopMenuRequestToken + 1
+        this.desktopMenuRequestToken = token
+
+        this.setState(prev => ({
+            context_menus: { ...prev.context_menus, default: false, app: false, taskbar: false },
+            desktopContextMenu: {
+                open: true,
+                anchor,
+                triggerType,
+                triggerId,
+            },
+        }), () => this.prepareDesktopPaste(token))
+    }
+
+    prepareDesktopPaste = async (token) => {
+        if (!navigator?.clipboard?.readText) {
+            if (this.desktopMenuRequestToken !== token) return
+            this.setState({ desktopPasteContent: '', desktopCanPaste: false })
+            return
+        }
+        try {
+            const text = await navigator.clipboard.readText()
+            if (this.desktopMenuRequestToken !== token) return
+            const trimmed = (text || '').trim()
+            this.setState({ desktopPasteContent: trimmed, desktopCanPaste: Boolean(trimmed) })
+        } catch (error) {
+            if (this.desktopMenuRequestToken !== token) return
+            this.setState({ desktopPasteContent: '', desktopCanPaste: false })
+        }
+    }
+
+    handleDesktopMenuClose = (reason) => {
+        this.closeDesktopContextMenu(reason)
+    }
+
+    closeDesktopContextMenu = (reason = 'programmatic') => {
+        if (!this.state.desktopContextMenu.open) {
+            if (reason === 'escape' || reason === 'pointer' || reason === 'select') {
+                this.restoreDesktopFocus(
+                    this.desktopFocusOrigin,
+                    this.desktopContextTrigger,
+                    {
+                        triggerId: this.state.desktopContextMenu.triggerId,
+                        triggerType: this.state.desktopContextMenu.triggerType,
+                    }
+                )
+                this.desktopFocusOrigin = null
+                this.desktopContextTrigger = null
+            }
+            return
+        }
+        const origin = this.desktopFocusOrigin
+        const trigger = this.desktopContextTrigger
+        const triggerInfo = {
+            triggerId: this.state.desktopContextMenu.triggerId,
+            triggerType: this.state.desktopContextMenu.triggerType,
+        }
+        this.desktopFocusOrigin = null
+        this.desktopContextTrigger = null
+        this.desktopMenuRequestToken += 1
+        this.setState(prev => ({
+            desktopContextMenu: { ...prev.desktopContextMenu, open: false, triggerId: null, triggerType: null },
+            desktopPasteContent: '',
+            desktopCanPaste: false,
+        }), () => {
+            this.restoreDesktopFocus(origin, trigger, triggerInfo)
+        })
+    }
+
+    restoreDesktopFocus = (origin, trigger, info = {}) => {
+        if (origin && typeof origin.focus === 'function') {
+            origin.focus()
+            return
+        }
+        if (trigger && typeof trigger.focus === 'function') {
+            trigger.focus()
+            return
+        }
+        if (info?.triggerId) {
+            const fallback = document.getElementById(`app-${info.triggerId}`)
+            if (fallback && typeof fallback.focus === 'function') {
+                fallback.focus()
+                return
+            }
+        }
+        const desktopSurface = document.querySelector('[data-context="desktop-area"]')
+        if (desktopSurface && typeof desktopSurface.focus === 'function') {
+            desktopSurface.focus()
+        }
+    }
+
+    toggleDesktopSortOrder = () => {
+        this.setState(prev => ({ desktopSortOrder: prev.desktopSortOrder === 'asc' ? 'desc' : 'asc' }))
+    }
+
+    toggleDesktopViewMode = () => {
+        this.setState(prev => ({ desktopViewMode: prev.desktopViewMode === 'grid' ? 'list' : 'grid' }))
+    }
+
+    selectAllDesktopIcons = () => {
+        const uniqueIds = Array.from(new Set(this.state.desktop_apps))
+        this.setState({ selectedDesktopApps: uniqueIds }, () => {
+            if (uniqueIds.length) {
+                const element = document.getElementById(`app-${uniqueIds[0]}`)
+                element?.focus?.()
+            }
+        })
+    }
+
+    handleDesktopPaste = async () => {
+        if (!this.state.desktopCanPaste) return
+        let text = this.state.desktopPasteContent
+        if (!text && navigator?.clipboard?.readText) {
+            try {
+                text = (await navigator.clipboard.readText()) || ''
+            } catch (e) {
+                text = ''
+            }
+        }
+        const trimmed = (text || '').trim()
+        if (!trimmed) return
+        window.dispatchEvent(new CustomEvent('clipboard-manager:add', { detail: { text: trimmed } }))
+        this.openApp('clipboard-manager')
     }
 
     fetchAppsData = (callback) => {
@@ -432,26 +597,40 @@ export class Desktop extends Component {
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+        if (Object.keys(this.state.closed_windows).length === 0) return null
+        const desktopIds = Array.from(new Set(this.state.desktop_apps))
+        if (!desktopIds.length) return null
 
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
+        const appMap = new Map(apps.map(app => [app.id, app]))
+        const selectedSet = new Set(this.state.selectedDesktopApps)
+        const sortedIds = desktopIds.sort((a, b) => {
+            const appA = appMap.get(a)
+            const appB = appMap.get(b)
+            const labelA = (appA?.title || '').toLowerCase()
+            const labelB = (appB?.title || '').toLowerCase()
+            if (this.state.desktopSortOrder === 'desc') {
+                return labelB.localeCompare(labelA)
             }
-        });
-        return appsJsx;
+            return labelA.localeCompare(labelB)
+        })
+
+        return sortedIds.map(id => {
+            const app = appMap.get(id)
+            if (!app) return null
+
+            const props = {
+                name: app.title,
+                id: app.id,
+                icon: app.icon,
+                openApp: this.openApp,
+                disabled: this.state.disabled_apps[app.id],
+                prefetch: app.screen?.prefetch,
+                viewMode: this.state.desktopViewMode,
+                selected: selectedSet.has(app.id),
+            }
+
+            return <UbuntuApp key={app.id} {...props} />
+        }).filter(Boolean)
     }
 
     renderWindows = () => {
@@ -864,14 +1043,22 @@ export class Desktop extends Component {
     }
 
     render() {
+        const desktopViewMode = this.state.desktopViewMode
+        const mainClasses = `h-full w-full flex flex-col ${desktopViewMode === 'list' ? 'items-start space-y-1' : 'items-end flex-wrap-reverse'} justify-start content-start pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent`
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                data-desktop-view={desktopViewMode}
+                className={mainClasses}
+            >
 
                 {/* Window Area */}
                 <div
                     id="window-area"
                     role="main"
                     className="absolute h-full w-full bg-transparent"
+                    tabIndex={-1}
                     data-context="desktop-area"
                 >
                     {this.renderWindows()}
@@ -907,11 +1094,21 @@ export class Desktop extends Component {
 
                 {/* Context Menus */}
                 <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    open={this.state.desktopContextMenu.open}
+                    anchorPoint={this.state.desktopContextMenu.anchor}
+                    onClose={this.handleDesktopMenuClose}
+                    onNewFolder={this.addNewFolder}
+                    onCreateShortcut={this.openShortcutSelector}
+                    onPaste={this.handleDesktopPaste}
+                    canPaste={this.state.desktopCanPaste}
+                    onSelectAll={this.selectAllDesktopIcons}
+                    sortOrder={this.state.desktopSortOrder}
+                    onToggleSort={this.toggleDesktopSortOrder}
+                    viewMode={desktopViewMode}
+                    onToggleView={this.toggleDesktopViewMode}
+                    openTerminal={() => this.openApp('terminal')}
+                    openSettings={() => this.openApp('settings')}
+                    onClearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu

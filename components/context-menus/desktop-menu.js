@@ -1,144 +1,140 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
+import {
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuSeparator,
+} from '../common/ContextMenu'
 import logger from '../../utils/logger'
 
-function DesktopMenu(props) {
-
+function DesktopMenu({
+    open,
+    anchorPoint,
+    onClose,
+    onNewFolder,
+    onCreateShortcut,
+    onPaste,
+    canPaste,
+    onSelectAll,
+    sortOrder,
+    onToggleSort,
+    viewMode,
+    onToggleView,
+    openTerminal,
+    openSettings,
+    onClearSession,
+}) {
     const [isFullScreen, setIsFullScreen] = useState(false)
 
     useEffect(() => {
-        document.addEventListener('fullscreenchange', checkFullScreen);
-        return () => {
-            document.removeEventListener('fullscreenchange', checkFullScreen);
-        };
+        const handleFullScreen = () => setIsFullScreen(Boolean(document.fullscreenElement))
+        handleFullScreen()
+        document.addEventListener('fullscreenchange', handleFullScreen)
+        return () => document.removeEventListener('fullscreenchange', handleFullScreen)
     }, [])
 
-
-    const openTerminal = () => {
-        props.openApp("terminal");
-    }
-
-    const openSettings = () => {
-        props.openApp("settings");
-    }
-
-    const checkFullScreen = () => {
-        if (document.fullscreenElement) {
-            setIsFullScreen(true)
-        } else {
-            setIsFullScreen(false)
-        }
-    }
-
-    const goFullScreen = () => {
-        // make website full screen
+    const handleFullScreenToggle = () => {
         try {
             if (document.fullscreenElement) {
                 document.exitFullscreen()
             } else {
                 document.documentElement.requestFullscreen()
             }
-        }
-        catch (e) {
-            logger.error(e)
+        } catch (error) {
+            logger.error(error)
         }
     }
 
+    const sortLabel = sortOrder === 'desc' ? 'Sort by name (Z → A)' : 'Sort by name (A → Z)'
+    const viewLabel = viewMode === 'list' ? 'View as grid' : 'View as list'
+    const fullScreenLabel = isFullScreen ? 'Exit Full Screen' : 'Enter Full Screen'
+
     return (
-        <div
+        <ContextMenuContent
             id="desktop-menu"
-            role="menu"
-            aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            open={open}
+            anchorPoint={anchorPoint}
+            onClose={onClose}
+            label="Desktop context menu"
         >
-            <button
-                onClick={props.addNewFolder}
-                type="button"
-                role="menuitem"
-                aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            <ContextMenuItem
+                onSelect={onNewFolder}
+                aria-label="Create new folder"
             >
-                <span className="ml-5">New Folder</span>
-            </button>
-            <button
-                onClick={props.openShortcutSelector}
-                type="button"
-                role="menuitem"
-                aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                New Folder
+            </ContextMenuItem>
+            <ContextMenuItem
+                onSelect={onCreateShortcut}
+                aria-label="Create desktop shortcut"
             >
-                <span className="ml-5">Create Shortcut...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
-            </div>
-            <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
-            </div>
-            <button
-                onClick={openTerminal}
-                type="button"
-                role="menuitem"
-                aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                Create Shortcut…
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+                onSelect={onPaste}
+                disabled={!canPaste}
+                aria-label="Paste clipboard contents"
             >
-                <span className="ml-5">Open in Terminal</span>
-            </button>
-            <Devider />
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                Paste
+            </ContextMenuItem>
+            <ContextMenuItem
+                onSelect={onSelectAll}
+                aria-label="Select all desktop icons"
             >
-                <span className="ml-5">Change Background...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                Select All
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+                onSelect={onToggleSort}
+                role="menuitemcheckbox"
+                checked={sortOrder === 'desc'}
+                aria-label="Toggle desktop sort order"
             >
-                <span className="ml-5">Settings</span>
-            </button>
-            <Devider />
-            <button
-                onClick={goFullScreen}
-                type="button"
-                role="menuitem"
-                aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                {sortLabel}
+            </ContextMenuItem>
+            <ContextMenuItem
+                onSelect={onToggleView}
+                role="menuitemcheckbox"
+                checked={viewMode === 'list'}
+                aria-label="Toggle desktop view mode"
             >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
-            </button>
-            <Devider />
-            <button
-                onClick={props.clearSession}
-                type="button"
-                role="menuitem"
-                aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                {viewLabel}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+                onSelect={openTerminal}
+                aria-label="Open in terminal"
             >
-                <span className="ml-5">Clear Session</span>
-            </button>
-        </div>
+                Open in Terminal
+            </ContextMenuItem>
+            <ContextMenuItem
+                onSelect={openSettings}
+                aria-label="Change background"
+            >
+                Change Background…
+            </ContextMenuItem>
+            <ContextMenuItem
+                onSelect={openSettings}
+                aria-label="Open settings"
+            >
+                Settings
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+                onSelect={handleFullScreenToggle}
+                aria-label={fullScreenLabel}
+            >
+                {fullScreenLabel}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+                onSelect={onClearSession}
+                aria-label="Clear session"
+            >
+                Clear Session
+            </ContextMenuItem>
+        </ContextMenuContent>
     )
 }
 
-function Devider() {
-    return (
-        <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
-        </div>
-    );
-}
-
-
 export default DesktopMenu
+
