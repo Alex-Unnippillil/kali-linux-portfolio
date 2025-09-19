@@ -35,6 +35,16 @@ yarn install
 yarn dev
 ```
 
+### Updating dependencies safely
+When you bump packages or touch `package.json`, keep the lockfile deterministic:
+
+1. Run `yarn install` to apply the version change locally.
+2. Execute `yarn dedupe` to collapse compatible ranges and keep the tree minimal.
+3. Verify the result with `yarn dedupe --check`; the command exits non-zero if duplicates remain.
+4. Inspect the lockfile (`git status`, `git diff yarn.lock`) and commit the updated `yarn.lock` alongside your dependency change.
+
+These steps match the CI guard that re-runs `yarn dedupe --check` and fails if the lockfile would change after a fresh install.
+
 ### Production Build
 Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
