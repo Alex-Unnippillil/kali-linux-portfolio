@@ -129,4 +129,5 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- Help center Lighthouse audit: run `yarn build` followed by `yarn lighthouse:help` to reproduce CI failures locally. Override the port with `LIGHTHOUSE_PORT=4020 yarn lighthouse:help` if another dev server is running, and append new contexts via `LIGHTHOUSE_HELP_CONTEXTS` so every `/help` variant stays above the 95 score threshold.
 
