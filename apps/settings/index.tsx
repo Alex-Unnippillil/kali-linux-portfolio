@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,39 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import type {
+  DataExportStage,
+  DataExportWorkerEvent,
+  DataExportWorkerCompleteEvent,
+  DataExportWorkerRequest,
+} from "../../lib/dataExport";
+
+type ExportProgressState = {
+  stage: DataExportStage;
+  completed: number;
+  total: number;
+  items: number;
+  bytes: number;
+};
+
+const STAGE_LABELS: Record<DataExportStage, string> = {
+  profiles: "Collecting device profiles",
+  sessions: "Archiving sessions",
+  flags: "Recording preference flags",
+};
+
+const formatBytes = (bytes: number): string => {
+  if (bytes <= 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};
+
+const pluralize = (count: number, word: string): string =>
+  `${count} ${word}${count === 1 ? "" : "s"}`;
 
 export default function Settings() {
   const {
@@ -33,6 +66,125 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const currentExportId = useRef<string | null>(null);
+  const [exportingData, setExportingData] = useState(false);
+  const [exportProgress, setExportProgress] =
+    useState<ExportProgressState | null>(null);
+  const [exportSummary, setExportSummary] = useState<
+    | {
+        bytes: number;
+        counts: Record<DataExportStage, number>;
+      }
+    | null
+  >(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    },
+    [],
+  );
+
+  const downloadArchive = (message: DataExportWorkerCompleteEvent) => {
+    const blob = new Blob([message.buffer], { type: message.mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = message.suggestedName;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  const handleWorkerMessage = (message: DataExportWorkerEvent) => {
+    if (
+      message.requestId &&
+      currentExportId.current &&
+      message.requestId !== currentExportId.current
+    ) {
+      return;
+    }
+
+    switch (message.type) {
+      case "progress":
+        setExportError(null);
+        setExportProgress({
+          stage: message.stage,
+          completed: message.completed,
+          total: message.total,
+          items: message.items,
+          bytes: message.bytes,
+        });
+        break;
+      case "complete":
+        downloadArchive(message);
+        setExportingData(false);
+        setExportProgress(null);
+        setExportError(null);
+        setExportSummary({
+          bytes: message.archive.totals.bytes,
+          counts: message.archive.totals.counts,
+        });
+        currentExportId.current = null;
+        break;
+      case "error":
+        setExportingData(false);
+        setExportProgress(null);
+        setExportSummary(null);
+        setExportError(message.error || "Failed to export data");
+        currentExportId.current = null;
+        break;
+      default:
+        break;
+    }
+  };
+
+  const ensureWorker = () => {
+    if (typeof window === "undefined" || typeof Worker === "undefined") {
+      setExportError("Web Workers are not supported in this environment.");
+      return null;
+    }
+    if (!workerRef.current) {
+      workerRef.current = new Worker(
+        new URL("../../workers/data-export.worker.ts", import.meta.url),
+        { type: "module" },
+      );
+      workerRef.current.onmessage = (event: MessageEvent<DataExportWorkerEvent>) => {
+        if (!event.data) return;
+        handleWorkerMessage(event.data);
+      };
+      workerRef.current.onerror = () => {
+        setExportingData(false);
+        setExportProgress(null);
+        setExportSummary(null);
+        setExportError("Failed to export data");
+        currentExportId.current = null;
+      };
+    }
+    return workerRef.current;
+  };
+
+  const handleDataExport = () => {
+    if (exportingData) return;
+    const worker = ensureWorker();
+    if (!worker) return;
+    setExportError(null);
+    setExportSummary(null);
+    setExportProgress(null);
+    setExportingData(true);
+    const id =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}`;
+    currentExportId.current = id;
+    const request: DataExportWorkerRequest = {
+      type: "start",
+      requestId: id,
+    };
+    worker.postMessage(request);
+  };
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -272,19 +424,56 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
-          <div className="flex justify-center my-4 space-x-4">
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+          <div className="flex flex-col items-center my-4 space-y-3">
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 rounded bg-ub-orange text-white"
+              >
+                Export Settings
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 rounded bg-ub-orange text-white"
+              >
+                Import Settings
+              </button>
+              <button
+                onClick={handleDataExport}
+                className="px-4 py-2 rounded bg-ub-orange text-white disabled:opacity-50"
+                disabled={exportingData}
+              >
+                {exportingData ? "Exporting Data…" : "Export Data Archive"}
+              </button>
+            </div>
+            <div
+              aria-live="polite"
+              className="text-sm text-ubt-grey text-center min-h-[1.5rem] flex flex-col gap-1"
             >
-              Export Settings
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Import Settings
-            </button>
+              {exportError ? (
+                <p className="text-red-400">{exportError}</p>
+              ) : exportProgress ? (
+                <>
+                  <p className="font-semibold">{STAGE_LABELS[exportProgress.stage]}</p>
+                  <p>
+                    Step {exportProgress.completed} of {exportProgress.total} ·{' '}
+                    {pluralize(exportProgress.items, "record")} · {formatBytes(exportProgress.bytes)}
+                  </p>
+                </>
+              ) : exportingData ? (
+                <p>Preparing data export…</p>
+              ) : exportSummary ? (
+                <p>
+                  Export complete — {pluralize(exportSummary.counts.profiles, "profile")},
+                  {' '}
+                  {pluralize(exportSummary.counts.sessions, "session")},
+                  {' '}
+                  {pluralize(exportSummary.counts.flags, "flag")} ({formatBytes(exportSummary.bytes)}).
+                </p>
+              ) : (
+                <p>Generate a privacy archive of profiles, sessions, and flags.</p>
+              )}
+            </div>
           </div>
         </>
       )}
