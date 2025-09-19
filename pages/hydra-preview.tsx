@@ -1,36 +1,59 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import FormError from '../components/ui/FormError';
+import useWizardController from '../hooks/useWizardController';
 
 const protocols = ['ssh', 'ftp', 'http', 'smtp'];
 
 const HydraPreview: React.FC = () => {
-  const [step, setStep] = useState(0);
-  const [target, setTarget] = useState('');
-  const [protocol, setProtocol] = useState(protocols[0]);
-  const [wordlist, setWordlist] = useState('');
-  const [error, setError] = useState('');
+  const wizard = useWizardController<{ target: string; protocol: string; wordlist: string }>(
+    useMemo(
+      () => ({
+        paramName: 'step',
+        steps: [
+          {
+            id: 'target',
+            initialData: '',
+            validate: ({ data }) => {
+              if (typeof data !== 'string' || !data.trim()) {
+                return 'Target is required';
+              }
+              return null;
+            },
+          },
+          {
+            id: 'protocol',
+            initialData: protocols[0],
+            validate: ({ data }) => {
+              if (typeof data !== 'string' || !data) {
+                return 'Protocol is required';
+              }
+              if (!protocols.includes(data)) {
+                return 'Unsupported protocol selected';
+              }
+              return null;
+            },
+          },
+          {
+            id: 'wordlist',
+            initialData: '',
+            validate: ({ data }) => {
+              if (typeof data !== 'string' || !data.trim()) {
+                return 'Wordlist is required';
+              }
+              return null;
+            },
+          },
+          { id: 'review' },
+        ],
+      }),
+      [],
+    ),
+  );
 
-  const next = () => {
-    if (step === 0 && !target.trim()) {
-      setError('Target is required');
-      return;
-    }
-    if (step === 1 && !protocol) {
-      setError('Protocol is required');
-      return;
-    }
-    if (step === 2 && !wordlist.trim()) {
-      setError('Wordlist is required');
-      return;
-    }
-    setError('');
-    setStep(step + 1);
-  };
-
-  const back = () => {
-    setError('');
-    setStep(step - 1);
-  };
+  const target = wizard.stepData.target ?? '';
+  const protocol = wizard.stepData.protocol ?? protocols[0];
+  const wordlist = wizard.stepData.wordlist ?? '';
+  const error = wizard.stepErrors[wizard.currentStepId];
 
   const command = `hydra -P ${wordlist} ${protocol}://${target}`;
 
@@ -38,7 +61,7 @@ const HydraPreview: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md rounded bg-white p-6 shadow-md">
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
-        {step === 0 && (
+        {wizard.currentStepId === 'target' && (
           <div>
             <label htmlFor="target" className="mb-2 block text-sm font-medium">
               Target Host
@@ -48,12 +71,12 @@ const HydraPreview: React.FC = () => {
               className="mb-4 w-full rounded border p-2"
               type="text"
               value={target}
-              onChange={(e) => setTarget(e.target.value)}
+              onChange={(e) => wizard.updateStepData('target', e.target.value)}
               placeholder="example.com or 192.168.1.1"
             />
           </div>
         )}
-        {step === 1 && (
+        {wizard.currentStepId === 'protocol' && (
           <div>
             <label htmlFor="protocol" className="mb-2 block text-sm font-medium">
               Protocol
@@ -62,7 +85,7 @@ const HydraPreview: React.FC = () => {
               id="protocol"
               className="mb-4 w-full rounded border p-2"
               value={protocol}
-              onChange={(e) => setProtocol(e.target.value)}
+              onChange={(e) => wizard.updateStepData('protocol', e.target.value)}
             >
               {protocols.map((p) => (
                 <option key={p} value={p}>
@@ -72,7 +95,7 @@ const HydraPreview: React.FC = () => {
             </select>
           </div>
         )}
-        {step === 2 && (
+        {wizard.currentStepId === 'wordlist' && (
           <div>
             <label htmlFor="wordlist" className="mb-2 block text-sm font-medium">
               Wordlist Path
@@ -82,12 +105,12 @@ const HydraPreview: React.FC = () => {
               className="mb-4 w-full rounded border p-2"
               type="text"
               value={wordlist}
-              onChange={(e) => setWordlist(e.target.value)}
+              onChange={(e) => wizard.updateStepData('wordlist', e.target.value)}
               placeholder="/usr/share/wordlists/rockyou.txt"
             />
           </div>
         )}
-        {step === 3 && (
+        {wizard.currentStepId === 'review' && (
           <div>
             <p className="mb-4 text-sm text-yellow-700">
               Use this command only on systems you own or have explicit permission to test. Unauthorized access is illegal.
@@ -96,19 +119,19 @@ const HydraPreview: React.FC = () => {
           </div>
         )}
         <div className="mt-4 flex justify-between">
-          {step > 0 && step < 3 && (
+          {!wizard.isFirst && (
             <button
               type="button"
-              onClick={back}
+              onClick={wizard.goBack}
               className="rounded bg-gray-300 px-4 py-2"
             >
               Back
             </button>
           )}
-          {step < 3 && (
+          {!wizard.isLast && (
             <button
               type="button"
-              onClick={next}
+              onClick={wizard.goNext}
               className="ml-auto rounded bg-blue-600 px-4 py-2 text-white"
             >
               Next
