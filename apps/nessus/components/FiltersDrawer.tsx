@@ -40,6 +40,7 @@ export default function FiltersDrawer({
                 type="checkbox"
                 checked={severityFilters[sev]}
                 onChange={() => toggleSeverity(sev)}
+                aria-label={`Toggle severity ${sev}`}
               />
               {sev}
             </label>

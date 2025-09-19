@@ -95,7 +95,12 @@ export default function TrendChart() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <input type="file" accept="application/json" onChange={handleFile} />
+        <input
+          type="file"
+          accept="application/json"
+          onChange={handleFile}
+          aria-label="Import Nessus history"
+        />
         {history.length > 0 && (
           <button
             type="button"

@@ -6,6 +6,8 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { getKillSwitchInfo } from '../../lib/flags';
+import KillSwitchGate from '../common/KillSwitchGate';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -183,6 +185,15 @@ export class Window extends Component {
             this._menuOpener.focus();
         }
         this._menuOpener = null;
+    }
+
+    preventEvent = (e) => {
+        if (typeof e?.preventDefault === 'function') {
+            e.preventDefault();
+        }
+        if (typeof e?.stopPropagation === 'function') {
+            e.stopPropagation();
+        }
     }
 
     changeCursorToMove = () => {
@@ -479,8 +490,7 @@ export class Window extends Component {
 
     handleTitleBarKeyDown = (e) => {
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
+            this.preventEvent(e);
             if (this.state.grabbed) {
                 this.handleStop();
             } else {
@@ -494,8 +504,7 @@ export class Window extends Component {
             else if (e.key === 'ArrowUp') dy = -step;
             else if (e.key === 'ArrowDown') dy = step;
             if (dx !== 0 || dy !== 0) {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 const node = document.getElementById(this.id);
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
@@ -525,40 +534,32 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.preventEvent(e);
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -612,6 +613,12 @@ export class Window extends Component {
     }
 
     render() {
+        const killSwitchInfo = this.props.killSwitchId
+            ? getKillSwitchInfo(this.props.killSwitchId)
+            : { active: false };
+        const pipHandler = killSwitchInfo.active
+            ? null
+            : () => this.props.screen(this.props.addFolder, this.props.openApp);
         return (
             <>
                 {this.state.snapPreview && (
@@ -657,11 +664,13 @@ export class Window extends Component {
                             close={this.closeWindow}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            pip={pipHandler}
                         />
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                                killSwitchId={this.props.killSwitchId}
+                                appId={this.props.id}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp} />)}
                     </div>
@@ -837,9 +846,16 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const renderContent = () => this.props.screen(this.props.addFolder, this.props.openApp);
         return (
             <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+                <KillSwitchGate
+                    appId={this.props.appId || this.props.title}
+                    appTitle={this.props.title}
+                    killSwitchId={this.props.killSwitchId}
+                >
+                    {renderContent}
+                </KillSwitchGate>
             </div>
         )
     }

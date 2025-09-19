@@ -1,4 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import { KILL_SWITCH_IDS } from './lib/flags';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -683,6 +684,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.beef,
     screen: displayBeef,
   },
   {
@@ -737,6 +739,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.ettercap,
     screen: displayEttercap,
   },
   {
@@ -755,6 +758,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.metasploit,
     screen: displayMetasploit,
   },
   {
@@ -764,6 +768,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.wireshark,
     screen: displayWireshark,
   },
   {
@@ -818,6 +823,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.kismet,
     screen: displayKismet,
   },
   {
@@ -847,12 +853,14 @@ const apps = [
     desktop_shortcut: false,
     screen: displayPluginManager,
   },
-  {    id: 'reaver',
+  {
+    id: 'reaver',
     title: 'Reaver',
     icon: '/themes/Yaru/apps/reaver.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.reaver,
     screen: displayReaver,
   },
   {
@@ -862,6 +870,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.nessus,
     screen: displayNessus,
   },
   {
@@ -880,6 +889,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.mimikatz,
     screen: displayMimikatz,
   },
   {
@@ -889,6 +899,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.mimikatz,
     screen: displayMimikatzOffline,
   },
   {
@@ -934,6 +945,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.hydra,
     screen: displayHydra,
   },
   {
@@ -997,6 +1009,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.hashcat,
     screen: displayHashcat,
   },
   {
@@ -1006,6 +1019,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.metasploitPost,
     screen: displayMsfPost,
   },
   {
@@ -1024,6 +1038,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.dsniff,
     screen: displayDsniff,
   },
   {
@@ -1033,6 +1048,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.john,
     screen: displayJohn,
   },
   {
@@ -1042,6 +1058,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    killSwitchId: KILL_SWITCH_IDS.openvas,
     screen: displayOpenVAS,
   },
   {

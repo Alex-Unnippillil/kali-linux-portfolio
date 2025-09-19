@@ -89,6 +89,7 @@ export default function FilterEditor() {
         className="w-full h-32 border p-2 font-mono"
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
+        aria-label="Filter editor"
       />
       <div className="grid grid-cols-2 gap-4">
         <div>

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
@@ -8,7 +10,7 @@ import FindingCard from './components/FindingCard';
 import FiltersDrawer from './components/FiltersDrawer';
 import { Plugin, Severity, Scan, Finding, severities } from './types';
 
-const Nessus: React.FC = () => {
+const NessusContent: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [severityFilters, setSeverityFilters] = useState<Record<Severity, boolean>>({
@@ -241,5 +243,15 @@ const Nessus: React.FC = () => {
     </div>
   );
 };
+
+const Nessus: React.FC = () => (
+  <KillSwitchGate
+    appId="nessus"
+    appTitle="Nessus"
+    killSwitchId={KILL_SWITCH_IDS.nessus}
+  >
+    {() => <NessusContent />}
+  </KillSwitchGate>
+);
 
 export default Nessus;

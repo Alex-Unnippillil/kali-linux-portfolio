@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
 import BeefApp from '../../components/apps/beef';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 
 type Severity = 'Low' | 'Medium' | 'High';
 
@@ -18,7 +20,7 @@ const severityStyles: Record<Severity, { icon: string; color: string }> = {
   High: { icon: '🔴', color: 'bg-red-700' },
 };
 
-const BeefPage: React.FC = () => {
+const BeefPageContent: React.FC = () => {
   const [logs] = useState<LogEntry[]>([
     { time: '10:00:00', severity: 'Low', message: 'Hook initialized' },
     { time: '10:00:02', severity: 'Medium', message: 'Payload delivered' },
@@ -72,5 +74,15 @@ const BeefPage: React.FC = () => {
     </div>
   );
 };
+
+const BeefPage: React.FC = () => (
+  <KillSwitchGate
+    appId="beef"
+    appTitle="BeEF"
+    killSwitchId={KILL_SWITCH_IDS.beef}
+  >
+    {() => <BeefPageContent />}
+  </KillSwitchGate>
+);
 
 export default BeefPage;

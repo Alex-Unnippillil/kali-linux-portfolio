@@ -95,5 +95,7 @@ export function hardModeViolation(
   return null;
 }
 
-export default { evaluateGuess, hardModeViolation };
+const wordleLogic = { evaluateGuess, hardModeViolation };
+
+export default wordleLogic;
 

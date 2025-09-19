@@ -80,6 +80,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
             onChange={(e) => handleRuleChange(i, 'expression', e.target.value)}
             placeholder="Filter expression"
             className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
+            aria-label="Filter expression"
           />
           <select
             value={rule.color}

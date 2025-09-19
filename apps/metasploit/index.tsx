@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import KillSwitchGate from '../../components/common/KillSwitchGate';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
+import { KILL_SWITCH_IDS } from '../../lib/flags';
 import Toast from '../../components/ui/Toast';
 
 interface Module {
@@ -42,7 +44,7 @@ function buildTree(mods: Module[]): TreeNode {
   return root;
 }
 
-const MetasploitPage: React.FC = () => {
+const MetasploitPageContent: React.FC = () => {
   const [selected, setSelected] = useState<Module | null>(null);
   const [split, setSplit] = useState(60);
   const splitRef = useRef<HTMLDivElement>(null);
@@ -140,6 +142,7 @@ const MetasploitPage: React.FC = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full p-1 mb-2 border rounded"
+          aria-label="Search modules"
         />
         <div className="flex flex-wrap gap-1 mb-2">
           <button
@@ -199,6 +202,7 @@ const MetasploitPage: React.FC = () => {
               type="text"
               placeholder="Payload options..."
               className="border p-1 w-full"
+              aria-label="Payload options"
             />
             <button
               onClick={handleGenerate}
@@ -213,6 +217,16 @@ const MetasploitPage: React.FC = () => {
     </div>
   );
 };
+
+const MetasploitPage: React.FC = () => (
+  <KillSwitchGate
+    appId="metasploit"
+    appTitle="Metasploit"
+    killSwitchId={KILL_SWITCH_IDS.metasploit}
+  >
+    {() => <MetasploitPageContent />}
+  </KillSwitchGate>
+);
 
 export default MetasploitPage;
 
