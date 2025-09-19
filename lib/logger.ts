@@ -1,5 +1,12 @@
 const SENSITIVE_KEYS = new Set(['password', 'secret', 'token', 'key']);
 
+export interface LogEntry {
+  level: string;
+  message: string;
+  correlationId: string;
+  [key: string]: any;
+}
+
 export interface Logger {
   info(message: string, meta?: Record<string, any>): void;
   warn(message: string, meta?: Record<string, any>): void;
@@ -7,22 +14,31 @@ export interface Logger {
   debug(message: string, meta?: Record<string, any>): void;
 }
 
+export function formatLogEntry(
+  level: string,
+  message: string,
+  correlationId: string,
+  meta: Record<string, any> = {},
+): LogEntry {
+  const safeMeta: Record<string, any> = {};
+  for (const [key, value] of Object.entries(meta)) {
+    if (!SENSITIVE_KEYS.has(key.toLowerCase())) {
+      safeMeta[key] = value;
+    }
+  }
+  return {
+    level,
+    message,
+    correlationId,
+    ...safeMeta,
+  };
+}
+
 class ConsoleLogger implements Logger {
   constructor(private correlationId: string) {}
 
   private log(level: string, message: string, meta: Record<string, any> = {}) {
-    const safeMeta: Record<string, any> = {};
-    for (const [key, value] of Object.entries(meta)) {
-      if (!SENSITIVE_KEYS.has(key.toLowerCase())) {
-        safeMeta[key] = value;
-      }
-    }
-    const entry = {
-      level,
-      message,
-      correlationId: this.correlationId,
-      ...safeMeta,
-    };
+    const entry = formatLogEntry(level, message, this.correlationId, meta);
     console.log(JSON.stringify(entry));
   }
 
@@ -40,7 +56,7 @@ class ConsoleLogger implements Logger {
   }
 }
 
-function generateCorrelationId(): string {
+export function generateCorrelationId(): string {
   if (typeof globalThis === 'object') {
     const cryptoObj: any = (globalThis as any).crypto;
     if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
