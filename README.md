@@ -358,7 +358,8 @@ yarn lint
 
 ## Feature Overview
 
-Browse all apps, games, and security tool demos at `/apps`, which presents a searchable grid built from `apps.config.js`.
+Browse all apps, games, and security tool demos at `/apps`, which presents a searchable grid built from `apps.config.js`. Every
+entry now has a scoped guide under `apps/<app>/README.md` documenting its purpose, entry points, and launch tips.
 
 ### Utilities & Media
 | App | Route | Category |
