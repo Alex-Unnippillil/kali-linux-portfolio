@@ -14,6 +14,35 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  opsRoute: 'global',
+};
+
+const safeGetItem = (key, fallback = null) => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const value = window.localStorage.getItem(key);
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+};
+
+const safeSetItem = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore write failures
+  }
+};
+
+const safeRemoveItem = (key) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // ignore remove failures
+  }
 };
 
 export async function getAccent() {
@@ -38,17 +67,16 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  return safeGetItem('density', DEFAULT_SETTINGS.density);
 }
 
 export async function setDensity(density) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  safeSetItem('density', density);
 }
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
+  const stored = safeGetItem('reduced-motion');
   if (stored !== null) {
     return stored === 'true';
   }
@@ -56,71 +84,76 @@ export async function getReducedMotion() {
 }
 
 export async function setReducedMotion(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+  safeSetItem('reduced-motion', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
+  const stored = safeGetItem('font-scale');
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
 export async function setFontScale(scale) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  safeSetItem('font-scale', String(scale));
 }
 
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  const stored = safeGetItem('high-contrast');
+  return stored === null ? DEFAULT_SETTINGS.highContrast : stored === 'true';
 }
 
 export async function setHighContrast(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  safeSetItem('high-contrast', value ? 'true' : 'false');
 }
 
 export async function getLargeHitAreas() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  const stored = safeGetItem('large-hit-areas');
+  return stored === null ? DEFAULT_SETTINGS.largeHitAreas : stored === 'true';
 }
 
 export async function setLargeHitAreas(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+  safeSetItem('large-hit-areas', value ? 'true' : 'false');
 }
 
 export async function getHaptics() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
+  const val = safeGetItem('haptics');
   return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
 export async function setHaptics(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('haptics', value ? 'true' : 'false');
+  safeSetItem('haptics', value ? 'true' : 'false');
 }
 
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
+  const val = safeGetItem('pong-spin');
   return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
 export async function setPongSpin(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
+  safeSetItem('pong-spin', value ? 'true' : 'false');
 }
 
 export async function getAllowNetwork() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  const stored = safeGetItem('allow-network');
+  return stored === null ? DEFAULT_SETTINGS.allowNetwork : stored === 'true';
 }
 
 export async function setAllowNetwork(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  safeSetItem('allow-network', value ? 'true' : 'false');
+}
+
+export async function getOpsRoute() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.opsRoute;
+  return safeGetItem('ops-route', DEFAULT_SETTINGS.opsRoute);
+}
+
+export async function setOpsRoute(value) {
+  safeSetItem('ops-route', value);
 }
 
 export async function resetSettings() {
@@ -129,14 +162,15 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
+  safeRemoveItem('density');
+  safeRemoveItem('reduced-motion');
+  safeRemoveItem('font-scale');
+  safeRemoveItem('high-contrast');
+  safeRemoveItem('large-hit-areas');
+  safeRemoveItem('pong-spin');
+  safeRemoveItem('allow-network');
+  safeRemoveItem('haptics');
+  safeRemoveItem('ops-route');
 }
 
 export async function exportSettings() {
@@ -151,6 +185,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    opsRoute,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +197,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getOpsRoute(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +211,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    opsRoute,
     theme,
   });
 }
@@ -199,6 +236,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    opsRoute,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +249,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (opsRoute !== undefined) await setOpsRoute(opsRoute);
   if (theme !== undefined) setTheme(theme);
 }
 
