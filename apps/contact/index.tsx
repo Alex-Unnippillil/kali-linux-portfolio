@@ -1,12 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
+
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
+import { useI18n } from "../../lib/i18n";
+import { createFormValidator, type FieldErrors } from "../../lib/validation/form-validator";
 import { trackEvent } from "@/lib/analytics-client";
 
 const DRAFT_KEY = "contact-draft";
@@ -17,32 +21,74 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
     const g: any = (window as any).grecaptcha;
     if (!g || !siteKey) return resolve("");
     g.ready(() => {
-      g.execute(siteKey, { action: "submit" })
+      g
+        .execute(siteKey, { action: "submit" })
         .then((token: string) => resolve(token))
         .catch(() => resolve(""));
     });
   });
 
+const contactFormSchema = contactSchema.pick({
+  name: true,
+  email: true,
+  message: true,
+  honeypot: true,
+});
+
+type ContactFormData = z.infer<typeof contactFormSchema>;
+
 const ContactApp: React.FC = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [honeypot, setHoneypot] = useState("");
+  const { t } = useI18n();
+
+  const validator = useMemo(
+    () =>
+      createFormValidator<ContactFormData>({
+        schema: contactFormSchema,
+        t,
+        fieldLabels: {
+          name: "forms.contact.fields.name",
+          email: "forms.contact.fields.email",
+          message: "forms.contact.fields.message",
+        },
+        asyncRules: {
+          email: [async (value) => {
+            const normalized = value.toLowerCase();
+            const blockedDomains = ["example.com", "test.com"];
+            if (blockedDomains.some((domain) => normalized.endsWith(`@${domain}`))) {
+              return "forms.contact.errors.emailDomain";
+            }
+            return null;
+          }],
+        },
+      }),
+    [t],
+  );
+
+  const [form, setForm] = useState<ContactFormData>({
+    name: "",
+    email: "",
+    message: "",
+    honeypot: "",
+  });
+  const [errors, setErrors] = useState<FieldErrors<ContactFormData>>({});
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [emailError, setEmailError] = useState("");
-  const [messageError, setMessageError] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
     if (saved) {
       try {
-        const draft = JSON.parse(saved);
-        setName(draft.name || "");
-        setEmail(draft.email || "");
-        setMessage(draft.message || "");
+        const draft = JSON.parse(saved) as Partial<ContactFormData> | null;
+        if (draft) {
+          setForm((prev) => ({
+            ...prev,
+            name: draft.name ?? "",
+            email: draft.email ?? "",
+            message: draft.message ?? "",
+          }));
+        }
       } catch {
         /* ignore */
       }
@@ -52,70 +98,71 @@ const ContactApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const draft = { name, email, message };
+    const draft = { name: form.name, email: form.email, message: form.message };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [name, email, message]);
+  }, [form.name, form.email, form.message]);
+
+  const updateField = <K extends keyof ContactFormData>(field: K, value: ContactFormData[K]) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev } as FieldErrors<ContactFormData>;
+      delete next[field];
+      return next;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
     setError("");
-    setEmailError("");
-    setMessageError("");
 
-    const emailResult = contactSchema.shape.email.safeParse(email);
-    const messageResult = contactSchema.shape.message.safeParse(message);
-    let hasValidationError = false;
-    if (!emailResult.success) {
-      setEmailError("Invalid email");
-      hasValidationError = true;
-    }
-    if (!messageResult.success) {
-      setMessageError("1-1000 chars");
-      hasValidationError = true;
-    }
-    if (hasValidationError) {
+    const result = await validator.validate(form);
+    if (!result.data) {
+      setErrors(result.errors);
+      setError(t("forms.contact.form.validation"));
       setSubmitting(false);
-      setError("Please fix the errors above and try again.");
       trackEvent("contact_submit_error", { method: "form" });
       return;
     }
 
+    const normalized = result.data;
+    setForm(normalized);
+
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
     if (!recaptchaToken) {
-      setError("Captcha verification failed. Please try again.");
+      setError(t("forms.contact.errors.captcha"));
       setSubmitting(false);
       trackEvent("contact_submit_error", { method: "form" });
       return;
     }
 
     try {
-      const result = await processContactForm({
-        name,
-        email,
-        message,
-        honeypot,
+      const response = await processContactForm({
+        ...normalized,
         csrfToken,
         recaptchaToken,
       });
-      if (result.success) {
-        setToast("Message sent");
-        setName("");
-        setEmail("");
-        setMessage("");
-        setHoneypot("");
+      if (response.success) {
+        setToast(t("forms.contact.form.success"));
+        setForm({ name: "", email: "", message: "", honeypot: "" });
+        setErrors({});
         localStorage.removeItem(DRAFT_KEY);
         trackEvent("contact_submit", { method: "form" });
       } else {
-        setError(result.error || "Submission failed");
+        setError(response.error || t("forms.contact.errors.submission"));
         trackEvent("contact_submit_error", { method: "form" });
       }
     } catch {
-      setError("Submission failed");
+      setError(t("forms.contact.errors.submission"));
       trackEvent("contact_submit_error", { method: "form" });
     }
+
     setSubmitting(false);
   };
 
@@ -139,7 +186,7 @@ const ContactApp: React.FC = () => {
           Open email app
         </button>
       </p>
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-md" noValidate>
         <div>
           <label htmlFor="contact-name" className="mb-[6px] block text-sm">
             Name
@@ -148,9 +195,12 @@ const ContactApp: React.FC = () => {
             <input
               id="contact-name"
               className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="text"
+              value={form.name}
+              onChange={(e) => updateField("name", e.target.value)}
               required
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? "contact-name-error" : undefined}
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -167,6 +217,11 @@ const ContactApp: React.FC = () => {
               />
             </svg>
           </div>
+          {errors.name && (
+            <FormError id="contact-name-error" className="mt-2">
+              {errors.name}
+            </FormError>
+          )}
         </div>
         <div>
           <label htmlFor="contact-email" className="mb-[6px] block text-sm">
@@ -177,11 +232,11 @@ const ContactApp: React.FC = () => {
               id="contact-email"
               type="email"
               className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={form.email}
+              onChange={(e) => updateField("email", e.target.value)}
               required
-              aria-invalid={!!emailError}
-              aria-describedby={emailError ? "contact-email-error" : undefined}
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? "contact-email-error" : undefined}
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -198,9 +253,9 @@ const ContactApp: React.FC = () => {
               />
             </svg>
           </div>
-          {emailError && (
+          {errors.email && (
             <FormError id="contact-email-error" className="mt-2">
-              {emailError}
+              {errors.email}
             </FormError>
           )}
         </div>
@@ -213,11 +268,11 @@ const ContactApp: React.FC = () => {
               id="contact-message"
               className="w-full rounded border border-gray-700 bg-gray-800 p-2 pl-10 text-white"
               rows={4}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              value={form.message}
+              onChange={(e) => updateField("message", e.target.value)}
               required
-              aria-invalid={!!messageError}
-              aria-describedby={messageError ? "contact-message-error" : undefined}
+              aria-invalid={!!errors.message}
+              aria-describedby={errors.message ? "contact-message-error" : undefined}
             />
             <svg
               className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
@@ -234,16 +289,16 @@ const ContactApp: React.FC = () => {
               />
             </svg>
           </div>
-          {messageError && (
+          {errors.message && (
             <FormError id="contact-message-error" className="mt-2">
-              {messageError}
+              {errors.message}
             </FormError>
           )}
         </div>
         <input
           type="text"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
+          value={form.honeypot}
+          onChange={(e) => updateField("honeypot", e.target.value)}
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
@@ -267,3 +322,4 @@ const ContactApp: React.FC = () => {
 };
 
 export default ContactApp;
+

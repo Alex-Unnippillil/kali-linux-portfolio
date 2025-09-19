@@ -1,0 +1,49 @@
+{
+  "validation": {
+    "errors": {
+      "required": "{{field}} is required.",
+      "email": "Enter a valid email for {{field}}.",
+      "minLength": "{{field}} must be at least {{count}} characters.",
+      "maxLength": "{{field}} must be at most {{count}} characters.",
+      "pattern": "{{field}} has an invalid format.",
+      "generic": "Please fix the highlighted fields and try again.",
+      "form": "Please review the highlighted fields."
+    }
+  },
+  "forms": {
+    "hydra": {
+      "fields": {
+        "target": "Target host",
+        "protocol": "Protocol",
+        "wordlist": "Wordlist path"
+      }
+    },
+    "dummy": {
+      "fields": {
+        "name": "Name",
+        "email": "Email",
+        "message": "Message"
+      },
+      "messages": {
+        "recovered": "Recovered draft",
+        "success": "Form submitted successfully!"
+      }
+    },
+    "contact": {
+      "fields": {
+        "name": "Name",
+        "email": "Email",
+        "message": "Message"
+      },
+      "errors": {
+        "emailDomain": "Please use a personal email address.",
+        "captcha": "Captcha verification failed. Please try again.",
+        "submission": "Submission failed."
+      },
+      "form": {
+        "validation": "Please fix the errors above and try again.",
+        "success": "Message sent"
+      }
+    }
+  }
+}

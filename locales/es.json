@@ -1,0 +1,49 @@
+{
+  "validation": {
+    "errors": {
+      "required": "{{field}} es obligatorio.",
+      "email": "Introduce un correo válido para {{field}}.",
+      "minLength": "{{field}} debe tener al menos {{count}} caracteres.",
+      "maxLength": "{{field}} debe tener como máximo {{count}} caracteres.",
+      "pattern": "El formato de {{field}} no es válido.",
+      "generic": "Revisa los campos resaltados y vuelve a intentarlo.",
+      "form": "Revisa los campos resaltados."
+    }
+  },
+  "forms": {
+    "hydra": {
+      "fields": {
+        "target": "Host de destino",
+        "protocol": "Protocolo",
+        "wordlist": "Ruta de la lista"
+      }
+    },
+    "dummy": {
+      "fields": {
+        "name": "Nombre",
+        "email": "Correo",
+        "message": "Mensaje"
+      },
+      "messages": {
+        "recovered": "Borrador recuperado",
+        "success": "¡Formulario enviado correctamente!"
+      }
+    },
+    "contact": {
+      "fields": {
+        "name": "Nombre",
+        "email": "Correo",
+        "message": "Mensaje"
+      },
+      "errors": {
+        "emailDomain": "Utiliza una dirección de correo personal.",
+        "captcha": "La verificación de captcha falló. Inténtalo de nuevo.",
+        "submission": "No se pudo enviar."
+      },
+      "form": {
+        "validation": "Corrige los errores indicados e inténtalo de nuevo.",
+        "success": "Mensaje enviado"
+      }
+    }
+  }
+}
