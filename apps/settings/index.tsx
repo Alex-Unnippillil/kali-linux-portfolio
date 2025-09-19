@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import useDisplayConfig from "../../hooks/useDisplayConfig";
 
 export default function Settings() {
   const {
@@ -37,10 +38,71 @@ export default function Settings() {
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "desktop", label: "Desktop" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+
+  const [displayConfig, setDisplayConfig, resetDisplayConfig] =
+    useDisplayConfig();
+
+  const handleDisplayNameChange = (id: string, name: string) => {
+    setDisplayConfig((current) => ({
+      ...current,
+      displays: current.displays.map((display) =>
+        display.id === id ? { ...display, name } : display
+      ),
+    }));
+  };
+
+  const handleSetPrimaryDisplay = (id: string) => {
+    setDisplayConfig((current) => ({
+      ...current,
+      primary: current.displays.some((display) => display.id === id)
+        ? id
+        : current.primary,
+    }));
+  };
+
+  const handleRemoveDisplay = (id: string) => {
+    setDisplayConfig((current) => {
+      if (current.displays.length <= 1) {
+        return current;
+      }
+      const displays = current.displays.filter((display) => display.id !== id);
+      const primary =
+        current.primary === id && displays.length
+          ? displays[0].id
+          : current.primary;
+      return {
+        displays,
+        primary,
+      };
+    });
+  };
+
+  const handleAddDisplay = () => {
+    setDisplayConfig((current) => {
+      const id = `display-${Math.random().toString(36).slice(2, 8)}`;
+      const nextIndex = current.displays.length + 1;
+      const name = `Workspace ${nextIndex}`;
+      return {
+        displays: [
+          ...current.displays,
+          {
+            id,
+            name,
+          },
+        ],
+        primary: current.primary || id,
+      };
+    });
+  };
+
+  const activeDisplayName =
+    displayConfig.displays.find((display) => display.id === displayConfig.primary)
+      ?.name || "Primary Workspace";
 
   const wallpapers = [
     "wall-1",
@@ -94,6 +156,7 @@ export default function Settings() {
       return;
     await resetSettings();
     window.localStorage.clear();
+    resetDisplayConfig();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
@@ -269,6 +332,86 @@ export default function Settings() {
             </button>
           </div>
         </>
+      )}
+      {activeTab === "desktop" && (
+        <div className="px-4 py-6 space-y-6 text-ubt-grey">
+          <p className="text-center">
+            Configure workspaces for each connected display. Every display keeps
+            its own set of open windows. Switching the primary display swaps to
+            the corresponding workspace and taskbar.
+          </p>
+          <div className="flex justify-center">
+            <span className="px-3 py-1 rounded-full border border-gray-900 border-opacity-60 bg-black bg-opacity-30 text-sm">
+              Active workspace: {activeDisplayName}
+            </span>
+          </div>
+          <div className="space-y-4">
+            {displayConfig.displays.map((display) => {
+              const isPrimary = displayConfig.primary === display.id;
+              return (
+                <div
+                  key={display.id}
+                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-gray-900 border-opacity-60 rounded px-4 py-3 bg-black bg-opacity-30"
+                >
+                  <div className="flex-1">
+                    <label
+                      htmlFor={`display-name-${display.id}`}
+                      className="block text-sm mb-1"
+                    >
+                      Display name
+                    </label>
+                    <input
+                      id={`display-name-${display.id}`}
+                      type="text"
+                      value={display.name}
+                      onChange={(event) =>
+                        handleDisplayNameChange(display.id, event.target.value)
+                      }
+                      className="w-full px-3 py-2 rounded border border-gray-900 border-opacity-60 bg-ub-cool-grey text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      aria-label={`Rename ${display.name}`}
+                    />
+                    <p className="mt-1 text-xs opacity-70 break-all">
+                      ID: {display.id}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSetPrimaryDisplay(display.id)}
+                      className={`px-3 py-2 rounded border border-gray-900 border-opacity-60 ${
+                        isPrimary
+                          ? "bg-ub-orange text-white"
+                          : "bg-ub-cool-grey text-ubt-grey hover:bg-ubt-grey hover:bg-opacity-20"
+                      }`}
+                      aria-pressed={isPrimary}
+                    >
+                      {isPrimary ? "Primary" : "Set Primary"}
+                    </button>
+                    {displayConfig.displays.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDisplay(display.id)}
+                        className="px-3 py-2 rounded border border-gray-900 border-opacity-60 bg-ub-cool-grey text-ubt-grey hover:bg-ubt-grey hover:bg-opacity-20"
+                        aria-label={`Remove ${display.name}`}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleAddDisplay}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Add Display
+            </button>
+          </div>
+        </div>
       )}
       {activeTab === "privacy" && (
         <>

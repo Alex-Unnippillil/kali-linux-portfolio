@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Persist state in localStorage.
@@ -33,11 +33,29 @@ export default function usePersistentState<T>(
     return getInitial();
   });
 
+  const skipBroadcastRef = useRef(false);
+  const channelRef = useRef(`ps:${Math.random().toString(36).slice(2)}`);
+
   useEffect(() => {
+    if (skipBroadcastRef.current) {
+      skipBroadcastRef.current = false;
+      return;
+    }
     try {
       window.localStorage.setItem(key, JSON.stringify(state));
     } catch {
       // ignore write errors
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('persistent-state', {
+            detail: { key, value: state, channel: channelRef.current },
+          }),
+        );
+      } catch {
+        // ignore broadcast errors
+      }
     }
   }, [key, state]);
 
@@ -50,6 +68,58 @@ export default function usePersistentState<T>(
     }
     reset();
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const computeInitial = () =>
+      typeof initial === 'function' ? (initial as () => T)() : initial;
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== key) return;
+      if (event.newValue === null) {
+        skipBroadcastRef.current = true;
+        setState(computeInitial());
+        return;
+      }
+      try {
+        const parsed = JSON.parse(event.newValue);
+        if (!validator || validator(parsed)) {
+          skipBroadcastRef.current = true;
+          setState(parsed as T);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    const handleBroadcast = (
+      event: Event,
+    ) => {
+      const custom = event as CustomEvent<{
+        key: string;
+        value: unknown;
+        channel?: string;
+      }>;
+      if (!custom.detail || custom.detail.key !== key) return;
+      if (custom.detail.channel === channelRef.current) return;
+      const value = custom.detail.value;
+      if (validator && !validator(value)) return;
+      skipBroadcastRef.current = true;
+      setState(value as T);
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('persistent-state', handleBroadcast as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener(
+        'persistent-state',
+        handleBroadcast as EventListener,
+      );
+    };
+  }, [initial, key, validator]);
 
   return [state, setState, reset, clear] as const;
 }
