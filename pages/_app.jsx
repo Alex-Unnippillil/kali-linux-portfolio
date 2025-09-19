@@ -44,13 +44,26 @@ function MyApp(props) {
       console.error('Analytics initialization failed', err);
     });
 
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    const shouldRegisterSw =
+      process.env.NODE_ENV === 'production' &&
+      process.env.NEXT_PUBLIC_DISABLE_SW !== 'true' &&
+      'serviceWorker' in navigator;
+
+    if (shouldRegisterSw) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
-          window.manualRefresh = () => registration.update();
+          const safeUpdate = async () => {
+            try {
+              await registration.update();
+            } catch {
+              // Swallow update errors so tests and offline scenarios don't surface noisy exceptions
+            }
+          };
+
+          window.manualRefresh = () => safeUpdate();
 
           if ('periodicSync' in registration) {
             try {
@@ -62,13 +75,13 @@ function MyApp(props) {
                   minInterval: 24 * 60 * 60 * 1000,
                 });
               } else {
-                registration.update();
+                await safeUpdate();
               }
             } catch {
-              registration.update();
+              await safeUpdate();
             }
           } else {
-            registration.update();
+            await safeUpdate();
           }
         } catch (err) {
           console.error('Service worker registration failed', err);
@@ -161,16 +174,19 @@ function MyApp(props) {
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
+            {process.env.NEXT_PUBLIC_DISABLE_VERCEL_INSIGHTS !== 'true' && (
+              <Analytics
+                beforeSend={(e) => {
+                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                  const evt = e;
+                  if (evt.metadata?.email) delete evt.metadata.email;
+                  return e;
+                }}
+              />
+            )}
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
+              process.env.NEXT_PUBLIC_DISABLE_VERCEL_INSIGHTS !== 'true' && <SpeedInsights />}
           </PipPortalProvider>
         </SettingsProvider>
       </div>
