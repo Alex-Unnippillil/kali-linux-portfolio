@@ -14,15 +14,13 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
-import DesktopMenu from '../context-menus/desktop-menu';
-import DefaultMenu from '../context-menus/default';
-import AppMenu from '../context-menus/app-menu';
+import ContextMenu from '../common/ContextMenu';
 import Taskbar from './taskbar';
-import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import logger from '../../utils/logger';
 
 export class Desktop extends Component {
     constructor() {
@@ -47,11 +45,18 @@ export class Desktop extends Component {
                 app: false,
                 taskbar: false,
             },
+            context_menu_positions: {
+                desktop: { x: 0, y: 0 },
+                default: { x: 0, y: 0 },
+                app: { x: 0, y: 0 },
+                taskbar: { x: 0, y: 0 },
+            },
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            isFullScreen: false,
         }
     }
 
@@ -86,6 +91,8 @@ export class Desktop extends Component {
         this.checkForNewFolders();
         this.checkForAppShortcuts();
         this.updateTrashIcon();
+        document.addEventListener('fullscreenchange', this.checkFullScreen);
+        this.checkFullScreen();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
@@ -95,6 +102,7 @@ export class Desktop extends Component {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        document.removeEventListener('fullscreenchange', this.checkFullScreen);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
 
@@ -144,6 +152,24 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    checkFullScreen = () => {
+        const isFullScreen = typeof document !== 'undefined' && Boolean(document.fullscreenElement);
+        this.setState({ isFullScreen });
+    }
+
+    toggleFullScreen = () => {
+        try {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen();
+            }
+        }
+        catch (e) {
+            logger.error(e);
+        }
     }
 
     handleGlobalShortcut = (e) => {
@@ -297,29 +323,24 @@ export class Desktop extends Component {
     }
 
     showContextMenu = (e, menuName /* context menu name */) => {
-        let { posx, posy } = this.getMenuPosition(e);
-        let contextMenu = document.getElementById(`${menuName}-menu`);
-
-        const menuWidth = contextMenu.offsetWidth;
-        const menuHeight = contextMenu.offsetHeight;
-        if (posx + menuWidth > window.innerWidth) posx -= menuWidth;
-        if (posy + menuHeight > window.innerHeight) posy -= menuHeight;
-
-        posx = posx.toString() + "px";
-        posy = posy.toString() + "px";
-
-        contextMenu.style.left = posx;
-        contextMenu.style.top = posy;
-
-        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+        const { posx, posy } = this.getMenuPosition(e);
+        this.setState(prev => ({
+            context_menus: { ...prev.context_menus, [menuName]: true },
+            context_menu_positions: {
+                ...prev.context_menu_positions,
+                [menuName]: { x: posx, y: posy },
+            },
+        }));
     }
 
     hideAllContextMenu = () => {
-        const menus = { ...this.state.context_menus };
-        Object.keys(menus).forEach(key => {
-            menus[key] = false;
+        this.setState(prev => {
+            const menus = { ...prev.context_menus };
+            Object.keys(menus).forEach(key => {
+                menus[key] = false;
+            });
+            return { context_menus: menus, context_app: null };
         });
-        this.setState({ context_menus: menus, context_app: null });
     }
 
     getMenuPosition = (e) => {
@@ -864,6 +885,163 @@ export class Desktop extends Component {
     }
 
     render() {
+        const {
+            context_menus,
+            context_menu_positions,
+            context_app,
+            minimized_windows,
+            isFullScreen,
+        } = this.state;
+        const isPinned = context_app ? Boolean(this.initFavourite[context_app]) : false;
+        const isWindowMinimized = context_app ? Boolean(minimized_windows[context_app]) : false;
+        const emoji = (symbol) => <span aria-hidden="true" role="img">{symbol}</span>;
+        const desktopMenuItems = [
+            {
+                id: 'desktop-new-folder',
+                label: 'New Folder',
+                onSelect: this.addNewFolder,
+            },
+            {
+                id: 'desktop-create-shortcut',
+                label: 'Create Shortcut...',
+                onSelect: this.openShortcutSelector,
+            },
+            { type: 'separator', id: 'desktop-separator-1' },
+            {
+                id: 'desktop-paste',
+                label: 'Paste',
+                disabled: true,
+            },
+            { type: 'separator', id: 'desktop-separator-2' },
+            {
+                id: 'desktop-show-desktop',
+                label: 'Show Desktop in Files',
+                disabled: true,
+            },
+            {
+                id: 'desktop-open-terminal',
+                label: 'Open in Terminal',
+                onSelect: () => this.openApp('terminal'),
+            },
+            { type: 'separator', id: 'desktop-separator-3' },
+            {
+                id: 'desktop-change-background',
+                label: 'Change Background...',
+                onSelect: () => this.openApp('settings'),
+            },
+            { type: 'separator', id: 'desktop-separator-4' },
+            {
+                id: 'desktop-display-settings',
+                label: 'Display Settings',
+                disabled: true,
+            },
+            {
+                id: 'desktop-settings',
+                label: 'Settings',
+                onSelect: () => this.openApp('settings'),
+            },
+            { type: 'separator', id: 'desktop-separator-5' },
+            {
+                id: 'desktop-full-screen',
+                label: `${isFullScreen ? 'Exit' : 'Enter'} Full Screen`,
+                onSelect: this.toggleFullScreen,
+            },
+            { type: 'separator', id: 'desktop-separator-6' },
+            {
+                id: 'desktop-clear-session',
+                label: 'Clear Session',
+                onSelect: () => {
+                    this.props.clearSession();
+                    if (typeof window !== 'undefined') {
+                        window.location.reload();
+                    }
+                },
+            },
+        ];
+        const defaultMenuItems = [
+            {
+                id: 'default-linkedin',
+                label: (
+                    <>
+                        Follow on <strong>LinkedIn</strong>
+                    </>
+                ),
+                icon: emoji('🙋‍♂️'),
+                href: 'https://www.linkedin.com/in/unnippillil/',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+            },
+            {
+                id: 'default-github',
+                label: (
+                    <>
+                        Follow on <strong>Github</strong>
+                    </>
+                ),
+                icon: emoji('🤝'),
+                href: 'https://github.com/Alex-Unnippillil',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+            },
+            {
+                id: 'default-contact',
+                label: 'Contact Me',
+                icon: emoji('📥'),
+                href: 'mailto:alex.j.unnippillil@gmail.com',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+            },
+            { type: 'separator', id: 'default-separator-1' },
+            {
+                id: 'default-reset',
+                label: 'Reset Kali Linux',
+                icon: emoji('🧹'),
+                onSelect: () => {
+                    safeLocalStorage?.clear();
+                    if (typeof window !== 'undefined') {
+                        window.location.reload();
+                    }
+                },
+            },
+        ];
+        const appMenuItems = [
+            {
+                id: 'app-pin',
+                label: 'Pin to Favorites',
+                checked: isPinned,
+                role: 'menuitemcheckbox',
+                onSelect: () => {
+                    if (!context_app) return;
+                    if (isPinned) {
+                        this.unpinApp(context_app);
+                    } else {
+                        this.pinApp(context_app);
+                    }
+                },
+            },
+        ];
+        const taskbarMenuItems = [
+            {
+                id: 'taskbar-minimize',
+                label: isWindowMinimized ? 'Restore' : 'Minimize',
+                onSelect: () => {
+                    if (!context_app) return;
+                    if (isWindowMinimized) {
+                        this.openApp(context_app);
+                    } else {
+                        this.hasMinimised(context_app);
+                    }
+                },
+            },
+            {
+                id: 'taskbar-close',
+                label: 'Close',
+                onSelect: () => {
+                    if (!context_app) return;
+                    this.closeApp(context_app);
+                },
+            },
+        ];
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -906,39 +1084,41 @@ export class Desktop extends Component {
                 {this.renderDesktopApps()}
 
                 {/* Context Menus */}
-                <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
-                />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
-                <AppMenu
-                    active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
-                    pinApp={() => this.pinApp(this.state.context_app)}
-                    unpinApp={() => this.unpinApp(this.state.context_app)}
+                <ContextMenu
+                    id="desktop-menu"
+                    ariaLabel="Desktop context menu"
+                    open={context_menus.desktop}
                     onClose={this.hideAllContextMenu}
+                    anchorPoint={context_menu_positions.desktop}
+                    items={desktopMenuItems}
+                    width={208}
                 />
-                <TaskbarMenu
-                    active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
-                    onMinimize={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        if (this.state.minimized_windows[id]) {
-                            this.openApp(id);
-                        } else {
-                            this.hasMinimised(id);
-                        }
-                    }}
-                    onClose={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        this.closeApp(id);
-                    }}
-                    onCloseMenu={this.hideAllContextMenu}
+                <ContextMenu
+                    id="default-menu"
+                    ariaLabel="Default context menu"
+                    open={context_menus.default}
+                    onClose={this.hideAllContextMenu}
+                    anchorPoint={context_menu_positions.default}
+                    items={defaultMenuItems}
+                    width={208}
+                />
+                <ContextMenu
+                    id="app-menu"
+                    ariaLabel="App context menu"
+                    open={context_menus.app}
+                    onClose={this.hideAllContextMenu}
+                    anchorPoint={context_menu_positions.app}
+                    items={appMenuItems}
+                    width={208}
+                />
+                <ContextMenu
+                    id="taskbar-menu"
+                    ariaLabel="Taskbar context menu"
+                    open={context_menus.taskbar}
+                    onClose={this.hideAllContextMenu}
+                    anchorPoint={context_menu_positions.taskbar}
+                    items={taskbarMenuItems}
+                    width={160}
                 />
 
                 {/* Folder Input Name Bar */}

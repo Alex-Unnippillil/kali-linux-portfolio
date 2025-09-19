@@ -19,6 +19,11 @@ export default function useRovingTabIndex(
       node.querySelectorAll<HTMLElement>(
         '[role="tab"], [role="menuitem"], [role="option"]'
       )
+    ).filter(
+      (el) =>
+        el.getAttribute('aria-disabled') !== 'true' &&
+        !el.hasAttribute('disabled') &&
+        el.getAttribute('data-roving-disabled') !== 'true'
     );
     if (items.length === 0) return;
 
