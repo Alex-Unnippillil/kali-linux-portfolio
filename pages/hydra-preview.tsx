@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import FormError from '../components/ui/FormError';
+import useDraftAutosave from '@/hooks/useDraftAutosave';
 
 const protocols = ['ssh', 'ftp', 'http', 'smtp'];
 
@@ -9,6 +10,20 @@ const HydraPreview: React.FC = () => {
   const [protocol, setProtocol] = useState(protocols[0]);
   const [wordlist, setWordlist] = useState('');
   const [error, setError] = useState('');
+
+  const { draft, statusMessage, clearDraft, recovered } = useDraftAutosave({
+    storageKey: 'hydra-preview-draft',
+    snapshot: { step, target, protocol, wordlist },
+    isEmpty: (data) => !data.target.trim() && !data.wordlist.trim(),
+  });
+
+  useEffect(() => {
+    if (!draft) return;
+    setStep(Math.min(Math.max(draft.step ?? 0, 0), 3));
+    setTarget(draft.target || '');
+    setProtocol(draft.protocol || protocols[0]);
+    setWordlist(draft.wordlist || '');
+  }, [draft]);
 
   const next = () => {
     if (step === 0 && !target.trim()) {
@@ -38,6 +53,24 @@ const HydraPreview: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md rounded bg-white p-6 shadow-md">
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
+        {(statusMessage || recovered) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+            <span>{statusMessage || 'Recovered draft'}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setStep(0);
+                setTarget('');
+                setProtocol(protocols[0]);
+                setWordlist('');
+                clearDraft();
+              }}
+              className="rounded border border-gray-300 px-2 py-1 text-gray-600 hover:border-gray-400 hover:text-gray-800"
+            >
+              Clear draft
+            </button>
+          </div>
+        )}
         {step === 0 && (
           <div>
             <label htmlFor="target" className="mb-2 block text-sm font-medium">

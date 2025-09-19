@@ -8,6 +8,7 @@ import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import useDraftAutosave from "@/hooks/useDraftAutosave";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -35,26 +36,23 @@ const ContactApp: React.FC = () => {
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
 
+  const { draft, statusMessage, clearDraft, recovered } = useDraftAutosave({
+    storageKey: DRAFT_KEY,
+    snapshot: { name, email, message },
+    isEmpty: (data) => !data.name.trim() && !data.email.trim() && !data.message.trim(),
+  });
+
   useEffect(() => {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (saved) {
-      try {
-        const draft = JSON.parse(saved);
-        setName(draft.name || "");
-        setEmail(draft.email || "");
-        setMessage(draft.message || "");
-      } catch {
-        /* ignore */
-      }
-    }
+    if (!draft) return;
+    setName(draft.name || "");
+    setEmail(draft.email || "");
+    setMessage(draft.message || "");
+  }, [draft]);
+
+  useEffect(() => {
     const meta = document.querySelector('meta[name="csrf-token"]');
     setCsrfToken(meta?.getAttribute("content") || "");
   }, []);
-
-  useEffect(() => {
-    const draft = { name, email, message };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [name, email, message]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +104,7 @@ const ContactApp: React.FC = () => {
         setEmail("");
         setMessage("");
         setHoneypot("");
-        localStorage.removeItem(DRAFT_KEY);
+        clearDraft();
         trackEvent("contact_submit", { method: "form" });
       } else {
         setError(result.error || "Submission failed");
@@ -261,6 +259,23 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
+      {(statusMessage || recovered) && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-gray-400" role="status">
+          <span>{statusMessage || "Recovered draft"}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setName("");
+              setEmail("");
+              setMessage("");
+              clearDraft();
+            }}
+            className="rounded border border-gray-700 px-2 py-1 text-gray-300 hover:border-gray-500 hover:text-white"
+          >
+            Clear draft
+          </button>
+        </div>
+      )}
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );
