@@ -17,9 +17,16 @@ export default function useRovingTabIndex(
 
     const items = Array.from(
       node.querySelectorAll<HTMLElement>(
-        '[role="tab"], [role="menuitem"], [role="option"]'
+        '[role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"]'
       )
-    );
+    ).filter((el) => {
+      const control = el as HTMLElement & { disabled?: boolean };
+      return (
+        el.getAttribute('aria-disabled') !== 'true' &&
+        !el.hasAttribute('data-roving-skip') &&
+        control.disabled !== true
+      );
+    });
     if (items.length === 0) return;
 
     let index = items.findIndex((el) => el.tabIndex === 0);

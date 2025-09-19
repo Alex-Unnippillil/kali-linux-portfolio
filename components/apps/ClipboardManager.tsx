@@ -68,6 +68,19 @@ const ClipboardManager: React.FC = () => {
     loadItems();
   }, [loadItems]);
 
+  useEffect(() => {
+    const handleExternalAdd = (event: Event) => {
+      const detail = (event as CustomEvent<{ text?: string }>).detail;
+      const text = detail?.text?.trim();
+      if (text) {
+        void addItem(text);
+      }
+    };
+
+    window.addEventListener('clipboard-manager:add', handleExternalAdd);
+    return () => window.removeEventListener('clipboard-manager:add', handleExternalAdd);
+  }, [addItem]);
+
   const handleCopy = useCallback(async () => {
     try {
       const perm = await (navigator.permissions as any)?.query?.({
