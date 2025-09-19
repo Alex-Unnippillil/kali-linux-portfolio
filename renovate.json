@@ -1,0 +1,69 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "UTC",
+  "prConcurrentLimit": 5,
+  "rangeStrategy": "auto",
+  "packageRules": [
+    {
+      "description": "Automerge patch updates for caret-managed dependencies",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["dependencies", "devDependencies"],
+      "matchUpdateTypes": ["patch"],
+      "matchCurrentValue": "/^\\^/",
+      "excludePackageNames": [
+        "tailwindcss",
+        "postcss",
+        "next",
+        "react",
+        "react-dom",
+        "typescript",
+        "webpack",
+        "jest",
+        "jest-environment-jsdom",
+        "eslint",
+        "eslint-config-next",
+        "@playwright/test",
+        "playwright-core",
+        "@ducanh2912/next-pwa",
+        "@next/bundle-analyzer"
+      ],
+      "excludePackagePatterns": ["^@types/"],
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "description": "Require manual review for framework and build chain updates",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "tailwindcss",
+        "postcss",
+        "next",
+        "react",
+        "react-dom",
+        "typescript",
+        "webpack",
+        "jest",
+        "jest-environment-jsdom",
+        "eslint",
+        "eslint-config-next",
+        "@playwright/test",
+        "playwright-core",
+        "@ducanh2912/next-pwa",
+        "@next/bundle-analyzer"
+      ],
+      "rangeStrategy": "pin",
+      "labels": ["dependencies", "manual-review"],
+      "automerge": false
+    },
+    {
+      "description": "Group TypeScript compiler and definitions",
+      "matchManagers": ["npm"],
+      "groupName": "TypeScript and types",
+      "matchPackageNames": ["typescript"],
+      "matchPackagePatterns": ["^@types/"],
+      "labels": ["dependencies", "manual-review"],
+      "automerge": false
+    }
+  ]
+}
