@@ -3,6 +3,53 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+const PRIVACY_PROFILE_KEY = 'privacy-profile';
+const PRIVACY_STATE_PREFIX = 'privacy-consent:';
+const analyticsEnvEnabled =
+  typeof process !== 'undefined' && process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
+
+export const PRIVACY_PROFILES = [
+  {
+    id: 'standard',
+    label: 'Standard insights',
+    description: 'Balanced analytics with aggregated metrics to improve the site.',
+    docs: 'https://github.com/Alex-Unnippillil/kali-linux-portfolio#analytics',
+    defaults: {
+      analytics: analyticsEnvEnabled,
+      telemetry: true,
+    },
+  },
+  {
+    id: 'minimal',
+    label: 'Minimal telemetry',
+    description: 'Disables marketing analytics while keeping build health telemetry.',
+    docs: 'https://vercel.com/docs/analytics',
+    defaults: {
+      analytics: false,
+      telemetry: true,
+    },
+  },
+  {
+    id: 'strict',
+    label: 'Strict privacy',
+    description: 'Turns off all analytics and telemetry for offline demos.',
+    docs: 'https://vercel.com/docs/speed-insights',
+    defaults: {
+      analytics: false,
+      telemetry: false,
+    },
+  },
+];
+
+export const DEFAULT_PRIVACY_PROFILE = PRIVACY_PROFILES[0].id;
+
+export const getPrivacyProfileDefaults = (profileId) => {
+  const profile = PRIVACY_PROFILES.find((p) => p.id === profileId);
+  return profile ? { ...profile.defaults } : { analytics: false, telemetry: false };
+};
+
+const privacyStateKey = (profileId) => `${PRIVACY_STATE_PREFIX}${profileId}`;
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
@@ -14,6 +61,9 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  privacyProfile: DEFAULT_PRIVACY_PROFILE,
+  analyticsConsent: getPrivacyProfileDefaults(DEFAULT_PRIVACY_PROFILE).analytics,
+  telemetryConsent: getPrivacyProfileDefaults(DEFAULT_PRIVACY_PROFILE).telemetry,
 };
 
 export async function getAccent() {
@@ -123,6 +173,51 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getPrivacyProfile() {
+  if (typeof window === 'undefined') return DEFAULT_PRIVACY_PROFILE;
+  const stored = window.localStorage.getItem(PRIVACY_PROFILE_KEY);
+  const valid = PRIVACY_PROFILES.some((profile) => profile.id === stored);
+  return valid ? stored : DEFAULT_PRIVACY_PROFILE;
+}
+
+export async function setPrivacyProfile(profileId) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PRIVACY_PROFILE_KEY, profileId);
+}
+
+export async function getPrivacyConsent(profileId) {
+  if (typeof window === 'undefined') return getPrivacyProfileDefaults(profileId);
+  try {
+    const stored = window.localStorage.getItem(privacyStateKey(profileId));
+    if (!stored) return getPrivacyProfileDefaults(profileId);
+    const parsed = JSON.parse(stored);
+    const defaults = getPrivacyProfileDefaults(profileId);
+    return {
+      analytics:
+        typeof parsed.analytics === 'boolean' ? parsed.analytics : defaults.analytics,
+      telemetry:
+        typeof parsed.telemetry === 'boolean' ? parsed.telemetry : defaults.telemetry,
+    };
+  } catch {
+    return getPrivacyProfileDefaults(profileId);
+  }
+}
+
+export async function setPrivacyConsent(profileId, consent) {
+  if (typeof window === 'undefined') return;
+  const payload = {
+    analytics:
+      typeof consent.analytics === 'boolean'
+        ? consent.analytics
+        : getPrivacyProfileDefaults(profileId).analytics,
+    telemetry:
+      typeof consent.telemetry === 'boolean'
+        ? consent.telemetry
+        : getPrivacyProfileDefaults(profileId).telemetry,
+  };
+  window.localStorage.setItem(privacyStateKey(profileId), JSON.stringify(payload));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +232,10 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(PRIVACY_PROFILE_KEY);
+  PRIVACY_PROFILES.forEach(({ id }) => {
+    window.localStorage.removeItem(privacyStateKey(id));
+  });
 }
 
 export async function exportSettings() {

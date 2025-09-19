@@ -20,9 +20,18 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getPrivacyProfile as loadPrivacyProfile,
+  setPrivacyProfile as savePrivacyProfile,
+  getPrivacyConsent as loadPrivacyConsent,
+  setPrivacyConsent as savePrivacyConsent,
+  PRIVACY_PROFILES,
+  DEFAULT_PRIVACY_PROFILE,
+  getPrivacyProfileDefaults,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { setAnalyticsEnabled, setTelemetryEnabled } from '../utils/privacyControls';
+import { createLogger } from '../lib/logger';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +72,10 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  analyticsConsent: boolean;
+  telemetryConsent: boolean;
+  privacyProfile: string;
+  privacyProfiles: typeof PRIVACY_PROFILES;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,7 +87,15 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setAnalyticsConsent: (value: boolean) => void;
+  setTelemetryConsent: (value: boolean) => void;
+  setPrivacyProfile: (profile: string) => void;
 }
+
+type PrivacyConsent = {
+  analytics: boolean;
+  telemetry: boolean;
+};
 
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
@@ -88,6 +109,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  analyticsConsent: defaults.analyticsConsent,
+  telemetryConsent: defaults.telemetryConsent,
+  privacyProfile: DEFAULT_PRIVACY_PROFILE,
+  privacyProfiles: PRIVACY_PROFILES,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +124,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setAnalyticsConsent: () => {},
+  setTelemetryConsent: () => {},
+  setPrivacyProfile: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -114,6 +142,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const loggerRef = useRef(createLogger('privacy-settings'));
+  const [privacyProfile, setPrivacyProfileState] = useState<string>(
+    defaults.privacyProfile ?? DEFAULT_PRIVACY_PROFILE,
+  );
+  const [privacyConsents, setPrivacyConsents] = useState<Record<string, PrivacyConsent>>(() => {
+    const initial: Record<string, PrivacyConsent> = {};
+    PRIVACY_PROFILES.forEach((profile) => {
+      initial[profile.id] = getPrivacyProfileDefaults(profile.id);
+    });
+    return initial;
+  });
+
+  const activeConsent =
+    privacyConsents[privacyProfile] ?? getPrivacyProfileDefaults(privacyProfile);
+  const analyticsConsent = activeConsent.analytics;
+  const telemetryConsent = activeConsent.telemetry;
 
   useEffect(() => {
     (async () => {
@@ -128,6 +172,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      const [storedProfile, consentEntries] = await Promise.all([
+        loadPrivacyProfile(),
+        Promise.all(
+          PRIVACY_PROFILES.map(async (profile) => [
+            profile.id,
+            await loadPrivacyConsent(profile.id),
+          ] as const),
+        ),
+      ]);
+      setPrivacyProfileState(
+        PRIVACY_PROFILES.some((profile) => profile.id === storedProfile)
+          ? storedProfile
+          : DEFAULT_PRIVACY_PROFILE,
+      );
+      setPrivacyConsents((prev) => {
+        const next = { ...prev };
+        consentEntries.forEach(([id, consent]) => {
+          next[id] = consent;
+        });
+        return next;
+      });
     })();
   }, []);
 
@@ -236,6 +301,44 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    setAnalyticsEnabled(analyticsConsent);
+  }, [analyticsConsent]);
+
+  useEffect(() => {
+    setTelemetryEnabled(telemetryConsent);
+  }, [telemetryConsent]);
+
+  const updatePrivacyConsent = (key: keyof PrivacyConsent, value: boolean) => {
+    let changed = false;
+    setPrivacyConsents((prev) => {
+      const current = prev[privacyProfile] ?? getPrivacyProfileDefaults(privacyProfile);
+      if (current[key] === value) return prev;
+      const updated = { ...current, [key]: value };
+      changed = true;
+      savePrivacyConsent(privacyProfile, updated).catch(() => {});
+      return {
+        ...prev,
+        [privacyProfile]: updated,
+      };
+    });
+    if (changed) {
+      loggerRef.current.info('privacy_consent_updated', {
+        profile: privacyProfile,
+        channel: key,
+        enabled: value,
+      });
+    }
+  };
+
+  const handleSetPrivacyProfile = (profileId: string) => {
+    if (profileId === privacyProfile) return;
+    if (!PRIVACY_PROFILES.some((profile) => profile.id === profileId)) return;
+    setPrivacyProfileState(profileId);
+    savePrivacyProfile(profileId).catch(() => {});
+    loggerRef.current.info('privacy_profile_selected', { profile: profileId });
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +353,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        analyticsConsent,
+        telemetryConsent,
+        privacyProfile,
+        privacyProfiles: PRIVACY_PROFILES,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +368,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setAnalyticsConsent: (value: boolean) => updatePrivacyConsent('analytics', value),
+        setTelemetryConsent: (value: boolean) => updatePrivacyConsent('telemetry', value),
+        setPrivacyProfile: handleSetPrivacyProfile,
       }}
     >
       {children}

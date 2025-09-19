@@ -1,8 +1,10 @@
 import ReactGA from 'react-ga4';
+import { isAnalyticsEnabled } from './privacyControls';
 
 type EventInput = Parameters<typeof ReactGA.event>[0];
 
 const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
+  if (!isAnalyticsEnabled()) return;
   try {
     const eventFn = ReactGA.event;
     if (typeof eventFn === 'function') {
