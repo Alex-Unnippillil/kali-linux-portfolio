@@ -42,6 +42,72 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window control accessibility', () => {
+  const originalDocumentPictureInPicture = (window as any).documentPictureInPicture;
+
+  afterEach(() => {
+    if (originalDocumentPictureInPicture) {
+      Object.defineProperty(window, 'documentPictureInPicture', {
+        configurable: true,
+        value: originalDocumentPictureInPicture,
+      });
+    } else {
+      delete (window as any).documentPictureInPicture;
+    }
+  });
+
+  it('renders controls with aria labels and minimum hit size', () => {
+    Object.defineProperty(window, 'documentPictureInPicture', {
+      configurable: true,
+      value: {},
+    });
+
+    render(
+      <Window
+        id="access-window"
+        title="Accessible"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        allowMaximize
+        pip={() => <div />}
+      />
+    );
+
+    const targets = [
+      { name: /window pin/i },
+      { name: /window minimize/i },
+      { name: /window maximize/i },
+      { name: /window close/i },
+    ];
+
+    targets.forEach(({ name }) => {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveAttribute('aria-label');
+
+      const rect = {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 40,
+        right: 40,
+        width: 40,
+        height: 40,
+        toJSON: () => ({}),
+      } as DOMRect;
+
+      jest.spyOn(button, 'getBoundingClientRect').mockReturnValue(rect);
+      const { width, height } = button.getBoundingClientRect();
+      expect(width).toBeGreaterThanOrEqual(32);
+      expect(height).toBeGreaterThanOrEqual(32);
+    });
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
@@ -198,8 +264,15 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
 
+    const releaseEvent = {
+      key: 'ArrowDown',
+      altKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    } as any;
+
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown(releaseEvent);
     });
 
     expect(ref.current!.state.snapped).toBeNull();

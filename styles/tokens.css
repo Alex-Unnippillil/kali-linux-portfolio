@@ -57,6 +57,25 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
+  --window-control-hit-area: var(--hit-area);
+  --window-control-icon-size: 1rem;
+  --window-control-surface: transparent;
+  --window-control-surface-hover: rgba(255, 255, 255, 0.12);
+  --window-control-surface-active: rgba(255, 255, 255, 0.18);
+  --window-control-surface-focus: rgba(255, 255, 255, 0.2);
+  --window-control-icon-color: rgba(245, 245, 245, 0.92);
+  --window-control-icon-hover: #ffffff;
+  --window-control-icon-active: #ffffff;
+  --window-control-icon-focus: #ffffff;
+  --window-control-pin-accent: rgba(255, 255, 255, 0.65);
+  --window-control-danger-surface: rgba(220, 53, 69, 0.85);
+  --window-control-danger-hover: rgba(220, 53, 69, 1);
+  --window-control-danger-active: rgba(176, 32, 41, 1);
+  --window-control-danger-focus: rgba(220, 53, 69, 1);
+  --window-control-danger-icon: #ffffff;
+  --window-control-danger-icon-hover: #ffffff;
+  --window-control-danger-icon-active: #ffffff;
+  --window-control-danger-icon-focus: #ffffff;
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
@@ -77,6 +96,23 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --window-control-surface: transparent;
+  --window-control-surface-hover: #ffffff;
+  --window-control-surface-active: #ffff00;
+  --window-control-surface-focus: #ffffff;
+  --window-control-icon-color: #ffffff;
+  --window-control-icon-hover: #000000;
+  --window-control-icon-active: #000000;
+  --window-control-icon-focus: #000000;
+  --window-control-pin-accent: #000000;
+  --window-control-danger-surface: #ff0000;
+  --window-control-danger-hover: #ff0000;
+  --window-control-danger-active: #ff8800;
+  --window-control-danger-focus: #ff0000;
+  --window-control-danger-icon: #ffffff;
+  --window-control-danger-icon-hover: #000000;
+  --window-control-danger-icon-active: #000000;
+  --window-control-danger-icon-focus: #000000;
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +152,22 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --window-control-surface: transparent;
+    --window-control-surface-hover: #ffffff;
+    --window-control-surface-active: #ffff00;
+    --window-control-surface-focus: #ffffff;
+    --window-control-icon-color: #ffffff;
+    --window-control-icon-hover: #000000;
+    --window-control-icon-active: #000000;
+    --window-control-icon-focus: #000000;
+    --window-control-pin-accent: #000000;
+    --window-control-danger-surface: #ff0000;
+    --window-control-danger-hover: #ff0000;
+    --window-control-danger-active: #ff8800;
+    --window-control-danger-focus: #ff0000;
+    --window-control-danger-icon: #ffffff;
+    --window-control-danger-icon-hover: #000000;
+    --window-control-danger-icon-active: #000000;
+    --window-control-danger-icon-focus: #000000;
   }
 }
