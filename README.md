@@ -91,6 +91,7 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn lint:editorconfig` – ensure files follow the `.editorconfig` formatting rules.
 - `yarn export` – generate a static export in the `out/` directory.
 
 ---
@@ -99,6 +100,7 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- `.editorconfig` enforces 2-space indentation, UTF-8 encoding, and LF newlines across JS/TS/MD files. Most editors detect it automatically; install an EditorConfig plugin if your setup needs it.
 
 ---
 

@@ -6444,6 +6444,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"editorconfig-checker@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "editorconfig-checker@npm:6.1.0"
+  bin:
+    ec: dist/index.js
+    editorconfig-checker: dist/index.js
+  checksum: 10c0/0876f5adeaf8c40dd179d78449bd3f14cf428f9179714cc49614407a525c185c228173ba849ff81c340af39a7c456cb904598bf3b60407b28b8302f2672ddb91
+  languageName: node
+  linkType: hard
+
 "ejs@npm:^3.1.6":
   version: 3.1.10
   resolution: "ejs@npm:3.1.10"
@@ -13905,6 +13915,7 @@ __metadata:
     decimal.js: "npm:^10.4.3"
     diff: "npm:^8"
     dompurify: "npm:^3.2.6"
+    editorconfig-checker: "npm:^6.1.0"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:15.5.2"
     fake-indexeddb: "npm:^6.1.0"

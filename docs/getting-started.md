@@ -6,6 +6,7 @@ This project is built with [Next.js](https://nextjs.org/).
 
 - Node.js 20
 - yarn or npm
+- An editor with [EditorConfig](https://editorconfig.org/) support (install the plugin if your editor doesn't ship with it) to pick up the repo's `.editorconfig` rules.
 
 ## Installation
 

@@ -36,6 +36,7 @@ const getPort = () =>
 
     await run('yarn', ['install', '--immutable']);
     await run('yarn', ['lint']);
+    await run('yarn', ['lint:editorconfig']);
     await run('yarn', ['tsc', '--noEmit']);
     await run('yarn', ['build']);
 
