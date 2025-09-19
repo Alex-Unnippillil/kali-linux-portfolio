@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  direction: 'ltr',
 };
 
 export async function getAccent() {
@@ -102,6 +103,17 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getDirection() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.direction;
+  const value = window.localStorage.getItem('direction');
+  return value === 'rtl' ? 'rtl' : 'ltr';
+}
+
+export async function setDirection(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('direction', value);
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('direction');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    direction,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getDirection(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +191,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    direction,
   });
 }
 
@@ -200,6 +216,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    direction,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +229,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (direction !== undefined) await setDirection(direction);
 }
 
 export const defaults = DEFAULT_SETTINGS;

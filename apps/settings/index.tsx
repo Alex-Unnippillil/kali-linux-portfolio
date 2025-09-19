@@ -31,6 +31,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    direction,
+    setDirection,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +82,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.direction !== undefined)
+        setDirection(parsed.direction === "rtl" ? "rtl" : "ltr");
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +105,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setDirection(defaults.direction as "ltr" | "rtl");
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -250,6 +255,14 @@ export default function Settings() {
               checked={highContrast}
               onChange={setHighContrast}
               ariaLabel="High Contrast"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Right-to-left layout:</span>
+            <ToggleSwitch
+              checked={direction === "rtl"}
+              onChange={(value) => setDirection(value ? "rtl" : "ltr")}
+              ariaLabel="Right-to-left layout"
             />
           </div>
           <div className="flex justify-center my-4 items-center">

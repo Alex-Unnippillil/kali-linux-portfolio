@@ -20,10 +20,13 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getDirection as loadDirection,
+  setDirection as saveDirection,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+type Direction = 'ltr' | 'rtl';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +66,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  direction: Direction;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +78,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setDirection: (value: Direction) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +93,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  direction: defaults.direction as Direction,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +105,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setDirection: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +120,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [direction, setDirection] = useState<Direction>(
+    defaults.direction as Direction,
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +138,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setDirection(await loadDirection());
     })();
   }, []);
 
@@ -236,6 +247,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveDirection(direction);
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('dir', direction);
+      if (document.body) {
+        document.body.setAttribute('dir', direction);
+      }
+    }
+  }, [direction]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +271,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        direction,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +283,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setDirection,
       }}
     >
       {children}
