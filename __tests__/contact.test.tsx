@@ -12,7 +12,7 @@ describe('contact form', () => {
         csrfToken: 'csrf',
         recaptchaToken: 'rc',
       },
-      fetchMock
+      { fetchImpl: fetchMock }
     );
     expect(result.success).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -29,7 +29,7 @@ describe('contact form', () => {
         csrfToken: 'csrf',
         recaptchaToken: 'rc',
       },
-      fetchMock
+      { fetchImpl: fetchMock }
     );
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/contact',

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import { createFetchCancelToken, fetchWithRetry } from '../../../utils/fetchWithRetry';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -79,6 +80,8 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const requestTokenRef = useRef(null);
+  const [retryAttempts, setRetryAttempts] = useState(0);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -113,6 +116,31 @@ const HydraApp = () => {
     saveWordlists('hydraPassLists', passLists);
   }, [passLists]);
 
+  const performHydraRequest = async (payload, { trackRetries = true } = {}) => {
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
+      return null;
+    }
+    const token = createFetchCancelToken();
+    if (trackRetries) {
+      requestTokenRef.current = token;
+      setRetryAttempts(0);
+    }
+    try {
+      const { promise } = fetchWithRetry('/api/hydra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        cancelToken: token,
+        onRetry: trackRetries ? ({ attempt }) => setRetryAttempts(attempt) : undefined,
+      });
+      return await promise;
+    } finally {
+      if (trackRetries && requestTokenRef.current === token) {
+        requestTokenRef.current = null;
+      }
+    }
+  };
+
   const resumeAttack = async (session) => {
     const user = userLists.find((l) => l.name === session.selectedUser);
     const pass = passLists.find((l) => l.name === session.selectedPass);
@@ -125,27 +153,29 @@ const HydraApp = () => {
     announceRef.current = Date.now();
     try {
       if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            target: session.target,
-            service: session.service,
-            userList: user.content,
-            passList: pass.content,
-            resume: true,
-          }),
+        const res = await performHydraRequest({
+          target: session.target,
+          service: session.service,
+          userList: user.content,
+          passList: pass.content,
+          resume: true,
         });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
+        if (res) {
+          const data = await res.json();
+          setOutput(data.output || data.error || 'No output');
+          setAnnounce('Hydra finished');
+        }
       } else {
         setOutput('Hydra demo output: feature disabled in static export');
         setAnnounce('Hydra finished (demo)');
       }
     } catch (err) {
-      setOutput(err.message);
-      setAnnounce('Hydra failed');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setAnnounce('Hydra cancelled');
+      } else {
+        setOutput(err.message);
+        setAnnounce('Hydra failed');
+      }
     } finally {
       setRunning(false);
       clearSession();
@@ -330,26 +360,28 @@ const HydraApp = () => {
     announceRef.current = Date.now();
     try {
       if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            target,
-            service,
-            userList: user.content,
-            passList: pass.content,
-          }),
+        const res = await performHydraRequest({
+          target,
+          service,
+          userList: user.content,
+          passList: pass.content,
         });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
+        if (res) {
+          const data = await res.json();
+          setOutput(data.output || data.error || 'No output');
+          setAnnounce('Hydra finished');
+        }
       } else {
         setOutput('Hydra demo output: feature disabled in static export');
         setAnnounce('Hydra finished (demo)');
       }
     } catch (err) {
-      setOutput(err.message);
-      setAnnounce('Hydra failed');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setAnnounce('Hydra cancelled');
+      } else {
+        setOutput(err.message);
+        setAnnounce('Hydra failed');
+      }
     } finally {
       setRunning(false);
       clearSession();
@@ -397,11 +429,11 @@ const HydraApp = () => {
     setPaused(true);
     setAnnounce('Hydra paused');
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pause' }),
-      });
+      try {
+        await performHydraRequest({ action: 'pause' }, { trackRetries: false });
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -409,15 +441,19 @@ const HydraApp = () => {
     setPaused(false);
     setAnnounce('Hydra resumed');
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resume' }),
-      });
+      try {
+        await performHydraRequest({ action: 'resume' }, { trackRetries: false });
+      } catch {
+        /* ignore */
+      }
     }
   };
 
   const cancelHydra = async () => {
+    if (requestTokenRef.current) {
+      requestTokenRef.current.cancel();
+      requestTokenRef.current = null;
+    }
     setRunning(false);
     setPaused(false);
     setRunId((id) => id + 1);
@@ -425,13 +461,14 @@ const HydraApp = () => {
     setTimeline([]);
     startRef.current = null;
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel' }),
-      });
+      try {
+        await performHydraRequest({ action: 'cancel' }, { trackRetries: false });
+      } catch {
+        /* ignore */
+      }
     }
     setAnnounce('Hydra cancelled');
+    setRetryAttempts(0);
     clearSession();
   };
 
@@ -635,6 +672,11 @@ const HydraApp = () => {
             </button>
           )}
         </div>
+        {(running || retryAttempts > 0) && (
+          <p className="col-span-2 text-xs text-gray-400" aria-live="polite">
+            API retries attempted: {retryAttempts}
+          </p>
+        )}
       </div>
 
       <Stepper
