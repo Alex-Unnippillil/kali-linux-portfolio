@@ -128,5 +128,6 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
+- Add QA review notes for the desktop overview: run `npx playwright test playwright/overview.spec.ts` to confirm multi-window, grouping, and context menu flows remain stable and leak-free.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
 
