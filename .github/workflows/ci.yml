@@ -26,6 +26,17 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: npm run lint
 
+  axe-linter:
+    runs-on: ubuntu-latest
+    needs: install
+    if: ${{ secrets.AXE_LINTER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dequelabs/axe-linter-action@v1
+        with:
+          api_key: ${{ secrets.AXE_LINTER_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
   typecheck:
     runs-on: ubuntu-latest
     needs: install
