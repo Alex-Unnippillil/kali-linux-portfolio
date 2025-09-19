@@ -1,12 +1,18 @@
 "use client";
 
 import React, { Component } from 'react';
-import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import {
+    CloseIcon,
+    MaximizeIcon,
+    MinimizeIcon,
+    PinIcon,
+    RestoreIcon,
+} from '../ui/icons';
 
 export class Window extends Component {
     constructor(props) {
@@ -742,14 +748,7 @@ export function WindowEditButtons(props) {
                     className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                     onClick={togglePin}
                 >
-                    <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-4 w-4 inline"
-                        width={16}
-                        height={16}
-                        sizes="16px"
-                    />
+                    <PinIcon className="h-4 w-4" size={16} aria-hidden="true" />
                 </button>
             )}
             <button
@@ -758,14 +757,7 @@ export function WindowEditButtons(props) {
                 className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.minimize}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+                <MinimizeIcon className="h-4 w-4" size={16} aria-hidden="true" />
             </button>
             {props.allowMaximize && (
                 props.isMaximised
@@ -776,14 +768,7 @@ export function WindowEditButtons(props) {
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
+                            <RestoreIcon className="h-4 w-4" size={16} aria-hidden="true" />
                         </button>
                     ) : (
                         <button
@@ -792,14 +777,7 @@ export function WindowEditButtons(props) {
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
+                            <MaximizeIcon className="h-4 w-4" size={16} aria-hidden="true" />
                         </button>
                     )
             )}
@@ -810,14 +788,7 @@ export function WindowEditButtons(props) {
                 className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.close}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+                <CloseIcon className="h-4 w-4" size={16} aria-hidden="true" />
             </button>
         </div>
     )

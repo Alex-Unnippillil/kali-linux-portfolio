@@ -1,5 +1,5 @@
-import Image from 'next/image';
 import { ModuleMetadata } from '../modules/metadata';
+import { DownloadIcon, InfoIcon } from './ui/icons';
 
 interface ModuleCardProps {
   module: ModuleMetadata;
@@ -42,18 +42,8 @@ export default function ModuleCard({
         <p className="text-sm">{highlight(module.description, query)}</p>
       </div>
       <div className="flex flex-col gap-2 items-center">
-        <Image
-          src="/themes/Yaru/status/about.svg"
-          alt="Details"
-          width={24}
-          height={24}
-        />
-        <Image
-          src="/themes/Yaru/status/download.svg"
-          alt="Run"
-          width={24}
-          height={24}
-        />
+        <InfoIcon size={24} aria-hidden="true" />
+        <DownloadIcon size={24} aria-hidden="true" />
       </div>
     </button>
   );

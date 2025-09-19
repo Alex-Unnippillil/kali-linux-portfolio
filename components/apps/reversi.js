@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { RefreshIcon, UndoIcon } from '../ui/icons';
 import {
   SIZE,
   DIRECTIONS,
@@ -414,7 +415,7 @@ const Reversi = () => {
           onClick={reset}
           aria-label="Reset"
         >
-          <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
+          <RefreshIcon size={18} aria-hidden="true" />
         </button>
         <button
           className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"
@@ -422,10 +423,7 @@ const Reversi = () => {
           disabled={!history.length}
           aria-label="Undo"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-            <path d="M9 15L3 9l6-6" />
-            <path d="M3 9h11a4 4 0 0 1 0 8h-1" />
-          </svg>
+          <UndoIcon size={18} aria-hidden="true" />
         </button>
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"

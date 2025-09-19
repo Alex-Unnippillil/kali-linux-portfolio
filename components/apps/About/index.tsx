@@ -9,6 +9,23 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import {
+  DownloadIcon,
+  FolderIcon,
+  GraduationCapIcon,
+  InfoIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+} from '../../ui/icons';
+
+const SECTION_ICONS: Record<string, typeof InfoIcon> = {
+  about: InfoIcon,
+  education: GraduationCapIcon,
+  skills: SparklesIcon,
+  certs: ShieldCheckIcon,
+  projects: FolderIcon,
+  resume: DownloadIcon,
+};
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -53,32 +70,28 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
 
   renderNavLinks = () => (
     <>
-      {data.sections.map((section) => (
-        <div
-          key={section.id}
-          id={section.id}
-          role="tab"
-          aria-selected={this.state.active_screen === section.id}
-          tabIndex={this.state.active_screen === section.id ? 0 : -1}
-          onFocus={this.changeScreen}
-          className={
-            (this.state.active_screen === section.id
-              ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
-              : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
-            ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
-          }
-        >
-          <Image
-            className="w-3 md:w-4 rounded border border-gray-600"
-            alt={section.alt}
-            src={section.icon}
-            width={16}
-            height={16}
-            sizes="16px"
-          />
-          <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
-        </div>
-      ))}
+      {data.sections.map((section) => {
+        const Icon = SECTION_ICONS[section.id] ?? InfoIcon;
+        return (
+          <div
+            key={section.id}
+            id={section.id}
+            role="tab"
+            aria-selected={this.state.active_screen === section.id}
+            tabIndex={this.state.active_screen === section.id ? 0 : -1}
+            onFocus={this.changeScreen}
+            className={
+              (this.state.active_screen === section.id
+                ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
+                : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
+              ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
+            }
+          >
+            <Icon size={16} className="text-gray-200" aria-hidden="true" />
+            <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
+          </div>
+        );
+      })}
     </>
   );
 
