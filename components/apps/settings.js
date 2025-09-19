@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import {
+    resetSettings,
+    defaults,
+    exportSettings as exportSettingsData,
+    importSettings as importSettingsData,
+} from '../../utils/settingsStore';
+import { useProfileSwitcher } from '../../hooks/useProfileSwitcher';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { persistentProfileId } = useProfileSwitcher();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -222,7 +229,7 @@ export function Settings() {
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
                     onClick={async () => {
-                        const data = await exportSettingsData();
+                        const data = await exportSettingsData(persistentProfileId);
                         const blob = new Blob([data], { type: 'application/json' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
@@ -243,7 +250,7 @@ export function Settings() {
                 </button>
                 <button
                     onClick={async () => {
-                        await resetSettings();
+                        await resetSettings(persistentProfileId);
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
                         setDensity(defaults.density);
@@ -251,6 +258,9 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setPongSpin(defaults.pongSpin);
+                        setAllowNetwork(defaults.allowNetwork);
+                        setHaptics(defaults.haptics);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -266,7 +276,7 @@ export function Settings() {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
                     const text = await file.text();
-                    await importSettingsData(text);
+                    await importSettingsData(text, persistentProfileId);
                     try {
                         const parsed = JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
@@ -275,6 +285,9 @@ export function Settings() {
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.pongSpin !== undefined) setPongSpin(parsed.pongSpin);
+                        if (parsed.allowNetwork !== undefined) setAllowNetwork(parsed.allowNetwork);
+                        if (parsed.haptics !== undefined) setHaptics(parsed.haptics);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);

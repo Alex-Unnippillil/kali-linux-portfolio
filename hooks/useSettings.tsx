@@ -20,9 +20,11 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  resetSettings,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { getTheme as loadTheme, setTheme as saveTheme, isDarkTheme } from '../utils/theme';
+import { useProfileSwitcher } from './useProfileSwitcher';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -102,6 +104,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { activeProfileId, persistentProfileId, isGuest } = useProfileSwitcher();
+  const profileId = activeProfileId;
+  const persist = !isGuest;
+
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
@@ -112,28 +118,87 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setTheme] = useState<string>(() => (persist ? loadTheme(profileId) : 'default'));
   const fetchRef = useRef<typeof fetch | null>(null);
+  const wasGuest = useRef(isGuest);
 
   useEffect(() => {
+    let cancelled = false;
+    if (!persist) {
+      setAccent(defaults.accent);
+      setWallpaper(defaults.wallpaper);
+      setDensity(defaults.density as Density);
+      setReducedMotion(defaults.reducedMotion);
+      setFontScale(defaults.fontScale);
+      setHighContrast(defaults.highContrast);
+      setLargeHitAreas(defaults.largeHitAreas);
+      setPongSpin(defaults.pongSpin);
+      setAllowNetwork(defaults.allowNetwork);
+      setHaptics(defaults.haptics);
+      setTheme('default');
+      return;
+    }
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
-    })();
-  }, []);
+      const [
+        accentValue,
+        wallpaperValue,
+        densityValue,
+        reducedMotionValue,
+        fontScaleValue,
+        highContrastValue,
+        largeHitValue,
+        pongSpinValue,
+        allowNetworkValue,
+        hapticsValue,
+      ] = await Promise.all([
+        loadAccent(profileId),
+        loadWallpaper(profileId),
+        loadDensity(profileId),
+        loadReducedMotion(profileId),
+        loadFontScale(profileId),
+        loadHighContrast(profileId),
+        loadLargeHitAreas(profileId),
+        loadPongSpin(profileId),
+        loadAllowNetwork(profileId),
+        loadHaptics(profileId),
+      ]);
+      if (cancelled) return;
+      setAccent(accentValue);
+      setWallpaper(wallpaperValue);
+      setDensity(densityValue as Density);
+      setReducedMotion(reducedMotionValue);
+      setFontScale(fontScaleValue);
+      setHighContrast(highContrastValue);
+      setLargeHitAreas(largeHitValue);
+      setPongSpin(pongSpinValue);
+      setAllowNetwork(allowNetworkValue);
+      setHaptics(hapticsValue);
+      setTheme(loadTheme(profileId));
+    })().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId, persist]);
 
   useEffect(() => {
-    saveTheme(theme);
-  }, [theme]);
+    if (wasGuest.current && !isGuest) {
+      (async () => {
+        await resetSettings(persistentProfileId);
+        setAccent(defaults.accent);
+        setWallpaper(defaults.wallpaper);
+        setDensity(defaults.density as Density);
+        setReducedMotion(defaults.reducedMotion);
+        setFontScale(defaults.fontScale);
+        setHighContrast(defaults.highContrast);
+        setLargeHitAreas(defaults.largeHitAreas);
+        setPongSpin(defaults.pongSpin);
+        setAllowNetwork(defaults.allowNetwork);
+        setHaptics(defaults.haptics);
+        setTheme('default');
+      })().catch(() => {});
+    }
+    wasGuest.current = isGuest;
+  }, [isGuest, persistentProfileId]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -149,12 +214,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
-  }, [accent]);
+    if (persist) {
+      saveAccent(profileId, accent);
+    }
+  }, [accent, persist, profileId]);
 
   useEffect(() => {
-    saveWallpaper(wallpaper);
-  }, [wallpaper]);
+    if (persist) {
+      saveWallpaper(profileId, wallpaper);
+    }
+  }, [wallpaper, persist, profileId]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -179,35 +248,55 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveDensity(density);
-  }, [density]);
+    if (persist) {
+      saveDensity(profileId, density);
+    }
+  }, [density, persist, profileId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
-    saveReducedMotion(reducedMotion);
-  }, [reducedMotion]);
+    if (persist) {
+      saveReducedMotion(profileId, reducedMotion);
+    }
+  }, [reducedMotion, persist, profileId]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
-  }, [fontScale]);
+    if (persist) {
+      saveFontScale(profileId, fontScale);
+    }
+  }, [fontScale, persist, profileId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
-    saveHighContrast(highContrast);
-  }, [highContrast]);
+    if (persist) {
+      saveHighContrast(profileId, highContrast);
+    }
+  }, [highContrast, persist, profileId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
-    saveLargeHitAreas(largeHitAreas);
-  }, [largeHitAreas]);
+    if (persist) {
+      saveLargeHitAreas(profileId, largeHitAreas);
+    }
+  }, [largeHitAreas, persist, profileId]);
 
   useEffect(() => {
-    savePongSpin(pongSpin);
-  }, [pongSpin]);
+    if (persist) {
+      savePongSpin(profileId, pongSpin);
+    }
+  }, [pongSpin, persist, profileId]);
 
   useEffect(() => {
-    saveAllowNetwork(allowNetwork);
+    if (persist) {
+      saveHaptics(profileId, haptics);
+    }
+  }, [haptics, persist, profileId]);
+
+  useEffect(() => {
+    if (persist) {
+      saveAllowNetwork(profileId, allowNetwork);
+    }
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
@@ -230,11 +319,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       window.fetch = fetchRef.current!;
     }
-  }, [allowNetwork]);
+  }, [allowNetwork, persist, profileId]);
 
   useEffect(() => {
-    saveHaptics(haptics);
-  }, [haptics]);
+    if (persist) {
+      saveTheme(profileId, theme);
+    } else {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.classList.toggle('dark', isDarkTheme(theme));
+    }
+  }, [theme, persist, profileId]);
 
   return (
     <SettingsContext.Provider
