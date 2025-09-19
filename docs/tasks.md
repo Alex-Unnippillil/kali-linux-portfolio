@@ -129,4 +129,5 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- Run `node scripts/verify-profiles.mjs` before shipping profile-related changes. The script fails on lint/type/build warnings, exercises BLE Sensor profile export/import persistence, and reuses the session to smoke critical `/apps/*` routes.
 
