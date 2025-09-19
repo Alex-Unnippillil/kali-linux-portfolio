@@ -11,6 +11,7 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { firaCode } from '../../lib/fonts';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -308,7 +309,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
-        fontFamily: '"Fira Code", monospace',
+        fontFamily: firaCode.style.fontFamily,
         theme: {
           background: '#0f1317',
           foreground: '#f5f5f5',
