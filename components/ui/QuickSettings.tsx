@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useId } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,23 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const { dndActive, dndScheduleActive, dndOverride, toggleDnd } = useSettings();
+  const dndLabelId = useId();
+  const dndControlId = useId();
+  const dndStatusId = useId();
+  const soundLabelId = useId();
+  const soundControlId = useId();
+  const networkLabelId = useId();
+  const networkControlId = useId();
+  const reduceMotionLabelId = useId();
+  const reduceMotionControlId = useId();
+
+  const dndStatus = (() => {
+    if (dndOverride === 'on') return 'Manual';
+    if (dndOverride === 'off') return 'Override off';
+    if (dndScheduleActive) return 'Scheduled';
+    return 'Off';
+  })();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -27,6 +45,25 @@ const QuickSettings = ({ open }: Props) => {
         open ? '' : 'hidden'
       }`}
     >
+      <label
+        htmlFor={dndControlId}
+        className="px-4 pb-2 flex justify-between items-center gap-4 cursor-pointer"
+      >
+        <span className="flex flex-col">
+          <span id={dndLabelId}>Do Not Disturb</span>
+          <span id={dndStatusId} className="text-xs text-white/70">
+            {dndStatus}
+          </span>
+        </span>
+        <input
+          id={dndControlId}
+          type="checkbox"
+          aria-labelledby={dndLabelId}
+          aria-describedby={dndStatusId}
+          checked={dndActive}
+          onChange={() => toggleDnd()}
+        />
+      </label>
       <div className="px-4 pb-2">
         <button
           className="w-full flex justify-between"
@@ -36,22 +73,45 @@ const QuickSettings = ({ open }: Props) => {
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
         </button>
       </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
-      </div>
-      <div className="px-4 flex justify-between">
-        <span>Reduced motion</span>
+      <label
+        htmlFor={soundControlId}
+        className="px-4 pb-2 flex justify-between items-center cursor-pointer"
+      >
+        <span id={soundLabelId}>Sound</span>
         <input
+          id={soundControlId}
           type="checkbox"
+          aria-labelledby={soundLabelId}
+          checked={sound}
+          onChange={() => setSound(!sound)}
+        />
+      </label>
+      <label
+        htmlFor={networkControlId}
+        className="px-4 pb-2 flex justify-between items-center cursor-pointer"
+      >
+        <span id={networkLabelId}>Network</span>
+        <input
+          id={networkControlId}
+          type="checkbox"
+          aria-labelledby={networkLabelId}
+          checked={online}
+          onChange={() => setOnline(!online)}
+        />
+      </label>
+      <label
+        htmlFor={reduceMotionControlId}
+        className="px-4 flex justify-between items-center cursor-pointer"
+      >
+        <span id={reduceMotionLabelId}>Reduced motion</span>
+        <input
+          id={reduceMotionControlId}
+          type="checkbox"
+          aria-labelledby={reduceMotionLabelId}
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
         />
-      </div>
+      </label>
     </div>
   );
 };

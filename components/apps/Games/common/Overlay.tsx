@@ -10,11 +10,13 @@ export default function Overlay({
   onResume,
   muted: externalMuted,
   onToggleSound,
+  appId = 'Games',
 }: {
   onPause?: () => void;
   onResume?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
+  appId?: string;
 }) {
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(externalMuted ?? false);
@@ -98,6 +100,7 @@ export default function Overlay({
       </div>
       {toast && (
         <Toast
+          appId={appId}
           message={toast}
           onClose={() => setToast('')}
           duration={1000000}

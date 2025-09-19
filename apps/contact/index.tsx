@@ -151,6 +151,7 @@ const ContactApp: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              aria-label="Name"
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -182,6 +183,7 @@ const ContactApp: React.FC = () => {
               required
               aria-invalid={!!emailError}
               aria-describedby={emailError ? "contact-email-error" : undefined}
+              aria-label="Email"
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -218,6 +220,7 @@ const ContactApp: React.FC = () => {
               required
               aria-invalid={!!messageError}
               aria-describedby={messageError ? "contact-message-error" : undefined}
+              aria-label="Message"
             />
             <svg
               className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
@@ -247,6 +250,7 @@ const ContactApp: React.FC = () => {
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
+          aria-label="Leave this field empty"
         />
         {error && <FormError>{error}</FormError>}
         <button
@@ -261,7 +265,7 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
+      {toast && <Toast appId="Contact" message={toast} onClose={() => setToast("")} />}
     </div>
   );
 };
