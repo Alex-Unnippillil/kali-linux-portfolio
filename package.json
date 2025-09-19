@@ -21,10 +21,11 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
-    "verify:all": "node scripts/verify.mjs"
+    "verify:all": "node scripts/verify.mjs",
+    "check:node": "node scripts/check-node-version.mjs"
   },
   "engines": {
-    "node": "20.19.5"
+    "node": "22.5.1"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
