@@ -1,9 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getWallpaperBlur as loadWallpaperBlur,
+  setWallpaperBlur as saveWallpaperBlur,
+  getWallpaperBrightness as loadWallpaperBrightness,
+  setWallpaperBrightness as saveWallpaperBrightness,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -20,6 +24,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getWallpaperAccent as loadWallpaperAccent,
+  setWallpaperAccent as saveWallpaperAccent,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -54,6 +60,9 @@ const shadeColor = (color: string, percent: number): string => {
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
+  wallpaperBlur: number;
+  wallpaperBrightness: number;
+  wallpaperAccent: string;
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -65,6 +74,9 @@ interface SettingsContextValue {
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
+  setWallpaperBlur: (blur: number) => void;
+  setWallpaperBrightness: (brightness: number) => void;
+  setWallpaperAccent: (accent: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -79,6 +91,9 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
+  wallpaperBlur: defaults.wallpaperBlur,
+  wallpaperBrightness: defaults.wallpaperBrightness,
+  wallpaperAccent: defaults.wallpaperAccent || defaults.accent,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -90,6 +105,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
+  setWallpaperBlur: () => {},
+  setWallpaperBrightness: () => {},
+  setWallpaperAccent: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
@@ -104,6 +122,13 @@ export const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [wallpaperBlur, setWallpaperBlur] = useState<number>(defaults.wallpaperBlur);
+  const [wallpaperBrightness, setWallpaperBrightness] = useState<number>(
+    defaults.wallpaperBrightness,
+  );
+  const [wallpaperAccent, setWallpaperAccentState] = useState<string>(
+    defaults.wallpaperAccent || defaults.accent,
+  );
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -119,6 +144,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     (async () => {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
+      setWallpaperBlur(await loadWallpaperBlur());
+      setWallpaperBrightness(await loadWallpaperBrightness());
+      setWallpaperAccentState(await loadWallpaperAccent());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -142,7 +170,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-ub-border-orange': border,
       '--color-primary': accent,
       '--color-accent': accent,
-      '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
     };
@@ -153,8 +180,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [accent]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const focusColor = wallpaperAccent || accent;
+    const apply = () => {
+      document.documentElement.style.setProperty('--color-wallpaper-accent', focusColor);
+      document.documentElement.style.setProperty('--color-focus-ring', focusColor);
+    };
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      const id = window.requestAnimationFrame(apply);
+      return () => window.cancelAnimationFrame(id);
+    }
+    apply();
+    return () => {};
+  }, [wallpaperAccent, accent]);
+
+  useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    saveWallpaperBlur(wallpaperBlur);
+  }, [wallpaperBlur]);
+
+  useEffect(() => {
+    saveWallpaperBrightness(wallpaperBrightness);
+  }, [wallpaperBrightness]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -236,11 +288,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  const setWallpaperAccent = useCallback((value: string) => {
+    setWallpaperAccentState(value);
+    saveWallpaperAccent(value);
+  }, []);
+
   return (
     <SettingsContext.Provider
       value={{
         accent,
         wallpaper,
+        wallpaperBlur,
+        wallpaperBrightness,
+        wallpaperAccent,
         density,
         reducedMotion,
         fontScale,
@@ -252,6 +312,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         theme,
         setAccent,
         setWallpaper,
+        setWallpaperBlur,
+        setWallpaperBrightness,
+        setWallpaperAccent,
         setDensity,
         setReducedMotion,
         setFontScale,

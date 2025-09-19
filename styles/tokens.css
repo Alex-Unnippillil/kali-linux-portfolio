@@ -58,7 +58,7 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--color-wallpaper-accent, var(--color-ubt-blue));
   --focus-outline-width: 2px;
 }
 
