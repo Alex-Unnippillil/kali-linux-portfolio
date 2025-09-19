@@ -23,6 +23,13 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { TASKBAR_PROGRESS_EVENT, TASKBAR_PROGRESS_STATES } from '../../utils/taskbarEvents';
+
+const createDefaultTaskbarMetadata = () => ({
+    badgeCount: 0,
+    badgeLabel: '',
+    progress: null,
+});
 
 export class Desktop extends Component {
     constructor() {
@@ -52,6 +59,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            taskbar_metadata: {},
         }
     }
 
@@ -89,6 +97,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener(TASKBAR_PROGRESS_EVENT, this.handleTaskbarProgressEvent);
     }
 
     componentWillUnmount() {
@@ -96,6 +105,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener(TASKBAR_PROGRESS_EVENT, this.handleTaskbarProgressEvent);
     }
 
     checkForNewFolders = () => {
@@ -144,6 +154,103 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    handleTaskbarProgressEvent = (event) => {
+        const detail = event?.detail || {};
+        const appId = detail.appId;
+
+        if (!appId) {
+            return;
+        }
+
+        this.setState((prevState) => {
+            if (!prevState.closed_windows || !(appId in prevState.closed_windows)) {
+                return null;
+            }
+
+            const existing = prevState.taskbar_metadata?.[appId];
+            const baseMetadata = existing
+                ? {
+                    badgeCount: existing.badgeCount || 0,
+                    badgeLabel: existing.badgeLabel || '',
+                    progress: existing.progress ? { ...existing.progress } : null,
+                }
+                : createDefaultTaskbarMetadata();
+
+            let nextMetadata = detail.reset ? createDefaultTaskbarMetadata() : baseMetadata;
+            let changed = false;
+
+            if (detail.reset) {
+                if (!existing || existing.badgeCount !== 0 || existing.badgeLabel !== '' || existing.progress !== null) {
+                    changed = true;
+                }
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail, 'badgeCount')) {
+                const badgeInput = detail.badgeCount;
+                const sanitizedBadge = typeof badgeInput === 'number' && Number.isFinite(badgeInput)
+                    ? Math.max(0, Math.round(badgeInput))
+                    : 0;
+                if (sanitizedBadge !== nextMetadata.badgeCount) {
+                    nextMetadata = { ...nextMetadata, badgeCount: sanitizedBadge };
+                    changed = true;
+                }
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail, 'badgeLabel')) {
+                const sanitizedLabel = typeof detail.badgeLabel === 'string' ? detail.badgeLabel : '';
+                if (sanitizedLabel !== nextMetadata.badgeLabel) {
+                    nextMetadata = { ...nextMetadata, badgeLabel: sanitizedLabel };
+                    changed = true;
+                }
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail, 'progress')) {
+                const progressDetail = detail.progress;
+                if (!progressDetail || typeof progressDetail.value !== 'number' || !Number.isFinite(progressDetail.value)) {
+                    if (nextMetadata.progress !== null) {
+                        nextMetadata = { ...nextMetadata, progress: null };
+                        changed = true;
+                    }
+                } else {
+                    let numericValue = progressDetail.value;
+                    if (numericValue <= 1) {
+                        numericValue *= 100;
+                    }
+                    numericValue = Math.min(100, Math.max(0, numericValue));
+                    const status = TASKBAR_PROGRESS_STATES.includes(progressDetail.status) ? progressDetail.status : 'normal';
+                    const label = typeof progressDetail.label === 'string' ? progressDetail.label : '';
+                    const previous = nextMetadata.progress || {};
+                    if (
+                        previous.value !== numericValue ||
+                        previous.status !== status ||
+                        (previous.label || '') !== label
+                    ) {
+                        nextMetadata = {
+                            ...nextMetadata,
+                            progress: {
+                                value: numericValue,
+                                status,
+                                label,
+                            },
+                        };
+                        changed = true;
+                    }
+                }
+            }
+
+            if (!changed) {
+                return null;
+            }
+
+            return {
+                taskbar_metadata: {
+                    ...prevState.taskbar_metadata,
+                    [appId]: nextMetadata,
+                },
+            };
+        });
     }
 
     handleGlobalShortcut = (e) => {
@@ -353,6 +460,7 @@ export class Desktop extends Component {
         }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
+        let taskbar_metadata = {};
         apps.forEach((app) => {
             focused_windows = {
                 ...focused_windows,
@@ -378,6 +486,10 @@ export class Desktop extends Component {
                 ...minimized_windows,
                 [app.id]: false,
             }
+            taskbar_metadata = {
+                ...taskbar_metadata,
+                [app.id]: createDefaultTaskbarMetadata(),
+            };
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
         this.setState({
@@ -387,7 +499,8 @@ export class Desktop extends Component {
             favourite_apps,
             overlapped_windows,
             minimized_windows,
-            desktop_apps
+            desktop_apps,
+            taskbar_metadata,
         }, () => {
             if (typeof callback === 'function') callback();
         });
@@ -397,6 +510,8 @@ export class Desktop extends Component {
     updateAppsData = () => {
         let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
         let desktop_apps = [];
+        let taskbar_metadata = { ...this.state.taskbar_metadata };
+        const knownAppIds = new Set();
         apps.forEach((app) => {
             focused_windows = {
                 ...focused_windows,
@@ -418,15 +533,27 @@ export class Desktop extends Component {
                 ...favourite_apps,
                 [app.id]: app.favourite
             }
+            if (!taskbar_metadata[app.id]) {
+                taskbar_metadata[app.id] = createDefaultTaskbarMetadata();
+            }
+            knownAppIds.add(app.id);
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+
+        Object.keys(taskbar_metadata).forEach((id) => {
+            if (!knownAppIds.has(id)) {
+                delete taskbar_metadata[id];
+            }
+        });
+
         this.setState({
             focused_windows,
             closed_windows,
             disabled_apps,
             minimized_windows,
             favourite_apps,
-            desktop_apps
+            desktop_apps,
+            taskbar_metadata,
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -697,11 +824,16 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        let taskbar_metadata = { ...this.state.taskbar_metadata };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        if (taskbar_metadata[objId]) {
+            taskbar_metadata[objId] = createDefaultTaskbarMetadata();
+        }
+
+        this.setState({ closed_windows, favourite_apps, taskbar_metadata }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -898,6 +1030,7 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     minimized_windows={this.state.minimized_windows}
                     focused_windows={this.state.focused_windows}
+                    taskbar_metadata={this.state.taskbar_metadata}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
                 />
