@@ -14,6 +14,16 @@ const config = [
     },
   },
   {
+    files: ['__tests__/**/*.{js,jsx,ts,tsx}', 'tests/**/*.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      globals: {
+        describeFlaky: 'readonly',
+        itFlaky: 'readonly',
+        testFlaky: 'readonly',
+      },
+    },
+  },
+  {
     files: ['utils/qrStorage.ts', 'utils/safeStorage.ts', 'utils/sync.ts'],
     rules: {
       'no-restricted-globals': ['error', 'window', 'document'],
