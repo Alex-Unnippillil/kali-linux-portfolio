@@ -3,6 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import {
+  buildErrorReportTemplate,
+  ErrorCode,
+  getLocalizedErrorEntry,
+  isErrorCode,
+  LocalizedErrorCatalogEntry,
+} from '../types/errorCodes';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -33,11 +40,17 @@ const InputHub = () => {
   const [status, setStatus] = useState('');
   const [useCaptcha, setUseCaptcha] = useState(false);
   const [emailjsReady, setEmailjsReady] = useState(false);
+  const [attachedErrorCode, setAttachedErrorCode] = useState<ErrorCode | null>(null);
+  const [errorTemplate, setErrorTemplate] = useState<string | null>(null);
+  const [errorContext, setErrorContext] =
+    useState<LocalizedErrorCatalogEntry | null>(null);
 
   useEffect(() => {
     const { preset, title, text, url, files } = router.query;
     if (preset === 'contact') {
       setSubject('General Inquiry');
+    } else if (preset === 'bug') {
+      setSubject('Bug Report');
     }
     const parts: string[] = [];
     if (title) parts.push(String(title));
@@ -60,6 +73,54 @@ const InputHub = () => {
       setMessage((m) => (m ? `${m}\n${incoming}` : incoming));
     }
   }, [router.query]);
+
+  useEffect(() => {
+    const { errorCode: rawCode } = router.query as {
+      errorCode?: string | string[];
+    };
+
+    if (!rawCode) {
+      if (errorTemplate) {
+        setMessage((current) => {
+          const cleaned = current.replace(errorTemplate, '').trim();
+          return cleaned;
+        });
+      }
+      setErrorTemplate(null);
+      setErrorContext(null);
+      setAttachedErrorCode(null);
+      return;
+    }
+
+    if (Array.isArray(rawCode) || !isErrorCode(rawCode)) {
+      return;
+    }
+
+    const normalizedCode = rawCode as ErrorCode;
+    if (attachedErrorCode === normalizedCode) {
+      return;
+    }
+
+    const locale =
+      typeof navigator !== 'undefined' && navigator.language
+        ? navigator.language
+        : undefined;
+    const localized = getLocalizedErrorEntry(normalizedCode, locale);
+    const template = buildErrorReportTemplate(normalizedCode, locale);
+
+    setErrorContext(localized);
+    setSubject('Bug Report');
+    setMessage((current) => {
+      const trimmed = current.trim();
+      const cleaned =
+        errorTemplate && trimmed
+          ? trimmed.replace(errorTemplate, '').trim()
+          : trimmed;
+      return cleaned ? `${template}\n\n${cleaned}` : template;
+    });
+    setErrorTemplate(template);
+    setAttachedErrorCode(normalizedCode);
+  }, [router.query, attachedErrorCode, errorTemplate]);
 
   useEffect(() => {
     const userId = process.env.NEXT_PUBLIC_USER_ID;
@@ -179,6 +240,17 @@ const InputHub = () => {
           {emailjsReady ? 'EmailJS: Online' : 'EmailJS: Offline'}
         </span>
       </div>
+      {errorContext && (
+        <div className="mb-4 rounded border border-yellow-500 bg-yellow-100 p-3 text-sm text-black shadow-sm dark:border-yellow-300 dark:bg-yellow-900 dark:text-yellow-100">
+          <p className="font-semibold">{errorContext.copy.title}</p>
+          <p className="mt-1">{errorContext.copy.description}</p>
+          <p className="mt-2 italic">{errorContext.copy.remediation}</p>
+          <p className="mt-2 text-xs text-yellow-900 dark:text-yellow-200">
+            Code: <span className="font-mono">{errorContext.code}</span> · Scope:{' '}
+            {errorContext.scope} · Severity: {errorContext.severity}
+          </p>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
           className="p-1 border"
