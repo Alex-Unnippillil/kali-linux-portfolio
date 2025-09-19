@@ -58,6 +58,16 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps) {
+        if (
+            this.props.tilingCommand &&
+            (!prevProps.tilingCommand ||
+                prevProps.tilingCommand.version !== this.props.tilingCommand.version)
+        ) {
+            this.applyTilingCommand(this.props.tilingCommand);
+        }
+    }
+
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -194,6 +204,19 @@ export class Window extends Component {
             this.unsnapWindow();
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
+    }
+
+    handleDragStart = (e) => {
+        if (e && e.ctrlKey && this.props.onRequestTiling) {
+            if (typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            this.setState({ cursorType: "cursor-default", grabbed: false });
+            this.props.onRequestTiling(this.id);
+            return false;
+        }
+        this.changeCursorToMove();
+        return true;
     }
 
     changeCursorToDefault = () => {
@@ -363,6 +386,35 @@ export class Window extends Component {
         }
         this.checkOverlap();
         this.checkSnapPreview();
+    }
+
+    applyTilingCommand = (command) => {
+        const { rect } = command;
+        if (!rect) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const widthPercent = typeof rect.widthPercent === 'number' ? rect.widthPercent : parseFloat(rect.widthPercent);
+        const heightPercent = typeof rect.heightPercent === 'number' ? rect.heightPercent : parseFloat(rect.heightPercent);
+        const x = typeof rect.x === 'number' ? rect.x : parseFloat(rect.x);
+        const y = typeof rect.y === 'number' ? rect.y : parseFloat(rect.y);
+        this.setState({
+            width: widthPercent,
+            height: heightPercent,
+            maximized: false,
+            snapPreview: null,
+            snapPosition: null,
+            snapped: null,
+            lastSize: null,
+        }, () => {
+            node.style.transform = `translate(${x}px, ${y}px)`;
+            node.style.setProperty('--window-transform-x', `${x}px`);
+            node.style.setProperty('--window-transform-y', `${y}px`);
+            this.resizeBoundries();
+            this.checkOverlap();
+            if (this.props.onPositionChange) {
+                this.props.onPositionChange(x, y);
+            }
+        });
     }
 
     handleStop = () => {
@@ -626,7 +678,7 @@ export class Window extends Component {
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
