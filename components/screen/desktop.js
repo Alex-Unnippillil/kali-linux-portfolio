@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { markPhase } from '../../lib/startupTimeline';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,8 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this._initialWindowsToOpen = 0;
+        this._desktopReadyMarked = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -70,15 +73,41 @@ export class Desktop extends Component {
                 this.setState({ favourite_apps });
             }
 
-            if (session.windows && session.windows.length) {
+            const windowsToOpen = [];
+            const seenWindows = new Set();
+            if (Array.isArray(session.windows) && session.windows.length) {
                 session.windows.forEach(({ id, x, y }) => {
+                    if (!id) {
+                        return;
+                    }
                     positions[id] = { x, y };
+                    if (seenWindows.has(id)) {
+                        return;
+                    }
+                    const meta = apps.find(app => app.id === id);
+                    if (meta && !meta.disabled) {
+                        seenWindows.add(id);
+                        windowsToOpen.push(id);
+                    }
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    if (!windowsToOpen.length) {
+                        this._initialWindowsToOpen = 0;
+                        this.markDesktopReady();
+                        return;
+                    }
+                    this._initialWindowsToOpen = windowsToOpen.length;
+                    windowsToOpen.forEach((id) => this.openApp(id));
                 });
             } else {
-                this.openApp('about-alex');
+                const aboutMeta = apps.find(app => app.id === 'about-alex');
+                if (aboutMeta && !aboutMeta.disabled) {
+                    this._initialWindowsToOpen = 1;
+                    this.openApp('about-alex');
+                } else {
+                    this._initialWindowsToOpen = 0;
+                    this.markDesktopReady();
+                }
             }
         });
         this.setContextListeners();
@@ -583,6 +612,23 @@ export class Desktop extends Component {
         }
     }
 
+    markDesktopReady = () => {
+        if (this._desktopReadyMarked) {
+            return;
+        }
+        this._desktopReadyMarked = true;
+        markPhase('desktop-ready');
+    }
+
+    handleInitialWindowOpened = () => {
+        if (this._initialWindowsToOpen > 0) {
+            this._initialWindowsToOpen -= 1;
+            if (this._initialWindowsToOpen === 0) {
+                this.markDesktopReady();
+            }
+        }
+    }
+
     openApp = (objId) => {
 
         // google analytics
@@ -650,6 +696,7 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.handleInitialWindowOpened();
                 });
                 this.app_stack.push(objId);
             }, 200);

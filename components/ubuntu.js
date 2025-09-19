@@ -7,6 +7,7 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { markPhase } from '../lib/startupTimeline';
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -19,9 +20,21 @@ export default class Ubuntu extends Component {
 		};
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                markPhase('boot:init');
+                if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                        window.requestAnimationFrame(() => markPhase('boot:first-paint'));
+                } else {
+                        markPhase('boot:first-paint');
+                }
+                this.getLocalData();
+        }
+
+        componentDidUpdate(prevProps, prevState) {
+                if (prevState?.booting_screen && !this.state.booting_screen) {
+                        markPhase('boot:interactive');
+                }
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {

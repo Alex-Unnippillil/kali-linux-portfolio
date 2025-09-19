@@ -1,3 +1,5 @@
+import type { StartupTimelineWindowPayload } from '../lib/startupTimeline';
+
 export {};
 
 declare global {
@@ -13,6 +15,7 @@ declare global {
     documentPictureInPicture?: {
       requestWindow: (options?: PictureInPictureWindowOptions) => Promise<Window>;
     };
+    __STARTUP_TIMELINE__?: StartupTimelineWindowPayload;
   }
 }
 

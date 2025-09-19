@@ -10,6 +10,7 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  devOnly?: boolean;
 };
 
 const CATEGORIES = [
@@ -25,10 +26,30 @@ const WhiskerMenu: React.FC = () => {
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
+  const [devtoolsEnabled, setDevtoolsEnabled] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const allApps: AppMeta[] = apps as any;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncFlag = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        setDevtoolsEnabled(params.get('devtools') === '1');
+      } catch {
+        setDevtoolsEnabled(false);
+      }
+    };
+    syncFlag();
+    window.addEventListener('popstate', syncFlag);
+    return () => window.removeEventListener('popstate', syncFlag);
+  }, []);
+
+  const allApps: AppMeta[] = useMemo(() => {
+    const list = apps as AppMeta[];
+    if (devtoolsEnabled) return list;
+    return list.filter(app => !app.devOnly);
+  }, [devtoolsEnabled]);
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
     try {
