@@ -10,7 +10,7 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettingsSelector } from '../../hooks/useSettings';
 
 // Basic 2048 game logic with tile merging mechanics.
 
@@ -240,7 +240,7 @@ const Game2048 = () => {
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
   const workerRef = useRef(null);
-  const { highContrast } = useSettings();
+  const highContrast = useSettingsSelector((state) => state.highContrast);
   const { record, registerReplay } = useInputRecorder();
 
   useEffect(() => {

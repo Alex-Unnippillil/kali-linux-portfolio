@@ -1,5 +1,11 @@
+import type { ReactNode } from 'react';
 import { renderHook, act } from '@testing-library/react';
-import { SettingsProvider, useSettings } from '../hooks/useSettings';
+import {
+  selectTheme,
+  SettingsProvider,
+  useSettingsActions,
+  useSettingsSelector,
+} from '../hooks/useSettings';
 import { getTheme, getUnlockedThemes, setTheme } from '../utils/theme';
 
 
@@ -11,9 +17,17 @@ describe('theme persistence and unlocking', () => {
   });
 
   test('theme persists across sessions', () => {
-    const { result } = renderHook(() => useSettings(), {
-      wrapper: SettingsProvider,
-    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <SettingsProvider>{children}</SettingsProvider>
+    );
+    const { result } = renderHook(
+      () => {
+        const theme = useSettingsSelector(selectTheme);
+        const { setTheme } = useSettingsActions();
+        return { theme, setTheme };
+      },
+      { wrapper },
+    );
     act(() => result.current.setTheme('dark'));
     expect(result.current.theme).toBe('dark');
     expect(getTheme()).toBe('dark');

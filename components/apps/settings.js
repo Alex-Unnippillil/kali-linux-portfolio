@@ -1,9 +1,41 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import {
+    ACCENT_OPTIONS,
+    useSettingsActions,
+    useSettingsSelector,
+} from '../../hooks/useSettings';
+import {
+    resetSettings,
+    defaults,
+    exportSettings as exportSettingsData,
+    importSettings as importSettingsData,
+} from '../../state/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const accent = useSettingsSelector((state) => state.accent);
+    const wallpaper = useSettingsSelector((state) => state.wallpaper);
+    const density = useSettingsSelector((state) => state.density);
+    const reducedMotion = useSettingsSelector((state) => state.reducedMotion);
+    const largeHitAreas = useSettingsSelector((state) => state.largeHitAreas);
+    const fontScale = useSettingsSelector((state) => state.fontScale);
+    const highContrast = useSettingsSelector((state) => state.highContrast);
+    const pongSpin = useSettingsSelector((state) => state.pongSpin);
+    const allowNetwork = useSettingsSelector((state) => state.allowNetwork);
+    const haptics = useSettingsSelector((state) => state.haptics);
+    const theme = useSettingsSelector((state) => state.theme);
+    const {
+        setAccent,
+        setWallpaper,
+        setDensity,
+        setReducedMotion,
+        setLargeHitAreas,
+        setFontScale,
+        setHighContrast,
+        setPongSpin,
+        setAllowNetwork,
+        setHaptics,
+        setTheme,
+    } = useSettingsActions();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);

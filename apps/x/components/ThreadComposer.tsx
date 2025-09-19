@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import usePersistentState from '../../../hooks/usePersistentState';
-import { useSettings } from '../../../hooks/useSettings';
+import { selectAccent, useSettingsSelector } from '../../../hooks/useSettings';
 import type { ScheduledTweet } from '../state/scheduled';
 
 interface TweetDraft {
@@ -22,7 +22,7 @@ const isTweetArray = (val: unknown): val is TweetDraft[] =>
   );
 
 export default function ThreadComposer() {
-  const { accent } = useSettings();
+  const accent = useSettingsSelector(selectAccent);
   const [tweets, setTweets] = usePersistentState<TweetDraft[]>(
     'x-thread-draft',
     () => [{ text: '', timestamp: '' }],
@@ -122,6 +122,7 @@ export default function ThreadComposer() {
             value={tweet.text}
             onChange={(e) => updateTweet(i, e.target.value)}
             placeholder={`Tweet ${i + 1}`}
+            aria-label={`Tweet ${i + 1}`}
             maxLength={280}
             className="w-full p-2 border rounded bg-transparent"
           />
@@ -129,6 +130,7 @@ export default function ThreadComposer() {
             type="datetime-local"
             value={tweet.timestamp}
             onChange={(e) => updateTime(i, e.target.value)}
+            aria-label={`Schedule time for tweet ${i + 1}`}
             className="w-full p-2 border rounded bg-transparent"
           />
           <div

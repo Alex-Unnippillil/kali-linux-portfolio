@@ -1,37 +1,46 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
-import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
-  resetSettings,
-  defaults,
-  exportSettings as exportSettingsData,
-  importSettings as importSettingsData,
-} from "../../utils/settingsStore";
+  ACCENT_OPTIONS,
+  selectAccent,
+  selectDensity,
+  selectFontScale,
+  selectHaptics,
+  selectHighContrast,
+  selectReducedMotion,
+  selectTheme,
+  selectWallpaper,
+  useSettingsActions,
+  useSettingsSelector,
+} from "../../hooks/useSettings";
+import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 
 export default function Settings() {
+  const accent = useSettingsSelector(selectAccent);
+  const wallpaper = useSettingsSelector(selectWallpaper);
+  const density = useSettingsSelector(selectDensity);
+  const reducedMotion = useSettingsSelector(selectReducedMotion);
+  const fontScale = useSettingsSelector(selectFontScale);
+  const highContrast = useSettingsSelector(selectHighContrast);
+  const haptics = useSettingsSelector(selectHaptics);
+  const theme = useSettingsSelector(selectTheme);
   const {
-    accent,
     setAccent,
-    wallpaper,
     setWallpaper,
-    density,
     setDensity,
-    reducedMotion,
     setReducedMotion,
-    fontScale,
     setFontScale,
-    highContrast,
     setHighContrast,
-    haptics,
     setHaptics,
-    theme,
     setTheme,
-  } = useSettings();
+    exportSettings,
+    importSettings,
+    resetSettings,
+  } = useSettingsActions();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
@@ -56,7 +65,7 @@ export default function Settings() {
   const changeBackground = (name: string) => setWallpaper(name);
 
   const handleExport = async () => {
-    const data = await exportSettingsData();
+    const data = await exportSettings();
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -68,21 +77,7 @@ export default function Settings() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    await importSettingsData(text);
-    try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
-    } catch (err) {
-      console.error("Invalid settings", err);
-    }
+    await importSettings(text);
   };
 
   const handleReset = async () => {
@@ -94,13 +89,6 @@ export default function Settings() {
       return;
     await resetSettings();
     window.localStorage.clear();
-    setAccent(defaults.accent);
-    setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
-    setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
-    setHighContrast(defaults.highContrast);
-    setTheme("default");
   };
 
   const [showKeymap, setShowKeymap] = useState(false);

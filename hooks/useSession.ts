@@ -1,5 +1,5 @@
 import usePersistentState from './usePersistentState';
-import { defaults } from '../utils/settingsStore';
+import { defaults } from '../state/settingsStore';
 
 export interface SessionWindow {
   id: string;
