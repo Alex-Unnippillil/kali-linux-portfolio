@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -27,6 +28,7 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const router = useRouter();
 
 
   useEffect(() => {
@@ -79,6 +81,53 @@ function MyApp(props) {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const persistOnline = () => {
+      try {
+        localStorage.setItem('pwa:last-online', new Date().toISOString());
+      } catch {
+        // Ignore storage failures (e.g. Safari private mode)
+      }
+    };
+    persistOnline();
+    window.addEventListener('online', persistOnline);
+    return () => {
+      window.removeEventListener('online', persistOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const recordAttempt = (url) => {
+      try {
+        localStorage.setItem('pwa:last-attempt', url);
+      } catch {
+        // Ignore storage failures
+      }
+    };
+
+    const recordCompletion = (url) => {
+      try {
+        localStorage.setItem('pwa:last-route', url);
+      } catch {
+        // Ignore storage failures
+      }
+    };
+
+    recordAttempt(router.asPath);
+    recordCompletion(router.asPath);
+
+    router.events.on('routeChangeStart', recordAttempt);
+    router.events.on('routeChangeComplete', recordCompletion);
+
+    return () => {
+      router.events.off('routeChangeStart', recordAttempt);
+      router.events.off('routeChangeComplete', recordCompletion);
+    };
+  }, [router]);
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
