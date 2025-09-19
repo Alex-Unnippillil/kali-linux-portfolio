@@ -2,6 +2,9 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const fs = require('fs');
+const path = require('path');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
@@ -59,6 +62,7 @@ const securityHeaders = [
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
 });
 
 const withPWA = require('@ducanh2912/next-pwa').default({
@@ -88,7 +92,8 @@ const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
 // Merge experiment settings and production optimizations into a single function.
-function configureWebpack(config, { isServer }) {
+function configureWebpack(config, options) {
+  const { isServer, nextRuntime } = options;
   // Enable WebAssembly loading and avoid JSON destructuring bug
   config.experiments = {
     ...(config.experiments || {}),
@@ -103,8 +108,21 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-dom$': path.resolve(__dirname, 'lib/react-dom-shim.js'),
   };
+  if (process.env.ANALYZE === 'true' && !nextRuntime) {
+    const reportsDir = path.join(__dirname, '.next', 'analyze');
+    fs.mkdirSync(reportsDir, { recursive: true });
+    config.plugins = config.plugins || [];
+    config.plugins.push(
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'json',
+        openAnalyzer: false,
+        logLevel: 'silent',
+        reportFilename: path.join(reportsDir, 'client.json'),
+      }),
+    );
+  }
   if (isProd) {
     config.optimization = {
       ...(config.optimization || {}),
