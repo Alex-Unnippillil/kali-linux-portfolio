@@ -1,0 +1,48 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "package.json",
+    "yarn.lock",
+    "next.config.js",
+    "postcss.config.js",
+    "tailwind.config.js",
+    "tsconfig.json",
+    "tsconfig.gamepad.json",
+    "apps.config.js"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "NEXT_PUBLIC_STATIC_EXPORT",
+    "NEXT_PUBLIC_ENABLE_ANALYTICS",
+    "FEATURE_TOOL_APIS",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "RECAPTCHA_SECRET",
+    "NEXT_PUBLIC_RECAPTCHA_SITE_KEY",
+    "NEXT_PUBLIC_RECAPTCHA_LANGUAGE"
+  ],
+  "tasks": {
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "outputs": ["coverage/**"]
+    },
+    "build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": [
+        ".next/**",
+        "public/sw.js",
+        "public/workbox-*.js",
+        "public/sw.js.map"
+      ]
+    }
+  }
+}
