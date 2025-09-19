@@ -35,6 +35,27 @@ yarn install
 yarn dev
 ```
 
+### Local HTTPS (mkcert)
+
+APIs such as the service worker, Clipboard API, and Web Share require a **secure context**. Use [`mkcert`](https://github.com/FiloSottile/mkcert) to create a trusted localhost certificate and run the app over HTTPS:
+
+1. Install `mkcert` using the instructions for your OS.
+2. Generate a local certificate and key (stored in `.certs/`, which is ignored by git):
+   ```bash
+   yarn certs:generate
+   ```
+3. Start the development server with TLS so secure-context checks pass:
+   ```bash
+   yarn dev:https
+   ```
+   Override the port with `PORT=3443 yarn dev:https` if you need to avoid collisions.
+4. To verify the production service worker locally, build the app and start the HTTPS proxy:
+   ```bash
+   yarn build
+   yarn preview:https
+   ```
+   This runs `next start` on `http://127.0.0.1:3000` and serves the trusted preview at `https://localhost:3443`, allowing the PWA install prompt and caching logic to operate as they do in production.
+
 ### Production Build
 Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
@@ -69,6 +90,7 @@ To send text or links directly into the Sticky Notes app:
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
+- Use `yarn preview:https` after `yarn build` to validate registration, offline caching, and install prompts without deploying.
 
 ---
 
@@ -89,6 +111,9 @@ See `.env.local.example` for the full list.
 
 - `yarn install` – install project dependencies.
 - `yarn dev` – start the development server with hot reloading.
+- `yarn dev:https` – start `next dev` with the mkcert TLS certificate for secure-context testing.
+- `yarn preview:https` – proxy `next start` through HTTPS to exercise the production service worker locally.
+- `yarn certs:generate` – generate and trust localhost certificates via `mkcert` (output in `.certs/`).
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.

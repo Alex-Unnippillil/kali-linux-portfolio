@@ -26,6 +26,7 @@ dist
 
 # misc
 .DS_Store
+.certs/
 *.pem
 
 # debug
