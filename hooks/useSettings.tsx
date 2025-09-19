@@ -8,8 +8,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
-  getFontScale as loadFontScale,
-  setFontScale as saveFontScale,
+  getUiScale as loadUiScale,
+  setUiScale as saveUiScale,
   getHighContrast as loadHighContrast,
   setHighContrast as saveHighContrast,
   getLargeHitAreas as loadLargeHitAreas,
@@ -56,7 +56,7 @@ interface SettingsContextValue {
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
-  fontScale: number;
+  uiScale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
@@ -67,7 +67,7 @@ interface SettingsContextValue {
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
-  setFontScale: (value: number) => void;
+  setUiScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
@@ -81,7 +81,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
-  fontScale: defaults.fontScale,
+  uiScale: defaults.uiScale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
@@ -92,7 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
-  setFontScale: () => {},
+  setUiScale: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
@@ -106,7 +106,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
+  const [uiScale, setUiScale] = useState<number>(defaults.uiScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
@@ -121,7 +121,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
+      setUiScale(await loadUiScale());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
@@ -157,28 +157,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [wallpaper]);
 
   useEffect(() => {
-    const spacing: Record<Density, Record<string, string>> = {
+    const spacing: Record<Density, Record<string, number>> = {
       regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
+        '--space-1': 0.25,
+        '--space-2': 0.5,
+        '--space-3': 0.75,
+        '--space-4': 1,
+        '--space-5': 1.5,
+        '--space-6': 2,
       },
       compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
+        '--space-1': 0.125,
+        '--space-2': 0.25,
+        '--space-3': 0.5,
+        '--space-4': 0.75,
+        '--space-5': 1,
+        '--space-6': 1.5,
       },
     };
     const vars = spacing[density];
     Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
+      const scaled = value * uiScale;
+      const formatted = `${parseFloat(scaled.toFixed(4))}rem`;
+      document.documentElement.style.setProperty(key, formatted);
     });
+  }, [density, uiScale]);
+
+  useEffect(() => {
     saveDensity(density);
   }, [density]);
 
@@ -188,9 +193,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
-  }, [fontScale]);
+    document.documentElement.style.setProperty('--ui-scale', uiScale.toString());
+    saveUiScale(uiScale);
+  }, [uiScale]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
@@ -201,6 +206,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
+
+  useEffect(() => {
+    const base = largeHitAreas ? 48 : 32;
+    const scaled = base * uiScale;
+    document.documentElement.style.setProperty('--hit-area', `${scaled}px`);
+  }, [largeHitAreas, uiScale]);
 
   useEffect(() => {
     savePongSpin(pongSpin);
@@ -243,7 +254,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         wallpaper,
         density,
         reducedMotion,
-        fontScale,
+        uiScale,
         highContrast,
         largeHitAreas,
         pongSpin,
@@ -254,7 +265,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setWallpaper,
         setDensity,
         setReducedMotion,
-        setFontScale,
+        setUiScale,
         setHighContrast,
         setLargeHitAreas,
         setPongSpin,

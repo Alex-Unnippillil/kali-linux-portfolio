@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Home directory icon</title>
+  <path d="M20 68l44-36 44 36v40a8 8 0 0 1-8 8H28a8 8 0 0 1-8-8z" fill="#1a1f26" stroke="#2f3b4a" stroke-width="4" />
+  <path d="M32 64h24v28H32z" fill="#1793d1" />
+  <path d="M76 64h20v36H76z" fill="#0f7abf" />
+  <path d="M16 68h96" stroke="#1793d1" stroke-width="6" stroke-linecap="round" />
+</svg>

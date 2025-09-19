@@ -460,7 +460,7 @@ play/pause and track controls include keyboard hotkeys.
 - **`components/base/window.js`** - draggable, focusable window with header controls; integrates with desktop z-index.
 - **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
-- **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper and other preferences with persistence.
+- **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper, **UI scale (100–200%)**, and other preferences with persistence. Scaling multiplies the shared CSS token map so typography, spacing, and theme palettes remain in sync.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
 - **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).

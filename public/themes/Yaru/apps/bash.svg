@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Bash terminal icon</title>
+  <defs>
+    <linearGradient id="bash-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1f26" />
+      <stop offset="100%" stop-color="#0f1317" />
+    </linearGradient>
+  </defs>
+  <rect x="8" y="16" width="112" height="96" rx="12" fill="url(#bash-bg)" stroke="#2f3b4a" stroke-width="4" />
+  <rect x="16" y="24" width="96" height="80" rx="8" fill="#090c10" />
+  <path d="M38 50l14 14-14 14" fill="none" stroke="#38a169" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M64 82h26" stroke="#38a169" stroke-width="8" stroke-linecap="round" />
+  <circle cx="28" cy="32" r="4" fill="#38a169" />
+  <circle cx="40" cy="32" r="4" fill="#d97706" />
+  <circle cx="52" cy="32" r="4" fill="#e53e3e" />
+</svg>

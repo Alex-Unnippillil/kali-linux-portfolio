@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Text editor icon</title>
+  <rect x="20" y="16" width="88" height="96" rx="12" fill="#f6f6f5" stroke="#d0d7de" stroke-width="4" />
+  <rect x="28" y="24" width="72" height="16" rx="4" fill="#1793d1" />
+  <rect x="28" y="48" width="56" height="8" rx="4" fill="#cbd5e1" />
+  <rect x="28" y="62" width="64" height="8" rx="4" fill="#cbd5e1" />
+  <rect x="28" y="76" width="52" height="8" rx="4" fill="#cbd5e1" />
+  <path d="M92 88l16-16-12-12-16 16-4 12z" fill="#d97706" />
+  <path d="M96 64l8 8" stroke="#0f1317" stroke-width="4" stroke-linecap="round" />
+</svg>

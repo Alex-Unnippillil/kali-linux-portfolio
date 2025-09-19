@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Browser icon</title>
+  <circle cx="64" cy="64" r="56" fill="#f1f3f5" stroke="#d0d7de" stroke-width="4" />
+  <path d="M64 64L30 36a56 56 0 0 1 68-4z" fill="#e53e3e" />
+  <path d="M64 64l34-28a56 56 0 0 1-14 74z" fill="#38a169" />
+  <path d="M64 64l20 42a56 56 0 0 1-68-6z" fill="#d97706" />
+  <circle cx="64" cy="64" r="24" fill="#1793d1" stroke="#0f7abf" stroke-width="4" />
+  <circle cx="64" cy="64" r="12" fill="#f5f5f5" />
+</svg>

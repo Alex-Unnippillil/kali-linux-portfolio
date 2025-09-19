@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Code editor icon</title>
+  <rect x="20" y="18" width="88" height="92" rx="18" fill="#1a1f26" stroke="#2f3b4a" stroke-width="4" />
+  <path d="M50 42l28-16 10 10v56l-10 10-28-16 20-22z" fill="#1793d1" opacity="0.9" />
+  <path d="M42 46l10-6 32 36-32 36-10-6 24-30z" fill="#62a0ea" opacity="0.9" />
+</svg>
