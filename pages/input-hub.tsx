@@ -12,6 +12,7 @@ const subjectTemplates = [
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve('');
     const g: any = (window as any).grecaptcha;
     if (!g || !siteKey) return resolve('');
     g.ready(() => {
@@ -74,7 +75,7 @@ const InputHub = () => {
       }
     }
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    if (siteKey) {
+    if (siteKey && typeof document !== 'undefined') {
       const script = document.createElement('script');
       script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
       script.async = true;
@@ -83,6 +84,7 @@ const InputHub = () => {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
     const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
@@ -90,7 +92,7 @@ const InputHub = () => {
     const flushQueue = async () => {
       if (!emailjsReady || !navigator.onLine) return;
       try {
-        const raw = localStorage.getItem(QUEUE_KEY);
+        const raw = window.localStorage.getItem(QUEUE_KEY);
         const queue: any[] = raw ? JSON.parse(raw) : [];
         for (const q of queue) {
           const token = q.useCaptcha
@@ -104,7 +106,7 @@ const InputHub = () => {
             'g-recaptcha-response': token,
           });
         }
-        if (queue.length) localStorage.removeItem(QUEUE_KEY);
+        if (queue.length) window.localStorage.removeItem(QUEUE_KEY);
       } catch {
         // ignore errors
       }
@@ -122,11 +124,12 @@ const InputHub = () => {
     message: string;
     useCaptcha: boolean;
   }) => {
+    if (typeof window === 'undefined') return;
     try {
-      const raw = localStorage.getItem(QUEUE_KEY);
+      const raw = window.localStorage.getItem(QUEUE_KEY);
       const queue = raw ? JSON.parse(raw) : [];
       queue.push(msg);
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      window.localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
     } catch {
       // ignore errors
     }
@@ -134,6 +137,10 @@ const InputHub = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (typeof navigator === 'undefined') {
+      setStatus('Browser APIs unavailable');
+      return;
+    }
     if (!emailjsReady) {
       setStatus('Email service unavailable');
       return;
@@ -183,6 +190,7 @@ const InputHub = () => {
         <input
           className="p-1 border"
           placeholder="Name"
+          aria-label="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -190,12 +198,14 @@ const InputHub = () => {
         <input
           className="p-1 border"
           placeholder="Email"
+          aria-label="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
         <select
           className="p-1 border"
+          aria-label="Subject"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
         >
@@ -208,19 +218,21 @@ const InputHub = () => {
         <textarea
           className="p-1 border"
           placeholder="Message"
+          aria-label="Message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           required
         />
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={useCaptcha}
-            onChange={(e) => setUseCaptcha(e.target.checked)}
-            disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-          />
-          <span>Use reCAPTCHA</span>
-        </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={useCaptcha}
+              onChange={(e) => setUseCaptcha(e.target.checked)}
+              disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+              aria-label="Use reCAPTCHA"
+            />
+            <span>Use reCAPTCHA</span>
+          </label>
         <button type="submit" className="bg-blue-500 text-white px-2 py-1">
           Send
         </button>

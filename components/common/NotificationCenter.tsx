@@ -1,4 +1,10 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 export interface AppNotification {
   id: string;
@@ -49,13 +55,22 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
     0
   );
 
+  const canUseAppBadging = useMemo(
+    () =>
+      typeof navigator !== 'undefined' &&
+      typeof (navigator as any).setAppBadge === 'function',
+    []
+  );
+
   useEffect(() => {
+    if (!canUseAppBadging) return;
     const nav: any = navigator;
-    if (nav && nav.setAppBadge) {
-      if (totalCount > 0) nav.setAppBadge(totalCount).catch(() => {});
-      else nav.clearAppBadge?.().catch(() => {});
+    if (totalCount > 0) {
+      nav.setAppBadge(totalCount).catch(() => {});
+    } else {
+      nav.clearAppBadge?.().catch(() => {});
     }
-  }, [totalCount]);
+  }, [canUseAppBadging, totalCount]);
 
   return (
     <NotificationsContext.Provider

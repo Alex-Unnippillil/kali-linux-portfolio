@@ -16,6 +16,7 @@ export default function GamepadCalibration() {
   const [vendor, setVendor] = useState<string>("");
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return undefined;
     const connect = (e: GamepadEvent) => setPad(e.gamepad);
     const disconnect = () => setPad(null);
     window.addEventListener("gamepadconnected", connect);
@@ -34,7 +35,7 @@ export default function GamepadCalibration() {
   }, []);
 
   useEffect(() => {
-    if (!pad) return;
+    if (!pad || typeof window === "undefined" || typeof navigator === "undefined") return;
     const existing = loadCalibration(pad.id);
     if (existing) {
       setRanges(existing.axes.map((r) => ({ ...r })));
@@ -54,10 +55,14 @@ export default function GamepadCalibration() {
           max: Math.max(rng.max, p.axes[i]),
         }))
       );
-      raf = requestAnimationFrame(read);
+      raf = window.requestAnimationFrame ? window.requestAnimationFrame(read) : 0;
     };
-    raf = requestAnimationFrame(read);
-    return () => cancelAnimationFrame(raf);
+    raf = window.requestAnimationFrame ? window.requestAnimationFrame(read) : 0;
+    return () => {
+      if (raf && window.cancelAnimationFrame) {
+        window.cancelAnimationFrame(raf);
+      }
+    };
   }, [pad]);
 
   const handlePreset = (name: string) => {
