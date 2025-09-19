@@ -4932,7 +4932,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"autoprefixer@npm:^10.4.13":
+"autoprefixer@npm:^10.4.21":
   version: 10.4.21
   resolution: "autoprefixer@npm:10.4.21"
   dependencies:
@@ -13155,7 +13155,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwindcss@npm:^3.2.4":
+"tailwindcss@npm:^3.4.17":
   version: 3.4.17
   resolution: "tailwindcss@npm:3.4.17"
   dependencies:
@@ -13893,7 +13893,7 @@ __metadata:
     "@zxing/library": "npm:^0.21.3"
     aframe: "npm:^1.5.0"
     antd: "npm:5.27.2"
-    autoprefixer: "npm:^10.4.13"
+    autoprefixer: "npm:^10.4.21"
     bad-words: "npm:^3.0.4"
     canvas-confetti: "npm:1.9.3"
     capstone-wasm: "npm:^1.0.3"
@@ -13958,7 +13958,7 @@ __metadata:
     sharp: "npm:^0.34.3"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
-    tailwindcss: "npm:^3.2.4"
+    tailwindcss: "npm:^3.4.17"
     test-exclude: "npm:7.0.1"
     three: "npm:^0.179.1"
     turndown: "npm:^7.2.1"
