@@ -100,6 +100,12 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Test Stability Policy
+
+- Pull requests must demonstrate Jest stability by passing `yarn test` (with coverage) three consecutive times in CI. The workflow summary records each attempt, and merges are blocked until all three succeed.
+- Pushes to `main` run `yarn test` once and `npx playwright test --retries=0` without automatic retries. Any failure is captured in the workflow summary so flaky behavior can be investigated immediately.
+- To mirror CI locally, run `yarn test --coverage` multiple times or execute `npx playwright test --retries=0` against a dev server before submitting a PR.
+
 ---
 
 ## Speed Insights

@@ -106,6 +106,8 @@ yarn smoke     # Manual smoke script that crawls /apps/* during dev
 npx playwright test
 ```
 
+> **CI stability policy:** Pull requests must show three consecutive passing runs of `yarn test --coverage`. Pushes to `main` execute `yarn test` and `npx playwright test --retries=0` without retries, and the workflow summary records any failure for investigation.
+
 Notes
 
 * Keep unit tests close to code in `__tests__/` or the project’s test folders.
