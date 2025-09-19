@@ -1,4 +1,4 @@
-# Kali Linux Portfolio 
+# Kali Linux Portfolio
 
 A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
 
@@ -11,6 +11,7 @@ A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/U
 This repository showcases **static, non-operational simulations** of security tools for educational purposes only. Running real offensive commands against systems without explicit authorization is illegal and can cause damage or service disruption.
 
 **Potential Risks**
+
 - Network scans may trigger intrusion detection and block your IP.
 - Brute-force attempts can lock accounts or corrupt data.
 - Sample outputs are canned and not from live targets.
@@ -22,11 +23,13 @@ Always test inside controlled labs and obtain written permission before performi
 ## Setup
 
 ### Requirements
+
 - **Node.js 20.19.5** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
+
 ```bash
 cp .env.local.example .env.local  # populate with required keys
 nvm install  # installs Node 20.19.5 from .nvmrc if needed
@@ -36,22 +39,29 @@ yarn dev
 ```
 
 ### Production Build
+
 Serverful deployments run the built Next.js server so all API routes are available.
+
 ```bash
 yarn build && yarn start
 ```
+
 The service worker is automatically generated during `next build` via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa).
 After the server starts, exercise an API route to confirm server-side functionality:
+
 ```bash
 curl -X POST http://localhost:3000/api/dummy
 ```
 
 ### Static Export (for GitHub Pages / S3 Websites)
+
 This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
+
 ```bash
 yarn export && npx serve out
 
 ```
+
 Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
 ### Install as PWA for Sharing
@@ -99,6 +109,25 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+
+## Git Hooks
+
+This repo uses [Husky](https://typicode.github.io/husky) and [lint-staged](https://github.com/okonet/lint-staged) to keep staged
+changes consistent before they land in the main branch. The `pre-commit` hook runs Prettier, ESLint, and a TypeScript
+typecheck on the files you stage. Formatting happens first, then linting with autofix, and finally a project-wide typecheck
+if any TypeScript files are included in the commit.
+
+### Setup locally
+
+1. Run `yarn install` (this executes the `prepare` script, which wires Git to `.husky/_`).
+2. If you ever need to re-create the hooks manually, run `yarn setup:hooks` which simply invokes the Husky CLI.
+
+### When automation should skip hooks
+
+The hook exits early when it detects CI (`CI=true`), when either `SKIP_PRECOMMIT` or `HUSKY_SKIP_HOOKS` is set, or when the
+commit author/committer name matches common bot identities (for example `github-actions[bot]`). Automated release tasks can
+set one of those flags to bypass local enforcement, while human commits will still run through the formatter, linter, and
+typecheck gates.
 
 ---
 
@@ -171,21 +200,25 @@ __tests__/
 ```
 
 **Windowing model.** The desktop (`components/screen/desktop.js`) manages:
+
 - z-ordering and focus of windows
 - global context menus (`components/context-menus/`)
 - favorites vs “All Applications” grid
 - analytics events for user actions
 
 **App registry.** `apps.config.js` registers apps using dynamic imports to keep the initial bundle lean:
+
 ```ts
 import dynamic from 'next/dynamic';
 
 const SudokuApp = dynamic(() => import('./components/apps/sudoku'));
 export const displaySudoku = () => <SudokuApp />;
 ```
+
 Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
 
 ### Prefetching dynamic apps
+
 Dynamic app modules include a `webpackPrefetch` hint and expose a `prefetch()` helper. Desktop tiles call this helper on hover or
 keyboard focus so bundles are warmed before launch. When adding a new app, export a default component and register it with
 `createDynamicApp` to opt into this behaviour.
@@ -196,29 +229,29 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 
 Copy `.env.local.example` to `.env.local` and fill in required values.
 
-| Name | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_TRACKING_ID` | GA4 measurement ID (e.g., `G-XXXXXXX`). |
-| `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
-| `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
-| `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
-| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
-| `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
-| `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
-| `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
-| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
-| `SUPABASE_URL` | Supabase project URL for server-side access. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL exposed to the client. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
-| `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
-| `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
-| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
-| `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
-| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
-| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| Name                             | Purpose                                                                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_TRACKING_ID`        | GA4 measurement ID (e.g., `G-XXXXXXX`).                                                                                        |
+| `NEXT_PUBLIC_SERVICE_ID`         | EmailJS service id.                                                                                                            |
+| `NEXT_PUBLIC_TEMPLATE_ID`        | EmailJS template id.                                                                                                           |
+| `NEXT_PUBLIC_USER_ID`            | EmailJS public key / user id.                                                                                                  |
+| `NEXT_PUBLIC_YOUTUBE_API_KEY`    | Used by the YouTube app for search/embed enhancements.                                                                         |
+| `NEXT_PUBLIC_BEEF_URL`           | Optional URL for the BeEF demo iframe (if used).                                                                               |
+| `NEXT_PUBLIC_GHIDRA_URL`         | Optional URL for a remote Ghidra Web interface.                                                                                |
+| `NEXT_PUBLIC_GHIDRA_WASM`        | Optional URL for a Ghidra WebAssembly build.                                                                                   |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client.                                                                                         |
+| `RECAPTCHA_SECRET`               | ReCAPTCHA secret key for server-side verification.                                                                             |
+| `SUPABASE_URL`                   | Supabase project URL for server-side access.                                                                                   |
+| `SUPABASE_SERVICE_ROLE_KEY`      | Supabase service role key for privileged operations.                                                                           |
+| `SUPABASE_ANON_KEY`              | Supabase anonymous key for server-side reads.                                                                                  |
+| `NEXT_PUBLIC_SUPABASE_URL`       | Supabase project URL exposed to the client.                                                                                    |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Public Supabase anonymous key used on the client.                                                                              |
+| `ADMIN_READ_KEY`                 | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
+| `NEXT_PUBLIC_UI_EXPERIMENTS`     | Enable experimental UI heuristics.                                                                                             |
+| `NEXT_PUBLIC_STATIC_EXPORT`      | Set to `'true'` during `yarn export` to disable server APIs.                                                                   |
+| `NEXT_PUBLIC_SHOW_BETA`          | Set to `1` to display a small beta badge in the UI.                                                                            |
+| `FEATURE_TOOL_APIS`              | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow.                                             |
+| `FEATURE_HYDRA`                  | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`.                                                              |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
@@ -238,26 +271,27 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 
 These external domains are whitelisted in the default CSP. Update this list whenever `next.config.js` changes.
 
-| Domain | Purpose |
-| --- | --- |
-| `platform.twitter.com` | Twitter widgets and scripts |
-| `syndication.twitter.com` | Twitter embed scripts |
-| `cdn.syndication.twimg.com` | Twitter asset CDN |
-| `*.twitter.com` | Additional Twitter content |
-| `*.x.com` | X (Twitter) domain equivalents |
-| `*.google.com` | Google services and Chrome app favicons |
-| `example.com` | Chrome app demo origin |
-| `developer.mozilla.org` | Chrome app demo origin |
-| `en.wikipedia.org` | Chrome app demo origin |
-| `cdn.jsdelivr.net` | Math.js library |
-| `cdnjs.cloudflare.com` | PDF.js worker |
-| `stackblitz.com` | StackBlitz IDE embeds |
-| `www.youtube.com` | YouTube IFrame API |
-| `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
-| `open.spotify.com` | Spotify embeds |
-| `vercel.live` | Vercel toolbar |
+| Domain                      | Purpose                                 |
+| --------------------------- | --------------------------------------- |
+| `platform.twitter.com`      | Twitter widgets and scripts             |
+| `syndication.twitter.com`   | Twitter embed scripts                   |
+| `cdn.syndication.twimg.com` | Twitter asset CDN                       |
+| `*.twitter.com`             | Additional Twitter content              |
+| `*.x.com`                   | X (Twitter) domain equivalents          |
+| `*.google.com`              | Google services and Chrome app favicons |
+| `example.com`               | Chrome app demo origin                  |
+| `developer.mozilla.org`     | Chrome app demo origin                  |
+| `en.wikipedia.org`          | Chrome app demo origin                  |
+| `cdn.jsdelivr.net`          | Math.js library                         |
+| `cdnjs.cloudflare.com`      | PDF.js worker                           |
+| `stackblitz.com`            | StackBlitz IDE embeds                   |
+| `www.youtube.com`           | YouTube IFrame API                      |
+| `www.youtube-nocookie.com`  | YouTube video embeds (privacy-enhanced) |
+| `open.spotify.com`          | Spotify embeds                          |
+| `vercel.live`               | Vercel toolbar                          |
 
 **Notes for prod hardening**
+
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
 - Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
 - If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
@@ -267,9 +301,11 @@ These external domains are whitelisted in the default CSP. Update this list when
 ## Deployment
 
 ### Static export (GitHub Pages)
+
 Workflow: `.github/workflows/gh-deploy.yml`:
- - Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
- - Uses **Node 20.19.5** to match `package.json`.
+
+- Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
+- Uses **Node 20.19.5** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -282,6 +318,7 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
 
 ### Vercel deployment
+
 - Create a Vercel project and connect this repo.
 - Required env variables (Project Settings):
   - `NEXT_PUBLIC_TRACKING_ID`
@@ -301,6 +338,7 @@ Workflow: `.github/workflows/gh-deploy.yml`:
 - If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
 
 ### Docker image build/run
+
 ```Dockerfile
 # node:20-alpine
 FROM node:20-alpine AS build
@@ -319,11 +357,13 @@ CMD ["yarn","start","-p","3000"]
 ```
 
 Build the image:
+
 ```bash
 docker build -t kali-portfolio .
 ```
 
 Run the container:
+
 ```bash
 docker run -p 3000:3000 \
   -e NEXT_PUBLIC_TRACKING_ID=... \
@@ -343,11 +383,13 @@ docker run -p 3000:3000 \
 ## Testing
 
 Jest is configured via `jest.config.js` with a **jsdom** environment and helpers in `jest.setup.ts`:
+
 - Mocks for `Image`, `OffscreenCanvas`, `AudioContext`, `Worker`, etc.
 - `__tests__/apps.smoke.test.tsx` dynamically imports each app and renders it to catch runtime errors.
 - Per-app logic tests (e.g., `blackjack.test.ts`, `sokoban.test.ts`, `nonogram.test.ts`).
 
 Commands:
+
 ```bash
 yarn test
 yarn test:watch
@@ -361,21 +403,22 @@ yarn lint
 Browse all apps, games, and security tool demos at `/apps`, which presents a searchable grid built from `apps.config.js`.
 
 ### Utilities & Media
-| App | Route | Category |
-| --- | --- | --- |
-| Alex | /apps/alex | Utility / Media |
-| Chrome | /apps/chrome | Utility / Media |
-| VS Code | /apps/vscode | StackBlitz IDE embed |
-| Spotify | /apps/spotify | Utility / Media |
-| Youtube | /apps/youtube | Utility / Media |
-| Weather | /apps/weather | Utility / Media |
-| X / Twitter | /apps/x | Utility / Media |
-| Todoist | /apps/todoist | Utility / Media |
-| Gedit | /apps/gedit | Utility / Media |
-| Settings | /apps/settings | Utility / Media |
-| Trash | /apps/trash | Utility / Media |
-| Project Gallery | /apps/project-gallery | Utility / Media |
-| Quote | /apps/quote | Utility / Media |
+
+| App             | Route                 | Category             |
+| --------------- | --------------------- | -------------------- |
+| Alex            | /apps/alex            | Utility / Media      |
+| Chrome          | /apps/chrome          | Utility / Media      |
+| VS Code         | /apps/vscode          | StackBlitz IDE embed |
+| Spotify         | /apps/spotify         | Utility / Media      |
+| Youtube         | /apps/youtube         | Utility / Media      |
+| Weather         | /apps/weather         | Utility / Media      |
+| X / Twitter     | /apps/x               | Utility / Media      |
+| Todoist         | /apps/todoist         | Utility / Media      |
+| Gedit           | /apps/gedit           | Utility / Media      |
+| Settings        | /apps/settings        | Utility / Media      |
+| Trash           | /apps/trash           | Utility / Media      |
+| Project Gallery | /apps/project-gallery | Utility / Media      |
+| Quote           | /apps/quote           | Utility / Media      |
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
 
@@ -385,70 +428,73 @@ System so your choices restore on load. The last mood played is remembered, and
 play/pause and track controls include keyboard hotkeys.
 
 ### Terminal Commands
+
 - `clear` – clears the terminal display.
 - `help` – lists available commands.
 
 ### Games
-| Game | Route | Category |
-| --- | --- | --- |
-| 2048 | /apps/2048 | Game |
-| Asteroids | /apps/asteroids | Game |
-| Battleship | /apps/battleship | Game |
-| Blackjack | /apps/blackjack | Game |
-| Breakout | /apps/breakout | Game |
-| Candy Crush | /apps/candy-crush | Game |
-| Car Racer | /apps/car-racer | Game - ghost replays, lane assist, drift scoring |
-| Checkers | /apps/checkers | Game |
-| Chess | /apps/chess | Game |
-| Connect Four | /apps/connect-four | Game |
-| Flappy Bird | /apps/flappy-bird | Game |
-| Frogger | /apps/frogger | Game |
-| Gomoku | /apps/gomoku | Game |
-| Hangman | /apps/hangman | Game |
-| Memory | /apps/memory | Game |
-| Minesweeper | /apps/minesweeper | Game |
-| Nonogram | /apps/nonogram | Game |
-| Pacman | /apps/pacman | Game |
-| Pinball | /apps/pinball | Game |
-| Platformer | /apps/platformer | Game |
-| Pong | /apps/pong | Game |
-| Reversi | /apps/reversi | Game |
-| Simon | /apps/simon | Game |
-| Snake | /apps/snake | Game |
-| Sokoban | /apps/sokoban | Game |
-| Solitaire | /apps/solitaire | Game |
-| Space Invaders | /apps/space-invaders | Game |
-| Sudoku | /apps/sudoku | Game |
-| Tetris | /apps/tetris | Game |
-| Tic Tac Toe | /apps/tictactoe | Game |
-| Tower Defense | /apps/tower-defense | Game |
-| Word Search | /apps/word-search | Game |
-| Wordle | /apps/wordle | Game |
+
+| Game           | Route                | Category                                         |
+| -------------- | -------------------- | ------------------------------------------------ |
+| 2048           | /apps/2048           | Game                                             |
+| Asteroids      | /apps/asteroids      | Game                                             |
+| Battleship     | /apps/battleship     | Game                                             |
+| Blackjack      | /apps/blackjack      | Game                                             |
+| Breakout       | /apps/breakout       | Game                                             |
+| Candy Crush    | /apps/candy-crush    | Game                                             |
+| Car Racer      | /apps/car-racer      | Game - ghost replays, lane assist, drift scoring |
+| Checkers       | /apps/checkers       | Game                                             |
+| Chess          | /apps/chess          | Game                                             |
+| Connect Four   | /apps/connect-four   | Game                                             |
+| Flappy Bird    | /apps/flappy-bird    | Game                                             |
+| Frogger        | /apps/frogger        | Game                                             |
+| Gomoku         | /apps/gomoku         | Game                                             |
+| Hangman        | /apps/hangman        | Game                                             |
+| Memory         | /apps/memory         | Game                                             |
+| Minesweeper    | /apps/minesweeper    | Game                                             |
+| Nonogram       | /apps/nonogram       | Game                                             |
+| Pacman         | /apps/pacman         | Game                                             |
+| Pinball        | /apps/pinball        | Game                                             |
+| Platformer     | /apps/platformer     | Game                                             |
+| Pong           | /apps/pong           | Game                                             |
+| Reversi        | /apps/reversi        | Game                                             |
+| Simon          | /apps/simon          | Game                                             |
+| Snake          | /apps/snake          | Game                                             |
+| Sokoban        | /apps/sokoban        | Game                                             |
+| Solitaire      | /apps/solitaire      | Game                                             |
+| Space Invaders | /apps/space-invaders | Game                                             |
+| Sudoku         | /apps/sudoku         | Game                                             |
+| Tetris         | /apps/tetris         | Game                                             |
+| Tic Tac Toe    | /apps/tictactoe      | Game                                             |
+| Tower Defense  | /apps/tower-defense  | Game                                             |
+| Word Search    | /apps/word-search    | Game                                             |
+| Wordle         | /apps/wordle         | Game                                             |
 
 ### Security Tools (Simulated)
-| Tool | Route | Category |
-| --- | --- | --- |
-| Autopsy | /apps/autopsy | Security Tool (simulated) |
-| BeEF | /apps/beef | Security Tool (simulated) |
-| Bluetooth Tools | /apps/bluetooth | Security Tool (simulated) |
-| dsniff | /apps/dsniff | Security Tool (simulated) |
-| Ettercap | /apps/ettercap | Security Tool (simulated) |
-| Ghidra | /apps/ghidra | Security Tool (simulated) |
-| Hashcat | /apps/hashcat | Security Tool (simulated) |
-| Hydra | /apps/hydra | Security Tool (simulated) |
-| John the Ripper | /apps/john | Security Tool (simulated) |
-| Kismet | /apps/kismet | Security Tool (simulated) |
-| Metasploit | /apps/metasploit | Security Tool (simulated) |
-| Metasploit Post | /apps/metasploit-post | Security Tool (simulated) |
-| Mimikatz | /apps/mimikatz | Security Tool (simulated) |
-| Nessus | /apps/nessus | Security Tool (simulated) |
-| Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |
-| OpenVAS | /apps/openvas | Security Tool (simulated) |
-| Radare2 | /apps/radare2 | Security Tool (simulated) |
-| Reaver | /apps/reaver | Security Tool (simulated) |
-| Recon-ng | /apps/reconng | Security Tool (simulated) |
-| Volatility | /apps/volatility | Security Tool (simulated) |
-| Wireshark | /apps/wireshark | Security Tool (simulated, lab use only) |
+
+| Tool            | Route                 | Category                                |
+| --------------- | --------------------- | --------------------------------------- |
+| Autopsy         | /apps/autopsy         | Security Tool (simulated)               |
+| BeEF            | /apps/beef            | Security Tool (simulated)               |
+| Bluetooth Tools | /apps/bluetooth       | Security Tool (simulated)               |
+| dsniff          | /apps/dsniff          | Security Tool (simulated)               |
+| Ettercap        | /apps/ettercap        | Security Tool (simulated)               |
+| Ghidra          | /apps/ghidra          | Security Tool (simulated)               |
+| Hashcat         | /apps/hashcat         | Security Tool (simulated)               |
+| Hydra           | /apps/hydra           | Security Tool (simulated)               |
+| John the Ripper | /apps/john            | Security Tool (simulated)               |
+| Kismet          | /apps/kismet          | Security Tool (simulated)               |
+| Metasploit      | /apps/metasploit      | Security Tool (simulated)               |
+| Metasploit Post | /apps/metasploit-post | Security Tool (simulated)               |
+| Mimikatz        | /apps/mimikatz        | Security Tool (simulated)               |
+| Nessus          | /apps/nessus          | Security Tool (simulated)               |
+| Nmap NSE        | /apps/nmap-nse        | Security Tool (simulated)               |
+| OpenVAS         | /apps/openvas         | Security Tool (simulated)               |
+| Radare2         | /apps/radare2         | Security Tool (simulated)               |
+| Reaver          | /apps/reaver          | Security Tool (simulated)               |
+| Recon-ng        | /apps/reconng         | Security Tool (simulated)               |
+| Volatility      | /apps/volatility      | Security Tool (simulated)               |
+| Wireshark       | /apps/wireshark       | Security Tool (simulated, lab use only) |
 
 > All security apps are **non-operational simulations** intended for education/demos. They **do not** execute exploits and should not be used for any unauthorized activity.
 > All reports and feed data are canned examples and not generated from live systems.
@@ -510,8 +556,7 @@ See [`LICENSE`](./LICENSE).
 
 ---
 
-*Generated on 2025-08-26*
-
+_Generated on 2025-08-26_
 
 ---
 
@@ -525,4 +570,3 @@ The calculator supports a subset of math.js expressions with the following featu
 - The previous answer is accessible via `Ans`.
 
 Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
-

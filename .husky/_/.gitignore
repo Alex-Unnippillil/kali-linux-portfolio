@@ -1,0 +1,5 @@
+*
+!.gitignore
+!h
+!husky.sh
+!pre-commit

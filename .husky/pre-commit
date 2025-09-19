@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+
+is_automated_user() {
+  case "$1" in
+    *"[bot]"*|dependabot@*|github-actions@*|github-actions*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+if [ "${CI:-}" = "true" ] || [ -n "${SKIP_PRECOMMIT:-}" ] || [ -n "${HUSKY_SKIP_HOOKS:-}" ]; then
+  echo "Skipping pre-commit hook (CI or skip flag detected)."
+  exit 0
+fi
+
+if is_automated_user "${GIT_AUTHOR_NAME:-}" || is_automated_user "${GIT_COMMITTER_NAME:-}"; then
+  echo "Skipping pre-commit hook for automated commit user."
+  exit 0
+fi
+
+yarn lint-staged
