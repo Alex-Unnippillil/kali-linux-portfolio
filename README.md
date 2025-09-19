@@ -354,6 +354,21 @@ yarn test:watch
 yarn lint
 ```
 
+## Bundle Analysis & Budgets
+
+Use the automated analyzer to inspect first-load bundles and enforce thresholds:
+
+```bash
+yarn build:analyze          # builds with @next/bundle-analyzer and prints gzip sizes
+yarn build:analyze --check  # exits non-zero when budgets are breached
+```
+
+- Shared initial JS budget: **180 kB gzip**.
+- Per-route first-load budget: **60 kB gzip**.
+- GitHub Actions runs `yarn build:analyze --check` and annotates pull requests with guidance when a bundle exceeds its budget (e.g., dynamic imports for heavy dependencies).
+
+Pass `--skip-build` if you already generated `.next/analyze/client.json` locally and only want to re-run the report without rebuilding.
+
 ---
 
 ## Feature Overview
