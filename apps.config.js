@@ -19,6 +19,30 @@ export const chromeDefaultTiles = [
   { title: 'Example', url: 'https://example.com' },
 ];
 
+export const helpArticles = {
+  terminal: {
+    appId: 'terminal',
+    articleId: 'terminal',
+    title: 'Terminal',
+    docPath: '/docs/apps/terminal.md',
+  },
+  wireshark: {
+    appId: 'wireshark',
+    articleId: 'wireshark',
+    title: 'Wireshark',
+    docPath: '/docs/apps/wireshark.md',
+  },
+};
+
+const withHelpArticle = (config) => {
+  const help = helpArticles[config.id];
+  if (!help) return config;
+  return {
+    ...config,
+    helpArticleId: help.articleId,
+  };
+};
+
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
@@ -1066,6 +1090,6 @@ const apps = [
   ...utilities,
   // Games are included so they appear alongside apps
   ...games,
-];
+].map(withHelpArticle);
 
 export default apps;
