@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from '../../../lib/server/fs';
 import path from 'path';
 
 const filePath = path.join(process.cwd(), 'data', 'pacman-leaderboard.json');

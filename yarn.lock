@@ -12450,6 +12450,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"server-only@npm:^0.0.1":
+  version: 0.0.1
+  resolution: "server-only@npm:0.0.1"
+  checksum: 10c0/4704f0ef85da0be981af6d4ed8e739d39bcfd265b9c246a684060acda5642d0fdc6daffc2308e71e2682c5f508090978802eae0a77623c9b90a49f9ae68048d6
+  languageName: node
+  linkType: hard
+
 "set-blocking@npm:^2.0.0":
   version: 2.0.0
   resolution: "set-blocking@npm:2.0.0"
@@ -13955,6 +13962,7 @@ __metadata:
     react-window: "npm:^2.0.2"
     rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
+    server-only: "npm:^0.0.1"
     sharp: "npm:^0.34.3"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"

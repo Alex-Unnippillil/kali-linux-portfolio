@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import fs from 'fs';
+import fs from '../../lib/server/fs';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
