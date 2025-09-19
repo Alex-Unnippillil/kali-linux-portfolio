@@ -35,3 +35,10 @@ test('My App launches', async ({ page }) => {
   await expect(page.locator('[data-testid="my-app"]')).toBeVisible();
 });
 ```
+
+## Launcher search index
+
+- Add any common aliases for the app to `data/search-synonyms.json`. Each key should be the alias text and the value either a
+  single app id or an array of ids that should appear for that alias.
+- Keep aliases in lowercase for readability; the search hook normalizes casing at runtime.
+- Run `yarn test searchSynonyms` to confirm the Whisker Menu resolves the new aliases.

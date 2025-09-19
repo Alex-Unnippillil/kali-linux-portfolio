@@ -1,0 +1,9 @@
+{
+  "cmd": "terminal",
+  "command prompt": "terminal",
+  "terminal emulator": "terminal",
+  "packet capture": ["wireshark"],
+  "packet sniffer": ["wireshark", "dsniff"],
+  "password cracker": ["john", "hashcat"],
+  "credential brute force": "hydra"
+}
