@@ -10,6 +10,8 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
+import usePersistentState from '../../../hooks/usePersistentState';
+import MagnifierOverlay from '../../common/MagnifierOverlay';
 
 interface Tile {
   title: string;
@@ -35,6 +37,30 @@ const DEMO_ORIGINS = [
   'https://developer.mozilla.org',
   'https://en.wikipedia.org',
 ];
+
+type MagnifierSettings = {
+  zoom: number;
+  radius: number;
+};
+
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+const MAGNIFIER_LIMITS = {
+  zoom: { min: 1.5, max: 4 },
+  radius: { min: 80, max: 200 },
+} as const;
+
+const MAGNIFIER_DEFAULTS: MagnifierSettings = {
+  zoom: 2,
+  radius: 120,
+};
+
+const isMagnifierSettings = (value: unknown): value is MagnifierSettings => {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<MagnifierSettings>;
+  return typeof candidate.zoom === 'number' && typeof candidate.radius === 'number';
+};
 
 const formatUrl = (value: string) => {
   let url = value.trim();
@@ -99,6 +125,38 @@ const Chrome: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const tileFileInput = useRef<HTMLInputElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [magnifierEnabled, setMagnifierEnabled] = useState(false);
+  const [showMagnifierSettings, setShowMagnifierSettings] = useState(false);
+  const [magnifierSettings, setMagnifierSettings] = usePersistentState<MagnifierSettings>(
+    'chrome:magnifier',
+    MAGNIFIER_DEFAULTS,
+    isMagnifierSettings,
+  );
+  const normalizedMagnifier = useMemo(
+    () => ({
+      zoom: clampNumber(
+        magnifierSettings.zoom,
+        MAGNIFIER_LIMITS.zoom.min,
+        MAGNIFIER_LIMITS.zoom.max,
+      ),
+      radius: clampNumber(
+        magnifierSettings.radius,
+        MAGNIFIER_LIMITS.radius.min,
+        MAGNIFIER_LIMITS.radius.max,
+      ),
+    }),
+    [magnifierSettings],
+  );
+
+  useEffect(() => {
+    if (
+      magnifierSettings.zoom !== normalizedMagnifier.zoom ||
+      magnifierSettings.radius !== normalizedMagnifier.radius
+    ) {
+      setMagnifierSettings(normalizedMagnifier);
+    }
+  }, [magnifierSettings, normalizedMagnifier, setMagnifierSettings]);
 
   useEffect(() => {
     (async () => {
@@ -210,6 +268,24 @@ const Chrome: React.FC = () => {
   );
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
+  const hasSanitizedArticle = Boolean(articles[activeId]);
+  const { zoom: magnifierZoom, radius: magnifierRadius } = normalizedMagnifier;
+  const magnifierAvailable = useMemo(
+    () => activeTab.url !== HOME_URL && !hasSanitizedArticle && !activeTab.blocked,
+    [activeTab.url, activeTab.blocked, hasSanitizedArticle],
+  );
+
+  useEffect(() => {
+    if (!magnifierAvailable && magnifierEnabled) {
+      setMagnifierEnabled(false);
+    }
+  }, [magnifierAvailable, magnifierEnabled]);
+
+  useEffect(() => {
+    if (!magnifierAvailable) {
+      setShowMagnifierSettings(false);
+    }
+  }, [magnifierAvailable]);
 
   useEffect(() => {
     setTabs((prev) =>
@@ -682,6 +758,94 @@ const Chrome: React.FC = () => {
           {activeTab.muted ? '🔇' : '🔊'}
         </button>
         <button
+          type="button"
+          onClick={() => setMagnifierEnabled((enabled) => !enabled)}
+          aria-label={magnifierEnabled ? 'Disable magnifier' : 'Enable magnifier'}
+          aria-pressed={magnifierEnabled}
+          disabled={!magnifierAvailable}
+          className={`px-2 transition-colors ${
+            magnifierEnabled ? 'bg-gray-700 rounded' : ''
+          } disabled:cursor-not-allowed disabled:opacity-50`}
+          title={
+            magnifierAvailable
+              ? 'Toggle magnifier overlay'
+              : 'Open a live page to enable the magnifier'
+          }
+        >
+          🔍
+        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowMagnifierSettings((open) => !open)}
+            aria-label="Magnifier settings"
+            aria-expanded={showMagnifierSettings}
+            className="px-2"
+          >
+            ⚙️
+          </button>
+          {showMagnifierSettings && (
+            <div
+              className="absolute right-0 z-30 mt-1 w-56 space-y-3 rounded border border-gray-700 bg-gray-900 p-3 text-xs shadow-lg"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center justify-between font-semibold">
+                  <span>Zoom</span>
+                  <span>{magnifierZoom.toFixed(1)}×</span>
+                </div>
+                <input
+                  type="range"
+                  min={MAGNIFIER_LIMITS.zoom.min}
+                  max={MAGNIFIER_LIMITS.zoom.max}
+                  step={0.1}
+                  value={magnifierZoom}
+                  onChange={(e) =>
+                    setMagnifierSettings((prev) => ({
+                      ...prev,
+                      zoom: Number(e.target.value),
+                    }))
+                  }
+                  aria-label="Magnifier zoom"
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between font-semibold">
+                  <span>Radius</span>
+                  <span>{Math.round(magnifierRadius)} px</span>
+                </div>
+                <input
+                  type="range"
+                  min={MAGNIFIER_LIMITS.radius.min}
+                  max={MAGNIFIER_LIMITS.radius.max}
+                  step={10}
+                  value={magnifierRadius}
+                  onChange={(e) =>
+                    setMagnifierSettings((prev) => ({
+                      ...prev,
+                      radius: Number(e.target.value),
+                    }))
+                  }
+                  aria-label="Magnifier radius"
+                  className="w-full"
+                />
+              </div>
+              <button
+                type="button"
+                className="w-full rounded bg-gray-700 py-1 font-semibold text-white hover:bg-gray-600"
+                onClick={() => setMagnifierSettings({ ...MAGNIFIER_DEFAULTS })}
+              >
+                Reset
+              </button>
+              {!magnifierAvailable && (
+                <p className="text-[10px] text-gray-300">
+                  Magnifier is only available on live iframe content.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        <button
           onClick={() => window.open(activeTab.url, '_blank', 'noopener,noreferrer')}
           aria-label="Open externally"
           title="Sandbox restrictions may block features"
@@ -770,7 +934,11 @@ const Chrome: React.FC = () => {
           />
         </div>
       )}
-        <div className="flex-grow bg-white relative overflow-auto">
+        <div
+          className="flex-grow bg-white relative overflow-auto"
+          ref={viewportRef}
+          data-testid="chrome-viewport"
+        >
           {activeTab.url === HOME_URL ? (
             homeGrid
           ) : articles[activeId] ? (
@@ -792,6 +960,17 @@ const Chrome: React.FC = () => {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
               referrerPolicy="no-referrer"
               allowFullScreen
+            />
+          )}
+          {magnifierEnabled && magnifierAvailable && (
+            <MagnifierOverlay
+              targetRef={viewportRef}
+              enabled={magnifierEnabled && magnifierAvailable}
+              zoom={magnifierZoom}
+              radius={magnifierRadius}
+              onClose={() => setMagnifierEnabled(false)}
+              testId="chrome-magnifier"
+              contentKey={`${activeTab.id}:${activeTab.url}`}
             />
           )}
           {showFlags && (
