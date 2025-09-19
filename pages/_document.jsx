@@ -1,4 +1,7 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import { ensureTrustedTypesPolicy } from '../utils/trustedTypes';
+
+ensureTrustedTypesPolicy();
 
 class MyDocument extends Document {
   /**

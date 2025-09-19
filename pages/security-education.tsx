@@ -1,6 +1,7 @@
 import React from 'react';
 import WorkflowCard from '../components/WorkflowCard';
 import { WindowMainScreen } from '../components/base/window';
+import { createTrustedHTML } from '../utils/trustedTypes';
 
 interface FrameProps {
   title: string;
@@ -8,16 +9,21 @@ interface FrameProps {
   description: string;
 }
 
-const InfoFrame = ({ title, link, description }: FrameProps) => (
-  <iframe
-    title={title}
-    sandbox="allow-popups"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture"
-    referrerPolicy="no-referrer"
-    srcDoc={`<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><h2>${title}</h2><p>${description}</p><p><a href='${link}' target='_blank' rel='noopener noreferrer'>Official Documentation</a></p></body></html>`}
-    style={{ width: '100%', border: '1px solid #ccc', height: '200px' }}
-  />
-);
+const InfoFrame = ({ title, link, description }: FrameProps) => {
+  const trustedSrcDoc = createTrustedHTML(
+    `<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><h2>${title}</h2><p>${description}</p><p><a href='${link}' target='_blank' rel='noopener noreferrer'>Official Documentation</a></p></body></html>`,
+  );
+  return (
+    <iframe
+      title={title}
+      sandbox="allow-popups"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture"
+      referrerPolicy="no-referrer"
+      srcDoc={trustedSrcDoc as unknown as string}
+      style={{ width: '100%', border: '1px solid #ccc', height: '200px' }}
+    />
+  );
+};
 
 const SecurityEducation = () => (
   <WindowMainScreen

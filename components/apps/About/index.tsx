@@ -7,6 +7,7 @@ import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
@@ -116,7 +117,9 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <script
             type="application/ld+json"
             nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+            dangerouslySetInnerHTML={{
+              __html: createTrustedHTML(JSON.stringify(structured)),
+            }}
           />
         </Head>
         <div

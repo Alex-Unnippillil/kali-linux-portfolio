@@ -5,6 +5,7 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 const escapeFilename = (str = '') =>
   str
@@ -590,7 +591,7 @@ function Autopsy({ initialArtifacts = null }) {
       <div
         aria-live="polite"
         className="sr-only"
-        dangerouslySetInnerHTML={{ __html: announcement }}
+        dangerouslySetInnerHTML={{ __html: createTrustedHTML(announcement) }}
       />
       <div className="flex space-x-2">
         <input
@@ -796,7 +797,9 @@ function Autopsy({ initialArtifacts = null }) {
           </button>
           <div
             className="font-bold"
-            dangerouslySetInnerHTML={{ __html: escapeFilename(selectedArtifact.name) }}
+            dangerouslySetInnerHTML={{
+              __html: createTrustedHTML(escapeFilename(selectedArtifact.name)),
+            }}
           />
           <div className="text-gray-400">{selectedArtifact.type}</div>
           <div className="text-xs">

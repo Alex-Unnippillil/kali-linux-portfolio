@@ -3,6 +3,7 @@ import { Readability } from '@mozilla/readability';
 import TurndownService from 'turndown';
 import DOMPurify from 'dompurify';
 import { useReadLater } from './ReadLaterList';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 interface ReaderProps {
   url: string;
@@ -80,7 +81,7 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
   if (!article) return <div>Loading...</div>;
 
   const renderedContent = (
-    <div dangerouslySetInnerHTML={{ __html: article.content }} />
+    <div dangerouslySetInnerHTML={{ __html: createTrustedHTML(article.content) }} />
   );
 
   const markdownContent = (

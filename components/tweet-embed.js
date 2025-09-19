@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
+import { createTrustedHTML } from '../utils/trustedTypes';
 
 export default function TweetEmbed({ id }) {
   const [html, setHtml] = useState(null);
@@ -58,7 +59,7 @@ export default function TweetEmbed({ id }) {
     <>
       <div
         className="tweet-embed"
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: createTrustedHTML(html) }}
         suppressHydrationWarning
       />
       <style jsx>{`

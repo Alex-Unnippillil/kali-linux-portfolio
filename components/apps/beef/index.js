@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import PayloadBuilder from '../../../apps/beef/components/PayloadBuilder';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 export default function Beef() {
-  const targetPage = `\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8"/>\n  <title>Sandboxed Target</title>\n</head>\n<body>\n  <h1>Sandboxed Target Page</h1>\n  <p>This page is isolated and cannot make network requests.</p>\n  <script>document.body.append(' - loaded');<\/script>\n</body>\n</html>`;
+  const targetPage = createTrustedHTML(`\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8"/>\n  <title>Sandboxed Target</title>\n</head>\n<body>\n  <h1>Sandboxed Target Page</h1>\n  <p>This page is isolated and cannot make network requests.</p>\n  <script>document.body.append(' - loaded');<\/script>\n</body>\n</html>`);
 
   const steps = [
     {

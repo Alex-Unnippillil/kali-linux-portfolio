@@ -19,8 +19,11 @@ document.getElementById('retry').addEventListener('click', () => {
       }
     }
     if (urls.size === 0) {
-      list.innerHTML = '<li>No apps available offline.</li>';
+      const empty = document.createElement('li');
+      empty.textContent = 'No apps available offline.';
+      list.replaceChildren(empty);
     } else {
+      list.replaceChildren();
       urls.forEach((path) => {
         const li = document.createElement('li');
         const a = document.createElement('a');
@@ -31,6 +34,8 @@ document.getElementById('retry').addEventListener('click', () => {
       });
     }
   } catch (err) {
-    list.innerHTML = '<li>Unable to access cached apps.</li>';
+    const errorItem = document.createElement('li');
+    errorItem.textContent = 'Unable to access cached apps.';
+    list.replaceChildren(errorItem);
   }
 })();

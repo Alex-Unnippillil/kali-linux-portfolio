@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import events from '../events.json';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 const escapeHtml = (str: string = '') =>
   str
@@ -73,20 +74,26 @@ function KeywordTester() {
             >
               <div
                 className="font-bold"
-                dangerouslySetInnerHTML={{ __html: highlight(artifact.name) }}
+                dangerouslySetInnerHTML={{
+                  __html: createTrustedHTML(highlight(artifact.name)),
+                }}
               />
               <div className="text-gray-400">{artifact.type}</div>
               {'user' in artifact && (
                 <div
                   className="text-xs"
                   dangerouslySetInnerHTML={{
-                    __html: `User: ${highlight(artifact.user)}`,
+                    __html: createTrustedHTML(
+                      `User: ${highlight(artifact.user)}`,
+                    ),
                   }}
                 />
               )}
               <div
                 className="text-xs"
-                dangerouslySetInnerHTML={{ __html: highlight(artifact.description) }}
+                dangerouslySetInnerHTML={{
+                  __html: createTrustedHTML(highlight(artifact.description)),
+                }}
               />
             </div>
           );

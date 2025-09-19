@@ -3,6 +3,7 @@ import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
 import hipaaProfile from './templates/hipaa.json';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
@@ -519,7 +520,9 @@ const OpenVASApp = () => {
               >
                 <div className="flex items-center justify-between">
                   <span
-                    dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
+                    dangerouslySetInnerHTML={{
+                      __html: createTrustedHTML(escapeHtml(f.description)),
+                    }}
                   />
                   <div className="flex gap-1 ml-2">
                     <span className="px-1 py-0.5 bg-red-700 rounded text-xs">
@@ -590,7 +593,9 @@ const OpenVASApp = () => {
             <h3 className="text-lg mb-2">Issue Detail</h3>
             <p
               className="mb-2"
-              dangerouslySetInnerHTML={{ __html: escapeHtml(selected.description) }}
+              dangerouslySetInnerHTML={{
+                __html: createTrustedHTML(escapeHtml(selected.description)),
+              }}
             />
             <div className="flex gap-2 mb-2">
               {selected.cvss !== undefined && (

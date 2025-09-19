@@ -28,7 +28,7 @@ if (isBrowser) {
   }
 
   function renderSwatches() {
-    swatches.innerHTML = '';
+    swatches.replaceChildren();
     colors.forEach((color) => {
       const swatch = document.createElement('div');
       swatch.className = 'swatch';

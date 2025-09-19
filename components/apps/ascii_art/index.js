@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -574,7 +575,9 @@ export default function AsciiArt() {
       ) : (
         <pre
           className="font-mono whitespace-pre overflow-auto flex-1"
-          dangerouslySetInnerHTML={{ __html: asciiHtml }}
+          dangerouslySetInnerHTML={{
+            __html: createTrustedHTML(asciiHtml),
+          }}
         />
       )}
       <canvas ref={canvasRef} className="hidden w-full h-full" />

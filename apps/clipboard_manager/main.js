@@ -11,7 +11,7 @@ if (isBrowser) {
   const clearBtn = document.getElementById('clear');
 
   function render() {
-    list.innerHTML = '';
+    list.replaceChildren();
     history.forEach((item) => {
       const li = document.createElement('li');
       li.textContent = item;

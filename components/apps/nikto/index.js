@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 const suggestions = {
   '/admin': 'Restrict access to the admin portal or remove it from public view.',
@@ -6,6 +7,14 @@ const suggestions = {
     'Remove or secure unnecessary CGI scripts and ensure they are up to date.',
   '/': 'Disable or standardize ETag headers to avoid disclosing inodes.',
 };
+
+const escapeHtml = (str = '') =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 const NiktoApp = () => {
   const [host, setHost] = useState('');
@@ -48,7 +57,9 @@ const NiktoApp = () => {
     const rows = findings
       .map(
         (f) =>
-          `<tr><td>${f.path}</td><td>${f.finding}</td><td>${f.severity}</td></tr>`
+          `<tr><td>${escapeHtml(f.path)}</td><td>${escapeHtml(
+            f.finding,
+          )}</td><td>${escapeHtml(f.severity)}</td></tr>`
       )
       .join('');
     return `<!DOCTYPE html><html><body><h1>Nikto Report</h1><table border="1"><tr><th>Path</th><th>Finding</th><th>Severity</th></tr>${rows}</table></body></html>`;
@@ -287,7 +298,7 @@ const NiktoApp = () => {
         </div>
         <iframe
           title="Nikto HTML Report"
-          srcDoc={htmlReport}
+          srcDoc={createTrustedHTML(htmlReport)}
           className="w-full h-64 bg-white"
         />
       </div>

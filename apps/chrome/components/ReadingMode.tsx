@@ -5,6 +5,7 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import { createStore, set as idbSet } from 'idb-keyval';
 import usePersistentState from '../../../hooks/usePersistentState';
+import { createTrustedHTML } from '../../../utils/trustedTypes';
 
 const snapshotStore = createStore('reading-mode', 'snapshots');
 
@@ -58,7 +59,9 @@ const ReadingMode = () => {
           Save snapshot
         </button>
       </div>
-      <article dangerouslySetInnerHTML={{ __html: displayed }} />
+      <article
+        dangerouslySetInnerHTML={{ __html: createTrustedHTML(displayed) }}
+      />
     </div>
   );
 };
