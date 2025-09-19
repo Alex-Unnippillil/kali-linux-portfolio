@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,6 +28,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getDesktopGrid as loadDesktopGrid,
+  setDesktopGrid as saveDesktopGrid,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -51,6 +61,93 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+export type DesktopGridPreset = 'spacious' | 'comfortable' | 'cozy' | 'compact';
+export type DesktopGridMode = DesktopGridPreset | 'custom';
+
+export interface DesktopGridSetting {
+  preset: DesktopGridMode;
+  spacing: number;
+}
+
+export interface DesktopGridMetrics {
+  spacing: number;
+  iconWidth: number;
+  iconHeight: number;
+  cellWidth: number;
+  cellHeight: number;
+  vars: Record<string, string>;
+}
+
+export const DESKTOP_GRID_PRESETS: Array<{
+  id: DesktopGridPreset;
+  label: string;
+  spacing: number;
+}> = [
+  { id: 'spacious', label: 'Spacious', spacing: 48 },
+  { id: 'comfortable', label: 'Comfortable', spacing: 36 },
+  { id: 'cozy', label: 'Cozy', spacing: 28 },
+  { id: 'compact', label: 'Compact', spacing: 20 },
+];
+
+export const DESKTOP_GRID_RANGE = {
+  min: 16,
+  max: 96,
+  step: 4,
+};
+
+export const DESKTOP_ICON_DIMENSIONS = {
+  width: 96,
+  height: 96,
+};
+
+const isDesktopPreset = (value: string): value is DesktopGridPreset =>
+  DESKTOP_GRID_PRESETS.some((preset) => preset.id === value);
+
+const clampSpacing = (value: number) => {
+  const numeric = Number.isFinite(value) ? value : DESKTOP_GRID_RANGE.min;
+  return Math.min(DESKTOP_GRID_RANGE.max, Math.max(DESKTOP_GRID_RANGE.min, numeric));
+};
+
+export const computeDesktopGridMetrics = (grid: DesktopGridSetting): DesktopGridMetrics => {
+  const spacing = clampSpacing(grid.spacing);
+  const iconWidth = DESKTOP_ICON_DIMENSIONS.width;
+  const iconHeight = DESKTOP_ICON_DIMENSIONS.height;
+  const cellWidth = iconWidth + spacing;
+  const cellHeight = iconHeight + spacing;
+  return {
+    spacing,
+    iconWidth,
+    iconHeight,
+    cellWidth,
+    cellHeight,
+    vars: {
+      '--desktop-grid-spacing': `${spacing}px`,
+      '--desktop-grid-cell-width': `${cellWidth}px`,
+      '--desktop-grid-cell-height': `${cellHeight}px`,
+      '--desktop-icon-width': `${iconWidth}px`,
+      '--desktop-icon-height': `${iconHeight}px`,
+    },
+  };
+};
+
+export const desktopGridToCssVars = (grid: DesktopGridSetting) =>
+  computeDesktopGridMetrics(grid).vars;
+
+const normalizeDesktopGrid = (value?: Partial<DesktopGridSetting> | null): DesktopGridSetting => {
+  const fallback = defaults.desktopGrid ?? { preset: 'comfortable', spacing: 32 };
+  const presetValue =
+    value && typeof value.preset === 'string' && (value.preset === 'custom' || isDesktopPreset(value.preset))
+      ? (value.preset as DesktopGridMode)
+      : (fallback.preset as DesktopGridMode);
+  const spacingValue =
+    value && typeof value.spacing === 'number'
+      ? value.spacing
+      : value && typeof value.spacing === 'string'
+        ? parseFloat(value.spacing)
+        : fallback.spacing;
+  return { preset: presetValue, spacing: clampSpacing(spacingValue) };
+};
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
@@ -63,6 +160,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  desktopGrid: DesktopGridSetting;
+  desktopGridMetrics: DesktopGridMetrics;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +173,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setDesktopGrid: (value: DesktopGridSetting) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +188,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  desktopGrid: normalizeDesktopGrid(defaults.desktopGrid),
+  desktopGridMetrics: computeDesktopGridMetrics(normalizeDesktopGrid(defaults.desktopGrid)),
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +201,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setDesktopGrid: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +216,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [desktopGrid, setDesktopGridState] = useState<DesktopGridSetting>(() =>
+    normalizeDesktopGrid(defaults.desktopGrid),
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
+  const desktopGridMetrics = useMemo(() => computeDesktopGridMetrics(desktopGrid), [desktopGrid]);
 
   useEffect(() => {
     (async () => {
@@ -128,6 +235,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setDesktopGridState(normalizeDesktopGrid(await loadDesktopGrid()));
     })();
   }, []);
 
@@ -236,6 +344,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    Object.entries(desktopGridMetrics.vars).forEach(([key, value]) => {
+      document.documentElement.style.setProperty(key, value);
+    });
+    saveDesktopGrid(desktopGrid);
+  }, [desktopGrid, desktopGridMetrics]);
+
+  const updateDesktopGrid = (value: DesktopGridSetting) => {
+    setDesktopGridState(normalizeDesktopGrid(value));
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +369,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        desktopGrid,
+        desktopGridMetrics,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +382,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setDesktopGrid: updateDesktopGrid,
       }}
     >
       {children}

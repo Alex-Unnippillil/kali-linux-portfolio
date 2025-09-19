@@ -1,11 +1,42 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import {
+    useSettings,
+    ACCENT_OPTIONS,
+    DESKTOP_GRID_PRESETS,
+    DESKTOP_GRID_RANGE,
+} from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+        desktopGrid,
+        setDesktopGrid,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
+    const gridLiveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
@@ -55,6 +86,14 @@ export function Settings() {
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
 
+    useEffect(() => {
+        if (!gridLiveRegion.current) return;
+        const presetLabel = desktopGrid.preset === 'custom'
+            ? 'Custom spacing'
+            : DESKTOP_GRID_PRESETS.find((preset) => preset.id === desktopGrid.preset)?.label || desktopGrid.preset;
+        gridLiveRegion.current.textContent = `Desktop grid spacing ${desktopGrid.spacing}px (${presetLabel})`;
+    }, [desktopGrid]);
+
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
@@ -98,6 +137,54 @@ export function Settings() {
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
+            </div>
+            <div className="flex flex-col items-center my-4 w-full px-4">
+                <span className="text-ubt-grey mb-2">Desktop Grid</span>
+                <div
+                    role="radiogroup"
+                    aria-label="Desktop grid density presets"
+                    className="flex flex-wrap justify-center gap-2"
+                >
+                    {DESKTOP_GRID_PRESETS.map((preset) => {
+                        const selected = desktopGrid.preset === preset.id;
+                        return (
+                            <button
+                                key={preset.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={selected}
+                                onClick={() => setDesktopGrid({ preset: preset.id, spacing: preset.spacing })}
+                                className={`px-3 py-1 rounded border transition-colors duration-150 focus:outline-none ${selected
+                                    ? 'bg-ub-orange border-ub-orange text-white'
+                                    : 'border-ubt-cool-grey text-ubt-grey hover:border-ub-orange hover:text-white'
+                                }`}
+                            >
+                                {preset.label}
+                            </button>
+                        );
+                    })}
+                </div>
+                <label htmlFor="desktop-grid-spacing" className="mt-4 mb-1 text-ubt-grey">
+                    Icon Spacing
+                </label>
+                <input
+                    id="desktop-grid-spacing"
+                    type="range"
+                    min={DESKTOP_GRID_RANGE.min}
+                    max={DESKTOP_GRID_RANGE.max}
+                    step={DESKTOP_GRID_RANGE.step}
+                    value={desktopGrid.spacing}
+                    onChange={(e) => setDesktopGrid({ preset: 'custom', spacing: parseInt(e.target.value, 10) })}
+                    aria-valuemin={DESKTOP_GRID_RANGE.min}
+                    aria-valuemax={DESKTOP_GRID_RANGE.max}
+                    aria-valuenow={desktopGrid.spacing}
+                    aria-valuetext={`${desktopGrid.spacing} pixels`}
+                    className="ubuntu-slider w-48"
+                />
+                <span className="text-xs text-ubt-grey mt-1" aria-hidden="true">
+                    {desktopGrid.spacing}px
+                </span>
+                <span ref={gridLiveRegion} role="status" aria-live="polite" className="sr-only"></span>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Font Size:</label>
@@ -251,6 +338,7 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setDesktopGrid({ ...defaults.desktopGrid });
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -275,6 +363,7 @@ export function Settings() {
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.desktopGrid !== undefined) setDesktopGrid(parsed.desktopGrid);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);

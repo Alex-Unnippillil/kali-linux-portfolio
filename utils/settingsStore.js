@@ -14,6 +14,35 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  desktopGrid: {
+    preset: 'comfortable',
+    spacing: 32,
+  },
+};
+
+let cachedStorage;
+let storageWarningIssued = false;
+
+const getSafeStorage = () => {
+  if (cachedStorage !== undefined) return cachedStorage;
+  if (typeof window === 'undefined') {
+    cachedStorage = null;
+    return cachedStorage;
+  }
+  try {
+    const storage = window.localStorage;
+    const testKey = '__settings-test__';
+    storage.setItem(testKey, '1');
+    storage.removeItem(testKey);
+    cachedStorage = storage;
+  } catch (error) {
+    cachedStorage = null;
+    if (!storageWarningIssued) {
+      console.warn('Local storage is unavailable; falling back to default settings', error);
+      storageWarningIssued = true;
+    }
+  }
+  return cachedStorage;
 };
 
 export async function getAccent() {
@@ -38,89 +67,165 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  const storage = getSafeStorage();
+  if (!storage) return DEFAULT_SETTINGS.density;
+  return storage.getItem('density') || DEFAULT_SETTINGS.density;
 }
 
 export async function setDensity(density) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('density', density);
 }
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
-  if (stored !== null) {
-    return stored === 'true';
+  const storage = getSafeStorage();
+  if (storage) {
+    const stored = storage.getItem('reduced-motion');
+    if (stored !== null) {
+      return stored === 'true';
+    }
   }
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof window.matchMedia === 'function') {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (error) {
+      // ignore matchMedia failures and fall back to default
+    }
+  }
+  return DEFAULT_SETTINGS.reducedMotion;
 }
 
 export async function setReducedMotion(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
+  const storage = getSafeStorage();
+  if (!storage) return DEFAULT_SETTINGS.fontScale;
+  const stored = storage.getItem('font-scale');
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('font-scale', String(scale));
 }
 
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  const storage = getSafeStorage();
+  if (!storage) return DEFAULT_SETTINGS.highContrast;
+  return storage.getItem('high-contrast') === 'true';
 }
 
 export async function setHighContrast(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('high-contrast', value ? 'true' : 'false');
 }
 
 export async function getLargeHitAreas() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  const storage = getSafeStorage();
+  if (!storage) return DEFAULT_SETTINGS.largeHitAreas;
+  return storage.getItem('large-hit-areas') === 'true';
 }
 
 export async function setLargeHitAreas(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('large-hit-areas', value ? 'true' : 'false');
 }
 
 export async function getHaptics() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
+  const storage = getSafeStorage();
+  if (!storage) return DEFAULT_SETTINGS.haptics;
+  const val = storage.getItem('haptics');
   return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
 export async function setHaptics(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('haptics', value ? 'true' : 'false');
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('haptics', value ? 'true' : 'false');
+}
+
+const sanitizeDesktopGrid = (grid) => {
+  const defaults = DEFAULT_SETTINGS.desktopGrid;
+  if (!grid || typeof grid !== 'object') return { ...defaults };
+  const validPresets = new Set(['spacious', 'comfortable', 'cozy', 'compact', 'custom']);
+  const preset = validPresets.has(grid.preset) ? grid.preset : defaults.preset;
+  const spacing = Number.isFinite(grid.spacing) ? grid.spacing : defaults.spacing;
+  return { preset, spacing };
+};
+
+export async function getDesktopGrid() {
+  if (typeof window === 'undefined') return { ...DEFAULT_SETTINGS.desktopGrid };
+  try {
+    const storage = getSafeStorage();
+    if (!storage) return { ...DEFAULT_SETTINGS.desktopGrid };
+    const stored = storage.getItem('desktop-grid');
+    if (!stored) return { ...DEFAULT_SETTINGS.desktopGrid };
+    const parsed = JSON.parse(stored);
+    return sanitizeDesktopGrid(parsed);
+  } catch (e) {
+    console.warn('Failed to load desktop grid settings', e);
+    return { ...DEFAULT_SETTINGS.desktopGrid };
+  }
+}
+
+export async function setDesktopGrid(grid) {
+  if (typeof window === 'undefined') return;
+  try {
+    const value = sanitizeDesktopGrid(grid);
+    const storage = getSafeStorage();
+    if (!storage) return;
+    storage.setItem('desktop-grid', JSON.stringify(value));
+  } catch (e) {
+    console.warn('Failed to save desktop grid settings', e);
+  }
 }
 
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
+  const storage = getSafeStorage();
+  if (!storage) return DEFAULT_SETTINGS.pongSpin;
+  const val = storage.getItem('pong-spin');
   return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
 export async function setPongSpin(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('pong-spin', value ? 'true' : 'false');
 }
 
 export async function getAllowNetwork() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  const storage = getSafeStorage();
+  if (!storage) return DEFAULT_SETTINGS.allowNetwork;
+  return storage.getItem('allow-network') === 'true';
 }
 
 export async function setAllowNetwork(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem('allow-network', value ? 'true' : 'false');
 }
 
 export async function resetSettings() {
@@ -129,14 +234,17 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.removeItem('density');
+  storage.removeItem('reduced-motion');
+  storage.removeItem('font-scale');
+  storage.removeItem('high-contrast');
+  storage.removeItem('large-hit-areas');
+  storage.removeItem('pong-spin');
+  storage.removeItem('allow-network');
+  storage.removeItem('haptics');
+  storage.removeItem('desktop-grid');
 }
 
 export async function exportSettings() {
@@ -151,6 +259,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    desktopGrid,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +271,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getDesktopGrid(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +285,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    desktopGrid,
     theme,
   });
 }
@@ -199,6 +310,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    desktopGrid,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +323,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (desktopGrid !== undefined) await setDesktopGrid(desktopGrid);
   if (theme !== undefined) setTheme(theme);
 }
 

@@ -1,5 +1,13 @@
 @import './globals.css';
 
+:root {
+    --desktop-icon-width: 6rem;
+    --desktop-icon-height: 6rem;
+    --desktop-grid-spacing: 32px;
+    --desktop-grid-cell-width: calc(var(--desktop-icon-width) + var(--desktop-grid-spacing));
+    --desktop-grid-cell-height: calc(var(--desktop-icon-height) + var(--desktop-grid-spacing));
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
@@ -145,6 +153,34 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .windowMainScreen::-webkit-scrollbar-thumb {
     background-color: var(--color-border);
     border-radius: 5px;
+}
+
+#window-area {
+    z-index: 5;
+}
+
+.desktop-icon-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.desktop-icon {
+    position: absolute;
+    pointer-events: auto;
+    touch-action: none;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    box-sizing: border-box;
+    will-change: transform;
+    transition: transform 120ms ease;
+}
+
+.desktop-icon--dragging {
+    transition: none;
+    z-index: 3;
 }
 
 /* SideBarApp Scale image onClick */
