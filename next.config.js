@@ -68,6 +68,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
+    ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^category$/, /^from$/],
     additionalManifestEntries: [
       { url: '/', revision: null },
       { url: '/feeds', revision: null },
@@ -79,8 +80,120 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/apps/terminal', revision: null },
       { url: '/apps/checkers', revision: null },
       { url: '/offline.html', revision: null },
+      { url: '/offline.css', revision: null },
+      { url: '/offline.js', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
+    runtimeCaching: (() => {
+      const gameIds = [
+        '2048',
+        'asteroids',
+        'battleship',
+        'blackjack',
+        'breakout',
+        'car-racer',
+        'lane-runner',
+        'checkers',
+        'chess',
+        'connect-four',
+        'frogger',
+        'hangman',
+        'memory',
+        'minesweeper',
+        'pacman',
+        'platformer',
+        'pong',
+        'reversi',
+        'simon',
+        'snake',
+        'sokoban',
+        'solitaire',
+        'tictactoe',
+        'tetris',
+        'tower-defense',
+        'word-search',
+        'wordle',
+        'flappy-bird',
+        'candy-crush',
+        'gomoku',
+        'pinball',
+        'sudoku',
+        'space-invaders',
+        'nonogram',
+      ];
+
+      const simulatorIds = [
+        'beef',
+        'ettercap',
+        'ble-sensor',
+        'metasploit',
+        'wireshark',
+        'kismet',
+        'nikto',
+        'autopsy',
+        'plugin-manager',
+        'reaver',
+        'nessus',
+        'ghidra',
+        'mimikatz',
+        'mimikatz/offline',
+        'ssh',
+        'http',
+        'html-rewriter',
+        'hydra',
+        'nmap-nse',
+        'radare2',
+        'volatility',
+        'hashcat',
+        'msf-post',
+        'evidence-vault',
+        'dsniff',
+        'john',
+        'openvas',
+        'recon-ng',
+        'security-tools',
+      ];
+
+      const escapeRegex = (value) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+      const createPattern = (ids) =>
+        new RegExp(`^/apps/(?:${ids.map(escapeRegex).join('|')})(?:/.*)?$`);
+
+      const createNavigationMatcher = (regex) =>
+        new Function(
+          'input',
+          `const { url, request } = input; return request.mode === 'navigate' && ${regex.toString()}.test(url.pathname);`,
+        );
+
+      const createFallbackPlugin = (targetCategory) => ({
+        async handlerDidError({ request }) {
+          const attempted = encodeURIComponent(request.url);
+          const target = new URL(
+            `/offline.html?category=${targetCategory}&from=${attempted}`,
+            self.location.origin,
+          );
+          return Response.redirect(target);
+        },
+      });
+
+      const createRoute = (regex, targetCategory) => ({
+        urlPattern: createNavigationMatcher(regex),
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'offline-pages',
+          networkTimeoutSeconds: 8,
+          plugins: [createFallbackPlugin(targetCategory)],
+        },
+      });
+
+      return [
+        createRoute(createPattern(gameIds), 'games'),
+        createRoute(createPattern(simulatorIds), 'simulators'),
+        createRoute(/^\/games\/(?!.*\.).+$/, 'games'),
+        createRoute(/^\/apps\/?$/, 'desktop'),
+        createRoute(/^\/apps\/(?!.*\.).+$/, 'desktop'),
+      ];
+    })(),
   },
 });
 
