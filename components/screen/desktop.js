@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { clampWindowPosition } from '../../utils/windowBounds';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -71,11 +72,15 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+                const sanitizedWindows = session.windows.map((win) => {
+                    const { x, y } = clampWindowPosition(win);
+                    return { ...win, x, y };
+                });
+                sanitizedWindows.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    sanitizedWindows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
                 this.openApp('about-alex');

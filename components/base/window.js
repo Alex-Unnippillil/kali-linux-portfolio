@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { clampWindowPosition } from '../../utils/windowBounds';
 
 export class Window extends Component {
     constructor(props) {
@@ -56,6 +57,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.revalidateBounds(true);
     }
 
     componentWillUnmount() {
@@ -221,16 +223,59 @@ export class Window extends Component {
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
-    setWinowsPosition = () => {
+    setWinowsPosition = (override) => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
-        var rect = r.getBoundingClientRect();
-        const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        let x;
+        let y;
+        if (override && typeof override.x === 'number' && typeof override.y === 'number') {
+            x = override.x;
+            y = override.y - 32;
+        } else {
+            var rect = r.getBoundingClientRect();
+            x = rect.x;
+            y = rect.y - 32;
+        }
+        const snappedX = this.snapToGrid(x);
+        const snappedY = this.snapToGrid(y);
+        r.style.setProperty('--window-transform-x', snappedX.toFixed(1).toString() + "px");
+        r.style.setProperty('--window-transform-y', snappedY.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
+            this.props.onPositionChange(snappedX, snappedY);
+        }
+    }
+
+    revalidateBounds = (persist = false) => {
+        if (typeof window === 'undefined') return;
+        const node = document.querySelector("#" + this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const { x, y, recentered } = clampWindowPosition(
+            { x: rect.x, y: rect.y },
+            {
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                windowWidth: rect.width,
+                windowHeight: rect.height,
+            }
+        );
+
+        if (x === rect.x && y === rect.y) {
+            if (persist) {
+                this.setWinowsPosition({ x, y });
+            }
+            return;
+        }
+
+        node.style.transform = `translate(${x}px,${y}px)`;
+        this.setWinowsPosition({ x, y });
+        this.checkOverlap();
+        if (recentered) {
+            window.dispatchEvent(
+                new CustomEvent('window-recentered', {
+                    detail: { id: this.id, x, y },
+                })
+            );
         }
     }
 
@@ -371,7 +416,9 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, () => {
+                this.revalidateBounds(true);
+            });
         }
     }
 
