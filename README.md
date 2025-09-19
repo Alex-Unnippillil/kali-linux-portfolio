@@ -92,6 +92,9 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn verify:full` – reproduce the README walkthrough end-to-end (install dependencies, lint with `--max-warnings=0`, run tests,
+  type-check with `tsc --noEmit`, build the production bundle, and execute the Playwright smoke suite without console warnings).
+  This command also runs in CI to ensure the documentation and automation stay in lockstep.
 
 ---
 

@@ -4,6 +4,8 @@ import path from 'path';
 
 const appDir = path.join(process.cwd(), 'pages', 'apps');
 
+const disallowedConsoleTypes = new Set(['warning', 'error', 'assert']);
+
 function getRoutes(dir: string, prefix = ''): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const routes: string[] = [];
@@ -24,8 +26,25 @@ const routes = getRoutes(appDir)
 
 for (const route of routes) {
   test(`loads ${route}`, async ({ page }) => {
+    const consoleIssues: string[] = [];
+
+    page.on('console', (message) => {
+      const type = message.type();
+      if (disallowedConsoleTypes.has(type)) {
+        consoleIssues.push(`[${type}] ${message.text()}`);
+      }
+    });
+
     await page.goto('/apps');
+    await page.waitForLoadState('networkidle');
     await page.locator(`a[href="${route}"]`).click();
+    await page.waitForURL(`**${route}`);
     await expect(page.locator('main')).toBeVisible();
+    expect(
+      consoleIssues,
+      consoleIssues.length > 0
+        ? `Console warnings or errors detected:\n${consoleIssues.join('\n')}`
+        : undefined,
+    ).toEqual([]);
   });
 }
