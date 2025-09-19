@@ -1,5 +1,8 @@
+import { useFeatureFlag } from '../hooks/useFeatureFlags';
+
 export default function BetaBadge() {
-  if (process.env.NEXT_PUBLIC_SHOW_BETA !== '1') return null;
+  const showBeta = useFeatureFlag('beta_badge');
+  if (!showBeta) return null;
   return (
     <button
       type="button"
