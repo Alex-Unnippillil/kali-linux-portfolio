@@ -26,6 +26,8 @@ Always test inside controlled labs and obtain written permission before performi
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
+Run `yarn preflight` after checking out the repo or switching Node versions. It verifies that `.nvmrc`, `package.json#engines.node`, and your local runtime all agree and exits with a clear error if they diverge. This keeps contributor environments aligned with CI.
+
 ### Install & Run (Dev)
 ```bash
 cp .env.local.example .env.local  # populate with required keys
