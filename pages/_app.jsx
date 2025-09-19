@@ -44,7 +44,12 @@ function MyApp(props) {
       console.error('Analytics initialization failed', err);
     });
 
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    const shouldRegisterServiceWorker =
+      'serviceWorker' in navigator &&
+      ((process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') ||
+        (process.env.NEXT_PUBLIC_ENABLE_DEV_SW === 'true' && window.location.protocol === 'https:'));
+
+    if (shouldRegisterServiceWorker) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
         try {

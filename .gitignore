@@ -27,6 +27,7 @@ dist
 # misc
 .DS_Store
 *.pem
+/.certs/
 
 # debug
 npm-debug.log*

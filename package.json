@@ -7,6 +7,7 @@
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
     "prebuild": "tsc -p tsconfig.gamepad.json",
     "dev": "next dev",
+    "dev:https": "node scripts/dev-https.mjs",
     "build": "next build",
     "postbuild": "node scripts/safe-copy.mjs",
     "start": "next start",
@@ -19,6 +20,7 @@
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
+    "cert:local": "node scripts/setup-local-https.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs"
