@@ -95,6 +95,16 @@ See `.env.local.example` for the full list.
 
 ---
 
+## Dependency Management
+
+See [`docs/dependency-policy.md`](./docs/dependency-policy.md) for guidance on when
+to use caret versus exact version pins and how we triage Renovate updates. The
+Renovate configuration in this repository mirrors that policy so low-risk
+dependencies can automerge while framework and build upgrades receive manual
+review.
+
+---
+
 ## Local Development Tips
 
 - Run `yarn lint` and `yarn test` before committing changes.
