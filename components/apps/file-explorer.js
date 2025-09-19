@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { ACTION_TYPES, recordAction } from '../../utils/actionJournal';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -151,11 +152,19 @@ export default function FileExplorer() {
     const text = await file.text();
     setCurrentFile({ name: file.name });
     setContent(text);
+    recordAction({
+      type: ACTION_TYPES.files.openFile,
+      payload: { name: file.name, source: 'fallback' },
+    });
   };
 
   const openFolder = async () => {
     try {
       const handle = await window.showDirectoryPicker();
+      recordAction({
+        type: ACTION_TYPES.files.openDirectory,
+        payload: { name: handle.name || '/', source: 'picker' },
+      });
       setDirHandle(handle);
       addRecentDir(handle);
       setRecent(await getRecentDirs());
@@ -168,6 +177,10 @@ export default function FileExplorer() {
     try {
       const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
       if (perm !== 'granted') return;
+      recordAction({
+        type: ACTION_TYPES.files.openDirectory,
+        payload: { name: entry.name, source: 'recent' },
+      });
       setDirHandle(entry.handle);
       setPath([{ name: entry.name, handle: entry.handle }]);
       await readDir(entry.handle);
@@ -186,6 +199,12 @@ export default function FileExplorer() {
       text = await f.text();
     }
     setContent(text);
+    if (file?.name) {
+      recordAction({
+        type: ACTION_TYPES.files.openFile,
+        payload: { name: file.name, source: opfsSupported ? 'opfs' : 'handle' },
+      });
+    }
   };
 
   const readDir = async (handle) => {
@@ -228,6 +247,10 @@ export default function FileExplorer() {
       const writable = await currentFile.handle.createWritable();
       await writable.write(content);
       await writable.close();
+      recordAction({
+        type: ACTION_TYPES.files.saveFile,
+        payload: { name: currentFile.name, characters: content.length },
+      });
       if (opfsSupported) await removeBuffer(currentFile.name);
     } catch {}
   };
@@ -284,6 +307,10 @@ export default function FileExplorer() {
                 const writable = await handle.createWritable();
                 await writable.write(content);
                 await writable.close();
+                recordAction({
+                  type: ACTION_TYPES.files.saveFile,
+                  payload: { name: currentFile.name, characters: content.length, source: 'fallback' },
+                });
               }}
               className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded self-start"
             >

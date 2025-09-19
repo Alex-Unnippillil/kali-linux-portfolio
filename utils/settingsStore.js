@@ -2,6 +2,7 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import { ACTION_TYPES, recordAction, recordSettingsChange } from './actionJournal';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -24,6 +25,7 @@ export async function getAccent() {
 export async function setAccent(accent) {
   if (typeof window === 'undefined') return;
   await set('accent', accent);
+  recordSettingsChange('accent', accent);
 }
 
 export async function getWallpaper() {
@@ -34,6 +36,7 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+  recordSettingsChange('wallpaper', wallpaper);
 }
 
 export async function getDensity() {
@@ -44,6 +47,7 @@ export async function getDensity() {
 export async function setDensity(density) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('density', density);
+  recordSettingsChange('density', density);
 }
 
 export async function getReducedMotion() {
@@ -58,6 +62,7 @@ export async function getReducedMotion() {
 export async function setReducedMotion(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+  recordSettingsChange('reducedMotion', !!value);
 }
 
 export async function getFontScale() {
@@ -69,6 +74,7 @@ export async function getFontScale() {
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('font-scale', String(scale));
+  recordSettingsChange('fontScale', Number(scale));
 }
 
 export async function getHighContrast() {
@@ -79,6 +85,7 @@ export async function getHighContrast() {
 export async function setHighContrast(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  recordSettingsChange('highContrast', !!value);
 }
 
 export async function getLargeHitAreas() {
@@ -89,6 +96,7 @@ export async function getLargeHitAreas() {
 export async function setLargeHitAreas(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+  recordSettingsChange('largeHitAreas', !!value);
 }
 
 export async function getHaptics() {
@@ -100,6 +108,7 @@ export async function getHaptics() {
 export async function setHaptics(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
+  recordSettingsChange('haptics', !!value);
 }
 
 export async function getPongSpin() {
@@ -111,6 +120,7 @@ export async function getPongSpin() {
 export async function setPongSpin(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
+  recordSettingsChange('pongSpin', !!value);
 }
 
 export async function getAllowNetwork() {
@@ -121,6 +131,7 @@ export async function getAllowNetwork() {
 export async function setAllowNetwork(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  recordSettingsChange('allowNetwork', !!value);
 }
 
 export async function resetSettings() {
@@ -137,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  recordAction({ type: ACTION_TYPES.settings.reset, payload: {} });
 }
 
 export async function exportSettings() {
@@ -212,6 +224,11 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  const importedKeys = settings && typeof settings === 'object' ? Object.keys(settings) : [];
+  recordAction({
+    type: ACTION_TYPES.settings.import,
+    payload: { keys: importedKeys },
+  });
 }
 
 export const defaults = DEFAULT_SETTINGS;
