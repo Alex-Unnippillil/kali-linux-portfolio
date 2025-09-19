@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import AlignmentControls from '../../../apps/figlet/components/AlignmentControls';
 import FontDropdown from '../../../apps/figlet/components/FontDropdown';
+import { useFileSafetyPrompt } from '../../../hooks/useFileSafetyPrompt';
+import FileSafetyModal from '../../FileSafetyModal';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
@@ -27,6 +29,7 @@ const FigletApp = () => {
   const preRef = useRef(null);
   const uploadedFonts = useRef({});
   const [serverFontNames, setServerFontNames] = useState([]);
+  const { requestFileAccess, modalProps } = useFileSafetyPrompt('FigletFontUpload');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -210,12 +213,20 @@ const FigletApp = () => {
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const name = file.name.replace(/\.flf$/i, '');
-    const data = await file.text();
-    uploadedFonts.current[name] = data;
-    workerRef.current?.postMessage({ type: 'load', name, data });
-    setFont(name);
-    e.target.value = '';
+    await requestFileAccess(
+      file,
+      async () => {
+        const name = file.name.replace(/\.flf$/i, '');
+        const data = await file.text();
+        uploadedFonts.current[name] = data;
+        workerRef.current?.postMessage({ type: 'load', name, data });
+        setFont(name);
+      },
+      { source: 'figlet-font-upload' },
+    );
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
   const displayedFonts = fonts.filter((f) => !monoOnly || f.mono);
@@ -264,7 +275,8 @@ const FigletApp = () => {
   }, [font]);
 
   return (
-    <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
+    <>
+      <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
       <div className="p-2 flex flex-wrap gap-2 bg-ub-gedit-dark items-center">
         <label className="flex items-center gap-1 text-sm">
           <input
@@ -468,7 +480,9 @@ const FigletApp = () => {
       <div aria-live="polite" className="sr-only">
         {announce}
       </div>
-    </div>
+      </div>
+      <FileSafetyModal {...modalProps} />
+    </>
   );
 };
 
