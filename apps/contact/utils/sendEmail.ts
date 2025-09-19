@@ -1,4 +1,5 @@
 import emailjs from '@emailjs/browser';
+import { clientEnv } from '../../../lib/env.client';
 
 export interface EmailData {
   name: string;
@@ -9,9 +10,9 @@ export interface EmailData {
 let initialized = false;
 
 export const sendEmail = async ({ name, email, message }: EmailData) => {
-  const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID || '';
-  const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID || '';
-  const userId = process.env.NEXT_PUBLIC_USER_ID || '';
+  const serviceId = clientEnv.NEXT_PUBLIC_SERVICE_ID || '';
+  const templateId = clientEnv.NEXT_PUBLIC_TEMPLATE_ID || '';
+  const userId = clientEnv.NEXT_PUBLIC_USER_ID || '';
 
   if (!initialized && userId) {
     try {

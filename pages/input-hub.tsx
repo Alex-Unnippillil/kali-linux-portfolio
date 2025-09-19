@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import { clientEnv } from '../lib/env.client';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -62,9 +63,9 @@ const InputHub = () => {
   }, [router.query]);
 
   useEffect(() => {
-    const userId = process.env.NEXT_PUBLIC_USER_ID;
-    const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID;
-    const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID;
+    const userId = clientEnv.NEXT_PUBLIC_USER_ID;
+    const serviceId = clientEnv.NEXT_PUBLIC_SERVICE_ID;
+    const templateId = clientEnv.NEXT_PUBLIC_TEMPLATE_ID;
     if (userId && serviceId && templateId) {
       try {
         emailjs.init(userId);
@@ -73,7 +74,7 @@ const InputHub = () => {
         setEmailjsReady(false);
       }
     }
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    const siteKey = clientEnv.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
     if (siteKey) {
       const script = document.createElement('script');
       script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
@@ -83,9 +84,9 @@ const InputHub = () => {
   }, []);
 
   useEffect(() => {
-    const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
-    const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+    const serviceId = clientEnv.NEXT_PUBLIC_SERVICE_ID as string;
+    const templateId = clientEnv.NEXT_PUBLIC_TEMPLATE_ID as string;
+    const siteKey = clientEnv.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
 
     const flushQueue = async () => {
       if (!emailjsReady || !navigator.onLine) return;
@@ -138,9 +139,9 @@ const InputHub = () => {
       setStatus('Email service unavailable');
       return;
     }
-    const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
-    const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+    const serviceId = clientEnv.NEXT_PUBLIC_SERVICE_ID as string;
+    const templateId = clientEnv.NEXT_PUBLIC_TEMPLATE_ID as string;
+    const siteKey = clientEnv.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     if (!navigator.onLine) {
       enqueueMessage({ name, email, subject, message, useCaptcha });
       setStatus('Message queued; will send when online.');
@@ -217,7 +218,7 @@ const InputHub = () => {
             type="checkbox"
             checked={useCaptcha}
             onChange={(e) => setUseCaptcha(e.target.checked)}
-            disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+            disabled={!clientEnv.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
           />
           <span>Use reCAPTCHA</span>
         </label>

@@ -1,6 +1,8 @@
+import { serverEnv } from './env.server';
+
 export function getServiceSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = serverEnv.SUPABASE_URL;
+  const key = serverEnv.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     console.warn(
       'Supabase service credentials missing; service functionality disabled',
@@ -27,8 +29,8 @@ export function getServiceSupabase() {
 }
 
 export function getAnonSupabaseServer() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY;
+  const url = serverEnv.SUPABASE_URL;
+  const key = serverEnv.SUPABASE_ANON_KEY;
   if (!url || !key) {
     console.warn(
       'Supabase anonymous credentials missing; related features disabled',

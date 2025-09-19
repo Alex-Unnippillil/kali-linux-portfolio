@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
+import { clientEnv } from '../../lib/env.client';
 
 export class Gedit extends Component {
 
@@ -29,7 +30,7 @@ export class Gedit extends Component {
     }
 
     componentDidMount() {
-        emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
+        emailjs.init(clientEnv.NEXT_PUBLIC_USER_ID);
         this.fetchLocation();
     }
 
@@ -110,8 +111,8 @@ export class Gedit extends Component {
             }, 500);
         }, 10000);
 
-        const serviceID = process.env.NEXT_PUBLIC_SERVICE_ID;
-        const templateID = process.env.NEXT_PUBLIC_TEMPLATE_ID;
+        const serviceID = clientEnv.NEXT_PUBLIC_SERVICE_ID;
+        const templateID = clientEnv.NEXT_PUBLIC_TEMPLATE_ID;
         const templateParams = {
             'name': name,
             'subject': subject,

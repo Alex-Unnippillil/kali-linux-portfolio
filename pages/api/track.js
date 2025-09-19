@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { serverEnv } from "../../lib/env.server";
 
 export default async function handler(
   req,
@@ -9,8 +10,8 @@ export default async function handler(
     return;
   }
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = serverEnv.SUPABASE_URL;
+  const key = serverEnv.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     res.status(500).json({ ok: false, code: "missing_supabase_env" });
     return;

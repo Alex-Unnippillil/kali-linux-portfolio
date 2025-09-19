@@ -1,9 +1,11 @@
 import { defineConfig } from '@playwright/test';
 
+import { serverEnv } from './lib/env.server';
+
 export default defineConfig({
   testDir: './tests',
   testMatch: /.*\.spec\.ts/,
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: serverEnv.BASE_URL || 'http://localhost:3000',
   },
 });

@@ -1,7 +1,8 @@
 import modules from '../../components/apps/mimikatz/modules.json';
+import { serverEnv } from '../../lib/env.server';
 
 export default async function handler(req, res) {
-  if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
+  if (serverEnv.FEATURE_TOOL_APIS !== 'enabled') {
     res.status(501).json({ error: 'Not implemented' });
     return;
   }

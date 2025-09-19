@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import { clientEnv } from '../../../lib/env.client';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -124,7 +125,7 @@ const HydraApp = () => {
     setAnnounce('Hydra resumed');
     announceRef.current = Date.now();
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      if (!staticExportEnabled) {
         const res = await fetch('/api/hydra', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -329,7 +330,7 @@ const HydraApp = () => {
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      if (!staticExportEnabled) {
         const res = await fetch('/api/hydra', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -396,7 +397,7 @@ const HydraApp = () => {
   const pauseHydra = async () => {
     setPaused(true);
     setAnnounce('Hydra paused');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (!staticExportEnabled) {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -408,7 +409,7 @@ const HydraApp = () => {
   const resumeHydra = async () => {
     setPaused(false);
     setAnnounce('Hydra resumed');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (!staticExportEnabled) {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -424,7 +425,7 @@ const HydraApp = () => {
     setOutput('');
     setTimeline([]);
     startRef.current = null;
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (!staticExportEnabled) {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -714,4 +715,6 @@ export default HydraApp;
 export const displayHydra = () => {
   return <HydraApp />;
 };
+
+const staticExportEnabled = clientEnv.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
