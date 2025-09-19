@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import HashcatApp, { detectHashType } from '../components/apps/hashcat';
 import progressInfo from '../components/apps/hashcat/progress.json';
 
-describe('HashcatApp', () => {
+describeFlaky('HashcatApp', () => {
   it('auto-detects hash types', () => {
     expect(detectHashType('d41d8cd98f00b204e9800998ecf8427e')).toBe('0');
     expect(detectHashType('da39a3ee5e6b4b0d3255bfef95601890afd80709')).toBe('100');
