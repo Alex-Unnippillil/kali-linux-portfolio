@@ -22,7 +22,10 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import SessionRestoreBanner from '../ui/SessionRestoreBanner';
+import { collectSessionSnapshot } from '../../utils/sessionStore';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useSession from '../../hooks/useSession';
 
 export class Desktop extends Component {
     constructor() {
@@ -52,7 +55,17 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            restorePrompt: false,
         }
+        this.sessionInterval = null;
+        this.sessionPersistenceStarted = false;
+        this.pendingSessionWindows = [];
+        this.windowSessionData = new Map();
+        this.isSavingSession = false;
+        this.pendingSessionSave = false;
+        this.pendingCloseSave = false;
+        this.initialSessionSaveTimeout = null;
+        this.skipPendingSaves = 0;
     }
 
     componentDidMount() {
@@ -60,26 +73,7 @@ export class Desktop extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         this.fetchAppsData(() => {
-            const session = this.props.session || {};
-            const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
-                });
-                this.setState({ favourite_apps });
-            }
-
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
-                });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about-alex');
-            }
+            this.initializeSession();
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -96,6 +90,148 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.stopSessionPersistence(true);
+    }
+
+    initializeSession = () => {
+        const session = this.props.session || {};
+
+        let favourite_apps = null;
+        if (Array.isArray(session.dock) && session.dock.length) {
+            favourite_apps = { ...this.state.favourite_apps };
+            session.dock.forEach(id => {
+                favourite_apps[id] = true;
+            });
+        }
+
+        const window_positions = { ...this.state.window_positions };
+        const minimized_windows = { ...this.state.minimized_windows };
+        this.windowSessionData = new Map();
+
+        const windows = Array.isArray(session.windows) ? session.windows : [];
+        windows.forEach(({ id, x, y, minimized, snapshot }) => {
+            if (!id) return;
+            window_positions[id] = {
+                x: typeof x === 'number' ? x : 60,
+                y: typeof y === 'number' ? y : 10,
+            };
+            if (typeof minimized === 'boolean') {
+                minimized_windows[id] = minimized;
+            }
+            if (snapshot !== undefined) {
+                this.windowSessionData.set(id, snapshot);
+            }
+        });
+
+        if (favourite_apps) {
+            this.setState({ favourite_apps });
+        }
+
+        const shouldPrompt = Boolean(session.pendingRestore && windows.length);
+        this.pendingSessionWindows = windows;
+
+        this.setState({
+            window_positions,
+            minimized_windows,
+            restorePrompt: shouldPrompt,
+        }, () => {
+            if (shouldPrompt) {
+                return;
+            }
+            if (windows.length) {
+                windows.forEach(this.openWindowFromSession);
+            } else {
+                this.openApp('about-alex');
+            }
+            this.startSessionPersistence();
+        });
+    }
+
+    openWindowFromSession = ({ id, minimized, snapshot }) => {
+        if (!id) return;
+        if (snapshot !== undefined) {
+            this.windowSessionData.set(id, snapshot);
+        }
+        this.openApp(id);
+        if (minimized) {
+            setTimeout(() => {
+                if (this.state.closed_windows[id] === false) {
+                    this.hasMinimised(id);
+                }
+            }, 250);
+        }
+    }
+
+    handleRestoreSession = () => {
+        const windows = this.pendingSessionWindows || [];
+        this.pendingSessionWindows = [];
+        if (typeof this.props.setSession === 'function') {
+            const session = this.props.session || {};
+            this.props.setSession({ ...session, pendingRestore: false, windows: session.windows || windows });
+        }
+        this.setState({ restorePrompt: false }, () => {
+            if (windows.length) {
+                windows.forEach(this.openWindowFromSession);
+            } else {
+                this.openApp('about-alex');
+            }
+            this.startSessionPersistence();
+        });
+    }
+
+    handleDismissSession = () => {
+        this.pendingSessionWindows = [];
+        this.windowSessionData.clear();
+        this.skipPendingSaves = 4;
+        if (typeof this.props.setSession === 'function') {
+            const session = this.props.session || {};
+            this.props.setSession({
+                ...session,
+                windows: [],
+                pendingRestore: false,
+                lastUpdated: Date.now(),
+            });
+        }
+        this.setState({ restorePrompt: false }, () => {
+            this.openApp('about-alex');
+            this.startSessionPersistence();
+        });
+    }
+
+    startSessionPersistence = () => {
+        if (this.sessionPersistenceStarted) return;
+        this.sessionPersistenceStarted = true;
+        this.initialSessionSaveTimeout = window.setTimeout(() => {
+            this.initialSessionSaveTimeout = null;
+            this.saveSession();
+        }, 300);
+        this.sessionInterval = window.setInterval(() => this.saveSession(), 15000);
+        window.addEventListener('beforeunload', this.handleBeforeUnload);
+        window.addEventListener('pagehide', this.handleBeforeUnload);
+    }
+
+    stopSessionPersistence = (closing = false) => {
+        if (this.sessionInterval) {
+            clearInterval(this.sessionInterval);
+            this.sessionInterval = null;
+        }
+        if (this.initialSessionSaveTimeout) {
+            clearTimeout(this.initialSessionSaveTimeout);
+            this.initialSessionSaveTimeout = null;
+        }
+        if (this.sessionPersistenceStarted) {
+            window.removeEventListener('beforeunload', this.handleBeforeUnload);
+            window.removeEventListener('pagehide', this.handleBeforeUnload);
+            this.sessionPersistenceStarted = false;
+        }
+        this.skipPendingSaves = 0;
+        if (closing) {
+            this.saveSession(true);
+        }
+    }
+
+    handleBeforeUnload = () => {
+        this.saveSession(true);
     }
 
     checkForNewFolders = () => {
@@ -460,6 +596,9 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const sessionState = this.windowSessionData.has(app.id)
+                    ? this.windowSessionData.get(app.id)
+                    : undefined;
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -480,6 +619,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    sessionState,
                 }
 
                 windowsJsx.push(
@@ -494,21 +634,89 @@ export class Desktop extends Component {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
+        const nextX = snap(x);
+        const nextY = snap(y);
+        const current = this.state.window_positions[id];
+        if (current && current.x === nextX && current.y === nextY) {
+            return;
+        }
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
+            window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), this.saveSession);
     }
 
-    saveSession = () => {
+    saveSession = (closing = false) => {
         if (!this.props.setSession) return;
+        if (this.state.restorePrompt && this.pendingSessionWindows.length) return;
+        if (!closing && !this.sessionPersistenceStarted) return;
+        if (!closing && this.skipPendingSaves > 0) {
+            this.skipPendingSaves -= 1;
+            return;
+        }
+        if (this.isSavingSession) {
+            if (closing) {
+                this.pendingCloseSave = true;
+            } else {
+                this.pendingSessionSave = true;
+            }
+            return;
+        }
+
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        this.isSavingSession = true;
+        const windows = openWindows.map(id => {
+            const pos = this.state.window_positions[id] || { x: 60, y: 10 };
+            const minimized = !!this.state.minimized_windows[id];
+            const existing = this.windowSessionData.get(id);
+            let snapshot;
+            try {
+                snapshot = collectSessionSnapshot(id);
+            } catch {
+                snapshot = existing;
+            }
+            if (snapshot === undefined) {
+                snapshot = existing;
+            }
+            if (snapshot === undefined) {
+                this.windowSessionData.delete(id);
+            } else {
+                this.windowSessionData.set(id, snapshot);
+            }
+            return {
+                id,
+                x: pos.x,
+                y: pos.y,
+                minimized,
+                snapshot: snapshot === undefined ? undefined : snapshot,
+            };
+        });
+
+        const activeIds = new Set(openWindows);
+        Array.from(this.windowSessionData.keys()).forEach(id => {
+            if (!activeIds.has(id)) {
+                this.windowSessionData.delete(id);
+            }
+        });
+
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+        const session = this.props.session || {};
+        try {
+            this.props.setSession({
+                ...session,
+                windows,
+                dock,
+                pendingRestore: closing ? false : windows.length > 0,
+                lastUpdated: Date.now(),
+            });
+        } finally {
+            this.isSavingSession = false;
+            if (this.pendingCloseSave || this.pendingSessionSave) {
+                const shouldClose = this.pendingCloseSave;
+                this.pendingCloseSave = false;
+                this.pendingSessionSave = false;
+                this.saveSession(shouldClose);
+            }
+        }
     }
 
     hideSideBar = (objId, hide) => {
@@ -837,10 +1045,18 @@ export class Desktop extends Component {
 
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
-                <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
+                <label className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
-                </div>
+                    <input
+                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        aria-label="New folder name"
+                    />
+                </label>
                 <div className="flex">
                     <button
                         type="button"
@@ -866,6 +1082,16 @@ export class Desktop extends Component {
     render() {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+
+                {this.state.restorePrompt && this.pendingSessionWindows.length ? (
+                    <div className="absolute top-2 left-1/2 z-40 w-full max-w-3xl px-4 transform -translate-x-1/2">
+                        <SessionRestoreBanner
+                            updatedAt={this.props.session ? this.props.session.lastUpdated : undefined}
+                            onRestore={this.handleRestoreSession}
+                            onDismiss={this.handleDismissSession}
+                        />
+                    </div>
+                ) : null}
 
                 {/* Window Area */}
                 <div
@@ -974,5 +1200,14 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { session, setSession, resetSession } = useSession();
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            session={session}
+            setSession={setSession}
+            clearSession={resetSession}
+        />
+    );
 }
