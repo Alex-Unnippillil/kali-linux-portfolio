@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { getDb } from '../../utils/safeIDB';
+import { getDb } from '@/utils';
 
 interface ClipItem {
   id?: number;

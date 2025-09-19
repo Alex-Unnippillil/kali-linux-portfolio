@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { importSpriteStrip } from '../utils/spriteStrip';
+import { importSpriteStrip } from '@/utils';
 
 interface SpriteStripPreviewProps {
   /** path to the sprite strip image */

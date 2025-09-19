@@ -3,7 +3,7 @@ import {
   updateScore,
   canUseTilt,
   CURVE_PRESETS,
-} from '../components/apps/lane-runner';
+} from '@/components/apps/lane-runner';
 
 describe('lane runner', () => {
   test('collision ends run', () => {

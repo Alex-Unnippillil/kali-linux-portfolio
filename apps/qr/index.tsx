@@ -9,7 +9,7 @@ import {
   loadLastScan,
   saveLastGeneration,
   saveLastScan,
-} from '../../utils/qrStorage';
+} from '@/utils';
 
 export default function QR() {
   const canvasRef = useRef<HTMLCanvasElement>(null);

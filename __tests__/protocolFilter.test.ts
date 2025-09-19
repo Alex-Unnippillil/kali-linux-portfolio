@@ -1,4 +1,4 @@
-import { filterLogsByProtocol, countProtocols } from '../utils/protocolFilter';
+import { filterLogsByProtocol, countProtocols } from '@/utils';
 
 describe('filterLogsByProtocol', () => {
   const logs = [

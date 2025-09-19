@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
 import Tabs from '../../components/Tabs';
 import FormError from '../../components/ui/FormError';
-import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
+import { clearScans, loadScans, saveScans } from '@/utils';
 
 const tabs = [
   { id: 'text', label: 'Text' },

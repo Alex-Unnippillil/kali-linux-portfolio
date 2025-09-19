@@ -11,7 +11,7 @@ import {
   findHint,
   autoFillLines,
 } from "./nonogramUtils";
-import { getDailyPuzzle } from "../../utils/dailyPuzzle";
+import { getDailyPuzzle } from "@/utils";
 
 // visual settings
 const CELL_SIZE = 30;

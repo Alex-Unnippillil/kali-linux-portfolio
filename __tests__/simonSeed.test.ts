@@ -1,4 +1,4 @@
-import { generateSequence } from '../components/apps/simon';
+import { generateSequence } from '@/components/apps/simon';
 
 describe('generateSequence', () => {
   test('uses seed for deterministic sequences', () => {

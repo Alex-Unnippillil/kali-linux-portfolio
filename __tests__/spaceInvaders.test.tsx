@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import SpaceInvaders from '../components/apps/space-invaders';
+import SpaceInvaders from '@/components/apps/space-invaders';
 
 jest.mock('../hooks/useAssetLoader', () => jest.fn(() => ({ loading: false, error: null })));
 

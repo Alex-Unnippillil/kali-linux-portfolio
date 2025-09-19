@@ -1,4 +1,4 @@
-import { createRng } from '../components/apps/breakout';
+import { createRng } from '@/components/apps/breakout';
 
 describe('breakout rng', () => {
   test('seed produces deterministic sequence', () => {

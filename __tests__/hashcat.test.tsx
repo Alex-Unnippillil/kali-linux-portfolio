@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
-import HashcatApp, { detectHashType } from '../components/apps/hashcat';
-import progressInfo from '../components/apps/hashcat/progress.json';
+import HashcatApp, { detectHashType } from '@/components/apps/hashcat';
+import progressInfo from '@/components/apps/hashcat/progress.json';
 
 describe('HashcatApp', () => {
   it('auto-detects hash types', () => {

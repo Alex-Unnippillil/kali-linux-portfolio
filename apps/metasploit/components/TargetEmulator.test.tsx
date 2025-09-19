@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TargetEmulator from './TargetEmulator';
-import modules from '../../../components/apps/metasploit/modules.json';
+import modules from '@/components/apps/metasploit/modules.json';
 
 describe('TargetEmulator', () => {
   beforeEach(() => {

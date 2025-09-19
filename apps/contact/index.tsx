@@ -3,10 +3,8 @@
 import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
-import { processContactForm } from "../../components/apps/contact";
-import { contactSchema } from "../../utils/contactSchema";
-import { copyToClipboard } from "../../utils/clipboard";
-import { openMailto } from "../../utils/mailto";
+import { processContactForm } from "@/components/apps/contact";
+import { contactSchema, copyToClipboard, openMailto } from "@/utils";
 import { trackEvent } from "@/lib/analytics-client";
 
 const DRAFT_KEY = "contact-draft";

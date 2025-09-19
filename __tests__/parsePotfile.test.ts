@@ -1,4 +1,4 @@
-import { parsePotfile } from '../components/apps/john/utils';
+import { parsePotfile } from '@/components/apps/john/utils';
 
 describe('parsePotfile', () => {
   it('parses lines into hash/password pairs', () => {

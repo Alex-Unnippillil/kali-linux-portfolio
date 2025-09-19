@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import copyToClipboard from '../../../utils/clipboard';
+import { copyToClipboard } from '@/utils';
 
 function extractVideoId(input: string): string {
   try {

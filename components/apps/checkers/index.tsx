@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
-import { pointerHandlers } from '../../../utils/pointer';
+import { pointerHandlers } from '@/utils';
 import {
   createBoard,
   getPieceMoves,

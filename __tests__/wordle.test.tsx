@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { getWordOfTheDay, buildResultMosaic } from '../utils/wordle';
+import { getWordOfTheDay, buildResultMosaic } from '@/utils';
 import type { ComponentType } from 'react';
 
 let Wordle: ComponentType;
@@ -12,7 +12,7 @@ describe('Wordle', () => {
       clipboard: { writeText: jest.fn() },
     });
     localStorage.clear();
-    Wordle = require('../components/apps/wordle').default;
+    Wordle = require('@/components/apps/wordle').default;
   });
   afterEach(() => {
     jest.clearAllTimers();

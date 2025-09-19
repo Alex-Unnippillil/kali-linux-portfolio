@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Certs from '../components/apps/certs';
+import Certs from '@/components/apps/certs';
 
 // Next.js Image component needs to be mocked for tests
 jest.mock('next/image', () => {

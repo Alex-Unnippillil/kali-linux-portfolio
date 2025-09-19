@@ -5,7 +5,7 @@ import {
   SIZE,
   computeLegalMoves,
   applyMove,
-} from "../../../components/apps/reversiLogic";
+} from "@/components/apps/reversiLogic";
 
 // basic board type definition
 export type Cell = "B" | "W" | null;

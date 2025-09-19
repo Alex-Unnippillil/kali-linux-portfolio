@@ -1,4 +1,4 @@
-import { computeBallSpin } from '../../utils/physics';
+import { computeBallSpin } from '@/utils';
 
 export interface SpinResult {
   spin: number;

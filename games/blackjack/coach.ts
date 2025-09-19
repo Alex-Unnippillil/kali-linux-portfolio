@@ -1,4 +1,4 @@
-import { basicStrategy, cardValue } from '../../components/apps/blackjack/engine';
+import { basicStrategy, cardValue } from '@/components/apps/blackjack/engine';
 
 export interface Card {
   suit: string;

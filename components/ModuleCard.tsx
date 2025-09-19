@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { ModuleMetadata } from '../modules/metadata';
+import { ModuleMetadata } from '@/modules';
 
 interface ModuleCardProps {
   module: ModuleMetadata;

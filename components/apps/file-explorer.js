@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
-import { getDb } from '../../utils/safeIDB';
+import { getDb } from '@/utils';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
 export async function openFileDialog(options = {}) {

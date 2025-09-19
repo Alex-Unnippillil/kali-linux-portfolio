@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
-import OpenVASApp from '../components/apps/openvas';
+import OpenVASApp from '@/components/apps/openvas';
 
 describe('OpenVASApp', () => {
   beforeEach(() => {

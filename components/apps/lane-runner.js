@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
-import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
+import { exportGameSettings, importGameSettings } from '@/utils';
 
 const WIDTH = 300;
 const HEIGHT = 500;

@@ -6,7 +6,7 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
-import { safeLocalStorage } from '../utils/safeStorage';
+import { safeLocalStorage } from '@/utils';
 
 export default class Ubuntu extends Component {
 	constructor() {

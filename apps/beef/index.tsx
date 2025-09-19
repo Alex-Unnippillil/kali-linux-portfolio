@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import BeefApp from '../../components/apps/beef';
+import BeefApp from '@/components/apps/beef';
 
 type Severity = 'Low' | 'Medium' | 'High';
 

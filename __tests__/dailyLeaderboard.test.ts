@@ -3,7 +3,7 @@ import {
   recordCompletion,
   getLeaderboard,
   hasCompleted,
-} from '../utils/dailyChallenge';
+} from '@/utils';
 
 describe('daily challenge and leaderboard', () => {
   beforeEach(() => {

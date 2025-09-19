@@ -6,7 +6,7 @@ import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
-import { getCspNonce } from '../../../utils/csp';
+import { getCspNonce } from '@/utils';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 

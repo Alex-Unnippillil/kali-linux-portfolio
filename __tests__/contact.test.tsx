@@ -1,4 +1,4 @@
-import { processContactForm } from '../components/apps/contact';
+import { processContactForm } from '@/components/apps/contact';
 
 describe('contact form', () => {
   it('invalid email blocked', async () => {

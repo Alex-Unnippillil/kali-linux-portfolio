@@ -7,7 +7,7 @@ jest.mock('react-draggable', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
+jest.mock('@/components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {

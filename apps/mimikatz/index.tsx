@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import MimikatzApp from '../../components/apps/mimikatz';
+import MimikatzApp from '@/components/apps/mimikatz';
 import ExposureExplainer from './components/ExposureExplainer';
 
 const disclaimerUrl = 'https://www.kali.org/docs/policy/disclaimer/';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Radare2 from '../components/apps/radare2';
+import Radare2 from '@/components/apps/radare2';
 import sample from '../apps/radare2/sample.json';
 
 describe('Radare2 tutorial', () => {

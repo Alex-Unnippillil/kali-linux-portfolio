@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getUnlockedThemes } from '../utils/theme';
+import { getUnlockedThemes } from '@/utils';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
 
 interface Props {

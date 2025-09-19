@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, act } from '@testing-library/react';
-import HydraApp from '../components/apps/hydra';
+import HydraApp from '@/components/apps/hydra';
 
 describe('Hydra wordlists', () => {
   beforeEach(() => {

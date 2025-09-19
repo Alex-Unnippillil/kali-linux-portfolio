@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
-import Stepper from '../components/apps/hydra/Stepper';
+import Stepper from '@/components/apps/hydra/Stepper';
 
 describe('Hydra Stepper', () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import GameLoop from '../components/apps/Games/common/loop/GameLoop';
+import GameLoop from '@/components/apps/Games/common/loop/GameLoop';
 
 let rafCb: FrameRequestCallback;
 

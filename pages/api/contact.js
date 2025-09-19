@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { contactSchema } from '../../utils/contactSchema';
+import { contactSchema } from '@/utils';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
 

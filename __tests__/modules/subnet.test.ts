@@ -4,7 +4,7 @@ import {
   getHostRange,
   getNetworkAddress,
   getUsableHostCount,
-} from '../../modules/networking/subnet';
+} from '@/modules';
 
 describe('modules/networking/subnet', () => {
   it('derives network and broadcast addresses for typical prefixes', () => {

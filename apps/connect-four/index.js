@@ -1,1 +1,1 @@
-export { default } from '../../components/apps/connect-four';
+export { default } from '@/components/apps/connect-four';

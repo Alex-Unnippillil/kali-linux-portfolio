@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import copyToClipboard from '../../../utils/clipboard';
+import { copyToClipboard } from '@/utils';
 
 interface Artifact {
   name: string;

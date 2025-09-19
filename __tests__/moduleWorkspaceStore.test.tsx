@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ModuleWorkspace from '../pages/module-workspace';
-import { getValue, clearStore } from '../utils/moduleStore';
+import { getValue, clearStore } from '@/utils';
 
 describe('ModuleWorkspace key-value store', () => {
   afterEach(() => clearStore());

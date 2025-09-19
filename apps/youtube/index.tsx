@@ -1,6 +1,6 @@
 'use client';
 
-import YouTubeApp from '../../components/apps/youtube';
+import YouTubeApp from '@/components/apps/youtube';
 
 export default function YouTubePage() {
   return (

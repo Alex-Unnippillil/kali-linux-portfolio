@@ -4,7 +4,7 @@ import React, { useState, useCallback, ReactNode, useRef } from 'react';
 import useOrientationGuard from '../../hooks/useOrientationGuard';
 import useGameInput from '../../hooks/useGameInput';
 import usePersistentState from '../../hooks/usePersistentState';
-import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
+import { exportGameSettings, importGameSettings } from '@/utils';
 
 interface GameShellProps {
   game: string;

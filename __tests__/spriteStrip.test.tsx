@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { act } from 'react';
 import SpriteStripPreview from '../components/SpriteStripPreview';
-import { importSpriteStrip, clearSpriteStripCache } from '../utils/spriteStrip';
+import { importSpriteStrip, clearSpriteStripCache } from '@/utils';
 
 jest.useFakeTimers();
 

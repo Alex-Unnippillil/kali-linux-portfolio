@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { pollTwinStick, TwinStickState } from '../utils/gamepad';
+import { pollTwinStick, TwinStickState } from '@/utils';
 
 export default function useGamepad(deadzone: number = 0.25): TwinStickState {
   const [state, setState] = useState<TwinStickState>(() => pollTwinStick(deadzone));

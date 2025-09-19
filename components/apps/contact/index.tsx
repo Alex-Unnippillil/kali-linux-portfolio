@@ -2,9 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import FormError from '../../ui/FormError';
-import { copyToClipboard } from '../../../utils/clipboard';
-import { openMailto } from '../../../utils/mailto';
-import { contactSchema } from '../../../utils/contactSchema';
+import { copyToClipboard, openMailto, contactSchema } from '@/utils';
 import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';

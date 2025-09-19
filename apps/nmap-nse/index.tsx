@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import share, { canShare } from '../../utils/share';
+import { share, canShare } from '@/utils';
 
 interface Script {
   name: string;

@@ -6,7 +6,7 @@ import {
   getAllMoves,
   applyMove,
   evaluateBoard,
-} from '../../components/apps/checkers/engine';
+} from '@/components/apps/checkers/engine';
 
 export const getSelectableMoves = (
   board: Board,

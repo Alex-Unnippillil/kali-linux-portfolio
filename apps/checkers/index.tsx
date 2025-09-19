@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { pointerHandlers } from '../../utils/pointer';
+import { pointerHandlers } from '@/utils';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
   Board,
@@ -11,7 +11,7 @@ import {
   applyMove,
   hasMoves,
   isDraw,
-} from '../../components/apps/checkers/engine';
+} from '@/components/apps/checkers/engine';
 import { getSelectableMoves } from '../../games/checkers/logic';
 
 // Helper to get all moves without enforcing capture

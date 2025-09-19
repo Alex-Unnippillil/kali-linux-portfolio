@@ -7,7 +7,7 @@ import DecodeTree from './DecodeTree';
 import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
-import { parsePcap } from '../../../utils/pcap';
+import { parsePcap } from '@/utils';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>

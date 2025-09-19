@@ -1,4 +1,4 @@
-import { formatBytes, formatDuration } from '../../components/apps/converter/format';
+import { formatBytes, formatDuration } from '@/components/apps/converter/format';
 
 describe('formatBytes', () => {
   it('handles bytes to KB', () => {

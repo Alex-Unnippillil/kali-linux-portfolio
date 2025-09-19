@@ -1,4 +1,4 @@
-import { pointerHandlers } from '../utils/pointer';
+import { pointerHandlers } from '@/utils';
 
 describe('pointerHandlers', () => {
   it('calls handler on click', () => {

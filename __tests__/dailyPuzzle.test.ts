@@ -1,4 +1,4 @@
-import { getDailyPuzzle } from "../utils/dailyPuzzle";
+import { getDailyPuzzle } from "@/utils";
 
 describe("getDailyPuzzle", () => {
   const puzzles = ["A", "B", "C"];

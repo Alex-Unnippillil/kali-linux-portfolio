@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Beef from '../components/apps/beef';
+import Beef from '@/components/apps/beef';
 
 describe('BeEF app', () => {
   test('advances through lab steps to payload builder', () => {

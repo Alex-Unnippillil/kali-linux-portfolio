@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import capture from '../../../components/apps/kismet/sampleCapture.json';
+import capture from '@/components/apps/kismet/sampleCapture.json';
 
 interface Frame {
   seq: number;

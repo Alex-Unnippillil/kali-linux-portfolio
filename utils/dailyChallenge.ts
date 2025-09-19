@@ -2,7 +2,7 @@ import {
   LeaderboardEntry,
   getLeaderboard,
   recordScore as baseRecordScore,
-} from '../components/apps/Games/common/leaderboard';
+} from '@/components/apps/Games/common/leaderboard';
 import { broadcastLeaderboard } from './sync';
 
 const SEED_PREFIX = 'dailySeed:';

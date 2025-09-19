@@ -1,4 +1,4 @@
-import { getNextRunTimes } from '../utils/cron';
+import { getNextRunTimes } from '@/utils';
 
 describe('getNextRunTimes', () => {
   it('calculates upcoming times for cron expression', () => {

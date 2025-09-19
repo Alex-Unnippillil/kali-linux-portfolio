@@ -1,0 +1,12 @@
+export { displayX } from './x';
+export { displaySpotify } from './spotify';
+export { displaySettings } from './settings';
+export { displayChrome } from './chrome';
+export { displayGedit } from './gedit';
+export { displayTodoist } from './todoist';
+export { displayWeather } from './weather';
+export { displayClipboardManager } from './ClipboardManager';
+export { displayFiglet } from './figlet';
+export { displayResourceMonitor } from './resource_monitor';
+export { displayScreenRecorder } from './screen-recorder';
+export { displayNikto } from './nikto';

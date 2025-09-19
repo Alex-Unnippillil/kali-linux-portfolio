@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import Autopsy from '../components/apps/autopsy';
+import Autopsy from '@/components/apps/autopsy';
 
 describe('Autopsy plugins and timeline', () => {
   beforeEach(() => {

@@ -12,7 +12,7 @@ import {
   logGameStart,
   logGameEnd,
   logGameError,
-} from '../../utils/analytics';
+} from '@/utils';
 import { DICTIONARIES } from '../../apps/hangman/engine';
 import { getGuessPool } from '../../apps/games/hangman/logic';
 

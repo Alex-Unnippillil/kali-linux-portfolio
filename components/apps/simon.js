@@ -8,7 +8,7 @@ import {
   getAudioContext,
   playColorTone,
   createToneSchedule,
-} from "../../utils/audio";
+} from "@/utils";
 
 const padStyles = [
   {

@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { HostRange } from '../../modules/networking/subnet';
-import { calculateSubnetInfo } from '../../modules/networking/subnet';
+import type { HostRange } from '@/modules';
+import { calculateSubnetInfo } from '@/modules';
 
 const formatHostRange = (range: HostRange) => {
   if (!range.firstHost || !range.lastHost) {

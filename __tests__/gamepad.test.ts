@@ -1,4 +1,4 @@
-import type { TwinStickState } from '../utils/gamepad';
+import type { TwinStickState } from '@/utils';
 
 let gamepad: any;
 let pollTwinStick: (deadzone?: number) => TwinStickState;
@@ -12,7 +12,7 @@ beforeEach(() => {
     return 1;
   };
   global.cancelAnimationFrame = jest.fn();
-  ({ gamepad, pollTwinStick } = require('../utils/gamepad'));
+  ({ gamepad, pollTwinStick } = require('@/utils'));
   (navigator as any).getGamepads = jest.fn(() => []);
 });
 

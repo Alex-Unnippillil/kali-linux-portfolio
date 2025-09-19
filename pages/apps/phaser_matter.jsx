@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-import { getDailySeed } from '../../utils/dailySeed';
+import { getDailySeed } from '@/utils';
 
 const PhaserMatter = dynamic(() => import('../../apps/phaser_matter'), {
   ssr: false,

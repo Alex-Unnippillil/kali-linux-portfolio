@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
-import { getDailySeed } from '../../utils/dailySeed';
+import { getDailySeed } from '@/utils';
 
 const SIZE = 4;
 

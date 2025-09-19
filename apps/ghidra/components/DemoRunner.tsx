@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import GhidraApp from '../../../components/apps/ghidra';
+import GhidraApp from '@/components/apps/ghidra';
 
 export default function DemoRunner() {
   const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;

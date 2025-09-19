@@ -9,7 +9,7 @@ import {
   SavedProfile,
   ServiceData,
   CharacteristicData,
-} from '../../utils/bleProfiles';
+} from '@/utils';
 
 type BluetoothDevice = any;
 type BluetoothRemoteGATTServer = any;

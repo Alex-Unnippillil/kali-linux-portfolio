@@ -8,12 +8,11 @@ import {
   dictionaries,
   buildResultMosaic,
   type DictName,
-
-} from "../../utils/wordle";
+  share,
+} from "@/utils";
 import type { GuessEntry, LetterResult } from "./logic";
 import { evaluateGuess, hardModeViolation } from "./logic";
 import Keyboard from "./components/Keyboard";
-import share from "../../utils/share";
 
 const WordleGame = () => {
   const [hardMode, setHardMode] = usePersistentState<boolean>(

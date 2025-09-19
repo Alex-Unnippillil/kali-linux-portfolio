@@ -3,7 +3,7 @@ import {
   getWordOfTheDay,
   buildResultMosaic,
   dictionaries as wordleDictionaries,
-} from '../../utils/wordle';
+} from '@/utils';
 
 // Determine today's puzzle key for local storage
 const todayKey = new Date().toISOString().split('T')[0];

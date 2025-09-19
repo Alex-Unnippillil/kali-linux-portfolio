@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import data from '../components/apps/nessus/sample-report.json';
+import data from '@/components/apps/nessus/sample-report.json';
 
 const severityColors: Record<string, string> = {
   Critical: '#991b1b',

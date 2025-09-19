@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import AboutApp from '../components/apps/About';
+import AboutApp from '@/components/apps/About';
 
 describe('AboutApp accessibility', () => {
   it('supports roving tabindex for navigation tabs', async () => {
