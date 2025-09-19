@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useId } from 'react';
 import Head from 'next/head';
+import Overlay from './ui/Overlay';
 
 const ALLOWLIST = ['https://vscode.dev', 'https://stackblitz.com'];
 
@@ -19,6 +20,8 @@ const isAllowed = (src) => {
 export default function ExternalFrame({ src, title, prefetch = false, onLoad: onLoadProp, ...props }) {
   const [cookiesBlocked, setCookiesBlocked] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const instructionsTitleId = useId();
+  const instructionsDescriptionId = useId();
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -79,12 +82,31 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
             </div>
           )}
         </div>
-        {showDialog && (
-          <dialog open>
-            <p>Enable third-party cookies in your browser settings to use this app.</p>
-            <button onClick={() => setShowDialog(false)}>Close</button>
-          </dialog>
-        )}
+        <Overlay
+          open={showDialog}
+          onOpenChange={setShowDialog}
+          labelledBy={instructionsTitleId}
+          describedBy={instructionsDescriptionId}
+          className="mx-4 max-w-sm rounded bg-gray-900 p-4 text-white shadow-lg"
+        >
+          <div className="space-y-3">
+            <h2 id={instructionsTitleId} className="text-base font-semibold">
+              Enable third-party cookies
+            </h2>
+            <p id={instructionsDescriptionId} className="text-sm text-gray-200">
+              Enable third-party cookies in your browser settings to use this app.
+            </p>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDialog(false)}
+                className="rounded bg-gray-700 px-3 py-1 text-sm font-medium hover:bg-gray-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Overlay>
       </div>
     </>
   );

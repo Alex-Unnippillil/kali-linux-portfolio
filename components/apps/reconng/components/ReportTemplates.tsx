@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useId } from 'react';
 import usePersistentState from '../../../../hooks/usePersistentState';
 import defaultTemplates from '../../../../templates/export/report-templates.json';
+import Overlay from '../../../ui/Overlay';
 
 interface Finding {
   title: string;
@@ -66,6 +67,8 @@ export default function ReportTemplates() {
   };
 
   const [showDialog, setShowDialog] = useState(false);
+  const shareTitleId = useId();
+  const shareDescriptionId = useId();
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -127,34 +130,58 @@ export default function ReportTemplates() {
       <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap text-sm">
         {report}
       </pre>
-      {showDialog && (
-        <dialog open className="p-4 bg-gray-800 text-white rounded max-w-md">
-          <p className="mb-2">Import templates (JSON)</p>
-          <input type="file" accept="application/json" onChange={handleImport} />
-          <p className="mt-4 mb-2">Share templates</p>
-          <textarea
-            readOnly
-            value={shareJson}
-            className="w-full h-40 p-1 text-black"
-          />
-          <div className="flex gap-2 mt-2">
+      <Overlay
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        labelledBy={shareTitleId}
+        describedBy={shareDescriptionId}
+        className="mx-4 w-full max-w-md rounded bg-gray-900 p-4 text-white shadow-xl"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 id={shareTitleId} className="text-lg font-semibold">
+              Import or share templates
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowDialog(false)}
+              className="rounded bg-gray-700 px-2 py-1 text-sm hover:bg-gray-600"
+            >
+              Close
+            </button>
+          </div>
+          <div className="space-y-2" id={shareDescriptionId}>
+            <div className="space-y-1">
+              <p className="text-sm">Import templates (JSON)</p>
+              <input type="file" accept="application/json" onChange={handleImport} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm">Share templates</p>
+              <textarea
+                readOnly
+                value={shareJson}
+                className="h-40 w-full rounded border border-gray-700 bg-gray-800 p-2 text-sm text-white"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={copyShare}
-              className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded"
+              className="rounded bg-blue-600 px-3 py-1 text-sm font-medium hover:bg-blue-500"
             >
               Copy
             </button>
             <button
               type="button"
               onClick={() => setShowDialog(false)}
-              className="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
+              className="rounded bg-gray-700 px-3 py-1 text-sm hover:bg-gray-600"
             >
-              Close
+              Done
             </button>
           </div>
-        </dialog>
-      )}
+        </div>
+      </Overlay>
     </div>
   );
 }
