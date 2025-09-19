@@ -22,6 +22,14 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+    DEFAULT_DISPLAY_ID,
+    getDisplayId,
+    loadWindowLayouts,
+    mergeLayout,
+    saveWindowLayouts,
+    layoutsEqual,
+} from '../../utils/windowLayoutPersistence';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -30,6 +38,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.displayId = DEFAULT_DISPLAY_ID;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -59,9 +68,11 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        this.displayId = getDisplayId();
+        const storedLayouts = loadWindowLayouts(this.displayId);
         this.fetchAppsData(() => {
             const session = this.props.session || {};
-            const positions = {};
+            const positions = { ...storedLayouts };
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -72,13 +83,17 @@ export class Desktop extends Component {
 
             if (session.windows && session.windows.length) {
                 session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                    positions[id] = mergeLayout(positions[id], { x, y });
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
-                this.openApp('about-alex');
+                this.setState({ window_positions: positions }, () => {
+                    if (!Object.keys(positions).length) {
+                        this.openApp('about-alex');
+                    }
+                });
             }
         });
         this.setContextListeners();
@@ -478,7 +493,9 @@ export class Desktop extends Component {
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
+                    initialLayout: pos,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onLayoutChange: (layout) => this.handleWindowLayoutChange(app.id, layout),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -494,9 +511,29 @@ export class Desktop extends Component {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
-        this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+        this.handleWindowLayoutChange(id, { x: snap(x), y: snap(y) });
+    }
+
+    handleWindowLayoutChange = (id, layout) => {
+        this.setState(prev => {
+            const nextLayout = mergeLayout(prev.window_positions[id], layout);
+            if (layoutsEqual(prev.window_positions[id], nextLayout)) {
+                return null;
+            }
+            return {
+                window_positions: { ...prev.window_positions, [id]: nextLayout }
+            };
+        }, () => {
+            this.persistWindowLayouts();
+            this.saveSession();
+        });
+    }
+
+    persistWindowLayouts = () => {
+        if (this.displayId === DEFAULT_DISPLAY_ID && typeof window !== 'undefined') {
+            this.displayId = getDisplayId();
+        }
+        saveWindowLayouts(this.displayId, this.state.window_positions);
     }
 
     saveSession = () => {

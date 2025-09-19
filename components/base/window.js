@@ -12,31 +12,45 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
+        const initialLayout = props.initialLayout || {};
+        this._initialLayout = initialLayout;
+        this._hasInitialLayoutDimensions =
+            initialLayout.widthPct !== undefined || initialLayout.heightPct !== undefined;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        const defaultStartX = isPortrait ? window.innerWidth * 0.05 : 60;
         this.startX =
+            initialLayout.x ??
             props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? 10;
+            defaultStartX;
+        this.startY = initialLayout.y ?? props.initialY ?? 10;
+        const defaultWidth = props.defaultWidth || (isPortrait ? 90 : 60);
+        const defaultHeight = props.defaultHeight || 85;
+        const hasLastSize =
+            typeof initialLayout.lastWidthPct === 'number' &&
+            typeof initialLayout.lastHeightPct === 'number';
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: initialLayout.widthPct ?? defaultWidth,
+            height: initialLayout.heightPct ?? defaultHeight,
             closed: false,
-            maximized: false,
+            maximized: initialLayout.maximized ?? false,
             parentSize: {
                 height: 100,
                 width: 100
             },
             snapPreview: null,
             snapPosition: null,
-            snapped: null,
-            lastSize: null,
+            snapped: initialLayout.snapped ?? null,
+            lastSize: hasLastSize
+                ? { width: initialLayout.lastWidthPct, height: initialLayout.lastHeightPct }
+                : null,
             grabbed: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._layoutFrame = null;
     }
 
     componentDidMount() {
@@ -56,6 +70,14 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (typeof window !== 'undefined') {
+            this._layoutFrame = window.requestAnimationFrame(() => {
+                this.applyInitialLayoutTransform();
+                this.setWinowsPosition();
+            });
+        } else {
+            this.setWinowsPosition();
+        }
     }
 
     componentWillUnmount() {
@@ -69,9 +91,84 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._layoutFrame !== null && typeof window !== 'undefined') {
+            window.cancelAnimationFrame(this._layoutFrame);
+            this._layoutFrame = null;
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevState.width !== this.state.width ||
+            prevState.height !== this.state.height ||
+            prevState.snapped !== this.state.snapped ||
+            prevState.maximized !== this.state.maximized ||
+            (prevState.lastSize?.width ?? null) !== (this.state.lastSize?.width ?? null) ||
+            (prevState.lastSize?.height ?? null) !== (this.state.lastSize?.height ?? null)
+        ) {
+            this.notifyLayoutChange();
+        }
+    }
+
+    applyInitialLayoutTransform = () => {
+        if (!this._initialLayout) return;
+        const { snapped, maximized } = this._initialLayout;
+        const node = typeof document !== 'undefined' ? document.getElementById(this.id) : null;
+        if (!node) return;
+        if (maximized) {
+            node.style.transform = 'translate(-1pt,-2pt)';
+            return;
+        }
+        if (snapped === 'left' || snapped === 'top') {
+            node.style.transform = 'translate(-1pt,-2pt)';
+        } else if (snapped === 'right' && typeof window !== 'undefined') {
+            node.style.transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        }
+    }
+
+    buildLayoutSnapshot = (overrides = {}) => {
+        const layout = {
+            x: typeof overrides.x === 'number' ? overrides.x : this.startX,
+            y: typeof overrides.y === 'number' ? overrides.y : this.startY,
+            widthPct: this.state.width,
+            heightPct: this.state.height,
+            snapped: this.state.snapped ?? null,
+            maximized: this.state.maximized,
+        };
+        if (this.state.lastSize) {
+            layout.lastWidthPct = this.state.lastSize.width;
+            layout.lastHeightPct = this.state.lastSize.height;
+        }
+        if (typeof overrides.x !== 'number' || typeof overrides.y !== 'number') {
+            if (typeof document !== 'undefined') {
+                const node = document.getElementById(this.id);
+                if (node) {
+                    const rect = node.getBoundingClientRect();
+                    layout.x = this.snapToGrid(rect.x);
+                    layout.y = this.snapToGrid(rect.y - 32);
+                }
+            }
+        }
+        return layout;
+    }
+
+    notifyLayoutChange = (overrides = {}) => {
+        if (!this.props.onLayoutChange && !this.props.onPositionChange) return;
+        const layout = this.buildLayoutSnapshot(overrides);
+        if (this.props.onLayoutChange) {
+            this.props.onLayoutChange(layout);
+        }
+        if (this.props.onPositionChange) {
+            this.props.onPositionChange(layout.x, layout.y);
+        }
     }
 
     setDefaultWindowDimenstion = () => {
+        if (this._hasInitialLayoutDimensions) {
+            this.resizeBoundries();
+            return;
+        }
+
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
@@ -222,16 +319,18 @@ export class Window extends Component {
     }
 
     setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+        if (typeof document === 'undefined') {
+            this.notifyLayoutChange();
+            return;
+        }
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
         const x = this.snapToGrid(rect.x);
         const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
-        if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
-        }
+        node.style.setProperty('--window-transform-x', `${x.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${y.toFixed(1)}px`);
+        this.notifyLayoutChange({ x, y });
     }
 
     unsnapWindow = () => {

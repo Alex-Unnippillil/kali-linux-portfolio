@@ -2,6 +2,7 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import { WINDOW_LAYOUT_STORAGE_KEY } from './windowLayoutPersistence';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -137,6 +138,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(WINDOW_LAYOUT_STORAGE_KEY);
 }
 
 export async function exportSettings() {
