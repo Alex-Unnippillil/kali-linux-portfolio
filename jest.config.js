@@ -15,6 +15,12 @@ const customJestConfig = {
     '<rootDir>/__tests__/playwright/',
     '<rootDir>/tests/',
   ],
+  coverageThreshold: {
+    global: {
+      lines: 70,
+    },
+  },
+  coverageReporters: ['text', 'lcov', 'json-summary'],
 };
 
 module.exports = createJestConfig(customJestConfig);
