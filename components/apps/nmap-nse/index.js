@@ -204,6 +204,7 @@ const NmapNSEApp = () => {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-label="Target"
           />
         </div>
         <div className="mb-4">
@@ -216,42 +217,55 @@ const NmapNSEApp = () => {
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-label="Script search"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
-                <p className="text-xs mb-1">{s.description}</p>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {s.tags.map((t) => (
-                    <span key={t} className="px-1 text-xs bg-gray-200 rounded">
-                      {t}
+            {filteredScripts.map((s) => {
+              const slug = s.name.replace(/[^a-z0-9-]/gi, '-');
+              const checkboxId = `script-${slug}`;
+              const checkboxLabelId = `${checkboxId}-label`;
+              const optionsId = `script-${slug}-options`;
+              return (
+                <div key={s.name} className="bg-white text-black p-2 rounded">
+                  <label className="flex items-center space-x-2" htmlFor={checkboxId}>
+                    <span id={checkboxLabelId} className="font-mono">
+                      {s.name}
                     </span>
-                  ))}
+                    <input
+                      id={checkboxId}
+                      type="checkbox"
+                      aria-labelledby={checkboxLabelId}
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                    />
+                  </label>
+                  <p className="text-xs mb-1">{s.description}</p>
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {s.tags.map((t) => (
+                      <span key={t} className="px-1 text-xs bg-gray-200 rounded">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      id={optionsId}
+                      type="text"
+                      aria-label={`Options for ${s.name}`}
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      className="w-full p-1 border rounded text-black"
+                    />
+                  )}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
             {filteredScripts.length === 0 && (
               <p className="text-sm">No scripts found.</p>
             )}
@@ -435,7 +449,7 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
+      {toast && <Toast appId="Nmap NSE" message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };

@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,10 +28,73 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getDndSettings as loadDndSettings,
+  setDndSettings as persistDndSettings,
+  getDefaultDndSettings,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+export type DndOverride = 'on' | 'off' | null;
+
+export interface DndSchedule {
+  id: string;
+  label: string;
+  description?: string;
+  start: string;
+  end: string;
+  days: number[];
+  enabled: boolean;
+}
+
+interface DndSettings {
+  override: DndOverride;
+  schedules: DndSchedule[];
+}
+
+const cloneSchedules = (schedules: DndSchedule[]): DndSchedule[] =>
+  schedules.map((schedule) => ({
+    ...schedule,
+    days: [...schedule.days],
+  }));
+
+const cloneDndSettings = (settings: DndSettings): DndSettings => ({
+  override: settings.override,
+  schedules: cloneSchedules(settings.schedules),
+});
+
+const parseTime = (time: string): number => {
+  const [hours, minutes] = time.split(':').map((segment) => parseInt(segment, 10));
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0;
+  return hours * 60 + minutes;
+};
+
+const isScheduleActive = (schedule: DndSchedule, now: Date): boolean => {
+  if (!schedule.enabled) return false;
+  const minutesOfDay = now.getHours() * 60 + now.getMinutes();
+  const start = parseTime(schedule.start);
+  const end = parseTime(schedule.end);
+  const days = schedule.days.length ? schedule.days : [0, 1, 2, 3, 4, 5, 6];
+  const day = now.getDay();
+
+  if (start === end) {
+    return days.includes(day);
+  }
+
+  if (start < end) {
+    return days.includes(day) && minutesOfDay >= start && minutesOfDay < end;
+  }
+
+  const previousDay = (day + 6) % 7;
+  return (
+    (days.includes(day) && minutesOfDay >= start) ||
+    (days.includes(previousDay) && minutesOfDay < end)
+  );
+};
+
+const isAnyScheduleActive = (schedules: DndSchedule[], now: Date = new Date()): boolean =>
+  schedules.some((schedule) => isScheduleActive(schedule, now));
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +134,10 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  dndActive: boolean;
+  dndScheduleActive: boolean;
+  dndOverride: DndOverride;
+  dndSchedules: DndSchedule[];
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,7 +149,13 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  toggleDnd: () => void;
+  setDndOverride: (value: DndOverride) => void;
+  clearDndOverride: () => void;
+  updateDndSchedule: (id: string, updates: Partial<Omit<DndSchedule, 'id'>>) => void;
 }
+
+const defaultDnd = cloneDndSettings(getDefaultDndSettings());
 
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
@@ -88,6 +169,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  dndActive: false,
+  dndScheduleActive: false,
+  dndOverride: defaultDnd.override,
+  dndSchedules: defaultDnd.schedules,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +184,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  toggleDnd: () => {},
+  setDndOverride: () => {},
+  clearDndOverride: () => {},
+  updateDndSchedule: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +202,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [dndSettings, setDndState] = useState<DndSettings>(() =>
+    cloneDndSettings(defaultDnd)
+  );
+  const [dndScheduleActive, setDndScheduleActive] = useState<boolean>(false);
+  const [dndLoaded, setDndLoaded] = useState<boolean>(false);
   const fetchRef = useRef<typeof fetch | null>(null);
+
+  const computeScheduleActive = useCallback(
+    () => isAnyScheduleActive(dndSettings.schedules, new Date()),
+    [dndSettings.schedules]
+  );
 
   useEffect(() => {
     (async () => {
@@ -127,9 +226,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      try {
+        const loadedDnd = await loadDndSettings();
+        const cloned = cloneDndSettings(loadedDnd);
+        setDndState(cloned);
+        setDndScheduleActive(isAnyScheduleActive(cloned.schedules));
+      } finally {
+        setDndLoaded(true);
+      }
       setTheme(loadTheme());
     })();
   }, []);
+
+  useEffect(() => {
+    if (!dndLoaded) return;
+
+    const update = () => {
+      setDndScheduleActive(computeScheduleActive());
+    };
+
+    update();
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const msUntilNextMinute = 60000 - (Date.now() % 60000);
+    timeoutId = setTimeout(() => {
+      update();
+      intervalId = setInterval(update, 60 * 1000);
+    }, msUntilNextMinute);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [computeScheduleActive, dndLoaded]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -236,6 +367,60 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (!dndLoaded) return;
+    persistDndSettings(dndSettings);
+  }, [dndLoaded, dndSettings]);
+
+  const dndActive =
+    dndSettings.override === 'on'
+      ? true
+      : dndSettings.override === 'off'
+        ? false
+        : dndScheduleActive;
+
+  const setDndOverride = useCallback((value: DndOverride) => {
+    setDndState((prev) => ({
+      ...prev,
+      override: value,
+    }));
+  }, []);
+
+  const clearDndOverride = useCallback(() => {
+    setDndOverride(null);
+  }, [setDndOverride]);
+
+  const toggleDnd = useCallback(() => {
+    setDndState((prev) => {
+      const currentlyActive =
+        prev.override === 'on' || (prev.override === null && dndScheduleActive);
+      return {
+        ...prev,
+        override: currentlyActive ? 'off' : 'on',
+      };
+    });
+  }, [dndScheduleActive]);
+
+  const updateDndSchedule = useCallback(
+    (id: string, updates: Partial<Omit<DndSchedule, 'id'>>) => {
+      setDndState((prev) => ({
+        ...prev,
+        schedules: prev.schedules.map((schedule) => {
+          if (schedule.id !== id) return schedule;
+          return {
+            ...schedule,
+            ...updates,
+            days:
+              updates.days !== undefined
+                ? [...updates.days]
+                : [...schedule.days],
+          };
+        }),
+      }));
+    },
+    []
+  );
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +435,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        dndActive,
+        dndScheduleActive,
+        dndOverride: dndSettings.override,
+        dndSchedules: dndSettings.schedules,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +450,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        toggleDnd,
+        setDndOverride,
+        clearDndOverride,
+        updateDndSchedule,
       }}
     >
       {children}

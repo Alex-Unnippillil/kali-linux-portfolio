@@ -1,4 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { useSettings } from '../../hooks/useSettings';
+import { NotificationsContext } from '../common/NotificationCenter';
 
 interface ToastProps {
   message: string;
@@ -6,6 +8,7 @@ interface ToastProps {
   onAction?: () => void;
   onClose?: () => void;
   duration?: number;
+  appId?: string;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -14,11 +17,31 @@ const Toast: React.FC<ToastProps> = ({
   onAction,
   onClose,
   duration = 6000,
+  appId,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
+  const suppressedRef = useRef(false);
+  const { dndActive } = useSettings();
+  const notifications = useContext(NotificationsContext);
+  const resolvedAppId = appId ?? 'System';
 
   useEffect(() => {
+    suppressedRef.current = false;
+  }, [message]);
+
+  useEffect(() => {
+    if (!dndActive || suppressedRef.current) return;
+    suppressedRef.current = true;
+    notifications?.pushNotification(resolvedAppId, message);
+    onClose?.();
+  }, [dndActive, message, notifications, onClose, resolvedAppId]);
+
+  useEffect(() => {
+    if (dndActive) {
+      setVisible(false);
+      return;
+    }
     setVisible(true);
     timeoutRef.current = setTimeout(() => {
       onClose && onClose();
@@ -26,7 +49,9 @@ const Toast: React.FC<ToastProps> = ({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [duration, onClose]);
+  }, [dndActive, duration, onClose]);
+
+  if (dndActive) return null;
 
   return (
     <div
