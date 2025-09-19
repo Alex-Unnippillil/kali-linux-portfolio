@@ -7,3 +7,41 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.window {
+  --window-shadow-current: var(--window-shadow-inactive);
+  --window-opacity-current: var(--window-opacity-active);
+  --window-brightness-current: 1;
+  --window-titlebar-current: var(--window-titlebar-inactive);
+  box-shadow: var(--window-shadow-current);
+  transition: box-shadow var(--motion-fast) ease, filter var(--motion-fast) ease;
+  filter: opacity(var(--window-opacity-current)) brightness(var(--window-brightness-current));
+}
+
+.windowActive {
+  --window-shadow-current: var(--window-shadow-active);
+  --window-opacity-current: var(--window-opacity-active);
+  --window-brightness-current: 1;
+  --window-titlebar-current: var(--window-titlebar-active);
+}
+
+.windowInactive {
+  --window-shadow-current: var(--window-shadow-inactive);
+  --window-opacity-current: var(--window-opacity-inactive);
+  --window-brightness-current: 0.95;
+  --window-titlebar-current: var(--window-titlebar-inactive);
+}
+
+.titleBar {
+  background-color: var(--window-titlebar-current);
+  color: var(--window-titlebar-text);
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.titleBarActive {
+  --window-titlebar-current: var(--window-titlebar-active);
+}
+
+.titleBarInactive {
+  --window-titlebar-current: var(--window-titlebar-inactive);
+}

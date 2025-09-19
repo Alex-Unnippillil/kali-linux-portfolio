@@ -33,6 +33,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            isActive: !!props.isFocused,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -53,6 +54,10 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('desktop-window-focus', this.handleFocusBroadcast);
+        }
+        this.updateActiveState(this.props.isFocused);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,9 +71,32 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('desktop-window-focus', this.handleFocusBroadcast);
+        }
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.isFocused !== this.props.isFocused) {
+            this.updateActiveState(this.props.isFocused);
+        }
+    }
+
+    updateActiveState = (isActive) => {
+        const next = !!isActive;
+        if (this.state.isActive !== next) {
+            this.setState({ isActive: next });
+        }
+    }
+
+    handleFocusBroadcast = (event) => {
+        if (!event || !event.detail) return;
+        const { id, active } = event.detail;
+        if (!this.id || id !== this.id) return;
+        this.updateActiveState(active);
     }
 
     setDefaultWindowDimenstion = () => {
@@ -612,6 +640,24 @@ export class Window extends Component {
     }
 
     render() {
+        const isActive = this.state.isActive;
+        const windowFocusClass = isActive ? styles.windowActive : styles.windowInactive;
+        const titleFocusClass = isActive ? styles.titleBarActive : styles.titleBarInactive;
+        const dragHandle = `.${styles.titleBar}`;
+        const focusState = isActive ? 'true' : 'false';
+        const windowClasses = [
+            this.state.cursorType,
+            this.state.closed ? 'closed-window' : '',
+            this.state.maximized ? 'duration-300 rounded-none' : 'rounded-lg rounded-b-none',
+            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+            this.state.grabbed ? 'opacity-70' : '',
+            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
+            this.props.isFocused ? 'z-30' : 'z-20',
+            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute border-black border-opacity-40 border border-t-0 flex flex-col',
+            styles.window,
+            windowFocusClass,
+        ].filter(Boolean).join(' ');
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -623,7 +669,7 @@ export class Window extends Component {
                 )}
                 <Draggable
                     axis="both"
-                    handle=".bg-ub-window-title"
+                    handle={dragHandle}
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
@@ -635,11 +681,12 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={windowClasses}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
+                        data-focused={focusState}
                         onKeyDown={this.handleKeyDown}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
@@ -649,6 +696,8 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            isActive={isActive}
+                            titleFocusClass={titleFocusClass}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,15 +723,19 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, isActive, titleFocusClass }) {
+    const colorToken = isActive ? 'var(--window-titlebar-active)' : 'var(--window-titlebar-inactive)';
+    const focusState = isActive ? 'true' : 'false';
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={`${styles.titleBar} ${titleFocusClass} relative border-t-2 border-white border-opacity-5 px-3 w-full select-none rounded-b-none flex items-center h-11`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            data-color-token={colorToken}
+            data-focused={focusState}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>

@@ -259,3 +259,8 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Accept:** 1200×630 Open Graph, 1080×1080 square fallback; served as static files and referenced in meta.
     - **Where:** `public/images/social/*`.
 
+
+### Focus contrast audit – window chrome
+
+- **Before:** Active and inactive title bars both used `#0C0F12` against `#F5F5F5` copy (contrast ratio 17.63:1).
+- **After:** Active title bar remains `#0C0F12` (17.63:1) while the inactive state shifts to `#1B1F24`, delivering a 15.19:1 contrast that stays above WCAG AA requirements while visually signalling blur.

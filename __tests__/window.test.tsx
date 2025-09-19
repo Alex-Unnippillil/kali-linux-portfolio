@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import styles from '../components/base/window.module.css';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -39,6 +40,72 @@ describe('Window lifecycle', () => {
 
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
+  });
+});
+
+describe('Window focus styles', () => {
+  const baseProps = {
+    screen: () => <div>content</div>,
+    focus: () => {},
+    hasMinimised: () => {},
+    closed: () => {},
+    hideSideBar: () => {},
+    openApp: () => {},
+  };
+
+  it('toggles active and inactive classes when focus changes', () => {
+    const { rerender } = render(
+      <Window
+        id="focus-window"
+        title="Focus Test"
+        isFocused={false}
+        {...baseProps}
+      />
+    );
+
+    const winEl = document.getElementById('focus-window');
+    expect(winEl).toHaveClass(styles.window);
+    expect(winEl).toHaveClass(styles.windowInactive);
+    expect(winEl).not.toHaveClass(styles.windowActive);
+
+    rerender(
+      <Window
+        id="focus-window"
+        title="Focus Test"
+        isFocused
+        {...baseProps}
+      />
+    );
+
+    const updated = document.getElementById('focus-window');
+    expect(updated).toHaveClass(styles.windowActive);
+    expect(updated).not.toHaveClass(styles.windowInactive);
+  });
+
+  it('sets inactive title bar token when unfocused', () => {
+    const { rerender } = render(
+      <Window
+        id="token-window"
+        title="Token Test"
+        isFocused
+        {...baseProps}
+      />
+    );
+
+    const activeBar = screen.getByRole('button', { name: 'Token Test' });
+    expect(activeBar).toHaveAttribute('data-color-token', 'var(--window-titlebar-active)');
+
+    rerender(
+      <Window
+        id="token-window"
+        title="Token Test"
+        isFocused={false}
+        {...baseProps}
+      />
+    );
+
+    const inactiveBar = screen.getByRole('button', { name: 'Token Test' });
+    expect(inactiveBar).toHaveAttribute('data-color-token', 'var(--window-titlebar-inactive)');
   });
 });
 
@@ -199,7 +266,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
