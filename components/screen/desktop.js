@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { recordAppUsage } from '../../utils/appUsage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -598,6 +599,7 @@ export class Desktop extends Component {
         if (this.state.closed_windows[objId] === false) {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
+                recordAppUsage(objId);
                 this.focus(objId);
                 var r = document.querySelector("#" + objId);
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
@@ -612,37 +614,7 @@ export class Desktop extends Component {
         } else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
-            }
-
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
-                }
-                if (a.frequency > b.frequency) {
-                    return -1;
-                }
-                return 0; // sort according to decreasing frequencies
-            });
-
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
-
-            let recentApps = [];
-            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
-            recentApps = recentApps.filter(id => id !== objId);
-            recentApps.unshift(objId);
-            recentApps = recentApps.slice(0, 10);
-            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+            recordAppUsage(objId);
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
