@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -74,6 +82,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  resetToDefaults: () => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -99,6 +108,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  resetToDefaults: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -236,6 +246,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  const resetToDefaults = useCallback(() => {
+    setAccent(defaults.accent);
+    setWallpaper(defaults.wallpaper);
+    setDensity(defaults.density as Density);
+    setReducedMotion(defaults.reducedMotion);
+    setFontScale(defaults.fontScale);
+    setHighContrast(defaults.highContrast);
+    setLargeHitAreas(defaults.largeHitAreas);
+    setPongSpin(defaults.pongSpin);
+    setAllowNetwork(defaults.allowNetwork);
+    setHaptics(defaults.haptics);
+    setTheme('default');
+  }, [
+    setAccent,
+    setWallpaper,
+    setDensity,
+    setReducedMotion,
+    setFontScale,
+    setHighContrast,
+    setLargeHitAreas,
+    setPongSpin,
+    setAllowNetwork,
+    setHaptics,
+    setTheme,
+  ]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -261,6 +297,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        resetToDefaults,
       }}
     >
       {children}
