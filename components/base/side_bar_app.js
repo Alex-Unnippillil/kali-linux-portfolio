@@ -101,7 +101,7 @@ export class SideBarApp extends Component {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                    " w-auto p-2 relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active focus-ring"}
                 id={"sidebar-" + this.props.id}
             >
                 <Image

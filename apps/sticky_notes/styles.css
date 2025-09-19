@@ -39,7 +39,12 @@ body {
   border: none;
   background: transparent;
   resize: none;
-  outline: none;
+}
+
+.note textarea:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+  box-shadow: var(--focus-ring-shadow);
 }
 
 .note .controls {
