@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { I18nProvider } from '../lib/i18n';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -26,7 +27,8 @@ const ubuntu = Ubuntu({
 
 
 function MyApp(props) {
-  const { Component, pageProps } = props;
+  const { Component, pageProps, router } = props;
+  const locale = pageProps?.locale || router?.locale || 'en';
 
 
   useEffect(() => {
@@ -156,23 +158,25 @@ function MyApp(props) {
         >
           Skip to app grid
         </a>
-        <SettingsProvider>
-          <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
-            <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
+        <I18nProvider locale={locale}>
+          <SettingsProvider>
+            <PipPortalProvider>
+              <div aria-live="polite" id="live-region" />
+              <Component {...pageProps} />
+              <ShortcutOverlay />
+              <Analytics
+                beforeSend={(e) => {
+                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                  const evt = e;
+                  if (evt.metadata?.email) delete evt.metadata.email;
+                  return e;
+                }}
+              />
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-          </PipPortalProvider>
-        </SettingsProvider>
+              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            </PipPortalProvider>
+          </SettingsProvider>
+        </I18nProvider>
       </div>
     </ErrorBoundary>
 
