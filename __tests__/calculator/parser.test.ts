@@ -5,12 +5,12 @@ const math = create(all);
 describe('calculator parser', () => {
   let calc: any;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const dom = new JSDOM('<!doctype html><html><body><input id="display" /></body></html>');
     global.window = dom.window as any;
     global.document = dom.window.document as any;
     global.math = math;
-    calc = require('../../apps/calculator/main.js');
+    calc = await import('../../apps/calculator/main.js');
     calc.setPreciseMode(false);
   });
 

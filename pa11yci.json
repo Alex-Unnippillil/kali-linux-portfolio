@@ -19,7 +19,7 @@
     {},
     {
       "label": "high-contrast",
-      "beforeScript": "scripts/a11y-high-contrast.js"
+      "beforeScript": "scripts/a11y-high-contrast.cjs"
     }
   ]
 }

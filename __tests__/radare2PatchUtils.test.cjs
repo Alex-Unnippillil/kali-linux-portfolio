@@ -1,4 +1,4 @@
-import { stagePatch, applyPatches, exportPatches } from '../components/apps/radare2/patchUtils';
+const { stagePatch, applyPatches, exportPatches } = require('../components/apps/radare2/patchUtils');
 
 describe('radare2 patch utilities', () => {
   test('stages and applies patches', () => {

@@ -1,4 +1,4 @@
-import { MonteCarloAI, randomizePlacement, BOARD_SIZE } from '../apps/games/battleship/ai';
+const { MonteCarloAI, randomizePlacement, BOARD_SIZE } = require('../apps/games/battleship/ai');
 
 test('AI computes move under 500ms', () => {
   const ai = new MonteCarloAI();
