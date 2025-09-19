@@ -1,17 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import logger from '../../utils/logger'
+import React from 'react'
 
 function DesktopMenu(props) {
-
-    const [isFullScreen, setIsFullScreen] = useState(false)
-
-    useEffect(() => {
-        document.addEventListener('fullscreenchange', checkFullScreen);
-        return () => {
-            document.removeEventListener('fullscreenchange', checkFullScreen);
-        };
-    }, [])
-
 
     const openTerminal = () => {
         props.openApp("terminal");
@@ -19,28 +8,6 @@ function DesktopMenu(props) {
 
     const openSettings = () => {
         props.openApp("settings");
-    }
-
-    const checkFullScreen = () => {
-        if (document.fullscreenElement) {
-            setIsFullScreen(true)
-        } else {
-            setIsFullScreen(false)
-        }
-    }
-
-    const goFullScreen = () => {
-        // make website full screen
-        try {
-            if (document.fullscreenElement) {
-                document.exitFullscreen()
-            } else {
-                document.documentElement.requestFullscreen()
-            }
-        }
-        catch (e) {
-            logger.error(e)
-        }
     }
 
     return (
@@ -110,13 +77,13 @@ function DesktopMenu(props) {
             </button>
             <Devider />
             <button
-                onClick={goFullScreen}
+                onClick={props.onToggleFullScreen}
                 type="button"
                 role="menuitem"
-                aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
+                aria-label={props.isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
+                <span className="ml-5">{props.isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
             <Devider />
             <button
