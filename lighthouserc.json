@@ -1,0 +1,45 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "yarn start --hostname 0.0.0.0 --port $PORT",
+      "startServerReadyPattern": "started server",
+      "url": [
+        "http://127.0.0.1:$$PORT$$/"
+      ],
+      "numberOfRuns": 1,
+      "settings": {
+        "preset": "desktop",
+        "chromeFlags": "--disable-gpu --no-sandbox",
+        "budgets": [
+          {
+            "path": "/",
+            "resourceSizes": [
+              { "resourceType": "script", "budget": 350 },
+              { "resourceType": "stylesheet", "budget": 120 },
+              { "resourceType": "image", "budget": 250 },
+              { "resourceType": "total", "budget": 550 }
+            ],
+            "timings": [
+              { "metric": "first-contentful-paint", "budget": 3000 },
+              { "metric": "interactive", "budget": 5000 },
+              { "metric": "total-blocking-time", "budget": 200 }
+            ]
+          }
+        ]
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.9 }],
+        "first-contentful-paint": ["warn", { "maxNumericValue": 3000, "aggregationMethod": "median" }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 3500, "aggregationMethod": "median" }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 200, "aggregationMethod": "median" }],
+        "byte-efficiency/total-byte-weight": ["warn", { "maxNumericValue": 563200 }]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  }
+}
