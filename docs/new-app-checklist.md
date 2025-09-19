@@ -2,6 +2,8 @@
 
 Use this checklist when adding a new app to the portfolio.
 
+Review the overarching [Contributing Guide](../CONTRIBUTING.md) for environment, testing, and review expectations before opening a pull request.
+
 ## Icon
 
 - Place a **64x64** SVG or PNG icon in `public/themes/Yaru/apps/`.

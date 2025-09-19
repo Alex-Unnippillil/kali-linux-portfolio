@@ -100,6 +100,10 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed environment setup, branching strategy, coding standards, and review expectations.
+
 ---
 
 ## Speed Insights
