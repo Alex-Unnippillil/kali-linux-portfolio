@@ -13,18 +13,21 @@
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:modules": "node scripts/test-modules.mjs",
     "lint": "eslint . --max-warnings=0",
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
+    "modules:boundary": "node scripts/examples/module-boundary.mjs",
+    "modules:manifest-check": "node scripts/examples/module-manifest-check.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs"
   },
   "engines": {
-    "node": "20.19.5"
+    "node": "22.12.0"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
