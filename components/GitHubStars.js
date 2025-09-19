@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, forwardRef } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
+import { useIntersectionHydration } from '../hooks/useIntersectionHydration';
 
-const GitHubStars = ({ user, repo }) => {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
+const GitHubStarsContent = forwardRef(function GitHubStarsContent({ user, repo }, ref) {
   const [stars, setStars] = usePersistentState(`gh-stars-${user}/${repo}`, null);
   const [loading, setLoading] = useState(stars === null);
 
@@ -22,26 +21,10 @@ const GitHubStars = ({ user, repo }) => {
   }, [user, repo, setStars]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      });
-    });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!visible) return;
     if (stars === null) {
       fetchStars();
     }
-  }, [visible, stars, fetchStars]);
-
-  if (!repo) return null;
+  }, [stars, fetchStars]);
 
   return (
     <div ref={ref} className="inline-flex items-center text-xs text-gray-300">
@@ -61,6 +44,27 @@ const GitHubStars = ({ user, repo }) => {
       )}
     </div>
   );
+});
+
+const GitHubStars = ({ user, repo }) => {
+  const ref = useRef(null);
+  const shouldHydrate = useIntersectionHydration(ref, { rootMargin: '200px' });
+
+  if (!repo) return null;
+
+  if (!shouldHydrate) {
+    return (
+      <div
+        ref={ref}
+        className="inline-flex items-center text-xs text-gray-300"
+        data-hydration="deferred"
+      >
+        <div className="h-5 w-12 bg-gray-200 animate-pulse rounded" />
+      </div>
+    );
+  }
+
+  return <GitHubStarsContent ref={ref} user={user} repo={repo} />;
 };
 
 export default GitHubStars;

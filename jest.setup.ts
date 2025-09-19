@@ -107,6 +107,26 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
+// Provide requestIdleCallback/cancelIdleCallback for environments lacking them
+if (typeof window !== 'undefined' && !('requestIdleCallback' in window)) {
+  // @ts-ignore
+  window.requestIdleCallback = (cb: IdleRequestCallback, opts?: IdleRequestOptions) => {
+    const start = Date.now();
+    return window.setTimeout(() => {
+      cb({
+        didTimeout: Boolean(opts?.timeout && Date.now() - start > opts.timeout),
+        timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
+      });
+    }, 1);
+  };
+  // @ts-ignore
+  window.cancelIdleCallback = (id: number) => window.clearTimeout(id);
+  // @ts-ignore
+  global.requestIdleCallback = window.requestIdleCallback;
+  // @ts-ignore
+  global.cancelIdleCallback = window.cancelIdleCallback;
+}
+
 // Simple localStorage mock for environments without it
 if (typeof window !== 'undefined' && !window.localStorage) {
   const store: Record<string, string> = {};
