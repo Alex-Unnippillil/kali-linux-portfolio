@@ -15,6 +15,7 @@ const publicEnvSchema = z.object({
   NEXT_PUBLIC_GHIDRA_URL: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  NEXT_PUBLIC_DEFAULT_CHANNEL: z.string().optional(),
 });
 
 const serverEnvSchema = publicEnvSchema.extend({
