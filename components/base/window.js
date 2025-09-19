@@ -6,7 +6,11 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
-import styles from './window.module.css';
+import WindowOutline from './window-outline';
+
+const MIN_WIDTH_PERCENT = 20;
+const MIN_HEIGHT_PERCENT = 20;
+const PT_TO_PX = 96 / 72;
 
 export class Window extends Component {
     constructor(props) {
@@ -33,10 +37,16 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            isResizing: false,
+            outlineBounds: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._resizeInfo = null;
+        this._resizeFrameId = null;
+        this._lastResizeFrame = null;
+        this.draggableRef = null;
     }
 
     componentDidMount() {
@@ -69,6 +79,13 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.removeResizeListeners();
+        if (this._resizeFrameId && typeof window !== 'undefined') {
+            cancelAnimationFrame(this._resizeFrameId);
+            this._resizeFrameId = null;
+        }
+        this._resizeInfo = null;
+        this._lastResizeFrame = null;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -205,20 +222,366 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
-    handleVerticleResize = () => {
-        if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
-        const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+    setDraggableRef = (instance) => {
+        this.draggableRef = instance;
     }
 
-    handleHorizontalResize = () => {
+    removeResizeListeners = () => {
+        if (typeof window === 'undefined') return;
+        window.removeEventListener('pointermove', this.handleResizeMove);
+        window.removeEventListener('pointerup', this.handleResizeEnd);
+        window.removeEventListener('pointercancel', this.handleResizeEnd);
+    }
+
+    getCursorForHandle = (handle) => {
+        if (handle === 'top' || handle === 'bottom') {
+            return 'cursor-ns-resize';
+        }
+        if (handle === 'left' || handle === 'right') {
+            return 'cursor-ew-resize';
+        }
+        if (handle === 'top-left' || handle === 'bottom-right') {
+            return 'cursor-nwse-resize';
+        }
+        if (handle === 'top-right' || handle === 'bottom-left') {
+            return 'cursor-nesw-resize';
+        }
+        return 'cursor-default';
+    }
+
+    getNodeTranslation = (node) => {
+        if (typeof window === 'undefined' || !node) {
+            return { x: 0, y: 0 };
+        }
+        const style = window.getComputedStyle(node);
+        const transform = style.transform || node.style.transform;
+        if (!transform || transform === 'none') {
+            return { x: 0, y: 0 };
+        }
+        if (typeof window.DOMMatrixReadOnly === 'function') {
+            try {
+                const matrix = new window.DOMMatrixReadOnly(transform);
+                return { x: matrix.m41, y: matrix.m42 };
+            } catch (error) {
+                // continue to regex parsing fallback
+            }
+        }
+        const translateMatch = /translate(?:3d)?\(([-\d.]+)(px|pt)?[,\s]+([-\d.]+)(px|pt)?/i.exec(transform);
+        if (translateMatch) {
+            const [, rawX, unitX, rawY, unitY] = translateMatch;
+            const convert = (value, unit) => {
+                const numeric = parseFloat(value);
+                if (!Number.isFinite(numeric)) return 0;
+                if (unit && unit.toLowerCase() === 'pt') {
+                    return numeric * PT_TO_PX;
+                }
+                return numeric;
+            };
+            return {
+                x: convert(rawX, unitX),
+                y: convert(rawY, unitY)
+            };
+        }
+        const matrixMatch = /matrix\(([^)]+)\)/.exec(transform);
+        if (matrixMatch) {
+            const values = matrixMatch[1].split(',').map(v => v.trim());
+            if (values.length >= 6) {
+                const x = parseFloat(values[4]) || 0;
+                const y = parseFloat(values[5]) || 0;
+                return { x, y };
+            }
+        }
+        return { x: 0, y: 0 };
+    }
+
+    applyResizeFrame = () => {
+        if (!this._lastResizeFrame) return;
+        const frame = this._lastResizeFrame;
+        if (this.draggableRef && typeof this.draggableRef.setState === 'function') {
+            this.draggableRef.setState({ x: frame.translateX, y: frame.translateY, slackX: 0, slackY: 0 });
+        }
+        this.setState({
+            width: frame.widthPercent,
+            height: frame.heightPercent,
+            outlineBounds: frame.outlineBounds
+        });
+    }
+
+    scheduleResizeUpdate = (frame) => {
+        this._lastResizeFrame = frame;
+        if (typeof window === 'undefined') {
+            this.applyResizeFrame();
+            return;
+        }
+        if (this._resizeFrameId !== null) return;
+        this._resizeFrameId = window.requestAnimationFrame(() => {
+            this._resizeFrameId = null;
+            this.applyResizeFrame();
+        });
+    }
+
+    startResize = (handle, event) => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
-        const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        if (typeof window === 'undefined') return;
+        event.preventDefault();
+        event.stopPropagation();
+
+        const node = document.getElementById(this.id);
+        if (!node) return;
+
+        this.focusWindow();
+
+        const rect = node.getBoundingClientRect();
+        const translation = this.getNodeTranslation(node);
+        const baseTranslateX = Number.isFinite(translation.x) ? translation.x : (this.draggableRef?.state?.x || 0);
+        const baseTranslateY = Number.isFinite(translation.y) ? translation.y : (this.draggableRef?.state?.y || 0);
+
+        this._resizeInfo = {
+            handle,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            startRect: rect,
+            baseTranslateX,
+            baseTranslateY,
+            snapped: this.state.snapped,
+            aspectRatio: rect.height > 0 ? rect.width / rect.height : 0,
+        };
+
+        const widthPercent = (rect.width / window.innerWidth) * 100;
+        const heightPercent = (rect.height / window.innerHeight) * 100;
+
+        this._lastResizeFrame = {
+            widthPercent,
+            heightPercent,
+            translateX: baseTranslateX,
+            translateY: baseTranslateY,
+            outlineBounds: {
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+            },
+        };
+
+        this.setState({
+            cursorType: this.getCursorForHandle(handle),
+            isResizing: true,
+            outlineBounds: this._lastResizeFrame.outlineBounds,
+        });
+
+        window.addEventListener('pointermove', this.handleResizeMove);
+        window.addEventListener('pointerup', this.handleResizeEnd);
+        window.addEventListener('pointercancel', this.handleResizeEnd);
+    }
+
+    handleResizeMove = (event) => {
+        if (!this._resizeInfo || event.pointerId !== this._resizeInfo.pointerId) return;
+        if (typeof window === 'undefined') return;
+        event.preventDefault();
+
+        const info = this._resizeInfo;
+        const dx = event.clientX - info.startX;
+        const dy = event.clientY - info.startY;
+
+        let left = info.startRect.left;
+        let right = info.startRect.right;
+        let top = info.startRect.top;
+        let bottom = info.startRect.bottom;
+
+        const minWidth = (this.props.minWidthPercent ?? MIN_WIDTH_PERCENT) / 100 * window.innerWidth;
+        const minHeight = (this.props.minHeightPercent ?? MIN_HEIGHT_PERCENT) / 100 * window.innerHeight;
+
+        if (info.handle.includes('left')) {
+            const proposedLeft = left + dx;
+            const maxLeft = right - minWidth;
+            left = Math.min(Math.max(proposedLeft, 0), maxLeft);
+        }
+        if (info.handle.includes('right')) {
+            const proposedRight = right + dx;
+            const minRight = left + minWidth;
+            right = Math.max(Math.min(proposedRight, window.innerWidth), minRight);
+        }
+        if (info.handle.includes('top')) {
+            const proposedTop = top + dy;
+            const maxTop = bottom - minHeight;
+            top = Math.min(Math.max(proposedTop, 0), maxTop);
+        }
+        if (info.handle.includes('bottom')) {
+            const proposedBottom = bottom + dy;
+            const minBottom = top + minHeight;
+            bottom = Math.max(Math.min(proposedBottom, window.innerHeight), minBottom);
+        }
+
+        let width = right - left;
+        let height = bottom - top;
+
+        if (info.snapped && info.aspectRatio) {
+            const ratio = info.aspectRatio;
+            const startWidth = info.startRect.width;
+            const startHeight = info.startRect.height;
+            const widthScale = startWidth === 0 ? 1 : width / startWidth;
+            const heightScale = startHeight === 0 ? 1 : height / startHeight;
+            const horizontalActive = info.handle.includes('left') || info.handle.includes('right');
+            const verticalActive = info.handle.includes('top') || info.handle.includes('bottom');
+
+            let scale = widthScale;
+            if (!horizontalActive && verticalActive) {
+                scale = heightScale;
+            } else if (horizontalActive && !verticalActive) {
+                scale = widthScale;
+            } else if (horizontalActive && verticalActive) {
+                scale = Math.abs(widthScale - 1) >= Math.abs(heightScale - 1) ? widthScale : heightScale;
+            }
+            if (!Number.isFinite(scale) || scale <= 0) {
+                scale = 1;
+            }
+
+            let newWidth = Math.max(minWidth, startWidth * scale);
+            let newHeight = Math.max(minHeight, startHeight * scale);
+
+            if (horizontalActive && !verticalActive) {
+                newHeight = Math.max(minHeight, newWidth / ratio);
+            } else if (verticalActive && !horizontalActive) {
+                newWidth = Math.max(minWidth, newHeight * ratio);
+            } else {
+                newHeight = Math.max(minHeight, newWidth / ratio);
+                newWidth = Math.max(minWidth, newHeight * ratio);
+            }
+
+            if (newHeight < minHeight) {
+                newHeight = minHeight;
+                newWidth = Math.max(minWidth, newHeight * ratio);
+            }
+            if (newWidth < minWidth) {
+                newWidth = minWidth;
+                newHeight = Math.max(minHeight, newWidth / ratio);
+            }
+
+            const anchorLeft = info.handle.includes('right') ? info.startRect.left : null;
+            const anchorRight = info.handle.includes('left') ? info.startRect.right : null;
+            const anchorTop = info.handle.includes('bottom') ? info.startRect.top : null;
+            const anchorBottom = info.handle.includes('top') ? info.startRect.bottom : null;
+
+            if (anchorRight !== null) {
+                right = anchorRight;
+                left = right - newWidth;
+            } else if (anchorLeft !== null) {
+                left = anchorLeft;
+                right = left + newWidth;
+            } else {
+                left = info.startRect.left;
+                right = left + newWidth;
+            }
+
+            if (anchorBottom !== null) {
+                bottom = anchorBottom;
+                top = bottom - newHeight;
+            } else if (anchorTop !== null) {
+                top = anchorTop;
+                bottom = top + newHeight;
+            } else {
+                top = info.startRect.top;
+                bottom = top + newHeight;
+            }
+
+            if (left < 0) {
+                const shift = -left;
+                left = 0;
+                right += shift;
+            }
+            if (right > window.innerWidth) {
+                const shift = right - window.innerWidth;
+                right = window.innerWidth;
+                left -= shift;
+            }
+            if (top < 0) {
+                const shift = -top;
+                top = 0;
+                bottom += shift;
+            }
+            if (bottom > window.innerHeight) {
+                const shift = bottom - window.innerHeight;
+                bottom = window.innerHeight;
+                top -= shift;
+            }
+
+            width = right - left;
+            height = bottom - top;
+        }
+
+        if (width < minWidth) {
+            width = minWidth;
+            if (info.handle.includes('left')) {
+                left = right - width;
+            } else {
+                right = left + width;
+            }
+        }
+        if (height < minHeight) {
+            height = minHeight;
+            if (info.handle.includes('top')) {
+                top = bottom - height;
+            } else {
+                bottom = top + height;
+            }
+        }
+
+        if (left < 0) {
+            right -= left;
+            left = 0;
+        }
+        if (right > window.innerWidth) {
+            const overflowX = right - window.innerWidth;
+            left -= overflowX;
+            right = window.innerWidth;
+        }
+        if (top < 0) {
+            bottom -= top;
+            top = 0;
+        }
+        if (bottom > window.innerHeight) {
+            const overflowY = bottom - window.innerHeight;
+            top -= overflowY;
+            bottom = window.innerHeight;
+        }
+
+        width = right - left;
+        height = bottom - top;
+
+        const widthPercent = (width / window.innerWidth) * 100;
+        const heightPercent = (height / window.innerHeight) * 100;
+        const translateX = info.baseTranslateX + (left - info.startRect.left);
+        const translateY = info.baseTranslateY + (top - info.startRect.top);
+
+        this.scheduleResizeUpdate({
+            widthPercent,
+            heightPercent,
+            translateX,
+            translateY,
+            outlineBounds: { left, top, width, height }
+        });
+    }
+
+    handleResizeEnd = (event) => {
+        if (!this._resizeInfo) return;
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        if (this._resizeFrameId && typeof window !== 'undefined') {
+            cancelAnimationFrame(this._resizeFrameId);
+            this._resizeFrameId = null;
+        }
+        this.applyResizeFrame();
+        this.removeResizeListeners();
+        this._resizeInfo = null;
+        this._lastResizeFrame = null;
+        this.setState({
+            isResizing: false,
+            outlineBounds: null,
+            cursorType: 'cursor-default'
+        }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
@@ -621,7 +984,12 @@ export class Window extends Component {
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
+                <WindowOutline
+                    visible={this.state.isResizing && !!this.state.outlineBounds}
+                    bounds={this.state.outlineBounds}
+                />
                 <Draggable
+                    ref={this.setDraggableRef}
                     axis="both"
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
@@ -642,8 +1010,58 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <>
+                                <div
+                                    data-testid="resize-handle-top"
+                                    className="absolute left-2.5 right-2.5 top-0 h-2.5 -translate-y-1/2 cursor-ns-resize z-30"
+                                    onPointerDown={(event) => this.startResize('top', event)}
+                                    aria-hidden="true"
+                                />
+                                <div
+                                    data-testid="resize-handle-right"
+                                    className="absolute top-2.5 bottom-2.5 right-0 w-2.5 translate-x-1/2 cursor-ew-resize z-30"
+                                    onPointerDown={(event) => this.startResize('right', event)}
+                                    aria-hidden="true"
+                                />
+                                <div
+                                    data-testid="resize-handle-bottom"
+                                    className="absolute left-2.5 right-2.5 bottom-0 h-2.5 translate-y-1/2 cursor-ns-resize z-30"
+                                    onPointerDown={(event) => this.startResize('bottom', event)}
+                                    aria-hidden="true"
+                                />
+                                <div
+                                    data-testid="resize-handle-left"
+                                    className="absolute top-2.5 bottom-2.5 left-0 w-2.5 -translate-x-1/2 cursor-ew-resize z-30"
+                                    onPointerDown={(event) => this.startResize('left', event)}
+                                    aria-hidden="true"
+                                />
+                                <div
+                                    data-testid="resize-handle-top-left"
+                                    className="absolute top-0 left-0 w-3 h-3 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize z-40"
+                                    onPointerDown={(event) => this.startResize('top-left', event)}
+                                    aria-hidden="true"
+                                />
+                                <div
+                                    data-testid="resize-handle-top-right"
+                                    className="absolute top-0 right-0 w-3 h-3 translate-x-1/2 -translate-y-1/2 cursor-nesw-resize z-40"
+                                    onPointerDown={(event) => this.startResize('top-right', event)}
+                                    aria-hidden="true"
+                                />
+                                <div
+                                    data-testid="resize-handle-bottom-left"
+                                    className="absolute bottom-0 left-0 w-3 h-3 -translate-x-1/2 translate-y-1/2 cursor-nesw-resize z-40"
+                                    onPointerDown={(event) => this.startResize('bottom-left', event)}
+                                    aria-hidden="true"
+                                />
+                                <div
+                                    data-testid="resize-handle-bottom-right"
+                                    className="absolute bottom-0 right-0 w-3 h-3 translate-x-1/2 translate-y-1/2 cursor-nwse-resize z-40"
+                                    onPointerDown={(event) => this.startResize('bottom-right', event)}
+                                    aria-hidden="true"
+                                />
+                            </>
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -688,46 +1106,6 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
         </div>
     )
 }
-
-// Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
-    }
-
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
-    }
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
