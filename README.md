@@ -87,11 +87,18 @@ See `.env.local.example` for the full list.
 
 ## Scripts
 
-- `yarn install` – install project dependencies.
-- `yarn dev` – start the development server with hot reloading.
-- `yarn test` – run the test suite.
-- `yarn lint` – check code for linting issues.
-- `yarn export` – generate a static export in the `out/` directory.
+| Command | Purpose | Usage notes |
+| --- | --- | --- |
+| `yarn dev` | Start the development server with hot reloading. | Runs on port 3000 by default. Keep this running while iterating locally. |
+| `yarn preview` | Build and serve the production bundle. | Equivalent to `next build && next start -p 3000`. Useful for validating production behavior or local Playwright runs. |
+| `yarn build` | Create an optimized production build. | Generates the assets consumed by `yarn start` or static export workflows. |
+| `yarn build:analyze` | Inspect the webpack bundle output. | Sets `ANALYZE=true` and emits bundle statistics for debugging size regressions. |
+| `yarn start` | Serve the previously built app. | Requires a successful `yarn build`; listens on port 3000 unless overridden. |
+| `yarn lint` | Check for ESLint violations. | Fails on warnings to match the CI gate. Run before committing. |
+| `yarn typecheck` | Validate TypeScript types without emitting files. | Uses `tsc --noEmit` to catch regressions in typed modules. |
+| `yarn test` | Execute the Jest unit test suite. | Pass additional flags (e.g., `--coverage`, `--runInBand`) as needed. |
+| `yarn e2e` | Run the Playwright end-to-end suite in `tests/`. | Requires the site to be running via `yarn dev` or `yarn preview` before invoking. |
+| `yarn export` | Produce a static export in the `out/` directory. | Use `npx serve out` to verify the static bundle locally. |
 
 ---
 
