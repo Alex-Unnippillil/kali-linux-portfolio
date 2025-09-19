@@ -6835,7 +6835,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-import-resolver-typescript@npm:^3.5.2":
+"eslint-import-resolver-typescript@npm:^3.5.2, eslint-import-resolver-typescript@npm:^3.6.1":
   version: 3.10.1
   resolution: "eslint-import-resolver-typescript@npm:3.10.1"
   dependencies:
@@ -13907,6 +13907,8 @@ __metadata:
     dompurify: "npm:^3.2.6"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:15.5.2"
+    eslint-import-resolver-typescript: "npm:^3.6.1"
+    eslint-plugin-import: "npm:^2.31.0"
     fake-indexeddb: "npm:^6.1.0"
     fast-glob: "npm:^3.3.3"
     fast-xml-parser: "npm:^4.3.5"

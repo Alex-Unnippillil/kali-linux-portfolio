@@ -11,9 +11,9 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
-import ShortcutOverlay from '../components/common/ShortcutOverlay';
-import PipPortalProvider from '../components/common/PipPortal';
-import ErrorBoundary from '../components/core/ErrorBoundary';
+import ShortcutOverlay from '@client/common/ShortcutOverlay';
+import PipPortalProvider from '@client/common/PipPortal';
+import ErrorBoundary from '@client/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 

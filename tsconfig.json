@@ -18,8 +18,9 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
-
+      "@/*": ["./*"],
+      "@client/*": ["components/*", "apps/*"],
+      "@server/*": ["lib/server/*", "pages/api/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],

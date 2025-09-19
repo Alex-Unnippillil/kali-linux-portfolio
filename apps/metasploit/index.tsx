@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import modulesData from '../../components/apps/metasploit/modules.json';
+import modulesData from '@/data/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
 import Toast from '../../components/ui/Toast';
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import seedrandom from 'seedrandom';
-import modules from '../../../components/apps/metasploit/modules.json';
+import modules from '@/data/metasploit/modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 
 interface ModuleInfo {

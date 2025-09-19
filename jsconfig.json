@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": { "@/*": ["./*"] }
+    "paths": {
+      "@/*": ["./*"],
+      "@client/*": ["components/*", "apps/*"],
+      "@server/*": ["lib/server/*", "pages/api/*"]
+    }
   }
 }

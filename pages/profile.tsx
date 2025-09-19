@@ -1,4 +1,4 @@
-import ScrollableTimeline from '../components/ScrollableTimeline';
+import ScrollableTimeline from '@client/ScrollableTimeline';
 
 const ProfilePage = () => (
   <main className="min-h-screen p-4 bg-gray-900 text-white">
