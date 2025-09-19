@@ -55,6 +55,33 @@ export default function Settings() {
 
   const changeBackground = (name: string) => setWallpaper(name);
 
+  const formatValue = (value: unknown): string => {
+    if (typeof value === "boolean") {
+      return value ? "On" : "Off";
+    }
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value.toString() : "—";
+    }
+    if (value === null || value === undefined) {
+      return "—";
+    }
+    return String(value);
+  };
+
+  const summarizeDiff = (
+    diff: Array<{ key: string; previous: unknown; next: unknown }>
+  ): string => {
+    if (!diff?.length) {
+      return "No changes detected.";
+    }
+    return diff
+      .map(
+        (change) =>
+          `• ${change.key}: ${formatValue(change.previous)} → ${formatValue(change.next)}`
+      )
+      .join("\n");
+  };
+
   const handleExport = async () => {
     const data = await exportSettingsData();
     const blob = new Blob([data], { type: "application/json" });
@@ -68,20 +95,42 @@ export default function Settings() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    await importSettingsData(text);
     try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
-    } catch (err) {
-      console.error("Invalid settings", err);
+      const result = await importSettingsData(text);
+      const summary = summarizeDiff(result?.diff ?? []);
+      const schemaLabel =
+        result?.metadata?.schemaVersion !== undefined
+          ? `v${result.metadata.schemaVersion}`
+          : "unknown";
+      const exportedLabel = result?.metadata?.exportedAt
+        ? `\nExported: ${new Date(result.metadata.exportedAt).toLocaleString()}`
+        : "";
+      const message = `Import settings (schema ${schemaLabel})?\n${summary}${exportedLabel}`;
+      if (!window.confirm(message)) {
+        return;
+      }
+
+      await result.apply();
+
+      const data = result?.data ?? {};
+      if (data.accent !== undefined) setAccent(data.accent as string);
+      if (data.wallpaper !== undefined)
+        setWallpaper(data.wallpaper as string);
+      if (data.density !== undefined) setDensity(data.density as any);
+      if (data.reducedMotion !== undefined)
+        setReducedMotion(Boolean(data.reducedMotion));
+      if (data.fontScale !== undefined)
+        setFontScale(Number(data.fontScale));
+      if (data.highContrast !== undefined)
+        setHighContrast(Boolean(data.highContrast));
+      if (data.haptics !== undefined) setHaptics(Boolean(data.haptics));
+      if (data.theme !== undefined) setTheme(data.theme as string);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to import settings.";
+      window.alert(message);
     }
   };
 
