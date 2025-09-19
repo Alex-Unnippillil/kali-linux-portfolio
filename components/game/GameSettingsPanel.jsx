@@ -38,6 +38,7 @@ export default function GameSettingsPanel({
   );
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     if (waitingFor) {
       window.addEventListener("keydown", assignKey, { once: true });
       return () => window.removeEventListener("keydown", assignKey);
@@ -50,6 +51,7 @@ export default function GameSettingsPanel({
 
   const [gamepadConnected, setGamepadConnected] = useState(false);
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     const connect = () => setGamepadConnected(true);
     const disconnect = () => setGamepadConnected(false);
     window.addEventListener("gamepadconnected", connect);
@@ -67,6 +69,7 @@ export default function GameSettingsPanel({
 
   // --- Persistence -------------------------------------------------------
   const saveSnapshot = () => {
+    if (typeof window === "undefined") return;
     if (getSnapshot) {
       const snap = getSnapshot();
       try {
@@ -76,6 +79,7 @@ export default function GameSettingsPanel({
   };
 
   const loadSnapshotClick = () => {
+    if (typeof window === "undefined") return;
     if (loadSnapshot) {
       const data = window.localStorage.getItem("game-snapshot");
       if (data) loadSnapshot(JSON.parse(data));
@@ -111,6 +115,7 @@ export default function GameSettingsPanel({
   // --- Input Latency Tester ---------------------------------------------
   const [latency, setLatency] = useState(null);
   const startLatencyTest = () => {
+    if (typeof window === "undefined" || typeof performance === "undefined") return;
     const start = performance.now();
     const handler = () => {
       setLatency(performance.now() - start);

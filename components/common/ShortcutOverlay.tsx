@@ -21,6 +21,7 @@ const ShortcutOverlay: React.FC = () => {
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isInput =
@@ -44,6 +45,8 @@ const ShortcutOverlay: React.FC = () => {
   }, [open, toggle, shortcuts]);
 
   const handleExport = () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (typeof URL === 'undefined' || typeof Blob === 'undefined') return;
     const data = JSON.stringify(shortcuts, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

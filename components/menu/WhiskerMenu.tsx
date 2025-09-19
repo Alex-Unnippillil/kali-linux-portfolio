@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
@@ -31,6 +31,7 @@ const WhiskerMenu: React.FC = () => {
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
+    if (!open) return [];
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
       return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
@@ -71,12 +72,18 @@ const WhiskerMenu: React.FC = () => {
     setHighlight(0);
   }, [open, category, query]);
 
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setOpen(false);
-  };
+  const openSelectedApp = useCallback(
+    (id: string) => {
+      if (typeof window === 'undefined') return;
+      window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+      setOpen(false);
+    },
+    []
+  );
 
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
@@ -100,9 +107,11 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, currentApps, highlight]);
+  }, [open, currentApps, highlight, openSelectedApp]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
     const handleClick = (e: MouseEvent) => {
       if (!open) return;
       const target = e.target as Node;
@@ -157,6 +166,7 @@ const WhiskerMenu: React.FC = () => {
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
+              aria-label="Search applications"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus

@@ -101,6 +101,11 @@ const ModuleWorkspace: React.FC = () => {
     setStoreData(getAll());
   }, [selected, optionValues]);
 
+  const copyResult = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    navigator.clipboard.writeText(result).catch(() => {});
+  }, [result]);
+
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
       <section className="space-y-2">
@@ -111,6 +116,7 @@ const ModuleWorkspace: React.FC = () => {
             onChange={(e) => setNewWorkspace(e.target.value)}
             placeholder="New workspace"
             className="p-1 rounded text-black"
+            aria-label="New workspace name"
           />
           <button
             onClick={addWorkspace}
@@ -184,6 +190,7 @@ const ModuleWorkspace: React.FC = () => {
                         })
                       }
                       className="mt-1 w-full p-1 rounded text-black"
+                      aria-label={`${opt.name} value`}
                     />
                   </label>
                 </div>
@@ -203,9 +210,7 @@ const ModuleWorkspace: React.FC = () => {
                     {result}
                   </pre>
                   <button
-                    onClick={() =>
-                      navigator.clipboard?.writeText(result)
-                    }
+                    onClick={copyResult}
                     className="px-2 py-1 text-sm rounded bg-gray-700"
                   >
                     Copy

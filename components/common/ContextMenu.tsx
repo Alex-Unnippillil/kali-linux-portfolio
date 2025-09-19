@@ -61,15 +61,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   }, [targetRef]);
 
   useEffect(() => {
-    if (open) {
-      window.dispatchEvent(new CustomEvent('context-menu-open'));
-    } else {
-      window.dispatchEvent(new CustomEvent('context-menu-close'));
-    }
+    if (typeof window === 'undefined') return;
+    const eventName = open ? 'context-menu-open' : 'context-menu-close';
+    window.dispatchEvent(new CustomEvent(eventName));
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
+
+    if (typeof document === 'undefined') return undefined;
 
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
