@@ -4,18 +4,20 @@ import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
+import { registerSessionProvider } from '../../utils/sessionStore';
 
 export class Gedit extends Component {
 
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
+        const session = props && typeof props.session === 'object' ? props.session : {};
         this.state = {
             sending: false,
             showProgress: false,
             progress: 0,
-            name: '',
-            subject: '',
-            message: '',
+            name: session.name || '',
+            subject: session.subject || '',
+            message: session.message || '',
             nameError: false,
             messageError: false,
             nameTouched: false,
@@ -26,17 +28,26 @@ export class Gedit extends Component {
         }
         this.progressTimer = null;
         this.progressInterval = null;
+        this.unregisterSession = null;
     }
 
     componentDidMount() {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
         this.fetchLocation();
+        if (typeof window !== 'undefined') {
+            this.unregisterSession = registerSessionProvider('gedit', () => ({
+                name: this.state.name,
+                subject: this.state.subject,
+                message: this.state.message,
+            }));
+        }
     }
 
     componentWillUnmount() {
         if (this.timeFrame) cancelAnimationFrame(this.timeFrame);
         if (this.progressTimer) clearTimeout(this.progressTimer);
         if (this.progressInterval) clearInterval(this.progressInterval);
+        if (this.unregisterSession) this.unregisterSession();
     }
 
     fetchLocation = () => {

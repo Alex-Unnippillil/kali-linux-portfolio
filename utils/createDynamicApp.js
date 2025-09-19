@@ -13,11 +13,13 @@ export const createDynamicApp = (id, title) =>
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
+        const Fallback = () => (
           <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
             {`Unable to load ${title}`}
           </div>
         );
+        Fallback.displayName = `${title}Fallback`;
+        return Fallback;
       }
     },
     {
@@ -34,8 +36,8 @@ export const createDisplay = (Component) => {
   const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
     ssr: false,
   });
-  const Display = (addFolder, openApp) => (
-    <DynamicComponent addFolder={addFolder} openApp={openApp} />
+  const Display = (addFolder, openApp, session) => (
+    <DynamicComponent addFolder={addFolder} openApp={openApp} session={session} />
   );
 
   Display.prefetch = () => {
@@ -43,6 +45,9 @@ export const createDisplay = (Component) => {
       Component.preload();
     }
   };
+
+  Display.displayName =
+    Component.displayName || Component.name || 'DynamicAppDisplay';
 
   return Display;
 };
