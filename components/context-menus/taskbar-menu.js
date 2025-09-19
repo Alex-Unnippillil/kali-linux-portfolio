@@ -23,6 +23,20 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    const handlePinToggle = () => {
+        if (props.pinned) {
+            props.onUnpin && props.onUnpin();
+        } else {
+            props.onPin && props.onPin();
+        }
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
+    const handleShowRecent = () => {
+        props.onShowRecent && props.onShowRecent();
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
     return (
         <div
             id="taskbar-menu"
@@ -40,6 +54,25 @@ function TaskbarMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleShowRecent}
+                disabled={!props.hasRecent}
+                role="menuitem"
+                aria-label="Show Recent Apps"
+                className={`w-full text-left cursor-default py-0.5 mb-1.5 ${props.hasRecent ? 'hover:bg-gray-700' : 'opacity-50 cursor-not-allowed'}`}
+            >
+                <span className="ml-5">Show Recent</span>
+            </button>
+            <button
+                type="button"
+                onClick={handlePinToggle}
+                role="menuitem"
+                aria-label={props.pinned ? 'Unpin from Taskbar' : 'Pin to Taskbar'}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{props.pinned ? 'Unpin from Taskbar' : 'Pin to Taskbar'}</span>
             </button>
             <button
                 type="button"

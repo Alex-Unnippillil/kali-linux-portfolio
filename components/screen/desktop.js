@@ -41,6 +41,8 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            pinned_list: [],
+            recent_items: [],
             context_menus: {
                 desktop: false,
                 default: false,
@@ -52,6 +54,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            taskbarRecentRequest: 0,
         }
     }
 
@@ -345,12 +348,28 @@ export class Desktop extends Component {
     fetchAppsData = (callback) => {
         let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
+            try { pinnedApps = JSON.parse(pinnedApps); } catch (e) { pinnedApps = []; }
             apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
         } else {
             pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
+        if (!Array.isArray(pinnedApps)) pinnedApps = [];
+
+        let recentItems = [];
+        try { recentItems = JSON.parse(safeLocalStorage?.getItem('taskbarRecentMeta') || '[]'); } catch (e) { recentItems = []; }
+        if (!Array.isArray(recentItems)) recentItems = [];
+        recentItems = recentItems
+            .filter(item => item && typeof item.id === 'string')
+            .map(item => {
+                const meta = apps.find(app => app.id === item.id) || {};
+                return {
+                    id: item.id,
+                    title: item.title || meta.title || item.id,
+                    icon: item.icon || meta.icon,
+                    lastOpened: item.lastOpened || Date.now(),
+                };
+            });
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -387,7 +406,9 @@ export class Desktop extends Component {
             favourite_apps,
             overlapped_windows,
             minimized_windows,
-            desktop_apps
+            desktop_apps,
+            pinned_list: pinnedApps,
+            recent_items: recentItems,
         }, () => {
             if (typeof callback === 'function') callback();
         });
@@ -583,6 +604,31 @@ export class Desktop extends Component {
         }
     }
 
+    recordRecentApp = (id) => {
+        const appMeta = apps.find(app => app.id === id);
+        if (!appMeta) return;
+        const now = Date.now();
+        this.setState(prevState => {
+            const previous = prevState.recent_items.find(item => item.id === id) || {};
+            const updated = {
+                ...previous,
+                id,
+                title: appMeta.title || previous.title || id,
+                icon: appMeta.icon || previous.icon,
+                lastOpened: now,
+            };
+            const filtered = prevState.recent_items.filter(item => item.id !== id);
+            const next = [updated, ...filtered].slice(0, 12);
+            return { recent_items: next };
+        }, () => {
+            safeLocalStorage?.setItem('taskbarRecentMeta', JSON.stringify(this.state.recent_items));
+        });
+    }
+
+    showRecentFromMenu = () => {
+        this.setState(prev => ({ taskbarRecentRequest: prev.taskbarRecentRequest + 1 }));
+    }
+
     openApp = (objId) => {
 
         // google analytics
@@ -608,6 +654,7 @@ export class Desktop extends Component {
                 this.focus(objId);
                 this.saveSession();
             }
+            this.recordRecentApp(objId);
             return;
         } else {
             let closed_windows = this.state.closed_windows;
@@ -650,6 +697,7 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.recordRecentApp(objId);
                 });
                 this.app_stack.push(objId);
             }, 200);
@@ -705,8 +753,6 @@ export class Desktop extends Component {
     }
 
     pinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = true
@@ -714,13 +760,18 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
+        this.setState(prevState => {
+            const favourite_apps = { ...prevState.favourite_apps, [id]: true }
+            const pinned_list = prevState.pinned_list.includes(id) ? prevState.pinned_list : [...prevState.pinned_list, id]
+            return { favourite_apps, pinned_list }
+        }, () => {
+            this.saveSession();
+            this.recordRecentApp(id);
+        })
         this.hideAllContextMenu()
     }
 
     unpinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = false
@@ -728,12 +779,20 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         pinnedApps = pinnedApps.filter(appId => appId !== id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
+        this.setState(prevState => {
+            const favourite_apps = { ...prevState.favourite_apps }
+            if (prevState.closed_windows[id]) favourite_apps[id] = false
+            const pinned_list = prevState.pinned_list.filter(appId => appId !== id)
+            return { favourite_apps, pinned_list }
+        }, () => {
+            this.saveSession();
+            this.recordRecentApp(id);
+        })
         this.hideAllContextMenu()
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -744,7 +803,9 @@ export class Desktop extends Component {
                 }
             }
         }
-        this.setState({ focused_windows });
+        this.setState({ focused_windows }, () => {
+            this.recordRecentApp(objId);
+        });
     }
 
     addNewFolder = () => {
@@ -900,6 +961,11 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    pinned={this.state.pinned_list}
+                    recentItems={this.state.recent_items}
+                    onPin={this.pinApp}
+                    onUnpin={this.unpinApp}
+                    recentRequestKey={this.state.taskbarRecentRequest}
                 />
 
                 {/* Desktop Apps */}
@@ -937,6 +1003,21 @@ export class Desktop extends Component {
                         const id = this.state.context_app;
                         if (!id) return;
                         this.closeApp(id);
+                    }}
+                    pinned={this.state.context_app ? this.state.pinned_list.includes(this.state.context_app) : false}
+                    hasRecent={this.state.recent_items.some(item => !this.state.pinned_list.includes(item.id))}
+                    onPin={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.pinApp(id);
+                    }}
+                    onUnpin={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.unpinApp(id);
+                    }}
+                    onShowRecent={() => {
+                        this.showRecentFromMenu();
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
