@@ -1,0 +1,14 @@
+{
+  "name": "Kali Linux Portfolio",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22",
+      "installYarnUsingCorepack": true
+    }
+  },
+  "mounts": [
+    "source=devcontainer-yarn-cache,target=${containerWorkspaceFolder}/.yarn,type=volume"
+  ],
+  "postCreateCommand": "corepack enable && corepack prepare yarn@4 --activate && yarn install --immutable"
+}

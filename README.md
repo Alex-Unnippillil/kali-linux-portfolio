@@ -26,6 +26,17 @@ Always test inside controlled labs and obtain written permission before performi
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
+### Dev Container (VS Code / Codespaces)
+
+This repo ships with [Dev Container](https://containers.dev/) settings under `.devcontainer/devcontainer.json` so contributors can get a reproducible environment with Docker, VS Code, or GitHub Codespaces:
+
+1. Install Docker Desktop (or another compatible container runtime) and the **Dev Containers** VS Code extension.
+2. Open this repository in VS Code and run **Dev Containers: Reopen in Container** from the Command Palette.
+3. The container uses `mcr.microsoft.com/devcontainers/javascript-node` with Node.js 22, enables Corepack, activates Yarn 4, and runs `yarn install --immutable` on first boot.
+4. The `.yarn` directory is mounted as a persistent Docker volume so the Yarn cache survives container rebuilds.
+
+Codespaces users get the same experience automatically when the workspace initializes.
+
 ### Install & Run (Dev)
 ```bash
 cp .env.local.example .env.local  # populate with required keys
