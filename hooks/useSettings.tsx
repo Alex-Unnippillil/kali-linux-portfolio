@@ -20,6 +20,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getReleaseChannel as loadReleaseChannel,
+  setReleaseChannel as saveReleaseChannel,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +65,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  releaseChannel: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +77,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setReleaseChannel: (value: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  releaseChannel: defaults.releaseChannel,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +104,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setReleaseChannel: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +119,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [releaseChannel, setReleaseChannelState] = useState<string>(
+    defaults.releaseChannel,
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
+  const previousReleaseChannelRef = useRef<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -127,6 +137,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      const channel = await loadReleaseChannel();
+      previousReleaseChannelRef.current = channel;
+      setReleaseChannelState(channel);
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +249,42 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveReleaseChannel(releaseChannel);
+    if (previousReleaseChannelRef.current === null) {
+      previousReleaseChannelRef.current = releaseChannel;
+      return;
+    }
+    if (previousReleaseChannelRef.current === releaseChannel) {
+      return;
+    }
+    previousReleaseChannelRef.current = releaseChannel;
+    if (typeof window === 'undefined') return;
+    (async () => {
+      try {
+        if ('caches' in window) {
+          const keys = await window.caches.keys();
+          await Promise.all(keys.map((key) => window.caches.delete(key)));
+        }
+        if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(
+            registrations.map(async (registration) => {
+              try {
+                await registration.update();
+              } catch {
+                // ignore update errors
+              }
+              registration.active?.postMessage?.({ type: 'refresh' });
+            }),
+          );
+        }
+      } catch {
+        // ignore cache bust errors
+      }
+    })();
+  }, [releaseChannel]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +299,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        releaseChannel,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +311,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setReleaseChannel: setReleaseChannelState,
       }}
     >
       {children}

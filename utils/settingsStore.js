@@ -3,6 +3,15 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+const DEFAULT_CHANNEL = process.env.NEXT_PUBLIC_DEFAULT_CHANNEL || 'stable';
+const RELEASE_CHANNEL_KEY = 'release-channel';
+const PROFILE_STORAGE_KEYS = [
+  'profile:active',
+  'desktop-profile',
+  'active-profile',
+  'profile',
+];
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
@@ -14,6 +23,21 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  releaseChannel: DEFAULT_CHANNEL,
+};
+
+const getActiveProfile = () => {
+  if (typeof window === 'undefined') return 'default';
+  for (const key of PROFILE_STORAGE_KEYS) {
+    const value = window.localStorage.getItem(key);
+    if (value) return value;
+  }
+  return 'default';
+};
+
+const getReleaseChannelKey = () => {
+  const profile = getActiveProfile();
+  return `${RELEASE_CHANNEL_KEY}:${profile}`;
 };
 
 export async function getAccent() {
@@ -123,6 +147,22 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getReleaseChannel() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.releaseChannel;
+  const profileKey = getReleaseChannelKey();
+  const scoped = window.localStorage.getItem(profileKey);
+  if (scoped) return scoped;
+  const globalValue = window.localStorage.getItem(RELEASE_CHANNEL_KEY);
+  return globalValue || DEFAULT_SETTINGS.releaseChannel;
+}
+
+export async function setReleaseChannel(channel) {
+  if (typeof window === 'undefined') return;
+  const profileKey = getReleaseChannelKey();
+  window.localStorage.setItem(profileKey, channel);
+  window.localStorage.setItem(RELEASE_CHANNEL_KEY, channel);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +177,14 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  Object.keys(window.localStorage)
+    .filter(
+      (key) =>
+        key === RELEASE_CHANNEL_KEY || key.startsWith(`${RELEASE_CHANNEL_KEY}:`),
+    )
+    .forEach((key) => {
+      window.localStorage.removeItem(key);
+    });
 }
 
 export async function exportSettings() {
@@ -151,6 +199,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    releaseChannel,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +211,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getReleaseChannel(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +225,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    releaseChannel,
     theme,
   });
 }
@@ -199,6 +250,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    releaseChannel,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +263,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (releaseChannel !== undefined) await setReleaseChannel(releaseChannel);
   if (theme !== undefined) setTheme(theme);
 }
 

@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
@@ -9,6 +9,18 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import ToggleSwitch from '../../ToggleSwitch';
+import { useSettings } from '../../../hooks/useSettings';
+
+const CHANNEL_LABELS: Record<string, string> = {
+  stable: 'Stable',
+  preview: 'Preview',
+  beta: 'Beta',
+  canary: 'Canary',
+};
+
+const formatChannelLabel = (channel: string) =>
+  CHANNEL_LABELS[channel] || channel.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -165,6 +177,92 @@ export default function AboutApp() {
 
 export { default as SafetyNote } from './SafetyNote';
 
+function ReleaseChannelSection() {
+  const { releaseChannel, setReleaseChannel } = useSettings();
+  const defaultChannel = useMemo(
+    () => process.env.NEXT_PUBLIC_DEFAULT_CHANNEL ?? 'stable',
+    [],
+  );
+  const fallbackChannel = useMemo(() => {
+    if (releaseChannel === defaultChannel) {
+      return defaultChannel === 'stable' ? 'preview' : 'stable';
+    }
+    return releaseChannel;
+  }, [releaseChannel, defaultChannel]);
+  const [showRestartPrompt, setShowRestartPrompt] = useState(false);
+  const initialChannelRef = useRef(releaseChannel);
+
+  useEffect(() => {
+    setShowRestartPrompt(releaseChannel !== initialChannelRef.current);
+  }, [releaseChannel]);
+
+  const handleToggle = (checked: boolean) => {
+    const nextChannel = checked ? fallbackChannel : defaultChannel;
+    setReleaseChannel(nextChannel);
+  };
+
+  const guidanceMessage =
+    releaseChannel === defaultChannel
+      ? `Switch to ${formatChannelLabel(fallbackChannel)} to preview upcoming builds.`
+      : `Switch back to ${formatChannelLabel(defaultChannel)} for the stable experience.`;
+
+  return (
+    <section className="mt-4 w-5/6 md:w-3/4 rounded-lg border border-gray-700 bg-black/40 p-4 text-sm text-gray-200">
+      <h2 className="mb-2 text-center text-base font-semibold uppercase tracking-wide text-ubt-grey">
+        Release Channel
+      </h2>
+      <p className="text-center text-sm md:text-left">
+        Active channel:{' '}
+        <span className="font-semibold text-white">
+          {formatChannelLabel(releaseChannel)}
+        </span>
+      </p>
+      <div className="mt-3 flex flex-col items-center gap-3 md:flex-row md:justify-between">
+        <div className="flex items-center gap-2">
+          <span
+            className={`text-xs uppercase tracking-wide ${
+              releaseChannel === defaultChannel ? 'text-white font-semibold' : 'text-gray-400'
+            }`}
+          >
+            {formatChannelLabel(defaultChannel)}
+          </span>
+          <ToggleSwitch
+            checked={releaseChannel !== defaultChannel}
+            onChange={handleToggle}
+            ariaLabel="Toggle release channel"
+          />
+          <span
+            className={`text-xs uppercase tracking-wide ${
+              releaseChannel !== defaultChannel ? 'text-white font-semibold' : 'text-gray-400'
+            }`}
+          >
+            {formatChannelLabel(fallbackChannel)}
+          </span>
+        </div>
+        <p className="text-center text-xs text-gray-300 md:text-right">{guidanceMessage}</p>
+      </div>
+      {showRestartPrompt && (
+        <div
+          role="alert"
+          className="mt-3 rounded border border-yellow-700 bg-yellow-900/60 px-3 py-2 text-xs text-yellow-100 md:text-sm"
+        >
+          <p>
+            Restart required to finish switching to the{' '}
+            {formatChannelLabel(releaseChannel)} channel.
+          </p>
+          <button
+            type="button"
+            onClick={() => typeof window !== 'undefined' && window.location.reload()}
+            className="mt-2 inline-flex items-center rounded bg-yellow-300 px-3 py-1 text-xs font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-100"
+          >
+            Restart now
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function About() {
   return (
     <>
@@ -191,6 +289,7 @@ function About() {
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0" />
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0" />
       </div>
+      <ReleaseChannelSection />
       <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
         <li className="list-pc">
           I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
