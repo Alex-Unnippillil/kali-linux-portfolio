@@ -1,7 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import FormError from '../components/ui/FormError';
+import Toast from '../components/ui/Toast';
+import useFormSubmission, {
+  type FormSubmissionResult,
+} from '../hooks/useFormSubmission';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -12,6 +16,61 @@ const DummyForm: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [recovered, setRecovered] = useState(false);
+  const {
+    pending,
+    handleSubmit,
+    spinner,
+    toast,
+    dismissToast,
+    submitProps,
+  } = useFormSubmission<React.FormEvent<HTMLFormElement>>({
+    onSubmit: async (e) => {
+      e.preventDefault();
+      setSuccess(false);
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!name || !email || !message) {
+        setError('All fields are required');
+        return { status: 'error', suppressToast: true } as FormSubmissionResult;
+      }
+      if (!emailRegex.test(email)) {
+        setError('Please enter a valid email');
+        return { status: 'error', suppressToast: true } as FormSubmissionResult;
+      }
+      setError('');
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+        try {
+          const res = await fetch('/api/dummy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, email, message }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data?.error || 'Failed to submit form');
+          }
+        } catch (err) {
+          const msg =
+            err instanceof Error ? err.message : 'Failed to submit form';
+          setError(msg);
+          throw err;
+        }
+      }
+      setSuccess(true);
+      window.localStorage.removeItem(STORAGE_KEY);
+      setName('');
+      setEmail('');
+      setMessage('');
+      setRecovered(false);
+      return {
+        status: 'success',
+        message: 'Form submitted successfully!',
+      } as FormSubmissionResult;
+    },
+    errorMessage: (error) =>
+      error instanceof Error ? error.message : 'Failed to submit form',
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -55,36 +114,6 @@ const DummyForm: React.FC = () => {
     return () => clearTimeout(handle);
   }, [name, email, message]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!name || !email || !message) {
-      setError('All fields are required');
-      return;
-    }
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email');
-      return;
-    }
-    setError('');
-    setSuccess(false);
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/dummy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, message }),
-      });
-    }
-    setSuccess(true);
-    window.localStorage.removeItem(STORAGE_KEY);
-    setName('');
-    setEmail('');
-    setMessage('');
-    setRecovered(false);
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
@@ -115,11 +144,27 @@ const DummyForm: React.FC = () => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
-        <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
+        <button
+          type="submit"
+          className="w-full rounded bg-blue-600 p-2 text-white disabled:opacity-70"
+          {...submitProps}
+        >
+          {pending ? spinner : 'Submit'}
+        </button>
         <p className="mt-4 text-xs text-gray-500">
           This form posts to a dummy endpoint. No data is stored. By submitting, you consent to this temporary processing of your information.
         </p>
       </form>
+      {toast && (
+        <Toast
+          message={
+            toast.status === 'error'
+              ? `Error: ${toast.message}`
+              : toast.message
+          }
+          onClose={dismissToast}
+        />
+      )}
     </div>
   );
 };
