@@ -23,6 +23,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { useProfiles } from './useProfiles';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +64,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  hydrated: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -88,6 +90,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  hydrated: false,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -102,6 +105,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { activeProfileId } = useProfiles();
+  const profileId = activeProfileId ?? null;
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
@@ -112,28 +117,103 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setThemeState] = useState<string>(() => loadTheme(profileId));
+  const [hydrated, setHydrated] = useState(false);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const hydrationRef = useRef(false);
+  const userThemeRef = useRef(false);
+  const themeRef = useRef(theme);
 
   useEffect(() => {
-    (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
-    })();
-  }, []);
-
-  useEffect(() => {
-    saveTheme(theme);
+    themeRef.current = theme;
   }, [theme]);
+
+  useEffect(() => {
+    let cancelled = false;
+    hydrationRef.current = true;
+    setHydrated(false);
+    userThemeRef.current = false;
+
+    setAccent(defaults.accent);
+    setWallpaper(defaults.wallpaper);
+    setDensity(defaults.density as Density);
+    setReducedMotion(defaults.reducedMotion);
+    setFontScale(defaults.fontScale);
+    setHighContrast(defaults.highContrast);
+    setLargeHitAreas(defaults.largeHitAreas);
+    setPongSpin(defaults.pongSpin);
+    setAllowNetwork(defaults.allowNetwork);
+    setHaptics(defaults.haptics);
+
+    const immediateTheme = loadTheme(profileId);
+    setThemeState(immediateTheme);
+    saveTheme(immediateTheme, profileId);
+
+    (async () => {
+      const [
+        nextAccent,
+        nextWallpaper,
+        nextDensity,
+        nextReducedMotion,
+        nextFontScale,
+        nextHighContrast,
+        nextLargeHitAreas,
+        nextPongSpin,
+        nextAllowNetwork,
+        nextHaptics,
+      ] = await Promise.all([
+        loadAccent(profileId),
+        loadWallpaper(profileId),
+        loadDensity(profileId),
+        loadReducedMotion(profileId),
+        loadFontScale(profileId),
+        loadHighContrast(profileId),
+        loadLargeHitAreas(profileId),
+        loadPongSpin(profileId),
+        loadAllowNetwork(profileId),
+        loadHaptics(profileId),
+      ]);
+
+      if (cancelled) {
+        hydrationRef.current = false;
+        return;
+      }
+
+      setAccent(nextAccent);
+      setWallpaper(nextWallpaper);
+      setDensity((nextDensity as Density) ?? (defaults.density as Density));
+      setReducedMotion(nextReducedMotion);
+      setFontScale(nextFontScale);
+      setHighContrast(nextHighContrast);
+      setLargeHitAreas(nextLargeHitAreas);
+      setPongSpin(nextPongSpin);
+      setAllowNetwork(nextAllowNetwork);
+      setHaptics(nextHaptics);
+
+      const finalTheme = loadTheme(profileId);
+      if (!userThemeRef.current) {
+        setThemeState(finalTheme);
+      }
+      const themeToPersist = userThemeRef.current ? themeRef.current : finalTheme;
+      saveTheme(themeToPersist, profileId);
+      hydrationRef.current = false;
+      setHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId]);
+
+  useEffect(() => {
+    if (hydrationRef.current) return;
+    saveTheme(theme, profileId);
+  }, [theme, profileId]);
+
+  const handleThemeChange = (next: string) => {
+    userThemeRef.current = true;
+    setThemeState(next);
+  };
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -149,12 +229,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
-  }, [accent]);
+    if (!hydrationRef.current) {
+      saveAccent(accent, profileId);
+    }
+  }, [accent, profileId]);
 
   useEffect(() => {
-    saveWallpaper(wallpaper);
-  }, [wallpaper]);
+    if (hydrationRef.current) return;
+    saveWallpaper(wallpaper, profileId);
+  }, [wallpaper, profileId]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -179,35 +262,49 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveDensity(density);
-  }, [density]);
+    if (!hydrationRef.current) {
+      saveDensity(density, profileId);
+    }
+  }, [density, profileId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
-    saveReducedMotion(reducedMotion);
-  }, [reducedMotion]);
+    if (!hydrationRef.current) {
+      saveReducedMotion(reducedMotion, profileId);
+    }
+  }, [reducedMotion, profileId]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
-  }, [fontScale]);
+    if (!hydrationRef.current) {
+      saveFontScale(fontScale, profileId);
+    }
+  }, [fontScale, profileId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
-    saveHighContrast(highContrast);
-  }, [highContrast]);
+    if (!hydrationRef.current) {
+      saveHighContrast(highContrast, profileId);
+    }
+  }, [highContrast, profileId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
-    saveLargeHitAreas(largeHitAreas);
-  }, [largeHitAreas]);
+    if (!hydrationRef.current) {
+      saveLargeHitAreas(largeHitAreas, profileId);
+    }
+  }, [largeHitAreas, profileId]);
 
   useEffect(() => {
-    savePongSpin(pongSpin);
-  }, [pongSpin]);
+    if (!hydrationRef.current) {
+      savePongSpin(pongSpin, profileId);
+    }
+  }, [pongSpin, profileId]);
 
   useEffect(() => {
-    saveAllowNetwork(allowNetwork);
+    if (!hydrationRef.current) {
+      saveAllowNetwork(allowNetwork, profileId);
+    }
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
@@ -230,11 +327,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       window.fetch = fetchRef.current!;
     }
-  }, [allowNetwork]);
+  }, [allowNetwork, profileId]);
 
   useEffect(() => {
-    saveHaptics(haptics);
-  }, [haptics]);
+    if (!hydrationRef.current) {
+      saveHaptics(haptics, profileId);
+    }
+  }, [haptics, profileId]);
 
   return (
     <SettingsContext.Provider
@@ -250,6 +349,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        hydrated,
         setAccent,
         setWallpaper,
         setDensity,
@@ -260,7 +360,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
-        setTheme,
+        setTheme: handleThemeChange,
       }}
     >
       {children}

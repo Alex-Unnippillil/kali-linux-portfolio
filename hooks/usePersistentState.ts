@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Persist state in localStorage.
@@ -14,37 +14,52 @@ export default function usePersistentState<T>(
   initial: T | (() => T),
   validator?: (value: unknown) => value is T,
 ) {
-  const getInitial = () =>
-    typeof initial === 'function' ? (initial as () => T)() : initial;
+  const getInitial = useCallback(
+    () => (typeof initial === 'function' ? (initial as () => T)() : initial),
+    [initial],
+  );
 
-  const [state, setState] = useState<T>(() => {
-    if (typeof window === 'undefined') return getInitial();
-    try {
-      const stored = window.localStorage.getItem(key);
-      if (stored !== null) {
-        const parsed = JSON.parse(stored);
-        if (!validator || validator(parsed)) {
-          return parsed as T;
+  const readValue = useCallback(
+    (storageKey: string) => {
+      if (typeof window === 'undefined') return getInitial();
+      try {
+        const stored = window.localStorage.getItem(storageKey);
+        if (stored !== null) {
+          const parsed = JSON.parse(stored);
+          if (!validator || validator(parsed)) {
+            return parsed as T;
+          }
         }
+      } catch {
+        // ignore parsing errors and fall back
       }
-    } catch {
-      // ignore parsing errors and fall back
-    }
-    return getInitial();
-  });
+      return getInitial();
+    },
+    [getInitial, validator],
+  );
+
+  const [storageKey, setStorageKey] = useState(key);
+  const [state, setState] = useState<T>(() => readValue(key));
 
   useEffect(() => {
+    if (key === storageKey) return;
+    setStorageKey(key);
+    setState(readValue(key));
+  }, [key, readValue, storageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      window.localStorage.setItem(key, JSON.stringify(state));
+      window.localStorage.setItem(storageKey, JSON.stringify(state));
     } catch {
       // ignore write errors
     }
-  }, [key, state]);
+  }, [storageKey, state]);
 
   const reset = () => setState(getInitial());
   const clear = () => {
     try {
-      window.localStorage.removeItem(key);
+      window.localStorage.removeItem(storageKey);
     } catch {
       // ignore remove errors
     }

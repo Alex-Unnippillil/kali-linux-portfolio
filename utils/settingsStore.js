@@ -1,6 +1,7 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import { getProfileScopedKey } from './profileKeys';
 import { getTheme, setTheme } from './theme';
 
 const DEFAULT_SETTINGS = {
@@ -16,130 +17,170 @@ const DEFAULT_SETTINGS = {
   haptics: true,
 };
 
-export async function getAccent() {
+export async function getAccent(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
-  return (await get('accent')) || DEFAULT_SETTINGS.accent;
+  try {
+    const key = getProfileScopedKey(profileId, 'accent');
+    return (await get(key)) || DEFAULT_SETTINGS.accent;
+  } catch {
+    return DEFAULT_SETTINGS.accent;
+  }
 }
 
-export async function setAccent(accent) {
+export async function setAccent(accent, profileId) {
   if (typeof window === 'undefined') return;
-  await set('accent', accent);
+  try {
+    await set(getProfileScopedKey(profileId, 'accent'), accent);
+  } catch {
+    // ignore
+  }
 }
 
-export async function getWallpaper() {
+export async function getWallpaper(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  try {
+    const key = getProfileScopedKey(profileId, 'bg-image');
+    return (await get(key)) || DEFAULT_SETTINGS.wallpaper;
+  } catch {
+    return DEFAULT_SETTINGS.wallpaper;
+  }
 }
 
-export async function setWallpaper(wallpaper) {
+export async function setWallpaper(wallpaper, profileId) {
   if (typeof window === 'undefined') return;
-  await set('bg-image', wallpaper);
+  try {
+    await set(getProfileScopedKey(profileId, 'bg-image'), wallpaper);
+  } catch {
+    // ignore
+  }
 }
 
-export async function getDensity() {
+export async function getDensity(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  const key = getProfileScopedKey(profileId, 'density');
+  return window.localStorage.getItem(key) || DEFAULT_SETTINGS.density;
 }
 
-export async function setDensity(density) {
+export async function setDensity(density, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  const key = getProfileScopedKey(profileId, 'density');
+  window.localStorage.setItem(key, density);
 }
 
-export async function getReducedMotion() {
+export async function getReducedMotion(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
+  const key = getProfileScopedKey(profileId, 'reduced-motion');
+  const stored = window.localStorage.getItem(key);
   if (stored !== null) {
     return stored === 'true';
   }
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export async function setReducedMotion(value) {
+export async function setReducedMotion(value, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+  const key = getProfileScopedKey(profileId, 'reduced-motion');
+  window.localStorage.setItem(key, value ? 'true' : 'false');
 }
 
-export async function getFontScale() {
+export async function getFontScale(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
+  const key = getProfileScopedKey(profileId, 'font-scale');
+  const stored = window.localStorage.getItem(key);
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
-export async function setFontScale(scale) {
+export async function setFontScale(scale, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  const key = getProfileScopedKey(profileId, 'font-scale');
+  window.localStorage.setItem(key, String(scale));
 }
 
-export async function getHighContrast() {
+export async function getHighContrast(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  const key = getProfileScopedKey(profileId, 'high-contrast');
+  return window.localStorage.getItem(key) === 'true';
 }
 
-export async function setHighContrast(value) {
+export async function setHighContrast(value, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  const key = getProfileScopedKey(profileId, 'high-contrast');
+  window.localStorage.setItem(key, value ? 'true' : 'false');
 }
 
-export async function getLargeHitAreas() {
+export async function getLargeHitAreas(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  const key = getProfileScopedKey(profileId, 'large-hit-areas');
+  return window.localStorage.getItem(key) === 'true';
 }
 
-export async function setLargeHitAreas(value) {
+export async function setLargeHitAreas(value, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+  const key = getProfileScopedKey(profileId, 'large-hit-areas');
+  window.localStorage.setItem(key, value ? 'true' : 'false');
 }
 
-export async function getHaptics() {
+export async function getHaptics(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
+  const key = getProfileScopedKey(profileId, 'haptics');
+  const val = window.localStorage.getItem(key);
   return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
-export async function setHaptics(value) {
+export async function setHaptics(value, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('haptics', value ? 'true' : 'false');
+  const key = getProfileScopedKey(profileId, 'haptics');
+  window.localStorage.setItem(key, value ? 'true' : 'false');
 }
 
-export async function getPongSpin() {
+export async function getPongSpin(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
+  const key = getProfileScopedKey(profileId, 'pong-spin');
+  const val = window.localStorage.getItem(key);
   return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
-export async function setPongSpin(value) {
+export async function setPongSpin(value, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
+  const key = getProfileScopedKey(profileId, 'pong-spin');
+  window.localStorage.setItem(key, value ? 'true' : 'false');
 }
 
-export async function getAllowNetwork() {
+export async function getAllowNetwork(profileId) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  const key = getProfileScopedKey(profileId, 'allow-network');
+  return window.localStorage.getItem(key) === 'true';
 }
 
-export async function setAllowNetwork(value) {
+export async function setAllowNetwork(value, profileId) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  const key = getProfileScopedKey(profileId, 'allow-network');
+  window.localStorage.setItem(key, value ? 'true' : 'false');
 }
 
-export async function resetSettings() {
+export async function resetSettings(profileId) {
   if (typeof window === 'undefined') return;
   await Promise.all([
-    del('accent'),
-    del('bg-image'),
+    del(getProfileScopedKey(profileId, 'accent')),
+    del(getProfileScopedKey(profileId, 'bg-image')),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
+  const keys = [
+    'density',
+    'reduced-motion',
+    'font-scale',
+    'high-contrast',
+    'large-hit-areas',
+    'pong-spin',
+    'allow-network',
+    'haptics',
+  ];
+  keys.forEach((name) => {
+    const scoped = getProfileScopedKey(profileId, name);
+    window.localStorage.removeItem(scoped);
+  });
 }
 
-export async function exportSettings() {
+export async function exportSettings(profileId) {
   const [
     accent,
     wallpaper,
@@ -152,18 +193,18 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
   ] = await Promise.all([
-    getAccent(),
-    getWallpaper(),
-    getDensity(),
-    getReducedMotion(),
-    getFontScale(),
-    getHighContrast(),
-    getLargeHitAreas(),
-    getPongSpin(),
-    getAllowNetwork(),
-    getHaptics(),
+    getAccent(profileId),
+    getWallpaper(profileId),
+    getDensity(profileId),
+    getReducedMotion(profileId),
+    getFontScale(profileId),
+    getHighContrast(profileId),
+    getLargeHitAreas(profileId),
+    getPongSpin(profileId),
+    getAllowNetwork(profileId),
+    getHaptics(profileId),
   ]);
-  const theme = getTheme();
+  const theme = getTheme(profileId);
   return JSON.stringify({
     accent,
     wallpaper,
@@ -179,7 +220,7 @@ export async function exportSettings() {
   });
 }
 
-export async function importSettings(json) {
+export async function importSettings(json, profileId) {
   if (typeof window === 'undefined') return;
   let settings;
   try {
@@ -201,17 +242,17 @@ export async function importSettings(json) {
     haptics,
     theme,
   } = settings;
-  if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
-  if (density !== undefined) await setDensity(density);
-  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
-  if (fontScale !== undefined) await setFontScale(fontScale);
-  if (highContrast !== undefined) await setHighContrast(highContrast);
-  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
-  if (pongSpin !== undefined) await setPongSpin(pongSpin);
-  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
-  if (haptics !== undefined) await setHaptics(haptics);
-  if (theme !== undefined) setTheme(theme);
+  if (accent !== undefined) await setAccent(accent, profileId);
+  if (wallpaper !== undefined) await setWallpaper(wallpaper, profileId);
+  if (density !== undefined) await setDensity(density, profileId);
+  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion, profileId);
+  if (fontScale !== undefined) await setFontScale(fontScale, profileId);
+  if (highContrast !== undefined) await setHighContrast(highContrast, profileId);
+  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas, profileId);
+  if (pongSpin !== undefined) await setPongSpin(pongSpin, profileId);
+  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork, profileId);
+  if (haptics !== undefined) await setHaptics(haptics, profileId);
+  if (theme !== undefined) setTheme(theme, profileId);
 }
 
 export const defaults = DEFAULT_SETTINGS;
