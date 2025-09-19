@@ -7,6 +7,68 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import useDailyTip from '../hooks/useDailyTip';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+
+const DailyTipToast = () => {
+        const { tip, dismissTip, neverShow } = useDailyTip();
+        const prefersReducedMotion = usePrefersReducedMotion();
+        const [renderedTip, setRenderedTip] = React.useState(null);
+        const [visible, setVisible] = React.useState(false);
+
+        React.useEffect(() => {
+                if (tip) {
+                        setRenderedTip(tip);
+                        setVisible(true);
+                }
+        }, [tip]);
+
+        React.useEffect(() => {
+                if (!tip && renderedTip) {
+                        setVisible(false);
+                        if (prefersReducedMotion || typeof window === 'undefined') {
+                                setRenderedTip(null);
+                                return;
+                        }
+
+                        const timeout = window.setTimeout(() => setRenderedTip(null), 200);
+                        return () => window.clearTimeout(timeout);
+                }
+                return undefined;
+        }, [tip, renderedTip, prefersReducedMotion]);
+
+        if (!renderedTip) return null;
+
+        const transitionClasses = prefersReducedMotion ? '' : 'transition-opacity duration-300 ease-out';
+        const opacityClass = visible ? 'opacity-100' : 'opacity-0 pointer-events-none';
+
+        return (
+                <div
+                        className={`fixed bottom-6 left-1/2 z-50 flex w-[min(28rem,90vw)] -translate-x-1/2 flex-col gap-2 rounded-lg bg-slate-900/90 p-4 text-slate-100 shadow-lg backdrop-blur ${transitionClasses} ${opacityClass}`}
+                        role="status"
+                        aria-live="polite"
+                >
+                        <div className="text-sm font-semibold text-sky-200">{renderedTip.title}</div>
+                        <p className="text-sm leading-snug">{renderedTip.body}</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                <button
+                                        type="button"
+                                        onClick={dismissTip}
+                                        className="rounded border border-slate-500/50 px-3 py-1 font-semibold text-slate-100/90 transition hover:border-slate-300 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                >
+                                        Dismiss
+                                </button>
+                                <button
+                                        type="button"
+                                        onClick={neverShow}
+                                        className="rounded border border-transparent px-3 py-1 font-semibold text-slate-100/80 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                >
+                                        Never show tips
+                                </button>
+                        </div>
+                </div>
+        );
+};
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -121,14 +183,15 @@ export default class Ubuntu extends Component {
 					bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <DailyTipToast />
+                        </div>
+                );
+        }
 }
