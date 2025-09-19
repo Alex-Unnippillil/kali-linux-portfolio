@@ -15,6 +15,9 @@ let renderApps = (props) => {
 
 export default function SideBar(props) {
 
+    const forceHidden = props.forceHidden;
+    const isHidden = props.hide || forceHidden;
+
     function showSideBar() {
         props.hideSideBar(null, false);
     }
@@ -29,7 +32,9 @@ export default function SideBar(props) {
         <>
             <nav
                 aria-label="Dock"
-                className={(props.hide ? " -translate-x-full " : "") +
+                aria-hidden={isHidden ? 'true' : undefined}
+                className={(isHidden ? " -translate-x-full " : "") +
+                    (forceHidden ? " opacity-0 pointer-events-none " : "") +
                     " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
             >
                 {
@@ -41,7 +46,9 @@ export default function SideBar(props) {
                 }
                 <AllApps showApps={props.showAllApps} />
             </nav>
-            <div onMouseEnter={showSideBar} onMouseLeave={hideSideBar} className={"w-1 h-full absolute top-0 left-0 bg-transparent z-50"}></div>
+            {!forceHidden && (
+                <div onMouseEnter={showSideBar} onMouseLeave={hideSideBar} className={"w-1 h-full absolute top-0 left-0 bg-transparent z-50"}></div>
+            )}
         </>
     )
 }

@@ -15,8 +15,17 @@ export default function Taskbar(props) {
         }
     };
 
+    const hidden = props.hidden;
+    const containerClass =
+        (hidden ? ' translate-y-full opacity-0 pointer-events-none ' : ' ') +
+        'absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40';
+
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            className={containerClass}
+            role="toolbar"
+            aria-hidden={hidden ? 'true' : undefined}
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}

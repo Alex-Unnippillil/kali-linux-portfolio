@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._restoreBounds = null;
     }
 
     componentDidMount() {
@@ -198,6 +199,24 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    saveRestoreBounds = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        this.setWinowsPosition();
+        const x = node.style.getPropertyValue('--window-transform-x');
+        const y = node.style.getPropertyValue('--window-transform-y');
+        const fallbackX = `${this.startX}px`;
+        const fallbackY = `${this.startY}px`;
+        this._restoreBounds = {
+            width: this.state.width,
+            height: this.state.height,
+            x: x || fallbackX,
+            y: y || fallbackY,
+            snapped: this.state.snapped,
+            lastSize: this.state.lastSize,
+        };
     }
 
     snapToGrid = (value) => {
@@ -411,28 +430,98 @@ export class Window extends Component {
         };
     }
 
+    getSnapTransform = (position) => {
+        if (position === 'right') {
+            return `translate(${window.innerWidth / 2}px,-2pt)`;
+        }
+        return 'translate(-1pt,-2pt)';
+    }
+
+    computeRestoreTarget = (node) => {
+        const stored = this._restoreBounds;
+        const fallbackX = node.style.getPropertyValue('--window-transform-x') || `${this.startX}px`;
+        const fallbackY = node.style.getPropertyValue('--window-transform-y') || `${this.startY}px`;
+        if (!stored) {
+            return {
+                width: this.state.width,
+                height: this.state.height,
+                transform: `translate(${fallbackX},${fallbackY})`,
+                x: fallbackX,
+                y: fallbackY,
+                snapped: null,
+                lastSize: this.state.lastSize || null,
+            };
+        }
+        if (stored.snapped) {
+            return {
+                width: stored.width,
+                height: stored.height,
+                transform: this.getSnapTransform(stored.snapped),
+                snapped: stored.snapped,
+                lastSize: stored.lastSize || null,
+            };
+        }
+        const x = stored.x || fallbackX;
+        const y = stored.y || fallbackY;
+        return {
+            width: stored.width,
+            height: stored.height,
+            transform: `translate(${x},${y})`,
+            x,
+            y,
+            snapped: null,
+            lastSize: stored.lastSize || null,
+        };
+    }
+
     restoreWindow = () => {
         const node = document.querySelector("#" + this.id);
-        this.setDefaultWindowDimenstion();
-        // get previous position
-        let posx = node.style.getPropertyValue("--window-transform-x");
-        let posy = node.style.getPropertyValue("--window-transform-y");
+        if (!node) return;
+        const target = this.computeRestoreTarget(node);
         const startTransform = node.style.transform;
-        const endTransform = `translate(${posx},${posy})`;
+        const endTransform = target.transform;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        if (prefersReducedMotion) {
+        this.setState({
+            maximized: false,
+            width: target.width,
+            height: target.height,
+            snapped: target.snapped || null,
+            snapPreview: null,
+            snapPosition: null,
+            lastSize: target.lastSize || null,
+        }, () => {
+            this.resizeBoundries();
+            if (target.snapped) {
+                this.props.hideSideBar(this.id, true);
+            }
+        });
+
+        const finalize = () => {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            if (!target.snapped) {
+                if (target.x) node.style.setProperty('--window-transform-x', target.x);
+                if (target.y) node.style.setProperty('--window-transform-y', target.y);
+                if (typeof this.props.onPositionChange === 'function' && target.x && target.y) {
+                    const numericX = parseFloat(target.x);
+                    const numericY = parseFloat(target.y);
+                    if (!Number.isNaN(numericX) && !Number.isNaN(numericY)) {
+                        this.props.onPositionChange(numericX, numericY);
+                    }
+                }
+            }
             this.checkOverlap();
+            this._dockAnimation = null;
+        };
+
+        if (prefersReducedMotion) {
+            finalize();
             return;
         }
 
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
+                finalize();
                 this._dockAnimation.onfinish = null;
             };
             this._dockAnimation.reverse();
@@ -442,9 +531,7 @@ export class Window extends Component {
                 { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
             this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
+                finalize();
                 this._dockAnimation.onfinish = null;
             };
         }
@@ -457,11 +544,19 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
-            var r = document.querySelector("#" + this.id);
-            this.setWinowsPosition();
+            const r = document.querySelector("#" + this.id);
+            if (!r) return;
+            this.saveRestoreBounds();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({
+                maximized: true,
+                height: 96.3,
+                width: 100.2,
+                snapped: null,
+                snapPreview: null,
+                snapPosition: null,
+            }, this.resizeBoundries);
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -510,6 +605,12 @@ export class Window extends Component {
                 }
             }
         }
+    }
+
+    handleTitleBarDoubleClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.maximizeWindow();
     }
 
     releaseGrab = () => {
@@ -649,6 +750,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,7 +776,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onDoubleClick }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +785,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>

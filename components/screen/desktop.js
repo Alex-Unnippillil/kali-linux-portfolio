@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import logger from '../../utils/logger';
 
 export class Desktop extends Component {
     constructor() {
@@ -41,6 +42,8 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            isFullscreen: false,
+            chromeHidden: false,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -58,6 +61,9 @@ export class Desktop extends Component {
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+        this.handleFullscreenChange();
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -96,6 +102,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
     }
 
     checkForNewFolders = () => {
@@ -144,6 +151,23 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    handleFullscreenChange = () => {
+        const isFullscreen = typeof document !== 'undefined' && !!document.fullscreenElement;
+        this.setState({ isFullscreen, chromeHidden: isFullscreen });
+    }
+
+    toggleFullscreen = async () => {
+        try {
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+            } else {
+                await document.documentElement.requestFullscreen();
+            }
+        } catch (e) {
+            logger.error(e);
+        }
     }
 
     handleGlobalShortcut = (e) => {
@@ -865,7 +889,7 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main id="desktop" role="main" className={`h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse ${this.state.chromeHidden ? 'pt-0' : 'pt-8'} bg-transparent relative overflow-hidden overscroll-none window-parent`}>
 
                 {/* Window Area */}
                 <div
@@ -882,7 +906,7 @@ export class Desktop extends Component {
 
                 {/* Ubuntu Side Menu Bar */}
                 <SideBar apps={apps}
-                    hide={this.state.hideSideBar}
+                    hide={this.state.hideSideBar || this.state.chromeHidden}
                     hideSideBar={this.hideSideBar}
                     favourite_apps={this.state.favourite_apps}
                     showAllApps={this.showAllApps}
@@ -890,7 +914,8 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     focused_windows={this.state.focused_windows}
                     isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                    openAppByAppId={this.openApp}
+                    forceHidden={this.state.chromeHidden} />
 
                 {/* Taskbar */}
                 <Taskbar
@@ -900,6 +925,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    hidden={this.state.chromeHidden}
                 />
 
                 {/* Desktop Apps */}
@@ -911,6 +937,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    isFullScreen={this.state.isFullscreen}
+                    onToggleFullScreen={this.toggleFullscreen}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
