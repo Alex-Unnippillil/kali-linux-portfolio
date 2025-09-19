@@ -3,6 +3,7 @@ export interface FetchLog {
   url: string;
   method: string;
   startTime: number;
+  timestamp?: number;
   endTime?: number;
   duration?: number;
   status?: number;
@@ -69,11 +70,17 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
         : input instanceof URL
         ? input.toString()
         : (input as Request).url;
+    const startTime = now();
+    const timestamp =
+      typeof performance !== 'undefined' && typeof performance.timeOrigin === 'number'
+        ? performance.timeOrigin + startTime
+        : Date.now();
     const record: FetchLog = {
       id,
       url,
       method,
-      startTime: now(),
+      startTime,
+      timestamp,
       requestSize: init?.body ? bodySize(init.body) : undefined,
     };
     active.set(id, record);
