@@ -9,6 +9,7 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import { RECAPTCHA_SITE_KEY } from '@/env.client';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -166,7 +167,7 @@ const ContactApp: React.FC = () => {
     })();
     const meta = document.querySelector('meta[name="csrf-token"]');
     setCsrfToken(meta?.getAttribute('content') || '');
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+    const siteKey = RECAPTCHA_SITE_KEY;
     if (!siteKey || !(window as any).grecaptcha) {
       setFallback(true);
     }
@@ -213,7 +214,7 @@ const ContactApp: React.FC = () => {
       return;
     }
     let recaptchaToken = '';
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+    const siteKey = RECAPTCHA_SITE_KEY;
     let shouldFallback = fallback;
     if (!shouldFallback && siteKey && (window as any).grecaptcha) {
       recaptchaToken = await getRecaptchaToken(siteKey);

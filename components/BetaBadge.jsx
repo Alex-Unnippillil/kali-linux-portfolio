@@ -1,5 +1,7 @@
+import { SHOW_BETA_BADGE } from '@/env.client';
+
 export default function BetaBadge() {
-  if (process.env.NEXT_PUBLIC_SHOW_BETA !== '1') return null;
+  if (!SHOW_BETA_BADGE) return null;
   return (
     <button
       type="button"

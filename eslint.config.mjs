@@ -19,6 +19,22 @@ const config = [
       'no-restricted-globals': ['error', 'window', 'document'],
     },
   },
+  {
+    files: [
+      'components/**/*.{js,jsx,ts,tsx}',
+      'apps/**/*.{js,jsx,ts,tsx}',
+      'hooks/**/*.{js,jsx,ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'process',
+          message: 'Import from env.client.ts instead of using process.env in client code.',
+        },
+      ],
+    },
+  },
   ...compat.config({
     extends: ['next/core-web-vitals'],
     rules: {

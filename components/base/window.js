@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { UI_EXPERIMENTS_ENABLED } from '@/env.client';
 
 export class Window extends Component {
     constructor(props) {
@@ -35,7 +36,7 @@ export class Window extends Component {
             grabbed: false,
         }
         this._usageTimeout = null;
-        this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        this._uiExperiments = UI_EXPERIMENTS_ENABLED;
         this._menuOpener = null;
     }
 
