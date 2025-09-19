@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useProfileSwitcher } from './useProfileSwitcher';
 
 /**
  * Persist state in localStorage.
@@ -14,13 +15,21 @@ export default function usePersistentState<T>(
   initial: T | (() => T),
   validator?: (value: unknown) => value is T,
 ) {
-  const getInitial = () =>
-    typeof initial === 'function' ? (initial as () => T)() : initial;
+  const { storageKey, isGuest } = useProfileSwitcher();
+  const storageKeyRef = useRef<string | null>(null);
+  const getInitial = useCallback(
+    () => (typeof initial === 'function' ? (initial as () => T)() : initial),
+    [initial],
+  );
+
+  const computeKey = useCallback(() => (isGuest ? null : storageKey(key)), [isGuest, key, storageKey]);
+  storageKeyRef.current = computeKey();
 
   const [state, setState] = useState<T>(() => {
-    if (typeof window === 'undefined') return getInitial();
+    const currentKey = storageKeyRef.current;
+    if (typeof window === 'undefined' || !currentKey) return getInitial();
     try {
-      const stored = window.localStorage.getItem(key);
+      const stored = window.localStorage.getItem(currentKey);
       if (stored !== null) {
         const parsed = JSON.parse(stored);
         if (!validator || validator(parsed)) {
@@ -34,22 +43,50 @@ export default function usePersistentState<T>(
   });
 
   useEffect(() => {
+    const currentKey = computeKey();
+    storageKeyRef.current = currentKey;
+    if (typeof window === 'undefined' || !currentKey) {
+      setState(getInitial());
+      return;
+    }
     try {
-      window.localStorage.setItem(key, JSON.stringify(state));
+      const stored = window.localStorage.getItem(currentKey);
+      if (stored !== null) {
+        const parsed = JSON.parse(stored);
+        if (!validator || validator(parsed)) {
+          setState(parsed as T);
+          return;
+        }
+      }
+    } catch {
+      // ignore errors and fall back to initial
+    }
+    setState(getInitial());
+    // validator intentionally included to refetch when it changes
+  }, [computeKey, getInitial, validator]);
+
+  useEffect(() => {
+    const currentKey = storageKeyRef.current;
+    if (!currentKey || typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(currentKey, JSON.stringify(state));
     } catch {
       // ignore write errors
     }
-  }, [key, state]);
+  }, [state]);
 
-  const reset = () => setState(getInitial());
-  const clear = () => {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // ignore remove errors
+  const reset = useCallback(() => setState(getInitial()), [getInitial]);
+  const clear = useCallback(() => {
+    const currentKey = storageKeyRef.current;
+    if (currentKey && typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(currentKey);
+      } catch {
+        // ignore remove errors
+      }
     }
     reset();
-  };
+  }, [reset]);
 
   return [state, setState, reset, clear] as const;
 }

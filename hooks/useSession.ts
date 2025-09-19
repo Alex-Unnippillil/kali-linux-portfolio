@@ -1,5 +1,7 @@
+import { useEffect, useRef } from 'react';
 import usePersistentState from './usePersistentState';
 import { defaults } from '../utils/settingsStore';
+import { useProfileSwitcher } from './useProfileSwitcher';
 
 export interface SessionWindow {
   id: string;
@@ -30,11 +32,20 @@ function isSession(value: unknown): value is DesktopSession {
 }
 
 export default function useSession() {
+  const { isGuest } = useProfileSwitcher();
   const [session, setSession, _reset, clear] = usePersistentState<DesktopSession>(
     'desktop-session',
     initialSession,
     isSession,
   );
+  const wasGuest = useRef(isGuest);
+
+  useEffect(() => {
+    if (wasGuest.current && !isGuest) {
+      clear();
+    }
+    wasGuest.current = isGuest;
+  }, [isGuest, clear]);
 
   const resetSession = () => {
     clear();
