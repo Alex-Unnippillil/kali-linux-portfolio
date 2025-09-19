@@ -9,6 +9,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Ensure new utilities have Jest tests mirroring existing ones.
 - Fix terminal build by importing `@xterm/xterm/css/xterm.css` and registering `FitAddon`.
 - Follow `docs/new-app-checklist.md` for all new apps.
+- Clamp restored desktop window coordinates to the viewport using `utils/windowBounds` so sessions never hydrate off-screen.
 
 ## Desktop Apps
 ### Google Chrome

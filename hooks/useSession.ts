@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import usePersistentState from './usePersistentState';
 import { defaults } from '../utils/settingsStore';
+import { clampWindowPosition } from '../utils/windowBounds';
 
 export interface SessionWindow {
   id: string;
@@ -35,6 +37,27 @@ export default function useSession() {
     initialSession,
     isSession,
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!session || !Array.isArray(session.windows) || session.windows.length === 0) {
+      return;
+    }
+
+    const sanitizedWindows = session.windows.map((win) => {
+      const { x, y } = clampWindowPosition(win);
+      return { ...win, x, y };
+    });
+
+    const changed = sanitizedWindows.some((win, index) => {
+      const original = session.windows[index];
+      return win.x !== original.x || win.y !== original.y;
+    });
+
+    if (changed) {
+      setSession({ ...session, windows: sanitizedWindows });
+    }
+  }, [session, setSession]);
 
   const resetSession = () => {
     clear();
