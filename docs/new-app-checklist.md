@@ -35,3 +35,8 @@ test('My App launches', async ({ page }) => {
   await expect(page.locator('[data-testid="my-app"]')).toBeVisible();
 });
 ```
+
+## Unit tests and coverage
+
+- Add or update Jest unit tests so the repository stays at or above the global **70% line coverage** threshold.
+- Run `yarn test --coverage` and check the summary (or downloaded CI artifact) before opening a PR.

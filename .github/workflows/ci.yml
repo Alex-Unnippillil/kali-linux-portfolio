@@ -48,7 +48,20 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: yarn test --coverage
+      - name: Run unit tests with coverage
+        id: unit_tests
+        run: yarn test --coverage
+        continue-on-error: true
+      - name: Upload coverage report
+        if: always() && hashFiles('coverage/**/*') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          retention-days: 7
+      - name: Fail if coverage or tests failed
+        if: steps.unit_tests.outcome != 'success'
+        run: exit 1
 
   security:
     runs-on: ubuntu-latest
