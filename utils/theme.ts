@@ -3,12 +3,13 @@ export const THEME_KEY = 'app:theme';
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
+  'high-contrast': 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
+const DARK_THEMES = ['dark', 'neon', 'matrix', 'high-contrast'] as const;
 
 export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
@@ -30,9 +31,13 @@ export const getTheme = (): string => {
 export const setTheme = (theme: string): void => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', isDarkTheme(theme));
+    document.documentElement.classList.toggle(
+      'high-contrast',
+      theme === 'high-contrast'
+    );
+    window.localStorage.setItem(THEME_KEY, theme);
   } catch {
     /* ignore storage errors */
   }

@@ -56,26 +56,41 @@ export default function BackgroundSlideshow() {
   return (
     <div className="p-4 space-y-4 text-ubt-grey">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {available.map((file) => (
-          <label key={file} className="flex flex-col items-center cursor-pointer">
-            <Image
-              src={`/images/wallpapers/${file}`}
-              alt={file}
-              width={96}
-              height={64}
-              sizes="96px"
-              className="object-cover mb-1 border border-ubt-cool-grey"
-            />
-            <input
-              type="checkbox"
-              checked={selected.includes(file)}
-              onChange={() => toggle(file)}
-            />
-          </label>
-        ))}
+        {available.map((file) => {
+          const base = file.replace(/\.[^.]+$/, '');
+          const inputId = `bg-slideshow-${base}`;
+          return (
+            <label
+              key={file}
+              htmlFor={inputId}
+              className="flex flex-col items-center cursor-pointer"
+            >
+              <Image
+                src={`/images/wallpapers/${file}`}
+                alt={base}
+                width={96}
+                height={64}
+                sizes="96px"
+                className="object-cover mb-1 border border-ubt-cool-grey"
+              />
+              <span id={`${inputId}-label`} className="sr-only">
+                {`Include ${base} in slideshow`}
+              </span>
+              <input
+                id={inputId}
+                type="checkbox"
+                checked={selected.includes(file)}
+                onChange={() => toggle(file)}
+                aria-labelledby={`${inputId}-label`}
+              />
+            </label>
+          );
+        })}
       </div>
       <div className="flex items-center space-x-2">
-        <label htmlFor="interval">Interval (s):</label>
+        <label id="interval-label" htmlFor="interval">
+          Interval (s):
+        </label>
         <input
           id="interval"
           type="number"
@@ -83,6 +98,7 @@ export default function BackgroundSlideshow() {
           value={Math.round(intervalMs / 1000)}
           onChange={(e) => setIntervalMs(Number(e.target.value) * 1000)}
           className="w-20 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+          aria-labelledby="interval-label"
         />
       </div>
       <button

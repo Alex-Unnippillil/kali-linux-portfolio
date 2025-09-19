@@ -60,8 +60,10 @@ export function Settings() {
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label htmlFor="legacy-theme" className="mr-2 text-ubt-grey">Theme:</label>
                 <select
+                    id="legacy-theme"
+                    aria-label="Theme"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -70,11 +72,12 @@ export function Settings() {
                     <option value="dark">Dark</option>
                     <option value="neon">Neon</option>
                     <option value="matrix">Matrix</option>
+                    <option value="high-contrast">High Contrast</option>
                 </select>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
-                <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+            <div className="flex justify-center my-4 items-center">
+                <span id="legacy-accent-label" className="mr-2 text-ubt-grey">Accent:</span>
+                <div aria-labelledby="legacy-accent-label" role="radiogroup" className="flex gap-2">
                     {ACCENT_OPTIONS.map((c) => (
                         <button
                             key={c}
@@ -89,8 +92,10 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label htmlFor="legacy-density" className="mr-2 text-ubt-grey">Density:</label>
                 <select
+                    id="legacy-density"
+                    aria-label="Density"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -100,8 +105,10 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label htmlFor="legacy-font-scale" className="mr-2 text-ubt-grey">Font Size:</label>
                 <input
+                    id="legacy-font-scale"
+                    aria-label="Font size"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -111,69 +118,81 @@ export function Settings() {
                     className="ubuntu-slider"
                 />
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={reducedMotion}
-                        onChange={(e) => setReducedMotion(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="legacy-reduced-motion"
+                    type="checkbox"
+                    checked={reducedMotion}
+                    onChange={(e) => setReducedMotion(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="legacy-reduced-motion-label"
+                />
+                <label id="legacy-reduced-motion-label" htmlFor="legacy-reduced-motion" className="text-ubt-grey">
                     Reduced Motion
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={largeHitAreas}
-                        onChange={(e) => setLargeHitAreas(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="legacy-large-hit-areas"
+                    type="checkbox"
+                    checked={largeHitAreas}
+                    onChange={(e) => setLargeHitAreas(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="legacy-large-hit-areas-label"
+                />
+                <label id="legacy-large-hit-areas-label" htmlFor="legacy-large-hit-areas" className="text-ubt-grey">
                     Large Hit Areas
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={highContrast}
-                        onChange={(e) => setHighContrast(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="legacy-high-contrast"
+                    type="checkbox"
+                    checked={highContrast}
+                    onChange={(e) => setHighContrast(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="legacy-high-contrast-label"
+                />
+                <label id="legacy-high-contrast-label" htmlFor="legacy-high-contrast" className="text-ubt-grey">
                     High Contrast
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={allowNetwork}
-                        onChange={(e) => setAllowNetwork(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="legacy-allow-network"
+                    type="checkbox"
+                    checked={allowNetwork}
+                    onChange={(e) => setAllowNetwork(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="legacy-allow-network-label"
+                />
+                <label id="legacy-allow-network-label" htmlFor="legacy-allow-network" className="text-ubt-grey">
                     Allow Network Requests
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={haptics}
-                        onChange={(e) => setHaptics(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="legacy-haptics"
+                    type="checkbox"
+                    checked={haptics}
+                    onChange={(e) => setHaptics(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="legacy-haptics-label"
+                />
+                <label id="legacy-haptics-label" htmlFor="legacy-haptics" className="text-ubt-grey">
                     Haptics
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={pongSpin}
-                        onChange={(e) => setPongSpin(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="legacy-pong-spin"
+                    type="checkbox"
+                    checked={pongSpin}
+                    onChange={(e) => setPongSpin(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="legacy-pong-spin-label"
+                />
+                <label id="legacy-pong-spin-label" htmlFor="legacy-pong-spin" className="text-ubt-grey">
                     Pong Spin
                 </label>
             </div>
@@ -282,6 +301,7 @@ export function Settings() {
                     e.target.value = '';
                 }}
                 className="hidden"
+                aria-label="Import settings file"
             />
         </div>
     )

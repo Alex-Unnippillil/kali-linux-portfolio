@@ -68,6 +68,21 @@ html[data-theme='matrix'] {
 
 }
 
+/* High contrast theme */
+html[data-theme='high-contrast'] {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-primary: #ffff00;
+  --color-secondary: #000000;
+  --color-accent: #ffff00;
+  --color-muted: #000000;
+  --color-surface: #000000;
+  --color-inverse: #000000;
+  --color-border: #ffffff;
+  --color-terminal: #39ff14;
+  --color-dark: #000000;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);

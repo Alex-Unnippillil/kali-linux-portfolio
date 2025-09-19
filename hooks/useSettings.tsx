@@ -107,13 +107,39 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
+  const [highContrast, setHighContrastState] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setThemeState] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const lastThemeRef = useRef<string>('default');
+  const motionDefaults = useRef<
+    { fast: string; medium: string; slow: string } | null
+  >(null);
+
+  const applyTheme = (value: string) => {
+    setThemeState(value);
+    saveTheme(value);
+  };
+
+  const handleThemeChange = (value: string) => {
+    if (value === 'high-contrast') {
+      if (theme !== 'high-contrast') {
+        lastThemeRef.current = theme;
+      }
+      setHighContrastState(true);
+      applyTheme('high-contrast');
+    } else {
+      setHighContrastState(false);
+      applyTheme(value);
+    }
+  };
+
+  const handleHighContrastChange = (value: boolean) => {
+    setHighContrastState(value);
+  };
 
   useEffect(() => {
     (async () => {
@@ -122,18 +148,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
+      handleHighContrastChange(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      applyTheme(loadTheme());
     })();
   }, []);
-
-  useEffect(() => {
-    saveTheme(theme);
-  }, [theme]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -183,7 +205,28 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [density]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    if (typeof window === 'undefined') return;
+    const root = document.documentElement;
+    if (!motionDefaults.current) {
+      const computed = getComputedStyle(root);
+      const fast = computed.getPropertyValue('--motion-fast').trim();
+      const medium = computed.getPropertyValue('--motion-medium').trim();
+      const slow = computed.getPropertyValue('--motion-slow').trim();
+      motionDefaults.current = {
+        fast: fast || '200ms',
+        medium: medium || '400ms',
+        slow: slow || '600ms',
+      };
+    }
+    root.classList.toggle('reduced-motion', reducedMotion);
+    const target = reducedMotion
+      ? { fast: '100ms', medium: '100ms', slow: '100ms' }
+      : motionDefaults.current;
+    if (target) {
+      root.style.setProperty('--motion-fast', target.fast);
+      root.style.setProperty('--motion-medium', target.medium);
+      root.style.setProperty('--motion-slow', target.slow);
+    }
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
@@ -193,9 +236,28 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [fontScale]);
 
   useEffect(() => {
+    if (highContrast && theme !== 'high-contrast') {
+      lastThemeRef.current = theme;
+      applyTheme('high-contrast');
+    } else if (!highContrast && theme === 'high-contrast') {
+      const fallback = lastThemeRef.current || 'default';
+      applyTheme(fallback);
+    }
     document.documentElement.classList.toggle('high-contrast', highContrast);
     saveHighContrast(highContrast);
-  }, [highContrast]);
+  }, [highContrast, theme]);
+
+  useEffect(() => {
+    if (theme !== 'high-contrast') {
+      lastThemeRef.current = theme;
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (theme === 'high-contrast' && !highContrast) {
+      setHighContrastState(true);
+    }
+  }, [theme, highContrast]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
@@ -255,12 +317,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setDensity,
         setReducedMotion,
         setFontScale,
-        setHighContrast,
+        setHighContrast: handleHighContrastChange,
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
         setHaptics,
-        setTheme,
+        setTheme: handleThemeChange,
       }}
     >
       {children}

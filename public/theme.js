@@ -13,8 +13,12 @@
 
     var theme = stored || (prefersDark ? 'dark' : 'default');
     document.documentElement.dataset.theme = theme;
-    var darkThemes = ['dark', 'neon', 'matrix'];
+    var darkThemes = ['dark', 'neon', 'matrix', 'high-contrast'];
     document.documentElement.classList.toggle('dark', darkThemes.includes(theme));
+    document.documentElement.classList.toggle(
+      'high-contrast',
+      theme === 'high-contrast'
+    );
   } catch (e) {
     console.error('Failed to apply theme', e);
     document.documentElement.dataset.theme = 'default';
