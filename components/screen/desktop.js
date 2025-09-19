@@ -52,6 +52,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            switcherQuery: '',
+            switcherSelectedId: null,
         }
     }
 
@@ -214,21 +216,53 @@ export class Desktop extends Component {
     openWindowSwitcher = () => {
         const windows = this.app_stack
             .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
-        }
+            .map(id => {
+                const meta = apps.find(a => a.id === id) || {};
+                return {
+                    id,
+                    title: meta.title || id,
+                    icon: meta.icon,
+                    isFocused: !!this.state.focused_windows[id],
+                    isMinimized: !!this.state.minimized_windows[id],
+                };
+            });
+        if (!windows.length) return;
+
+        const focusedId = this.getFocusedWindowId();
+        const initialId = windows.find(win => win.id === focusedId)?.id || windows[0].id;
+        this.setState({
+            showWindowSwitcher: true,
+            switcherWindows: windows,
+            switcherSelectedId: initialId,
+        });
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.setState({
+            showWindowSwitcher: false,
+            switcherWindows: [],
+            switcherQuery: '',
+            switcherSelectedId: null,
+        });
     }
 
     selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
+        this.setState({
+            showWindowSwitcher: false,
+            switcherWindows: [],
+            switcherQuery: '',
+            switcherSelectedId: null,
+        }, () => {
             this.openApp(id);
         });
+    }
+
+    updateWindowSwitcherSelection = (id) => {
+        this.setState({ switcherSelectedId: id });
+    }
+
+    updateWindowSwitcherQuery = (query) => {
+        this.setState({ switcherQuery: query });
     }
 
     checkContextMenu = (e) => {
@@ -864,6 +898,7 @@ export class Desktop extends Component {
     }
 
     render() {
+        const focusedWindowId = this.getFocusedWindowId();
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -964,6 +999,12 @@ export class Desktop extends Component {
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
+                        minimizedWindows={this.state.minimized_windows}
+                        focusedId={focusedWindowId}
+                        query={this.state.switcherQuery}
+                        selectedId={this.state.switcherSelectedId}
+                        onQueryChange={this.updateWindowSwitcherQuery}
+                        onHighlight={this.updateWindowSwitcherSelection}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
 
