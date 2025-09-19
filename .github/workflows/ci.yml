@@ -14,7 +14,7 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
 
-  lint:
+  quality:
     runs-on: ubuntu-latest
     needs: install
     steps:
@@ -24,31 +24,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: npm run lint
-
-  typecheck:
-    runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: npm run tsc -- --noEmit
-
-  test:
-    runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn test --coverage
+      - run: yarn quality
 
   security:
     runs-on: ubuntu-latest

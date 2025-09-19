@@ -1,4 +1,4 @@
-export interface ModuleOption {
+interface ModuleOption {
   name: string;
   required: boolean;
   description: string;
@@ -66,9 +66,6 @@ const MODULES: Record<string, ModuleMetadata> = {
     ],
   },
 };
-
-export const getModuleMetadata = (name: string): ModuleMetadata | undefined =>
-  MODULES[name];
 
 const modules: ModuleMetadata[] = Object.values(MODULES);
 

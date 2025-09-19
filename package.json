@@ -20,6 +20,8 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
+    "ts-prune": "ts-prune --project tsconfig.ts-prune.json --error",
+    "quality": "yarn lint && yarn ts-prune && yarn typecheck && yarn test --coverage",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs"
   },
@@ -139,6 +141,7 @@
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
     "test-exclude": "7.0.1",
+    "ts-prune": "^0.10.3",
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
