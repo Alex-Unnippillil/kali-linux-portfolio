@@ -90,8 +90,27 @@ See `.env.local.example` for the full list.
 - `yarn install` – install project dependencies.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
+- `yarn test:examples` – execute the sample code under `examples/`.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+
+---
+
+## Examples
+
+The `examples/` directory contains minimal TypeScript and JavaScript snippets that demonstrate
+core utility APIs such as the structured logger, environment validation helpers, and the in-memory
+pub/sub bus. Each snippet exports a `run*Example` function so it can be executed from automated
+tests or a Node REPL.
+
+To run the examples locally and verify they stay up to date with the implementation, execute:
+
+```bash
+yarn test:examples
+```
+
+The command runs a focused Jest suite that imports every example and asserts the observed output.
+This ensures the samples compile and continue to reflect real behaviour in CI.
 
 ---
 
