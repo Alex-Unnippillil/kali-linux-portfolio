@@ -28,7 +28,7 @@ Always test inside controlled labs and obtain written permission before performi
 
 ### Install & Run (Dev)
 ```bash
-cp .env.local.example .env.local  # populate with required keys
+cp .env.example .env.local        # includes inline docs for each key
 nvm install  # installs Node 20.19.5 from .nvmrc if needed
 nvm use
 yarn install
@@ -74,14 +74,14 @@ To send text or links directly into the Sticky Notes app:
 
 ## Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill in required API keys:
+Copy `.env.example` to `.env.local` (or `.env`) and fill in the values you plan to use. The example file ships with inline comments that describe accepted formats for each variable.
 
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
 
-See `.env.local.example` for the full list.
+See the detailed reference table later in this document for defaults, scopes, and requirement notes.
 
 ---
 
@@ -192,33 +192,36 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 
 ---
 
-## Environment Variables
+## Environment Variable Reference
 
-Copy `.env.local.example` to `.env.local` and fill in required values.
+The matrix below mirrors the inline comments in `.env.example` and `.env.local.example`. Use it to determine which variables you need for a given deployment target.
 
-| Name | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_TRACKING_ID` | GA4 measurement ID (e.g., `G-XXXXXXX`). |
-| `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
-| `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
-| `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
-| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
-| `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
-| `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
-| `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
-| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
-| `SUPABASE_URL` | Supabase project URL for server-side access. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL exposed to the client. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
-| `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
-| `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
-| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
-| `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
-| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
-| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| Variable | Scope | Default | Required? | Description |
+| --- | --- | --- | --- | --- |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | Client | `"false"` | No | Enables GA4 + Vercel analytics wrappers when set to `"true"`. |
+| `NEXT_PUBLIC_VERCEL_ENV` | Client | `""` | No | Overrides the environment label in GA reporting; Vercel sets this automatically. |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Client | `""` | No – required only if reCAPTCHA is enabled for forms. | Client-side reCAPTCHA key used by spam-protected forms. |
+| `NEXT_PUBLIC_TRACKING_ID` | Client | `""` | No – required to emit GA4 events. | GA4 measurement ID (format `G-XXXXXXX`). |
+| `NEXT_PUBLIC_USER_ID` | Client | `""` | No – required for the EmailJS contact app. | EmailJS public key used during client-side initialisation. |
+| `NEXT_PUBLIC_SERVICE_ID` | Client | `""` | No – required for the EmailJS contact app. | EmailJS service identifier. |
+| `NEXT_PUBLIC_TEMPLATE_ID` | Client | `""` | No – required for the EmailJS contact app. | EmailJS template identifier. |
+| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Client | `"YOUR_YOUTUBE_API_KEY"` | No | Optional YouTube Data API key that unlocks richer media search. |
+| `NEXT_PUBLIC_CURRENCY_API_URL` | Client | `""` | No | Optional HTTPS endpoint for currency conversion; defaults to exchangerate.host. |
+| `NEXT_PUBLIC_DEMO_MODE` | Client | `"false"` | No | Forces apps to use canned tool responses when set to `"true"`. |
+| `NEXT_PUBLIC_UI_EXPERIMENTS` | Client | `"false"` | No | Enables experimental UI heuristics behind a flag. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Client & Build | `"false"` | No – set to `"true"` when running `yarn export`. | Signals the app to avoid API calls during static exports. |
+| `NEXT_PUBLIC_SHOW_BETA` | Client | `""` | No | Displays the beta badge when set to `"1"`. |
+| `NEXT_PUBLIC_GHIDRA_WASM` | Client | `""` | No | URL to a hosted Ghidra WebAssembly build for the Ghidra demo. |
+| `NEXT_PUBLIC_GHIDRA_URL` | Client | `""` | No | URL to an external Ghidra web interface. |
+| `FEATURE_TOOL_APIS` | Server | `"disabled"` | No | Master switch for simulated tool API routes (`"enabled"` or `"disabled"`). |
+| `FEATURE_HYDRA` | Server | `"disabled"` | No | Enables the Hydra API stub when combined with `FEATURE_TOOL_APIS="enabled"`. |
+| `RECAPTCHA_SECRET` | Server | `""` | No – required only if reCAPTCHA is enabled. | Secret key used to verify reCAPTCHA tokens server-side. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Client | `""` | No – required for Supabase-backed features. | Supabase project URL exposed to the browser. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client | `""` | No – required for Supabase-backed features. | Supabase anon key safe for client usage. |
+| `SUPABASE_URL` | Server | `""` | No – required for Supabase-backed features. | Supabase project URL used by server utilities. |
+| `SUPABASE_ANON_KEY` | Server | `""` | No – required for Supabase-backed features. | Supabase anon key consumed on the server (SSR/API). |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server | `""` | No – required only for privileged Supabase operations. | Supabase service-role key (keep secret). |
+| `ADMIN_READ_KEY` | Server | `""` | No – required to access `/api/admin/messages`. | Secret string authorizing protected admin message APIs. |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
