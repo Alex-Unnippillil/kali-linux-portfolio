@@ -3,9 +3,9 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import ConsentCenter from "./components/ConsentCenter";
 import {
   resetSettings,
-  defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
 } from "../../utils/settingsStore";
@@ -31,6 +31,7 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    resetToDefaults,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,13 +95,7 @@ export default function Settings() {
       return;
     await resetSettings();
     window.localStorage.clear();
-    setAccent(defaults.accent);
-    setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
-    setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
-    setHighContrast(defaults.highContrast);
-    setTheme("default");
+    resetToDefaults();
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -286,6 +281,7 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
+          <ConsentCenter />
         </>
       )}
         <input
