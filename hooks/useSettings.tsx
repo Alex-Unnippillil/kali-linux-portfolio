@@ -20,6 +20,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getKeyboardMode as loadKeyboardModeSetting,
+  setKeyboardMode as saveKeyboardModeSetting,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +65,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  keyboardMode: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +77,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setKeyboardMode: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  keyboardMode: defaults.keyboardMode,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +104,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setKeyboardMode: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +119,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [keyboardMode, setKeyboardModeState] = useState<boolean>(defaults.keyboardMode);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const lastInputMethod = useRef<'pointer' | 'keyboard'>('pointer');
 
   useEffect(() => {
     (async () => {
@@ -128,6 +136,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setKeyboardModeState(await loadKeyboardModeSetting());
     })();
   }, []);
 
@@ -236,6 +245,114 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveKeyboardModeSetting(keyboardMode);
+  }, [keyboardMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const root = document.documentElement;
+
+    const updateInteractionMode = () => {
+      const usingKeyboard = keyboardMode || lastInputMethod.current === 'keyboard';
+      root.classList.toggle('using-keyboard', usingKeyboard);
+      root.classList.toggle('using-pointer', !keyboardMode && lastInputMethod.current === 'pointer');
+      root.dataset.inputMode = usingKeyboard ? 'keyboard' : 'pointer';
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      lastInputMethod.current = 'keyboard';
+      updateInteractionMode();
+    };
+
+    const onPointer = () => {
+      if (keyboardMode) {
+        return;
+      }
+      lastInputMethod.current = 'pointer';
+      updateInteractionMode();
+    };
+
+    updateInteractionMode();
+
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('mousedown', onPointer, true);
+    window.addEventListener('pointerdown', onPointer, true);
+    window.addEventListener('touchstart', onPointer, true);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('mousedown', onPointer, true);
+      window.removeEventListener('pointerdown', onPointer, true);
+      window.removeEventListener('touchstart', onPointer, true);
+      if (root.dataset.inputMode) {
+        delete root.dataset.inputMode;
+      }
+      root.classList.remove('using-keyboard');
+      root.classList.remove('using-pointer');
+    };
+  }, [keyboardMode]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const root = document.documentElement;
+    root.toggleAttribute('data-keyboard-mode', keyboardMode);
+
+    if (!keyboardMode) {
+      document
+        .querySelectorAll('[data-forced-focus-visible]')
+        .forEach((el) => el.removeAttribute('data-forced-focus-visible'));
+      return;
+    }
+
+    let lastForced: HTMLElement | null = null;
+
+    const applyFocus = (element: HTMLElement | null) => {
+      if (lastForced && lastForced !== element) {
+        lastForced.removeAttribute('data-forced-focus-visible');
+      }
+      if (element) {
+        element.setAttribute('data-forced-focus-visible', 'true');
+      }
+      lastForced = element;
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement) {
+        applyFocus(event.target);
+      }
+    };
+
+    const handleFocusOut = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement && event.target === lastForced) {
+        event.target.removeAttribute('data-forced-focus-visible');
+        lastForced = null;
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+
+    if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+      applyFocus(document.activeElement);
+    }
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      if (lastForced) {
+        lastForced.removeAttribute('data-forced-focus-visible');
+      }
+      document
+        .querySelectorAll('[data-forced-focus-visible]')
+        .forEach((el) => el.removeAttribute('data-forced-focus-visible'));
+    };
+  }, [keyboardMode]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +367,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        keyboardMode,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +379,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setKeyboardMode: setKeyboardModeState,
       }}
     >
       {children}
