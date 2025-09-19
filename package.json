@@ -13,7 +13,7 @@
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "node scripts/check-plugin-boundaries.mjs && eslint . --max-warnings=0",
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "a11y": "node scripts/a11y.mjs",
