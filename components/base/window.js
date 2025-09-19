@@ -33,10 +33,13 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            magnetGuides: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._gridSize = 8;
+        this._lastBounds = null;
     }
 
     componentDidMount() {
@@ -56,6 +59,19 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+
+        this.emitBounds();
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevState.width !== this.state.width ||
+            prevState.height !== this.state.height ||
+            prevState.maximized !== this.state.maximized ||
+            prevProps.minimized !== this.props.minimized
+        ) {
+            this.emitBounds();
+        }
     }
 
     componentWillUnmount() {
@@ -69,6 +85,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.emitBounds(null);
     }
 
     setDefaultWindowDimenstion = () => {
@@ -193,11 +210,11 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.setState({ cursorType: "cursor-move", grabbed: true, magnetGuides: null })
     }
 
     changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default", grabbed: false })
+        this.setState({ cursorType: "cursor-default", grabbed: false, magnetGuides: null })
     }
 
     snapToGrid = (value) => {
@@ -205,12 +222,206 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
+    roundToGrid = (value, grid = this._gridSize) => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return value;
+        }
+        if (!grid) return value;
+        return Math.round(value / grid) * grid;
+    }
+
+    areGuidesEqual = (next, prev) => {
+        if (next === prev) return true;
+        if (!next || !prev) return false;
+        if (next.length !== prev.length) return false;
+        for (let i = 0; i < next.length; i += 1) {
+            if (
+                next[i].orientation !== prev[i].orientation ||
+                next[i].position !== prev[i].position
+            ) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    updateMagnetGuides = (guides) => {
+        const normalized = guides && guides.length
+            ? guides.map(guide => ({
+                orientation: guide.orientation,
+                position: Math.round(guide.position),
+            }))
+            : null;
+        if (this.areGuidesEqual(normalized, this.state.magnetGuides)) {
+            return;
+        }
+        this.setState({ magnetGuides: normalized });
+    }
+
+    applyMagnetism = (event, node, position) => {
+        const threshold = 8;
+        if (!node) {
+            return { x: position.x, y: position.y, guides: null };
+        }
+
+        if (event?.altKey) {
+            return { x: position.x, y: position.y, guides: null };
+        }
+
+        const rect = node.getBoundingClientRect();
+        const width = rect?.width || 0;
+        const height = rect?.height || 0;
+        const current = {
+            left: position.x,
+            top: position.y,
+            right: position.x + width,
+            bottom: position.y + height,
+            width,
+            height,
+        };
+
+        const bestHorizontal = { distance: threshold + 1, left: null, guide: null };
+        const bestVertical = { distance: threshold + 1, top: null, guide: null };
+        const epsilon = 0.01;
+
+        const considerHorizontal = (distance, left, guide) => {
+            if (!Number.isFinite(distance) || !Number.isFinite(left)) return;
+            if (distance <= epsilon) return;
+            if (distance <= threshold && distance < bestHorizontal.distance) {
+                bestHorizontal.distance = distance;
+                bestHorizontal.left = left;
+                bestHorizontal.guide = guide;
+            }
+        };
+
+        const considerVertical = (distance, top, guide) => {
+            if (!Number.isFinite(distance) || !Number.isFinite(top)) return;
+            if (distance <= epsilon) return;
+            if (distance <= threshold && distance < bestVertical.distance) {
+                bestVertical.distance = distance;
+                bestVertical.top = top;
+                bestVertical.guide = guide;
+            }
+        };
+
+        const registry = this.props.boundsRegistry || {};
+        Object.entries(registry).forEach(([id, bounds]) => {
+            if (id === this.id || !bounds) return;
+            const otherLeft = Number.isFinite(bounds.left) ? bounds.left : 0;
+            const otherTop = Number.isFinite(bounds.top) ? bounds.top : 0;
+            const otherRight = Number.isFinite(bounds.right)
+                ? bounds.right
+                : otherLeft + (Number.isFinite(bounds.width) ? bounds.width : 0);
+            const otherBottom = Number.isFinite(bounds.bottom)
+                ? bounds.bottom
+                : otherTop + (Number.isFinite(bounds.height) ? bounds.height : 0);
+
+            considerHorizontal(Math.abs(current.left - otherLeft), otherLeft, otherLeft);
+            considerHorizontal(Math.abs(current.left - otherRight), otherRight, otherRight);
+            considerHorizontal(Math.abs(current.right - otherLeft), otherLeft - current.width, otherLeft);
+            considerHorizontal(Math.abs(current.right - otherRight), otherRight - current.width, otherRight);
+
+            considerVertical(Math.abs(current.top - otherTop), otherTop, otherTop);
+            considerVertical(Math.abs(current.top - otherBottom), otherBottom, otherBottom);
+            considerVertical(Math.abs(current.bottom - otherTop), otherTop - current.height, otherTop);
+            considerVertical(Math.abs(current.bottom - otherBottom), otherBottom - current.height, otherBottom);
+        });
+
+        const gridLeft = this.roundToGrid(current.left);
+        considerHorizontal(Math.abs(current.left - gridLeft), gridLeft, gridLeft);
+        const gridRight = this.roundToGrid(current.right);
+        considerHorizontal(Math.abs(current.right - gridRight), gridRight - current.width, gridRight);
+
+        const gridTop = this.roundToGrid(current.top);
+        considerVertical(Math.abs(current.top - gridTop), gridTop, gridTop);
+        const gridBottom = this.roundToGrid(current.bottom);
+        considerVertical(Math.abs(current.bottom - gridBottom), gridBottom - current.height, gridBottom);
+
+        let snappedX = position.x;
+        let snappedY = position.y;
+        const guides = [];
+
+        if (bestHorizontal.left !== null) {
+            const candidate = this.roundToGrid(bestHorizontal.left);
+            const delta = Math.abs(candidate - position.x);
+            if (delta <= threshold && delta > epsilon) {
+                snappedX = candidate;
+                const guidePosition = this.roundToGrid(bestHorizontal.guide ?? candidate);
+                guides.push({ orientation: 'vertical', position: guidePosition });
+            }
+        }
+
+        if (bestVertical.top !== null) {
+            const candidate = this.roundToGrid(bestVertical.top);
+            const delta = Math.abs(candidate - position.y);
+            if (delta <= threshold && delta > epsilon) {
+                snappedY = candidate;
+                const guidePosition = this.roundToGrid(bestVertical.guide ?? candidate);
+                if (!guides.some(g => g.orientation === 'horizontal' && g.position === guidePosition)) {
+                    guides.push({ orientation: 'horizontal', position: guidePosition });
+                }
+            }
+        }
+
+        if (!guides.length) {
+            return { x: position.x, y: position.y, guides: null };
+        }
+
+        return { x: snappedX, y: snappedY, guides };
+    }
+
+    emitBounds = (rect) => {
+        if (!this.props.onBoundsChange) return;
+        if (rect === null) {
+            this._lastBounds = null;
+            this.props.onBoundsChange(null);
+            return;
+        }
+
+        let targetRect = rect;
+        if (!targetRect) {
+            const node = document.getElementById(this.id);
+            if (!node) return;
+            targetRect = node.getBoundingClientRect();
+        }
+
+        const toNumber = (value) => Math.round(value);
+        const bounds = {
+            left: toNumber(targetRect.left),
+            top: toNumber(targetRect.top),
+            right: toNumber(targetRect.right),
+            bottom: toNumber(targetRect.bottom),
+            width: toNumber(targetRect.width),
+            height: toNumber(targetRect.height),
+        };
+        bounds.centerX = Math.round(bounds.left + bounds.width / 2);
+        bounds.centerY = Math.round(bounds.top + bounds.height / 2);
+
+        if (
+            this._lastBounds &&
+            this._lastBounds.left === bounds.left &&
+            this._lastBounds.top === bounds.top &&
+            this._lastBounds.right === bounds.right &&
+            this._lastBounds.bottom === bounds.bottom &&
+            this._lastBounds.width === bounds.width &&
+            this._lastBounds.height === bounds.height
+        ) {
+            return;
+        }
+
+        this._lastBounds = bounds;
+        this.props.onBoundsChange(bounds);
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        this.setState({ height: heightPercent }, () => {
+            this.resizeBoundries();
+            this.emitBounds();
+        });
     }
 
     handleHorizontalResize = () => {
@@ -218,7 +429,10 @@ export class Window extends Component {
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        this.setState({ width: widthPercent }, () => {
+            this.resizeBoundries();
+            this.emitBounds();
+        });
     }
 
     setWinowsPosition = () => {
@@ -232,6 +446,7 @@ export class Window extends Component {
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
+        this.emitBounds(rect);
     }
 
     unsnapWindow = () => {
@@ -249,9 +464,15 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.emitBounds();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.emitBounds();
+            });
         }
     }
 
@@ -285,7 +506,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.emitBounds();
+        });
     }
 
     checkOverlap = () => {
@@ -336,11 +560,9 @@ export class Window extends Component {
         }
     }
 
-    applyEdgeResistance = (node, data) => {
-        if (!node || !data) return;
+    applyEdgeResistance = (x, y) => {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
-        let { x, y } = data;
         const maxX = this.state.parentSize.width;
         const maxY = this.state.parentSize.height;
 
@@ -352,17 +574,44 @@ export class Window extends Component {
             return pos;
         }
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        return {
+            x: resist(x, 0, maxX),
+            y: resist(y, 0, maxY),
+        };
     }
 
     handleDrag = (e, data) => {
-        if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+        if (!data || !data.node) {
+            this.updateMagnetGuides(null);
+            this.checkOverlap();
+            this.checkSnapPreview();
+            return;
         }
+
+        const node = data.node;
+        let x = typeof data.x === 'number' ? data.x : 0;
+        let y = typeof data.y === 'number' ? data.y : 0;
+
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+            if (match) {
+                x = parseFloat(match[1]);
+                y = parseFloat(match[2]);
+            }
+        }
+
+        const clamped = this.applyEdgeResistance(x, y);
+        const magnet = this.applyMagnetism(e, node, clamped);
+        const finalPos = this.applyEdgeResistance(magnet.x, magnet.y);
+
+        node.style.transform = `translate(${finalPos.x}px, ${finalPos.y}px)`;
+        this.updateMagnetGuides(magnet.guides);
+
         this.checkOverlap();
         this.checkSnapPreview();
+
+        const rect = node.getBoundingClientRect();
+        this.emitBounds(rect);
     }
 
     handleStop = () => {
@@ -371,7 +620,9 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, () => {
+                this.setWinowsPosition();
+            });
         }
     }
 
@@ -423,7 +674,9 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false }, () => {
+                this.emitBounds();
+            });
             this.checkOverlap();
             return;
         }
@@ -431,7 +684,9 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false }, () => {
+                    this.emitBounds();
+                });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -443,7 +698,9 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false }, () => {
+                    this.emitBounds();
+                });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -461,7 +718,9 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2 }, () => {
+                this.emitBounds();
+            });
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -471,6 +730,7 @@ export class Window extends Component {
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
+            this.emitBounds(null);
             setTimeout(() => {
                 this.props.closed(this.id)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
@@ -621,6 +881,21 @@ export class Window extends Component {
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
+                {this.state.magnetGuides && this.state.magnetGuides.map((guide, index) => {
+                    const style = guide.orientation === 'vertical'
+                        ? { left: `${guide.position}px`, top: '0px', bottom: '0px', width: '2px' }
+                        : { top: `${guide.position}px`, left: '0px', right: '0px', height: '2px' };
+                    return (
+                        <div
+                            key={`magnet-${guide.orientation}-${index}-${guide.position}`}
+                            className="fixed pointer-events-none z-40 transition-opacity duration-75"
+                            style={{
+                                ...style,
+                                background: 'rgba(125, 211, 252, 0.45)',
+                            }}
+                        />
+                    );
+                })}
                 <Draggable
                     axis="both"
                     handle=".bg-ub-window-title"

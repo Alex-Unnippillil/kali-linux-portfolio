@@ -40,6 +40,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_bounds: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -479,7 +480,9 @@ export class Desktop extends Component {
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onBoundsChange: (bounds) => this.updateWindowBounds(app.id, bounds),
                     snapEnabled: this.props.snapEnabled,
+                    boundsRegistry: this.state.window_bounds,
                 }
 
                 windowsJsx.push(
@@ -497,6 +500,30 @@ export class Desktop extends Component {
         this.setState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
+    }
+
+    updateWindowBounds = (id, bounds) => {
+        this.setState(prev => {
+            const next = { ...prev.window_bounds };
+            if (!bounds) {
+                if (next[id] === undefined) return null;
+                delete next[id];
+            } else {
+                const current = next[id];
+                const same = current
+                    && current.left === bounds.left
+                    && current.top === bounds.top
+                    && current.right === bounds.right
+                    && current.bottom === bounds.bottom
+                    && current.width === bounds.width
+                    && current.height === bounds.height;
+                if (same) {
+                    return null;
+                }
+                next[id] = bounds;
+            }
+            return { window_bounds: next };
+        });
     }
 
     saveSession = () => {
@@ -701,7 +728,9 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        const window_bounds = { ...this.state.window_bounds };
+        delete window_bounds[objId];
+        this.setState({ closed_windows, favourite_apps, window_bounds }, this.saveSession);
     }
 
     pinApp = (id) => {
