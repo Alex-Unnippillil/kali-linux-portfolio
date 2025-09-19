@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { initA2HS } from '@/src/pwa/a2hs';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -30,6 +31,7 @@ function MyApp(props) {
 
 
   useEffect(() => {
+    initA2HS();
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }

@@ -5,14 +5,20 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
+let initialized = false;
 
 export function initA2HS() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || initialized) return;
+  initialized = true;
   window.addEventListener('beforeinstallprompt', (e: Event) => {
     const event = e as BeforeInstallPromptEvent;
     event.preventDefault();
     deferredPrompt = event;
     window.dispatchEvent(new Event('a2hs:available'));
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    window.dispatchEvent(new Event('a2hs:installed'));
   });
 }
 

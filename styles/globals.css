@@ -19,6 +19,10 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --pwa-safe-area-top: 0px;
+  --pwa-safe-area-right: 0px;
+  --pwa-safe-area-bottom: 0px;
+  --pwa-safe-area-left: 0px;
   accent-color: var(--color-control-accent);
 }
 

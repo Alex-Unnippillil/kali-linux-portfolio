@@ -1,5 +1,6 @@
 export type EventName =
   | 'cta_click'
+  | 'cta_dismiss'
   | 'signup_submit'
   | 'contact_submit'
   | 'contact_submit_error'

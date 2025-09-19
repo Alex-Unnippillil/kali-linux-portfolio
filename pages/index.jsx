@@ -35,8 +35,10 @@ const App = () => (
     </a>
     <Meta />
     <Ubuntu />
-    <BetaBadge />
-    <InstallButton />
+    <div className="pwa-fab-container pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
+      <InstallButton />
+      <BetaBadge />
+    </div>
   </>
 );
 
