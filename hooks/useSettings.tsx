@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,10 +28,67 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getNotificationPreferences as loadNotificationPreferences,
+  setNotificationPreferences as persistNotificationPreferences,
   defaults,
+  defaultNotificationPreference as notificationPreferenceDefaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+export type NotificationPreference = {
+  banners: boolean;
+  sounds: boolean;
+  badges: boolean;
+};
+
+const FALLBACK_NOTIFICATION_PREFERENCE: NotificationPreference = {
+  banners: notificationPreferenceDefaults?.banners ?? true,
+  sounds: notificationPreferenceDefaults?.sounds ?? true,
+  badges: notificationPreferenceDefaults?.badges ?? true,
+};
+
+const cloneFallbackPreference = (): NotificationPreference => ({
+  ...FALLBACK_NOTIFICATION_PREFERENCE,
+});
+
+const sanitizeNotificationPreference = (
+  pref?: Partial<NotificationPreference> | null,
+): NotificationPreference => {
+  const base = cloneFallbackPreference();
+  if (!pref) return base;
+  const normalized: NotificationPreference = {
+    banners:
+      typeof pref.banners === 'boolean' ? pref.banners : base.banners,
+    sounds: typeof pref.sounds === 'boolean' ? pref.sounds : base.sounds,
+    badges: typeof pref.badges === 'boolean' ? pref.badges : base.badges,
+  };
+  if (!normalized.banners) {
+    normalized.sounds = false;
+  }
+  return normalized;
+};
+
+const isDefaultNotificationPreference = (pref: NotificationPreference) =>
+  pref.banners === FALLBACK_NOTIFICATION_PREFERENCE.banners &&
+  pref.sounds === FALLBACK_NOTIFICATION_PREFERENCE.sounds &&
+  pref.badges === FALLBACK_NOTIFICATION_PREFERENCE.badges;
+
+const normalizePreferencesRecord = (
+  prefs?: Record<string, Partial<NotificationPreference> | NotificationPreference>,
+): Record<string, NotificationPreference> => {
+  if (!prefs) return {};
+  return Object.entries(prefs).reduce<Record<string, NotificationPreference>>(
+    (acc, [appId, pref]) => {
+      const normalized = sanitizeNotificationPreference(pref);
+      if (!isDefaultNotificationPreference(normalized)) {
+        acc[appId] = normalized;
+      }
+      return acc;
+    },
+    {},
+  );
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +128,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  notificationPreferences: Record<string, NotificationPreference>;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +140,15 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  getNotificationPreference: (appId: string) => NotificationPreference;
+  updateNotificationPreference: (
+    appId: string,
+    updates: Partial<NotificationPreference>,
+  ) => void;
+  resetNotificationPreference: (appId?: string) => void;
+  setNotificationPreferences: (
+    prefs: Record<string, Partial<NotificationPreference>>,
+  ) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +163,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  notificationPreferences: normalizePreferencesRecord(
+    defaults.notificationPreferences,
+  ),
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +177,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  getNotificationPreference: () => cloneFallbackPreference(),
+  updateNotificationPreference: () => {},
+  resetNotificationPreference: () => {},
+  setNotificationPreferences: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +195,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [notificationPreferences, setNotificationPreferencesState] = useState<
+    Record<string, NotificationPreference>
+  >(() => normalizePreferencesRecord(defaults.notificationPreferences));
   const fetchRef = useRef<typeof fetch | null>(null);
+  const hasLoadedNotificationPreferences = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -129,6 +215,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const loaded = await loadNotificationPreferences();
+        if (!cancelled) {
+          setNotificationPreferencesState(
+            normalizePreferencesRecord(loaded),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          hasLoadedNotificationPreferences.current = true;
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -236,6 +343,55 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (!hasLoadedNotificationPreferences.current) return;
+    void persistNotificationPreferences(notificationPreferences);
+  }, [notificationPreferences]);
+
+  const getNotificationPreference = useCallback(
+    (appId: string) => sanitizeNotificationPreference(notificationPreferences[appId]),
+    [notificationPreferences],
+  );
+
+  const updateNotificationPreference = useCallback(
+    (appId: string, updates: Partial<NotificationPreference>) => {
+      setNotificationPreferencesState(prev => {
+        const current = sanitizeNotificationPreference(prev[appId]);
+        const next = sanitizeNotificationPreference({ ...current, ...updates });
+        if (isDefaultNotificationPreference(next)) {
+          if (!(appId in prev)) return prev;
+          const { [appId]: _removed, ...rest } = prev;
+          return rest;
+        }
+        return {
+          ...prev,
+          [appId]: next,
+        };
+      });
+    },
+    [],
+  );
+
+  const resetNotificationPreference = useCallback((appId?: string) => {
+    if (!appId) {
+      setNotificationPreferencesState({});
+      return;
+    }
+    setNotificationPreferencesState(prev => {
+      if (!(appId in prev)) return prev;
+      const next = { ...prev };
+      delete next[appId];
+      return next;
+    });
+  }, []);
+
+  const setNotificationPreferences = useCallback(
+    (prefs: Record<string, Partial<NotificationPreference>>) => {
+      setNotificationPreferencesState(normalizePreferencesRecord(prefs));
+    },
+    [],
+  );
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +406,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        notificationPreferences,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +418,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        getNotificationPreference,
+        updateNotificationPreference,
+        resetNotificationPreference,
+        setNotificationPreferences,
       }}
     >
       {children}
