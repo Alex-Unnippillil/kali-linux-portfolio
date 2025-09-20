@@ -171,10 +171,30 @@ const calculateRiskMap = (board) => {
   return risk;
 };
 
-const Minesweeper = () => {
+const Minesweeper = ({
+  difficulty = 'normal',
+  onGameStart,
+  onGameEnd,
+  onStatusChange,
+  onPausedChange,
+} = {}) => {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
   const workerRef = useRef(null);
+  const callbacksRef = useRef({
+    onGameStart,
+    onGameEnd,
+    onStatusChange,
+    onPausedChange,
+  });
+  useEffect(() => {
+    callbacksRef.current = {
+      onGameStart,
+      onGameEnd,
+      onStatusChange,
+      onPausedChange,
+    };
+  }, [onGameEnd, onGameStart, onPausedChange, onStatusChange]);
   const initWorker = () => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
@@ -218,6 +238,15 @@ const Minesweeper = () => {
   const rightDown = useRef(false);
   const chorded = useRef(false);
   const flagAnim = useRef({});
+  const gameOverRef = useRef(false);
+
+  useEffect(() => {
+    callbacksRef.current.onStatusChange?.(status);
+  }, [status]);
+
+  useEffect(() => {
+    callbacksRef.current.onPausedChange?.(paused);
+  }, [paused]);
 
   useEffect(() => {
     initWorker();
@@ -244,7 +273,10 @@ const Minesweeper = () => {
           } else {
             setHasSave(false);
           }
-          if (data.status) setStatus(data.status);
+          if (data.status) {
+            setStatus(data.status);
+            gameOverRef.current = data.status === 'won' || data.status === 'lost';
+          }
           if (data.seed !== undefined) setSeed(data.seed);
           if (data.shareCode) setShareCode(data.shareCode);
           if (data.bv) setBV(data.bv);
@@ -252,8 +284,14 @@ const Minesweeper = () => {
           if (data.flags) setFlags(data.flags);
           if (data.paused) setPaused(data.paused);
           if (data.status === 'playing' && !data.paused) {
-            setStartTime(Date.now() - (data.elapsed || 0) * 1000);
-            setElapsed(data.elapsed || 0);
+            const resumedElapsed = data.elapsed || 0;
+            setStartTime(Date.now() - resumedElapsed * 1000);
+            setElapsed(resumedElapsed);
+            callbacksRef.current.onGameStart?.({
+              difficulty,
+              resumed: true,
+              elapsed: resumedElapsed,
+            });
           } else {
             if (data.startTime) setStartTime(data.startTime);
             if (data.elapsed) setElapsed(data.elapsed);
@@ -465,7 +503,9 @@ const Minesweeper = () => {
   };
 
   const checkAndHandleWin = (newBoard) => {
+    if (gameOverRef.current) return;
     if (checkWin(newBoard)) {
+      gameOverRef.current = true;
       setStatus('won');
       const time = (Date.now() - startTime) / 1000;
       setElapsed(time);
@@ -478,6 +518,12 @@ const Minesweeper = () => {
           localStorage.setItem('minesweeper-best-time', time.toString());
         }
       }
+      callbacksRef.current.onGameEnd?.({
+        result: 'won',
+        time,
+        difficulty,
+        bv: finalBV,
+      });
     }
   };
 
@@ -562,10 +608,16 @@ const Minesweeper = () => {
 
   const startGame = async (x, y) => {
     flagAnim.current = {};
+    gameOverRef.current = false;
     const newBoard = generateBoard(seed, x, y);
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
+    callbacksRef.current.onGameStart?.({
+      difficulty,
+      resumed: false,
+      elapsed: 0,
+    });
     setShareCode(`${seed.toString(36)}-${x}-${y}`);
     setBV(calculate3BV(newBoard));
     setBVPS(null);
@@ -638,7 +690,9 @@ const Minesweeper = () => {
                   newBoard[cx][cy].revealed = true;
                 });
                 if (hit) {
+                  if (gameOverRef.current) return;
                   setBoard(newBoard);
+                  gameOverRef.current = true;
                   setStatus('lost');
                   const time = (Date.now() - startTime) / 1000;
                   setElapsed(time);
@@ -647,6 +701,12 @@ const Minesweeper = () => {
                   setBVPS(time > 0 ? finalBV / time : finalBV);
                   playSound('boom');
                   setAriaMessage('Boom! Game over');
+                  callbacksRef.current.onGameEnd?.({
+                    result: 'lost',
+                    time,
+                    difficulty,
+                    bv: finalBV,
+                  });
                   return;
                 }
               }
@@ -660,7 +720,12 @@ const Minesweeper = () => {
         revealed.forEach(([cx, cy]) => {
           newBoard[cx][cy].revealed = true;
         });
+        if (gameOverRef.current) {
+          setBoard(newBoard);
+          return;
+        }
         setBoard(newBoard);
+        gameOverRef.current = true;
         setStatus('lost');
         const time = (Date.now() - startTime) / 1000;
         setElapsed(time);
@@ -669,6 +734,12 @@ const Minesweeper = () => {
         setBVPS(time > 0 ? finalBV / time : finalBV);
         playSound('boom');
         setAriaMessage('Boom! Game over');
+        callbacksRef.current.onGameEnd?.({
+          result: 'lost',
+          time,
+          difficulty,
+          bv: finalBV,
+        });
         return;
       }
       playSound('reveal');
@@ -772,7 +843,12 @@ const Minesweeper = () => {
             newBoard[cx][cy].revealed = true;
           });
           if (hit) {
+            if (gameOverRef.current) {
+              setBoard(newBoard);
+              return;
+            }
             setBoard(newBoard);
+            gameOverRef.current = true;
             setStatus('lost');
             const time = (Date.now() - startTime) / 1000;
             setElapsed(time);
@@ -781,6 +857,12 @@ const Minesweeper = () => {
             setBVPS(time > 0 ? finalBV / time : finalBV);
             playSound('boom');
             setAriaMessage('Boom! Game over');
+            callbacksRef.current.onGameEnd?.({
+              result: 'lost',
+              time,
+              difficulty,
+              bv: finalBV,
+            });
             return;
           }
         }
@@ -882,6 +964,7 @@ const Minesweeper = () => {
     workerRef.current?.terminate();
     initWorker();
     flagAnim.current = {};
+    gameOverRef.current = false;
     setBoard(null);
     setStatus('ready');
     setSeed(Math.floor(Math.random() * 2 ** 31));
@@ -914,6 +997,7 @@ const Minesweeper = () => {
     workerRef.current?.terminate();
     initWorker();
     flagAnim.current = {};
+    gameOverRef.current = false;
     setSeed(newSeed);
     setShareCode('');
     setBoard(null);
@@ -932,6 +1016,11 @@ const Minesweeper = () => {
         setBoard(newBoard);
         setStatus('playing');
         setStartTime(Date.now());
+        callbacksRef.current.onGameStart?.({
+          difficulty,
+          resumed: false,
+          elapsed: 0,
+        });
         setShareCode(codeInput.trim());
         setBV(calculate3BV(newBoard));
         setFlags(0);
@@ -967,7 +1056,10 @@ const Minesweeper = () => {
       } else {
         setHasSave(false);
       }
-      if (data.status) setStatus(data.status);
+      if (data.status) {
+        setStatus(data.status);
+        gameOverRef.current = data.status === 'won' || data.status === 'lost';
+      }
       if (data.seed !== undefined) setSeed(data.seed);
       if (data.shareCode) setShareCode(data.shareCode);
       if (data.bv) setBV(data.bv);
@@ -975,8 +1067,14 @@ const Minesweeper = () => {
       if (data.flags) setFlags(data.flags);
       if (data.paused) setPaused(data.paused);
       if (data.status === 'playing' && !data.paused) {
-        setStartTime(Date.now() - (data.elapsed || 0) * 1000);
-        setElapsed(data.elapsed || 0);
+        const resumedElapsed = data.elapsed || 0;
+        setStartTime(Date.now() - resumedElapsed * 1000);
+        setElapsed(resumedElapsed);
+        callbacksRef.current.onGameStart?.({
+          difficulty,
+          resumed: true,
+          elapsed: resumedElapsed,
+        });
       } else {
         if (data.startTime) setStartTime(data.startTime);
         if (data.elapsed) setElapsed(data.elapsed);
