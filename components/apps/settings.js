@@ -56,15 +56,15 @@ export function Settings() {
     }, [accent, accentText, contrastRatio]);
 
     return (
-        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
+        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-surface"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-ink-muted">Theme:</label>
                 <select
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-surface text-ink-muted px-2 py-1 rounded border border-border"
                 >
                     <option value="default">Default</option>
                     <option value="dark">Dark</option>
@@ -73,7 +73,7 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
+                <label className="mr-2 text-ink-muted">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
                     {ACCENT_OPTIONS.map((c) => (
                         <button
@@ -89,18 +89,18 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-ink-muted">Density:</label>
                 <select
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-surface text-ink-muted px-2 py-1 rounded border border-border"
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ink-muted">Font Size:</label>
                 <input
                     type="range"
                     min="0.75"
@@ -112,7 +112,7 @@ export function Settings() {
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ink-muted flex items-center">
                     <input
                         type="checkbox"
                         checked={reducedMotion}
@@ -123,7 +123,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ink-muted flex items-center">
                     <input
                         type="checkbox"
                         checked={largeHitAreas}
@@ -134,7 +134,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ink-muted flex items-center">
                     <input
                         type="checkbox"
                         checked={highContrast}
@@ -145,7 +145,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ink-muted flex items-center">
                     <input
                         type="checkbox"
                         checked={allowNetwork}
@@ -156,7 +156,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ink-muted flex items-center">
                     <input
                         type="checkbox"
                         checked={haptics}
@@ -167,7 +167,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ink-muted flex items-center">
                     <input
                         type="checkbox"
                         checked={pongSpin}
@@ -180,7 +180,7 @@ export function Settings() {
             <div className="flex justify-center my-4">
                 <div
                     className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
