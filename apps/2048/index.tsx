@@ -1,11 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
 
 const SIZE = 4;
+export const MOVE_COOLDOWN_MS = 120;
+const SWIPE_THRESHOLD_PX = 30;
 
 // simple seeded PRNG
 const mulberry32 = (seed: number) => () => {
@@ -110,6 +120,8 @@ const saveReplay = (replay: any) => {
   };
 };
 
+type Direction = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
+
 const Page2048 = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
   // Skip tile transition classes if the user prefers reduced motion
@@ -127,6 +139,16 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const lastMoveAtRef = useRef(0);
+  const swipeRef = useRef({ startX: 0, startY: 0, pointerId: null as number | null });
+
+  const tileWrapperStyle = useMemo<CSSProperties | undefined>(
+    () =>
+      prefersReducedMotion
+        ? undefined
+        : { transitionDuration: `${MOVE_COOLDOWN_MS}ms`, willChange: 'transform, opacity' },
+    [prefersReducedMotion]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -171,15 +193,15 @@ const Page2048 = () => {
     };
   }, [hard, moves, boardType]);
 
-  const handleMove = useCallback(
-    (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
-      if (won || lost) return;
+  const applyMove = useCallback(
+    (dir: Direction) => {
+      if (won || lost) return false;
       let moved: number[][] | undefined;
       if (dir === 'ArrowLeft') moved = moveLeft(board);
       if (dir === 'ArrowRight') moved = moveRight(board);
       if (dir === 'ArrowUp') moved = moveUp(board);
       if (dir === 'ArrowDown') moved = moveDown(board);
-      if (!moved || boardsEqual(board, moved)) return;
+      if (!moved || boardsEqual(board, moved)) return false;
       setHistory((h) => [...h, board.map((row) => [...row])]);
       addRandomTile(moved, rngRef.current);
       const newHighest = checkHighest(moved);
@@ -192,8 +214,20 @@ const Page2048 = () => {
       resetTimer();
       if (newHighest >= 2048) setWon(true);
       else if (!hasMoves(moved)) setLost(true);
+      return true;
     },
     [board, won, lost, highest, boardType, resetTimer]
+  );
+
+  const handleMove = useCallback(
+    (dir: Direction) => {
+      const now = Date.now();
+      if (now - lastMoveAtRef.current < MOVE_COOLDOWN_MS) return;
+      if (applyMove(dir)) {
+        lastMoveAtRef.current = now;
+      }
+    },
+    [applyMove]
   );
 
   const handleUndo = useCallback(() => {
@@ -206,6 +240,7 @@ const Page2048 = () => {
       setWon(false);
       setLost(false);
       resetTimer();
+      lastMoveAtRef.current = 0;
       return h.slice(0, -1);
     });
   }, [resetTimer]);
@@ -223,6 +258,7 @@ const Page2048 = () => {
     setLost(false);
     setHighest(0);
     resetTimer();
+    lastMoveAtRef.current = 0;
   }, [resetTimer]);
 
   useEffect(() => {
@@ -256,6 +292,57 @@ const Page2048 = () => {
     if (boardType === 'hex') return v.toString(16).toUpperCase();
     return v;
   };
+
+  const handlePointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    swipeRef.current.startX = e.clientX;
+    swipeRef.current.startY = e.clientY;
+    swipeRef.current.pointerId = e.pointerId;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // noop - pointer capture not supported
+    }
+  }, []);
+
+  const handlePointerEnd = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (swipeRef.current.pointerId !== e.pointerId) return;
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // noop - pointer capture not supported
+      }
+      const dx = e.clientX - swipeRef.current.startX;
+      const dy = e.clientY - swipeRef.current.startY;
+      swipeRef.current.pointerId = null;
+      if (Math.abs(dx) < SWIPE_THRESHOLD_PX && Math.abs(dy) < SWIPE_THRESHOLD_PX) {
+        return;
+      }
+      const horizontal = Math.abs(dx) > Math.abs(dy);
+      const dir: Direction = horizontal
+        ? dx > 0
+          ? 'ArrowRight'
+          : 'ArrowLeft'
+        : dy > 0
+        ? 'ArrowDown'
+        : 'ArrowUp';
+      handleMove(dir);
+    },
+    [handleMove]
+  );
+
+  const handlePointerCancel = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (swipeRef.current.pointerId === null) return;
+    if (swipeRef.current.pointerId === e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // noop - pointer capture not supported
+      }
+    }
+    swipeRef.current.pointerId = null;
+  }, []);
 
   useEffect(() => {
     if (won || lost) {
@@ -300,12 +387,23 @@ const Page2048 = () => {
         </button>
         {hard && <div className="ml-2">{timer}</div>}
       </div>
-      <div className="grid w-full max-w-sm grid-cols-4 gap-2">
+      <div
+        className="grid w-full max-w-sm grid-cols-4 gap-2"
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerCancel}
+        onPointerLeave={handlePointerCancel}
+        style={{ touchAction: 'none' }}
+        data-testid="daily-2048-board"
+      >
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => (
             <div
               key={`${rIdx}-${cIdx}`}
-              className={`w-full aspect-square ${prefersReducedMotion ? '' : 'transition-transform transition-opacity'}`}
+              className={`w-full aspect-square ${
+                prefersReducedMotion ? '' : 'transition-transform transition-opacity'
+              }`}
+              style={tileWrapperStyle}
             >
               <div
                 className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
