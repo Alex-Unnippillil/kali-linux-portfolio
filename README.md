@@ -92,6 +92,7 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `npx playwright test tests/solitaire-autoplay.spec.ts` – run the Solitaire autoplay stability check (requires a dev server running on `localhost:3000`).
 
 ---
 
