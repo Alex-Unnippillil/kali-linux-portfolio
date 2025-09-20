@@ -2,6 +2,7 @@
 
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 
 const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
@@ -19,10 +20,12 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowControlsMenu from '../context-menus/window-controls-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useVirtualDesktops from '../../hooks/useVirtualDesktops';
 
 export class Desktop extends Component {
     constructor() {
@@ -46,12 +49,13 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                windowControls: false,
             },
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
-            switcherWindows: [],
+            switcherDesktops: [],
         }
     }
 
@@ -89,6 +93,18 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps) {
+        const prevManager = prevProps.virtualDesktops;
+        const currentManager = this.props.virtualDesktops;
+        if ((prevManager && currentManager && prevManager.activeDesktopId !== currentManager.activeDesktopId)
+            || prevManager?.windowAssignments !== currentManager?.windowAssignments) {
+            this.syncFocusWithActiveDesktop();
+        }
+        if (this.state.showWindowSwitcher && prevManager && currentManager && prevManager.desktops !== currentManager.desktops) {
+            this.setState({ switcherDesktops: currentManager.desktops });
+        }
     }
 
     componentWillUnmount() {
@@ -151,20 +167,23 @@ export class Desktop extends Component {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
+            } else if (typeof window !== 'undefined') {
+                const direction = e.shiftKey ? -1 : 1;
+                window.dispatchEvent(new CustomEvent('desktop-switcher-cycle', { detail: direction }));
             }
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
         }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        else if (e.ctrlKey && e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            e.preventDefault();
+            this.cycleDesktops(e.key === 'ArrowRight' ? 1 : -1);
+        }
+        else if (e.metaKey && !e.ctrlKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {
@@ -176,7 +195,7 @@ export class Desktop extends Component {
 
     getFocusedWindowId = () => {
         for (const key in this.state.focused_windows) {
-            if (this.state.focused_windows[key]) {
+            if (this.state.focused_windows[key] && this.isWindowOnActiveDesktop(key)) {
                 return key;
             }
         }
@@ -184,19 +203,27 @@ export class Desktop extends Component {
     }
 
     cycleApps = (direction) => {
-        if (!this.app_stack.length) return;
+        const visibleStack = this.app_stack.filter((id) =>
+            this.state.closed_windows[id] === false && this.isWindowOnActiveDesktop(id),
+        );
+        if (!visibleStack.length) return;
         const currentId = this.getFocusedWindowId();
-        let index = this.app_stack.indexOf(currentId);
-        if (index === -1) index = 0;
-        let next = (index + direction + this.app_stack.length) % this.app_stack.length;
-        // Skip minimized windows
-        for (let i = 0; i < this.app_stack.length; i++) {
-            const id = this.app_stack[next];
+        let index = currentId ? visibleStack.indexOf(currentId) : -1;
+        if (index === -1) {
+            const first = visibleStack[direction > 0 ? 0 : visibleStack.length - 1];
+            if (first) {
+                this.focus(first);
+            }
+            return;
+        }
+        let next = (index + direction + visibleStack.length) % visibleStack.length;
+        for (let i = 0; i < visibleStack.length; i++) {
+            const id = visibleStack[next];
             if (!this.state.minimized_windows[id]) {
                 this.focus(id);
                 break;
             }
-            next = (next + direction + this.app_stack.length) % this.app_stack.length;
+            next = (next + direction + visibleStack.length) % visibleStack.length;
         }
     }
 
@@ -204,30 +231,117 @@ export class Desktop extends Component {
         const currentId = this.getFocusedWindowId();
         if (!currentId) return;
         const base = currentId.split('#')[0];
-        const windows = this.app_stack.filter(id => id.startsWith(base));
+        const windows = this.app_stack.filter(id => id.startsWith(base) && this.isWindowOnActiveDesktop(id));
         if (windows.length <= 1) return;
         let index = windows.indexOf(currentId);
         let next = (index + direction + windows.length) % windows.length;
         this.focus(windows[next]);
     }
 
+    cycleDesktops = (direction) => {
+        const manager = this.getDesktopManager();
+        if (!manager || manager.desktops.length <= 1) return;
+        const desktops = manager.desktops;
+        const activeId = manager.activeDesktopId;
+        const currentIndex = desktops.findIndex(desktop => desktop.id === activeId);
+        if (currentIndex === -1) return;
+        const nextIndex = (currentIndex + direction + desktops.length) % desktops.length;
+        const nextDesktop = desktops[nextIndex];
+        if (nextDesktop) {
+            this.scheduleFrame(() => manager.setActiveDesktop(nextDesktop.id));
+        }
+    }
+
+    getDesktopManager = () => this.props.virtualDesktops;
+
+    getActiveDesktopId = () => {
+        const manager = this.getDesktopManager();
+        return manager ? manager.activeDesktopId : null;
+    }
+
+    getWindowDesktopId = (windowId) => {
+        const manager = this.getDesktopManager();
+        if (!manager) return null;
+        return manager.getWindowDesktopId(windowId) || manager.activeDesktopId;
+    }
+
+    isWindowOnActiveDesktop = (windowId) => {
+        const manager = this.getDesktopManager();
+        if (!manager) return true;
+        const assigned = manager.getWindowDesktopId(windowId);
+        const target = assigned || manager.activeDesktopId;
+        return target === manager.activeDesktopId;
+    }
+
+    scheduleFrame = (callback) => {
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(callback);
+        } else {
+            callback();
+        }
+    }
+
+    syncFocusWithActiveDesktop = () => {
+        const manager = this.getDesktopManager();
+        if (!manager) return;
+        const currentFocused = this.getFocusedWindowId();
+        if (currentFocused && this.isWindowOnActiveDesktop(currentFocused) && !this.state.minimized_windows[currentFocused]) {
+            return;
+        }
+        const candidates = this.app_stack.filter((id) =>
+            this.state.closed_windows[id] === false && this.isWindowOnActiveDesktop(id),
+        );
+        if (!candidates.length) {
+            if (currentFocused) {
+                const focused_windows = { ...this.state.focused_windows };
+                focused_windows[currentFocused] = false;
+                this.setState({ focused_windows });
+            }
+            return;
+        }
+        const target = candidates.find((id) => !this.state.minimized_windows[id]) || candidates[0];
+        this.focus(target);
+    }
+
     openWindowSwitcher = () => {
-        const windows = this.app_stack
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+        const manager = this.getDesktopManager();
+        if (manager && manager.desktops.length) {
+            this.setState({ showWindowSwitcher: true, switcherDesktops: manager.desktops });
         }
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.setState({ showWindowSwitcher: false, switcherDesktops: [] });
     }
 
-    selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
-            this.openApp(id);
+    selectDesktop = (id) => {
+        const manager = this.getDesktopManager();
+        this.setState({ showWindowSwitcher: false, switcherDesktops: [] }, () => {
+            if (!manager) return;
+            this.scheduleFrame(() => manager.setActiveDesktop(id));
+        });
+    }
+
+    moveWindowToDesktop = (desktopId) => {
+        const manager = this.getDesktopManager();
+        const windowId = this.state.context_app;
+        if (!manager || !windowId) return;
+        this.hideAllContextMenu();
+        this.scheduleFrame(() => {
+            manager.moveWindowToDesktop(windowId, desktopId);
+            if (desktopId === manager.activeDesktopId) {
+                this.focus(windowId);
+                return;
+            }
+            if (this.state.focused_windows[windowId]) {
+                this.setState(prev => ({
+                    focused_windows: { ...prev.focused_windows, [windowId]: false },
+                }), () => {
+                    this.giveFocusToLastApp();
+                });
+            } else {
+                this.giveFocusToLastApp();
+            }
         });
     }
 
@@ -259,6 +373,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window-controls":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Window Controls Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "windowControls"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -289,6 +410,10 @@ export class Desktop extends Component {
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            case "window-controls":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Window Controls Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "windowControls"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -457,7 +582,7 @@ export class Desktop extends Component {
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+            if (this.state.closed_windows[app.id] === false && this.isWindowOnActiveDesktop(app.id)) {
 
                 const pos = this.state.window_positions[app.id];
                 const props = {
@@ -558,8 +683,11 @@ export class Desktop extends Component {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
             for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+                const id = this.app_stack[index];
+                if (this.state.closed_windows[id]) continue;
+                if (!this.isWindowOnActiveDesktop(id)) continue;
+                if (!this.state.minimized_windows[id]) {
+                    this.focus(id);
                     break;
                 }
             }
@@ -569,7 +697,7 @@ export class Desktop extends Component {
     checkAllMinimised = () => {
         let result = true;
         for (const key in this.state.minimized_windows) {
-            if (!this.state.closed_windows[key]) { // if app is opened
+            if (!this.state.closed_windows[key] && this.isWindowOnActiveDesktop(key)) { // if app is opened on active desktop
                 result = result & this.state.minimized_windows[key];
             }
         }
@@ -591,11 +719,22 @@ export class Desktop extends Component {
             action: `Opened ${objId} window`
         });
 
+        const desktopManager = this.getDesktopManager();
+        if (desktopManager) {
+            desktopManager.ensureWindowOnDesktop(objId, desktopManager.activeDesktopId);
+        }
+
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
+            if (desktopManager) {
+                const assignedDesktop = desktopManager.getWindowDesktopId(objId);
+                if (assignedDesktop && assignedDesktop !== desktopManager.activeDesktopId) {
+                    this.scheduleFrame(() => desktopManager.setActiveDesktop(assignedDesktop));
+                }
+            }
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
@@ -618,7 +757,7 @@ export class Desktop extends Component {
             if (currentApp) {
                 frequentApps.forEach((app) => {
                     if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
+                        app.frequency += 1; // increase the frequency if app is found
                     }
                 });
             } else {
@@ -701,6 +840,11 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
+        const desktopManager = this.getDesktopManager();
+        if (desktopManager) {
+            desktopManager.removeWindowAssignment(objId);
+        }
+
         this.setState({ closed_windows, favourite_apps }, this.saveSession);
     }
 
@@ -733,7 +877,10 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        if (!this.isWindowOnActiveDesktop(objId)) {
+            return;
+        }
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -864,8 +1011,18 @@ export class Desktop extends Component {
     }
 
     render() {
+        const desktopManager = this.getDesktopManager();
+        const desktops = desktopManager ? desktopManager.desktops : [];
+        const activeDesktopId = desktopManager ? desktopManager.activeDesktopId : null;
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+
+                <WorkspaceTabs
+                    desktops={desktops}
+                    activeDesktopId={activeDesktopId}
+                    onSelect={this.selectDesktop}
+                    onReorder={desktopManager ? desktopManager.reorderDesktops : undefined}
+                />
 
                 {/* Window Area */}
                 <div
@@ -940,6 +1097,13 @@ export class Desktop extends Component {
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
+                <WindowControlsMenu
+                    active={this.state.context_menus.windowControls}
+                    desktops={desktops}
+                    activeDesktopId={activeDesktopId}
+                    onMove={this.moveWindowToDesktop}
+                    onClose={this.hideAllContextMenu}
+                />
 
                 {/* Folder Input Name Bar */}
                 {
@@ -963,16 +1127,109 @@ export class Desktop extends Component {
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
-                        windows={this.state.switcherWindows}
-                        onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                        desktops={this.state.switcherDesktops.length ? this.state.switcherDesktops : desktops}
+                        activeDesktopId={activeDesktopId}
+                        onSelect={this.selectDesktop}
+                        onClose={this.closeWindowSwitcher}
+                        onReorder={desktopManager ? desktopManager.reorderDesktops : undefined}
+                    /> : null}
 
             </main>
         )
     }
 }
 
+function WorkspaceTabs({ desktops = [], activeDesktopId, onSelect, onReorder }) {
+    const [draggedId, setDraggedId] = React.useState(null);
+    const [dragOverId, setDragOverId] = React.useState(null);
+
+    if (!desktops.length) {
+        return null;
+    }
+
+    const canDrag = typeof onReorder === 'function' && desktops.length > 1;
+
+    const handleSelect = (desktopId) => {
+        if (typeof onSelect === 'function') {
+            onSelect(desktopId);
+        }
+    };
+
+    const handleDragStart = (desktopId) => (event) => {
+        if (!canDrag) return;
+        setDraggedId(desktopId);
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('application/x-virtual-desktop-id', desktopId);
+    };
+
+    const handleDragOver = (desktopId) => (event) => {
+        if (!canDrag) return;
+        event.preventDefault();
+        if (draggedId && draggedId !== desktopId) {
+            setDragOverId(desktopId);
+        }
+        event.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDragLeave = (desktopId) => () => {
+        if (dragOverId === desktopId) {
+            setDragOverId(null);
+        }
+    };
+
+    const handleDrop = (desktopId) => (event) => {
+        if (!canDrag) return;
+        event.preventDefault();
+        const sourceId = event.dataTransfer.getData('application/x-virtual-desktop-id') || draggedId;
+        setDragOverId(null);
+        setDraggedId(null);
+        if (sourceId && sourceId !== desktopId && typeof onReorder === 'function') {
+            onReorder(sourceId, desktopId);
+        }
+    };
+
+    const handleDragEnd = () => {
+        setDragOverId(null);
+        setDraggedId(null);
+    };
+
+    return (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex gap-2">
+            {desktops.map((desktop) => {
+                const isActive = desktop.id === activeDesktopId;
+                const isDropTarget = dragOverId === desktop.id;
+                return (
+                    <button
+                        key={desktop.id}
+                        type="button"
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors border ${isActive ? 'bg-ub-orange text-black border-ub-orange' : 'bg-black bg-opacity-40 text-white border-transparent hover:bg-white hover:bg-opacity-20'} ${isDropTarget ? 'ring-2 ring-ub-orange' : ''}`}
+                        onClick={() => handleSelect(desktop.id)}
+                        draggable={canDrag}
+                        onDragStart={handleDragStart(desktop.id)}
+                        onDragOver={handleDragOver(desktop.id)}
+                        onDragEnter={handleDragOver(desktop.id)}
+                        onDragLeave={handleDragLeave(desktop.id)}
+                        onDrop={handleDrop(desktop.id)}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <Image
+                            src={desktop.icon}
+                            alt=""
+                            width={24}
+                            height={24}
+                            className="w-6 h-6"
+                            sizes="24px"
+                        />
+                        <span className="text-sm font-medium truncate max-w-[8rem]">{desktop.name}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const virtualDesktops = useVirtualDesktops();
+    return <Desktop {...props} snapEnabled={snapEnabled} virtualDesktops={virtualDesktops} />;
 }

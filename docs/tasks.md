@@ -10,6 +10,10 @@ This document tracks planned improvements and new features for the desktop portf
 - Fix terminal build by importing `@xterm/xterm/css/xterm.css` and registering `FitAddon`.
 - Follow `docs/new-app-checklist.md` for all new apps.
 
+## Keyboard Shortcuts
+- `Alt` + `Tab`: Open the workspace switcher overlay. Continue holding `Alt` and tap `Tab` to cycle the highlighted desktop, then release to activate it.
+- `Ctrl` + `Super` + `← / →`: Jump directly to the previous or next workspace without opening the switcher.
+
 ## Desktop Apps
 ### Google Chrome
 - Convert component to pure JS.
