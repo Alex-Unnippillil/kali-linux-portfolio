@@ -42,6 +42,167 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window freeze lifecycle', () => {
+  it('notifies registered handlers on minimize and resume', () => {
+    const freeze = jest.fn();
+    const resume = jest.fn();
+    const screen = jest.fn((addFolder, openApp, manager) => {
+      manager.registerLifecycle({ freeze, resume });
+      return <div>content</div>;
+    });
+
+    const { rerender } = render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={screen}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        minimized={false}
+      />,
+    );
+
+    rerender(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={screen}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        minimized
+      />,
+    );
+
+    expect(freeze).toHaveBeenCalled();
+
+    rerender(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={screen}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        minimized={false}
+      />,
+    );
+
+    expect(resume).toHaveBeenCalled();
+  });
+
+  it('pauses requestAnimationFrame loops when minimized without handlers', () => {
+    jest.useFakeTimers();
+    try {
+      const managerBefore = (window as any).__desktopRafManager__;
+      const originalNativeRequest = managerBefore?.nativeRequest;
+      const originalNativeCancel = managerBefore?.nativeCancel;
+      const originalRaf = window.requestAnimationFrame;
+      const originalCancel = window.cancelAnimationFrame;
+      window.requestAnimationFrame = ((cb: FrameRequestCallback) =>
+        setTimeout(() => cb(Date.now()), 16)) as any;
+      window.cancelAnimationFrame = ((handle: number) => clearTimeout(handle)) as any;
+
+      let frames = 0;
+      let started = false;
+      const loop = () => {
+        frames += 1;
+        requestAnimationFrame(loop);
+      };
+      const screen = jest.fn(() => {
+        if (!started) {
+          started = true;
+          requestAnimationFrame(loop);
+        }
+        return <div>loop</div>;
+      });
+
+      const { rerender } = render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={screen}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          minimized={false}
+        />,
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(50);
+      });
+
+      expect(frames).toBeGreaterThan(0);
+      const beforeFreeze = frames;
+      const manager = (window as any).__desktopRafManager__;
+      expect(manager).toBeDefined();
+      expect(manager.frozen.has('test-window')).toBe(false);
+
+      rerender(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={screen}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          minimized
+        />,
+      );
+
+      const frozenManager = (window as any).__desktopRafManager__;
+      expect(frozenManager.frozen.has('test-window')).toBe(true);
+
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      expect(frames).toBe(beforeFreeze);
+
+      rerender(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={screen}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          minimized={false}
+        />,
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      expect(frames).toBeGreaterThan(beforeFreeze);
+      if (managerBefore) {
+        window.requestAnimationFrame = originalNativeRequest ?? originalRaf;
+        window.cancelAnimationFrame = originalNativeCancel ?? originalCancel;
+      } else {
+        window.requestAnimationFrame = originalRaf;
+        window.cancelAnimationFrame = originalCancel;
+      }
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
@@ -199,7 +360,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
