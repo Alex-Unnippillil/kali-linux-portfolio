@@ -1,5 +1,13 @@
 import ReactGA from 'react-ga4';
-import { logEvent, logGameStart, logGameEnd, logGameError } from '../utils/analytics';
+import {
+  __resetPowerSaverMetrics,
+  getPowerSaverMetrics,
+  logEvent,
+  logGameEnd,
+  logGameError,
+  logGameStart,
+  logPowerSaverChange,
+} from '../utils/analytics';
 
 jest.mock('react-ga4', () => ({
   event: jest.fn(),
@@ -10,6 +18,7 @@ describe('analytics utilities', () => {
 
   beforeEach(() => {
     mockEvent.mockReset();
+    __resetPowerSaverMetrics();
   });
 
   it('logs generic events', () => {
@@ -36,6 +45,25 @@ describe('analytics utilities', () => {
   it('handles errors from ReactGA.event without throwing', () => {
     mockEvent.mockImplementationOnce(() => { throw new Error('fail'); });
     expect(() => logEvent({ category: 't', action: 'a' } as any)).not.toThrow();
+  });
+
+  it('records power saver analytics', () => {
+    logPowerSaverChange(true, 90);
+    logPowerSaverChange(false);
+
+    expect(mockEvent).toHaveBeenCalledTimes(2);
+    expect(mockEvent).toHaveBeenLastCalledWith({
+      category: 'power-saver',
+      action: 'disabled',
+      label: undefined,
+      value: undefined,
+    });
+
+    expect(getPowerSaverMetrics()).toEqual({
+      activationCount: 1,
+      totalEstimatedMinutesGained: 90,
+      lastGainEstimate: 0,
+    });
   });
 });
 

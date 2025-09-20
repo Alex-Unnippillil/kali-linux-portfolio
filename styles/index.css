@@ -9,6 +9,8 @@ body{
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    filter: brightness(var(--power-saver-brightness, 1));
+    transition: filter 200ms ease-in-out;
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {

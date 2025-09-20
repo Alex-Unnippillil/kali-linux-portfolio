@@ -20,6 +20,7 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
+  --power-saver-brightness: 1;
 }
 
 /* Dark theme */
