@@ -12,8 +12,52 @@
     }
   },
   "urls": [
-    "http://localhost:3000",
-    "http://localhost:3000/apps"
+    {
+      "url": "http://localhost:3000",
+      "label": "desktop-ready",
+      "actions": [
+        "wait 3000",
+        "wait for element #window-area"
+      ]
+    },
+    {
+      "url": "http://localhost:3000",
+      "label": "about-window",
+      "actions": [
+        "wait 3000",
+        "run script window.dispatchEvent(new CustomEvent('open-app', { detail: 'about' }));",
+        "wait for element #about"
+      ]
+    },
+    {
+      "url": "http://localhost:3000",
+      "label": "contact-flow",
+      "actions": [
+        "wait 3000",
+        "wait for element [data-app-id=\"gedit\"]",
+        "click element [data-app-id=\"gedit\"]",
+        "press key ENTER",
+        "wait for element #gedit",
+        "set field #sender-name Accessibility Robot",
+        "set field #sender-subject Accessibility smoke test",
+        "set field #sender-message Exercising the contact form fields for accessibility.",
+        "wait 500"
+      ]
+    },
+    {
+      "url": "http://localhost:3000",
+      "label": "project-gallery",
+      "actions": [
+        "wait 3000",
+        "run script window.dispatchEvent(new CustomEvent('open-app', { detail: 'project-gallery' }));",
+        "wait for element #project-gallery",
+        "wait 500"
+      ]
+    },
+    {
+      "url": "http://localhost:3000/apps",
+      "label": "apps-grid"
+    }
   ],
   "scenarios": [
     {},
