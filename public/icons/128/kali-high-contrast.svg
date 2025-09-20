@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title>Kali high contrast icon 128px</title>
+  <rect width="256" height="256" rx="48" fill="#000000" />
+  <rect x="16" y="16" width="224" height="224" rx="40" fill="none" stroke="#0B6BFF" stroke-width="16" />
+  <path d="M84 72h52v112H84z" fill="#00883A" />
+  <path d="M152 72h40l-68 56 68 56h-40l-68-56z" fill="#C05600" />
+  <circle cx="188" cy="92" r="28" fill="#FFFFFF" />
+  <circle cx="188" cy="92" r="18" fill="#0B6BFF" />
+</svg>
