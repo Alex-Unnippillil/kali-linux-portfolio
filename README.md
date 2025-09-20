@@ -124,6 +124,14 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 - Client-side only **simulations** of security tools (no real exploitation)
 - A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 
+## Firewall Simulator
+
+The simulated firewall utility mirrors how desktop security suites separate trusted and untrusted networks.
+
+- Profiles for **Home**, **Work**, and **Public** are persisted in [`utils/firewallStore.ts`](./utils/firewallStore.ts) with per-profile rule sets.
+- The UI in [`components/apps/firewall`](./components/apps/firewall) exposes rule lists and an inline editor for protocol, port, and application combinations.
+- Profile switches emit analytics events via `utils/analytics.ts` and swap the active rule set atomically so other windows never see partial state.
+
 ### Gamepad Input & Remapping
 
 Games can listen for normalized gamepad events via `utils/gamepad.ts`. The manager polls
