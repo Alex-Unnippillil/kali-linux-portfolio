@@ -5,6 +5,7 @@ import usePersistentState from "../../hooks/usePersistentState";
 import CrossfadePlayer from "./utils/crossfade";
 import Visualizer from "./Visualizer";
 import Lyrics from "./Lyrics";
+import MiniPlayer from "./components/MiniPlayer";
 
 interface Track {
   title: string;
@@ -144,6 +145,28 @@ const SpotifyApp = () => {
   };
 
   const currentTrack = queue[current];
+  const hasTracks = queue.length > 0;
+
+  if (mini) {
+    return (
+      <div
+        className="h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex items-center justify-center p-4"
+        tabIndex={0}
+        onKeyDown={handleKey}
+      >
+        <MiniPlayer
+          track={currentTrack}
+          progress={progress}
+          duration={duration}
+          canControl={hasTracks}
+          onNext={next}
+          onPrevious={previous}
+          onTogglePlay={togglePlay}
+          onExit={() => setMini(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
