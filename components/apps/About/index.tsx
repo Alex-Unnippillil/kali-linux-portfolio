@@ -110,7 +110,10 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     const nonce = getCspNonce();
 
     return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+      <section
+        aria-label="About workspace"
+        className="w-full h-full flex bg-ub-cool-grey text-white select-none relative"
+      >
         <Head>
           <title>About</title>
           <script
@@ -149,7 +152,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
         <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
           {this.state.screen}
         </div>
-      </main>
+      </section>
     );
   }
 }

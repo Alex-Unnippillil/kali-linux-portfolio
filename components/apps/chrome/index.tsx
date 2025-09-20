@@ -774,7 +774,8 @@ const Chrome: React.FC = () => {
           {activeTab.url === HOME_URL ? (
             homeGrid
           ) : articles[activeId] ? (
-            <main
+            <article
+              aria-label="Article content"
               style={{ maxInlineSize: '60ch', margin: 'auto' }}
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articles[activeId] ?? '') }}
             />

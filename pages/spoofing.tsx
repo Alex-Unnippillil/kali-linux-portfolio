@@ -61,14 +61,23 @@ const DnsDiagram = () => (
 const SpoofingOverview = () => (
   <>
     <Meta />
-    <main className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen">
+    <section
+      aria-labelledby="spoofing-heading"
+      className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen"
+    >
+      <h1 id="spoofing-heading" className="md:col-span-2 text-2xl font-semibold text-white">
+        Spoofing simulations
+      </h1>
+      <p className="md:col-span-2 text-white/80">
+        Visual explainers for ARP and DNS spoofing are paired with links to upstream documentation.
+      </p>
       <ToolTile title="arpspoof" link="https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html">
         <ArpDiagram />
       </ToolTile>
       <ToolTile title="dnsspoof" link="https://manpages.debian.org/unstable/dsniff/dnsspoof.8.en.html">
         <DnsDiagram />
       </ToolTile>
-    </main>
+    </section>
   </>
 );
 

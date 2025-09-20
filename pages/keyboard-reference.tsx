@@ -1,8 +1,13 @@
 import React from 'react';
 
 const KeyboardReference = () => (
-  <main className="min-h-screen bg-ub-cool-grey text-white p-4 space-y-4">
-    <h1 className="text-2xl font-bold">Keyboard Mapping Reference</h1>
+  <section
+    aria-labelledby="keyboard-reference-heading"
+    className="min-h-screen bg-ub-cool-grey text-white p-4 space-y-4"
+  >
+    <h1 id="keyboard-reference-heading" className="text-2xl font-bold">
+      Keyboard Mapping Reference
+    </h1>
     <p className="mb-4">Common shortcuts for navigating and interacting with the desktop.</p>
     <table className="w-full border-collapse">
       <thead>
@@ -34,7 +39,7 @@ const KeyboardReference = () => (
         </tr>
       </tbody>
     </table>
-  </main>
+  </section>
 );
 
 export default KeyboardReference;

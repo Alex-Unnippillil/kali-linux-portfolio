@@ -38,7 +38,13 @@ const VideoGallery: React.FC = () => {
   );
 
   return (
-    <main className="p-4">
+    <section
+      aria-labelledby="video-gallery-heading"
+      className="p-4"
+    >
+      <h1 id="video-gallery-heading" className="mb-4 text-2xl font-semibold">
+        Kali Linux video gallery
+      </h1>
       <input
         type="text"
         placeholder="Search videos..."
@@ -79,7 +85,7 @@ const VideoGallery: React.FC = () => {
           </button>
         ))}
       </div>
-    </main>
+    </section>
   );
 };
 

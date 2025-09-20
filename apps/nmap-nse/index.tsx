@@ -168,7 +168,7 @@ const NmapNSE: React.FC = () => {
         </aside>
 
         {/* details */}
-        <main className="flex-1 p-4 overflow-y-auto">
+        <section className="flex-1 p-4 overflow-y-auto" aria-live="polite">
           {selected ? (
             <div>
               <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
@@ -208,7 +208,7 @@ const NmapNSE: React.FC = () => {
           ) : (
             <p>Select a script to view details.</p>
           )}
-        </main>
+        </section>
       </div>
     </div>
   );

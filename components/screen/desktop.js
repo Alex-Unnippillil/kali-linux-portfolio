@@ -865,12 +865,16 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <div
+                id="desktop"
+                role="region"
+                aria-label="Desktop workspace"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+            >
 
                 {/* Window Area */}
                 <div
                     id="window-area"
-                    role="main"
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >
@@ -967,7 +971,7 @@ export class Desktop extends Component {
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
 
-            </main>
+            </div>
         )
     }
 }

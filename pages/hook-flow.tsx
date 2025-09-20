@@ -8,8 +8,14 @@ const HookFlow: React.FC = () => {
 
   if (!consented) {
     return (
-      <main className="p-4 text-center">
-        <p className="mb-4 font-bold">
+      <section
+        aria-labelledby="hook-flow-consent-heading"
+        className="p-4 text-center"
+      >
+        <h1 id="hook-flow-consent-heading" className="mb-4 font-bold">
+          View React hook flow diagram
+        </h1>
+        <p className="mb-4">
           This page contains diagrams and links to external documentation.
         </p>
         <button
@@ -18,12 +24,18 @@ const HookFlow: React.FC = () => {
         >
           Continue
         </button>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="p-4 space-y-4">
+    <section
+      aria-labelledby="hook-flow-heading"
+      className="p-4 space-y-4"
+    >
+      <h1 id="hook-flow-heading" className="text-2xl font-semibold">
+        React hook flow reference
+      </h1>
       <Image
         src="/hook-flow.svg"
         alt="React hook flow diagram"
@@ -38,7 +50,7 @@ const HookFlow: React.FC = () => {
         sandbox="allow-scripts allow-same-origin"
         className="w-full h-96 border"
       />
-    </main>
+    </section>
   );
 };
 
