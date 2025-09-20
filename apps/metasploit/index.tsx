@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
+import PayloadBuilderForm from './components/PayloadBuilderForm';
 import Toast from '../../components/ui/Toast';
 
 interface Module {
@@ -99,7 +100,9 @@ const MetasploitPage: React.FC = () => {
     };
   }, []);
 
-  const handleGenerate = () => setToast('Payload generated');
+  const handlePayloadCopy = (result: { success: boolean }) => {
+    setToast(result.success ? 'Payload copied to clipboard' : 'Failed to copy payload');
+  };
 
   const renderTree = (node: TreeNode) => (
     <ul className="ml-2">
@@ -192,20 +195,10 @@ const MetasploitPage: React.FC = () => {
           />
           <div
             style={{ height: `calc(${100 - split}% - 2px)` }}
-            className="overflow-auto p-2 space-y-2"
+            className="overflow-auto p-2"
           >
-            <h3 className="font-semibold">Generate Payload</h3>
-            <input
-              type="text"
-              placeholder="Payload options..."
-              className="border p-1 w-full"
-            />
-            <button
-              onClick={handleGenerate}
-              className="px-2 py-1 bg-blue-500 text-white rounded"
-            >
-              Generate
-            </button>
+            <h3 className="mb-3 font-semibold">Generate Payload</h3>
+            <PayloadBuilderForm onCopy={handlePayloadCopy} />
           </div>
         </div>
       </div>
