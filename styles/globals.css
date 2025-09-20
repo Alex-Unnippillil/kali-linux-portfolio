@@ -77,3 +77,30 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+.skip-link {
+  position: absolute;
+  top: -999px;
+  left: var(--space-4);
+  z-index: 999;
+  background: var(--color-primary);
+  color: var(--color-inverse);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+body.screen-reader-mode {
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+body.keyboard-nav-mode *:focus {
+  outline: 3px solid var(--color-ub-border-orange);
+  outline-offset: 4px;
+}
