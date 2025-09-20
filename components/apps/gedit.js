@@ -3,6 +3,7 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
+import { listKeys, signMessage as signGpgMessage } from '../../utils/gpgMock';
 import { createDisplay } from '../../utils/createDynamicApp';
 
 export class Gedit extends Component {
@@ -211,4 +212,27 @@ export class Gedit extends Component {
 }
 
 export default Gedit;
+
+export const simulateGeditEmailSigning = async (message, options = {}) => {
+    const { keyId, sign = signGpgMessage, loadKeys = listKeys } = options;
+    const trimmed = (message || '').trim();
+    if (!trimmed) {
+        throw new Error('Message must not be empty');
+    }
+    const keys = await loadKeys();
+    if (!Array.isArray(keys) || keys.length === 0) {
+        throw new Error('No GPG keys available for signing');
+    }
+    const resolved = keyId ? keys.find((key) => key.id === keyId) || keys[0] : keys[0];
+    if (!resolved) {
+        throw new Error('Unable to resolve signing key');
+    }
+    const signature = await sign(resolved.id, trimmed);
+    return {
+        key: resolved,
+        signature,
+        signedMessage: `${trimmed}\n\n--SIGNED-BY ${resolved.email}--\n${signature}`,
+    };
+};
+
 export const displayGedit = createDisplay(Gedit);

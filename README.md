@@ -433,6 +433,7 @@ play/pause and track controls include keyboard hotkeys.
 | Bluetooth Tools | /apps/bluetooth | Security Tool (simulated) |
 | dsniff | /apps/dsniff | Security Tool (simulated) |
 | Ettercap | /apps/ettercap | Security Tool (simulated) |
+| GPG Manager | /apps/gpg-manager | Security Tool (simulated) |
 | Ghidra | /apps/ghidra | Security Tool (simulated) |
 | Hashcat | /apps/hashcat | Security Tool (simulated) |
 | Hydra | /apps/hydra | Security Tool (simulated) |
