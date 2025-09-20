@@ -30,6 +30,19 @@ const STORAGE_KEY = 'chrome-tabs';
 const HOME_URL = 'home://start';
 const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
+const IFRAME_PERMISSIONS = [
+  'accelerometer',
+  'autoplay',
+  'clipboard-write',
+  'encrypted-media',
+  'geolocation',
+  'gyroscope',
+  'picture-in-picture',
+  'microphone',
+  'camera',
+] as const;
+const IFRAME_ALLOW_ATTRIBUTE = IFRAME_PERMISSIONS.join('; ');
+const IFRAME_PERMISSION_LABEL = IFRAME_PERMISSIONS.join(', ');
 const DEMO_ORIGINS = [
   'https://example.com',
   'https://developer.mozilla.org',
@@ -159,6 +172,17 @@ const Chrome: React.FC = () => {
     () =>
       articles[activeId] ? DOMPurify.sanitize(articles[activeId]) : '',
     [articles, activeId],
+  );
+  const allowedOriginHosts = useMemo(
+    () =>
+      DEMO_ORIGINS.map((origin) => {
+        try {
+          return new URL(origin).host;
+        } catch {
+          return origin;
+        }
+      }),
+    [],
   );
 
   const updateFavicon = useCallback(
@@ -525,6 +549,7 @@ const Chrome: React.FC = () => {
                 type="file"
                 accept="application/json"
                 onChange={importTiles}
+                aria-label="Import tiles JSON"
                 className="hidden"
               />
             </>
@@ -536,9 +561,19 @@ const Chrome: React.FC = () => {
           <div key={i} className="flex flex-col items-center">
             {editingTiles && (
               <div className="mb-1 space-x-1">
-                <button onClick={() => moveTile(i, -1)}>↑</button>
-                <button onClick={() => moveTile(i, 1)}>↓</button>
-                <button onClick={() => removeTile(i)}>×</button>
+                <button aria-label="Move tile up" onClick={() => moveTile(i, -1)} type="button">
+                  ↑
+                </button>
+                <button
+                  aria-label="Move tile down"
+                  onClick={() => moveTile(i, 1)}
+                  type="button"
+                >
+                  ↓
+                </button>
+                <button aria-label="Remove tile" onClick={() => removeTile(i)} type="button">
+                  ×
+                </button>
               </div>
             )}
             {(() => {
@@ -575,12 +610,14 @@ const Chrome: React.FC = () => {
             placeholder="Title"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
+            aria-label="Tile title"
           />
           <input
             className="px-1 text-black border rounded"
             placeholder="URL"
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
+            aria-label="Tile URL"
           />
           <button
             onClick={addTile}
@@ -590,6 +627,41 @@ const Chrome: React.FC = () => {
           </button>
         </div>
       )}
+      <div
+        className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800"
+        aria-label="Chrome sandbox permissions"
+      >
+        <h2 className="text-base font-semibold text-gray-900">Sandbox &amp; permissions</h2>
+        <p className="mt-1">
+          Tabs run in a sandboxed iframe so the demo stays self-contained. Only curated
+          origins load inside the window; other URLs open externally.
+        </p>
+        <ul className="mt-2 list-inside list-disc space-y-1">
+          <li>
+            Allowed demo sites:{' '}
+            {allowedOriginHosts.map((host, index) => (
+              <span key={host} className="whitespace-nowrap">
+                <code>{host}</code>
+                {index < allowedOriginHosts.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+            .
+          </li>
+          <li>
+            Active sandbox flags: {SANDBOX_FLAGS.join(', ')}. Adding
+            {' '}<code>allow-same-origin</code> would break the isolation.
+          </li>
+          <li>
+            The iframe requests features: {IFRAME_PERMISSION_LABEL}. Camera and microphone
+            stay disabled by the site Permissions Policy.
+          </li>
+          <li>
+            Network calls from pages fail because of <code>{CSP}</code>.
+            Downloads, login flows, and persistent storage may not work—use the ↗ toolbar
+            button for full browser access.
+          </li>
+        </ul>
+      </div>
     </div>
   );
 
@@ -691,7 +763,7 @@ const Chrome: React.FC = () => {
         </button>
         <button
           onClick={() => setShowFlags((s) => !s)}
-          aria-label="Show sandbox flags"
+          aria-label="Toggle sandbox and permissions info"
           className="px-2"
         >
           ⚑
@@ -767,6 +839,7 @@ const Chrome: React.FC = () => {
             placeholder="Search tabs"
             value={tabQuery}
             onChange={(e) => setTabQuery(e.target.value)}
+            aria-label="Search open tabs"
           />
         </div>
       )}
@@ -789,23 +862,48 @@ const Chrome: React.FC = () => {
               sandbox={SANDBOX_FLAGS.join(' ')}
               // @ts-ignore - CSP is a valid attribute but not in the React types
               csp={CSP}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+              allow={IFRAME_ALLOW_ATTRIBUTE}
               referrerPolicy="no-referrer"
               allowFullScreen
             />
           )}
           {showFlags && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 space-y-1">
-              <p>Active sandbox flags: {SANDBOX_FLAGS.join(', ') || '(none)'}</p>
-              <p>
-                Pages run in an isolated iframe. Scripts, forms and popups work, but network
-                access is blocked by CSP.
+            <aside
+              className="absolute bottom-0 left-0 right-0 space-y-2 bg-black/80 p-3 text-xs text-white"
+              role="note"
+              aria-label="Chrome sandbox permissions"
+            >
+              <p className="font-semibold text-white">Sandbox &amp; permissions</p>
+              <p className="text-white/80">
+                Active sandbox flags: {SANDBOX_FLAGS.join(', ') || '(none)'}. Content renders in an
+                isolated iframe with <code>{CSP}</code>, so fetch and WebSocket calls from the page
+                fail.
               </p>
-              <p>
-                Note: combining <code>allow-scripts</code> with <code>allow-same-origin</code> defeats
-                isolation.
+              <ul className="list-inside list-disc space-y-1 text-white/80">
+                <li>
+                  Allowed demo sites:{' '}
+                  {allowedOriginHosts.map((host, index) => (
+                    <span key={host} className="whitespace-nowrap">
+                      <code>{host}</code>
+                      {index < allowedOriginHosts.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                  . Use the ↗ toolbar button for other domains.
+                </li>
+                <li>
+                  Iframe features requested: {IFRAME_PERMISSION_LABEL}. Camera and microphone stay
+                  disabled by the site Permissions Policy to avoid unexpected prompts.
+                </li>
+                <li>
+                  Downloads, login flows, and persistent storage can fail because the sandbox blocks
+                  same-origin access.
+                </li>
+              </ul>
+              <p className="text-white/70">
+                Adding <code>allow-same-origin</code> would break the isolation and is intentionally
+                avoided.
               </p>
-            </div>
+            </aside>
           )}
         </div>
       </div>
