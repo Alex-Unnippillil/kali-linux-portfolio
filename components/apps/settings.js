@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, setTerminalFontScale, setTerminalTheme, setTerminalSize } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -252,6 +252,9 @@ export function Settings() {
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
+                        setTerminalFontScale(defaults.terminalFontScale);
+                        setTerminalTheme(defaults.terminalTheme);
+                        setTerminalSize({ ...defaults.terminalSize });
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
@@ -276,6 +279,11 @@ export function Settings() {
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
+                        if (parsed.terminalFontScale !== undefined) setTerminalFontScale(parsed.terminalFontScale);
+                        if (parsed.terminalTheme !== undefined) setTerminalTheme(parsed.terminalTheme);
+                        if (parsed.terminalSize && typeof parsed.terminalSize.width === 'number' && typeof parsed.terminalSize.height === 'number') {
+                            setTerminalSize({ ...parsed.terminalSize });
+                        }
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }

@@ -20,10 +20,17 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTerminalFontScale as loadTerminalFontScale,
+  setTerminalFontScale as saveTerminalFontScale,
+  getTerminalTheme as loadTerminalTheme,
+  setTerminalTheme as saveTerminalTheme,
+  getTerminalSize as loadTerminalSize,
+  setTerminalSize as saveTerminalSize,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+export type TerminalSize = { width: number; height: number };
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +70,9 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  terminalFontScale: number;
+  terminalTheme: string;
+  terminalSize: TerminalSize;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +84,9 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setTerminalFontScale: (value: number) => void;
+  setTerminalTheme: (value: string) => void;
+  setTerminalSize: (value: TerminalSize) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +101,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  terminalFontScale: defaults.terminalFontScale,
+  terminalTheme: defaults.terminalTheme,
+  terminalSize: defaults.terminalSize,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +115,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setTerminalFontScale: () => {},
+  setTerminalTheme: () => {},
+  setTerminalSize: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +132,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [terminalFontScale, setTerminalFontScale] = useState<number>(
+    defaults.terminalFontScale,
+  );
+  const [terminalTheme, setTerminalTheme] = useState<string>(defaults.terminalTheme);
+  const [terminalSize, setTerminalSize] = useState<TerminalSize>({
+    ...defaults.terminalSize,
+  });
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +154,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setTerminalFontScale(await loadTerminalFontScale());
+      setTerminalTheme(await loadTerminalTheme());
+      const size = await loadTerminalSize();
+      setTerminalSize({ ...size });
     })();
   }, []);
 
@@ -236,6 +266,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveTerminalFontScale(terminalFontScale);
+  }, [terminalFontScale]);
+
+  useEffect(() => {
+    saveTerminalTheme(terminalTheme);
+  }, [terminalTheme]);
+
+  useEffect(() => {
+    saveTerminalSize(terminalSize);
+  }, [terminalSize]);
+
+  const updateTerminalSize = (value: TerminalSize) => {
+    setTerminalSize({ ...value });
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +296,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        terminalFontScale,
+        terminalTheme,
+        terminalSize,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +310,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setTerminalFontScale,
+        setTerminalTheme,
+        setTerminalSize: updateTerminalSize,
       }}
     >
       {children}
