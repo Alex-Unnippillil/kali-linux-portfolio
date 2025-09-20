@@ -1,9 +1,9 @@
 import React from 'react'
 import Head from 'next/head';
-import { getCspNonce } from '../../utils/csp';
+import { useCspNonce } from '../../utils/csp';
 
 export default function Meta() {
-    const nonce = getCspNonce();
+    const nonce = useCspNonce();
     return (
         <Head>
             {/* Primary Meta Tags */}

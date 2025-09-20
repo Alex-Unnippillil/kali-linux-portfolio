@@ -8,6 +8,28 @@ if (typeof global.structuredClone !== 'function') {
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
 
+try {
+  const edgeFetch = require('next/dist/compiled/@edge-runtime/primitives/fetch');
+  if (typeof global.Request === 'undefined') {
+    // @ts-ignore
+    global.Request = edgeFetch.Request;
+  }
+  if (typeof global.Response === 'undefined') {
+    // @ts-ignore
+    global.Response = edgeFetch.Response;
+  }
+  if (typeof global.Headers === 'undefined') {
+    // @ts-ignore
+    global.Headers = edgeFetch.Headers;
+  }
+  if (typeof global.fetch === 'undefined') {
+    // @ts-ignore
+    global.fetch = edgeFetch.fetch;
+  }
+} catch {
+  // ignore if primitives are unavailable in the test environment
+}
+
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore
 global.TextEncoder = TextEncoder;
