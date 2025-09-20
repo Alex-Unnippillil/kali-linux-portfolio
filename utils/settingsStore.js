@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  accentLocked: false,
 };
 
 export async function getAccent() {
@@ -24,6 +25,17 @@ export async function getAccent() {
 export async function setAccent(accent) {
   if (typeof window === 'undefined') return;
   await set('accent', accent);
+}
+
+export async function getAccentLock() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.accentLocked;
+  const stored = await get('accent-locked');
+  return stored === undefined ? DEFAULT_SETTINGS.accentLocked : Boolean(stored);
+}
+
+export async function setAccentLock(locked) {
+  if (typeof window === 'undefined') return;
+  await set('accent-locked', locked);
 }
 
 export async function getWallpaper() {
@@ -128,6 +140,7 @@ export async function resetSettings() {
   await Promise.all([
     del('accent'),
     del('bg-image'),
+    del('accent-locked'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -142,6 +155,7 @@ export async function resetSettings() {
 export async function exportSettings() {
   const [
     accent,
+    accentLocked,
     wallpaper,
     density,
     reducedMotion,
@@ -153,6 +167,7 @@ export async function exportSettings() {
     haptics,
   ] = await Promise.all([
     getAccent(),
+    getAccentLock(),
     getWallpaper(),
     getDensity(),
     getReducedMotion(),
@@ -166,6 +181,7 @@ export async function exportSettings() {
   const theme = getTheme();
   return JSON.stringify({
     accent,
+    accentLocked,
     wallpaper,
     density,
     reducedMotion,
@@ -190,6 +206,7 @@ export async function importSettings(json) {
   }
   const {
     accent,
+    accentLocked,
     wallpaper,
     density,
     reducedMotion,
@@ -202,6 +219,7 @@ export async function importSettings(json) {
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
+  if (accentLocked !== undefined) await setAccentLock(accentLocked);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);

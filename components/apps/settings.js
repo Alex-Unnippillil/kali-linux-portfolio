@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, accentLocked, setAccentLocked, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -87,6 +87,22 @@ export function Settings() {
                         />
                     ))}
                 </div>
+            </div>
+            <div className="flex flex-col items-center text-ubt-grey my-2">
+                <label className="flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={accentLocked}
+                        onChange={(e) => setAccentLocked(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Lock accent color
+                </label>
+                <p className="text-xs mt-2 text-center max-w-xs">
+                    {accentLocked
+                        ? 'Accent stays fixed when wallpapers change.'
+                        : 'Accent adjusts automatically to match your wallpaper.'}
+                </p>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Density:</label>
@@ -245,6 +261,7 @@ export function Settings() {
                     onClick={async () => {
                         await resetSettings();
                         setAccent(defaults.accent);
+                        setAccentLocked(defaults.accentLocked);
                         setWallpaper(defaults.wallpaper);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
@@ -270,6 +287,7 @@ export function Settings() {
                     try {
                         const parsed = JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
+                        if (parsed.accentLocked !== undefined) setAccentLocked(parsed.accentLocked);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);

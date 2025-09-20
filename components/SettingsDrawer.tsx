@@ -9,7 +9,7 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, accentLocked, setAccentLocked, theme, setTheme } = useSettings();
 
   return (
     <div>
@@ -51,6 +51,14 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label className="flex items-center gap-2 mt-3">
+            <input
+              type="checkbox"
+              checked={accentLocked}
+              onChange={(e) => setAccentLocked(e.target.checked)}
+            />
+            Lock accent color
           </label>
         </div>
       )}
