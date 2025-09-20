@@ -158,3 +158,130 @@ export const upgradeTower = (tower: Tower, path: 'range' | 'damage') => {
   else tower.damage += 1;
 };
 
+type LevelVec = { x: number; y: number };
+
+export type LevelData = {
+  path: LevelVec[];
+  spawners: LevelVec[];
+  towers: Tower[];
+  waves: (keyof typeof ENEMY_TYPES)[][];
+};
+
+const ensureNumber = (value: unknown, label: string): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Invalid number for ${label}`);
+  }
+  return value;
+};
+
+const cloneVecArray = (arr: LevelVec[]) =>
+  arr.map(({ x, y }) => ({ x, y }));
+
+const sanitizeTower = (tower: Tower): Tower => {
+  const base: Tower = {
+    x: tower.x,
+    y: tower.y,
+    range: tower.range,
+    damage: tower.damage,
+    level: tower.level,
+  };
+  if (tower.type) base.type = tower.type;
+  return base;
+};
+
+export const serializeLevelData = (data: LevelData) =>
+  JSON.stringify(
+    {
+      path: cloneVecArray(data.path),
+      spawners: cloneVecArray(data.spawners),
+      towers: data.towers.map(sanitizeTower),
+      waves: data.waves.map((wave) => [...wave]),
+    },
+    null,
+    2,
+  );
+
+const ensureVecArray = (value: unknown, label: string): LevelVec[] => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new Error(`Level ${label} must be an array`);
+  }
+  return value.map((item, idx) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`Level ${label}[${idx}] must be an object`);
+    }
+    const record = item as Record<string, unknown>;
+    return {
+      x: ensureNumber(record.x, `${label}[${idx}].x`),
+      y: ensureNumber(record.y, `${label}[${idx}].y`),
+    };
+  });
+};
+
+const ensureTowers = (value: unknown): Tower[] => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new Error('Level towers must be an array');
+  }
+  return value.map((item, idx) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`Level towers[${idx}] must be an object`);
+    }
+    const record = item as Record<string, unknown>;
+    const tower: Tower = {
+      x: ensureNumber(record.x, `towers[${idx}].x`),
+      y: ensureNumber(record.y, `towers[${idx}].y`),
+      range: ensureNumber(record.range, `towers[${idx}].range`),
+      damage: ensureNumber(record.damage, `towers[${idx}].damage`),
+      level: ensureNumber(record.level, `towers[${idx}].level`),
+    };
+    if (record.type !== undefined) {
+      if (typeof record.type !== 'string' || !(record.type in TOWER_TYPES)) {
+        throw new Error(`Invalid tower type at towers[${idx}]`);
+      }
+      tower.type = record.type as TowerType;
+    }
+    return tower;
+  });
+};
+
+const ensureWaves = (
+  value: unknown,
+): (keyof typeof ENEMY_TYPES)[][] => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new Error('Level waves must be an array');
+  }
+  return value.map((wave, waveIndex) => {
+    if (!Array.isArray(wave)) {
+      throw new Error(`Level waves[${waveIndex}] must be an array`);
+    }
+    return wave.map((type, enemyIndex) => {
+      if (typeof type !== 'string' || !(type in ENEMY_TYPES)) {
+        throw new Error(
+          `Invalid enemy type at waves[${waveIndex}][${enemyIndex}]`,
+        );
+      }
+      return type as keyof typeof ENEMY_TYPES;
+    });
+  });
+};
+
+export const deserializeLevelData = (json: string): LevelData => {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch (error) {
+    throw new Error('Invalid level JSON');
+  }
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Level JSON must be an object');
+  }
+  const record = raw as Record<string, unknown>;
+  return {
+    path: ensureVecArray(record.path, 'path'),
+    spawners: ensureVecArray(record.spawners, 'spawners'),
+    towers: ensureTowers(record.towers),
+    waves: ensureWaves(record.waves),
+  };
+};
