@@ -1,3 +1,5 @@
+"use client";
+
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { createLogger } from '../../lib/logger';
 
