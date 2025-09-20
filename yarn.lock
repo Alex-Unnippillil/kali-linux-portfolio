@@ -13892,6 +13892,7 @@ __metadata:
     "@zxing/browser": "npm:^0.1.5"
     "@zxing/library": "npm:^0.21.3"
     aframe: "npm:^1.5.0"
+    ajv: "npm:^8.17.1"
     antd: "npm:5.27.2"
     autoprefixer: "npm:^10.4.13"
     bad-words: "npm:^3.0.4"

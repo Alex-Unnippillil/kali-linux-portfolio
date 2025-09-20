@@ -42,6 +42,7 @@
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "aframe": "^1.5.0",
+    "ajv": "^8.17.1",
     "antd": "5.27.2",
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
