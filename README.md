@@ -373,6 +373,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Todoist | /apps/todoist | Utility / Media |
 | Gedit | /apps/gedit | Utility / Media |
 | Settings | /apps/settings | Utility / Media |
+| Disk Manager | /apps/disk-manager | Utility / Media |
 | Trash | /apps/trash | Utility / Media |
 | Project Gallery | /apps/project-gallery | Utility / Media |
 | Quote | /apps/quote | Utility / Media |
@@ -383,6 +384,11 @@ The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app fo
 add, reorder, or delete moods; selections persist in the browser's Origin Private File
 System so your choices restore on load. The last mood played is remembered, and
 play/pause and track controls include keyboard hotkeys.
+
+The Disk Manager utility provides a mock partition layout sourced from `utils/diskState.ts`
+and walks through resize, format, and mount workflows with guardrails for encrypted or
+boot partitions. Each simulated operation logs a summary so you can demonstrate
+expected post-check steps without touching real disks.
 
 ### Terminal Commands
 - `clear` – clears the terminal display.
