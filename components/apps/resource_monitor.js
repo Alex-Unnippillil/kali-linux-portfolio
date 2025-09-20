@@ -19,12 +19,40 @@ const ResourceMonitor = () => {
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
   const [fps, setFps] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
 
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
   const containerRef = useRef(null);
+  const isActiveRef = useRef(true);
+
+  const shouldSample = !paused && isVisible;
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node || typeof IntersectionObserver !== 'function') return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const visible = entry.isIntersecting && entry.intersectionRatio > 0;
+      setIsVisible(visible);
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    isActiveRef.current = shouldSample;
+    if (!shouldSample) {
+      cancelAnimationFrame(animRef.current);
+    } else {
+      lastDrawRef.current = 0;
+    }
+  }, [shouldSample]);
 
   // Spawn worker for network speed tests
   useEffect(() => {
@@ -43,12 +71,13 @@ const ResourceMonitor = () => {
 
   useEffect(() => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ type: paused ? 'stop' : 'start' });
+      workerRef.current.postMessage({ type: shouldSample ? 'start' : 'stop' });
     }
-  }, [paused]);
+  }, [shouldSample]);
 
   // Sampling loop using requestAnimationFrame
   useEffect(() => {
+    if (!shouldSample) return undefined;
     let raf;
     let lastFrame = performance.now();
     let lastSample = performance.now();
@@ -57,9 +86,9 @@ const ResourceMonitor = () => {
       const dt = now - lastFrame;
       lastFrame = now;
       const currentFps = 1000 / dt;
-      if (!paused) setFps(currentFps);
+      setFps(currentFps);
 
-      if (!paused && now - lastSample >= 1000) {
+      if (now - lastSample >= 1000) {
         const target = 1000 / 60; // 60 FPS ideal frame time
         const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
         let mem = 0;
@@ -77,30 +106,29 @@ const ResourceMonitor = () => {
     };
     raf = requestAnimationFrame(sample);
     return () => cancelAnimationFrame(raf);
-  }, [paused, scheduleDraw]);
+  }, [shouldSample, scheduleDraw]);
 
   // Stress test animation – many moving windows
   useEffect(() => {
+    if (!stress || !shouldSample) return undefined;
     let raf;
     const animate = () => {
-      if (stress && !paused) {
-        const rect = containerRef.current?.getBoundingClientRect();
-        stressWindows.current.forEach((w, i) => {
-          w.x += w.vx;
-          w.y += w.vy;
-          if (rect) {
-            if (w.x < 0 || w.x > rect.width - 20) w.vx *= -1;
-            if (w.y < 0 || w.y > rect.height - 20) w.vy *= -1;
-          }
-          const el = stressEls.current[i];
-          if (el) el.style.transform = `translate(${w.x}px, ${w.y}px)`;
-        });
-      }
+      const rect = containerRef.current?.getBoundingClientRect();
+      stressWindows.current.forEach((w, i) => {
+        w.x += w.vx;
+        w.y += w.vy;
+        if (rect) {
+          if (w.x < 0 || w.x > rect.width - 20) w.vx *= -1;
+          if (w.y < 0 || w.y > rect.height - 20) w.vy *= -1;
+        }
+        const el = stressEls.current[i];
+        if (el) el.style.transform = `translate(${w.x}px, ${w.y}px)`;
+      });
       raf = requestAnimationFrame(animate);
     };
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [stress, paused]);
+  }, [stress, shouldSample]);
 
   // Create or clear stress windows when toggled
   useEffect(() => {
@@ -121,6 +149,7 @@ const ResourceMonitor = () => {
   }, [stress]);
 
   const pushSample = (key, value) => {
+    if (!isActiveRef.current) return;
     const arr = dataRef.current[key];
     arr.push(value);
     if (arr.length > MAX_POINTS) arr.shift();
@@ -163,6 +192,7 @@ const ResourceMonitor = () => {
   }, []);
 
   const scheduleDraw = useCallback(() => {
+    if (!isActiveRef.current) return;
     const now = performance.now();
     if (now - lastDrawRef.current >= THROTTLE_MS) {
       lastDrawRef.current = now;

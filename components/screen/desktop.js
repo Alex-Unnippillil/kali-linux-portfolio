@@ -89,6 +89,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('minimize-app', this.handleMinimizeAppEvent);
     }
 
     componentWillUnmount() {
@@ -96,6 +97,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('minimize-app', this.handleMinimizeAppEvent);
     }
 
     checkForNewFolders = () => {
@@ -581,6 +583,14 @@ export class Desktop extends Component {
         if (id) {
             this.openApp(id);
         }
+    }
+
+    handleMinimizeAppEvent = (e) => {
+        const id = e.detail;
+        if (!id) return;
+        if (this.state.closed_windows[id] !== false) return;
+        if (this.state.minimized_windows[id]) return;
+        this.hasMinimised(id);
     }
 
     openApp = (objId) => {
