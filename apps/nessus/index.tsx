@@ -6,11 +6,13 @@ import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
 import FindingCard from './components/FindingCard';
 import FiltersDrawer from './components/FiltersDrawer';
-import { Plugin, Severity, Scan, Finding, severities } from './types';
+import { Plugin, Severity, Scan, Finding } from './types';
 
 const Nessus: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoryFilters, setCategoryFilters] = useState<Record<string, boolean>>({});
   const [severityFilters, setSeverityFilters] = useState<Record<Severity, boolean>>({
     Critical: true,
     High: true,
@@ -45,10 +47,23 @@ const Nessus: React.FC = () => {
         const json: Plugin[] = await res.json();
         setPlugins(json);
         const tagSet = new Set<string>();
+        const categorySet = new Set<string>();
         for (const p of json) {
           p.tags?.forEach((t) => tagSet.add(t));
+          categorySet.add(p.category || 'General');
         }
         setTags(Array.from(tagSet));
+        const sortedCategories = Array.from(categorySet).sort((a, b) =>
+          a.localeCompare(b),
+        );
+        setCategories(sortedCategories);
+        setCategoryFilters((prev) => {
+          const next: Record<string, boolean> = {};
+          sortedCategories.forEach((cat) => {
+            next[cat] = prev[cat] ?? true;
+          });
+          return next;
+        });
       } catch {
         // ignore fetch errors
       }
@@ -128,15 +143,29 @@ const Nessus: React.FC = () => {
       t.includes(tag) ? t.filter((x) => x !== tag) : [...t, tag],
     );
 
+  const toggleCategory = (category: string) =>
+    setCategoryFilters((filters) => ({
+      ...filters,
+      [category]: !(filters[category] ?? true),
+    }));
+
   const filtered = useMemo(
-    () =>
-      plugins.filter(
+    () => {
+      const categoryEntries = Object.entries(categoryFilters);
+      const hasCategoryFilters = categoryEntries.length > 0;
+      const activeCategories = categoryEntries
+        .filter(([, active]) => active)
+        .map(([cat]) => cat);
+      return plugins.filter(
         (p) =>
           severityFilters[p.severity] &&
           (tagFilters.length === 0 ||
-            p.tags?.some((t) => tagFilters.includes(t))),
-      ),
-    [plugins, severityFilters, tagFilters],
+            p.tags?.some((t) => tagFilters.includes(t))) &&
+          (!hasCategoryFilters ||
+            activeCategories.includes(p.category || 'General')),
+      );
+    },
+    [plugins, severityFilters, tagFilters, categoryFilters],
   );
 
   useEffect(() => {
@@ -177,6 +206,36 @@ const Nessus: React.FC = () => {
         >
           Filters
         </button>
+        <div className="flex flex-wrap items-center gap-3 mb-4 text-sm">
+          <span className="text-gray-300">Pending checks: {filtered.length}</span>
+          {categories.length > 0 && (
+            <div
+              className="flex flex-wrap items-center gap-2"
+              role="group"
+              aria-label="Filter by category"
+            >
+              <span className="text-gray-400">Categories:</span>
+              {categories.map((cat) => {
+                const active = categoryFilters[cat] ?? true;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    aria-pressed={active}
+                    className={`px-2 py-1 rounded-full border text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      active
+                        ? 'bg-blue-600 border-blue-600'
+                        : 'bg-gray-800 border-gray-700 text-gray-300'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         <ul
           ref={listRef}
           onScroll={handleScroll}
@@ -237,6 +296,9 @@ const Nessus: React.FC = () => {
         tags={tags}
         tagFilters={tagFilters}
         toggleTag={toggleTag}
+        categories={categories}
+        categoryFilters={categoryFilters}
+        toggleCategory={toggleCategory}
       />
     </div>
   );

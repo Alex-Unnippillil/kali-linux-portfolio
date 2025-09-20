@@ -11,6 +11,9 @@ interface Props {
   tags: string[];
   tagFilters: string[];
   toggleTag: (tag: string) => void;
+  categories: string[];
+  categoryFilters: Record<string, boolean>;
+  toggleCategory: (category: string) => void;
 }
 
 export default function FiltersDrawer({
@@ -21,6 +24,9 @@ export default function FiltersDrawer({
   tags,
   tagFilters,
   toggleTag,
+  categories,
+  categoryFilters,
+  toggleCategory,
 }: Props) {
   return (
     <div
@@ -60,6 +66,31 @@ export default function FiltersDrawer({
             ))}
           </div>
         </div>
+        {categories.length > 0 && (
+          <div className="mt-6">
+            <h4 className="font-semibold mb-2">Categories</h4>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => {
+                const active = categoryFilters[cat] ?? true;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    aria-pressed={active}
+                    className={`px-2 py-1 rounded-full border text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      active
+                        ? 'bg-blue-600 border-blue-600'
+                        : 'bg-gray-800 border-gray-700'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

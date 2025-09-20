@@ -24,6 +24,7 @@ export default function FindingCard({ plugin }: Props) {
       </div>
       <div className="font-semibold">{plugin.name}</div>
       <div className="flex gap-2 mt-2 flex-wrap text-xs">
+        <span className="px-2 py-1 bg-blue-700 rounded">{plugin.category}</span>
         {plugin.cwe?.map((cwe) => (
           <span key={cwe} className="px-2 py-1 bg-gray-700 rounded">
             CWE-{cwe}
