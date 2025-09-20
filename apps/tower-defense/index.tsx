@@ -17,6 +17,38 @@ const GRID_SIZE = 10;
 const CELL_SIZE = 40;
 const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
 
+const ECONOMY = {
+  killReward: 5,
+  leakPenalty: 8,
+  buildCost: 15,
+  upgradeCost: 10,
+} as const;
+
+export type WaveTelemetryRow = {
+  wave: number;
+  leaks: number;
+  damage: number;
+  earned: number;
+  spent: number;
+};
+
+const formatNet = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
+
+export const formatEconomyValue = (row: WaveTelemetryRow) => {
+  const net = row.earned - row.spent;
+  return `+${row.earned} / -${row.spent} (${formatNet(net)})`;
+};
+
+export const serializeTelemetryToCsv = (rows: WaveTelemetryRow[]) => {
+  const header = "Wave,Leaks,Tower Damage,Economy";
+  if (!rows.length) return header;
+  const lines = rows.map(
+    (row) =>
+      `${row.wave},${row.leaks},${row.damage},${formatEconomyValue(row)}`,
+  );
+  return [header, ...lines].join("\n");
+};
+
 type Vec = { x: number; y: number };
 
 const DIRS: Vec[] = [
@@ -113,6 +145,100 @@ const TowerDefense = () => {
   >([]);
   const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const flowFieldRef = useRef<Vec[][] | null>(null);
+  const telemetryRef = useRef<WaveTelemetryRow[]>([]);
+  const currentWaveStatsRef = useRef<WaveTelemetryRow | null>(null);
+  const stagedSpendingRef = useRef(0);
+  const telemetryDirtyRef = useRef(false);
+
+  const markTelemetryDirty = () => {
+    telemetryDirtyRef.current = true;
+  };
+
+  const ensureWaveStats = () => {
+    if (!currentWaveStatsRef.current) {
+      currentWaveStatsRef.current = {
+        wave: waveRef.current,
+        leaks: 0,
+        damage: 0,
+        earned: 0,
+        spent: stagedSpendingRef.current,
+      };
+      stagedSpendingRef.current = 0;
+      markTelemetryDirty();
+    }
+    return currentWaveStatsRef.current;
+  };
+
+  const recordDamage = (amount: number) => {
+    const stats = ensureWaveStats();
+    stats.damage += amount;
+    markTelemetryDirty();
+  };
+
+  const recordKill = (enemyType?: EnemyInstance["type"]) => {
+    const stats = ensureWaveStats();
+    const reward =
+      (enemyType &&
+        ENEMY_TYPES[enemyType as keyof typeof ENEMY_TYPES]?.health) ??
+      ECONOMY.killReward;
+    stats.earned += reward;
+    markTelemetryDirty();
+  };
+
+  const recordLeak = () => {
+    const stats = ensureWaveStats();
+    stats.leaks += 1;
+    stats.spent += ECONOMY.leakPenalty;
+    markTelemetryDirty();
+  };
+
+  const recordSpending = (amount: number) => {
+    if (!amount) return;
+    if (currentWaveStatsRef.current) {
+      currentWaveStatsRef.current.spent += amount;
+    } else {
+      stagedSpendingRef.current += amount;
+    }
+    markTelemetryDirty();
+  };
+
+  const finalizeWaveTelemetry = () => {
+    if (!currentWaveStatsRef.current) return;
+    const snapshot = { ...currentWaveStatsRef.current };
+    const existingIndex = telemetryRef.current.findIndex(
+      (row) => row.wave === snapshot.wave,
+    );
+    if (existingIndex >= 0) telemetryRef.current[existingIndex] = snapshot;
+    else telemetryRef.current.push(snapshot);
+    telemetryRef.current.sort((a, b) => a.wave - b.wave);
+    currentWaveStatsRef.current = null;
+    markTelemetryDirty();
+  };
+
+  const prepareNextWaveTelemetry = () => {
+    currentWaveStatsRef.current = {
+      wave: waveRef.current,
+      leaks: 0,
+      damage: 0,
+      earned: 0,
+      spent: stagedSpendingRef.current,
+    };
+    stagedSpendingRef.current = 0;
+    markTelemetryDirty();
+  };
+
+  const getTelemetryRows = () => {
+    const rows = telemetryRef.current.map((row) => ({ ...row }));
+    if (currentWaveStatsRef.current) {
+      const existingIndex = rows.findIndex(
+        (row) => row.wave === currentWaveStatsRef.current?.wave,
+      );
+      if (existingIndex >= 0)
+        rows[existingIndex] = { ...currentWaveStatsRef.current };
+      else rows.push({ ...currentWaveStatsRef.current });
+    }
+    return rows.sort((a, b) => a.wave - b.wave);
+  };
 
   const [waveConfig, setWaveConfig] = useState<
     (keyof typeof ENEMY_TYPES)[][]
@@ -177,6 +303,7 @@ const TowerDefense = () => {
     }
     if (pathSetRef.current.has(key)) return;
     setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
+    recordSpending(ECONOMY.buildCost);
   };
 
   const handleCanvasMove = (e: React.MouseEvent) => {
@@ -340,7 +467,17 @@ const TowerDefense = () => {
         const goal = path[path.length - 1];
         const reached =
           Math.floor(e.x) === goal?.x && Math.floor(e.y) === goal?.y;
-        return e.health > 0 && !reached;
+        if (reached) {
+          recordLeak();
+          e.active = false;
+          return false;
+        }
+        if (e.health <= 0) {
+          recordKill(e.type);
+          e.active = false;
+          return false;
+        }
+        return true;
       });
       towers.forEach((t) => {
         (t as any).cool = (t as any).cool ? (t as any).cool - dt : 0;
@@ -350,6 +487,7 @@ const TowerDefense = () => {
           );
           if (enemy) {
             enemy.health -= t.damage;
+            recordDamage(t.damage);
             damageNumbersRef.current.push({
               x: enemy.x,
               y: enemy.y,
@@ -376,17 +514,23 @@ const TowerDefense = () => {
         t.life -= dt * 2;
       });
       damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
-        if (
-          enemiesSpawnedRef.current >= currentWave.length &&
-          enemiesRef.current.length === 0
-        ) {
-          running.current = false;
-          if (waveRef.current < waveConfig.length) {
-            waveRef.current += 1;
-            waveCountdownRef.current = 5;
-          }
-          forceRerender((n) => n + 1);
+      if (
+        enemiesSpawnedRef.current >= currentWave.length &&
+        enemiesRef.current.length === 0
+      ) {
+        running.current = false;
+        finalizeWaveTelemetry();
+        if (waveRef.current < waveConfig.length) {
+          waveRef.current += 1;
+          waveCountdownRef.current = 5;
+          prepareNextWaveTelemetry();
         }
+        forceRerender((n) => n + 1);
+      }
+      }
+      if (telemetryDirtyRef.current) {
+        telemetryDirtyRef.current = false;
+        forceRerender((n) => n + 1);
       }
       draw();
       requestAnimationFrame(update);
@@ -398,13 +542,22 @@ const TowerDefense = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
-    };
+  const start = () => {
+    if (!path.length || !waveConfig.length) return;
+    setEditing(false);
+    running.current = false;
+    enemiesRef.current = [];
+    enemiesSpawnedRef.current = 0;
+    spawnTimer.current = 0;
+    damageNumbersRef.current = [];
+    damageTicksRef.current = [];
+    telemetryRef.current = [];
+    currentWaveStatsRef.current = null;
+    waveRef.current = 1;
+    prepareNextWaveTelemetry();
+    waveCountdownRef.current = 3;
+    forceRerender((n) => n + 1);
+  };
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
@@ -415,7 +568,25 @@ const TowerDefense = () => {
       arr[selected] = t;
       return arr;
     });
+    recordSpending(ECONOMY.upgradeCost);
   };
+
+  const exportTelemetry = () => {
+    const rows = getTelemetryRows();
+    if (!rows.length) return;
+    const csv = serializeTelemetryToCsv(rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "tower-defense-telemetry.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const telemetryRows = getTelemetryRows();
 
   return (
     <GameLayout gameId="tower-defense">
@@ -514,6 +685,45 @@ const TowerDefense = () => {
           )}
         </div>
         {!editing && <DpsCharts towers={towers} />}
+        <div className="bg-gray-800/80 rounded p-2 text-xs space-y-2 border border-gray-700">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold uppercase tracking-wide text-gray-300">
+              Telemetry
+            </span>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded disabled:opacity-50"
+              onClick={exportTelemetry}
+              disabled={telemetryRows.length === 0}
+            >
+              Export CSV
+            </button>
+          </div>
+          {telemetryRows.length ? (
+            <div className="space-y-1">
+              <div className="grid grid-cols-4 gap-2 font-semibold text-gray-200">
+                <span>Wave</span>
+                <span>Leaks</span>
+                <span>Damage</span>
+                <span>Economy</span>
+              </div>
+              {telemetryRows.map((row) => (
+                <div
+                  key={row.wave}
+                  className="grid grid-cols-4 gap-2 bg-gray-900/60 rounded px-2 py-1"
+                >
+                  <span>{row.wave}</span>
+                  <span>{row.leaks}</span>
+                  <span>{row.damage}</span>
+                  <span>{formatEconomyValue(row)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-[11px]">
+              Telemetry will populate once a wave completes.
+            </p>
+          )}
+        </div>
       </div>
     </GameLayout>
   );
