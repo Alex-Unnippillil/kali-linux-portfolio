@@ -11,6 +11,20 @@ describe('live region components', () => {
     unmount();
   });
 
+  it('Toast remains visible when duration is null', () => {
+    jest.useFakeTimers();
+    const onClose = jest.fn();
+    const { unmount } = render(<Toast message="Stay" duration={null} onClose={onClose} />);
+
+    try {
+      jest.advanceTimersByTime(10_000);
+      expect(onClose).not.toHaveBeenCalled();
+    } finally {
+      unmount();
+      jest.useRealTimers();
+    }
+  });
+
   it('FormError announces politely', () => {
     render(<FormError>Required field</FormError>);
     const region = screen.getByRole('status');

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Toast from '../components/ui/Toast';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,7 +28,36 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const [showSwUpdateToast, setShowSwUpdateToast] = useState(false);
+  const swWaitingRef = useRef(null);
 
+  const handleSwUpdateReady = useCallback((registration) => {
+    if (!registration) return;
+
+    const assignWaitingWorker = (worker) => {
+      if (!worker) return;
+      swWaitingRef.current = worker;
+      setShowSwUpdateToast(true);
+    };
+
+    if (registration.waiting) {
+      assignWaitingWorker(registration.waiting);
+      return;
+    }
+
+    const { installing } = registration;
+    if (installing) {
+      installing.addEventListener('statechange', () => {
+        if (
+          installing.state === 'installed' &&
+          typeof navigator !== 'undefined' &&
+          navigator.serviceWorker?.controller
+        ) {
+          assignWaitingWorker(registration.waiting || installing);
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
@@ -44,6 +74,8 @@ function MyApp(props) {
       console.error('Analytics initialization failed', err);
     });
 
+    let cleanupRegistrationListener = () => {};
+
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
@@ -51,6 +83,17 @@ function MyApp(props) {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
           window.manualRefresh = () => registration.update();
+
+          handleSwUpdateReady(registration);
+
+          const updateFoundHandler = () => {
+            handleSwUpdateReady(registration);
+          };
+
+          registration.addEventListener('updatefound', updateFoundHandler);
+          cleanupRegistrationListener = () => {
+            registration.removeEventListener('updatefound', updateFoundHandler);
+          };
 
           if ('periodicSync' in registration) {
             try {
@@ -77,6 +120,38 @@ function MyApp(props) {
       register().catch((err) => {
         console.error('Service worker setup failed', err);
       });
+    }
+
+    return () => {
+      cleanupRegistrationListener();
+    };
+  }, [handleSwUpdateReady]);
+
+  const applySwUpdate = useCallback(() => {
+    setShowSwUpdateToast(false);
+
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return;
+    }
+
+    const waitingWorker = swWaitingRef.current;
+    swWaitingRef.current = null;
+    if (waitingWorker && 'serviceWorker' in navigator) {
+      const reload = () => {
+        navigator.serviceWorker.removeEventListener('controllerchange', reload);
+        window.location.reload();
+      };
+
+      navigator.serviceWorker.addEventListener('controllerchange', reload);
+      try {
+        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      } catch (err) {
+        console.error('Failed to send skip waiting to service worker', err);
+        navigator.serviceWorker.removeEventListener('controllerchange', reload);
+        window.location.reload();
+      }
+    } else {
+      window.location.reload();
     }
   }, []);
 
@@ -171,6 +246,15 @@ function MyApp(props) {
             />
 
             {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            {showSwUpdateToast && (
+              <Toast
+                message="A new version is available."
+                actionLabel="Update and reload"
+                onAction={applySwUpdate}
+                onClose={() => setShowSwUpdateToast(false)}
+                duration={null}
+              />
+            )}
           </PipPortalProvider>
         </SettingsProvider>
       </div>
