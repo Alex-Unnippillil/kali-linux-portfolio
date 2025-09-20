@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import {
+  generateNiktoHtmlReport,
+  generateNiktoJsonReport,
+} from '../../../utils/niktoReportGenerators';
+
 const suggestions = {
   '/admin': 'Restrict access to the admin portal or remove it from public view.',
   '/cgi-bin/test':
@@ -36,6 +41,18 @@ const NiktoApp = () => {
     ssl ? ' -ssl' : ''
   }`;
 
+  const metadata = useMemo(
+    () => ({
+      target: {
+        host: host || 'TARGET',
+        port: port || undefined,
+        protocol: ssl ? 'https' : 'http',
+      },
+      command,
+    }),
+    [command, host, port, ssl]
+  );
+
   const grouped = useMemo(() => {
     return findings.reduce((acc, f) => {
       acc[f.severity] = acc[f.severity] || [];
@@ -44,15 +61,10 @@ const NiktoApp = () => {
     }, {});
   }, [findings]);
 
-  const htmlReport = useMemo(() => {
-    const rows = findings
-      .map(
-        (f) =>
-          `<tr><td>${f.path}</td><td>${f.finding}</td><td>${f.severity}</td></tr>`
-      )
-      .join('');
-    return `<!DOCTYPE html><html><body><h1>Nikto Report</h1><table border="1"><tr><th>Path</th><th>Finding</th><th>Severity</th></tr>${rows}</table></body></html>`;
-  }, [findings]);
+  const htmlReport = useMemo(
+    () => generateNiktoHtmlReport(findings, metadata),
+    [findings, metadata]
+  );
 
   const copyReport = async () => {
     try {
@@ -68,6 +80,21 @@ const NiktoApp = () => {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'nikto-report.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportJsonReport = () => {
+    const report = generateNiktoJsonReport(findings, metadata);
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nikto-report.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -283,6 +310,13 @@ const NiktoApp = () => {
             className="px-2 py-1 bg-blue-600 rounded text-sm"
           >
             Export HTML
+          </button>
+          <button
+            type="button"
+            onClick={exportJsonReport}
+            className="px-2 py-1 bg-blue-600 rounded text-sm"
+          >
+            Export JSON
           </button>
         </div>
         <iframe
