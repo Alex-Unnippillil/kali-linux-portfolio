@@ -74,7 +74,10 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
             {...props}
           />
           {!loaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-200 animate-pulse" aria-hidden="true">
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-gray-200 animate-pulse motion-reduce:animate-none motion-reduce:opacity-100"
+              aria-hidden="true"
+            >
               <span className="sr-only">Loading...</span>
             </div>
           )}
