@@ -1,10 +1,24 @@
 import React, { useEffect, useRef } from "react";
 import InputRemap from "./Games/common/input-remap/InputRemap";
-import useInputMapping from "./Games/common/input-remap/useInputMapping";
+
+type OverlayView = "help" | "pause";
+
+interface OverlayLegendEntry {
+  label: string;
+  description: string;
+}
 
 interface HelpOverlayProps {
   gameId: string;
+  view: OverlayView;
   onClose: () => void;
+  onViewChange: (view: OverlayView) => void;
+  onResume: () => void;
+  onRestart?: () => void;
+  paused: boolean;
+  mapping: Record<string, string>;
+  setKey: (action: string, key: string) => string | null;
+  overlayLegend: OverlayLegendEntry[];
 }
 
 interface Instruction {
@@ -166,12 +180,35 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
 };
 
-const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
+const HelpOverlay: React.FC<HelpOverlayProps> = ({
+  gameId,
+  view,
+  onClose,
+  onViewChange,
+  onResume,
+  onRestart,
+  paused,
+  mapping,
+  setKey,
+  overlayLegend,
+}) => {
   const info = GAME_INSTRUCTIONS[gameId];
-  const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
-  const noop = () => null;
+  const pauseTabId = `${gameId}-overlay-tab-pause`;
+  const helpTabId = `${gameId}-overlay-tab-help`;
+  const pausePanelId = `${gameId}-overlay-panel-pause`;
+  const helpPanelId = `${gameId}-overlay-panel-help`;
+
+  const describeKey = (key: string) => {
+    if (!key) return "";
+    if (key === " ") return "Space";
+    if (key === "ArrowUp") return "Arrow Up";
+    if (key === "ArrowDown") return "Arrow Down";
+    if (key === "ArrowLeft") return "Arrow Left";
+    if (key === "ArrowRight") return "Arrow Right";
+    return key.length === 1 ? key.toUpperCase() : key;
+  };
 
   useEffect(() => {
     if (!overlayRef.current) return;
@@ -206,48 +243,213 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
       node.removeEventListener("keydown", handleKey);
       prevFocus.current?.focus();
     };
-  }, [onClose]);
+  }, [onClose, view]);
 
-  if (!info) return null;
+  const renderControlsSummary = () => {
+    if (!info) {
+      return "Use on-screen prompts to interact.";
+    }
+    if (!info.actions) {
+      return info.controls;
+    }
+    return Object.entries(info.actions)
+      .map(([action, defaultKey]) => {
+        const activeKey = describeKey(mapping[action] ?? defaultKey);
+        return `${action}: ${activeKey}`;
+      })
+      .join(", ");
+  };
+
   return (
     <div
       ref={overlayRef}
-      className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
+      className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50 p-4"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={view === "pause" ? pauseTabId : helpTabId}
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
-        <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
-        <p className="mb-2">
-          <strong>Objective:</strong> {info.objective}
-        </p>
-        {info.actions ? (
-          <>
-            <p>
-              <strong>Controls:</strong>{" "}
-              {Object.entries(mapping)
-                .map(([a, k]) => `${a}: ${k}`)
-                .join(", ")}
+      <div className="w-full max-w-2xl bg-gray-800 rounded shadow-lg p-4 sm:p-6 space-y-4" role="document">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold">Game menu</h2>
+            <p className="text-sm text-gray-300">
+              Switch between pause controls and how-to-play guidance.
             </p>
-            <div className="mt-2">
-              <InputRemap
-                mapping={mapping}
-                setKey={setKey as (action: string, key: string) => string | null}
-                actions={info.actions}
-              />
-            </div>
-          </>
-        ) : (
-          <p>
-            <strong>Controls:</strong> {info.controls}
-          </p>
-        )}
-        <button
-          onClick={onClose}
-          className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="self-start rounded bg-gray-700 px-3 py-1 text-sm focus:outline-none focus:ring"
+          >
+            Close
+          </button>
+        </div>
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Overlay sections"
         >
-          Close
-        </button>
+          <button
+            id={pauseTabId}
+            type="button"
+            role="tab"
+            aria-selected={view === "pause"}
+            aria-controls={pausePanelId}
+            tabIndex={view === "pause" ? 0 : -1}
+            onClick={() => onViewChange("pause")}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                onViewChange("help");
+              }
+            }}
+            className={`rounded px-3 py-1 text-sm focus:outline-none focus:ring ${
+              view === "pause"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-200"
+            }`}
+          >
+            Pause
+          </button>
+          <button
+            id={helpTabId}
+            type="button"
+            role="tab"
+            aria-selected={view === "help"}
+            aria-controls={helpPanelId}
+            tabIndex={view === "help" ? 0 : -1}
+            onClick={() => onViewChange("help")}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                onViewChange("pause");
+              }
+            }}
+            className={`rounded px-3 py-1 text-sm focus:outline-none focus:ring ${
+              view === "help"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-200"
+            }`}
+          >
+            How to play
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div
+            id={pausePanelId}
+            role="tabpanel"
+            aria-labelledby={pauseTabId}
+            hidden={view !== "pause"}
+            className="space-y-3"
+          >
+            <h3 className="text-lg font-semibold">Game paused</h3>
+            <p className="text-sm text-gray-300">
+              Use the buttons below to resume, restart, or review the controls.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onResume}
+                className="rounded bg-blue-600 px-3 py-1 text-sm focus:outline-none focus:ring"
+              >
+                Resume
+              </button>
+              {onRestart && (
+                <button
+                  type="button"
+                  onClick={onRestart}
+                  className="rounded bg-gray-700 px-3 py-1 text-sm focus:outline-none focus:ring"
+                >
+                  Restart
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onViewChange("help")}
+                className="rounded bg-gray-700 px-3 py-1 text-sm focus:outline-none focus:ring"
+              >
+                View controls
+              </button>
+            </div>
+          </div>
+          <div
+            id={helpPanelId}
+            role="tabpanel"
+            aria-labelledby={helpTabId}
+            hidden={view !== "help"}
+            className="space-y-3"
+          >
+            {paused && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={onResume}
+                  className="rounded bg-blue-600 px-3 py-1 text-sm focus:outline-none focus:ring"
+                >
+                  Resume game
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onViewChange("pause")}
+                  className="rounded bg-gray-700 px-3 py-1 text-sm focus:outline-none focus:ring"
+                >
+                  Pause options
+                </button>
+              </div>
+            )}
+            <div>
+              <h3 className="text-lg font-semibold">Objective</h3>
+              <p className="text-sm text-gray-200">
+                {info?.objective ?? "Explore the controls below to get started."}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Controls</h3>
+              {info?.actions ? (
+                <>
+                  <p className="text-sm text-gray-200">
+                    Customize the keys below to match your preferences.
+                  </p>
+                  <p className="text-sm text-gray-300">{renderControlsSummary()}</p>
+                  <div className="mt-2">
+                    <InputRemap mapping={mapping} setKey={setKey} actions={info.actions} />
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-200">{renderControlsSummary()}</p>
+              )}
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded bg-gray-700 px-3 py-1 text-sm focus:outline-none focus:ring"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+        {overlayLegend.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">
+              Overlay shortcuts
+            </h3>
+            <ul className="space-y-1 text-sm text-gray-300">
+              {overlayLegend.map((entry) => (
+                <li
+                  key={`${entry.label}-${entry.description}`}
+                  className="flex justify-between gap-2"
+                >
+                  <span className="font-mono text-gray-100 whitespace-nowrap">
+                    {entry.label}
+                  </span>
+                  <span className="text-right">{entry.description}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
