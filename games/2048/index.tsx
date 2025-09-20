@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GameShell from '../../components/games/GameShell';
 import { toPng } from 'html-to-image';
 import useOPFSLeaderboard from '../../hooks/useOPFSLeaderboard';
@@ -16,7 +16,13 @@ import {
   boardsEqual,
 } from '../../apps/games/_2048/logic';
 import { reset, serialize, deserialize } from '../../apps/games/rng';
-import { startRecording, recordMove, downloadReplay } from './replay';
+import {
+  startRecording,
+  recordMove,
+  downloadReplay,
+  rewindLastMove,
+  type ReplayData,
+} from './replay';
 
 // limit of undo operations per game
 const UNDO_LIMIT = 5;
@@ -51,7 +57,9 @@ const SKINS: Record<string, Record<number, string>> = {
   },
 };
 
-type HistoryEntry = { board: Board; rng: string; score: number };
+type Direction = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
+
+type HistoryEntry = { board: Board; rng: string; score: number; move?: Direction };
 
 const emptyBoard = (): Board => Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
 
@@ -70,8 +78,27 @@ const Game2048 = () => {
   const [merged, setMerged] = useState<Array<[number, number]>>([]);
   const [paused, setPaused] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [seed, setSeed] = useState('');
+  const [replayState, setReplayState] = useState<ReplayData | null>(null);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayStatus, setReplayStatus] = useState<'idle' | 'replaying' | 'match' | 'mismatch'>('idle');
+  const [replayIndex, setReplayIndex] = useState(0);
   const boardRef = useRef<HTMLDivElement>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const boardStateRef = useRef<Board>(emptyBoard());
+  const replayTimeoutRef = useRef<number | null>(null);
+  const savedStateRef = useRef<{
+    board: Board;
+    history: HistoryEntry[];
+    undosLeft: number;
+    score: number;
+    won: boolean;
+    lost: boolean;
+    merged: Array<[number, number]>;
+    submitted: boolean;
+    seed: string;
+    boardSize: number;
+  } | null>(null);
   const { scores, addScore } = useOPFSLeaderboard('game_2048');
 
   // load best score from localStorage
@@ -93,21 +120,68 @@ const Game2048 = () => {
     }
   }, [best]);
 
+  useEffect(() => {
+    boardStateRef.current = board.map((row) => [...row]);
+  }, [board]);
+
+  const clearReplayTimer = useCallback(() => {
+    if (replayTimeoutRef.current !== null) {
+      window.clearTimeout(replayTimeoutRef.current);
+      replayTimeoutRef.current = null;
+    }
+  }, []);
+
+  const stopReplay = useCallback(
+    (restore = true, status: typeof replayStatus | null = 'idle') => {
+      clearReplayTimer();
+      setIsReplaying(false);
+      if (status !== null) setReplayStatus(status);
+      setReplayIndex(0);
+      if (restore && savedStateRef.current) {
+        const saved = savedStateRef.current;
+        const restoredBoard = saved.board.map((row) => [...row]);
+        setBoard(restoredBoard);
+        boardStateRef.current = restoredBoard;
+        setHistory(saved.history);
+        setUndosLeft(saved.undosLeft);
+        setScore(saved.score);
+        setWon(saved.won);
+        setLost(saved.lost);
+        setMerged(saved.merged);
+        setSubmitted(saved.submitted);
+        setSeed(saved.seed);
+        setSize(saved.boardSize);
+      }
+      savedStateRef.current = null;
+    },
+    [clearReplayTimer],
+  );
+
+  useEffect(() => () => clearReplayTimer(), [clearReplayTimer]);
+
   const init = useCallback(() => {
-    reset();
+    stopReplay(false, null);
+    const newSeed = Math.random().toString(36).slice(2, 10);
+    setSeed(newSeed);
+    reset(newSeed);
     setSize(boardSize);
     const b = emptyBoard();
     addRandomTile(b);
     addRandomTile(b);
     setBoard(b);
+    boardStateRef.current = b.map((row) => [...row]);
     setHistory([]);
     setScore(0);
     setUndosLeft(UNDO_LIMIT);
     setWon(false);
     setLost(false);
     setMerged([]);
-    startRecording(b);
-  }, [boardSize]);
+    setSubmitted(false);
+    const replay = startRecording(b, 0, newSeed, boardSize);
+    setReplayState(replay);
+    setReplayStatus('idle');
+    setReplayIndex(0);
+  }, [boardSize, stopReplay]);
 
   useEffect(() => {
     init();
@@ -125,8 +199,8 @@ const Game2048 = () => {
   };
 
   const move = useCallback(
-    (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
-      if (won || lost || paused) return;
+    (dir: Direction) => {
+      if (won || lost || paused || isReplaying) return;
       const fn =
         dir === 'ArrowLeft'
           ? moveLeft
@@ -135,46 +209,201 @@ const Game2048 = () => {
           : dir === 'ArrowUp'
           ? moveUp
           : moveDown;
-      const { board: moved, score: gained, merges } = fn(
-        board.map((row) => [...row])
-      );
+      const current = board.map((row) => [...row]);
+      const { board: moved, score: gained, merges } = fn(current);
       if (boardsEqual(board, moved)) return;
       setHistory((h) => [
         ...h,
-        { board: board.map((row) => [...row]), rng: serialize(), score },
+        { board: board.map((row) => [...row]), rng: serialize(), score, move: dir },
       ]);
-      recordMove(dir);
       addRandomTile(moved);
-      const hi = highestTile(moved);
-      setScore((s) => {
-        const newScore = s + gained;
-        if (newScore > best) setBest(newScore);
-        return newScore;
-      });
-      setBoard(moved);
+      const snapshot = moved.map((row) => [...row]);
+      const newScore = score + gained;
+      if (newScore > best) setBest(newScore);
+      setScore(newScore);
+      setBoard(snapshot);
+      boardStateRef.current = snapshot;
       setMerged(merges);
-      if (hi >= 2048) setWon(true);
-      else if (!hMoves(moved)) setLost(true);
+      const hi = highestTile(snapshot);
+      const nextWon = hi >= 2048;
+      const nextLost = !nextWon && !hMoves(snapshot);
+      setWon(nextWon);
+      setLost(nextLost);
+      const replay = recordMove(dir, snapshot, newScore, nextWon, nextLost);
+      setReplayState(replay);
+      setReplayStatus('idle');
+      setReplayIndex(0);
     },
-    [board, best, won, lost, score, paused]
+    [board, best, won, lost, score, paused, isReplaying]
   );
 
+  const replayStatusRef = useRef(replayStatus);
+  useEffect(() => {
+    replayStatusRef.current = replayStatus;
+  }, [replayStatus]);
+
   const undo = useCallback(() => {
-    if (!history.length || undosLeft === 0 || paused) return;
+    if (!history.length || undosLeft === 0 || paused || isReplaying) return;
     const last = history[history.length - 1];
     deserialize(last.rng);
-    setBoard(last.board.map((row) => [...row]));
+    const restored = last.board.map((row) => [...row]);
+    setBoard(restored);
+    boardStateRef.current = restored;
     setHistory((h) => h.slice(0, -1));
     setUndosLeft((u) => u - 1);
     setScore(last.score);
     setWon(false);
     setLost(false);
-    }, [history, undosLeft, paused]);
+    setReplayState(rewindLastMove());
+    setReplayStatus('idle');
+    setReplayIndex(0);
+  }, [history, undosLeft, paused, isReplaying]);
+
+  const startReplay = useCallback(() => {
+    if (!replayState || replayState.events.length === 0) return;
+    if (replayState.size !== boardSize) return;
+    stopReplay(false, null);
+    savedStateRef.current = {
+      board: board.map((row) => [...row]),
+      history: history.map((entry) => ({
+        ...entry,
+        board: entry.board.map((row) => [...row]),
+      })),
+      undosLeft,
+      score,
+      won,
+      lost,
+      merged: merged.map((m) => [...m] as [number, number]),
+      submitted,
+      seed,
+      boardSize,
+    };
+    setIsReplaying(true);
+    setReplayStatus('replaying');
+    setReplayIndex(0);
+    deserialize(replayState.rng);
+    setSize(replayState.size);
+    const initialBoard = replayState.board.map((row) => [...row]);
+    setBoard(initialBoard);
+    boardStateRef.current = initialBoard;
+    setScore(replayState.score);
+    setWon(false);
+    setLost(false);
+    setMerged([]);
+    setSubmitted(false);
+
+    const events = replayState.events;
+    if (!events.length) {
+      setReplayIndex(0);
+      stopReplay(true, 'match');
+      return;
+    }
+
+    const scheduleStep = (index: number) => {
+      if (index >= events.length) {
+        setReplayIndex(events.length);
+        const finalStatus =
+          replayStatusRef.current === 'mismatch' ? 'mismatch' : 'match';
+        stopReplay(true, finalStatus);
+        return;
+      }
+      const delay =
+        index === 0 ? events[index].t : events[index].t - events[index - 1].t;
+      replayTimeoutRef.current = window.setTimeout(() => {
+        const event = events[index];
+        const currentBoard = boardStateRef.current.map((row) => [...row]);
+        const moveFn =
+          event.dir === 'ArrowLeft'
+            ? moveLeft
+            : event.dir === 'ArrowRight'
+            ? moveRight
+            : event.dir === 'ArrowUp'
+            ? moveUp
+            : moveDown;
+        const { board: moved, merges } = moveFn(currentBoard);
+        addRandomTile(moved);
+        const snapshot = moved.map((row) => [...row]);
+        const boardMatches = boardsEqual(snapshot, event.board);
+        const rngMatches = serialize() === event.rng;
+        if (!boardMatches || !rngMatches) {
+          setReplayStatus('mismatch');
+        }
+        setBoard(snapshot);
+        boardStateRef.current = snapshot;
+        setMerged(merges);
+        setScore(event.score);
+        setWon(event.won);
+        setLost(event.lost);
+        setReplayIndex(index + 1);
+        scheduleStep(index + 1);
+      }, Math.max(16, delay));
+    };
+
+    scheduleStep(0);
+  }, [
+    replayState,
+    board,
+    history,
+    undosLeft,
+    score,
+    won,
+    lost,
+    merged,
+    submitted,
+    seed,
+    boardSize,
+    stopReplay,
+  ]);
+
+  const canReplay = useMemo(
+    () =>
+      !!(
+        replayState &&
+        replayState.events.length > 0 &&
+        replayState.size === boardSize
+      ),
+    [replayState, boardSize],
+  );
+
+  const replayMessage = useMemo(() => {
+    if (!replayState || replayState.events.length === 0) {
+      return 'Play a game to capture a replay.';
+    }
+    if (replayState.size !== boardSize) {
+      return `Replay recorded on ${replayState.size}x${replayState.size}. Switch board size to watch.`;
+    }
+    if (replayStatus === 'replaying') {
+      const total = replayState.events.length;
+      const step = Math.min(replayIndex === 0 ? 1 : replayIndex, total);
+      return `Replaying move ${step}/${total}…`;
+    }
+    if (replayStatus === 'match') {
+      return 'Replay verified – states match original run.';
+    }
+    if (replayStatus === 'mismatch') {
+      return 'Replay mismatch detected – check seed or move history.';
+    }
+    return 'Replay ready.';
+  }, [replayState, replayStatus, replayIndex, boardSize]);
 
   // keyboard controls
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (paused) return;
+      if (isReplaying) {
+        if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          init();
+        }
+        if (
+          ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'u', 'U', 'Backspace'].includes(
+            e.key,
+          )
+        ) {
+          e.preventDefault();
+        }
+        return;
+      }
       if ([
         'ArrowLeft',
         'ArrowRight',
@@ -195,16 +424,17 @@ const Game2048 = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [move, undo, init, paused]);
+  }, [move, undo, init, paused, isReplaying]);
 
   // touch controls
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isReplaying) return;
     const t = e.touches[0];
     touchStart.current = { x: t.clientX, y: t.clientY };
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart.current || paused) return;
+    if (!touchStart.current || paused || isReplaying) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.current.x;
     const dy = t.clientY - touchStart.current.y;
@@ -221,12 +451,13 @@ const Game2048 = () => {
 
   // record score when game ends
   useEffect(() => {
+    if (isReplaying) return;
     if ((won || lost) && !submitted) {
       addScore(score);
       setSubmitted(true);
     }
     if (!won && !lost && submitted) setSubmitted(false);
-  }, [won, lost, score, addScore, submitted]);
+  }, [won, lost, score, addScore, submitted, isReplaying]);
 
   const shareCard = useCallback(async () => {
     if (!boardRef.current) return;
@@ -299,6 +530,20 @@ const Game2048 = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={startReplay}
+            disabled={!canReplay || isReplaying}
+          >
+            Play Replay
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={() => stopReplay(true, 'idle')}
+            disabled={!isReplaying}
+          >
+            Stop Replay
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={shareCard}
           >
             Share Card
@@ -314,13 +559,23 @@ const Game2048 = () => {
               </option>
             ))}
           </select>
-          <div className="ml-auto flex space-x-2">
-            <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
-              Score: {score}
+          <div className="ml-auto flex flex-col items-end space-y-1">
+            <div className="flex space-x-2">
+              <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
+                Score: {score}
+              </div>
+              <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
+                Best: {best}
+              </div>
             </div>
-            <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
-              Best: {best}
+            <div
+              className={`text-xs ${
+                replayStatus === 'mismatch' ? 'text-red-400' : 'text-gray-400'
+              }`}
+            >
+              {replayMessage}
             </div>
+            <div className="text-xs text-gray-500">Seed: {seed || '—'}</div>
           </div>
         </div>
         <div
