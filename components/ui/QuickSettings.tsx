@@ -5,9 +5,15 @@ import { useEffect } from 'react';
 
 interface Props {
   open: boolean;
+  onOpenUserSwitcher?: () => void;
+  userSwitcherEnabled?: boolean;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({
+  open,
+  onOpenUserSwitcher,
+  userSwitcherEnabled = false,
+}: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -52,6 +58,21 @@ const QuickSettings = ({ open }: Props) => {
           onChange={() => setReduceMotion(!reduceMotion)}
         />
       </div>
+      {userSwitcherEnabled && (
+        <div className="mt-3 border-t border-black border-opacity-20 pt-3 px-4 text-sm">
+          <button
+            type="button"
+            onClick={onOpenUserSwitcher}
+            className="w-full rounded border border-transparent bg-black bg-opacity-20 px-3 py-2 text-left hover:bg-opacity-30 focus:border-ubt-grey focus:outline-none"
+          >
+            Switch user
+          </button>
+          <p className="mt-2 text-xs text-ubt-grey">
+            Hop between sessions without logging out. Workspaces resume when
+            you return.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

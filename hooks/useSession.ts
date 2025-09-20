@@ -13,11 +13,17 @@ export interface DesktopSession {
   dock: string[];
 }
 
-const initialSession: DesktopSession = {
+export const initialDesktopSession: DesktopSession = {
   windows: [],
   wallpaper: defaults.wallpaper,
   dock: [],
 };
+
+export const createInitialDesktopSession = (): DesktopSession => ({
+  windows: [],
+  wallpaper: defaults.wallpaper,
+  dock: [],
+});
 
 function isSession(value: unknown): value is DesktopSession {
   if (!value || typeof value !== 'object') return false;
@@ -32,7 +38,7 @@ function isSession(value: unknown): value is DesktopSession {
 export default function useSession() {
   const [session, setSession, _reset, clear] = usePersistentState<DesktopSession>(
     'desktop-session',
-    initialSession,
+    createInitialDesktopSession,
     isSession,
   );
 
