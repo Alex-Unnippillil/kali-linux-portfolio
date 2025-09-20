@@ -22,6 +22,7 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
+import { setThemeCookie } from '../app/actions';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
@@ -134,6 +135,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') return;
+
+    const persist = async () => {
+      try {
+        await setThemeCookie(theme, accent);
+      } catch (error) {
+        console.error('Failed to persist theme preferences', error);
+      }
+    };
+
+    void persist();
+  }, [theme, accent]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
