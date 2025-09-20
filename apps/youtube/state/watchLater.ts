@@ -13,7 +13,7 @@ export interface Video {
 
 const WATCH_LATER_KEY = 'youtube:watch-later';
 
-function isVideo(v: any): v is Video {
+export function isVideo(v: any): v is Video {
   return (
     v &&
     typeof v.id === 'string' &&
@@ -27,11 +27,11 @@ function isVideo(v: any): v is Video {
   );
 }
 
-function validate(list: unknown): list is Video[] {
+export function validateVideoList(list: unknown): list is Video[] {
   return Array.isArray(list) && list.every(isVideo);
 }
 
 export default function useWatchLater() {
-  return usePersistentState<Video[]>(WATCH_LATER_KEY, [], validate);
+  return usePersistentState<Video[]>(WATCH_LATER_KEY, [], validateVideoList);
 }
 
