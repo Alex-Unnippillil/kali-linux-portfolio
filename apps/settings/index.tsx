@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import UndoToast from "../../components/ui/UndoToast";
 
 export default function Settings() {
   const {
@@ -31,6 +32,9 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    recentChange,
+    undoHistoryEntry,
+    clearRecentChange,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -301,6 +305,11 @@ export default function Settings() {
           className="hidden"
         />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
+      <UndoToast
+        entry={recentChange}
+        onUndo={(entry) => undoHistoryEntry(entry.id)}
+        onDismiss={clearRecentChange}
+      />
     </div>
   );
 }
