@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
@@ -733,94 +733,141 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const baseButtonClass = 'mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6';
+    const closeButtonClass = 'mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6';
+    const iconClass = 'h-4 w-4 inline';
+
+    const buttons = useMemo(() => {
+        const items = [];
+        if (pipSupported && props.pip) {
+            items.push({
+                key: 'pin',
+                ariaLabel: 'Window pin',
+                onClick: togglePin,
+                className: baseButtonClass,
+                iconSrc: '/themes/Yaru/window/window-pin-symbolic.svg',
+                iconAlt: 'Kali window pin',
+            });
+        }
+        items.push({
+            key: 'minimize',
+            ariaLabel: 'Window minimize',
+            onClick: props.minimize,
+            className: baseButtonClass,
+            iconSrc: '/themes/Yaru/window/window-minimize-symbolic.svg',
+            iconAlt: 'Kali window minimize',
+        });
+        if (props.allowMaximize) {
+            items.push({
+                key: props.isMaximised ? 'restore' : 'maximize',
+                ariaLabel: props.isMaximised ? 'Window restore' : 'Window maximize',
+                onClick: props.maximize,
+                className: baseButtonClass,
+                iconSrc: props.isMaximised
+                    ? '/themes/Yaru/window/window-restore-symbolic.svg'
+                    : '/themes/Yaru/window/window-maximize-symbolic.svg',
+                iconAlt: props.isMaximised ? 'Kali window restore' : 'Kali window maximize',
+            });
+        }
+        items.push({
+            key: 'close',
+            ariaLabel: 'Window close',
+            onClick: props.close,
+            className: closeButtonClass,
+            iconSrc: '/themes/Yaru/window/window-close-symbolic.svg',
+            iconAlt: 'Kali window close',
+            id: `close-${props.id}`,
+        });
+        return items;
+    }, [
+        pipSupported,
+        props.pip,
+        togglePin,
+        props.minimize,
+        props.allowMaximize,
+        props.isMaximised,
+        props.maximize,
+        props.close,
+        props.id,
+        baseButtonClass,
+        closeButtonClass,
+    ]);
+
+    const [focusIndex, setFocusIndex] = useState(0);
+    const buttonRefs = useRef([]);
+
+    useEffect(() => {
+        setFocusIndex((current) => {
+            if (buttons.length === 0) {
+                return 0;
+            }
+            if (current > buttons.length - 1) {
+                return buttons.length - 1;
+            }
+            if (current < 0) {
+                return 0;
+            }
+            return current;
+        });
+    }, [buttons.length]);
+
+    const moveFocus = useCallback(
+        (nextIndex) => {
+            if (buttons.length === 0) return;
+            const normalized = (nextIndex + buttons.length) % buttons.length;
+            const target = buttonRefs.current[normalized];
+            if (target) {
+                target.focus();
+            }
+            setFocusIndex(normalized);
+        },
+        [buttons.length],
+    );
+
+    const handleKeyDown = useCallback(
+        (event, index) => {
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                event.preventDefault();
+                const delta = event.key === 'ArrowRight' ? 1 : -1;
+                moveFocus(index + delta);
+            }
+        },
+        [moveFocus],
+    );
+
+    const handleFocus = useCallback((index) => {
+        setFocusIndex((current) => (current === index ? current : index));
+    }, []);
+
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
-            {pipSupported && props.pip && (
+            {buttons.map((button, index) => (
                 <button
+                    key={button.key}
                     type="button"
-                    aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                    onClick={togglePin}
+                    aria-label={button.ariaLabel}
+                    className={button.className}
+                    onClick={button.onClick}
+                    id={button.id}
+                    tabIndex={focusIndex === index ? 0 : -1}
+                    ref={(node) => {
+                        buttonRefs.current[index] = node;
+                    }}
+                    onKeyDown={(event) => handleKeyDown(event, index)}
+                    onFocus={() => handleFocus(index)}
                 >
                     <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-4 w-4 inline"
+                        src={button.iconSrc}
+                        alt={button.iconAlt}
+                        className={iconClass}
                         width={16}
                         height={16}
                         sizes="16px"
                     />
                 </button>
-            )}
-            <button
-                type="button"
-                aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.minimize}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
-            {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
-            )}
-            <button
-                type="button"
-                id={`close-${props.id}`}
-                aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.close}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
+            ))}
         </div>
-    )
+    );
 }
 
 // Window's Main Screen

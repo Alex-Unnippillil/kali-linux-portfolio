@@ -1,0 +1,11 @@
+button[tabindex="0"] {
+  outline: none;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+button[tabindex="0"]:focus,
+button[tabindex="0"]:focus-visible {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
