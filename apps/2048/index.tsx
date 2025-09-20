@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
+import { Direction, findBestMove } from './hint';
 
 const SIZE = 4;
 
@@ -91,6 +92,13 @@ const tileColors: Record<number, string> = {
   2048: 'bg-green-600 text-white',
 };
 
+const directionLabels: Record<Direction, string> = {
+  ArrowLeft: '← Left',
+  ArrowRight: '→ Right',
+  ArrowUp: '↑ Up',
+  ArrowDown: '↓ Down',
+};
+
 const DB_NAME = '2048';
 const STORE_NAME = 'replays';
 
@@ -115,6 +123,7 @@ const Page2048 = () => {
   // Skip tile transition classes if the user prefers reduced motion
   const rngRef = useRef(mulberry32(0));
   const seedRef = useRef(0);
+  const hintCacheRef = useRef<Map<string, Direction | null>>(new Map());
   const [board, setBoard] = useState<number[][]>(
     Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
   );
@@ -127,6 +136,8 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const [hint, setHint] = useState<Direction | null>(null);
+  const [hintComputed, setHintComputed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -190,6 +201,8 @@ const Page2048 = () => {
       setBoard(moved);
       setMoves((m) => [...m, dir]);
       resetTimer();
+      setHint(null);
+      setHintComputed(false);
       if (newHighest >= 2048) setWon(true);
       else if (!hasMoves(moved)) setLost(true);
     },
@@ -206,6 +219,8 @@ const Page2048 = () => {
       setWon(false);
       setLost(false);
       resetTimer();
+      setHint(null);
+      setHintComputed(false);
       return h.slice(0, -1);
     });
   }, [resetTimer]);
@@ -223,6 +238,9 @@ const Page2048 = () => {
     setLost(false);
     setHighest(0);
     resetTimer();
+    setHint(null);
+    setHintComputed(false);
+    hintCacheRef.current.clear();
   }, [resetTimer]);
 
   useEffect(() => {
@@ -274,6 +292,20 @@ const Page2048 = () => {
     }
   }, [won, lost, moves, boardType, hard, highest]);
 
+  const computeHint = useCallback(() => {
+    if (won || lost) return;
+    const key = board.map((row) => row.join(',')).join(';');
+    if (hintCacheRef.current.has(key)) {
+      setHint(hintCacheRef.current.get(key) ?? null);
+      setHintComputed(true);
+      return;
+    }
+    const move = findBestMove(board);
+    hintCacheRef.current.set(key, move);
+    setHint(move);
+    setHintComputed(true);
+  }, [board, won, lost]);
+
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <div className="flex space-x-2">
@@ -282,6 +314,9 @@ const Page2048 = () => {
         </button>
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
           Undo
+        </button>
+        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={computeHint}>
+          Hint
         </button>
         <label className="flex items-center space-x-1 px-2">
           <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
@@ -300,6 +335,11 @@ const Page2048 = () => {
         </button>
         {hard && <div className="ml-2">{timer}</div>}
       </div>
+      {hintComputed && (
+        <div className="text-sm text-gray-300">
+          {hint ? `Hint: ${directionLabels[hint]}` : 'No safe moves available'}
+        </div>
+      )}
       <div className="grid w-full max-w-sm grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => (
