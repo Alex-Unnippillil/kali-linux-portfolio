@@ -265,6 +265,8 @@ const ContactApp: React.FC = () => {
       <h1 className="mb-6 text-2xl">Contact</h1>
       {banner && (
         <div
+          role="status"
+          aria-live="polite"
           className={`mb-6 rounded p-3 text-sm ${
             banner.type === 'success' ? 'bg-green-600' : 'bg-red-600'
           }`}
@@ -386,10 +388,19 @@ const ContactApp: React.FC = () => {
         <button
           type="submit"
           disabled={submitting}
+          aria-busy={submitting}
           className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
         >
           {submitting ? (
-            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <>
+              <div
+                className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"
+                aria-hidden="true"
+              />
+              <span className="sr-only" aria-live="polite">
+                Sending message…
+              </span>
+            </>
           ) : (
             'Send'
           )}
