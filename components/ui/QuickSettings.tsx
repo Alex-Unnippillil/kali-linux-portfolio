@@ -12,6 +12,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [lowPowerMode, setLowPowerMode] = usePersistentState('qs-low-power', false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -20,6 +21,13 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('low-power', lowPowerMode);
+    return () => {
+      document.documentElement.classList.remove('low-power');
+    };
+  }, [lowPowerMode]);
 
   return (
     <div
@@ -44,12 +52,20 @@ const QuickSettings = ({ open }: Props) => {
         <span>Network</span>
         <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
       </div>
-      <div className="px-4 flex justify-between">
+      <div className="px-4 pb-2 flex justify-between">
         <span>Reduced motion</span>
         <input
           type="checkbox"
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
+        />
+      </div>
+      <div className="px-4 flex justify-between">
+        <span>Low power mode</span>
+        <input
+          type="checkbox"
+          checked={lowPowerMode}
+          onChange={() => setLowPowerMode(!lowPowerMode)}
         />
       </div>
     </div>

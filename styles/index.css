@@ -31,6 +31,7 @@ button:focus-visible {
     }
 }
 
+.low-power *, .low-power *::before, .low-power *::after,
 .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -377,6 +378,13 @@ dialog {
         backdrop-filter: blur(10px);
         background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
     }
+}
+
+.low-power .context-menu-bg,
+.low-power .windowMainScreen {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: color-mix(in srgb, var(--color-bg), transparent 15%);
 }
 
 .emoji-list>li {
