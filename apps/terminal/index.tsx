@@ -7,7 +7,22 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
+import type { ITheme } from '@xterm/xterm';
+import SettingsPanel from '../../components/apps/terminal/SettingsPanel';
+import {
+  DEFAULT_TERMINAL_PRESET_ID,
+  terminalColorPresets,
+  type TerminalColorPreset,
+  type TerminalColorVariant,
+  type TerminalPresetId,
+  type TerminalThemeVariant,
+} from '../../data/terminal/colors';
+import {
+  assertAccessibleAnsiRamp,
+} from '../../utils/color/ansiContrast';
+import { isDarkTheme } from '../../utils/theme';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
@@ -76,6 +91,145 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+const CUSTOM_PRESET_ID = 'custom' as const;
+const TERMINAL_PALETTE_STORAGE_KEY = 'terminal:palette';
+
+type PaletteId = TerminalPresetId | typeof CUSTOM_PRESET_ID;
+
+interface TerminalPaletteExport {
+  presetId?: string;
+  custom?: {
+    name?: string;
+    description?: string;
+    dark: TerminalColorVariant;
+    light: TerminalColorVariant;
+  };
+  name?: string;
+  description?: string;
+  dark?: TerminalColorVariant;
+  light?: TerminalColorVariant;
+}
+
+type VariantInput = Partial<TerminalColorVariant> & { palette?: unknown };
+
+const sanitizeVariant = (
+  variant: VariantInput | undefined,
+  label: string,
+): TerminalColorVariant => {
+  if (!variant || typeof variant !== 'object') {
+    throw new Error(`${label} is missing a color definition.`);
+  }
+
+  const { palette, background, foreground, cursor, selectionBackground } = variant;
+
+  if (!Array.isArray(palette)) {
+    throw new Error(`${label} must include a palette array.`);
+  }
+
+  if (palette.length !== 16) {
+    throw new Error(`${label} palette must include 16 colors.`);
+  }
+
+  const colors = palette.map((color, index) => {
+    if (typeof color !== 'string') {
+      throw new Error(`${label} color ${index} must be a string.`);
+    }
+    return color;
+  });
+
+  if (typeof background !== 'string') {
+    throw new Error(`${label} must include a background color.`);
+  }
+
+  if (typeof foreground !== 'string') {
+    throw new Error(`${label} must include a foreground color.`);
+  }
+
+  if (typeof cursor !== 'string') {
+    throw new Error(`${label} must include a cursor color.`);
+  }
+
+  if (typeof selectionBackground !== 'string') {
+    throw new Error(`${label} must include a selectionBackground value.`);
+  }
+
+  assertAccessibleAnsiRamp(colors, background, { label, minContrast: 4.5 });
+
+  return {
+    palette: colors,
+    background,
+    foreground,
+    cursor,
+    selectionBackground,
+  };
+};
+
+const buildCustomPreset = (
+  input: TerminalPaletteExport['custom'] | TerminalColorPreset | undefined,
+  fallbackName: string,
+): TerminalColorPreset => {
+  if (!input || typeof input !== 'object') {
+    throw new Error('Custom palette definition is missing.');
+  }
+
+  const baseName =
+    'name' in input && typeof input.name === 'string' && input.name.trim().length > 0
+      ? input.name.trim()
+      : fallbackName;
+
+  const description =
+    'description' in input && typeof input.description === 'string' && input.description.trim().length > 0
+      ? input.description.trim()
+      : 'Imported terminal color preset.';
+
+  const darkVariant = 'dark' in input ? (input as any).dark : undefined;
+  const lightVariant = 'light' in input ? (input as any).light : undefined;
+
+  const dark = sanitizeVariant(darkVariant, `${baseName} (dark)`);
+  const light = sanitizeVariant(lightVariant, `${baseName} (light)`);
+
+  return {
+    id: CUSTOM_PRESET_ID,
+    name: baseName,
+    description,
+    dark,
+    light,
+  };
+};
+
+const detectThemeVariant = (): TerminalThemeVariant => {
+  if (typeof document === 'undefined') return 'dark';
+  const root = document.documentElement;
+  if (root.classList.contains('dark')) return 'dark';
+  const theme = root.dataset.theme;
+  if (!theme || theme === 'default') return 'dark';
+  return isDarkTheme(theme) ? 'dark' : 'light';
+};
+
+const toXtermTheme = (variant: TerminalColorVariant): ITheme => ({
+  background: variant.background,
+  foreground: variant.foreground,
+  cursor: variant.cursor,
+  cursorAccent: variant.foreground,
+  selectionBackground: variant.selectionBackground,
+  black: variant.palette[0],
+  red: variant.palette[1],
+  green: variant.palette[2],
+  yellow: variant.palette[3],
+  blue: variant.palette[4],
+  magenta: variant.palette[5],
+  cyan: variant.palette[6],
+  white: variant.palette[7],
+  brightBlack: variant.palette[8],
+  brightRed: variant.palette[9],
+  brightGreen: variant.palette[10],
+  brightYellow: variant.palette[11],
+  brightBlue: variant.palette[12],
+  brightMagenta: variant.palette[13],
+  brightCyan: variant.palette[14],
+  brightWhite: variant.palette[15],
+});
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -105,24 +259,214 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
+  const [paletteId, setPaletteId] = useState<PaletteId>(DEFAULT_TERMINAL_PRESET_ID);
+  const [customPreset, setCustomPreset] = useState<TerminalColorPreset | null>(null);
+  const [themeVariant, setThemeVariant] = useState<TerminalThemeVariant>(() =>
+    typeof window === 'undefined' ? 'dark' : detectThemeVariant(),
+  );
+  const activePreset = useMemo<TerminalColorPreset>(() => {
+    if (paletteId === CUSTOM_PRESET_ID && customPreset) {
+      return customPreset;
+    }
+    const builtIn = terminalColorPresets.find((preset) => preset.id === paletteId);
+    return builtIn ?? terminalColorPresets[0];
+  }, [paletteId, customPreset]);
+  const paletteVariant = useMemo<TerminalColorVariant>(
+    () => activePreset[themeVariant],
+    [activePreset, themeVariant],
+  );
+  const paletteVariantRef = useRef<TerminalColorVariant>(paletteVariant);
+
+  useEffect(() => {
+    paletteVariantRef.current = paletteVariant;
+  }, [paletteVariant]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem(TERMINAL_PALETTE_STORAGE_KEY);
+      if (!stored) return;
+      const parsed: TerminalPaletteExport = JSON.parse(stored);
+      if (!parsed || typeof parsed !== 'object') return;
+
+      let nextCustom: TerminalColorPreset | null = null;
+      try {
+        if (parsed.custom || (parsed.dark && parsed.light)) {
+          nextCustom = buildCustomPreset(
+            parsed.custom ?? (parsed as TerminalColorPreset),
+            'Saved palette',
+          );
+          setCustomPreset(nextCustom);
+        }
+      } catch (error) {
+        console.warn('Ignoring stored terminal palette override', error);
+      }
+
+      if (typeof parsed.presetId === 'string') {
+        if (parsed.presetId === CUSTOM_PRESET_ID && nextCustom) {
+          setPaletteId(CUSTOM_PRESET_ID);
+          return;
+        }
+        const builtIn = terminalColorPresets.find((preset) => preset.id === parsed.presetId);
+        if (builtIn) {
+          setPaletteId(builtIn.id);
+          return;
+        }
+      }
+
+      if (nextCustom) {
+        setPaletteId(CUSTOM_PRESET_ID);
+      }
+    } catch (error) {
+      console.warn('Failed to load terminal palette preference', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (paletteId === CUSTOM_PRESET_ID && !customPreset) {
+      setPaletteId(DEFAULT_TERMINAL_PRESET_ID);
+    }
+  }, [paletteId, customPreset]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const updateThemeVariant = () => setThemeVariant(detectThemeVariant());
+    updateThemeVariant();
+    const observer = new MutationObserver(updateThemeVariant);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const payload: TerminalPaletteExport =
+        paletteId === CUSTOM_PRESET_ID && customPreset
+          ? {
+              presetId: CUSTOM_PRESET_ID,
+              custom: {
+                name: customPreset.name,
+                description: customPreset.description,
+                dark: customPreset.dark,
+                light: customPreset.light,
+              },
+            }
+          : {
+              presetId: paletteId,
+              ...(customPreset
+                ? {
+                    custom: {
+                      name: customPreset.name,
+                      description: customPreset.description,
+                      dark: customPreset.dark,
+                      light: customPreset.light,
+                    },
+                  }
+                : {}),
+            };
+      window.localStorage.setItem(
+        TERMINAL_PALETTE_STORAGE_KEY,
+        JSON.stringify(payload),
+      );
+    } catch (error) {
+      console.warn('Failed to persist terminal palette preference', error);
+    }
+  }, [paletteId, customPreset]);
+
+  const exportPalette = useCallback((): string => {
+    const payload: TerminalPaletteExport =
+      paletteId === CUSTOM_PRESET_ID && customPreset
+        ? {
+            presetId: CUSTOM_PRESET_ID,
+            custom: {
+              name: customPreset.name,
+              description: customPreset.description,
+              dark: customPreset.dark,
+              light: customPreset.light,
+            },
+          }
+        : { presetId: activePreset.id };
+    return JSON.stringify(payload, null, 2);
+  }, [activePreset, paletteId, customPreset]);
+
+  const importPalette = useCallback(async (input: string): Promise<string> => {
+    const trimmed = input.trim();
+    if (!trimmed) {
+      throw new Error('Paste preset JSON before importing.');
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch (error) {
+      throw new Error('Preset JSON could not be parsed.');
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Preset payload must be an object.');
+    }
+
+    const payload = parsed as TerminalPaletteExport;
+
+    if (payload.custom || (payload.dark && payload.light)) {
+      const custom = buildCustomPreset(
+        payload.custom ?? (payload as TerminalColorPreset),
+        'Imported palette',
+      );
+      setCustomPreset(custom);
+      setPaletteId(CUSTOM_PRESET_ID);
+      return `Imported custom palette "${custom.name}".`;
+    }
+
+    if (payload.presetId && typeof payload.presetId === 'string') {
+      const preset = terminalColorPresets.find((item) => item.id === payload.presetId);
+      if (!preset) {
+        throw new Error(`Unknown preset id "${payload.presetId}".`);
+      }
+      setPaletteId(preset.id as PaletteId);
+      return `Loaded preset "${preset.name}".`;
+    }
+
+    throw new Error('Preset JSON must include a presetId or custom palette definition.');
+  }, [setCustomPreset, setPaletteId]);
+
+  const removeCustomPalette = useCallback(() => {
+    setCustomPreset(null);
+    if (paletteId === CUSTOM_PRESET_ID) {
+      setPaletteId(DEFAULT_TERMINAL_PRESET_ID);
+    }
+  }, [paletteId]);
+
+  useEffect(() => {
+    if (!termRef.current) return;
+    termRef.current.options.theme = toXtermTheme(paletteVariant);
+  }, [paletteVariant]);
+
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    if (settingsOpen) {
+      term.blur?.();
+    } else if (!paletteOpen) {
+      term.focus?.();
+    }
+  }, [settingsOpen, paletteOpen]);
+
+  const handleSelectPreset = useCallback(
+    (id: string) => {
+      if (id === CUSTOM_PRESET_ID) {
+        if (customPreset) {
+          setPaletteId(CUSTOM_PRESET_ID);
+        }
+        return;
+      }
+      setPaletteId(id as PaletteId);
+    },
+    [customPreset],
+  );
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -309,11 +653,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
-        theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
-        },
+        theme: toXtermTheme(paletteVariantRef.current),
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -419,6 +759,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
+              aria-label="Command palette"
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -444,42 +785,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </div>
         </div>
       )}
-      {settingsOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-2 py-1 bg-gray-700 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-2 py-1 bg-blue-600 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsPanel
+        open={settingsOpen}
+        presets={terminalColorPresets}
+        customPreset={customPreset}
+        activePresetId={paletteId}
+        activePreset={activePreset}
+        activeVariant={themeVariant}
+        onClose={() => setSettingsOpen(false)}
+        onSelectPreset={handleSelectPreset}
+        onExportPreset={exportPalette}
+        onImportPreset={importPalette}
+        onRemoveCustom={customPreset ? removeCustomPalette : undefined}
+      />
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 bg-gray-800 p-1">
           <button onClick={handleCopy} aria-label="Copy">
