@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
@@ -24,6 +24,10 @@ export default function Calculator() {
 
   const btnCls =
     'btn min-h-12 w-12 transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-white';
+
+  const handleHistoryClear = useCallback(() => {
+    setHistory([]);
+  }, [setHistory]);
 
   useEffect(() => {
     let evaluate: any;
@@ -327,14 +331,7 @@ export default function Calculator() {
         <div id="paren-indicator" />
       </div>
       <FormulaEditor />
-      <div id="history" className="history hidden" aria-live="polite">
-        {history.map(({ expr, result }, i) => (
-          <div key={i} className="history-entry">
-            {expr} = {result}
-          </div>
-        ))}
-      </div>
-      <Tape entries={history} />
+      <Tape entries={history} onClear={handleHistoryClear} />
     </div>
   );
 }
