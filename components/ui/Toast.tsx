@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from 'react';
+import { useOptionalFocusMode } from '../../hooks/useFocusMode';
 
 interface ToastProps {
   message: string;
@@ -6,6 +9,7 @@ interface ToastProps {
   onAction?: () => void;
   onClose?: () => void;
   duration?: number;
+  respectFocus?: boolean;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -14,19 +18,27 @@ const Toast: React.FC<ToastProps> = ({
   onAction,
   onClose,
   duration = 6000,
+  respectFocus = true,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
+  const focus = useOptionalFocusMode();
+  const suppressed = respectFocus && focus?.shouldSilenceNotifications;
 
   useEffect(() => {
-    setVisible(true);
+    setVisible(!suppressed);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       onClose && onClose();
     }, duration);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [duration, onClose]);
+  }, [duration, onClose, suppressed]);
+
+  if (suppressed) {
+    return null;
+  }
 
   return (
     <div

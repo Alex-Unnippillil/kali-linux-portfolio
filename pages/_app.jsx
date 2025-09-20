@@ -11,11 +11,13 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import { FocusModeProvider } from '../hooks/useFocusMode';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import NotificationCenter from '../components/common/NotificationCenter';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -157,21 +159,25 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
-            <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
+          <FocusModeProvider>
+            <NotificationCenter>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(e) => {
+                    if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                    const evt = e;
+                    if (evt.metadata?.email) delete evt.metadata.email;
+                    return e;
+                  }}
+                />
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-          </PipPortalProvider>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </FocusModeProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>
