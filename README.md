@@ -354,6 +354,30 @@ yarn test:watch
 yarn lint
 ```
 
+### Playwright BeEF lab stability scenario
+
+The reusable flow in [`playwright/beefLabScenario.ts`](./playwright/beefLabScenario.ts) drives the BeEF lab demo five times, checks for console warnings, and tracks heap growth. Run it locally with Playwright (Chromium only):
+
+```bash
+# In one terminal start the dev server
+yarn dev
+
+# Install browser binaries once (if you haven't already)
+npx playwright install chromium
+
+# In another terminal run the scenario
+npx playwright test tests/beef-lab.spec.ts --browser=chromium
+
+```
+
+If you're running in a fresh Linux container without GUI libraries, install Playwright's Chromium dependencies first:
+
+```bash
+npx playwright install-deps chromium
+```
+
+The assertion fails if heap usage grows by more than **7 MB** across the run or if any browser warnings are logged.
+
 ---
 
 ## Feature Overview
