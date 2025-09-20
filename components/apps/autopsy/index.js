@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
-import demoCase from '../../../apps/autopsy/data/case.json';
 
 const escapeFilename = (str = '') =>
   str
@@ -14,327 +13,6 @@ const escapeFilename = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-
-function Timeline({ events, onSelect }) {
-  const canvasRef = useRef(null);
-  const overviewRef = useRef(null);
-  const containerRef = useRef(null);
-  const workerRef = useRef(null);
-  const positionsRef = useRef([]);
-  const [sorted, setSorted] = useState([]);
-  const MIN_ZOOM = 1 / (24 * 60); // 1 pixel per day
-  const MAX_ZOOM = 60; // 60 pixels per minute
-  const [zoom, setZoom] = useState(1 / 60); // start at 1 pixel per hour
-  const [zoomAnnouncement, setZoomAnnouncement] = useState('');
-  const [sliderIndex, setSliderIndex] = useState(0);
-  const [hoverIndex, setHoverIndex] = useState(null);
-  const dayMarkers = useMemo(() => {
-    const days = [];
-    const seen = new Set();
-    sorted.forEach((ev, idx) => {
-      const day = new Date(ev.timestamp).toISOString().split('T')[0];
-      if (!seen.has(day)) {
-        seen.add(day);
-        days.push({ day, idx });
-      }
-    });
-    return days;
-  }, [sorted]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(
-        new URL('./timelineWorker.js', import.meta.url)
-      );
-      workerRef.current.onmessage = (e) => setSorted(e.data);
-      return () => workerRef.current?.terminate();
-    }
-    return undefined;
-  }, []);
-
-  useEffect(() => {
-    if (workerRef.current) workerRef.current.postMessage({ events });
-  }, [events]);
-
-  useEffect(() => {
-    setSliderIndex(0);
-  }, [sorted]);
-
-  useEffect(() => {
-    const minutesPerPixel = 1 / zoom;
-    let scale;
-    if (minutesPerPixel >= 1440) {
-      const days = minutesPerPixel / 1440;
-      scale = `${days.toFixed(0)} day${days > 1 ? 's' : ''} per pixel`;
-    } else if (minutesPerPixel >= 60) {
-      const hours = minutesPerPixel / 60;
-      scale = `${hours.toFixed(0)} hour${hours > 1 ? 's' : ''} per pixel`;
-    } else if (minutesPerPixel >= 1) {
-      scale = `${minutesPerPixel.toFixed(0)} minute${
-        minutesPerPixel > 1 ? 's' : ''
-      } per pixel`;
-    } else {
-      const seconds = minutesPerPixel * 60;
-      scale = `${seconds.toFixed(0)} second${
-        seconds > 1 ? 's' : ''
-      } per pixel`;
-    }
-    setZoomAnnouncement(`Timeline scale: ${scale}`);
-  }, [zoom]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const handleWheel = (e) => {
-      e.preventDefault();
-      const factor = e.deltaY < 0 ? 2 : 0.5;
-      setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * factor)));
-    };
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
-  }, [MAX_ZOOM, MIN_ZOOM]);
-
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || sorted.length === 0) return;
-    const ctx = canvas.getContext('2d');
-    const times = sorted.map((e) => new Date(e.timestamp).getTime());
-    const min = Math.min(...times);
-    const max = Math.max(...times);
-    const rangeMin = (max - min) / 60000 || 1;
-    const width = Math.max(rangeMin * zoom, 600);
-    canvas.width = width;
-    canvas.height = 80;
-    const height = canvas.height;
-    const prefersReduced = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
-    const render = () => {
-      const gradient = ctx.createLinearGradient(0, 0, width, 0);
-      gradient.addColorStop(0, '#1f1f1f');
-      gradient.addColorStop(1, '#2a2a2a');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-      ctx.strokeStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(0, height / 2);
-      ctx.lineTo(width, height / 2);
-      ctx.stroke();
-
-      // Draw ticks based on zoom level
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px sans-serif';
-      const minutesPerPixel = 1 / zoom;
-      const approxTickMinutes = minutesPerPixel * 80;
-      const tickOptions = [1, 5, 15, 30, 60, 120, 240, 720, 1440];
-      const tickMinutes =
-        tickOptions.find((t) => t >= approxTickMinutes) || 1440;
-      const tickMs = tickMinutes * 60000;
-      const firstTick = Math.ceil(min / tickMs) * tickMs;
-      for (let t = firstTick; t <= max; t += tickMs) {
-        const x = ((t - min) / 60000) * zoom;
-        ctx.fillRect(x, height / 2 + 10, 1, 10);
-        const date = new Date(t);
-        let label;
-        if (tickMinutes >= 1440) {
-          label = date.toLocaleDateString();
-        } else if (tickMinutes >= 60) {
-          label = date.toLocaleTimeString([], { hour: '2-digit' });
-        } else {
-          label = date.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
-        }
-        ctx.fillText(label, x + 2, height / 2 + 25);
-      }
-
-      ctx.fillStyle = '#ffa500';
-      positionsRef.current = [];
-      sorted.forEach((ev) => {
-        const t = new Date(ev.timestamp).getTime();
-        const x = ((t - min) / 60000) * zoom;
-        ctx.fillRect(x, height / 2 - 10, 2, 20);
-        positionsRef.current.push({ x, event: ev });
-      });
-
-      const overview = overviewRef.current;
-      const container = containerRef.current;
-      if (overview) {
-        const octx = overview.getContext('2d');
-        const owidth = container ? container.clientWidth : 600;
-        overview.width = owidth;
-        overview.height = 20;
-        const ogradient = octx.createLinearGradient(0, 0, owidth, 0);
-        ogradient.addColorStop(0, '#1f1f1f');
-        ogradient.addColorStop(1, '#2a2a2a');
-        octx.fillStyle = ogradient;
-        octx.fillRect(0, 0, owidth, 20);
-        octx.fillStyle = '#ffa500';
-        const total = max - min || 1;
-        sorted.forEach((ev) => {
-          const t = new Date(ev.timestamp).getTime();
-          const x = ((t - min) / total) * owidth;
-          octx.fillRect(x, 5, 1, 10);
-        });
-        if (container) {
-          const startRatio = container.scrollLeft / width;
-          const endRatio =
-            (container.scrollLeft + container.clientWidth) / width;
-          const rectX = startRatio * owidth;
-          const rectWidth = Math.max((endRatio - startRatio) * owidth, 10);
-          octx.strokeStyle = '#ffffff';
-          octx.strokeRect(rectX, 0, rectWidth, 20);
-        }
-      }
-    };
-    if (prefersReduced) {
-      render();
-    } else {
-      requestAnimationFrame(render);
-    }
-  }, [sorted, zoom]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const handleClick = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const hit = positionsRef.current.find((p) => Math.abs(p.x - x) < 5);
-      if (hit && onSelect) onSelect(hit.event);
-    };
-    canvas.addEventListener('click', handleClick);
-    return () => canvas.removeEventListener('click', handleClick);
-  }, [onSelect]);
-
-  useEffect(() => {
-    draw();
-  }, [draw]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const handleScroll = () => draw();
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [draw]);
-
-  useEffect(() => {
-    const overview = overviewRef.current;
-    const container = containerRef.current;
-    if (!overview || !container) return;
-    const handleClick = (e) => {
-      const rect = overview.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const ratio = x / overview.width;
-      const target =
-        ratio * canvasRef.current.width - container.clientWidth / 2;
-      container.scrollLeft = Math.max(0, target);
-      draw();
-    };
-    overview.addEventListener('click', handleClick);
-    return () => overview.removeEventListener('click', handleClick);
-  }, [draw]);
-
-  return (
-    <div className="w-full">
-      <div aria-live="polite" className="sr-only">
-        {zoomAnnouncement}
-      </div>
-      <div className="flex space-x-2 mb-1">
-        <button
-          onClick={() => setZoom((z) => Math.min(z * 2, MAX_ZOOM))}
-          className="bg-ub-orange text-black px-2 py-1 rounded"
-          aria-label="Zoom in"
-        >
-          +
-        </button>
-        <button
-          onClick={() => setZoom((z) => Math.max(z / 2, MIN_ZOOM))}
-          className="bg-ub-orange text-black px-2 py-1 rounded"
-          aria-label="Zoom out"
-        >
-          -
-        </button>
-      </div>
-      {sorted.length > 0 && (
-        <div className="relative mb-2">
-          <input
-            type="range"
-            min={0}
-            max={sorted.length - 1}
-            value={sliderIndex}
-            onChange={(e) => {
-              const idx = Number(e.target.value);
-              setSliderIndex(idx);
-              if (onSelect && sorted[idx]) onSelect(sorted[idx]);
-            }}
-            onMouseMove={(e) => {
-              const rect = e.target.getBoundingClientRect();
-              const percent = (e.clientX - rect.left) / rect.width;
-              const idx = Math.round(percent * (sorted.length - 1));
-              setHoverIndex(idx);
-            }}
-            onMouseLeave={() => setHoverIndex(null)}
-            list="timeline-day-markers"
-            className="w-full"
-            aria-label="Timeline scrub bar"
-          />
-          <datalist id="timeline-day-markers">
-            {dayMarkers.map((m) => (
-              <option
-                key={m.day}
-                value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
-              />
-            ))}
-          </datalist>
-          {hoverIndex !== null && sorted[hoverIndex] && (
-            <div
-              className="absolute -top-10 bg-ub-grey text-xs p-1 rounded"
-              style={{
-                left: `${
-                  sorted.length > 1
-                    ? (hoverIndex / (sorted.length - 1)) * 100
-                    : 0
-                }%`,
-                transform: 'translateX(-50%)',
-              }}
-            >
-              <div>
-                {new Date(sorted[hoverIndex].timestamp).toLocaleString()}
-              </div>
-              <div>{sorted[hoverIndex].name}</div>
-              {sorted[hoverIndex].description && (
-                <div className="text-[10px]">
-                  {sorted[hoverIndex].description}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      <div
-        ref={containerRef}
-        className="w-full overflow-x-auto p-1.5 bg-gradient-to-r from-ub-grey to-ub-cool-grey rounded"
-      >
-        <canvas
-          ref={canvasRef}
-          className="bg-ub-grey"
-          role="img"
-          aria-label="File event timeline"
-        />
-      </div>
-      <canvas
-        ref={overviewRef}
-        className="bg-ub-grey mt-2 w-full"
-        height={20}
-        aria-label="Timeline overview"
-      />
-    </div>
-  );
-}
 
 function Autopsy({ initialArtifacts = null }) {
   const [caseName, setCaseName] = useState('');
@@ -355,9 +33,6 @@ function Autopsy({ initialArtifacts = null }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [previewTab, setPreviewTab] = useState('hex');
-  const [timelineEvents] = useState(
-    demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
-  );
   const parseWorkerRef = useRef(null);
 
   useEffect(() => {
@@ -439,14 +114,6 @@ function Autopsy({ initialArtifacts = null }) {
       a.name.toLowerCase().includes(searchLower) ||
       a.description.toLowerCase().includes(searchLower) ||
       (a.user && a.user.toLowerCase().includes(searchLower))
-  );
-  const filteredTimeline = timelineEvents.filter(
-    (t) =>
-      (!startTime || new Date(t.timestamp) >= new Date(startTime)) &&
-      (!endTime || new Date(t.timestamp) <= new Date(endTime))
-  );
-  const visibleTimeline = filteredTimeline.filter((t) =>
-    t.name.toLowerCase().includes(searchLower)
   );
 
   const createCase = () => {
@@ -707,12 +374,6 @@ function Autopsy({ initialArtifacts = null }) {
             artifacts={visibleArtifacts}
             onSelect={setSelectedArtifact}
           />
-          {visibleTimeline.length > 0 && (
-            <>
-              <div className="text-sm font-bold">Timeline</div>
-              <Timeline events={visibleTimeline} onSelect={() => {}} />
-            </>
-          )}
           {fileTree && (
             <div className="flex space-x-4">
               <div className="w-1/3">

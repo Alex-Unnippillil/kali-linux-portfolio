@@ -1,31 +1,85 @@
 {
-  "timeline": [
-    {
-      "timestamp": "2023-08-01T10:00:00Z",
-      "event": "resume.docx created on desktop",
-      "thumbnail": "/themes/Yaru/apps/gedit.png"
-    },
-    {
-      "timestamp": "2023-08-01T12:30:00Z",
-      "event": "photo.jpg taken on phone",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
-    },
-    {
-      "timestamp": "2023-08-01T14:45:00Z",
-      "event": "system.log updated",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
-    },
-    {
-      "timestamp": "2023-08-01T16:15:00Z",
-      "event": "run.exe executed",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
-    },
-    {
-      "timestamp": "2023-08-01T18:20:00Z",
-      "event": "Registry key modified",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
-    }
-  ],
+  "timeline": {
+    "categories": [
+      {
+        "id": "docs",
+        "label": "Documents",
+        "color": "#f97316",
+        "description": "Word processing files and exported reports",
+        "icon": "/themes/Yaru/apps/gedit.png"
+      },
+      {
+        "id": "images",
+        "label": "Images",
+        "color": "#38bdf8",
+        "description": "Photos, screenshots, and other media captures",
+        "icon": "/themes/Yaru/apps/autopsy.svg"
+      },
+      {
+        "id": "archives",
+        "label": "Archives",
+        "color": "#a855f7",
+        "description": "Compressed bundles and staging exports"
+      }
+    ],
+    "events": [
+      {
+        "id": "evt-resume-draft",
+        "categoryId": "docs",
+        "timestamp": "2023-08-01T10:00:00Z",
+        "title": "resume.docx drafted on desktop",
+        "summary": "User created resume.docx in the Documents folder using LibreOffice Writer.",
+        "thumbnail": "/themes/Yaru/apps/gedit.png",
+        "sources": ["Documents/resume.docx"]
+      },
+      {
+        "id": "evt-expense-export",
+        "categoryId": "docs",
+        "timestamp": "2023-08-01T10:22:00Z",
+        "title": "Expense report exported to PDF",
+        "summary": "Spreadsheet export saved as expense_report.pdf alongside the resume draft.",
+        "thumbnail": "/themes/Yaru/apps/gedit.png",
+        "sources": ["Documents/expense_report.pdf", "Documents/resume.docx"]
+      },
+      {
+        "id": "evt-photo-import",
+        "categoryId": "images",
+        "timestamp": "2023-08-01T12:30:00Z",
+        "title": "photo.jpg imported from mobile",
+        "summary": "High-resolution image synced from the user's phone into Pictures/Trips.",
+        "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+        "sources": ["Pictures/Trips/photo.jpg"]
+      },
+      {
+        "id": "evt-screenshot",
+        "categoryId": "images",
+        "timestamp": "2023-08-01T13:05:00Z",
+        "title": "Screenshot captured for support ticket",
+        "summary": "Desktop screenshot saved to Pictures/Screenshots illustrating an error dialog.",
+        "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+        "sources": ["Pictures/Screenshots/support.png"]
+      },
+      {
+        "id": "evt-log-archive",
+        "categoryId": "archives",
+        "timestamp": "2023-08-01T14:45:00Z",
+        "endTimestamp": "2023-08-01T14:47:00Z",
+        "title": "System logs compressed",
+        "summary": "Incident response script packaged system.log into logs-2023-08-01.tar.gz for transfer.",
+        "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+        "sources": ["Archives/logs-2023-08-01.tar.gz", "Logs/system.log"]
+      },
+      {
+        "id": "evt-backup-bundle",
+        "categoryId": "archives",
+        "timestamp": "2023-08-01T16:15:00Z",
+        "title": "Evidence bundle encrypted",
+        "summary": "Collected artifacts zipped into incident-backup.zip and staged in Archives.",
+        "thumbnail": "/themes/Yaru/apps/autopsy.svg",
+        "sources": ["Archives/incident-backup.zip", "Documents/resume.docx", "Pictures/Trips/photo.jpg"]
+      }
+    ]
+  },
   "fileTree": {
     "name": "root",
     "children": [
@@ -35,6 +89,10 @@
           {
             "name": "resume.docx",
             "thumbnail": "/themes/Yaru/apps/gedit.png"
+          },
+          {
+            "name": "expense_report.pdf",
+            "thumbnail": "/themes/Yaru/apps/gedit.png"
           }
         ]
       },
@@ -42,7 +100,34 @@
         "name": "Pictures",
         "children": [
           {
-            "name": "photo.jpg",
+            "name": "Trips",
+            "children": [
+              {
+                "name": "photo.jpg",
+                "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+              }
+            ]
+          },
+          {
+            "name": "Screenshots",
+            "children": [
+              {
+                "name": "support.png",
+                "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Archives",
+        "children": [
+          {
+            "name": "logs-2023-08-01.tar.gz",
+            "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+          },
+          {
+            "name": "incident-backup.zip",
             "thumbnail": "/themes/Yaru/apps/autopsy.svg"
           }
         ]
