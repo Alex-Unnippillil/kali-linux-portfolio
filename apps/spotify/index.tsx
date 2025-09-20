@@ -1,48 +1,81 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 import CrossfadePlayer from "./utils/crossfade";
 import Visualizer from "./Visualizer";
 import Lyrics from "./Lyrics";
-
-interface Track {
-  title: string;
-  url: string;
-  cover?: string;
-}
-
-const DEFAULT_PLAYLIST = [
+import {
+  filterLibrary,
+  spotifyLibrary,
+  toQueueTracks,
+  type LibraryAlbum,
+  type LibraryPlaylist,
+  type LibraryTrack,
+  type QueueTrack,
+} from "./library";
+const FALLBACK_PLAYLIST: QueueTrack[] = [
   {
-    title: "Song 1",
+    id: "fallback-neon-drive",
+    title: "Neon Drive",
     url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    cover: "/themes/Yaru/apps/spotify.svg",
+    artist: "SoundHelix Ensemble",
+    album: "Kali Nights",
   },
   {
-    title: "Song 2",
+    id: "fallback-midnight-terminal",
+    title: "Midnight Terminal",
     url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+    cover: "/themes/Yaru/apps/spotify.svg",
+    artist: "SoundHelix Ensemble",
+    album: "Kali Nights",
   },
   {
-    title: "Song 3",
+    id: "fallback-cyan-aurora",
+    title: "Cyan Aurora",
     url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+    cover: "/themes/Yaru/apps/spotify.svg",
+    artist: "Echo Sector",
+    album: "Polar Wave",
   },
 ];
 
-const serialize = (tracks: Track[]) => JSON.stringify(tracks, null, 2);
+const DEFAULT_PLAYLIST: QueueTrack[] =
+  spotifyLibrary.playlists.length > 0
+    ? toQueueTracks(spotifyLibrary.playlists[0].tracks)
+    : FALLBACK_PLAYLIST;
 
-const isTrackArray = (v: unknown): v is Track[] =>
+const isTrackArray = (v: unknown): v is QueueTrack[] =>
   Array.isArray(v) && v.every((t) => t && typeof t.url === "string");
 
+type FilterMode = "tracks" | "albums" | "playlists";
+
+const cloneQueue = (tracks: QueueTrack[]) => tracks.map((track) => ({ ...track }));
+
+const FILTER_ORDER: FilterMode[] = ["tracks", "albums", "playlists"];
+
+const MODE_LABELS: Record<FilterMode, string> = {
+  tracks: "Tracks",
+  albums: "Albums",
+  playlists: "Playlists",
+};
+
 const SpotifyApp = () => {
-  const [playlistText, setPlaylistText] = usePersistentState(
-    "spotify-playlist-text",
-    () => serialize(DEFAULT_PLAYLIST),
-  );
-  const [queue, setQueue] = usePersistentState<Track[]>(
+  const library = spotifyLibrary;
+  const [queue, setQueue] = usePersistentState<QueueTrack[]>(
     "spotify-queue",
-    () => DEFAULT_PLAYLIST,
+    () => cloneQueue(DEFAULT_PLAYLIST),
     isTrackArray,
   );
-  const [recent, setRecent] = usePersistentState<Track[]>(
+  const [recent, setRecent] = usePersistentState<QueueTrack[]>(
     "spotify-recent",
     [],
     isTrackArray,
@@ -71,22 +104,65 @@ const SpotifyApp = () => {
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const [filterMode, setFilterMode] = useState<FilterMode>("tracks");
 
-  const loadPlaylist = () => {
-    try {
-      const parsed = JSON.parse(playlistText);
-      if (isTrackArray(parsed)) {
-        setQueue(parsed);
-        setPlaylistText(serialize(parsed));
-        setCurrent(0);
+  const filteredLibrary = useMemo(
+    () => filterLibrary(library, deferredSearch),
+    [library, deferredSearch],
+  );
+
+  const resetToDefaultQueue = () => {
+    setQueue(cloneQueue(DEFAULT_PLAYLIST));
+    setCurrent(0);
+  };
+
+  const playTracks = (tracks: LibraryTrack[]) => {
+    const queueTracks = toQueueTracks(tracks);
+    if (!queueTracks.length) return;
+    setQueue(queueTracks);
+    setCurrent(0);
+  };
+
+  const enqueueTracks = (tracks: LibraryTrack[]) => {
+    const additions = toQueueTracks(tracks);
+    if (!additions.length) return;
+    let shouldResetCurrent = false;
+    setQueue((existing) => {
+      const seen = new Set(existing.map((item) => item.url));
+      const deduped: QueueTrack[] = [];
+      additions.forEach((track) => {
+        if (seen.has(track.url)) {
+          return;
+        }
+        seen.add(track.url);
+        deduped.push(track);
+      });
+      if (!deduped.length) {
+        return existing;
       }
-    } catch {
-      // ignore invalid JSON
+      if (!existing.length) {
+        shouldResetCurrent = true;
+      }
+      return [...existing, ...deduped];
+    });
+    if (shouldResetCurrent) {
+      setCurrent(0);
     }
   };
 
+  const handlePlayTrack = (track: LibraryTrack) => playTracks([track]);
+  const handleQueueTrack = (track: LibraryTrack) => enqueueTracks([track]);
+  const handlePlayAlbum = (album: LibraryAlbum) => playTracks(album.tracks);
+  const handleQueueAlbum = (album: LibraryAlbum) => enqueueTracks(album.tracks);
+  const handlePlayPlaylist = (playlist: LibraryPlaylist) =>
+    playTracks(playlist.tracks);
+  const handleQueuePlaylist = (playlist: LibraryPlaylist) =>
+    enqueueTracks(playlist.tracks);
+
   useEffect(() => {
-    if (!queue.length) loadPlaylist();
+    if (!queue.length) resetToDefaultQueue();
     const player = new CrossfadePlayer();
     playerRef.current = player;
     setAnalyser(player.getAnalyser());
@@ -143,7 +219,138 @@ const SpotifyApp = () => {
     }
   };
 
+  const counts = {
+    tracks: filteredLibrary.tracks.length,
+    albums: filteredLibrary.albums.length,
+    playlists: filteredLibrary.playlists.length,
+  };
+  const trimmedSearch = search.trim();
   const currentTrack = queue[current];
+
+  const noResultsMessage = trimmedSearch
+    ? `No ${MODE_LABELS[filterMode].toLowerCase()} match “${trimmedSearch}”.`
+    : `No ${MODE_LABELS[filterMode].toLowerCase()} available.`;
+
+  let libraryContent: ReactNode;
+  if (filterMode === "tracks") {
+    libraryContent = filteredLibrary.tracks.length ? (
+      <ul className="divide-y divide-gray-700">
+        {filteredLibrary.tracks.map((track) => {
+          const meta = [track.artist, track.album]
+            .filter(Boolean)
+            .join(" • ");
+          return (
+            <li
+              key={track.id}
+              className="px-2 py-2 transition-colors hover:bg-gray-700/40"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-medium leading-snug">{track.title}</p>
+                  {meta && (
+                    <p className="text-xs text-[var(--color-muted)]">{meta}</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    className="rounded border border-gray-600 px-2 py-1 text-xs transition-colors hover:border-blue-500"
+                    onClick={() => handlePlayTrack(track)}
+                  >
+                    Play
+                  </button>
+                  <button
+                    className="rounded border border-gray-600 px-2 py-1 text-xs transition-colors hover:border-blue-500"
+                    onClick={() => handleQueueTrack(track)}
+                  >
+                    Queue
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    ) : (
+      <p className="px-2 py-3 text-sm text-[var(--color-muted)]">{noResultsMessage}</p>
+    );
+  } else if (filterMode === "albums") {
+    libraryContent = filteredLibrary.albums.length ? (
+      <ul className="divide-y divide-gray-700">
+        {filteredLibrary.albums.map((album) => (
+          <li
+            key={album.id}
+            className="px-2 py-2 transition-colors hover:bg-gray-700/40"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium leading-snug">{album.title}</p>
+                <p className="text-xs text-[var(--color-muted)]">
+                  {album.artist} • {album.tracks.length} tracks
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  className="rounded border border-gray-600 px-2 py-1 text-xs transition-colors hover:border-blue-500"
+                  onClick={() => handlePlayAlbum(album)}
+                >
+                  Play
+                </button>
+                <button
+                  className="rounded border border-gray-600 px-2 py-1 text-xs transition-colors hover:border-blue-500"
+                  onClick={() => handleQueueAlbum(album)}
+                >
+                  Queue
+                </button>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="px-2 py-3 text-sm text-[var(--color-muted)]">{noResultsMessage}</p>
+    );
+  } else {
+    libraryContent = filteredLibrary.playlists.length ? (
+      <ul className="divide-y divide-gray-700">
+        {filteredLibrary.playlists.map((playlist) => (
+          <li
+            key={playlist.id}
+            className="px-2 py-2 transition-colors hover:bg-gray-700/40"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium leading-snug">{playlist.title}</p>
+                {playlist.description && (
+                  <p className="text-xs text-[var(--color-muted)]">
+                    {playlist.description}
+                  </p>
+                )}
+                <p className="text-xs text-[var(--color-muted)]">
+                  {playlist.tracks.length} tracks
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  className="rounded border border-gray-600 px-2 py-1 text-xs transition-colors hover:border-blue-500"
+                  onClick={() => handlePlayPlaylist(playlist)}
+                >
+                  Play
+                </button>
+                <button
+                  className="rounded border border-gray-600 px-2 py-1 text-xs transition-colors hover:border-blue-500"
+                  onClick={() => handleQueuePlaylist(playlist)}
+                >
+                  Queue
+                </button>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="px-2 py-3 text-sm text-[var(--color-muted)]">{noResultsMessage}</p>
+    );
+  }
 
   return (
     <div
@@ -243,45 +450,103 @@ const SpotifyApp = () => {
       )}
       {!mini && (
         <div className="flex-1 overflow-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="hidden md:block">
-            <h2 className="mb-2 text-lg">Playlist JSON</h2>
-            <textarea
-              className="w-full h-40 text-black p-1"
-              value={playlistText}
-              onChange={(e) => setPlaylistText(e.target.value)}
-            />
-            <button
-              onClick={loadPlaylist}
-              className="mt-2 rounded bg-blue-600 px-2 py-1 text-sm"
-            >
-              Load Playlist
-            </button>
-            <h2 className="mt-4 mb-2 text-lg">Queue</h2>
-            <ul className="max-h-40 overflow-auto border border-gray-700 rounded">
-              {queue.map((t, i) => (
-                <li key={t.url} className={i === current ? "bg-gray-700" : ""}>
+          <div className="space-y-4">
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-lg">Library</h2>
+                <button
+                  onClick={resetToDefaultQueue}
+                  className="rounded border border-gray-700 px-2 py-1 text-xs transition-colors hover:border-blue-500"
+                >
+                  Reset Queue
+                </button>
+              </div>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search tracks, albums, playlists"
+                className="w-full rounded border border-gray-700 bg-[var(--color-bg)] px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+              />
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {FILTER_ORDER.map((mode) => (
                   <button
-                    className="w-full text-left px-2 py-1 hover:bg-gray-600 focus:outline-none"
-                    onClick={() => setCurrent(i)}
+                    key={mode}
+                    onClick={() => setFilterMode(mode)}
+                    className={`rounded border px-2 py-1 transition-colors ${
+                      filterMode === mode
+                        ? "border-blue-500 bg-blue-600 text-white"
+                        : "border-gray-700 hover:border-blue-500"
+                    }`}
                   >
-                    {t.title || t.url}
+                    {MODE_LABELS[mode]} ({counts[mode]})
                   </button>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+              <div className="mt-3 max-h-64 overflow-auto rounded border border-gray-700">
+                {libraryContent}
+              </div>
+            </div>
+            <div>
+              <h2 className="mt-4 mb-2 text-lg">Queue</h2>
+              {queue.length ? (
+                <ul className="max-h-40 overflow-auto rounded border border-gray-700 divide-y divide-gray-700">
+                  {queue.map((t, i) => {
+                    const meta = [t.artist, t.album]
+                      .filter(Boolean)
+                      .join(" • ");
+                    return (
+                      <li key={t.url} className={i === current ? "bg-gray-700/60" : ""}>
+                        <button
+                          className="w-full px-2 py-2 text-left hover:bg-gray-600 focus:outline-none"
+                          onClick={() => setCurrent(i)}
+                        >
+                          <span className="block text-sm font-medium">
+                            {t.title || t.url}
+                          </span>
+                          {meta && (
+                            <span className="block text-xs text-[var(--color-muted)]">
+                              {meta}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="rounded border border-gray-700 px-2 py-2 text-sm text-[var(--color-muted)]">
+                  Queue is empty. Choose something from the library to start.
+                </p>
+              )}
+            </div>
           </div>
           <div>
             <h2 className="mb-2 text-lg">Recently Played</h2>
-            <ul className="max-h-72 overflow-auto border border-gray-700 rounded">
-              {recent.map((t) => (
-                <li
-                  key={t.url}
-                  className="px-2 py-1 border-b border-gray-700 last:border-b-0"
-                >
-                  {t.title || t.url}
-                </li>
-              ))}
-            </ul>
+            {recent.length ? (
+              <ul className="max-h-72 overflow-auto rounded border border-gray-700 divide-y divide-gray-700">
+                {recent.map((t) => {
+                  const meta = [t.artist, t.album]
+                    .filter(Boolean)
+                    .join(" • ");
+                  return (
+                    <li key={t.url} className="px-2 py-2">
+                      <span className="block text-sm font-medium">
+                        {t.title || t.url}
+                      </span>
+                      {meta && (
+                        <span className="block text-xs text-[var(--color-muted)]">
+                          {meta}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="rounded border border-gray-700 px-2 py-2 text-sm text-[var(--color-muted)]">
+                Nothing here yet. Play a track to populate your history.
+              </p>
+            )}
           </div>
         </div>
       )}
