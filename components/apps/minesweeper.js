@@ -11,10 +11,54 @@ import { getDailySeed } from '../../utils/dailySeed';
  * and renders to a canvas element.
  */
 
-const BOARD_SIZE = 8;
-const MINES_COUNT = 10;
+const DEFAULT_SIZE = 8;
+const DEFAULT_MINES = 10;
+export const MIN_BOARD_SIZE = 4;
+export const MAX_BOARD_SIZE = 24;
+const MIN_MINES = 1;
 const CELL_SIZE = 32;
-const CANVAS_SIZE = BOARD_SIZE * CELL_SIZE;
+
+export const validateConfig = (sizeInput, minesInput) => {
+  const sizeNumber = Number(sizeInput);
+  if (!Number.isFinite(sizeNumber)) {
+    return { valid: false, error: 'Board size must be a number.' };
+  }
+  const size = Math.floor(sizeNumber);
+  if (size < MIN_BOARD_SIZE || size > MAX_BOARD_SIZE) {
+    return {
+      valid: false,
+      error: `Board size must be between ${MIN_BOARD_SIZE} and ${MAX_BOARD_SIZE}.`,
+    };
+  }
+
+  const minesNumber = Number(minesInput);
+  if (!Number.isFinite(minesNumber)) {
+    return { valid: false, error: 'Mine count must be a number.' };
+  }
+  const mines = Math.floor(minesNumber);
+  if (mines < MIN_MINES) {
+    return {
+      valid: false,
+      error: 'Mine count must be at least 1.',
+    };
+  }
+
+  const maxMines = size * size - 1;
+  if (mines > maxMines) {
+    return {
+      valid: false,
+      error: `Mine count must be between ${MIN_MINES} and ${maxMines}.`,
+    };
+  }
+
+  return { valid: true, size, mines, maxMines };
+};
+
+const PRESETS = [
+  { id: 'beginner', label: 'Beginner', size: 8, mines: 10 },
+  { id: 'intermediate', label: 'Intermediate', size: 16, mines: 40 },
+  { id: 'expert', label: 'Expert', size: 24, mines: 99 },
+];
 
 const numberColors = [
   '#0000ff',
@@ -47,9 +91,9 @@ const hashSeed = (str) => {
 const cloneBoard = (board) =>
   board.map((row) => row.map((cell) => ({ ...cell })));
 
-const generateBoard = (seed, sx, sy) => {
-  const board = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => ({
+const generateBoard = (seed, sx, sy, size, mines) => {
+  const board = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => ({
       mine: false,
       revealed: false,
       flagged: false,
@@ -59,10 +103,7 @@ const generateBoard = (seed, sx, sy) => {
   );
 
   const rng = mulberry32(seed);
-  const indices = Array.from(
-    { length: BOARD_SIZE * BOARD_SIZE },
-    (_, i) => i,
-  );
+  const indices = Array.from({ length: size * size }, (_, i) => i);
 
   // Fisher-Yates shuffle using seeded rng
   for (let i = indices.length - 1; i > 0; i--) {
@@ -75,25 +116,25 @@ const generateBoard = (seed, sx, sy) => {
     for (let dy = -1; dy <= 1; dy++) {
       const nx = sx + dx;
       const ny = sy + dy;
-      if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
-        safe.add(nx * BOARD_SIZE + ny);
+      if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+        safe.add(nx * size + ny);
       }
     }
   }
 
   let placed = 0;
   for (const idx of indices) {
-    if (placed >= MINES_COUNT) break;
+    if (placed >= mines) break;
     if (safe.has(idx)) continue;
-    const x = Math.floor(idx / BOARD_SIZE);
-    const y = idx % BOARD_SIZE;
+    const x = Math.floor(idx / size);
+    const y = idx % size;
     board[x][y].mine = true;
     placed++;
   }
 
   const dirs = [-1, 0, 1];
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
       if (board[x][y].mine) continue;
       let count = 0;
       dirs.forEach((dx) =>
@@ -103,9 +144,9 @@ const generateBoard = (seed, sx, sy) => {
           const ny = y + dy;
           if (
             nx >= 0 &&
-            nx < BOARD_SIZE &&
+            nx < size &&
             ny >= 0 &&
-            ny < BOARD_SIZE &&
+            ny < size &&
             board[nx][ny].mine
           ) {
             count++;
@@ -123,11 +164,10 @@ const checkWin = (board) =>
   board.flat().every((cell) => cell.revealed || cell.mine);
 
 const calculateRiskMap = (board) => {
-  const risk = Array.from({ length: BOARD_SIZE }, () =>
-    Array(BOARD_SIZE).fill(0),
-  );
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
+  const size = board.length;
+  const risk = Array.from({ length: size }, () => Array(size).fill(0));
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
       const cell = board[x][y];
       if (cell.revealed || cell.flagged) continue;
       let maxProb = 0;
@@ -136,7 +176,7 @@ const calculateRiskMap = (board) => {
           if (dx === 0 && dy === 0) continue;
           const nx = x + dx;
           const ny = y + dy;
-          if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) continue;
+          if (nx < 0 || nx >= size || ny < 0 || ny >= size) continue;
           const nCell = board[nx][ny];
           if (!nCell.revealed || nCell.mine || nCell.adjacent === 0) continue;
           let flagged = 0;
@@ -146,12 +186,7 @@ const calculateRiskMap = (board) => {
               if (ox === 0 && oy === 0) continue;
               const mx = nx + ox;
               const my = ny + oy;
-              if (
-                mx < 0 ||
-                mx >= BOARD_SIZE ||
-                my < 0 ||
-                my >= BOARD_SIZE
-              )
+              if (mx < 0 || mx >= size || my < 0 || my >= size)
                 continue;
               const around = board[mx][my];
               if (around.flagged) flagged++;
@@ -184,6 +219,11 @@ const Minesweeper = () => {
       workerRef.current = null;
     }
   };
+  const [boardSize, setBoardSize] = useState(DEFAULT_SIZE);
+  const [mineCount, setMineCount] = useState(DEFAULT_MINES);
+  const [customSize, setCustomSize] = useState(DEFAULT_SIZE.toString());
+  const [customMines, setCustomMines] = useState(DEFAULT_MINES.toString());
+  const [configError, setConfigError] = useState('');
   const [board, setBoard] = useState(null);
   const [status, setStatus] = useState('ready');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
@@ -218,6 +258,8 @@ const Minesweeper = () => {
   const rightDown = useRef(false);
   const chorded = useRef(false);
   const flagAnim = useRef({});
+  const canvasSize = boardSize * CELL_SIZE;
+  const maxMines = Math.max(boardSize * boardSize - 1, 1);
 
   useEffect(() => {
     initWorker();
@@ -237,10 +279,35 @@ const Minesweeper = () => {
       if (saved) {
         try {
           const data = JSON.parse(saved);
+          const configResult = validateConfig(
+            data.size ?? DEFAULT_SIZE,
+            data.mines ?? DEFAULT_MINES,
+          );
+          const targetSize = configResult.valid
+            ? configResult.size
+            : DEFAULT_SIZE;
+          const targetMines = configResult.valid
+            ? configResult.mines
+            : Math.min(DEFAULT_MINES, targetSize * targetSize - 1);
+          setBoardSize(targetSize);
+          setMineCount(targetMines);
+          setCustomSize(targetSize.toString());
+          setCustomMines(targetMines.toString());
+
           if (data.board) {
-            const first = data.board[0]?.[0];
-            setBoard(Array.isArray(first) ? deserializeBoard(data.board) : data.board);
-            setHasSave(true);
+            const stored = Array.isArray(data.board[0])
+              ? deserializeBoard(data.board)
+              : data.board;
+            if (
+              Array.isArray(stored) &&
+              stored.length === targetSize &&
+              stored[0]?.length === targetSize
+            ) {
+              setBoard(stored);
+              setHasSave(true);
+            } else {
+              setHasSave(false);
+            }
           } else {
             setHasSave(false);
           }
@@ -325,13 +392,13 @@ const Minesweeper = () => {
     const ctx = canvas.getContext('2d');
     let frame;
     const draw = () => {
-      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.clearRect(0, 0, canvasSize, canvasSize);
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const riskMap = showRisk && board ? calculateRiskMap(board) : null;
-      for (let x = 0; x < BOARD_SIZE; x++) {
-        for (let y = 0; y < BOARD_SIZE; y++) {
+      for (let x = 0; x < boardSize; x++) {
+        for (let y = 0; y < boardSize; y++) {
           const cell = board
             ? board[x][y]
             : {
@@ -401,22 +468,22 @@ const Minesweeper = () => {
       }
       if (paused && status === 'playing') {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
         ctx.fillStyle = '#fff';
-        ctx.fillText('Paused', CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+        ctx.fillText('Paused', canvasSize / 2, canvasSize / 2);
       }
       frame = requestAnimationFrame(draw);
     };
     draw();
     return () => cancelAnimationFrame(frame);
-    }, [board, status, paused, flags, showRisk, cursor, cursorVisible]);
+    }, [board, status, paused, flags, showRisk, cursor, cursorVisible, boardSize, canvasSize]);
 
   useEffect(() => {
     if (!useQuestionMarks && board) {
       const newBoard = cloneBoard(board);
       let changed = false;
-      for (let x = 0; x < BOARD_SIZE; x++) {
-        for (let y = 0; y < BOARD_SIZE; y++) {
+      for (let x = 0; x < newBoard.length; x++) {
+        for (let y = 0; y < newBoard[x].length; y++) {
           if (newBoard[x][y].question) {
             newBoard[x][y].question = false;
             changed = true;
@@ -441,12 +508,14 @@ const Minesweeper = () => {
           bvps,
           flags,
           paused,
+          size: boardSize,
+          mines: mineCount,
         };
         localStorage.setItem('minesweeper-state', JSON.stringify(data));
         setHasSave(!!board);
       } catch {}
     }
-  }, [board, status, seed, shareCode, startTime, elapsed, bv, bvps, flags, paused]);
+  }, [board, status, seed, shareCode, startTime, elapsed, bv, bvps, flags, paused, boardSize, mineCount]);
 
   const playSound = (type) => {
     if (!sound || typeof window === 'undefined') return;
@@ -561,8 +630,10 @@ const Minesweeper = () => {
   };
 
   const startGame = async (x, y) => {
+    const size = boardSize;
+    const mines = Math.min(mineCount, size * size - 1);
     flagAnim.current = {};
-    const newBoard = generateBoard(seed, x, y);
+    const newBoard = generateBoard(seed, x, y, size, mines);
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
@@ -596,6 +667,7 @@ const Minesweeper = () => {
     }
 
     const newBoard = cloneBoard(board);
+    const size = newBoard.length;
     const cell = newBoard[x][y];
 
     if (cell.revealed) {
@@ -608,9 +680,9 @@ const Minesweeper = () => {
             const ny = y + dy;
             if (
               nx >= 0 &&
-              nx < BOARD_SIZE &&
+              nx < size &&
               ny >= 0 &&
-              ny < BOARD_SIZE &&
+              ny < size &&
               newBoard[nx][ny].flagged
             ) {
               flagged++;
@@ -625,9 +697,9 @@ const Minesweeper = () => {
               const ny = y + dy;
               if (
                 nx >= 0 &&
-                nx < BOARD_SIZE &&
+                nx < size &&
                 ny >= 0 &&
-                ny < BOARD_SIZE &&
+                ny < size &&
                 !newBoard[nx][ny].flagged
               ) {
                 const { hit, cells: revealed } = await computeRevealed(
@@ -694,6 +766,7 @@ const Minesweeper = () => {
   const toggleFlag = (x, y) => {
     if (status !== 'playing' || paused || !board) return;
     const newBoard = cloneBoard(board);
+    const size = newBoard.length;
     const cell = newBoard[x][y];
     if (cell.revealed) return;
 
@@ -742,9 +815,9 @@ const Minesweeper = () => {
         const ny = y + dy;
         if (
           nx >= 0 &&
-          nx < BOARD_SIZE &&
+          nx < size &&
           ny >= 0 &&
-          ny < BOARD_SIZE &&
+          ny < size &&
           newBoard[nx][ny].flagged
         ) {
           flagged++;
@@ -759,9 +832,9 @@ const Minesweeper = () => {
         const ny = y + dy;
         if (
           nx >= 0 &&
-          nx < BOARD_SIZE &&
+          nx < size &&
           ny >= 0 &&
-          ny < BOARD_SIZE &&
+          ny < size &&
           !newBoard[nx][ny].flagged
         ) {
           const { hit, cells: revealed } = await computeRevealed(
@@ -792,8 +865,15 @@ const Minesweeper = () => {
 
   const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const size = board ? board.length : boardSize;
+    const y = Math.max(
+      0,
+      Math.min(size - 1, Math.floor((e.clientX - rect.left) / CELL_SIZE)),
+    );
+    const x = Math.max(
+      0,
+      Math.min(size - 1, Math.floor((e.clientY - rect.top) / CELL_SIZE)),
+    );
     setCursor({ x, y });
     setCursorVisible(true);
     setFacePressed(true);
@@ -809,8 +889,15 @@ const Minesweeper = () => {
 
   const handleMouseUp = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const size = board ? board.length : boardSize;
+    const y = Math.max(
+      0,
+      Math.min(size - 1, Math.floor((e.clientX - rect.left) / CELL_SIZE)),
+    );
+    const x = Math.max(
+      0,
+      Math.min(size - 1, Math.floor((e.clientY - rect.top) / CELL_SIZE)),
+    );
     setCursor({ x, y });
     setFacePressed(false);
     if (e.button === 0) {
@@ -837,8 +924,15 @@ const Minesweeper = () => {
 
   const handleMouseMove = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const size = board ? board.length : boardSize;
+    const y = Math.max(
+      0,
+      Math.min(size - 1, Math.floor((e.clientX - rect.left) / CELL_SIZE)),
+    );
+    const x = Math.max(
+      0,
+      Math.min(size - 1, Math.floor((e.clientY - rect.top) / CELL_SIZE)),
+    );
     setCursor({ x, y });
     setCursorVisible(true);
   };
@@ -859,17 +953,19 @@ const Minesweeper = () => {
   };
 
   const handleKeyDown = (e) => {
+    const limit = board ? board.length : boardSize;
+    if (limit <= 0) return;
     if (e.key === 'ArrowUp') {
       setCursor((c) => ({ x: Math.max(0, c.x - 1), y: c.y }));
       setCursorVisible(true);
     } else if (e.key === 'ArrowDown') {
-      setCursor((c) => ({ x: Math.min(BOARD_SIZE - 1, c.x + 1), y: c.y }));
+      setCursor((c) => ({ x: Math.min(limit - 1, c.x + 1), y: c.y }));
       setCursorVisible(true);
     } else if (e.key === 'ArrowLeft') {
       setCursor((c) => ({ x: c.x, y: Math.max(0, c.y - 1) }));
       setCursorVisible(true);
     } else if (e.key === 'ArrowRight') {
-      setCursor((c) => ({ x: c.x, y: Math.min(BOARD_SIZE - 1, c.y + 1) }));
+      setCursor((c) => ({ x: c.x, y: Math.min(limit - 1, c.y + 1) }));
       setCursorVisible(true);
     } else if (e.key.toLowerCase() === 'f') {
       toggleFlag(cursor.x, cursor.y);
@@ -898,6 +994,35 @@ const Minesweeper = () => {
     setFaceBtnDown(false);
     setCursor({ x: 0, y: 0 });
     setCursorVisible(false);
+    setHasSave(false);
+  };
+
+  const applyConfig = (size, mines) => {
+    setBoardSize(size);
+    setMineCount(mines);
+    setCustomSize(size.toString());
+    setCustomMines(mines.toString());
+    setConfigError('');
+    reset();
+  };
+
+  const handlePresetSelect = (preset) => {
+    const result = validateConfig(preset.size, preset.mines);
+    if (!result.valid) {
+      setConfigError(result.error);
+      return;
+    }
+    applyConfig(result.size, result.mines);
+  };
+
+  const handleCustomSubmit = (e) => {
+    e.preventDefault();
+    const result = validateConfig(customSize, customMines);
+    if (!result.valid) {
+      setConfigError(result.error);
+      return;
+    }
+    applyConfig(result.size, result.mines);
   };
 
   const copyCode = () => {
@@ -928,7 +1053,9 @@ const Minesweeper = () => {
       const x = parseInt(parts[1], 10);
       const y = parseInt(parts[2], 10);
       if (!Number.isNaN(x) && !Number.isNaN(y)) {
-        const newBoard = generateBoard(newSeed, x, y);
+        const size = boardSize;
+        const mines = Math.min(mineCount, size * size - 1);
+        const newBoard = generateBoard(newSeed, x, y, size, mines);
         setBoard(newBoard);
         setStatus('playing');
         setStartTime(Date.now());
@@ -960,10 +1087,32 @@ const Minesweeper = () => {
     if (!saved) return;
     try {
       const data = JSON.parse(saved);
+      const configResult = validateConfig(
+        data.size ?? boardSize,
+        data.mines ?? mineCount,
+      );
+      const targetSize = configResult.valid ? configResult.size : boardSize;
+      const targetMines = configResult.valid ? configResult.mines : mineCount;
+      if (configResult.valid) {
+        setBoardSize(targetSize);
+        setMineCount(targetMines);
+        setCustomSize(targetSize.toString());
+        setCustomMines(targetMines.toString());
+      }
       if (data.board) {
-        const first = data.board[0]?.[0];
-        setBoard(Array.isArray(first) ? deserializeBoard(data.board) : data.board);
-        setHasSave(true);
+        const stored = Array.isArray(data.board[0])
+          ? deserializeBoard(data.board)
+          : data.board;
+        if (
+          Array.isArray(stored) &&
+          stored.length === targetSize &&
+          stored[0]?.length === targetSize
+        ) {
+          setBoard(stored);
+          setHasSave(true);
+        } else {
+          setHasSave(false);
+        }
       } else {
         setHasSave(false);
       }
@@ -1011,39 +1160,117 @@ const Minesweeper = () => {
   return (
     <GameLayout gameId="minesweeper">
       <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
-      <div className="mb-2 flex items-center space-x-2">
-        <span>Seed:</span>
-        <span className="font-mono">{seed.toString(36)}</span>
-        {shareCode && (
-          <button
-            onClick={copyCode}
+        <div className="w-full max-w-xl mb-4">
+          <div className="mb-2 flex flex-wrap justify-center gap-2">
+            {PRESETS.map((preset) => {
+              const isActive =
+                boardSize === preset.size && mineCount === preset.mines;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handlePresetSelect(preset)}
+                  className={`px-3 py-1 rounded border transition focus:outline-none focus:ring ${
+                    isActive
+                      ? 'border-blue-400 bg-gray-700'
+                      : 'border-transparent bg-gray-700 hover:bg-gray-600'
+                  }`}
+                  aria-pressed={isActive}
+                >
+                  {preset.label}{' '}
+                  <span className="text-xs text-gray-300">
+                    ({preset.size}×{preset.size}, {preset.mines} mines)
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <form
+            onSubmit={handleCustomSubmit}
+            className="flex flex-wrap items-end justify-center gap-3"
+          >
+            <label htmlFor="minesweeper-size" className="flex flex-col text-sm">
+              <span id="minesweeper-size-label">Size</span>
+              <input
+                id="minesweeper-size"
+                type="number"
+                inputMode="numeric"
+                className="mt-1 w-24 rounded border border-gray-600 bg-white px-2 py-1 text-black"
+                value={customSize}
+                min={MIN_BOARD_SIZE}
+                max={MAX_BOARD_SIZE}
+                step={1}
+                aria-labelledby="minesweeper-size-label"
+                onChange={(e) => setCustomSize(e.target.value)}
+              />
+            </label>
+            <label htmlFor="minesweeper-mines" className="flex flex-col text-sm">
+              <span id="minesweeper-mines-label">Mines</span>
+              <input
+                id="minesweeper-mines"
+                type="number"
+                inputMode="numeric"
+                className="mt-1 w-28 rounded border border-gray-600 bg-white px-2 py-1 text-black"
+                value={customMines}
+                min={MIN_MINES}
+                max={maxMines}
+                step={1}
+                aria-labelledby="minesweeper-mines-label"
+                onChange={(e) => setCustomMines(e.target.value)}
+              />
+            </label>
+            <button
+              type="submit"
+              className="rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring"
+            >
+              Start Custom Game
+            </button>
+          </form>
+          {configError && (
+            <p className="mt-2 text-center text-sm text-red-400">{configError}</p>
+          )}
+          <p className="mt-2 text-center text-xs text-gray-300">
+            Current board: {boardSize}×{boardSize} with {mineCount} mines (max {maxMines}).
+          </p>
+        </div>
+        <div className="mb-2 flex items-center space-x-2">
+          <span>Seed:</span>
+          <span className="font-mono">{seed.toString(36)}</span>
+          {shareCode && (
+            <button
+              onClick={copyCode}
             className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
           >
             Copy Code
           </button>
         )}
       </div>
-      <div className="mb-2 flex items-center space-x-2">
-        <input
-          className="px-1 text-black"
-          value={codeInput}
-          onChange={(e) => setCodeInput(e.target.value)}
-          placeholder="seed or share code"
-        />
-        <button
-          onClick={loadFromCode}
-          className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Load
-        </button>
-      </div>
-      <div className="mb-2">Mines: {MINES_COUNT - flags}</div>
-      <div className="mb-2">
-        3BV: {bv}
-        {(status === 'won' || status === 'lost') && bvps !== null
-          ? ` | 3BV/s: ${bvps.toFixed(2)}`
-          : ''}
-        {` | Best: ${bestTime ? bestTime.toFixed(2) : '--'}s`}
+          <div className="mb-2 flex items-center space-x-2">
+            <label htmlFor="minesweeper-seed-input" className="sr-only">
+              Seed or share code
+            </label>
+            <input
+              id="minesweeper-seed-input"
+              className="px-1 text-black"
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value)}
+              placeholder="seed or share code"
+              aria-label="Seed or share code"
+            />
+          <button
+            onClick={loadFromCode}
+            className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Load
+          </button>
+        </div>
+        <div className="mb-2">Mines: {Math.max(mineCount - flags, 0)}</div>
+        <div className="mb-2">
+          3BV: {bv}
+          {(status === 'won' || status === 'lost') && bvps !== null
+            ? ` | 3BV/s: ${bvps.toFixed(2)}`
+            : ''}
+          {` | Best: ${bestTime ? bestTime.toFixed(2) : '--'}s`}
         {(status === 'won' || status === 'lost')
           ? ` | Time: ${elapsed.toFixed(2)}s`
           : ''}
@@ -1069,20 +1296,21 @@ const Minesweeper = () => {
           {face}
         </button>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onContextMenu={handleContextMenu}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        className="bg-gray-700 mb-4"
-        style={{ imageRendering: 'pixelated' }}
-      />
+          <canvas
+            ref={canvasRef}
+            width={canvasSize}
+            height={canvasSize}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onContextMenu={handleContextMenu}
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+            className="bg-gray-700 mb-4"
+            aria-label="Minesweeper board"
+            style={{ imageRendering: 'pixelated' }}
+          />
       <div className="mt-2 mb-2">
         {status === 'ready'
           ? 'Click any cell to start'
@@ -1126,21 +1354,29 @@ const Minesweeper = () => {
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-gray-800 p-4 rounded">
             <h2 className="mb-2 text-center">Settings</h2>
-            <div className="mb-2 flex items-center">
-              <label className="w-40">Question Marks</label>
-              <input
-                type="checkbox"
-                checked={useQuestionMarks}
-                onChange={(e) => setUseQuestionMarks(e.target.checked)}
-              />
-            </div>
-            <div className="mb-2 flex items-center">
-              <label className="w-40">Solver Assist</label>
-              <input
-                type="checkbox"
-                checked={showRisk}
-                onChange={(e) => setShowRisk(e.target.checked)}
-              />
+              <div className="mb-2 flex items-center">
+                <label htmlFor="question-marks-toggle" className="w-40">
+                  Question Marks
+                </label>
+                <input
+                  id="question-marks-toggle"
+                  type="checkbox"
+                  checked={useQuestionMarks}
+                  aria-label="Toggle question marks"
+                  onChange={(e) => setUseQuestionMarks(e.target.checked)}
+                />
+              </div>
+              <div className="mb-2 flex items-center">
+                <label htmlFor="solver-assist-toggle" className="w-40">
+                  Solver Assist
+                </label>
+                <input
+                  id="solver-assist-toggle"
+                  type="checkbox"
+                  checked={showRisk}
+                  aria-label="Toggle solver assist"
+                  onChange={(e) => setShowRisk(e.target.checked)}
+                />
             </div>
             <button
               className="mt-2 px-2 py-1 bg-blue-500"
