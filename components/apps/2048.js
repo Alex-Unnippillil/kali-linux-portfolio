@@ -4,6 +4,7 @@ import useOPFS from '../../hooks/useOPFS.js';
 import GameLayout, { useInputRecorder } from './GameLayout';
 import useGameControls from './useGameControls';
 import { vibrate } from './Games/common/haptics';
+import { findHint as computeHint, scoreMoves as computeScores } from '../../apps/games/_2048/ai';
 import {
   random,
   reset as resetRng,
@@ -206,6 +207,20 @@ const tileSymbols = {
   2048: '✦',
 };
 
+const HINT_ICONS = {
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+  ArrowLeft: '←',
+  ArrowRight: '→',
+};
+
+const HINT_LABELS = {
+  ArrowUp: 'Up',
+  ArrowDown: 'Down',
+  ArrowLeft: 'Left',
+  ArrowRight: 'Right',
+};
+
 const validateBoard = (b) =>
   Array.isArray(b) &&
   b.length === SIZE &&
@@ -242,6 +257,7 @@ const Game2048 = () => {
   const workerRef = useRef(null);
   const { highContrast } = useSettings();
   const { record, registerReplay } = useInputRecorder();
+  const hintLabel = hint ? HINT_LABELS[hint] || hint.replace('Arrow', '') : '';
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -300,6 +316,19 @@ const Game2048 = () => {
     };
     return () => workerRef.current?.terminate();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setHint(computeHint(board));
+      if (coach) setMoveScores(computeScores(board));
+      else setMoveScores(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [board, coach]);
 
   useEffect(() => {
     if (!bestReady) return;
@@ -599,8 +628,13 @@ const Game2048 = () => {
           <div className="px-4 py-2 bg-gray-700 rounded" data-testid="combo-meter">
             Combo: {combo}
           </div>
-          <div className="px-4 py-2 bg-gray-700 rounded" data-testid="hint-display">
-            Hint: {hint ? hint.replace('Arrow', '') : ''}
+          <div
+            className="px-4 py-2 bg-gray-700 rounded"
+            data-testid="hint-display"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            Hint: {hintLabel}
           </div>
         </div>
         <div className="relative inline-block">
@@ -635,6 +669,18 @@ const Game2048 = () => {
               })
             )}
           </div>
+          {hint && (
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              aria-hidden="true"
+              data-testid="hint-overlay"
+            >
+              <div className="bg-black/70 text-yellow-300 px-3 py-1 rounded-full flex items-center space-x-2 shadow-lg border border-yellow-500/40">
+                <span className="text-2xl leading-none">{HINT_ICONS[hint] || ''}</span>
+                <span className="uppercase tracking-wide text-xs font-semibold">{hintLabel}</span>
+              </div>
+            </div>
+          )}
           {coach && moveScores && (
             <>
               <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm">
