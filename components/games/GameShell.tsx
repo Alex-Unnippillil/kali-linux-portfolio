@@ -5,6 +5,7 @@ import useOrientationGuard from '../../hooks/useOrientationGuard';
 import useGameInput from '../../hooks/useGameInput';
 import usePersistentState from '../../hooks/usePersistentState';
 import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
+import FadeInOnMount from '../common/FadeInOnMount';
 
 interface GameShellProps {
   game: string;
@@ -74,9 +75,10 @@ export default function GameShell({
     importGameSettings(game, text);
   };
 
+  const shellClassName = `game-shell${paused ? ' paused' : ''}${muted ? ' muted' : ''}`;
+
   return (
-    <div className={`game-shell${paused ? ' paused' : ''}${muted ? ' muted' : ''}`}
-         data-speed={speed}>
+    <FadeInOnMount className={shellClassName} data-speed={speed}>
       <div className="game-content">{children}</div>
       {controls && <div className="game-controls">{controls}</div>}
       {showSettings && settings && (
@@ -125,6 +127,6 @@ export default function GameShell({
           if (e.target) e.target.value = '';
         }}
       />
-    </div>
+    </FadeInOnMount>
   );
 }

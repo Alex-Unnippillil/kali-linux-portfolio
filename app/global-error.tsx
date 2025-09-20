@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { reportClientError } from '../lib/client-error-reporter';
+import FadeInOnMount from '../components/common/FadeInOnMount';
 
 export default function GlobalError({
   error,
@@ -17,7 +18,7 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+        <FadeInOnMount className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
           <h2 className="text-xl font-semibold">Something went wrong!</h2>
           <button
             type="button"
@@ -26,7 +27,7 @@ export default function GlobalError({
           >
             Try again
           </button>
-        </div>
+        </FadeInOnMount>
       </body>
     </html>
   );
