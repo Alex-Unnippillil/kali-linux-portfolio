@@ -657,13 +657,14 @@ export class Window extends Component {
                             close={this.closeWindow}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.metadata)}
                         />
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                                openApp={this.props.openApp}
+                                metadata={this.props.metadata} />)}
                     </div>
                 </Draggable >
             </>
@@ -839,7 +840,7 @@ export class WindowMainScreen extends Component {
     render() {
         return (
             <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.metadata)}
             </div>
         )
     }
