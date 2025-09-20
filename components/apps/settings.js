@@ -1,9 +1,71 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { SOUND_THEMES, useSoundTheme } from '../../hooks/useSoundTheme';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
+const WAVE_SAMPLE_COUNT = 48;
+
+const sampleWaveform = (waveform, progress) => {
+    const normalized = progress % 1;
+    const angle = normalized * Math.PI * 2;
+    switch (waveform) {
+        case 'square':
+            return Math.sign(Math.sin(angle)) || 0;
+        case 'triangle':
+            return (2 / Math.PI) * Math.asin(Math.sin(angle));
+        case 'sawtooth':
+            return 2 * (normalized - Math.floor(normalized + 0.5));
+        case 'sine':
+        default:
+            return Math.sin(angle);
+    }
+};
+
+const createWavePath = (waveform, amplitude, width, height, phase = 0) => {
+    const midY = height / 2;
+    const amp = (height / 2 - 4) * Math.min(1, Math.max(0, amplitude));
+    let d = '';
+    for (let i = 0; i <= WAVE_SAMPLE_COUNT; i += 1) {
+        const progress = i / WAVE_SAMPLE_COUNT;
+        const value = sampleWaveform(waveform, progress + phase);
+        const x = progress * width;
+        const y = midY - value * amp;
+        d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
+    }
+    return d;
+};
+
+const WaveformThumbnail = ({ preview, active }) => {
+    const width = 96;
+    const height = 48;
+    return (
+        <svg
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            className="mt-2 w-full rounded-md bg-black/40"
+            role="presentation"
+            aria-hidden="true"
+        >
+            <rect x="0" y="0" width={width} height={height} rx="8" ry="8" fill="rgba(15,19,23,0.7)" />
+            {preview.map((tone, index) => (
+                <path
+                    key={`${tone.band}-${tone.waveform}`}
+                    d={createWavePath(tone.waveform, tone.amplitude, width, height, index * 0.35)}
+                    stroke={tone.color}
+                    strokeWidth={active ? 2.2 : 1.6}
+                    strokeLinecap="round"
+                    fill="none"
+                    opacity={tone.band === 'soft' ? 0.95 : tone.band === 'mid' ? 0.8 : 0.7}
+                />
+            ))}
+        </svg>
+    );
+};
+
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, soundTheme, setSoundTheme, soundThemeVolume, setSoundThemeVolume, audioCues, setAudioCues } = useSettings();
+    const { previewTheme } = useSoundTheme({ themeId: soundTheme, volumeMultiplier: soundThemeVolume, enabled: audioCues });
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -71,6 +133,77 @@ export function Settings() {
                     <option value="neon">Neon</option>
                     <option value="matrix">Matrix</option>
                 </select>
+            </div>
+            <div className="w-full px-4">
+                <div className="mx-auto my-4 max-w-4xl rounded-lg border border-gray-900 bg-black/40 p-4 shadow-inner">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h2 className="text-ubt-grey font-semibold">Sound Theme</h2>
+                            <p className="text-xs text-ubt-grey/70">
+                                Map notification categories to low, mid, and soft tones for quick recognition.
+                            </p>
+                        </div>
+                        <label className="flex items-center gap-2 text-ubt-grey text-sm">
+                            <input
+                                type="checkbox"
+                                checked={audioCues}
+                                onChange={(e) => setAudioCues(e.target.checked)}
+                                className="h-4 w-4"
+                            />
+                            Enable audio cues
+                        </label>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        {SOUND_THEMES.map((themeOption) => {
+                            const isActive = themeOption.id === soundTheme;
+                            return (
+                                <button
+                                    key={themeOption.id}
+                                    type="button"
+                                    onClick={() => setSoundTheme(themeOption.id)}
+                                    className={`group flex flex-col rounded-lg border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400 ${isActive ? 'border-ub-orange bg-black/60 shadow-lg shadow-orange-500/20' : 'border-gray-800/80 hover:border-orange-400 hover:bg-black/50'}`}
+                                >
+                                    <span className="text-sm font-semibold text-ubt-grey">{themeOption.label}</span>
+                                    <WaveformThumbnail preview={themeOption.preview} active={isActive} />
+                                    <span className="mt-2 text-xs text-ubt-grey/70">{themeOption.description}</span>
+                                    <div className="mt-3 flex items-center justify-between text-xs text-ubt-grey/60">
+                                        <span>{isActive ? 'Selected' : 'Tap to select'}</span>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                previewTheme(themeOption.id);
+                                            }}
+                                            disabled={!audioCues}
+                                            className={`rounded px-2 py-1 font-semibold transition ${audioCues ? 'bg-orange-500/20 text-ub-orange hover:bg-orange-500/30 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-orange-400' : 'cursor-not-allowed bg-gray-800/60 text-gray-500'}`}
+                                        >
+                                            Preview
+                                        </button>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center">
+                        <label htmlFor="sound-theme-volume" className="text-sm text-ubt-grey md:w-40">
+                            Cue loudness
+                        </label>
+                        <div className="flex flex-1 items-center gap-3">
+                            <input
+                                id="sound-theme-volume"
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={soundThemeVolume}
+                                onChange={(e) => setSoundThemeVolume(parseFloat(e.target.value))}
+                                disabled={!audioCues}
+                                className="ubuntu-slider flex-1"
+                            />
+                            <span className="w-12 text-right text-xs text-ubt-grey/70">{Math.round(soundThemeVolume * 100)}%</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
@@ -251,6 +384,9 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setSoundTheme(defaults.soundTheme);
+                        setSoundThemeVolume(defaults.soundThemeVolume);
+                        setAudioCues(defaults.audioCues);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -275,6 +411,9 @@ export function Settings() {
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.soundTheme !== undefined) setSoundTheme(parsed.soundTheme);
+                        if (parsed.soundThemeVolume !== undefined) setSoundThemeVolume(parsed.soundThemeVolume);
+                        if (parsed.audioCues !== undefined) setAudioCues(parsed.audioCues);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);

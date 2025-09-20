@@ -20,6 +20,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getSoundTheme as loadSoundTheme,
+  setSoundTheme as saveSoundTheme,
+  getSoundThemeVolume as loadSoundThemeVolume,
+  setSoundThemeVolume as saveSoundThemeVolume,
+  getAudioCues as loadAudioCues,
+  setAudioCues as saveAudioCues,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +69,9 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  soundTheme: string;
+  soundThemeVolume: number;
+  audioCues: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +83,9 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setSoundTheme: (value: string) => void;
+  setSoundThemeVolume: (value: number) => void;
+  setAudioCues: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +100,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  soundTheme: defaults.soundTheme,
+  soundThemeVolume: defaults.soundThemeVolume,
+  audioCues: defaults.audioCues,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +114,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setSoundTheme: () => {},
+  setSoundThemeVolume: () => {},
+  setAudioCues: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +131,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [soundTheme, setSoundTheme] = useState<string>(defaults.soundTheme);
+  const [soundThemeVolume, setSoundThemeVolume] = useState<number>(defaults.soundThemeVolume);
+  const [audioCues, setAudioCues] = useState<boolean>(defaults.audioCues);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +149,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setSoundTheme(await loadSoundTheme());
+      setSoundThemeVolume(await loadSoundThemeVolume());
+      setAudioCues(await loadAudioCues());
     })();
   }, []);
 
@@ -236,6 +260,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveSoundTheme(soundTheme);
+  }, [soundTheme]);
+
+  useEffect(() => {
+    const volume = Math.min(1, Math.max(0, Number.isFinite(soundThemeVolume) ? soundThemeVolume : defaults.soundThemeVolume));
+    saveSoundThemeVolume(volume);
+    if (volume !== soundThemeVolume) {
+      setSoundThemeVolume(volume);
+    }
+  }, [soundThemeVolume]);
+
+  useEffect(() => {
+    saveAudioCues(audioCues);
+  }, [audioCues]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +290,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        soundTheme,
+        soundThemeVolume,
+        audioCues,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +304,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setSoundTheme,
+        setSoundThemeVolume,
+        setAudioCues,
       }}
     >
       {children}

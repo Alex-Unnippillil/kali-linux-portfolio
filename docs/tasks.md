@@ -56,6 +56,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 
 ### Settings
 - Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.js`.
+- Document default notification cues: soft sine for info/success, mid triangle for warnings, and low sine for errors.
 
 ### Resource Monitor
 - Display `performance.memory` data and FPS from `performance.now()` deltas.

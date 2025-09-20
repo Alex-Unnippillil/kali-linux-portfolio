@@ -154,6 +154,48 @@ export default function useGameAudio() {
     });
   }, [muted, gameVolume]);
 
+  const playTone = useCallback(
+    ({
+      frequency = 440,
+      type = 'sine',
+      duration = 0.3,
+      volume = 0.7,
+      volumeMultiplier = 1,
+      attack = 0.02,
+      release = 0.12,
+    } = {}) => {
+      const ctx = ctxRef.current;
+      const gainDest = masterGainRef.current;
+      if (!ctx || !gainDest || muted) return;
+
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = frequency;
+
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      const maxGain = Math.max(0, volume * volumeMultiplier);
+      const attackEnd = now + Math.max(0.005, attack);
+      const sustainEnd = now + Math.max(attackEnd - now + 0.05, duration);
+      const releaseEnd = sustainEnd + Math.max(0.05, release);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(maxGain, attackEnd);
+      gain.gain.setValueAtTime(maxGain, sustainEnd);
+      gain.gain.linearRampToValueAtTime(0.0001, releaseEnd);
+
+      osc.connect(gain);
+      gain.connect(gainDest);
+      osc.start(now);
+      osc.stop(releaseEnd + 0.01);
+      osc.onended = () => {
+        osc.disconnect();
+        gain.disconnect();
+      };
+    },
+    [muted],
+  );
+
   return {
     context: ctxRef.current,
     muted,
@@ -163,5 +205,6 @@ export default function useGameAudio() {
     playSfx,
     addMusicLayer,
     setMusicState,
+    playTone,
   };
 }
