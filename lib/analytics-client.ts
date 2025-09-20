@@ -4,7 +4,8 @@ export type EventName =
   | 'contact_submit'
   | 'contact_submit_error'
   | 'outbound_link_click'
-  | 'download_click';
+  | 'download_click'
+  | 'ssh_public_key_copied';
 
 export function trackEvent(
   name: EventName,
