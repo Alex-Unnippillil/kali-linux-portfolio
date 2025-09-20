@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { cancelClipboardWipe } from '../../utils/secretVault';
 
 export class Window extends Component {
     constructor(props) {
@@ -51,6 +52,7 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
+        window.addEventListener('beforeunload', this.handleBeforeUnload);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
@@ -64,11 +66,17 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        window.removeEventListener('beforeunload', this.handleBeforeUnload);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        void cancelClipboardWipe({ wipe: true });
+    }
+
+    handleBeforeUnload = () => {
+        void cancelClipboardWipe({ wipe: true });
     }
 
     setDefaultWindowDimenstion = () => {
@@ -467,6 +475,7 @@ export class Window extends Component {
     }
 
     closeWindow = () => {
+        void cancelClipboardWipe({ wipe: true });
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
@@ -519,46 +528,46 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const stopEvent = () => {
+            if (typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            if (typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+            }
+        };
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
