@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
+import MiniPlayer from "../media/MiniPlayer";
 import CrossfadePlayer from "./utils/crossfade";
 import Visualizer from "./Visualizer";
 import Lyrics from "./Lyrics";
@@ -71,6 +72,11 @@ const SpotifyApp = () => {
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const playingRef = useRef(playing);
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   const loadPlaylist = () => {
     try {
@@ -96,22 +102,44 @@ const SpotifyApp = () => {
 
   useEffect(() => {
     const track = queue[current];
-    if (!track) return;
+    if (!track) {
+      setDuration(0);
+      setProgress(0);
+      setPlaying(false);
+      return;
+    }
     setRecent((r) =>
       [track, ...r.filter((t) => t.url !== track.url)].slice(0, 10),
     );
-    playerRef.current
-      ?.play(track.url, crossfade)
-      .then(() => {
+    const result = playerRef.current?.play(track.url, crossfade);
+    if (result) {
+      setPlaying(true);
+      result.then((state) => {
         setDuration(playerRef.current?.getDuration() ?? 0);
         setProgress(0);
+        if (state) setPlaying(state === "running");
       });
+    } else {
+      setPlaying(false);
+    }
   }, [current, queue, setRecent, crossfade]);
 
   useEffect(() => {
     let raf: number;
     const tick = () => {
-      setProgress(playerRef.current?.getCurrentTime() ?? 0);
+      const player = playerRef.current;
+      if (player) {
+        setProgress(player.getCurrentTime() ?? 0);
+        const state = player.getState();
+        if (state) {
+          const isRunning = state === "running";
+          if (playingRef.current !== isRunning) {
+            setPlaying(isRunning);
+          }
+        }
+      } else {
+        setProgress(0);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -121,14 +149,28 @@ const SpotifyApp = () => {
   const next = () => {
     if (!queue.length) return;
     setCurrent((i) => (i + 1) % queue.length);
+    setPlaying(true);
   };
 
   const previous = () => {
     if (!queue.length) return;
     setCurrent((i) => (i - 1 + queue.length) % queue.length);
+    setPlaying(true);
   };
 
-  const togglePlay = () => playerRef.current?.toggle();
+  const togglePlay = () => {
+    const toggled = playerRef.current?.toggle();
+    if (toggled) {
+      toggled.then((state) => {
+        if (state) setPlaying(state === "running");
+      });
+    }
+  };
+
+  const seekTo = (time: number) => {
+    playerRef.current?.seek(time);
+    setProgress(time);
+  };
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.code === "MediaTrackNext") {
@@ -165,11 +207,12 @@ const SpotifyApp = () => {
           </button>
           <button
             onClick={togglePlay}
-            title="Play/Pause"
+            title={playing ? "Pause" : "Play"}
             disabled={!queue.length}
+            aria-pressed={playing}
             className="w-9 h-9 flex items-center justify-center"
           >
-            ⏯
+            {playing ? "⏸" : "▶"}
           </button>
           <button
             onClick={next}
@@ -202,6 +245,8 @@ const SpotifyApp = () => {
           <button
             onClick={() => setMini(!mini)}
             className="border px-2 py-1 rounded"
+            aria-pressed={mini}
+            aria-label={mini ? "Return to full player" : "Open mini player"}
           >
             {mini ? "Full" : "Mini"}
           </button>
@@ -213,13 +258,9 @@ const SpotifyApp = () => {
           min={0}
           max={duration}
           value={progress}
-          onChange={(e) => {
-            const t = Number(e.target.value);
-            playerRef.current?.seek(t);
-            setProgress(t);
-          }}
+          onChange={(e) => seekTo(Number(e.target.value))}
           className="w-full h-1 mb-2"
-          disabled={!queue.length}
+          disabled={!queue.length || duration === 0}
         />
       )}
       {currentTrack && (
@@ -285,6 +326,20 @@ const SpotifyApp = () => {
           </div>
         </div>
       )}
+      <MiniPlayer
+        visible={mini}
+        title={currentTrack?.title}
+        artwork={currentTrack?.cover}
+        isPlaying={playing}
+        progress={progress}
+        duration={duration}
+        disabled={!currentTrack}
+        onTogglePlay={togglePlay}
+        onNext={next}
+        onPrevious={previous}
+        onSeek={seekTo}
+        onExit={() => setMini(false)}
+      />
     </div>
   );
 };
