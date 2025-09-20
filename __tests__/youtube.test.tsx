@@ -29,8 +29,34 @@ describe('YouTube search app', () => {
     const user = userEvent.setup();
     render(<YouTubeApp initialResults={mockVideos} />);
     await user.click(screen.getByAltText('Video A'));
+    expect(
+      screen.getByLabelText('Loading video player'),
+    ).toBeInTheDocument();
     const iframe = screen.getByTitle('YouTube video player');
-    expect(iframe).toHaveAttribute('src', expect.stringContaining('a'));
+    expect(iframe).toHaveAttribute(
+      'src',
+      expect.stringContaining('youtube-nocookie.com/embed/a'),
+    );
+  });
+
+  it('allows toggling privacy-enhanced mode', async () => {
+    const user = userEvent.setup();
+    render(<YouTubeApp initialResults={mockVideos} />);
+    await user.click(screen.getByAltText('Video A'));
+    const toggle = screen.getByLabelText(/Privacy-enhanced mode/i);
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(toggle).not.toBeChecked();
+    const iframe = screen.getByTitle('YouTube video player');
+    expect(iframe).toHaveAttribute(
+      'src',
+      expect.stringContaining('youtube.com/embed/a'),
+    );
+    await waitFor(() =>
+      expect(window.localStorage.getItem('youtube:privacy-enhanced')).toBe(
+        'false',
+      ),
+    );
   });
 
   it('adds to queue and watch later lists', async () => {
