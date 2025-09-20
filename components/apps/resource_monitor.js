@@ -1,4 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  detectSensitiveStrings,
+  createMasksFromMatches,
+  buildRedactionMetadata,
+  downloadRedactionMetadata,
+} from '../../utils/redaction';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
@@ -172,6 +178,29 @@ const ResourceMonitor = () => {
 
   const togglePause = () => setPaused((p) => !p);
   const toggleStress = () => setStress((s) => !s);
+  const exportSnapshot = useCallback(() => {
+    const snapshot = {
+      generatedAt: new Date().toISOString(),
+      cpu: dataRef.current.cpu,
+      mem: dataRef.current.mem,
+      fps: dataRef.current.fps,
+      net: dataRef.current.net,
+    };
+    const json = JSON.stringify(snapshot, null, 2);
+    const masks = createMasksFromMatches(detectSensitiveStrings(json));
+    const metadata = buildRedactionMetadata(masks);
+    const filename = `resource-monitor-${Date.now()}.json`;
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    downloadRedactionMetadata(filename, metadata);
+  }, []);
 
   return (
     <div
@@ -184,6 +213,9 @@ const ResourceMonitor = () => {
         </button>
         <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
           {stress ? 'Stop Stress' : 'Stress Test'}
+        </button>
+        <button onClick={exportSnapshot} className="px-2 py-1 bg-ub-dark-grey rounded">
+          Export Snapshot
         </button>
         <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
       </div>
