@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exit code 4 &mdash; jq parse error</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 2rem;
+        background: #0f1317;
+        color: #f8fafc;
+      }
+      h1 {
+        color: #38bdf8;
+      }
+      code {
+        background: rgba(148, 163, 184, 0.15);
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+      }
+      section {
+        margin-top: 1.5rem;
+      }
+      pre {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Exit code 4 &mdash; jq could not parse your JSON</h1>
+      <p>
+        jq returns status <code>4</code> when the input is not valid JSON. The command
+        stops before applying any filters so you can fix the data first.
+      </p>
+    </header>
+    <section>
+      <h2>Validate the input</h2>
+      <ul>
+        <li>Run <code>jq . file.json</code> to confirm the file parses without filters.</li>
+        <li>Use <code>python -m json.tool file.json</code> as a second opinion.</li>
+        <li>Look for trailing commas, unquoted property names, or mismatched brackets.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Format errors clearly</h2>
+      <p>
+        jq highlights the byte offset of the failure. Reformat the JSON with
+        <code>jq .</code> or the Python formatter above to reveal the location. Fix the
+        syntax and retry your original filter.
+      </p>
+      <pre>
+$ jq '.items[] | {name, id}' broken.json
+parse error: Expected separator between values at line 12, column 5
+      </pre>
+    </section>
+    <section>
+      <h2>Prevent future issues</h2>
+      <ul>
+        <li>Validate API responses before saving them to disk.</li>
+        <li>Check JSON files into version control to catch accidental edits.</li>
+        <li>Use a schema or linter when working with large JSON datasets.</li>
+      </ul>
+    </section>
+  </body>
+</html>

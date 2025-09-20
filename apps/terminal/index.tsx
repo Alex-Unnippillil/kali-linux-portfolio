@@ -7,7 +7,10 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useId,
 } from 'react';
+import { trackEvent } from '@/lib/analytics-client';
+import { getExitCodeInfo, TerminalErrorCodeEntry } from '@/utils/terminal/errorCodeTips';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
@@ -76,6 +79,11 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+interface ExitCodeTipState {
+  code: number;
+  info: TerminalErrorCodeEntry;
+}
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -96,11 +104,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     setAlias: (n, v) => {
       aliasesRef.current[n] = v;
     },
-    runWorker: async () => {},
+    runWorker: async () => 0,
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tipsEnabled, setTipsEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const stored = window.localStorage.getItem('terminal:tipsEnabled');
+    return stored !== 'false';
+  });
+  const [activeTip, setActiveTip] = useState<ExitCodeTipState | null>(null);
+  const tipsToggleId = useId();
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -123,6 +138,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('terminal:tipsEnabled', tipsEnabled ? 'true' : 'false');
+  }, [tipsEnabled]);
+
+  useEffect(() => {
+    if (!tipsEnabled) {
+      setActiveTip(null);
+    }
+  }, [tipsEnabled]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -164,21 +190,50 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     } catch {}
   };
 
+  const processExitCode = useCallback(
+    (code: number) => {
+      if (code === 0) {
+        setActiveTip(null);
+        return;
+      }
+      const info = getExitCodeInfo(code);
+      if (info) {
+        writeLine(`\x1b[31mExit code: ${code} – ${info.title}\x1b[0m`);
+        if (tipsEnabled) {
+          setActiveTip((prev) => {
+            if (prev && prev.code === code) {
+              return prev;
+            }
+            trackEvent('terminal_exit_code_tip_shown', { code });
+            return { code, info };
+          });
+        } else {
+          setActiveTip(null);
+        }
+      } else {
+        writeLine(`\x1b[31mExit code: ${code}\x1b[0m`);
+        setActiveTip(null);
+      }
+    },
+    [tipsEnabled, writeLine],
+  );
+
   const runWorker = useCallback(
     async (command: string) => {
       const worker = workerRef.current;
       if (!worker) {
         writeLine('Worker not available');
-        return;
+        processExitCode(1);
+        return 1;
       }
-      await new Promise<void>((resolve) => {
+      const exitCode = await new Promise<number>((resolve) => {
         worker.onmessage = ({ data }: MessageEvent<any>) => {
           if (data.type === 'data') {
             for (const line of String(data.chunk).split('\n')) {
               if (line) writeLine(line);
             }
           } else if (data.type === 'end') {
-            resolve();
+            resolve(typeof data.exitCode === 'number' ? data.exitCode : 0);
           }
         };
         worker.postMessage({
@@ -187,8 +242,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           files: filesRef.current,
         });
       });
+      processExitCode(exitCode);
+      return exitCode;
     },
-    [writeLine],
+    [processExitCode, writeLine],
   );
 
   contextRef.current.runWorker = runWorker;
@@ -243,12 +300,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
             : cmd;
         const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+        if (!cmdName) return;
         const handler = registryRef.current[cmdName];
         historyRef.current.push(cmd);
-        if (handler) await handler(cmdRest.join(' '), contextRef.current);
-        else if (cmdName) await runWorker(expanded);
+        if (handler) {
+          await handler(cmdRest.join(' '), contextRef.current);
+          processExitCode(0);
+        } else {
+          await runWorker(expanded);
+        }
       },
-      [runWorker],
+      [processExitCode, runWorker],
     );
 
     const autocomplete = useCallback(() => {
@@ -274,6 +336,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             runCommand(commandRef.current.trim());
             commandRef.current = '';
             prompt();
+          } else if (ch === '\u0003') {
+            writeLine('^C');
+            commandRef.current = '';
+            processExitCode(130);
+            prompt();
           } else if (ch === '\u007F') {
             if (commandRef.current.length > 0) {
               termRef.current?.write('\b \b');
@@ -285,7 +352,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           }
         }
       },
-      [runCommand, prompt],
+      [processExitCode, runCommand, prompt, writeLine],
     );
 
   useImperativeHandle(ref, () => ({
@@ -444,6 +511,74 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </div>
         </div>
       )}
+      {activeTip && tipsEnabled && (
+        <div className="pointer-events-auto absolute bottom-4 right-4 z-20 w-80 max-w-full rounded-lg border border-sky-500/60 bg-slate-900/95 p-4 text-xs text-slate-100 shadow-xl backdrop-blur">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-semibold text-sky-300">
+                Exit code {activeTip.code}: {activeTip.info.title}
+              </p>
+              <p className="mt-1 text-slate-200">{activeTip.info.summary}</p>
+            </div>
+            <button
+              type="button"
+              className="text-slate-400 transition hover:text-slate-100"
+              aria-label="Dismiss exit code tip"
+              onClick={() => {
+                setActiveTip(null);
+                trackEvent('terminal_exit_code_tip_dismissed', {
+                  code: activeTip.code,
+                  method: 'close',
+                });
+              }}
+            >
+              ×
+            </button>
+          </div>
+          {activeTip.info.tips.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-300">
+              {activeTip.info.tips.map((tip) => (
+                <li key={tip}>{tip}</li>
+              ))}
+            </ul>
+          )}
+          {activeTip.info.docs.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {activeTip.info.docs.map((doc) => (
+                <a
+                  key={doc.path}
+                  href={doc.path}
+                  className="rounded bg-sky-500/20 px-2 py-1 text-sky-200 underline hover:bg-sky-500/30"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() =>
+                    trackEvent('terminal_exit_code_tip_link_clicked', {
+                      code: activeTip.code,
+                      href: doc.path,
+                    })
+                  }
+                >
+                  {doc.label}
+                </a>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className="mt-3 text-[11px] text-slate-400 underline hover:text-slate-200"
+            onClick={() => {
+              setActiveTip(null);
+              setSettingsOpen(true);
+              trackEvent('terminal_exit_code_tip_dismissed', {
+                code: activeTip.code,
+                method: 'settings',
+              });
+            }}
+          >
+            Disable tips in settings
+          </button>
+        </div>
+      )}
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
           <div className="bg-gray-900 p-4 rounded space-y-4">
@@ -457,6 +592,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <span className="text-green-400">script.sh</span>{' '}
               <span className="text-gray-300">README.md</span>
             </pre>
+            <div className="border-t border-gray-800 pt-3">
+              <label
+                htmlFor={tipsToggleId}
+                className="flex items-center gap-2 text-sm text-white"
+              >
+                <input
+                  id={tipsToggleId}
+                  type="checkbox"
+                  className="h-4 w-4 accent-sky-500"
+                  checked={tipsEnabled}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setTipsEnabled(next);
+                    trackEvent('terminal_exit_code_tip_toggle', { enabled: next });
+                  }}
+                />
+                Show exit code troubleshooting tips
+              </label>
+              <p className="mt-1 text-xs text-gray-400">
+                Tips link to cached documentation for offline use.
+              </p>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"

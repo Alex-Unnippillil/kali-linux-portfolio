@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exit code 126 &mdash; Command invoked cannot execute</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 2rem;
+        background: #0f1317;
+        color: #f8fafc;
+      }
+      h1 {
+        color: #38bdf8;
+      }
+      code {
+        background: rgba(148, 163, 184, 0.15);
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+      }
+      section {
+        margin-top: 1.5rem;
+      }
+      ol {
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Exit code 126 &mdash; Command invoked cannot execute</h1>
+      <p>
+        The shell located the command but could not run it. Most often this means the file
+        is missing the executable bit or is built for another architecture.
+      </p>
+    </header>
+    <section>
+      <h2>Fix permissions</h2>
+      <ol>
+        <li>Inspect the file with <code>ls -l script.sh</code>.</li>
+        <li>If the execute bits (<code>x</code>) are missing, run <code>chmod +x script.sh</code>.</li>
+        <li>Re-run the script: <code>./script.sh</code>.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>Other causes</h2>
+      <ul>
+        <li>Windows line endings. Convert with <code>dos2unix script.sh</code>.</li>
+        <li>Binary built for a different CPU. Download the version that matches your OS.</li>
+        <li>Missing interpreter line. Ensure scripts start with a shebang like <code>#!/bin/bash</code>.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Verify the fix</h2>
+      <ul>
+        <li>Use <code>file script.sh</code> to confirm the interpreter.</li>
+        <li>Run <code>bash -n script.sh</code> to check for syntax errors before execution.</li>
+        <li>Commit the corrected file so the executable bit is preserved in version control.</li>
+      </ul>
+    </section>
+  </body>
+</html>
