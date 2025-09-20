@@ -1,10 +1,11 @@
 import dynamic from 'next/dynamic';
+import { getAppSkeleton } from '../app-skeletons';
 
 // Dynamically load the full Weather application. This remains the default
 // export so existing imports continue to work.
 const WeatherApp = dynamic(() => import('../../apps/weather'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  loading: () => getAppSkeleton('weather', 'Weather'),
 });
 
 /**

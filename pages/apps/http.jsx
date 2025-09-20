@@ -1,8 +1,9 @@
 import dynamic from 'next/dynamic';
+import { getAppSkeleton } from '../../components/app-skeletons';
 
 const HTTPPreview = dynamic(() => import('../../apps/http'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  loading: () => getAppSkeleton('http', 'HTTP'),
 });
 
 export default function HTTPPage() {

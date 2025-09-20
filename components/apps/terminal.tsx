@@ -1,14 +1,11 @@
 import dynamic from 'next/dynamic';
+import { getAppSkeleton } from '../app-skeletons';
 import HelpPanel from '../HelpPanel';
 
 // Lazily load the heavy terminal app with session tabs on the client only.
 const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
   ssr: false,
-  loading: () => (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-      Loading Terminal...
-    </div>
-  ),
+  loading: () => getAppSkeleton('terminal', 'Terminal'),
 });
 
 /**
