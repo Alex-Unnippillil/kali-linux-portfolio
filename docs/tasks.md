@@ -61,6 +61,9 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Display `performance.memory` data and FPS from `performance.now()` deltas.
 - Show CPU synthetic load graph using `requestAnimationFrame` buckets.
 
+### Services
+- Surface mock systemd-style services from `utils/serviceRegistry.ts` with search, status badges, start/stop controls, and expandable log history.
+
 ### Project Gallery
 - Load projects from `projects.json`; add filters and buttons for repo and live demo.
 
