@@ -25,6 +25,48 @@ describe('YouTube search app', () => {
     window.localStorage.clear();
   });
 
+  afterEach(() => {
+    delete (window as any).YT;
+  });
+
+  it('initializes embeds with privacy-enhanced parameters', async () => {
+    const user = userEvent.setup();
+    const createPlayer = jest.fn((_el, opts) => {
+      opts.events?.onReady?.({
+        target: {
+          getPlaybackRate: () => 1,
+        },
+      });
+      return {
+        loadVideoById: jest.fn(),
+        getPlaybackRate: jest.fn().mockReturnValue(1),
+        getPlayerState: jest.fn().mockReturnValue(2),
+        playVideo: jest.fn(),
+        pauseVideo: jest.fn(),
+        seekTo: jest.fn(),
+        getCurrentTime: jest.fn().mockReturnValue(0),
+        getAvailablePlaybackRates: jest.fn().mockReturnValue([1]),
+      };
+    });
+    (window as any).YT = {
+      Player: createPlayer,
+      PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0 },
+    };
+
+    render(<YouTubeApp initialResults={mockVideos} />);
+    await user.click(screen.getByAltText('Video A'));
+
+    await waitFor(() => expect(createPlayer).toHaveBeenCalled());
+    const [, options] = createPlayer.mock.calls[0];
+    expect(options.host).toBe('https://www.youtube-nocookie.com');
+    expect(options.playerVars).toMatchObject({
+      rel: 0,
+      modestbranding: 1,
+      enablejsapi: 1,
+      origin: window.location.origin,
+    });
+  });
+
   it('loads video when thumbnail clicked', async () => {
     const user = userEvent.setup();
     render(<YouTubeApp initialResults={mockVideos} />);

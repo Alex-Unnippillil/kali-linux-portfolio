@@ -26,13 +26,26 @@ const ComparePlayers = () => {
   const [rightPlayer, setRightPlayer] = useState<any>(null);
   const [ready, setReady] = useState(false);
 
+  const buildPlayerVars = () => {
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : undefined;
+    return {
+      rel: 0,
+      modestbranding: 1,
+      enablejsapi: 1,
+      ...(origin ? { origin } : {}),
+    };
+  };
+
   useEffect(() => {
     if (window.YT) {
       setReady(true);
       return;
     }
     const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.src = 'https://www.youtube-nocookie.com/iframe_api';
     window.onYouTubeIframeAPIReady = () => setReady(true);
     document.body.appendChild(tag);
   }, []);
@@ -42,7 +55,7 @@ const ComparePlayers = () => {
     const player = new window.YT.Player(leftDiv.current, {
       host: 'https://www.youtube-nocookie.com',
       videoId: leftId,
-      playerVars: { origin: window.location.origin, rel: 0 },
+      playerVars: buildPlayerVars(),
     });
     setLeftPlayer(player);
   }, [ready, leftId]);
@@ -52,7 +65,7 @@ const ComparePlayers = () => {
     const player = new window.YT.Player(rightDiv.current, {
       host: 'https://www.youtube-nocookie.com',
       videoId: rightId,
-      playerVars: { origin: window.location.origin, rel: 0 },
+      playerVars: buildPlayerVars(),
     });
     setRightPlayer(player);
   }, [ready, rightId]);

@@ -28,7 +28,7 @@ export default function ClipMaker() {
       return;
     }
     const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.src = 'https://www.youtube-nocookie.com/iframe_api';
     document.body.appendChild(tag);
     window.onYouTubeIframeAPIReady = () => setReady(true);
     return () => {
@@ -41,10 +41,19 @@ export default function ClipMaker() {
     if (playerRef.current) {
       playerRef.current.destroy();
     }
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : undefined;
     playerRef.current = new window.YT.Player(containerRef.current, {
       videoId,
       host: 'https://www.youtube-nocookie.com',
-      playerVars: { modestbranding: 1 },
+      playerVars: {
+        rel: 0,
+        modestbranding: 1,
+        enablejsapi: 1,
+        ...(origin ? { origin } : {}),
+      },
     });
   }, [ready, videoId]);
 

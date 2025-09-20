@@ -15,6 +15,8 @@ const VIDEO_CACHE_NAME = 'youtube-video-cache';
 const CACHED_LIST_KEY = 'youtube:cached-videos';
 const MAX_CACHE_BYTES = 100 * 1024 * 1024;
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+const YT_PRIVACY_HOST = 'https://www.youtube-nocookie.com';
+const BASE_EMBED_PARAMS = 'rel=0&modestbranding=1&enablejsapi=1';
 
 async function trimVideoCache() {
   if (!('storage' in navigator) || !navigator.storage?.estimate) return;
@@ -255,6 +257,19 @@ function VirtualGrid({
 }
 
 export default function YouTubeApp({ initialResults = [] }: Props) {
+  const getPlayerVars = () => {
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : undefined;
+    return {
+      rel: 0,
+      modestbranding: 1,
+      enablejsapi: 1,
+      ...(origin ? { origin } : {}),
+    };
+  };
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Video[]>(initialResults);
   const [current, setCurrent] = useState<Video | null>(null);
@@ -270,6 +285,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [, setPlaybackRate] = useState(1);
   const [solidHeader, setSolidHeader] = useState(false);
+  const [embedParams, setEmbedParams] = useState(BASE_EMBED_PARAMS);
 
   useEffect(() => {
     const onScroll = () => setSolidHeader(window.scrollY > 0);
@@ -319,6 +335,10 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       } else {
         playerRef.current = new window.YT.Player(playerDivRef.current!, {
           videoId: current.id,
+          host: YT_PRIVACY_HOST,
+          // rel=0 only limits suggestions to the current channel in privacy
+          // mode; we still pass it for best-effort suppression.
+          playerVars: getPlayerVars(),
           events: {
             onReady: (e: any) => {
               setPlayerReady(true);
@@ -336,11 +356,18 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       initPlayer();
     } else {
       const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
+      tag.src = `${YT_PRIVACY_HOST}/iframe_api`;
       window.onYouTubeIframeAPIReady = initPlayer;
       document.body.appendChild(tag);
     }
   }, [current]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.location?.origin) return;
+    const params = new URLSearchParams(BASE_EMBED_PARAMS);
+    params.set('origin', window.location.origin);
+    setEmbedParams(params.toString());
+  }, []);
 
   useEffect(() => {
     void trimVideoCache();
@@ -549,28 +576,29 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
           />
         </form>
         {current && (
-          <div className="relative mx-4 mb-4 bg-black">
-            {!playerReady && (
-              <iframe
-                title="YouTube video player"
-                src={`https://www.youtube-nocookie.com/embed/${current.id}`}
-                className="aspect-video w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
+          <>
+            <div className="relative mx-4 mb-2 bg-black">
+              {!playerReady && (
+                <iframe
+                  title="YouTube video player"
+                  src={`${YT_PRIVACY_HOST}/embed/${current.id}?${embedParams}`}
+                  className="aspect-video w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+              <div
+                ref={playerDivRef}
+                className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
               />
-            )}
-            <div
-              ref={playerDivRef}
-              className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
-            />
-            <div
-              className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
-            >
-              <button
-                onClick={togglePlay}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
-                className="text-ubt-cool-grey hover:text-ubt-green"
+              <div
+                className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
               >
+                <button
+                  onClick={togglePlay}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                  className="text-ubt-cool-grey hover:text-ubt-green"
+                >
                 {isPlaying ? (
                   <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
                     <path
@@ -653,7 +681,13 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 </svg>
               </button>
             </div>
-          </div>
+            </div>
+            <p className="px-4 pb-4 text-xs text-ubt-grey">
+              Related suggestions may still appear after playback. YouTube only
+              limits them to the same channel when using privacy-enhanced
+              embeds.
+            </p>
+          </>
         )}
         <VirtualGrid
           items={results}
