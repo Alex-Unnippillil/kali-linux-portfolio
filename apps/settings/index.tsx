@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,8 +12,22 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import {
+  clearShortcutHintCooldown,
+  getShortcutHintSettings,
+  onShortcutHintSettingsChange,
+  setShortcutHintsDisabled,
+  shortcutHintDefaults,
+  ShortcutHintSettings,
+} from "../../utils/settings/shortcutHints";
 
-export default function Settings() {
+type TabId = "appearance" | "accessibility" | "privacy";
+
+interface SettingsProps {
+  initialTab?: TabId;
+}
+
+export default function Settings({ initialTab = "appearance" }: SettingsProps) {
   const {
     accent,
     setAccent,
@@ -33,14 +47,42 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [hintSettings, setHintSettings] = useState<ShortcutHintSettings>(shortcutHintDefaults);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
-  type TabId = (typeof tabs)[number]["id"];
-  const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+
+  useEffect(() => {
+    let mounted = true;
+    getShortcutHintSettings().then((settings) => {
+      if (mounted) setHintSettings(settings);
+    });
+    const unsubscribe = onShortcutHintSettingsChange((settings) => {
+      setHintSettings(settings);
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const hintsEnabled = !hintSettings.disabled;
+  const cooldownActive =
+    hintsEnabled && hintSettings.suppressedUntil > Date.now();
+
+  const handleHintToggle = async (enabled: boolean) => {
+    const next = await setShortcutHintsDisabled(!enabled);
+    setHintSettings(next);
+  };
+
+  const handleResumeHints = async () => {
+    const next = await clearShortcutHintCooldown();
+    setHintSettings(next);
+  };
 
   const wallpapers = [
     "wall-1",
@@ -260,9 +302,36 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
+          <div className="flex flex-col items-center my-4">
+            <div className="flex items-center">
+              <span className="mr-2 text-ubt-grey">Shortcut hints:</span>
+              <ToggleSwitch
+                checked={hintsEnabled}
+                onChange={handleHintToggle}
+                ariaLabel="Shortcut hints"
+              />
+            </div>
+            <p className="mt-2 max-w-md text-center text-xs text-ubt-grey">
+              {hintsEnabled
+                ? cooldownActive
+                  ? "Hints are snoozed for 24 hours after the last reminder."
+                  : "Hints appear after repeated pointer use when a keyboard shortcut exists."
+                : "Hints are disabled. Enable them to see shortcut reminders."}
+            </p>
+            {hintsEnabled && cooldownActive && (
+              <button
+                type="button"
+                onClick={handleResumeHints}
+                className="mt-2 text-xs text-ub-orange underline"
+              >
+                Resume hints now
+              </button>
+            )}
+          </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
+              data-shortcut-action="Show keyboard shortcuts"
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Edit Shortcuts
@@ -304,3 +373,5 @@ export default function Settings() {
     </div>
   );
 }
+
+export const displaySettings = () => <Settings />;
