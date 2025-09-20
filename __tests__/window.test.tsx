@@ -9,6 +9,52 @@ jest.mock('react-draggable', () => ({
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+describe('Window focus management', () => {
+  it('calls focus callback on mouse down', () => {
+    const focus = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={focus}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = screen.getByRole('dialog', { name: /test/i });
+    fireEvent.mouseDown(winEl);
+
+    expect(focus).toHaveBeenCalledWith('test-window');
+  });
+
+  it('calls focus callback on focus events', () => {
+    const focus = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={focus}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = screen.getByRole('dialog', { name: /test/i });
+    fireEvent.focus(winEl);
+
+    expect(focus).toHaveBeenCalledWith('test-window');
+  });
+});
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
@@ -198,8 +244,15 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
 
+    const altEvent = {
+      key: 'ArrowDown',
+      altKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    } as any;
+
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown(altEvent);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
