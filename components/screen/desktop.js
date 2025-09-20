@@ -147,7 +147,16 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if (e.altKey && !e.ctrlKey && !e.metaKey && (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar')) {
+            const target = e.target;
+            const tagName = target && target.tagName ? target.tagName.toLowerCase() : '';
+            if (tagName === 'input' || tagName === 'textarea' || target?.isContentEditable) {
+                return;
+            }
+            e.preventDefault();
+            this.openShortcutSelector();
+        }
+        else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
