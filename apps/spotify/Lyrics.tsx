@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import CrossfadePlayer from './utils/crossfade';
+import WebAudioManager from './utils/audioEngine';
 import { fetchTimedLyrics, LyricLine } from '../../player/lyrics';
 
 interface LyricsProps {
   title: string;
-  player: CrossfadePlayer | null;
+  player: WebAudioManager | null;
 }
 
 const Lyrics = ({ title, player }: LyricsProps) => {
