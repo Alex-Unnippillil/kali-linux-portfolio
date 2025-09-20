@@ -9,6 +9,15 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import { useSettings } from '../../hooks/useSettings';
+import PasteOptionsMenu from '../../components/ui/PasteOptionsMenu';
+import {
+  loadTrackingParameterLists,
+  sanitizeClipboardText,
+  summarizeSanitization,
+  PASTE_MODE_METADATA,
+  type PasteMode,
+} from '../../utils/clipboard/sanitize';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -77,6 +86,7 @@ const files: Record<string, string> = {
 };
 
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+  const { pasteMode, setPasteMode: updatePasteMode } = useSettings();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -101,6 +111,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const pasteMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [pasteMenuOpen, setPasteMenuOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -153,17 +165,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      handleInput(text);
-    } catch {}
-  };
-
   const runWorker = useCallback(
     async (command: string) => {
       const worker = workerRef.current;
@@ -202,6 +203,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         );
         writeLine(
           'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
+        );
+        writeLine(
+          'Paste menu: use the caret next to Paste to choose Keep formatting, Plain text, Clean URL, or Code block. Defaults follow Settings > Clipboard.',
         );
       },
       ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
@@ -284,9 +288,37 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             termRef.current?.write(ch);
           }
         }
-      },
-      [runCommand, prompt],
-    );
+    },
+    [runCommand, prompt],
+  );
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(contentRef.current).catch(() => {});
+  }, []);
+
+  const performPaste = useCallback(
+    async (mode?: PasteMode) => {
+      try {
+        if (!navigator.clipboard?.readText) return;
+        const text = await navigator.clipboard.readText();
+        if (!text) return;
+        const selectedMode = mode ?? pasteMode;
+        const result = sanitizeClipboardText(text, selectedMode, {
+          trackingParameters: loadTrackingParameterLists(),
+        });
+        const summary = summarizeSanitization(result);
+        if (summary && typeof window !== 'undefined') {
+          const proceed = window.confirm(`${summary}\n\nPaste sanitized content?`);
+          if (!proceed) return;
+        }
+        handleInput(result.sanitized);
+        termRef.current?.focus();
+      } catch (error) {
+        console.error('Paste failed', error);
+      }
+    },
+    [pasteMode, handleInput],
+  );
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
@@ -395,6 +427,29 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, []);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const onPaste = (event: ClipboardEvent) => {
+      event.preventDefault();
+      const data = event.clipboardData?.getData('text/plain') ?? '';
+      if (!data) return;
+      const html = event.clipboardData?.getData('text/html') ?? undefined;
+      const result = sanitizeClipboardText(data, pasteMode, {
+        trackingParameters: loadTrackingParameterLists(),
+        html,
+      });
+      const summary = summarizeSanitization(result);
+      if (summary && typeof window !== 'undefined') {
+        const proceed = window.confirm(`${summary}\n\nPaste sanitized content?`);
+        if (!proceed) return;
+      }
+      handleInput(result.sanitized);
+    };
+    container.addEventListener('paste', onPaste);
+    return () => container.removeEventListener('paste', onPaste);
+  }, [pasteMode, handleInput]);
+
+  useEffect(() => {
     const listener = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
@@ -481,17 +536,59 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2 bg-gray-800 p-1">
-          <button onClick={handleCopy} aria-label="Copy">
-            <CopyIcon />
-          </button>
-          <button onClick={handlePaste} aria-label="Paste">
+      <div className="flex items-center gap-2 bg-gray-800 p-1">
+        <button
+          onClick={handleCopy}
+          aria-label="Copy"
+          className="rounded bg-gray-700 p-1 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+        >
+          <CopyIcon />
+        </button>
+        <div className="flex items-stretch overflow-hidden rounded bg-gray-700">
+          <button
+            onClick={() => {
+              setPasteMenuOpen(false);
+              void performPaste();
+            }}
+            aria-label={`Paste (${PASTE_MODE_METADATA[pasteMode].label})`}
+            title={`Paste (${PASTE_MODE_METADATA[pasteMode].label})`}
+            className="flex items-center justify-center px-2 py-1 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+          >
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
-            <SettingsIcon />
+          <button
+            ref={pasteMenuButtonRef}
+            aria-label="Open paste options"
+            aria-haspopup="menu"
+            aria-expanded={pasteMenuOpen}
+            onClick={() => setPasteMenuOpen((value) => !value)}
+            className="flex items-center justify-center px-1 text-xs hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+          >
+            <span className="sr-only">Open paste options</span>
+            <svg width={12} height={12} viewBox="0 0 12 12" aria-hidden="true" fill="currentColor">
+              <path d="M6 8.5 2.5 4.5h7L6 8.5Z" />
+            </svg>
           </button>
         </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+          className="rounded bg-gray-700 p-1 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+        >
+          <SettingsIcon />
+        </button>
+      </div>
+      <PasteOptionsMenu
+        anchorRef={pasteMenuButtonRef}
+        open={pasteMenuOpen}
+        defaultMode={pasteMode}
+        onClose={() => setPasteMenuOpen(false)}
+        onSelect={(mode) => {
+          setPasteMenuOpen(false);
+          void performPaste(mode);
+        }}
+        onSetDefault={updatePasteMode}
+      />
         <div className="relative">
           <TerminalContainer
             ref={containerRef}

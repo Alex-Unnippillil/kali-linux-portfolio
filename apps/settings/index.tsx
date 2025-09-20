@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
@@ -285,6 +286,17 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+          <div className="mt-6 flex flex-col items-center gap-2 text-center text-gray-300">
+            <p className="max-w-lg text-sm">
+              Control paste behavior and sanitization rules from the dedicated clipboard panel.
+            </p>
+            <Link
+              href="/apps/settings/clipboard"
+              className="rounded bg-ub-orange px-4 py-2 text-sm font-semibold text-white hover:bg-ub-orange/90 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+            >
+              Open Clipboard Settings
+            </Link>
           </div>
         </>
       )}
