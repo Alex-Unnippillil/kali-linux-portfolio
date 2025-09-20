@@ -1,0 +1,69 @@
+/*
+  Font-family fallbacks and optional font-face declarations.
+  The base UI font is still provided by Next.js' `Ubuntu` font loader,
+  but we ensure every stack has resilient system fallbacks so first paint
+  never hides text if a web font is late to load.
+*/
+
+:root {
+  /* Resilient sans-serif stack approximating Ubuntu metrics */
+  --font-stack-sans: 'Segoe UI', 'Noto Sans', 'Helvetica Neue', Arial, 'Liberation Sans', system-ui, sans-serif;
+  /* Monospace stack used by terminal-style apps */
+  --font-stack-mono: 'Ubuntu Mono', 'SFMono-Regular', 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  /* Dyslexia-friendly stack that falls back to broadly available faces */
+  --font-stack-dyslexic: 'OpenDyslexic', 'Atkinson Hyperlegible', 'Comic Sans MS', 'Segoe UI', 'Noto Sans', Arial, sans-serif;
+
+  /* Default base font combines the primary web font with the system stack */
+  --font-family-base: 'Ubuntu', var(--font-stack-sans);
+}
+
+/* Adjust for systems with variable fonts available */
+@supports (font-variation-settings: normal) {
+  :root {
+    --font-stack-sans: 'Segoe UI Variable Text', 'Segoe UI Variable Display', 'Segoe UI', 'Noto Sans', 'Helvetica Neue', Arial,
+      'Liberation Sans', system-ui, sans-serif;
+  }
+}
+
+/* When dyslexia mode is enabled we favour the accessible stack */
+.dyslexia {
+  --font-family-base: 'OpenDyslexic', var(--font-stack-dyslexic);
+}
+
+/* Optional font-face declarations rely on locally installed fonts.
+   We mark them optional so they never block render on slow connections. */
+@font-face {
+  font-family: 'OpenDyslexic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: local('OpenDyslexic'), local('OpenDyslexic-Regular');
+  unicode-range: U+0000-00FF;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: local('OpenDyslexic Bold'), local('OpenDyslexic-Bold');
+  unicode-range: U+0000-00FF;
+}
+
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: local('Ubuntu Mono'), local('UbuntuMono-Regular');
+  unicode-range: U+0000-00FF;
+}
+
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: local('Ubuntu Mono Bold'), local('UbuntuMono-Bold');
+  unicode-range: U+0000-00FF;
+}
