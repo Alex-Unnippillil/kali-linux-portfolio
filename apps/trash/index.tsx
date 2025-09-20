@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import useTrashState from './state';
 import HistoryList from './components/HistoryList';
+import useOPFS from '../../hooks/useOPFS';
+import {
+  discardDuplicateTrashPayload,
+  isDuplicateTrashPayload,
+  restoreDuplicateFromTrash,
+} from '../../utils/files/duplicateScanner';
 
 const DEFAULT_ICON = '/themes/Yaru/system/folder.png';
 const EMPTY_ICON = '/themes/Yaru/status/user-trash-symbolic.svg';
@@ -17,6 +23,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     restoreFromHistory,
     restoreAllFromHistory,
   } = useTrashState();
+  const { root } = useOPFS();
   const [selected, setSelected] = useState<number | null>(null);
   const [purgeDays, setPurgeDays] = useState(30);
   const [emptyCountdown, setEmptyCountdown] = useState<number | null>(null);
@@ -43,28 +50,59 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
 
   const notifyChange = () => window.dispatchEvent(new Event('trash-change'));
 
-  const restore = useCallback(() => {
+  const performRestore = useCallback(
+    async (item: (typeof items)[number]) => {
+      if (isDuplicateTrashPayload(item.payload)) {
+        if (!root) {
+          alert('Storage is unavailable to restore this file.');
+          return false;
+        }
+        const restored = await restoreDuplicateFromTrash(item.payload, root);
+        if (!restored) {
+          alert('Unable to restore file from backup. It may have been removed.');
+          return false;
+        }
+        return true;
+      }
+      openApp(item.id);
+      return true;
+    },
+    [openApp, root],
+  );
+
+  const discardPayload = useCallback(
+    async (item: (typeof items)[number]) => {
+      if (isDuplicateTrashPayload(item.payload) && root) {
+        await discardDuplicateTrashPayload(item.payload, root);
+      }
+    },
+    [root],
+  );
+
+  const restore = useCallback(async () => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
-    openApp(item.id);
+    const didRestore = await performRestore(item);
+    if (!didRestore) return;
     setItems(items => items.filter((_, i) => i !== selected));
     setSelected(null);
     notifyChange();
-  }, [items, selected, openApp, setItems]);
+  }, [items, selected, performRestore, setItems]);
 
-  const remove = useCallback(() => {
+  const remove = useCallback(async () => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Delete ${item.title}?`)) return;
+    await discardPayload(item);
     const next = items.filter((_, i) => i !== selected);
     setItems(next);
     pushHistory(item);
     setSelected(null);
     notifyChange();
-  }, [items, selected, setItems, pushHistory]);
+  }, [items, selected, setItems, pushHistory, discardPayload]);
 
-  const purge = useCallback(() => {
+  const purge = useCallback(async () => {
     if (selected === null) return;
     const item = items[selected];
     if (
@@ -73,29 +111,38 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       )
     )
       return;
+    await discardPayload(item);
     setItems(items => items.filter((_, i) => i !== selected));
     setSelected(null);
     notifyChange();
-  }, [items, selected, setItems]);
+  }, [items, selected, setItems, discardPayload]);
 
-  const restoreAll = () => {
+  const restoreAll = useCallback(async () => {
     if (items.length === 0) return;
     if (!window.confirm('Restore all windows?')) return;
-    items.forEach(item => openApp(item.id));
+    for (const item of items) {
+      const restored = await performRestore(item);
+      if (!restored) {
+        return;
+      }
+    }
     setItems([]);
     setSelected(null);
     notifyChange();
-  };
+  }, [items, performRestore, setItems]);
 
   const empty = () => {
     if (items.length === 0 || emptyCountdown !== null) return;
     if (!window.confirm('Empty trash?')) return;
     let count = 3;
     setEmptyCountdown(count);
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
       count -= 1;
       if (count <= 0) {
         clearInterval(timer);
+        for (const item of items) {
+          await discardPayload(item);
+        }
         pushHistory(items);
         setItems([]);
         setSelected(null);
