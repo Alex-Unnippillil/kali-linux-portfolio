@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -128,6 +129,8 @@ const WhiskerMenu: React.FC = () => {
           width={16}
           height={16}
           className="inline mr-1"
+          placeholder="blur"
+          blurDataURL={DEFAULT_BLUR_DATA_URL}
         />
         Applications
       </button>

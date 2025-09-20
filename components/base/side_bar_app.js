@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import Image from 'next/image';
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder';
 import { toCanvas } from 'html-to-image';
 
 export class SideBarApp extends Component {
@@ -111,6 +112,8 @@ export class SideBarApp extends Component {
                     src={this.props.icon.replace('./', '/')}
                     alt="Ubuntu App Icon"
                     sizes="28px"
+                    placeholder="blur"
+                    blurDataURL={DEFAULT_BLUR_DATA_URL}
                 />
                 <Image
                     width={28}
@@ -119,6 +122,8 @@ export class SideBarApp extends Component {
                     src={this.props.icon.replace('./', '/')}
                     alt=""
                     sizes="28px"
+                    placeholder="blur"
+                    blurDataURL={DEFAULT_BLUR_DATA_URL}
                 />
                 {
                     (
@@ -142,6 +147,8 @@ export class SideBarApp extends Component {
                             alt={`Preview of ${this.props.title}`}
                             className="w-32 h-20 object-cover"
                             sizes="128px"
+                            placeholder="blur"
+                            blurDataURL={DEFAULT_BLUR_DATA_URL}
                         />
                     </div>
                 )}

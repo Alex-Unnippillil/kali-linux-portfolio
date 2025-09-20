@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder';
 
 export function CloseIcon() {
   return (
@@ -7,6 +8,8 @@ export function CloseIcon() {
       alt="Close"
       width={16}
       height={16}
+      placeholder="blur"
+      blurDataURL={DEFAULT_BLUR_DATA_URL}
     />
   );
 }
@@ -18,6 +21,8 @@ export function MinimizeIcon() {
       alt="Minimize"
       width={16}
       height={16}
+      placeholder="blur"
+      blurDataURL={DEFAULT_BLUR_DATA_URL}
     />
   );
 }
@@ -29,6 +34,8 @@ export function MaximizeIcon() {
       alt="Maximize"
       width={16}
       height={16}
+      placeholder="blur"
+      blurDataURL={DEFAULT_BLUR_DATA_URL}
     />
   );
 }
@@ -40,6 +47,8 @@ export function RestoreIcon() {
       alt="Restore"
       width={16}
       height={16}
+      placeholder="blur"
+      blurDataURL={DEFAULT_BLUR_DATA_URL}
     />
   );
 }
@@ -51,6 +60,8 @@ export function PinIcon() {
       alt="Pin"
       width={16}
       height={16}
+      placeholder="blur"
+      blurDataURL={DEFAULT_BLUR_DATA_URL}
     />
   );
 }

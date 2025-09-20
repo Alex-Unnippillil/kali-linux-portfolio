@@ -1,9 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder';
 
 const TagIcon = () => (
   <svg
@@ -289,8 +291,16 @@ export default function ProjectGalleryPage() {
                 className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
                 aria-label={`${p.title}: ${p.description}`}
               >
-                <div className="w-full aspect-video overflow-hidden">
-                  <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
+                <div className="relative w-full aspect-video overflow-hidden">
+                  <Image
+                    src={p.thumbnail}
+                    alt={p.title}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    placeholder="blur"
+                    blurDataURL={DEFAULT_BLUR_DATA_URL}
+                  />
                 </div>
                 <div className="p-2 flex-1">
                   <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>

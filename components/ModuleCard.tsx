@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder';
 import { ModuleMetadata } from '../modules/metadata';
 
 interface ModuleCardProps {
@@ -47,12 +48,16 @@ export default function ModuleCard({
           alt="Details"
           width={24}
           height={24}
+          placeholder="blur"
+          blurDataURL={DEFAULT_BLUR_DATA_URL}
         />
         <Image
           src="/themes/Yaru/status/download.svg"
           alt="Run"
           width={24}
           height={24}
+          placeholder="blur"
+          blurDataURL={DEFAULT_BLUR_DATA_URL}
         />
       </div>
     </button>

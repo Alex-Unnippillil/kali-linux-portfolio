@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder';
 
 interface Video {
   id: string;
@@ -67,14 +68,16 @@ const VideoGallery: React.FC = () => {
             className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
             onClick={() => setPlaying(video.id)}
           >
-            <Image
-              src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
-              alt={video.title}
-              width={480}
-              height={360}
-              sizes="(max-width: 768px) 100vw, 480px"
-              className="w-full"
-            />
+          <Image
+            src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
+            alt={video.title}
+            width={480}
+            height={360}
+            sizes="(max-width: 768px) 100vw, 480px"
+            className="w-full"
+            placeholder="blur"
+            blurDataURL={DEFAULT_BLUR_DATA_URL}
+          />
             <p className="mt-2 text-sm" style={{ maxInlineSize: '60ch' }}>{video.title}</p>
           </button>
         ))}
