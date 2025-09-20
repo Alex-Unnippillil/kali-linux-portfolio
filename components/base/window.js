@@ -525,40 +525,40 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -612,6 +612,13 @@ export class Window extends Component {
     }
 
     render() {
+        const fallbackId = typeof this.props.title === 'string'
+            ? `window-${this.props.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+            : 'window';
+        const baseId = this.id || this.props.id || fallbackId;
+        const titleId = `${baseId}-title`;
+        const toolbarId = `${baseId}-toolbar`;
+        const contentId = `${baseId}-content`;
         return (
             <>
                 {this.state.snapPreview && (
@@ -636,34 +643,47 @@ export class Window extends Component {
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
-                        id={this.id}
-                        role="dialog"
-                        aria-label={this.props.title}
+                        id={baseId}
+                        role="application"
+                        aria-labelledby={titleId}
+                        aria-describedby={contentId}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar
-                            title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
-                            id={this.id}
-                            allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
-                        />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                        <div
+                            className="flex h-full w-full flex-col"
+                            role="dialog"
+                            aria-modal="false"
+                            aria-labelledby={titleId}
+                            aria-describedby={contentId}
+                        >
+                            {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                            {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                            <WindowTopBar
+                                title={this.props.title}
+                                onKeyDown={this.handleTitleBarKeyDown}
+                                onBlur={this.releaseGrab}
+                                grabbed={this.state.grabbed}
+                                titleId={titleId}
+                            />
+                            <WindowEditButtons
+                                minimize={this.minimizeWindow}
+                                maximize={this.maximizeWindow}
+                                isMaximised={this.state.maximized}
+                                close={this.closeWindow}
+                                id={this.id}
+                                allowMaximize={this.props.allowMaximize !== false}
+                                pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                                toolbarId={toolbarId}
+                                toolbarLabel={this.props.title ? `${this.props.title} window controls` : 'Window controls'}
+                            />
+                            {(this.id === "settings"
+                                ? <Settings contentId={contentId} />
+                                : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                                    addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                                    openApp={this.props.openApp}
+                                    contentId={contentId} />)}
+                        </div>
                     </div>
                 </Draggable >
             </>
@@ -674,7 +694,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, titleId }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -684,7 +704,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div id={titleId} className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
 }
@@ -733,8 +753,16 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const toolbarProps = {
+        role: 'toolbar',
+        'aria-label': props.toolbarLabel || 'Window controls',
+        ...(props.toolbarId ? { id: props.toolbarId } : {}),
+    };
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div
+            className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]"
+            {...toolbarProps}
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -838,7 +866,10 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div
+                id={this.props.contentId ? this.props.contentId : undefined}
+                className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}
+            >
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
