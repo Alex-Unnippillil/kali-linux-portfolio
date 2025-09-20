@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useEffect, useState } from 'react';
+import AutofillModal from '../ui/AutofillModal';
 
 export interface AppNotification {
   id: string;
@@ -61,6 +62,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
     <NotificationsContext.Provider
       value={{ notifications, pushNotification, clearNotifications }}
     >
+      <AutofillModal />
       {children}
       <div className="notification-center">
         {Object.entries(notifications).map(([appId, list]) => (
