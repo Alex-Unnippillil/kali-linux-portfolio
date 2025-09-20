@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from 'react';
+import Router from 'next/router';
+import NProgress from 'nprogress';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -10,6 +12,7 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
+import '../styles/nprogress.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
@@ -27,6 +30,59 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+
+  useEffect(() => {
+    NProgress.configure({
+      showSpinner: false,
+      trickleSpeed: 120,
+    });
+
+    const handleRouteStart = () => {
+      NProgress.start();
+    };
+
+    const handleRouteDone = () => {
+      NProgress.done();
+    };
+
+    Router.events.on('routeChangeStart', handleRouteStart);
+    Router.events.on('routeChangeComplete', handleRouteDone);
+    Router.events.on('routeChangeError', handleRouteDone);
+
+    let pendingLoadListener = false;
+
+    if (typeof document !== 'undefined') {
+      const handleLoad = () => {
+        handleRouteDone();
+        window.removeEventListener('load', handleLoad);
+      };
+
+      NProgress.start();
+
+      if (document.readyState === 'complete') {
+        handleRouteDone();
+      } else {
+        window.addEventListener('load', handleLoad);
+        pendingLoadListener = true;
+      }
+
+      return () => {
+        Router.events.off('routeChangeStart', handleRouteStart);
+        Router.events.off('routeChangeComplete', handleRouteDone);
+        Router.events.off('routeChangeError', handleRouteDone);
+
+        if (pendingLoadListener) {
+          window.removeEventListener('load', handleLoad);
+        }
+      };
+    }
+
+    return () => {
+      Router.events.off('routeChangeStart', handleRouteStart);
+      Router.events.off('routeChangeComplete', handleRouteDone);
+      Router.events.off('routeChangeError', handleRouteDone);
+    };
+  }, []);
 
 
   useEffect(() => {
