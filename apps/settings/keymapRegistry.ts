@@ -3,11 +3,12 @@ import usePersistentState from '../../hooks/usePersistentState';
 export interface Shortcut {
   description: string;
   keys: string;
+  category: string;
 }
 
 const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { description: 'Show keyboard shortcuts', keys: '?' },
-  { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Show keyboard shortcuts', keys: '?', category: 'System' },
+  { description: 'Open settings', keys: 'Ctrl+,', category: 'System' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
@@ -36,9 +37,10 @@ export function useKeymap() {
     validator
   );
 
-  const shortcuts = DEFAULT_SHORTCUTS.map(({ description, keys }) => ({
+  const shortcuts = DEFAULT_SHORTCUTS.map(({ description, keys, category }) => ({
     description,
     keys: map[description] || keys,
+    category,
   }));
 
   const updateShortcut = (description: string, keys: string) =>
