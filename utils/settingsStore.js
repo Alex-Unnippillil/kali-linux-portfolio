@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  windowRules: [],
 };
 
 export async function getAccent() {
@@ -102,6 +103,31 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getWindowRules() {
+  if (typeof window === 'undefined') return [...DEFAULT_SETTINGS.windowRules];
+  try {
+    const stored = window.localStorage.getItem('window-rules');
+    if (!stored) {
+      return [...DEFAULT_SETTINGS.windowRules];
+    }
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [...DEFAULT_SETTINGS.windowRules];
+  } catch (error) {
+    console.warn('Failed to read window rules', error);
+    return [...DEFAULT_SETTINGS.windowRules];
+  }
+}
+
+export async function setWindowRules(rules) {
+  if (typeof window === 'undefined') return;
+  try {
+    const value = Array.isArray(rules) ? rules : [];
+    window.localStorage.setItem('window-rules', JSON.stringify(value));
+  } catch (error) {
+    console.error('Failed to persist window rules', error);
+  }
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +163,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('window-rules');
 }
 
 export async function exportSettings() {
@@ -151,6 +178,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    windowRules,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +190,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getWindowRules(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +205,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    windowRules,
   });
 }
 
@@ -199,6 +229,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    windowRules,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +242,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (windowRules !== undefined) await setWindowRules(windowRules);
   if (theme !== undefined) setTheme(theme);
 }
 

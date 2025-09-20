@@ -379,6 +379,8 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
 
+- **Settings** now includes a window rule editor with a live tester. Preview rules against the active window before saving so layouts stay predictable.
+
 The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
 add, reorder, or delete moods; selections persist in the browser's Origin Private File
 System so your choices restore on load. The last mood played is remembered, and
