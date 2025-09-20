@@ -1,12 +1,152 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import {
+  simulateDnsLookup,
+  type DnsLookupRequest,
+  type DnsLookupResponse,
+} from './dnsUtils';
 
-const HTTPBuilder: React.FC = () => {
+type DnsStatus = 'idle' | 'resolving' | 'success' | 'error';
+
+export const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
-  const command = `curl -X ${method} ${url}`.trim();
+  const [error, setError] = useState<string | null>(null);
+  const [dnsStatus, setDnsStatus] = useState<DnsStatus>('idle');
+  const [dnsMessage, setDnsMessage] = useState<string | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+      return;
+    }
+
+    try {
+      const worker = new Worker(new URL('./dnsResolver.worker.ts', import.meta.url));
+      workerRef.current = worker;
+
+      const handleMessage = (event: MessageEvent<DnsLookupResponse>) => {
+        const { id } = event.data;
+        if (id !== requestIdRef.current) {
+          return;
+        }
+
+        if (event.data.type === 'success') {
+          setDnsStatus('success');
+          setDnsMessage(`Resolved ${event.data.host} to ${event.data.address}`);
+        } else {
+          setDnsStatus('error');
+          setDnsMessage(`DNS lookup failed: ${event.data.error}`);
+        }
+      };
+
+      const handleError = () => {
+        setDnsStatus('error');
+        setDnsMessage('DNS lookup failed: worker error.');
+      };
+
+      worker.addEventListener('message', handleMessage);
+      worker.addEventListener('error', handleError);
+
+      return () => {
+        worker.removeEventListener('message', handleMessage);
+        worker.removeEventListener('error', handleError);
+        worker.terminate();
+      };
+    } catch {
+      workerRef.current = null;
+    }
+  }, []);
+
+  const startDnsLookup = (hostname: string, requestId: number) => {
+    const fallbackLookup = () => {
+      simulateDnsLookup(hostname)
+        .then((address) => {
+          if (requestId !== requestIdRef.current) {
+            return;
+          }
+          setDnsStatus('success');
+          setDnsMessage(`Resolved ${hostname} to ${address}`);
+        })
+        .catch((lookupError) => {
+          if (requestId !== requestIdRef.current) {
+            return;
+          }
+          const message =
+            lookupError instanceof Error ? lookupError.message : 'Unknown error.';
+          setDnsStatus('error');
+          setDnsMessage(`DNS lookup failed: ${message}`);
+        });
+    };
+
+    if (workerRef.current) {
+      try {
+        workerRef.current.postMessage({ id: requestId, host: hostname } satisfies DnsLookupRequest);
+        return;
+      } catch {
+        workerRef.current = null;
+      }
+    }
+
+    fallbackLookup();
+  };
+
+  const handleUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setUrl(value);
+
+    const trimmed = value.trim();
+    const currentRequestId = ++requestIdRef.current;
+
+    setDnsStatus('idle');
+    setDnsMessage(null);
+
+    if (!trimmed) {
+      setError('URL is required.');
+      return;
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(trimmed);
+    } catch {
+      setError('Enter a valid URL including protocol (e.g. https://example.com).');
+      return;
+    }
+
+    const protocol = parsedUrl.protocol.toLowerCase();
+    if (protocol === 'file:') {
+      setError('file:// URLs are blocked for security reasons.');
+      return;
+    }
+
+    if (protocol !== 'http:' && protocol !== 'https:') {
+      setError('Only HTTP and HTTPS URLs are supported.');
+      return;
+    }
+
+    setError(null);
+
+    const hostname = parsedUrl.hostname.trim();
+    if (!hostname) {
+      setDnsStatus('error');
+      setDnsMessage('DNS lookup failed: hostname missing.');
+      return;
+    }
+
+    setDnsStatus('resolving');
+    setDnsMessage('Resolving host…');
+
+    startDnsLookup(hostname, currentRequestId);
+  };
+
+  const sanitizedUrl = url.trim();
+  const command = sanitizedUrl ? `curl -X ${method} ${sanitizedUrl}` : '';
+  const hasError = Boolean(error || dnsStatus === 'error');
+  const feedbackId = 'http-url-feedback';
 
   return (
     <div className="h-full bg-gray-900 p-4 text-white overflow-auto">
@@ -30,7 +170,7 @@ const HTTPBuilder: React.FC = () => {
           </label>
           <select
             id="http-method"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+            className="w-full rounded border bg-gray-800 p-2 text-white focus:outline-none focus:ring"
             value={method}
             onChange={(e) => setMethod(e.target.value)}
           >
@@ -47,10 +187,32 @@ const HTTPBuilder: React.FC = () => {
           <input
             id="http-url"
             type="text"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+            className={`w-full rounded border bg-gray-800 p-2 text-white focus:outline-none focus:ring ${
+              hasError ? 'border-red-500 focus:ring-red-400' : 'border-gray-700 focus:ring-blue-400'
+            }`}
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={handleUrlChange}
+            aria-invalid={hasError}
+            aria-describedby={feedbackId}
+            placeholder="https://example.com"
+            autoComplete="off"
           />
+          <div
+            id={feedbackId}
+            className="mt-1 min-h-[1.5rem] text-xs"
+            aria-live="polite"
+          >
+            {error && <p className="text-red-400">{error}</p>}
+            {!error && dnsStatus === 'resolving' && (
+              <p className="text-yellow-300">Resolving host…</p>
+            )}
+            {!error && dnsStatus === 'error' && dnsMessage && (
+              <p className="text-red-400">{dnsMessage}</p>
+            )}
+            {!error && dnsStatus === 'success' && dnsMessage && (
+              <p className="text-emerald-300">{dnsMessage}</p>
+            )}
+          </div>
         </div>
       </form>
       <div>
