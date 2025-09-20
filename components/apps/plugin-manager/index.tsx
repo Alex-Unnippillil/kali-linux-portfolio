@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useShellConfig } from '../../../hooks/useShellConfig';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -39,15 +40,21 @@ export default function PluginManager() {
     }
     return null;
   });
+  const { safeMode } = useShellConfig();
 
   useEffect(() => {
+    if (safeMode) {
+      setPlugins([]);
+      return;
+    }
     fetch('/api/plugins')
       .then((res) => res.json())
       .then(setPlugins)
       .catch(() => setPlugins([]));
-  }, []);
+  }, [safeMode]);
 
   const install = async (plugin: PluginInfo) => {
+    if (safeMode) return;
     const res = await fetch(`/api/plugins/${plugin.file}`);
     const manifest: PluginManifest = await res.json();
     const updated = { ...installed, [plugin.id]: manifest };
@@ -56,6 +63,7 @@ export default function PluginManager() {
   };
 
   const run = (plugin: PluginInfo) => {
+    if (safeMode) return;
     const manifest = installed[plugin.id];
     if (!manifest) return;
     const output: string[] = [];
@@ -119,6 +127,18 @@ export default function PluginManager() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  if (safeMode) {
+    return (
+      <div className="p-4 text-white">
+        <h1 className="text-xl mb-4">Plugin Catalog</h1>
+        <p className="text-sm text-ubt-ice-white/80">
+          Plugin installation and execution are disabled while safe mode is active. Restart the shell without
+          safe mode to manage plugins.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 text-white">
