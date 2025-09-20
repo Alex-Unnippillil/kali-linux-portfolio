@@ -42,6 +42,79 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window focus state', () => {
+  const baseProps = {
+    id: 'test-window',
+    title: 'Test',
+    screen: () => <div>content</div>,
+    hasMinimised: () => {},
+    closed: () => {},
+    hideSideBar: () => {},
+    openApp: () => {},
+  };
+
+  it('applies focus styling when the window receives focus', () => {
+    const focus = jest.fn();
+    render(
+      <Window
+        {...baseProps}
+        focus={focus}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    expect(winEl).toHaveClass('window-unfocused');
+
+    fireEvent.focus(winEl);
+
+    expect(winEl).toHaveClass('window-focused');
+    expect(winEl).not.toHaveClass('window-unfocused');
+    expect(focus).toHaveBeenCalledWith('test-window');
+  });
+
+  it('removes focus styling on blur events', () => {
+    render(
+      <Window
+        {...baseProps}
+        focus={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    fireEvent.focus(winEl);
+    fireEvent.blur(winEl);
+
+    expect(winEl).toHaveClass('window-unfocused');
+    expect(winEl).not.toHaveClass('window-focused');
+  });
+
+  it('syncs focus state when props change', () => {
+    const focus = jest.fn();
+    const { rerender } = render(
+      <Window
+        {...baseProps}
+        focus={focus}
+        isFocused={false}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    expect(winEl).toHaveClass('window-unfocused');
+
+    rerender(
+      <Window
+        {...baseProps}
+        focus={focus}
+        isFocused
+      />
+    );
+
+    expect(winEl).toHaveClass('window-focused');
+    expect(winEl).not.toHaveClass('window-unfocused');
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
@@ -199,7 +272,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
