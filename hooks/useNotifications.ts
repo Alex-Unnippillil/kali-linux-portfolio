@@ -1,5 +1,10 @@
 import { useContext } from 'react';
-import { NotificationsContext } from '../components/common/NotificationCenter';
+import {
+  NotificationsContext,
+  type PushOptions,
+  type AppNotification,
+  type NotificationActionInput,
+} from '../components/common/NotificationCenter';
 
 export const useNotifications = () => {
   const ctx = useContext(NotificationsContext);
@@ -10,3 +15,5 @@ export const useNotifications = () => {
 };
 
 export default useNotifications;
+
+export type { PushOptions, AppNotification, NotificationActionInput };
