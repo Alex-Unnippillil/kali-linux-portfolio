@@ -18,6 +18,7 @@ function BootingScreen(props) {
                 alt="Ubuntu Logo"
                 sizes="(max-width: 768px) 50vw, 25vw"
                 priority
+                fetchPriority="high"
             />
             <div className="w-10 h-10 flex justify-center items-center rounded-full outline-none cursor-pointer" onClick={props.turnOn} >
                 {(props.isShutDown
@@ -31,6 +32,8 @@ function BootingScreen(props) {
                 src="/themes/Yaru/status/ubuntu_white_hex.svg"
                 alt="Kali Linux Name"
                 sizes="(max-width: 768px) 50vw, 20vw"
+                priority
+                fetchPriority="high"
             />
             <div className="text-white mb-4">
                 <a className="underline" href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">linkedin</a>

@@ -125,6 +125,7 @@ function About() {
                     height={256}
                     sizes="(max-width: 768px) 50vw, 25vw"
                     priority
+                    fetchPriority="high"
                 />
             </div>
             <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
