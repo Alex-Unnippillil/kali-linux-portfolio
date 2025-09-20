@@ -23,6 +23,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { setThemeColorMeta } from '../utils/metadata';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -151,6 +152,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     saveAccent(accent);
   }, [accent]);
+
+  useEffect(() => {
+    setThemeColorMeta();
+  }, [accent, theme]);
 
   useEffect(() => {
     saveWallpaper(wallpaper);

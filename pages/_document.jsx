@@ -1,4 +1,5 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import { readAccentColorFromStyles } from '../utils/metadata.server';
 
 class MyDocument extends Document {
   /**
@@ -12,12 +13,13 @@ class MyDocument extends Document {
 
   render() {
     const { nonce } = this.props;
+    const themeColor = readAccentColorFromStyles();
     return (
       <Html lang="en" data-csp-nonce={nonce}>
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
-          <meta name="theme-color" content="#0f1317" />
+          <meta name="theme-color" content={themeColor} />
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
