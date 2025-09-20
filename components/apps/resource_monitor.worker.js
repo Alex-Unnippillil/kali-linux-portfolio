@@ -1,6 +1,7 @@
 const WIDTH = 300;
 const HEIGHT = 100;
 const MAX_POINTS = 50;
+const WINDOW = 5;
 let ctx = {};
 let data = { cpu: [], memory: [], down: [], up: [] };
 let reduceMotion = false;
@@ -12,6 +13,7 @@ let hidden = false;
 let drawHandle = null;
 let sampleHandle = null;
 let paused = false;
+const lastSample = { cpu: 0, memory: 0, down: 0, up: 0 };
 
 self.onmessage = (e) => {
   const { type } = e.data || {};
@@ -84,9 +86,8 @@ function startSampling() {
     const down = connection.downlink || 0;
     const up = connection.uplink || connection.upload || 0;
 
-    push(cpu, memory, down, up);
+    push({ cpu, memory, down, up });
     if (reduceMotion && !hidden && !paused) draw();
-    self.postMessage({ cpu, memory, down, up });
     sampleHandle = setTimeout(sample, 1000);
   };
   sampleHandle = setTimeout(sample, 1000);
@@ -108,16 +109,37 @@ function runStress() {
   stressHandle = setTimeout(runStress, 0);
 }
 
-function push(cpu, memory, down, up) {
+function push(sample) {
+  if (!sample || typeof sample !== 'object') return;
+  Object.keys(lastSample).forEach((key) => {
+    if (typeof sample[key] === 'number' && Number.isFinite(sample[key])) {
+      lastSample[key] = sample[key];
+    }
+  });
   sampleCount++;
-  if (sampleCount % decimate !== 0) return;
-  data.cpu.push(cpu);
-  data.memory.push(memory);
-  data.down.push(down);
-  data.up.push(up);
-  Object.keys(data).forEach((k) => {
-    const max = Math.floor(MAX_POINTS / decimate) || 1;
-    if (data[k].length > max) data[k].shift();
+  const shouldStore = sampleCount % decimate === 0;
+  if (shouldStore) {
+    Object.keys(data).forEach((key) => {
+      const value = sample[key];
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        data[key].push(value);
+      }
+    });
+    Object.keys(data).forEach((k) => {
+      const max = Math.floor(MAX_POINTS / decimate) || 1;
+      if (data[k].length > max) data[k].shift();
+    });
+  }
+  postSummary();
+}
+
+function postSummary() {
+  const summary = computeSummary();
+  self.postMessage({
+    type: 'summary',
+    summary,
+    latest: { ...lastSample },
+    timestamp: performance.now(),
   });
 }
 
@@ -204,4 +226,61 @@ function drawNetwork(ctx2d) {
   ctx2d.font = '12px sans-serif';
   ctx2d.fillText(`Down: ${latestDown.toFixed(1)} Mbps`, 4, 12);
   ctx2d.fillText(`Up: ${latestUp.toFixed(1)} Mbps`, 4, 26);
+}
+
+function computeSummary() {
+  const summary = {};
+  Object.keys(data).forEach((key) => {
+    summary[key] = summarizeSeries(data[key]);
+  });
+  return summary;
+}
+
+function summarizeSeries(series) {
+  const length = series.length;
+  if (!length) {
+    return {
+      latest: 0,
+      average: 0,
+      min: 0,
+      max: 0,
+      windowAverage: 0,
+      windowMin: 0,
+      windowMax: 0,
+      trend: 0,
+      count: 0,
+    };
+  }
+  let min = series[0];
+  let max = series[0];
+  let sum = 0;
+  for (let i = 0; i < length; i += 1) {
+    const value = series[i];
+    sum += value;
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  const latest = series[length - 1];
+  const windowLength = Math.min(WINDOW, length);
+  let windowSum = 0;
+  let windowMin = series[length - windowLength];
+  let windowMax = series[length - windowLength];
+  for (let i = length - windowLength; i < length; i += 1) {
+    const value = series[i];
+    windowSum += value;
+    if (value < windowMin) windowMin = value;
+    if (value > windowMax) windowMax = value;
+  }
+  const baseIndex = Math.max(0, length - windowLength);
+  return {
+    latest,
+    average: sum / length,
+    min,
+    max,
+    windowAverage: windowSum / windowLength,
+    windowMin,
+    windowMax,
+    trend: latest - series[baseIndex],
+    count: length,
+  };
 }
