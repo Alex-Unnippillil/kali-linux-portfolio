@@ -17,7 +17,7 @@ export default function useRovingTabIndex(
 
     const items = Array.from(
       node.querySelectorAll<HTMLElement>(
-        '[role="tab"], [role="menuitem"], [role="option"]'
+        '[role="tab"], [role="menuitem"], [role="option"], [role="menuitemradio"]'
       )
     );
     if (items.length === 0) return;
