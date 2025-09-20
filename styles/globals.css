@@ -77,3 +77,22 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+.visual-bell {
+  animation: visual-bell-flash 150ms ease-in-out;
+}
+
+@keyframes visual-bell-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(23, 147, 209, 0);
+  }
+
+  45% {
+    box-shadow: 0 0 0 4px rgba(23, 147, 209, 0.65),
+      0 0 12px rgba(23, 147, 209, 0.55);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(23, 147, 209, 0);
+  }
+}
