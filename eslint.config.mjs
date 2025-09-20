@@ -1,5 +1,6 @@
 import { FlatCompat } from '@eslint/eslintrc';
 import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
+import motionPlugin from './eslint-plugin-motion/index.js';
 
 const compat = new FlatCompat();
 
@@ -11,6 +12,15 @@ const config = [
     },
     rules: {
       'no-top-level-window/no-top-level-window-or-document': 'error',
+    },
+  },
+  {
+    files: ['components/base/**/*.{js,jsx,ts,tsx}', 'components/core/**/*.{js,jsx,ts,tsx}'],
+    plugins: {
+      motion: motionPlugin,
+    },
+    rules: {
+      'motion/no-raw-motion': 'warn',
     },
   },
   {
