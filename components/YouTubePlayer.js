@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
+import { observeOPFS } from '../lib/opfs-observer';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
@@ -21,6 +22,7 @@ export default function YouTubePlayer({ videoId }) {
   const [results, setResults] = useState([]);
   const prefersReducedMotion = usePrefersReducedMotion();
   const { supported, getDir, readFile, writeFile, listFiles } = useOPFS();
+  const [opfsEvents, setOpfsEvents] = useState(0);
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -143,18 +145,31 @@ export default function YouTubePlayer({ videoId }) {
   };
 
   useEffect(() => {
+    if (!supported) return;
+    const disconnect = observeOPFS(() => {
+      setOpfsEvents((count) => count + 1);
+    });
+    return () => {
+      disconnect();
+    };
+  }, [supported]);
+
+  useEffect(() => {
     let cancelled = false;
     if (!supported) return;
     (async () => {
       const dir = await getDir('video-notes');
-      if (!dir) return;
+      if (!dir) {
+        if (!cancelled) setNotes('');
+        return;
+      }
       const text = await readFile(`${videoId}.txt`, dir);
-      if (!cancelled && text !== null) setNotes(text);
+      if (!cancelled) setNotes(text ?? '');
     })();
     return () => {
       cancelled = true;
     };
-  }, [videoId, supported, getDir, readFile]);
+  }, [videoId, supported, getDir, readFile, opfsEvents]);
 
   const handleNoteChange = useCallback(
     async (e) => {
@@ -191,7 +206,7 @@ export default function YouTubePlayer({ videoId }) {
     return () => {
       cancelled = true;
     };
-  }, [search, supported, getDir, listFiles, readFile]);
+  }, [search, supported, getDir, listFiles, readFile, opfsEvents]);
 
   return (
     <>

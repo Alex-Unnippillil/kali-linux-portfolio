@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { observeOPFS } from '../../lib/opfs-observer';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -130,7 +131,17 @@ export default function FileExplorer() {
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
+
+  useEffect(() => {
+    if (!opfsSupported || !dirHandle) return;
+    const disconnect = observeOPFS(() => {
+      readDir(dirHandle).catch(() => {});
+    });
+    return () => {
+      disconnect();
+    };
+  }, [opfsSupported, dirHandle, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -188,16 +199,27 @@ export default function FileExplorer() {
     setContent(text);
   };
 
-  const readDir = async (handle) => {
+  const readDir = useCallback(async (handle) => {
+    if (!handle) {
+      setDirs([]);
+      setFiles([]);
+      return;
+    }
+
     const ds = [];
     const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
+    try {
+      for await (const [name, h] of handle.entries()) {
+        if (h.kind === 'file') fs.push({ name, handle: h });
+        else if (h.kind === 'directory') ds.push({ name, handle: h });
+      }
+      setDirs(ds);
+      setFiles(fs);
+    } catch {
+      setDirs([]);
+      setFiles([]);
     }
-    setDirs(ds);
-    setFiles(fs);
-  };
+  }, []);
 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);
