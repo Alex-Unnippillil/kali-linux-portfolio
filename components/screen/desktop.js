@@ -14,6 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import HotCorners from '../HotCorners';
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -30,6 +31,8 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.overviewObserver = null;
+        this.isUpdatingOverview = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -89,6 +92,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.setupOverviewSync();
     }
 
     componentWillUnmount() {
@@ -96,6 +100,13 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.overviewObserver) {
+            this.overviewObserver.disconnect();
+            this.overviewObserver = null;
+        }
+        if (typeof document !== 'undefined') {
+            document.documentElement.classList.remove('show-overview');
+        }
     }
 
     checkForNewFolders = () => {
@@ -144,6 +155,52 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    updateOverviewState = (active, extraState = {}, callback) => {
+        if (typeof document !== 'undefined') {
+            const root = document.documentElement;
+            if (root) {
+                this.isUpdatingOverview = true;
+                root.classList.toggle('show-overview', active);
+            }
+        }
+
+        this.setState({ ...extraState, allAppsView: active }, () => {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            this.isUpdatingOverview = false;
+        });
+    }
+
+    setupOverviewSync = () => {
+        if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
+            return;
+        }
+
+        const root = document.documentElement;
+        if (!root) {
+            return;
+        }
+
+        const active = root.classList.contains('show-overview');
+        if (active !== this.state.allAppsView) {
+            this.setState({ allAppsView: active });
+        }
+
+        this.overviewObserver = new MutationObserver(() => {
+            if (this.isUpdatingOverview) {
+                return;
+            }
+
+            const isActive = root.classList.contains('show-overview');
+            if (isActive !== this.state.allAppsView) {
+                this.setState({ allAppsView: isActive });
+            }
+        });
+
+        this.overviewObserver.observe(root, { attributes: true, attributeFilter: ['class'] });
     }
 
     handleGlobalShortcut = (e) => {
@@ -647,7 +704,7 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.updateOverviewState(false, { closed_windows, favourite_apps }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -823,7 +880,10 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = () => {
+        const next = !this.state.allAppsView;
+        this.updateOverviewState(next);
+    }
 
     renderNameBar = () => {
         let addFolder = () => {
@@ -866,6 +926,8 @@ export class Desktop extends Component {
     render() {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+
+                <HotCorners />
 
                 {/* Window Area */}
                 <div
