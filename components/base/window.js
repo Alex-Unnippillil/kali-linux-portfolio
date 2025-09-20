@@ -8,6 +8,12 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const SNAP_ZONE_DETAILS = {
+    left: { label: 'Snap Left', shortcut: 'Alt + ArrowLeft' },
+    right: { label: 'Snap Right', shortcut: 'Alt + ArrowRight' },
+    top: { label: 'Snap Top Half', shortcut: 'Alt + ArrowUp' },
+};
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -31,6 +37,7 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
             snapped: null,
+            snapTooltip: null,
             lastSize: null,
             grabbed: false,
         }
@@ -248,44 +255,12 @@ export class Window extends Component {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                snapTooltip: null
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, snapTooltip: null }, this.resizeBoundries);
         }
-    }
-
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     checkOverlap = () => {
@@ -313,26 +288,50 @@ export class Window extends Component {
         }
     }
 
+    showSnapTooltip = () => {
+        const { snapPosition, snapTooltip } = this.state;
+        if (snapPosition && snapTooltip !== snapPosition) {
+            this.setState({ snapTooltip: snapPosition });
+        }
+    }
+
+    hideSnapTooltip = () => {
+        if (this.state.snapTooltip) {
+            this.setState({ snapTooltip: null });
+        }
+    }
+
     checkSnapPreview = () => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
         const threshold = 30;
-        let snap = null;
+        let zone = null;
         if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+            zone = 'left';
         }
         else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
+            zone = 'right';
         }
         else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
+            zone = 'top';
         }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+
+        if (zone) {
+            const snap = zone === 'left'
+                ? { left: '0', top: '0', width: '50%', height: '100%' }
+                : zone === 'right'
+                    ? { left: '50%', top: '0', width: '50%', height: '100%' }
+                    : { left: '0', top: '0', width: '100%', height: '50%' };
+            if (this.state.snapPosition !== zone) {
+                this.setState(prev => ({
+                    snapPreview: snap,
+                    snapPosition: zone,
+                    snapTooltip: prev.snapTooltip === zone ? prev.snapTooltip : null,
+                }));
+            }
+        } else if (this.state.snapPreview || this.state.snapTooltip || this.state.snapPosition) {
+            this.setState({ snapPreview: null, snapPosition: null, snapTooltip: null });
         }
     }
 
@@ -371,7 +370,9 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            if (this.state.snapPreview || this.state.snapTooltip || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null, snapTooltip: null });
+            }
         }
     }
 
@@ -586,6 +587,7 @@ export class Window extends Component {
 
     snapWindow = (pos) => {
         this.focusWindow();
+        this.setWinowsPosition();
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
@@ -598,12 +600,19 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
             node.style.transform = transform;
         }
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
+            snapTooltip: null,
             snapped: pos,
             lastSize: { width, height },
             width: newWidth,
@@ -612,14 +621,32 @@ export class Window extends Component {
     }
 
     render() {
+        const { snapPreview, snapPosition, snapTooltip } = this.state;
+        const zoneDetails = snapPosition ? SNAP_ZONE_DETAILS[snapPosition] : null;
+        const tooltipId = snapPosition ? `snap-tooltip-${this.id}-${snapPosition}` : undefined;
+        const tooltipVisible = !!(snapPosition && snapTooltip === snapPosition);
+        const previewAriaLabel = zoneDetails
+            ? `${zoneDetails.label}. Shortcut ${zoneDetails.shortcut}.`
+            : undefined;
         return (
             <>
-                {this.state.snapPreview && (
+                {snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
-                    />
+                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 z-40 transition-opacity focus:outline-none relative"
+                        style={{ left: snapPreview.left, top: snapPreview.top, width: snapPreview.width, height: snapPreview.height }}
+                        tabIndex={0}
+                        aria-label={previewAriaLabel}
+                        aria-describedby={tooltipId}
+                        onMouseEnter={this.showSnapTooltip}
+                        onMouseLeave={this.hideSnapTooltip}
+                        onFocus={this.showSnapTooltip}
+                        onBlur={this.hideSnapTooltip}
+                    >
+                        {snapPosition && (
+                            <SnapZoneTooltip id={tooltipId} zone={snapPosition} visible={tooltipVisible} />
+                        )}
+                    </div>
                 )}
                 <Draggable
                     axis="both"
@@ -672,6 +699,24 @@ export class Window extends Component {
 }
 
 export default Window
+
+function SnapZoneTooltip({ id, zone, visible }) {
+    const details = SNAP_ZONE_DETAILS[zone];
+    if (!details) return null;
+    return (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div
+                id={id}
+                role="tooltip"
+                aria-hidden={!visible}
+                className={`rounded bg-gray-900 bg-opacity-90 px-3 py-2 text-sm text-white shadow-lg transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
+            >
+                <div className="font-semibold">{details.label}</div>
+                <div className="mt-1 text-xs text-gray-300">{details.shortcut}</div>
+            </div>
+        </div>
+    );
+}
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
