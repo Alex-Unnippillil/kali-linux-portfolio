@@ -1,0 +1,7 @@
+[data-paused="true"] *,
+[data-paused="true"] *::before,
+[data-paused="true"] *::after {
+  animation: none !important;
+  animation-play-state: paused !important;
+  transition: none !important;
+}

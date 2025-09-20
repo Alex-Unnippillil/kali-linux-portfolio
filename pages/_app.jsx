@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import '../app/globals.css';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -15,6 +16,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
+import VisibilityPause from '../src/ui/VisibilityPause';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
@@ -149,6 +151,7 @@ function MyApp(props) {
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
+      <VisibilityPause />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"
