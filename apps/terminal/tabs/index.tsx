@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import TabbedWindow, { TabDefinition } from '../../../components/ui/TabbedWindow';
+import TabbedWindow, { TabDefinition } from '../../../components/desktop/TabbedWindow';
 import Terminal, { TerminalProps } from '..';
 
 const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
@@ -19,6 +19,8 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
   return (
     <TabbedWindow
       className="h-full w-full"
+      groupId="terminal"
+      tabListLabel="Terminal sessions"
       initialTabs={[createTab()]}
       onNewTab={createTab}
     />

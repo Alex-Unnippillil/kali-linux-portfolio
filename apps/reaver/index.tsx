@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow, { TabDefinition } from '../../components/desktop/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
@@ -365,6 +365,8 @@ const ReaverPage: React.FC = () => {
   return (
     <TabbedWindow
       className="min-h-screen bg-gray-900 text-white"
+      groupId="reaver"
+      tabListLabel="Reaver sessions"
       initialTabs={[createTab()]}
       onNewTab={createTab}
     />

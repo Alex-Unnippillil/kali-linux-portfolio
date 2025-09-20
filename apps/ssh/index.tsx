@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow, { TabDefinition } from '../../components/desktop/TabbedWindow';
 
 const SSHBuilder: React.FC = () => {
   const [user, setUser] = useState('');
@@ -83,6 +83,8 @@ const SSHPreview: React.FC = () => {
   return (
     <TabbedWindow
       className="min-h-screen bg-gray-900 text-white"
+      groupId="ssh"
+      tabListLabel="SSH sessions"
       initialTabs={[createTab()]}
       onNewTab={createTab}
     />
