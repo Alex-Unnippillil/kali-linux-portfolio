@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useLocaleDirection from '../../hooks/useLocaleDirection';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,8 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const direction = useLocaleDirection();
+  const isRTL = direction === 'rtl';
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -127,14 +130,14 @@ const WhiskerMenu: React.FC = () => {
           alt="Menu"
           width={16}
           height={16}
-          className="inline mr-1"
+          className={`inline ${isRTL ? 'ml-1' : 'mr-1'}`}
         />
         Applications
       </button>
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
+          className={`absolute ${isRTL ? 'right-0' : 'left-0'} mt-1 z-50 flex bg-ub-grey text-white shadow-lg ${isRTL ? 'flex-row-reverse' : ''}`}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -142,11 +145,11 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
+          <div className={`flex flex-col bg-gray-800 p-2 ${isRTL ? 'items-end text-right' : ''}`}>
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`${isRTL ? 'text-right' : 'text-left'} px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
@@ -159,9 +162,13 @@ const WhiskerMenu: React.FC = () => {
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
+              style={{ textAlign: isRTL ? 'right' : 'left' }}
               autoFocus
             />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+            <div
+              className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto"
+              style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+            >
               {currentApps.map((app, idx) => (
                 <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
                   <UbuntuApp

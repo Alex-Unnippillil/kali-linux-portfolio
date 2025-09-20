@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import useLocaleDirection from '../../hooks/useLocaleDirection';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const isRTL = useLocaleDirection() === 'rtl';
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -23,9 +25,9 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 shadow border-black border border-opacity-20 ${
         open ? '' : 'hidden'
-      }`}
+      } ${isRTL ? 'left-3 right-auto' : 'right-3 left-auto'}`}
     >
       <div className="px-4 pb-2">
         <button
