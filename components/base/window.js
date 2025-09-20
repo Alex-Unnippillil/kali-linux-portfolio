@@ -37,6 +37,13 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.windowRef = React.createRef();
+        this._position = { x: this.startX, y: this.startY };
+        this._lastDragData = null;
+        this._dragFrame = null;
+        this._dragFrameIsTimeout = false;
+        this._isSidebarHidden = false;
+        this._passiveOptions = { passive: true };
     }
 
     componentDidMount() {
@@ -47,12 +54,12 @@ export class Window extends Component {
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
         // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
+        window.addEventListener('resize', this.resizeBoundries, this._passiveOptions);
         // Listen for context menu events to toggle inert background
-        window.addEventListener('context-menu-open', this.setInertBackground);
-        window.addEventListener('context-menu-close', this.removeInertBackground);
-        const root = document.getElementById(this.id);
-        root?.addEventListener('super-arrow', this.handleSuperArrow);
+        window.addEventListener('context-menu-open', this.setInertBackground, this._passiveOptions);
+        window.addEventListener('context-menu-close', this.removeInertBackground, this._passiveOptions);
+        const root = this.windowRef.current || document.getElementById(this.id);
+        root?.addEventListener('super-arrow', this.handleSuperArrow, this._passiveOptions);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -61,11 +68,13 @@ export class Window extends Component {
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        window.removeEventListener('resize', this.resizeBoundries);
-        window.removeEventListener('context-menu-open', this.setInertBackground);
-        window.removeEventListener('context-menu-close', this.removeInertBackground);
-        const root = document.getElementById(this.id);
-        root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        window.removeEventListener('resize', this.resizeBoundries, this._passiveOptions);
+        window.removeEventListener('context-menu-open', this.setInertBackground, this._passiveOptions);
+        window.removeEventListener('context-menu-close', this.removeInertBackground, this._passiveOptions);
+        const root = this.windowRef.current || document.getElementById(this.id);
+        root?.removeEventListener('super-arrow', this.handleSuperArrow, this._passiveOptions);
+        this.cancelDragProcessing();
+        this._lastDragData = null;
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -156,6 +165,73 @@ export class Window extends Component {
         shrink();
     }
 
+    parseTransform = (transform) => {
+        if (!transform) {
+            return this._position || { x: 0, y: 0 };
+        }
+        const match = transform.match(/translate(?:3d)?\(\s*([-0-9.]+)[^,]*,\s*([-0-9.]+)[^,]*/i);
+        if (!match) {
+            return this._position || { x: 0, y: 0 };
+        }
+        const x = Number.parseFloat(match[1]);
+        const y = Number.parseFloat(match[2]);
+        return {
+            x: Number.isNaN(x) ? 0 : x,
+            y: Number.isNaN(y) ? 0 : y,
+        };
+    }
+
+    syncPositionFromNode = () => {
+        const node = this.windowRef.current || document.getElementById(this.id);
+        if (!node) {
+            return this._position || { x: 0, y: 0 };
+        }
+        const position = this.parseTransform(node.style.transform);
+        this._position = position;
+        return position;
+    }
+
+    scheduleDragProcessing = () => {
+        if (this._dragFrame) return;
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            this._dragFrame = window.requestAnimationFrame(this.flushDrag);
+            this._dragFrameIsTimeout = false;
+        } else {
+            this._dragFrame = setTimeout(this.flushDrag, 16);
+            this._dragFrameIsTimeout = true;
+        }
+    }
+
+    cancelDragProcessing = () => {
+        if (!this._dragFrame) return;
+        if (this._dragFrameIsTimeout) {
+            clearTimeout(this._dragFrame);
+        } else if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this._dragFrame);
+        }
+        this._dragFrame = null;
+        this._dragFrameIsTimeout = false;
+    }
+
+    flushDrag = () => {
+        this._dragFrame = null;
+        this._dragFrameIsTimeout = false;
+        const data = this._lastDragData;
+        this._lastDragData = null;
+        if (!data) return;
+        let { x, y } = data;
+        if (data.node) {
+            const adjusted = this.applyEdgeResistance(data.node, data);
+            if (adjusted) {
+                x = adjusted.x;
+                y = adjusted.y;
+            }
+        }
+        this._position = { x, y };
+        this.checkOverlap(x);
+        this.checkSnapPreview({ x, y });
+    }
+
     getOverlayRoot = () => {
         if (this.props.overlayRoot) {
             if (typeof this.props.overlayRoot === 'string') {
@@ -194,6 +270,7 @@ export class Window extends Component {
             this.unsnapWindow();
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.syncPositionFromNode();
     }
 
     changeCursorToDefault = () => {
@@ -221,27 +298,29 @@ export class Window extends Component {
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
-    setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
-        const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+    setWinowsPosition = (position) => {
+        const node = this.windowRef.current || document.getElementById(this.id);
+        if (!node) return;
+        const current = position ?? this.syncPositionFromNode();
+        const snappedX = this.snapToGrid(current.x);
+        const snappedY = this.snapToGrid(current.y - 32);
+        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${snappedY.toFixed(1)}px`);
+        this._position = { x: current.x, y: current.y };
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
+            this.props.onPositionChange(snappedX, snappedY);
         }
     }
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
-        if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
+        const node = this.windowRef.current || document.getElementById(this.id);
+        if (node) {
+            const x = node.style.getPropertyValue('--window-transform-x');
+            const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
+                node.style.transform = `translate(${x},${y})`;
+                this.syncPositionFromNode();
             }
         }
         if (this.state.lastSize) {
@@ -249,95 +328,85 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.checkOverlap();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.checkOverlap();
+            });
         }
     }
 
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
-
-    checkOverlap = () => {
-        var r = document.querySelector("#" + this.id);
-        var rect = r.getBoundingClientRect();
-        if (rect.x.toFixed(1) < 50) { // if this window overlapps with SideBar
-            this.props.hideSideBar(this.id, true);
-        }
-        else {
-            this.props.hideSideBar(this.id, false);
+    checkOverlap = (x) => {
+        if (!this.props.hideSideBar) return;
+        const positionX = typeof x === 'number' ? x : this.syncPositionFromNode().x;
+        const shouldHide = positionX < 50;
+        if (shouldHide !== this._isSidebarHidden) {
+            this.props.hideSideBar(this.id, shouldHide);
+            this._isSidebarHidden = shouldHide;
         }
     }
 
     setInertBackground = () => {
-        const root = document.getElementById(this.id);
+        const root = this.windowRef.current || document.getElementById(this.id);
         if (root) {
             root.setAttribute('inert', '');
         }
     }
 
     removeInertBackground = () => {
-        const root = document.getElementById(this.id);
+        const root = this.windowRef.current || document.getElementById(this.id);
         if (root) {
             root.removeAttribute('inert');
         }
     }
 
-    checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+    checkSnapPreview = (position) => {
+        if (typeof window === 'undefined') return;
+        const { x, y } = position ?? this.syncPositionFromNode();
         const threshold = 30;
-        let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const widthPx = (this.state.width / 100) * viewportWidth;
+        const heightPx = (this.state.height / 100) * viewportHeight;
+
+        let snapPreview = null;
+        let snapPosition = null;
+
+        if (x <= threshold) {
+            snapPreview = { left: '0', top: '0', width: '50%', height: '100%' };
+            snapPosition = 'left';
+        } else if (x + widthPx >= viewportWidth - threshold) {
+            snapPreview = { left: '50%', top: '0', width: '50%', height: '100%' };
+            snapPosition = 'right';
+        } else if (y <= threshold) {
+            snapPreview = { left: '0', top: '0', width: '100%', height: '50%' };
+            snapPosition = 'top';
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+
+        const { snapPreview: currentPreview, snapPosition: currentPosition } = this.state;
+
+        if (snapPosition) {
+            if (
+                currentPosition !== snapPosition ||
+                !currentPreview ||
+                currentPreview.left !== snapPreview.left ||
+                currentPreview.top !== snapPreview.top ||
+                currentPreview.width !== snapPreview.width ||
+                currentPreview.height !== snapPreview.height
+            ) {
+                this.setState({ snapPreview, snapPosition });
+            }
+        } else if (currentPreview || currentPosition) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
     applyEdgeResistance = (node, data) => {
-        if (!node || !data) return;
+        if (!node || !data) return null;
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
@@ -355,17 +424,17 @@ export class Window extends Component {
         x = resist(x, 0, maxX);
         y = resist(y, 0, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
+        return { x, y };
     }
 
     handleDrag = (e, data) => {
-        if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
-        }
-        this.checkOverlap();
-        this.checkSnapPreview();
+        this._lastDragData = data;
+        this.scheduleDragProcessing();
     }
 
     handleStop = () => {
+        this.cancelDragProcessing();
+        this.flushDrag();
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
@@ -373,6 +442,8 @@ export class Window extends Component {
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.checkOverlap();
+        this.setWinowsPosition(this._position);
     }
 
     focusWindow = () => {
@@ -386,16 +457,19 @@ export class Window extends Component {
         }
         this.setWinowsPosition();
         // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
+        const r = document.querySelector("#sidebar-" + this.id);
+        if (!r) return;
+        const sidebBarApp = r.getBoundingClientRect();
 
-        const node = document.querySelector("#" + this.id);
+        const node = this.windowRef.current || document.getElementById(this.id);
+        if (!node) return;
         const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
+            this.syncPositionFromNode();
             return;
         }
 
@@ -407,12 +481,14 @@ export class Window extends Component {
         this._dockAnimation.onfinish = () => {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
+            this.syncPositionFromNode();
             this._dockAnimation.onfinish = null;
         };
     }
 
     restoreWindow = () => {
-        const node = document.querySelector("#" + this.id);
+        const node = this.windowRef.current || document.getElementById(this.id);
+        if (!node) return;
         this.setDefaultWindowDimenstion();
         // get previous position
         let posx = node.style.getPropertyValue("--window-transform-x");
@@ -425,6 +501,7 @@ export class Window extends Component {
             node.style.transform = endTransform;
             this.setState({ maximized: false });
             this.checkOverlap();
+            this.syncPositionFromNode();
             return;
         }
 
@@ -433,6 +510,7 @@ export class Window extends Component {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
                 this.checkOverlap();
+                this.syncPositionFromNode();
                 this._dockAnimation.onfinish = null;
             };
             this._dockAnimation.reverse();
@@ -445,6 +523,7 @@ export class Window extends Component {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
                 this.checkOverlap();
+                this.syncPositionFromNode();
                 this._dockAnimation.onfinish = null;
             };
         }
@@ -457,12 +536,15 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
-            var r = document.querySelector("#" + this.id);
+            const node = this.windowRef.current || document.getElementById(this.id);
+            if (!node) return;
             this.setWinowsPosition();
             // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
+            node.style.transform = `translate(-1pt,-2pt)`;
+            this.syncPositionFromNode();
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
+            this._isSidebarHidden = true;
         }
     }
 
@@ -471,6 +553,7 @@ export class Window extends Component {
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
+            this._isSidebarHidden = false;
             setTimeout(() => {
                 this.props.closed(this.id)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
@@ -496,17 +579,22 @@ export class Window extends Component {
             if (dx !== 0 || dy !== 0) {
                 e.preventDefault();
                 e.stopPropagation();
-                const node = document.getElementById(this.id);
+                const node = this.windowRef.current || document.getElementById(this.id);
                 if (node) {
-                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
-                    let x = match ? parseFloat(match[1]) : 0;
-                    let y = match ? parseFloat(match[2]) : 0;
-                    x += dx;
-                    y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkOverlap();
-                    this.checkSnapPreview();
-                    this.setWinowsPosition();
+                    const current = this.parseTransform(node.style.transform);
+                    let x = current.x + dx;
+                    let y = current.y + dy;
+                    const adjusted = this.applyEdgeResistance(node, { x, y });
+                    if (adjusted) {
+                        x = adjusted.x;
+                        y = adjusted.y;
+                    } else {
+                        node.style.transform = `translate(${x}px, ${y}px)`;
+                    }
+                    this._position = { x, y };
+                    this.checkOverlap(x);
+                    this.checkSnapPreview({ x, y });
+                    this.setWinowsPosition({ x, y });
                 }
             }
         }
@@ -585,7 +673,9 @@ export class Window extends Component {
     }
 
     snapWindow = (pos) => {
+        if (!pos) return;
         this.focusWindow();
+        this.setWinowsPosition();
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
@@ -598,17 +688,31 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
         }
-        const node = document.getElementById(this.id);
+        if (!transform) {
+            this.setState({ snapPreview: null, snapPosition: null });
+            return;
+        }
+        const node = this.windowRef.current || document.getElementById(this.id);
         if (node && transform) {
             node.style.transform = transform;
+            this.syncPositionFromNode();
         }
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
     }
 
     render() {
@@ -632,8 +736,10 @@ export class Window extends Component {
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    nodeRef={this.windowRef}
                 >
                     <div
+                        ref={this.windowRef}
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
