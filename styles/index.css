@@ -105,9 +105,17 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: var(--shadow-window);
+    -webkit-box-shadow: var(--shadow-window);
+    -moz-box-shadow: var(--shadow-window);
+}
+
+.opened-window {
+    background-color: var(--surface-window-muted);
+    border-color: var(--border-window);
+    backdrop-filter: var(--window-backdrop-filter);
+    -webkit-backdrop-filter: var(--window-backdrop-filter);
+    transition: box-shadow var(--motion-medium) ease, background-color var(--motion-medium) ease, border-color var(--motion-medium) ease;
 }
 
 .closed-window {
@@ -130,6 +138,14 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .windowMainScreen {
     container-type: inline-size;
+}
+
+.windowMainScreen[data-surface='muted'] {
+    background-color: var(--surface-window-muted);
+}
+
+.windowMainScreen[data-surface='main'] {
+    background-color: var(--surface-window);
 }
 
 .windowMainScreen::-webkit-scrollbar-track {

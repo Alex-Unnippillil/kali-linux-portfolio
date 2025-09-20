@@ -31,6 +31,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    reducedTransparency,
+    setReducedTransparency,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +82,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.reducedTransparency !== undefined)
+        setReducedTransparency(parsed.reducedTransparency);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -100,6 +104,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setReducedTransparency(defaults.reducedTransparency);
     setTheme("default");
   };
 
@@ -242,6 +247,14 @@ export default function Settings() {
               checked={reducedMotion}
               onChange={setReducedMotion}
               ariaLabel="Reduced Motion"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Reduced Transparency:</span>
+            <ToggleSwitch
+              checked={reducedTransparency}
+              onChange={setReducedTransparency}
+              ariaLabel="Reduced Transparency"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
