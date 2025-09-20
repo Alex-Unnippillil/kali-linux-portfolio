@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import { registerSkipTarget, notifySkipTargetsChanged } from '../system/FocusManager';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -15,6 +16,28 @@ let renderApps = (props) => {
 
 export default function SideBar(props) {
 
+    const navRef = useRef(null);
+
+    useEffect(() => {
+        const unregister = registerSkipTarget({
+            id: 'dock',
+            label: 'Dock',
+            shortcut: 'Control+Shift+1',
+            priority: 10,
+            getNode: () => {
+                if (typeof props.hideSideBar === 'function') {
+                    props.hideSideBar(null, false);
+                }
+                return navRef.current;
+            },
+            getAnnouncement: () =>
+                'Focus moved to the dock. Use Tab to reach pinned applications.',
+        });
+        notifySkipTargetsChanged();
+        return unregister;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     function showSideBar() {
         props.hideSideBar(null, false);
     }
@@ -28,7 +51,9 @@ export default function SideBar(props) {
     return (
         <>
             <nav
+                ref={navRef}
                 aria-label="Dock"
+                tabIndex={-1}
                 className={(props.hide ? " -translate-x-full " : "") +
                     " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
             >

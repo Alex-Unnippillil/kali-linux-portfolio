@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Image from 'next/image';
+import { registerSkipTarget, notifySkipTargetsChanged } from '../system/FocusManager';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const barRef = useRef(null);
+    const availabilityRef = useRef({ running: runningApps.length });
+    availabilityRef.current.running = runningApps.length;
+
+    useEffect(() => {
+        const unregister = registerSkipTarget({
+            id: 'taskbar',
+            label: 'Taskbar',
+            shortcut: 'Control+Shift+3',
+            priority: 30,
+            getNode: () => barRef.current,
+            isAvailable: () => availabilityRef.current.running > 0,
+            getAnnouncement: () =>
+                'Focus moved to the taskbar. Use Tab to explore running applications.',
+        });
+        notifySkipTargetsChanged();
+        return unregister;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        notifySkipTargetsChanged();
+    }, [runningApps.length]);
 
     const handleClick = (app) => {
         const id = app.id;
@@ -16,7 +40,12 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            ref={barRef}
+            className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40"
+            role="toolbar"
+            tabIndex={-1}
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}

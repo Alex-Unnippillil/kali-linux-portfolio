@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import SkipLinks from '../components/system/SkipLinks';
 
 const Ubuntu = dynamic(
   () =>
@@ -30,9 +31,7 @@ const InstallButton = dynamic(
  */
 const App = () => (
   <>
-    <a href="#window-area" className="sr-only focus:not-sr-only">
-      Skip to content
-    </a>
+    <SkipLinks />
     <Meta />
     <Ubuntu />
     <BetaBadge />
