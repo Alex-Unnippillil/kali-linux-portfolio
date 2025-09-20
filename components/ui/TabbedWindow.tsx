@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import { useDesktop } from '../core/DesktopProvider';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -38,6 +39,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   onTabsChange,
   className = '',
 }) => {
+  const { tokens } = useDesktop();
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
@@ -164,17 +166,21 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 
   return (
     <div
-      className={`flex flex-col w-full h-full ${className}`.trim()}
+      className={`flex flex-col w-full h-full ${tokens.text} ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div
+        className={`flex flex-shrink-0 bg-gray-800 text-white overflow-x-auto ${tokens.inlineGap}`.trim()}
+      >
         {tabs.map((t, i) => (
           <div
             key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
+            className={`flex items-center select-none rounded-md transition-colors ${
+              tokens.inlineGap
+            } ${tokens.control} ${
               t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
+            } cursor-pointer`}
             draggable
             onDragStart={handleDragStart(i)}
             onDragOver={handleDragOver(i)}
@@ -184,7 +190,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="p-0.5"
+                className={`rounded px-1 ${tokens.subtleText}`.trim()}
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);
@@ -198,7 +204,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className={`bg-gray-800 hover:bg-gray-700 rounded-md transition-colors ${tokens.control}`.trim()}
             onClick={addTab}
             aria-label="New Tab"
           >

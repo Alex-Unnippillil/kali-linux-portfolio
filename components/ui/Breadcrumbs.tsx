@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDesktop } from '../core/DesktopProvider';
 
 interface Segment {
   name: string;
@@ -10,8 +11,13 @@ interface Props {
 }
 
 const Breadcrumbs: React.FC<Props> = ({ path, onNavigate }) => {
+  const { tokens } = useDesktop();
+
   return (
-    <nav className="flex items-center space-x-1 text-white" aria-label="Breadcrumb">
+    <nav
+      className={`flex items-center text-white ${tokens.inlineGap} ${tokens.text}`.trim()}
+      aria-label="Breadcrumb"
+    >
       {path.map((seg, idx) => (
         <React.Fragment key={idx}>
           <button

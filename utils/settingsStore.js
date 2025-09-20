@@ -137,6 +137,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('display:density');
+  window.localStorage.removeItem('display:density-lock');
 }
 
 export async function exportSettings() {

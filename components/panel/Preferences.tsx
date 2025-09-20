@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import { useDesktop } from "../core/DesktopProvider";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -17,6 +18,7 @@ export default function Preferences() {
   ];
 
   const [active, setActive] = useState<TabId>("display");
+  const { tokens } = useDesktop();
 
   const [size, setSize] = useState(() => {
     if (typeof window === "undefined") return 24;
@@ -63,11 +65,11 @@ export default function Preferences() {
   return (
     <div>
       <Tabs tabs={TABS} active={active} onChange={setActive} />
-      <div className="p-4">
+      <div className={`p-4 ${tokens.stackGap}`.trim()}>
         {active === "display" && (
-          <div className="space-y-4">
+          <div className={`flex flex-col ${tokens.stackGap}`.trim()}>
             <div className="flex items-center justify-between">
-              <label htmlFor="orientation" className="text-ubt-grey">
+              <label htmlFor="orientation" className={`text-ubt-grey ${tokens.text}`.trim()}>
                 Orientation
               </label>
               <select
@@ -76,14 +78,14 @@ export default function Preferences() {
                 onChange={(e) =>
                   setOrientation(e.target.value as "horizontal" | "vertical")
                 }
-                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+                className={`bg-ub-cool-grey text-white rounded ${tokens.control}`.trim()}
               >
                 <option value="horizontal">Horizontal</option>
                 <option value="vertical">Vertical</option>
               </select>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-ubt-grey">Autohide</span>
+              <span className={`text-ubt-grey ${tokens.text}`.trim()}>Autohide</span>
               <ToggleSwitch
                 checked={autohide}
                 onChange={setAutohide}
@@ -93,9 +95,9 @@ export default function Preferences() {
           </div>
         )}
         {active === "measurements" && (
-          <div className="space-y-4">
+          <div className={`flex flex-col ${tokens.stackGap}`.trim()}>
             <div className="flex items-center justify-between">
-              <label htmlFor="panel-size" className="text-ubt-grey">
+              <label htmlFor="panel-size" className={`text-ubt-grey ${tokens.text}`.trim()}>
                 Size: {size}px
               </label>
               <input
@@ -110,7 +112,7 @@ export default function Preferences() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label htmlFor="panel-length" className="text-ubt-grey">
+              <label htmlFor="panel-length" className={`text-ubt-grey ${tokens.text}`.trim()}>
                 Length: {length}%
               </label>
               <input
@@ -127,13 +129,19 @@ export default function Preferences() {
           </div>
         )}
         {active === "appearance" && (
-          <p className="text-ubt-grey">Appearance settings are not available yet.</p>
+          <p className={`text-ubt-grey ${tokens.text}`.trim()}>
+            Appearance settings are not available yet.
+          </p>
         )}
         {active === "opacity" && (
-          <p className="text-ubt-grey">Opacity settings are not available yet.</p>
+          <p className={`text-ubt-grey ${tokens.text}`.trim()}>
+            Opacity settings are not available yet.
+          </p>
         )}
         {active === "items" && (
-          <p className="text-ubt-grey">Item settings are not available yet.</p>
+          <p className={`text-ubt-grey ${tokens.text}`.trim()}>
+            Item settings are not available yet.
+          </p>
         )}
       </div>
     </div>
