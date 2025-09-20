@@ -18,6 +18,16 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    const handleTile = (position) => {
+        props.onTile && props.onTile(position);
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
+    const handleCascade = () => {
+        props.onCascade && props.onCascade();
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
     const handleClose = () => {
         props.onClose && props.onClose();
         props.onCloseMenu && props.onCloseMenu();
@@ -40,6 +50,54 @@ function TaskbarMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
+            </button>
+            <div className="border-t border-gray-800 border-opacity-70 my-1" role="separator" />
+            <div role="group" aria-label="Tile window">
+                <button
+                    type="button"
+                    onClick={() => handleTile('left')}
+                    role="menuitem"
+                    aria-label="Tile window to the left quadrant"
+                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+                >
+                    <span className="ml-5">Tile Left Quadrant</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => handleTile('right')}
+                    role="menuitem"
+                    aria-label="Tile window to the right quadrant"
+                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+                >
+                    <span className="ml-5">Tile Right Quadrant</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => handleTile('top')}
+                    role="menuitem"
+                    aria-label="Tile window to the top quadrant"
+                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+                >
+                    <span className="ml-5">Tile Top Quadrant</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => handleTile('bottom')}
+                    role="menuitem"
+                    aria-label="Tile window to the bottom quadrant"
+                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                >
+                    <span className="ml-5">Tile Bottom Quadrant</span>
+                </button>
+            </div>
+            <button
+                type="button"
+                onClick={handleCascade}
+                role="menuitem"
+                aria-label="Cascade all open windows"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Cascade All</span>
             </button>
             <button
                 type="button"

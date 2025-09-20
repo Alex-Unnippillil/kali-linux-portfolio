@@ -53,6 +53,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('window-manager', this.handleWindowManager);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +67,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('window-manager', this.handleWindowManager);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -273,6 +275,11 @@ export class Window extends Component {
             newWidth = 100.2;
             newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'bottom') {
+            newWidth = 100.2;
+            newHeight = 50;
+            const offset = window.innerHeight * 0.5 - 2;
+            transform = `translate(-1pt,${offset}px)`;
         }
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
@@ -284,7 +291,8 @@ export class Window extends Component {
             snapped: position,
             lastSize: { width, height },
             width: newWidth,
-            height: newHeight
+            height: newHeight,
+            maximized: false
         }, this.resizeBoundries);
     }
 
@@ -330,6 +338,10 @@ export class Window extends Component {
         else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (rect.bottom >= window.innerHeight - threshold) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -524,11 +536,7 @@ export class Window extends Component {
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
+            if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('left');
@@ -540,6 +548,16 @@ export class Window extends Component {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('top');
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.state.snapped && this.state.snapped !== 'bottom') {
+                    this.unsnapWindow();
+                } else if (this.state.snapped === 'bottom') {
+                    this.unsnapWindow();
+                } else {
+                    this.snapWindow('bottom');
+                }
             }
             this.focusWindow();
         } else if (e.shiftKey) {
@@ -565,6 +583,55 @@ export class Window extends Component {
         }
     }
 
+    handleWindowManager = (event) => {
+        if (!event || !event.detail) return;
+        const { action, position, frame } = event.detail;
+        if (action === 'tile' && position) {
+            this.handleManagerTile(position);
+        } else if (action === 'cascade' && frame) {
+            this.handleManagerCascade(frame);
+        }
+    }
+
+    handleManagerTile = (position) => {
+        if (this.props.minimized) return;
+        if (typeof position === 'string') {
+            this.snapWindow(position);
+        }
+    }
+
+    handleManagerCascade = (frame) => {
+        if (!frame) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const x = typeof frame.x === 'number' ? frame.x : 0;
+        const y = typeof frame.y === 'number' ? frame.y : 0;
+        const width = typeof frame.width === 'number' ? frame.width : this.state.width;
+        const height = typeof frame.height === 'number' ? frame.height : this.state.height;
+        const snap = this.props.snapEnabled
+            ? (value) => Math.round(value / 8) * 8
+            : (value) => value;
+        const snappedX = snap(x);
+        const snappedY = snap(y);
+        this.setState({
+            snapPreview: null,
+            snapPosition: null,
+            snapped: null,
+            maximized: false,
+            lastSize: null,
+            width,
+            height
+        }, () => {
+            node.style.transform = `translate(${snappedX}px,${snappedY}px)`;
+            node.style.setProperty('--window-transform-x', `${snappedX}px`);
+            node.style.setProperty('--window-transform-y', `${snappedY}px`);
+            if (this.props.onPositionChange) {
+                this.props.onPositionChange(snappedX, snappedY);
+            }
+            this.checkOverlap();
+        });
+    }
+
     handleSuperArrow = (e) => {
         const key = e.detail;
         if (key === 'ArrowLeft') {
@@ -579,7 +646,13 @@ export class Window extends Component {
             if (this.state.maximized) {
                 this.restoreWindow();
             } else if (this.state.snapped) {
-                this.unsnapWindow();
+                if (this.state.snapped === 'bottom') {
+                    this.unsnapWindow();
+                } else {
+                    this.unsnapWindow();
+                }
+            } else {
+                this.snapWindow('bottom');
             }
         }
     }
