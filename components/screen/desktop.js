@@ -24,6 +24,9 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const LAYOUT_STORAGE_KEY = 'wm.layout';
+const LAYOUT_STORAGE_VERSION = 1;
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -59,25 +62,38 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        const storedLayout = this.loadStoredLayout();
+
         this.fetchAppsData(() => {
             const session = this.props.session || {};
-            const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
+            const sessionDock = Array.isArray(session.dock) ? session.dock : [];
+            const sessionWindows = Array.isArray(session.windows) ? session.windows : [];
+
+            const dockSource = storedLayout && Array.isArray(storedLayout.dock)
+                ? storedLayout.dock
+                : sessionDock;
+
+            if (dockSource.length) {
+                const favourite_apps = { ...this.state.favourite_apps };
+                dockSource.forEach((id) => {
+                    if (favourite_apps[id] !== undefined) {
+                        favourite_apps[id] = true;
+                    }
                 });
                 this.setState({ favourite_apps });
             }
 
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+            const windowsSource = storedLayout ? storedLayout.windows : sessionWindows;
+
+            if (windowsSource && windowsSource.length) {
+                const positions = {};
+                windowsSource.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    windowsSource.forEach(({ id }) => this.openApp(id));
                 });
-            } else {
+            } else if (!storedLayout && !sessionWindows.length) {
                 this.openApp('about-alex');
             }
         });
@@ -89,6 +105,8 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('beforeunload', this.persistLayout);
+        window.addEventListener('pagehide', this.persistLayout);
     }
 
     componentWillUnmount() {
@@ -96,6 +114,9 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('beforeunload', this.persistLayout);
+        window.removeEventListener('pagehide', this.persistLayout);
+        this.persistLayout();
     }
 
     checkForNewFolders = () => {
@@ -499,16 +520,142 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    getLayoutSnapshot = () => {
+        const knownIds = new Set(apps.map(app => app.id));
+        const windows = [];
+        const seenWindows = new Set();
+
+        const stackOrder = Array.isArray(this.app_stack) ? this.app_stack : [];
+        stackOrder.forEach((id) => {
+            if (seenWindows.has(id)) return;
+            if (!knownIds.has(id)) return;
+            if (!this.state.closed_windows || this.state.closed_windows[id]) return;
+            seenWindows.add(id);
+            const pos = this.state.window_positions[id] || {};
+            const x = typeof pos.x === 'number' && Number.isFinite(pos.x) ? pos.x : 60;
+            const y = typeof pos.y === 'number' && Number.isFinite(pos.y) ? pos.y : 10;
+            windows.push({
+                id,
+                x,
+                y,
+                minimized: !!this.state.minimized_windows[id],
+            });
+        });
+
+        const openWindows = Object.keys(this.state.closed_windows || {}).filter(
+            (id) => this.state.closed_windows[id] === false && knownIds.has(id)
+        );
+        openWindows.forEach((id) => {
+            if (seenWindows.has(id)) return;
+            seenWindows.add(id);
+            const pos = this.state.window_positions[id] || {};
+            const x = typeof pos.x === 'number' && Number.isFinite(pos.x) ? pos.x : 60;
+            const y = typeof pos.y === 'number' && Number.isFinite(pos.y) ? pos.y : 10;
+            windows.push({
+                id,
+                x,
+                y,
+                minimized: !!this.state.minimized_windows[id],
+            });
+        });
+
+        const dockSet = new Set();
+        const dock = [];
+        Object.keys(this.state.favourite_apps || {}).forEach((id) => {
+            if (this.state.favourite_apps[id] && knownIds.has(id) && !dockSet.has(id)) {
+                dockSet.add(id);
+                dock.push(id);
+            }
+        });
+
+        return { windows, dock };
+    }
+
+    storeLayoutSnapshot = (snapshot) => {
+        if (!safeLocalStorage) return;
+        try {
+            const payload = {
+                version: LAYOUT_STORAGE_VERSION,
+                windows: snapshot.windows,
+                dock: snapshot.dock,
+                savedAt: Date.now(),
+            };
+            safeLocalStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(payload));
+        } catch (e) {
+            // ignore write errors
+        }
+    }
+
+    loadStoredLayout = () => {
+        if (!safeLocalStorage) return null;
+        try {
+            const raw = safeLocalStorage.getItem(LAYOUT_STORAGE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') {
+                safeLocalStorage.removeItem(LAYOUT_STORAGE_KEY);
+                return null;
+            }
+            if (parsed.version !== LAYOUT_STORAGE_VERSION) {
+                safeLocalStorage.removeItem(LAYOUT_STORAGE_KEY);
+                return null;
+            }
+
+            const knownIds = new Set(apps.map(app => app.id));
+
+            const sanitizeNumber = (value, fallback) => (
+                typeof value === 'number' && Number.isFinite(value) ? value : fallback
+            );
+
+            const windows = Array.isArray(parsed.windows)
+                ? parsed.windows.reduce((acc, entry) => {
+                    if (!entry || typeof entry !== 'object') return acc;
+                    const { id, x, y, minimized } = entry;
+                    if (typeof id !== 'string' || !knownIds.has(id)) return acc;
+                    acc.push({
+                        id,
+                        x: sanitizeNumber(x, 60),
+                        y: sanitizeNumber(y, 10),
+                        minimized: typeof minimized === 'boolean' ? minimized : false,
+                    });
+                    return acc;
+                }, [])
+                : [];
+
+            const dock = [];
+            if (Array.isArray(parsed.dock)) {
+                const seenDock = new Set();
+                parsed.dock.forEach((id) => {
+                    if (
+                        typeof id === 'string'
+                        && knownIds.has(id)
+                        && !seenDock.has(id)
+                    ) {
+                        seenDock.add(id);
+                        dock.push(id);
+                    }
+                });
+            }
+
+            return { windows, dock };
+        } catch (e) {
+            safeLocalStorage.removeItem(LAYOUT_STORAGE_KEY);
+            return null;
+        }
+    }
+
+    persistLayout = () => {
+        const snapshot = this.getLayoutSnapshot();
+        this.storeLayoutSnapshot(snapshot);
+    }
+
     saveSession = () => {
-        if (!this.props.setSession) return;
-        const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
-        const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+        const snapshot = this.getLayoutSnapshot();
+        if (this.props.setSession) {
+            const sessionWindows = snapshot.windows.map(({ id, x, y }) => ({ id, x, y }));
+            this.props.setSession({ ...this.props.session, windows: sessionWindows, dock: snapshot.dock });
+        }
+        this.storeLayoutSnapshot(snapshot);
     }
 
     hideSideBar = (objId, hide) => {
@@ -911,7 +1058,19 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    clearSession={() => {
+                        if (safeLocalStorage) {
+                            try {
+                                safeLocalStorage.removeItem(LAYOUT_STORAGE_KEY);
+                            } catch (e) {
+                                // ignore removal errors
+                            }
+                        }
+                        if (typeof this.props.clearSession === 'function') {
+                            this.props.clearSession();
+                        }
+                        window.location.reload();
+                    }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
