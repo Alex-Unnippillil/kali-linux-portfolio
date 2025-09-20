@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { subscribe } from '@/src/lib/bc';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -22,7 +23,11 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  getTheme as loadTheme,
+  setTheme as saveTheme,
+  THEME_EVENT,
+} from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -114,6 +119,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const themeFromBroadcast = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -132,7 +138,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    saveTheme(theme);
+    const unsubscribe = subscribe<string>(THEME_EVENT, next => {
+      themeFromBroadcast.current = true;
+      setTheme(next);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (themeFromBroadcast.current) {
+      themeFromBroadcast.current = false;
+      saveTheme(theme, { broadcast: false });
+    } else {
+      saveTheme(theme);
+    }
   }, [theme]);
 
   useEffect(() => {

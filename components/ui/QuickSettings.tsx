@@ -1,25 +1,48 @@
 "use client";
 
-import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { BC_EVENTS, publish, subscribe } from '@/src/lib/bc';
+import { useTheme } from '../../hooks/useTheme';
+import usePersistentState from '../../hooks/usePersistentState';
+import { isDarkTheme } from '../../utils/theme';
 
 interface Props {
   open: boolean;
 }
 
 const QuickSettings = ({ open }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
-  const [sound, setSound] = usePersistentState('qs-sound', true);
+  const { theme, setTheme } = useTheme();
+  const [dnd, setDnd] = usePersistentState<boolean>(
+    'qs-dnd',
+    false,
+    (value): value is boolean => typeof value === 'boolean',
+  );
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+    const unsubscribe = subscribe<boolean>(BC_EVENTS.dnd, next => {
+      setDnd(next);
+    });
+    return () => unsubscribe();
+  }, [setDnd]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  const themeLabel = isDarkTheme(theme) ? 'Dark' : 'Light';
+
+  const toggleTheme = () => {
+    const next = isDarkTheme(theme) ? 'default' : 'dark';
+    setTheme(next);
+  };
+
+  const toggleDnd = () => {
+    const next = !dnd;
+    setDnd(next);
+    publish<boolean>(BC_EVENTS.dnd, next);
+  };
 
   return (
     <div
@@ -28,17 +51,14 @@ const QuickSettings = ({ open }: Props) => {
       }`}
     >
       <div className="px-4 pb-2">
-        <button
-          className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-        >
+        <button className="w-full flex justify-between" onClick={toggleTheme}>
           <span>Theme</span>
-          <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+          <span>{themeLabel}</span>
         </button>
       </div>
       <div className="px-4 pb-2 flex justify-between">
-        <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
+        <span>Do Not Disturb</span>
+        <input type="checkbox" checked={dnd} onChange={toggleDnd} />
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
