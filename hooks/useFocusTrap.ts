@@ -1,55 +1,116 @@
-import { useEffect } from 'react';
+import { RefObject, useEffect } from 'react';
 
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  const selectors = [
-    'a[href]',
-    'button:not([disabled])',
-    'textarea:not([disabled])',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])'
-  ];
-  return Array.from(container.querySelectorAll<HTMLElement>(selectors.join(',')));
+const FOCUSABLE_SELECTORS = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+];
+
+const getFocusableElements = (container: HTMLElement) =>
+  Array.from(
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS.join(',')),
+  ).filter((el) => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true');
+
+const focusElement = (el: HTMLElement | null | undefined) => {
+  if (!el || typeof el.focus !== 'function') return;
+  try {
+    el.focus({ preventScroll: true });
+  } catch {
+    el.focus();
+  }
+};
+
+export interface FocusTrapOptions {
+  active: boolean;
+  containerRef: RefObject<HTMLElement>;
+  initialFocusRef?: RefObject<HTMLElement>;
+  onEscape?: () => void;
+  returnFocusRef?: RefObject<HTMLElement>;
 }
 
-export default function useFocusTrap(ref: React.RefObject<HTMLElement>, active: boolean = true) {
+const useFocusTrapInternal = ({
+  active,
+  containerRef,
+  initialFocusRef,
+  onEscape,
+  returnFocusRef,
+}: FocusTrapOptions) => {
   useEffect(() => {
-    const node = ref.current;
-    if (!node || !active) return;
+    if (!active) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
-      const focusable = getFocusableElements(node);
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusable = getFocusableElements(container);
+    const initialTarget = initialFocusRef?.current || focusable[0] || container;
 
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
+    focusElement(initialTarget);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (onEscape) {
+          event.preventDefault();
+          onEscape();
         }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const elements = getFocusableElements(container);
+      if (elements.length === 0) {
+        event.preventDefault();
+        focusElement(container);
+        return;
+      }
+
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      const activeElement = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (!container.contains(activeElement) || activeElement === first) {
+          event.preventDefault();
+          focusElement(last);
+        }
+      } else if (!event.shiftKey) {
+        if (!container.contains(activeElement) || activeElement === last) {
+          event.preventDefault();
+          focusElement(first);
         }
       }
     };
 
-    const handleFocus = (e: FocusEvent) => {
-      if (!node.contains(e.target as Node)) {
-        const focusable = getFocusableElements(node);
-        focusable[0]?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('focusin', handleFocus);
+    container.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('focusin', handleFocus);
+      container.removeEventListener('keydown', handleKeyDown);
+      const returnTarget = returnFocusRef?.current || previouslyFocused;
+      focusElement(returnTarget || null);
     };
-  }, [ref, active]);
+  }, [active, containerRef, initialFocusRef, onEscape, returnFocusRef]);
+};
+
+function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boolean): void;
+function useFocusTrap(options: FocusTrapOptions): void;
+function useFocusTrap(
+  arg1: RefObject<HTMLElement> | FocusTrapOptions,
+  arg2?: boolean,
+): void {
+  if (typeof arg2 === 'boolean') {
+    useFocusTrapInternal({
+      active: arg2,
+      containerRef: arg1 as RefObject<HTMLElement>,
+    });
+    return;
+  }
+
+  useFocusTrapInternal(arg1 as FocusTrapOptions);
 }
+
+export { useFocusTrapInternal };
+
+export default useFocusTrap;
