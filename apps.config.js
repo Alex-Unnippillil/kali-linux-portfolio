@@ -65,6 +65,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+const FirstBootChecklistApp = createDynamicApp('first-boot/FirstBootChecklist', 'First Boot Checklist');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -161,6 +162,7 @@ const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayFirstBootChecklist = createDisplay(FirstBootChecklistApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
@@ -693,6 +695,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayAboutAlex,
+  },
+  {
+    id: 'first-boot-checklist',
+    title: 'First Boot Checklist',
+    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayFirstBootChecklist,
   },
   {
     id: 'settings',

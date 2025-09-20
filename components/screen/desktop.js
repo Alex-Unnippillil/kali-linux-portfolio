@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { isFirstBootChecklistComplete, loadFirstBootChecklistState } from '../../utils/firstBootChecklist';
 
 export class Desktop extends Component {
     constructor() {
@@ -62,6 +63,10 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const firstBootState = loadFirstBootChecklistState();
+            const firstBootFlag = process.env.NEXT_PUBLIC_ENABLE_FIRST_BOOT_CHECKLIST;
+            const firstBootEnabled = firstBootFlag !== 'disabled';
+            const shouldOpenFirstBoot = firstBootEnabled && !isFirstBootChecklistComplete(firstBootState);
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -76,9 +81,15 @@ export class Desktop extends Component {
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
+                    if (shouldOpenFirstBoot && !session.windows.some(({ id }) => id === 'first-boot-checklist')) {
+                        this.openApp('first-boot-checklist');
+                    }
                 });
             } else {
                 this.openApp('about-alex');
+                if (shouldOpenFirstBoot) {
+                    this.openApp('first-boot-checklist');
+                }
             }
         });
         this.setContextListeners();
