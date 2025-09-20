@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kali Linux Portfolio icon for light theme">
+  <rect width="512" height="512" rx="112" fill="#f4f7fb" />
+  <rect x="88" y="104" width="336" height="304" rx="60" fill="#e2e8f0" />
+  <rect x="188" y="160" width="52" height="192" rx="26" fill="#0f172a" />
+  <path d="M246 256L350 160H412L308 256L412 352H350L246 256Z" fill="#0284c7" />
+  <path d="M302 256L380 188H360L284 256L360 324H380L302 256Z" fill="#38bdf8" />
+</svg>
