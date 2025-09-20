@@ -1,0 +1,60 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-day" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a" />
+      <stop offset="1" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="bg-night" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e1b4b" />
+      <stop offset="1" stop-color="#0b1120" />
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="rgba(255,255,255,0.32)" />
+      <stop offset="1" stop-color="rgba(15,23,42,0.48)" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="720" fill="url(#bg-day)" />
+  <rect x="640" width="640" height="720" fill="url(#bg-night)" />
+  <g font-family="'Ubuntu', 'Segoe UI', sans-serif" font-weight="500">
+    <!-- Day variant -->
+    <text x="80" y="88" font-size="24" fill="#cbd5f5" letter-spacing="12">LOCKED</text>
+    <text x="80" y="176" font-size="96" fill="#f8fafc">09:27</text>
+    <text x="82" y="220" font-size="28" fill="#cbd5f5" letter-spacing="10">SAT · FEB 15</text>
+    <rect x="80" y="268" width="232" height="56" rx="28" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.35)" stroke-width="2" />
+    <text x="116" y="305" font-size="18" fill="#e2e8f0" letter-spacing="8">UNLOCK</text>
+    <rect x="80" y="360" width="400" height="220" rx="32" fill="rgba(2,6,23,0.55)" stroke="rgba(148,163,184,0.35)" stroke-width="2" />
+    <text x="120" y="412" font-size="20" fill="#cbd5f5" letter-spacing="5">AUTH DIALOG</text>
+    <rect x="120" y="430" width="320" height="60" rx="18" fill="rgba(15,23,42,0.72)" />
+    <rect x="120" y="508" width="160" height="44" rx="22" fill="#f8fafc" />
+    <text x="153" y="537" font-size="16" fill="#0f172a" letter-spacing="6">UNLOCK</text>
+
+    <!-- Night variant -->
+    <text x="720" y="88" font-size="24" fill="#a5b4fc" letter-spacing="12">LOCKED</text>
+    <rect x="720" y="140" width="440" height="150" rx="36" fill="rgba(15,23,42,0.55)" stroke="rgba(226,232,240,0.25)" stroke-width="2" />
+    <circle cx="780" cy="215" r="55" fill="#38bdf8" opacity="0.85" />
+    <text x="856" y="210" font-size="26" fill="#e2e8f0">Zero-Day Dawn</text>
+    <text x="856" y="240" font-size="18" fill="#cbd5f5">Pulsewidth Collective</text>
+    <rect x="856" y="254" width="264" height="12" rx="6" fill="rgba(255,255,255,0.2)" />
+    <rect x="856" y="254" width="160" height="12" rx="6" fill="#f8fafc" />
+    <g fill="#f8fafc" font-size="18" letter-spacing="10">
+      <text x="768" y="292">⏮</text>
+      <text x="810" y="292">⏯</text>
+      <text x="852" y="292">⏭</text>
+    </g>
+
+    <rect x="720" y="332" width="440" height="300" rx="36" fill="rgba(15,23,42,0.55)" stroke="rgba(226,232,240,0.25)" stroke-width="2" />
+    <text x="760" y="378" font-size="20" fill="#cbd5f5" letter-spacing="6">NOTIFICATIONS</text>
+    <rect x="760" y="396" width="140" height="24" rx="12" fill="rgba(56,189,248,0.35)" />
+    <text x="780" y="414" font-size="12" fill="#0f172a" letter-spacing="4">PREVIEWS ON</text>
+
+    <g font-size="16">
+      <rect x="760" y="430" width="360" height="60" rx="20" fill="rgba(15,23,42,0.65)" stroke="rgba(148,163,184,0.35)" />
+      <text x="788" y="456" fill="#cbd5f5" letter-spacing="6">MAIL</text>
+      <text x="788" y="482" fill="#e2e8f0">Lunch moved to 13:30 at the lab.</text>
+
+      <rect x="760" y="502" width="360" height="60" rx="20" fill="rgba(15,23,42,0.65)" stroke="rgba(148,163,184,0.35)" />
+      <text x="788" y="528" fill="#cbd5f5" letter-spacing="6">SIGNAL</text>
+      <text x="788" y="554" fill="#e2e8f0">Preview hidden — unlock to read.</text>
+    </g>
+  </g>
+</svg>
