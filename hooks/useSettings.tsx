@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -23,6 +23,8 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { normalizeAccentColor } from '../utils/color/extractAccent';
+import { contrastRatio } from '../components/apps/Games/common/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -102,7 +104,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
+  const [accent, setAccentState] = useState<string>(() => normalizeAccentColor(defaults.accent));
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
@@ -114,6 +116,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const setAccent = useCallback((next: string) => {
+    setAccentState(normalizeAccentColor(next));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -129,7 +134,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
-  }, []);
+  }, [setAccent]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -137,6 +142,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
+    const darkText = '#0f1317';
+    const lightText = '#ffffff';
+    const accentText =
+      contrastRatio(accent, darkText) >= contrastRatio(accent, lightText)
+        ? darkText
+        : lightText;
     const vars: Record<string, string> = {
       '--color-ub-orange': accent,
       '--color-ub-border-orange': border,
@@ -145,6 +156,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--color-accent-contrast': accentText,
+      '--tw-ring-color': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
