@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useId } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
 
@@ -48,17 +48,28 @@ export default function SideBar(props) {
 
 export function AllApps(props) {
 
-    const [title, setTitle] = useState(false);
+    const [tooltipVisible, setTooltipVisible] = useState(false);
+    const tooltipId = useId();
+
+    const showTooltip = () => setTooltipVisible(true);
+    const hideTooltip = () => setTooltipVisible(false);
 
     return (
-        <div
-            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
+        <button
+            type="button"
+            aria-label="Show applications"
+            aria-describedby={tooltipVisible ? tooltipId : undefined}
+            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-50 bg-transparent`}
             style={{ marginTop: 'auto' }}
-            onMouseEnter={() => {
-                setTitle(true);
-            }}
-            onMouseLeave={() => {
-                setTitle(false);
+            onMouseEnter={showTooltip}
+            onMouseLeave={hideTooltip}
+            onFocus={showTooltip}
+            onBlur={hideTooltip}
+            onKeyDown={(event) => {
+                if ((event.key === 'Escape' || event.key === 'Esc') && tooltipVisible) {
+                    event.stopPropagation();
+                    hideTooltip();
+                }
             }}
             onClick={props.showApps}
         >
@@ -72,14 +83,17 @@ export function AllApps(props) {
                     sizes="28px"
                 />
                 <div
+                    id={tooltipId}
+                    role="tooltip"
+                    aria-hidden={!tooltipVisible}
                     className={
-                        (title ? " visible " : " invisible ") +
+                        (tooltipVisible ? " visible " : " invisible ") +
                         " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
                     }
                 >
                     Show Applications
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
