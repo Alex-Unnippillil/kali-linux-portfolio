@@ -56,10 +56,10 @@ describe('Autopsy plugins and timeline', () => {
     });
     fireEvent.click(screen.getByText('Create Case'));
     await screen.findByText('Hash Analyzer');
-    const selects = screen.getAllByRole('combobox');
-    fireEvent.change(selects[0], { target: { value: 'hash' } });
+    const pluginSelect = await screen.findByLabelText('Select plugin');
+    fireEvent.change(pluginSelect, { target: { value: 'hash' } });
     await waitFor(() =>
-      expect((selects[0] as HTMLSelectElement).value).toBe('hash')
+      expect((pluginSelect as HTMLSelectElement).value).toBe('hash')
     );
   });
 
@@ -69,9 +69,9 @@ describe('Autopsy plugins and timeline', () => {
       target: { value: 'Demo' },
     });
     fireEvent.click(screen.getByText('Create Case'));
-    await screen.findByLabelText('Filter by type');
+    await screen.findByLabelText('Filter artifacts by type');
     expect(screen.getByText('resume.docx')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Filter by type'), {
+    fireEvent.change(screen.getByLabelText('Filter artifacts by type'), {
       target: { value: 'Log' },
     });
     expect(screen.queryByText('resume.docx')).toBeNull();
