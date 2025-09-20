@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import data from './data.json';
 import ArpLab from './components/ArpLab';
-import vendors from '../kismet/oui.json';
+import { lookupVendor } from '../kismet/ouiLookup';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -49,7 +49,7 @@ const EttercapApp = () => {
       arpTable.map(({ ip, mac }) => ({
         ip,
         mac,
-        vendor: vendors[mac.slice(0, 8).toUpperCase()] || 'Unknown',
+        vendor: lookupVendor(mac, 'Unknown'),
       })),
     []
   );
