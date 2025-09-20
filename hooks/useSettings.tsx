@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -22,6 +30,10 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
+import tinycolor from 'tinycolor2';
+import AccentPrompt from '../components/apps/theme/AccentPrompt';
+import { useWallpaper } from './useWallpaper';
+import { prepareAccent } from '../utils/color/extractAccent';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
@@ -34,22 +46,6 @@ export const ACCENT_OPTIONS = [
   '#805ad5', // purple
   '#ed64a6', // pink
 ];
-
-// Utility to lighten or darken a hex color by a percentage
-const shadeColor = (color: string, percent: number): string => {
-  const f = parseInt(color.slice(1), 16);
-  const t = percent < 0 ? 0 : 255;
-  const p = Math.abs(percent);
-  const R = f >> 16;
-  const G = (f >> 8) & 0x00ff;
-  const B = f & 0x0000ff;
-  const newR = Math.round((t - R) * p) + R;
-  const newG = Math.round((t - G) * p) + G;
-  const newB = Math.round((t - B) * p) + B;
-  return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
-    .toString(16)
-    .slice(1)}`;
-};
 
 interface SettingsContextValue {
   accent: string;
@@ -102,7 +98,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
+  const [accent, setAccentState] = useState<string>(() => prepareAccent(defaults.accent).color);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
@@ -115,9 +111,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
+  const readBackgroundColor = useCallback(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return '#0f1317';
+    }
+    const computed = window.getComputedStyle?.(document.documentElement);
+    const value = computed?.getPropertyValue('--color-bg') ?? '';
+    return value.trim() || '#0f1317';
+  }, []);
+
+  const applyAccent = useCallback(
+    (value: string) => {
+      const background = readBackgroundColor();
+      const prepared = prepareAccent(value, { background });
+      setAccentState(prepared.color);
+    },
+    [readBackgroundColor],
+  );
+
+  const { suggestion: accentSuggestion, approve: approveAccent, dismiss: dismissAccent } =
+    useWallpaper({
+      wallpaper,
+      currentAccent: accent,
+      onAccentApproved: applyAccent,
+    });
+
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
+      const storedAccent = await loadAccent();
+      const background = readBackgroundColor();
+      setAccentState(prepareAccent(storedAccent, { background }).color);
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
@@ -129,14 +152,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
-  }, []);
+  }, [readBackgroundColor]);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    applyAccent(accent);
+  }, [theme, accent, applyAccent]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const tone = tinycolor(accent);
+    const border = tone.darken(12).toHexString();
+    const contrastColor = tinycolor
+      .mostReadable(accent, ['#000000', '#ffffff'], {
+        includeFallbackColors: true,
+        level: 'AAA',
+        size: 'large',
+      })
+      .toHexString();
+
     const vars: Record<string, string> = {
       '--color-ub-orange': accent,
       '--color-ub-border-orange': border,
@@ -145,10 +183,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--color-accent-contrast': contrastColor,
+      '--accent-ring-color': accent,
+      '--focus-outline-color': accent,
     };
+
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
+    document.documentElement.style.setProperty('accent-color', accent);
     saveAccent(accent);
   }, [accent]);
 
@@ -250,7 +293,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
-        setAccent,
+        setAccent: applyAccent,
         setWallpaper,
         setDensity,
         setReducedMotion,
@@ -264,6 +307,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <AccentPrompt
+        suggestion={accentSuggestion}
+        onApprove={approveAccent}
+        onDismiss={dismissAccent}
+      />
     </SettingsContext.Provider>
   );
 }
