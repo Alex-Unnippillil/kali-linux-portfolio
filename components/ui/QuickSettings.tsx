@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const { highContrast, setHighContrast } = useSettings();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -43,6 +45,15 @@ const QuickSettings = ({ open }: Props) => {
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
         <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+      </div>
+      <div className="px-4 pb-2 flex justify-between">
+        <label htmlFor="quick-high-contrast">High contrast</label>
+        <input
+          id="quick-high-contrast"
+          type="checkbox"
+          checked={highContrast}
+          onChange={() => setHighContrast(!highContrast)}
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
