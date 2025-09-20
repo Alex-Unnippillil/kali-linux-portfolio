@@ -99,7 +99,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       aria-hidden={!open}
       style={{ left: pos.x, top: pos.y }}
       className={(open ? 'block ' : 'hidden ') +
-        'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
+        'cursor-default w-52 context-menu-bg text-left rounded text-white py-4 absolute z-50 text-sm'}
     >
       {items.map((item, i) => (
         <button

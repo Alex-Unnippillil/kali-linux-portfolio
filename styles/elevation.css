@@ -1,0 +1,75 @@
+/* Elevation and surface tokens */
+
+:root {
+  /* Shadow-driven elevation scale for lighter themes */
+  --elevation-level-0: none;
+  --elevation-level-1: 0 2px 4px rgba(15, 19, 23, 0.18), 0 1px 0 rgba(15, 19, 23, 0.12);
+  --elevation-level-2: 0 8px 16px rgba(15, 19, 23, 0.22), 0 2px 6px rgba(15, 19, 23, 0.18);
+  --elevation-level-3: 0 16px 28px rgba(15, 19, 23, 0.28), 0 6px 12px rgba(15, 19, 23, 0.2);
+  --elevation-level-4: 0 28px 48px rgba(15, 19, 23, 0.35), 0 12px 20px rgba(15, 19, 23, 0.24);
+
+  --elevation-dock: var(--elevation-level-1);
+  --elevation-panel: var(--elevation-level-1);
+  --elevation-popover: var(--elevation-level-2);
+  --elevation-window: var(--elevation-level-2);
+  --elevation-window-active: var(--elevation-level-3);
+  --elevation-modal: var(--elevation-level-4);
+
+  --surface-dock: color-mix(in srgb, var(--color-surface) 88%, #ffffff 12%);
+  --surface-panel: color-mix(in srgb, var(--color-surface) 92%, #ffffff 8%);
+  --surface-popover: color-mix(in srgb, var(--color-surface) 84%, #ffffff 16%);
+  --surface-modal: color-mix(in srgb, var(--color-surface) 80%, #ffffff 20%);
+  --surface-window: color-mix(in srgb, var(--color-surface) 88%, #ffffff 12%);
+  --surface-scrim: rgba(15, 19, 23, 0.6);
+
+  --surface-border-subtle: color-mix(in srgb, var(--color-inverse) 16%, transparent);
+  --surface-border-strong: color-mix(in srgb, var(--color-inverse) 24%, transparent);
+}
+
+html.dark {
+  /* Overlay-driven elevation scale for dark themes */
+  --elevation-level-1: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 10px 24px rgba(0, 0, 0, 0.5);
+  --elevation-level-2: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 18px 36px rgba(0, 0, 0, 0.55);
+  --elevation-level-3: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 26px 44px rgba(0, 0, 0, 0.6);
+  --elevation-level-4: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 36px 60px rgba(0, 0, 0, 0.65);
+
+  --surface-dock: color-mix(in srgb, var(--color-surface) 72%, #ffffff 28%);
+  --surface-panel: color-mix(in srgb, var(--color-surface) 76%, #ffffff 24%);
+  --surface-popover: color-mix(in srgb, var(--color-surface) 68%, #ffffff 32%);
+  --surface-modal: color-mix(in srgb, var(--color-surface) 62%, #ffffff 38%);
+  --surface-window: color-mix(in srgb, var(--color-surface) 70%, #ffffff 30%);
+  --surface-scrim: rgba(3, 6, 10, 0.72);
+
+  --surface-border-subtle: color-mix(in srgb, #ffffff 18%, transparent);
+  --surface-border-strong: color-mix(in srgb, #ffffff 28%, transparent);
+}
+
+.surface-dock {
+  background-color: var(--surface-dock, var(--color-surface));
+  box-shadow: var(--elevation-dock);
+}
+
+.surface-panel {
+  background-color: var(--surface-panel, var(--color-surface));
+  box-shadow: var(--elevation-panel);
+}
+
+.surface-popover {
+  background-color: var(--surface-popover, var(--color-surface));
+  box-shadow: var(--elevation-popover);
+  border: 1px solid var(--surface-border-subtle);
+}
+
+.surface-modal {
+  background-color: var(--surface-modal, var(--color-surface));
+  box-shadow: var(--elevation-modal);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.surface-border {
+  border: 1px solid var(--surface-border-subtle);
+}
+
+.surface-border-strong {
+  border: 1px solid var(--surface-border-strong);
+}

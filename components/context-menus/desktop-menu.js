@@ -48,7 +48,7 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg text-left font-light rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
                 onClick={props.addNewFolder}
