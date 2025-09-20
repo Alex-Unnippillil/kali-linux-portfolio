@@ -1,7 +1,9 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+export const metadata = getPageMetadata('/dummy-form');
 
 const STORAGE_KEY = 'dummy-form-draft';
 

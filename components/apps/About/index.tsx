@@ -1,12 +1,10 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
-import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
-import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
@@ -101,24 +99,8 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
   };
 
   render() {
-    const structured = {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: 'Alex Unnippillil',
-      url: 'https://unnippillil.com',
-    };
-    const nonce = getCspNonce();
-
     return (
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
-        <Head>
-          <title>About</title>
-          <script
-            type="application/ld+json"
-            nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
-          />
-        </Head>
         <div
           className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
           role="tablist"

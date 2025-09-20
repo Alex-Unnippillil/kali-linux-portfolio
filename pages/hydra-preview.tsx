@@ -1,5 +1,7 @@
+import { getPageMetadata } from '@/lib/metadata';
 import React, { useState } from 'react';
 import FormError from '../components/ui/FormError';
+export const metadata = getPageMetadata('/hydra-preview');
 
 const protocols = ['ssh', 'ftp', 'http', 'smtp'];
 

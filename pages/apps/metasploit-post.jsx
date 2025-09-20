@@ -1,4 +1,6 @@
+import { getPageMetadata } from '@/lib/metadata';
 import dynamic from 'next/dynamic';
+export const metadata = getPageMetadata('/apps/metasploit-post');
 
 const MetasploitPost = dynamic(() => import('../../apps/metasploit-post'), {
   ssr: false,

@@ -1,5 +1,6 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
@@ -7,6 +8,7 @@ import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
 import Tabs from '../../components/Tabs';
 import FormError from '../../components/ui/FormError';
 import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
+export const metadata = getPageMetadata('/qr');
 
 const tabs = [
   { id: 'text', label: 'Text' },

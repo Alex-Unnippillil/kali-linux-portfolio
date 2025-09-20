@@ -1,6 +1,8 @@
+import { getPageMetadata } from '@/lib/metadata';
 import React from 'react';
 import WorkflowCard from '../components/WorkflowCard';
 import { WindowMainScreen } from '../components/base/window';
+export const metadata = getPageMetadata('/security-education');
 
 interface FrameProps {
   title: string;

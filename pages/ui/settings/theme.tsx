@@ -1,8 +1,10 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import { ChangeEvent } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+export const metadata = getPageMetadata('/ui/settings/theme');
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({

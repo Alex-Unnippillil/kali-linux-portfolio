@@ -1,4 +1,6 @@
+import { getPageMetadata } from '@/lib/metadata';
 import { useState } from 'react';
+export const metadata = getPageMetadata('/admin/messages');
 
 export default function AdminMessages() {
   const [key, setKey] = useState('');

@@ -1,6 +1,8 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import React, { useEffect, useMemo, useState } from 'react';
+export const metadata = getPageMetadata('/nikto-report');
 
 interface NiktoFinding {
   path: string;

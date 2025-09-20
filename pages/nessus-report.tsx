@@ -1,7 +1,9 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import React, { useMemo, useState } from 'react';
 import data from '../components/apps/nessus/sample-report.json';
+export const metadata = getPageMetadata('/nessus-report');
 
 const severityColors: Record<string, string> = {
   Critical: '#991b1b',

@@ -1,8 +1,10 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+export const metadata = getPageMetadata('/input-hub');
 
 const subjectTemplates = [
   'General Inquiry',

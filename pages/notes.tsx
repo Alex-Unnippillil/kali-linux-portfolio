@@ -1,7 +1,9 @@
 'use client';
 
+import { getPageMetadata } from '@/lib/metadata';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+export const metadata = getPageMetadata('/notes');
 
 interface NotesPageState {
   notes: unknown[] | null;

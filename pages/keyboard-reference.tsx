@@ -1,4 +1,6 @@
+import { getPageMetadata } from '@/lib/metadata';
 import React from 'react';
+export const metadata = getPageMetadata('/keyboard-reference');
 
 const KeyboardReference = () => (
   <main className="min-h-screen bg-ub-cool-grey text-white p-4 space-y-4">

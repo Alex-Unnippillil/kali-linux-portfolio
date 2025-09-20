@@ -1,5 +1,7 @@
+import { getPageMetadata } from '@/lib/metadata';
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+export const metadata = getPageMetadata('/apps/weather_widget');
 
 const WeatherWidget = dynamic(() => import('../../apps/weather_widget'), {
   ssr: false,
