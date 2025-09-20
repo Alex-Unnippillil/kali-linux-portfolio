@@ -1,0 +1,43 @@
+@supports (anchor-name: --context-menu-anchor) {
+  .context-menu-anchor {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    anchor-name: --context-menu-anchor;
+  }
+
+  .context-menu[data-open='true'] {
+    position: fixed;
+    inset: auto;
+    position-anchor: --context-menu-anchor;
+    transform: translate(
+      var(--context-menu-translate-x, 0),
+      var(--context-menu-translate-y, 0)
+    );
+  }
+
+  .context-menu[data-anchor-x='right'] {
+    left: anchor(right);
+    --context-menu-translate-x: 0;
+  }
+
+  .context-menu[data-anchor-x='left'] {
+    left: anchor(left);
+    --context-menu-translate-x: -100%;
+  }
+
+  .context-menu[data-anchor-y='bottom'] {
+    top: anchor(bottom);
+    --context-menu-translate-y: 0;
+  }
+
+  .context-menu[data-anchor-y='top'] {
+    top: anchor(top);
+    --context-menu-translate-y: -100%;
+  }
+}
