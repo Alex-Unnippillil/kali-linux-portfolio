@@ -1,12 +1,20 @@
 'use client';
 
-import { TrashItem } from '../state';
+import { TrashHistoryEntry } from '../state';
 
 interface Props {
-  history: TrashItem[];
+  history: TrashHistoryEntry[];
   onRestore: (index: number) => void;
   onRestoreAll: () => void;
 }
+
+const describeEntry = (entry: TrashHistoryEntry) => {
+  if (entry.action === 'empty') {
+    return `${entry.items.length} item${entry.items.length === 1 ? '' : 's'} emptied`;
+  }
+  if (entry.items.length === 1) return entry.items[0].title;
+  return `${entry.items[0].title} (+${entry.items.length - 1} more)`;
+};
 
 export default function HistoryList({ history, onRestore, onRestoreAll }: Props) {
   if (history.length === 0) return null;
@@ -24,19 +32,28 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
           Restore All
         </button>
       </div>
-      <ul className="max-h-32 overflow-auto">
-        {history.map((item, idx) => (
-          <li key={item.closedAt} className="flex justify-between items-center h-9">
-            <span className="truncate mr-2 font-mono" title={item.title}>
-              {item.title}
-            </span>
+      <ul className="max-h-32 overflow-auto space-y-1">
+        {history.map((entry, idx) => (
+          <li key={entry.id} className="flex items-center justify-between gap-2">
+            <div className="flex flex-col overflow-hidden">
+              <span
+                className="truncate font-mono"
+                title={entry.items.map(item => item.title).join(', ')}
+              >
+                {describeEntry(entry)}
+              </span>
+              <span className="text-[10px] uppercase tracking-wide opacity-70">
+                {entry.action === 'empty' ? 'Trash emptied' : 'Item deleted'}
+              </span>
+            </div>
             <button
               onClick={() => {
-                if (window.confirm(`Restore ${item.title}?`)) onRestore(idx);
+                const name = entry.items.length === 1 ? entry.items[0].title : `${entry.items.length} items`;
+                if (window.confirm(`Restore ${name}?`)) onRestore(idx);
               }}
               className="text-ub-orange hover:underline"
             >
-              Restore
+              Undo
             </button>
           </li>
         ))}

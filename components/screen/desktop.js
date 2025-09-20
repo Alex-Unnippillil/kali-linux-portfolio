@@ -677,12 +677,15 @@ export class Desktop extends Component {
         let trash = [];
         try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
         trash = trash.filter(item => now - item.closedAt <= ms);
+        const size = image ? Math.floor(((image.split(',')[1] || image).length * 3) / 4) : undefined;
         trash.push({
             id: objId,
             title: appMeta.title || objId,
             icon: appMeta.icon,
             image,
             closedAt: now,
+            size,
+            metadata: { kind: 'window' }
         });
         safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
         this.updateTrashIcon();
