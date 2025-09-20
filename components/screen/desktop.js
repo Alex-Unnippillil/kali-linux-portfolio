@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import WindowTilingHotkeys from '../WindowTilingHotkeys';
 
 export class Desktop extends Component {
     constructor() {
@@ -163,14 +164,6 @@ export class Desktop extends Component {
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
-            }
         }
     }
 
@@ -866,6 +859,11 @@ export class Desktop extends Component {
     render() {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+
+                <WindowTilingHotkeys
+                    enabled={this.props.snapEnabled}
+                    getFocusedWindowId={this.getFocusedWindowId}
+                />
 
                 {/* Window Area */}
                 <div
