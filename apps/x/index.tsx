@@ -465,14 +465,14 @@ export default function XTimeline() {
                   >
                     <div className="relative">
                       <div className="w-12 h-12 rounded-full bg-[var(--color-muted)] animate-pulse" />
-                      <IconBadge className="w-3 h-3 absolute bottom-0 right-0 text-[var(--color-muted)]" />
+                      <IconBadge className="w-3 h-3 absolute bottom-0 right-0 text-[var(--color-text-muted)]" />
                     </div>
                     <div className="flex-1 space-y-1.5">
                       <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-3/4" />
                       <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-1/2" />
                       <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-full" />
                     </div>
-                    <IconShare className="w-5 h-5 text-[var(--color-muted)]" />
+                    <IconShare className="w-5 h-5 text-[var(--color-text-muted)]" />
                   </li>
                 ))}
               </ul>
@@ -496,7 +496,7 @@ export default function XTimeline() {
               </div>
             )}
             {!loading && !timelineLoaded && !scriptError && (
-              <div className="text-center text-[var(--color-muted)]">Nothing to see</div>
+              <div className="text-center text-[var(--color-text-muted)]">Nothing to see</div>
             )}
           </>
         )}
