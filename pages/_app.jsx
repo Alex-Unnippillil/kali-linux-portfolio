@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { CspNonceProvider, useCspNonce } from '../utils/csp';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -25,9 +26,8 @@ const ubuntu = Ubuntu({
 });
 
 
-function MyApp(props) {
-  const { Component, pageProps } = props;
-
+function AppContent({ Component, pageProps }) {
+  const nonce = useCspNonce();
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
@@ -148,7 +148,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
-      <Script src="/a2hs.js" strategy="beforeInteractive" />
+      <Script nonce={nonce} src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"
@@ -175,8 +175,16 @@ function MyApp(props) {
         </SettingsProvider>
       </div>
     </ErrorBoundary>
+  );
+}
 
+function MyApp(props) {
+  const { Component, pageProps, cspNonce } = props;
 
+  return (
+    <CspNonceProvider nonce={cspNonce}>
+      <AppContent Component={Component} pageProps={pageProps} />
+    </CspNonceProvider>
   );
 }
 

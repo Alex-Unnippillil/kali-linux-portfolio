@@ -6,14 +6,18 @@ import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
-import { getCspNonce } from '../../../utils/csp';
+import { useCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
+type AboutAlexProps = {
+  nonce?: string;
+};
+
+class AboutAlex extends Component<AboutAlexProps, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
 
-  constructor(props: unknown) {
+  constructor(props: AboutAlexProps) {
     super(props);
     this.state = {
       screen: <></>,
@@ -107,7 +111,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       name: 'Alex Unnippillil',
       url: 'https://unnippillil.com',
     };
-    const nonce = getCspNonce();
+    const { nonce } = this.props;
 
     return (
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
@@ -155,13 +159,16 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
 }
 
 export default function AboutApp() {
+  const nonce = useCspNonce();
   return (
     <>
-      <AboutAlex />
+      <AboutAlex nonce={nonce} />
       <AboutSlides />
     </>
   );
 }
+
+export { AboutAlex };
 
 export { default as SafetyNote } from './SafetyNote';
 

@@ -5,8 +5,33 @@ class MyDocument extends Document {
    * @param {import('next/document').DocumentContext} ctx
    */
   static async getInitialProps(ctx) {
+    const rawNonce =
+      ctx?.res?.getHeader?.('x-nonce') ??
+      ctx?.req?.headers?.['x-nonce'] ??
+      ctx?.res?.getHeader?.('x-csp-nonce');
+
+    const nonce = Array.isArray(rawNonce)
+      ? rawNonce[0]
+      : rawNonce != null
+        ? String(rawNonce)
+        : undefined;
+
+    const originalRenderPage = ctx.renderPage;
+    ctx.renderPage = (options = {}) => {
+      const { enhanceApp, ...rest } = options;
+
+      return originalRenderPage({
+        ...rest,
+        enhanceApp: (App) => {
+          const EnhancedApp = enhanceApp ? enhanceApp(App) : App;
+          return function AppWithNonce(appProps) {
+            return <EnhancedApp {...appProps} cspNonce={nonce} />;
+          };
+        },
+      });
+    };
+
     const initial = await Document.getInitialProps(ctx);
-    const nonce = ctx?.res?.getHeader?.('x-csp-nonce');
     return { ...initial, nonce };
   }
 
