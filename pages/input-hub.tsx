@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
+import Script from 'next/script';
 import { useRouter } from 'next/router';
 
 const subjectTemplates = [
@@ -23,6 +24,7 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
   });
 
 const QUEUE_KEY = 'input-hub-queue';
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
 
 const InputHub = () => {
   const router = useRouter();
@@ -73,19 +75,11 @@ const InputHub = () => {
         setEmailjsReady(false);
       }
     }
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    if (siteKey) {
-      const script = document.createElement('script');
-      script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
-      script.async = true;
-      document.head.appendChild(script);
-    }
   }, []);
 
   useEffect(() => {
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
     const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
 
     const flushQueue = async () => {
       if (!emailjsReady || !navigator.onLine) return;
@@ -94,7 +88,7 @@ const InputHub = () => {
         const queue: any[] = raw ? JSON.parse(raw) : [];
         for (const q of queue) {
           const token = q.useCaptcha
-            ? await getRecaptchaToken(siteKey)
+            ? await getRecaptchaToken(RECAPTCHA_SITE_KEY)
             : '';
           await emailjs.send(serviceId, templateId, {
             name: q.name,
@@ -140,7 +134,6 @@ const InputHub = () => {
     }
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
     const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     if (!navigator.onLine) {
       enqueueMessage({ name, email, subject, message, useCaptcha });
       setStatus('Message queued; will send when online.');
@@ -149,7 +142,9 @@ const InputHub = () => {
       setMessage('');
       return;
     }
-    const token = useCaptcha ? await getRecaptchaToken(siteKey) : '';
+    const token = useCaptcha
+      ? await getRecaptchaToken(RECAPTCHA_SITE_KEY)
+      : '';
     setStatus('Sending...');
     try {
       await emailjs.send(serviceId, templateId, {
@@ -170,6 +165,13 @@ const InputHub = () => {
 
   return (
     <div className="p-4 text-black max-w-md mx-auto">
+      {RECAPTCHA_SITE_KEY && (
+        <Script
+          id="recaptcha-script"
+          src={`https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`}
+          strategy="lazyOnload"
+        />
+      )}
       <div className="mb-4">
         <span
           className={`px-2 py-1 text-sm rounded ${
@@ -217,7 +219,7 @@ const InputHub = () => {
             type="checkbox"
             checked={useCaptcha}
             onChange={(e) => setUseCaptcha(e.target.checked)}
-            disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+            disabled={!RECAPTCHA_SITE_KEY}
           />
           <span>Use reCAPTCHA</span>
         </label>
