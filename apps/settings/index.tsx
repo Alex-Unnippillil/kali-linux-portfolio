@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { clearHistory as clearOpenHistory } from "../../utils/analytics/openHistory";
 
 export default function Settings() {
   const {
@@ -29,6 +30,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    suggestionsEnabled,
+    setSuggestionsEnabled,
     theme,
     setTheme,
   } = useSettings();
@@ -100,6 +103,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setSuggestionsEnabled(defaults.suggestionsEnabled);
     setTheme("default");
   };
 
@@ -285,6 +289,40 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+          <div className="flex flex-col items-center my-4 space-y-2">
+            <div className="flex items-center space-x-3">
+              <span className="text-ubt-grey">Show app suggestions</span>
+              <ToggleSwitch
+                checked={suggestionsEnabled}
+                onChange={setSuggestionsEnabled}
+                ariaLabel="Enable app suggestions"
+              />
+            </div>
+            <p className="text-xs text-ubt-grey text-center max-w-md">
+              When enabled, compatible apps highlight “Last used” and “Popular”
+              choices based on on-device history only.
+            </p>
+          </div>
+          <div className="flex flex-col items-center my-4 space-y-2">
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Clear app suggestion history? This will remove last used and popular recommendations.",
+                  )
+                ) {
+                  clearOpenHistory();
+                }
+              }}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Clear Suggestion History
+            </button>
+            <p className="text-xs text-ubt-grey text-center max-w-md">
+              Removes per-type open history and resets recommendations. This
+              does not delete your files.
+            </p>
           </div>
         </>
       )}
