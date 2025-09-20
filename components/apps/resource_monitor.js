@@ -1,45 +1,67 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Charts from './resource-monitor/Charts';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
 
+const INITIAL_SERIES_STATE = {
+  cpu: [],
+  memory: [],
+  disk: [],
+  network: [],
+};
+
 const ResourceMonitor = () => {
-  const cpuCanvas = useRef(null);
-  const memCanvas = useRef(null);
-  const fpsCanvas = useRef(null);
-  const netCanvas = useRef(null);
   const workerRef = useRef(null);
+  const dataRef = useRef({ cpu: [], mem: [], disk: [], net: [] });
 
-  const dataRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
-  const displayRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
-  const animRef = useRef();
-  const lastDrawRef = useRef(0);
-  const THROTTLE_MS = 1000;
-
+  const [chartData, setChartData] = useState(() => ({ ...INITIAL_SERIES_STATE }));
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
   const [fps, setFps] = useState(0);
 
+  const diskTrendRef = useRef(35);
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
   const containerRef = useRef(null);
 
-  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+  const updateCharts = useCallback(() => {
+    setChartData({
+      cpu: [...dataRef.current.cpu],
+      memory: [...dataRef.current.mem],
+      disk: [...dataRef.current.disk],
+      network: [...dataRef.current.net],
+    });
+  }, []);
+
+  const pushSample = useCallback((key, value) => {
+    const arr = dataRef.current[key];
+    arr.push(value);
+    if (arr.length > MAX_POINTS) arr.shift();
+  }, []);
+
+  const computeDiskUsage = useCallback((cpuValue, memValue) => {
+    const next =
+      diskTrendRef.current +
+      (cpuValue - 50) * 0.05 +
+      (memValue - 50) * 0.02 +
+      (Math.random() - 0.5) * 4;
+    diskTrendRef.current = Math.min(100, Math.max(0, next));
+    return diskTrendRef.current;
+  }, []);
 
   // Spawn worker for network speed tests
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof Worker !== 'function') return;
-    workerRef.current = new Worker(
-      new URL('./speedtest.worker.js', import.meta.url),
-    );
+    if (typeof window === 'undefined' || typeof Worker !== 'function') return undefined;
+    workerRef.current = new Worker(new URL('./speedtest.worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       const { speed } = e.data || {};
       pushSample('net', speed);
-      scheduleDraw();
+      updateCharts();
     };
     workerRef.current.postMessage({ type: 'start' });
     return () => workerRef.current?.terminate();
-  }, [scheduleDraw]);
+  }, [pushSample, updateCharts]);
 
   useEffect(() => {
     if (workerRef.current) {
@@ -67,17 +89,18 @@ const ResourceMonitor = () => {
           const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
           mem = (usedJSHeapSize / totalJSHeapSize) * 100;
         }
+        const disk = computeDiskUsage(cpu, mem);
         pushSample('cpu', cpu);
         pushSample('mem', mem);
-        pushSample('fps', currentFps);
-        scheduleDraw();
+        pushSample('disk', disk);
+        updateCharts();
         lastSample = now;
       }
       raf = requestAnimationFrame(sample);
     };
     raf = requestAnimationFrame(sample);
     return () => cancelAnimationFrame(raf);
-  }, [paused, scheduleDraw]);
+  }, [paused, computeDiskUsage, pushSample, updateCharts]);
 
   // Stress test animation – many moving windows
   useEffect(() => {
@@ -120,106 +143,25 @@ const ResourceMonitor = () => {
     }
   }, [stress]);
 
-  const pushSample = (key, value) => {
-    const arr = dataRef.current[key];
-    arr.push(value);
-    if (arr.length > MAX_POINTS) arr.shift();
-  };
-
-  const drawCharts = (dataset = dataRef.current) => {
-    drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'CPU %', 100);
-    drawChart(memCanvas.current, dataset.mem, '#ffd700', 'Memory %', 100);
-    drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 120);
-    drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
-  };
-
-  const animateCharts = useCallback(() => {
-    const from = { ...displayRef.current };
-    const to = { ...dataRef.current };
-    const start = performance.now();
-    const duration = 300;
-
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      const interpolated = {};
-      ['cpu', 'mem', 'fps', 'net'].forEach((key) => {
-        const fromArr = from[key];
-        const toArr = to[key];
-        interpolated[key] = toArr.map((v, i) => {
-          const a = fromArr[i] ?? fromArr[fromArr.length - 1] ?? 0;
-          return a + (v - a) * t;
-        });
-      });
-      drawCharts(interpolated);
-      if (t < 1) {
-        animRef.current = requestAnimationFrame(step);
-      } else {
-        displayRef.current = to;
-      }
-    };
-
-    cancelAnimationFrame(animRef.current);
-    animRef.current = requestAnimationFrame(step);
-  }, []);
-
-  const scheduleDraw = useCallback(() => {
-    const now = performance.now();
-    if (now - lastDrawRef.current >= THROTTLE_MS) {
-      lastDrawRef.current = now;
-      animateCharts();
-    }
-  }, [animateCharts]);
-
   const togglePause = () => setPaused((p) => !p);
   const toggleStress = () => setStress((s) => !s);
 
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu overflow-hidden"
+      className="relative flex h-full w-full flex-col overflow-hidden bg-ub-cool-grey font-ubuntu text-white"
     >
-      <div className="p-2 flex gap-2 items-center">
-        <button onClick={togglePause} className="px-2 py-1 bg-ub-dark-grey rounded">
+      <div className="flex items-center gap-2 p-2">
+        <button onClick={togglePause} className="rounded bg-ub-dark-grey px-2 py-1">
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
+        <button onClick={toggleStress} className="rounded bg-ub-dark-grey px-2 py-1">
           {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
         <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
       </div>
-      <div className="flex flex-1 items-center justify-evenly gap-4 p-4">
-        <canvas
-          ref={cpuCanvas}
-          width={300}
-          height={100}
-          role="img"
-          aria-label="CPU usage chart"
-          className="bg-ub-dark-grey"
-        />
-        <canvas
-          ref={memCanvas}
-          width={300}
-          height={100}
-          role="img"
-          aria-label="Memory usage chart"
-          className="bg-ub-dark-grey"
-        />
-        <canvas
-          ref={fpsCanvas}
-          width={300}
-          height={100}
-          role="img"
-          aria-label="FPS chart"
-          className="bg-ub-dark-grey"
-        />
-        <canvas
-          ref={netCanvas}
-          width={300}
-          height={100}
-          role="img"
-          aria-label="Network speed chart"
-          className="bg-ub-dark-grey"
-        />
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        <Charts data={chartData} />
       </div>
       {stressWindows.current.map((_, i) => (
         <div
@@ -227,35 +169,12 @@ const ResourceMonitor = () => {
           ref={(el) => {
             stressEls.current[i] = el;
           }}
-          className="absolute w-8 h-6 bg-white bg-opacity-20 border border-gray-500 pointer-events-none"
+          className="pointer-events-none absolute h-6 w-8 border border-gray-500 bg-white bg-opacity-20"
         />
       ))}
     </div>
   );
 };
-
-function drawChart(canvas, values, color, label, maxVal) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  values.forEach((v, i) => {
-    const x = (i / (values.length - 1 || 1)) * w;
-    const y = h - (v / maxVal) * h;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  const latest = values[values.length - 1] || 0;
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '12px sans-serif';
-  ctx.fillText(`${label}: ${latest.toFixed(1)}`, 4, 12);
-}
 
 export default ResourceMonitor;
 
