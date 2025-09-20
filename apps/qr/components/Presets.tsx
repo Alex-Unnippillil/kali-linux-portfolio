@@ -16,6 +16,8 @@ interface Props {
   margin: number;
   ecc: 'L' | 'M' | 'Q' | 'H';
   logo?: string | null;
+  foregroundColor: string;
+  backgroundColor: string;
 }
 
 const Presets: React.FC<Props> = ({
@@ -25,6 +27,8 @@ const Presets: React.FC<Props> = ({
   margin,
   ecc,
   logo,
+  foregroundColor,
+  backgroundColor,
 }) => {
   const [preset, setPreset] = useState<Preset>('text');
   const [text, setText] = useState('');
@@ -59,6 +63,10 @@ const Presets: React.FC<Props> = ({
       margin,
       width: size,
       errorCorrectionLevel: ecc,
+      color: {
+        dark: foregroundColor,
+        light: backgroundColor,
+      },
     })
       .then(() => {
         if (logo) {
@@ -79,7 +87,16 @@ const Presets: React.FC<Props> = ({
         const ctx = canvas.getContext('2d');
         if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       });
-  }, [payload, canvasRef, size, margin, ecc, logo]);
+  }, [
+    payload,
+    canvasRef,
+    size,
+    margin,
+    ecc,
+    logo,
+    foregroundColor,
+    backgroundColor,
+  ]);
 
   const copyPayload = async () => {
     if (!payload) return;
