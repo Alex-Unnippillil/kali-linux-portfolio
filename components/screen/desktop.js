@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { restoreWindowGeometry, saveWindowGeometry, clearAllWindowGeometry } from '@/src/wm/persistence';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -40,6 +41,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -62,6 +64,7 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const sizes = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -71,10 +74,13 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+                session.windows.forEach(({ id, x, y, width, height }) => {
                     positions[id] = { x, y };
+                    if (typeof width === 'number' && typeof height === 'number') {
+                        sizes[id] = { width, height };
+                    }
                 });
-                this.setState({ window_positions: positions }, () => {
+                this.setState({ window_positions: positions, window_sizes: sizes }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
@@ -460,6 +466,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const size = this.state.window_sizes[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -474,8 +481,8 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: size && typeof size.width === 'number' ? size.width : app.defaultWidth,
+                    defaultHeight: size && typeof size.height === 'number' ? size.height : app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
@@ -490,23 +497,74 @@ export class Desktop extends Component {
         return windowsJsx;
     }
 
+    getViewportSize = () => {
+        if (typeof window === 'undefined') return null;
+        if (!window.innerWidth || !window.innerHeight) return null;
+        return { width: window.innerWidth, height: window.innerHeight };
+    }
+
+    measureWindowSize = (id) => {
+        if (typeof document === 'undefined' || typeof window === 'undefined') return null;
+        const node = document.getElementById(id);
+        if (!node || !window.innerWidth || !window.innerHeight) return null;
+        const rect = node.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        const width = (rect.width / window.innerWidth) * 100;
+        const height = (rect.height / window.innerHeight) * 100;
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
+        return {
+            width: Number(width.toFixed(2)),
+            height: Number(height.toFixed(2)),
+        };
+    }
+
     updateWindowPosition = (id, x, y) => {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
-        this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+        const snappedX = snap(x);
+        const snappedY = snap(y);
+        const viewport = this.getViewportSize();
+        const measuredSize = this.measureWindowSize(id);
+        const sizeEntry = measuredSize || this.state.window_sizes[id] || null;
+
+        this.setState(prev => {
+            const nextPositions = { ...prev.window_positions, [id]: { x: snappedX, y: snappedY } };
+            if (sizeEntry) {
+                return {
+                    window_positions: nextPositions,
+                    window_sizes: { ...prev.window_sizes, [id]: sizeEntry },
+                };
+            }
+            return { window_positions: nextPositions };
+        }, () => {
+            this.saveSession();
+            if (viewport && sizeEntry) {
+                saveWindowGeometry(id, {
+                    x: snappedX,
+                    y: snappedY,
+                    widthPct: sizeEntry.width,
+                    heightPct: sizeEntry.height,
+                }, viewport);
+            }
+        });
     }
 
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const windows = openWindows.map(id => {
+            const position = this.state.window_positions[id];
+            const size = this.state.window_sizes[id];
+            const appMeta = apps.find(a => a.id === id) || {};
+            return {
+                id,
+                x: position ? position.x : 60,
+                y: position ? position.y : 10,
+                width: size && typeof size.width === 'number' ? size.width : appMeta.defaultWidth,
+                height: size && typeof size.height === 'number' ? size.height : appMeta.defaultHeight,
+            };
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
     }
@@ -610,8 +668,10 @@ export class Desktop extends Component {
             }
             return;
         } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
+            const closed_windows = { ...this.state.closed_windows };
+            const favourite_apps = { ...this.state.favourite_apps };
+            const window_positions = { ...this.state.window_positions };
+            const window_sizes = { ...this.state.window_sizes };
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -644,10 +704,37 @@ export class Desktop extends Component {
             recentApps = recentApps.slice(0, 10);
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
+            const appMeta = apps.find(a => a.id === objId);
+            const viewport = this.getViewportSize();
+            const restored = restoreWindowGeometry(objId, viewport || undefined, {
+                widthPct: appMeta?.defaultWidth,
+                heightPct: appMeta?.defaultHeight,
+            });
+            if (typeof restored.x === 'number' && typeof restored.y === 'number') {
+                window_positions[objId] = { x: restored.x, y: restored.y };
+            }
+            if (typeof restored.widthPct === 'number' && typeof restored.heightPct === 'number') {
+                window_sizes[objId] = { width: restored.widthPct, height: restored.heightPct };
+            }
+            if (
+                viewport &&
+                typeof restored.x === 'number' &&
+                typeof restored.y === 'number' &&
+                typeof restored.widthPct === 'number' &&
+                typeof restored.heightPct === 'number'
+            ) {
+                saveWindowGeometry(objId, {
+                    x: restored.x,
+                    y: restored.y,
+                    widthPct: restored.widthPct,
+                    heightPct: restored.heightPct,
+                }, viewport);
+            }
+
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState({ closed_windows, favourite_apps, window_positions, window_sizes, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -911,7 +998,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    clearSession={() => { this.props.clearSession(); clearAllWindowGeometry(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
