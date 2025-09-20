@@ -1,4 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {
+  NotificationPriority,
+  shouldSilenceNotification,
+  subscribeToFullscreenChanges,
+} from '../../modules/desktop/fullscreenManager';
 
 interface ToastProps {
   message: string;
@@ -6,6 +11,7 @@ interface ToastProps {
   onAction?: () => void;
   onClose?: () => void;
   duration?: number;
+  intent?: NotificationPriority;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -14,11 +20,36 @@ const Toast: React.FC<ToastProps> = ({
   onAction,
   onClose,
   duration = 6000,
+  intent = 'default',
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
+  const [silenced, setSilenced] = useState(() =>
+    shouldSilenceNotification(intent),
+  );
+  const dismissedRef = useRef(false);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    return subscribeToFullscreenChanges(() => {
+      setSilenced(shouldSilenceNotification(intent));
+    });
+  }, [intent]);
+
+  useEffect(() => {
+    if (silenced && !dismissedRef.current) {
+      dismissedRef.current = true;
+      onClose?.();
+    }
+  }, [silenced, onClose]);
+
+  useEffect(() => {
+    if (silenced) {
+      return undefined;
+    }
+
     setVisible(true);
     timeoutRef.current = setTimeout(() => {
       onClose && onClose();
@@ -26,7 +57,11 @@ const Toast: React.FC<ToastProps> = ({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [duration, onClose]);
+  }, [duration, onClose, silenced]);
+
+  if (silenced) {
+    return null;
+  }
 
   return (
     <div
