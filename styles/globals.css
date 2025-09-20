@@ -68,6 +68,24 @@ html[data-theme='matrix'] {
 
 }
 
+/* Red team theme */
+html[data-theme='redteam'] {
+  --color-bg: #160404;
+  --color-text: #ffeaea;
+  --color-primary: #f87171;
+  --color-secondary: #2c0a0a;
+  --color-accent: #ef4444;
+  --color-muted: #3a0d0d;
+  --color-surface: #230808;
+  --color-inverse: #0f0f0f;
+  --color-border: #7f1d1d;
+  --color-terminal: #ff6b6b;
+  --color-dark: #140404;
+  --color-focus-ring: var(--color-accent);
+  --color-selection: rgba(248, 113, 113, 0.35);
+  --color-control-accent: var(--color-accent);
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
