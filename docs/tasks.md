@@ -61,6 +61,12 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Display `performance.memory` data and FPS from `performance.now()` deltas.
 - Show CPU synthetic load graph using `requestAnimationFrame` buckets.
 
+### Disk Analyzer
+- Use a treemap to surface the largest directories. The block area represents total size; hover to read percent of the scanned volume.
+- Pair the treemap with a sunburst chart so analysts can track depth—each ring represents a deeper folder level.
+- Allow breadcrumb drill-down so the table view always reflects the focused branch and highlights the heaviest offenders first.
+- CSV exports should include absolute sizes, human-readable strings, file/folder counts, and relative percentages for offline reporting.
+
 ### Project Gallery
 - Load projects from `projects.json`; add filters and buttons for repo and live demo.
 
