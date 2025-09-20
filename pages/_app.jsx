@@ -12,6 +12,7 @@ import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import RouteProgress from '../src/ui/RouteProgress';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
@@ -150,6 +151,7 @@ function MyApp(props) {
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
+        <RouteProgress />
         <a
           href="#app-grid"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
