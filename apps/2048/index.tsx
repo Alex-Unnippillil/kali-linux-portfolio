@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
+import { shareGameResult } from './share';
 
 const SIZE = 4;
 
@@ -127,6 +128,8 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -197,6 +200,8 @@ const Page2048 = () => {
   );
 
   const handleUndo = useCallback(() => {
+    setShareMessage(null);
+    setSharing(false);
     setHistory((h) => {
       if (!h.length) return h;
       const prev = h[h.length - 1];
@@ -223,6 +228,8 @@ const Page2048 = () => {
     setLost(false);
     setHighest(0);
     resetTimer();
+    setShareMessage(null);
+    setSharing(false);
   }, [resetTimer]);
 
   useEffect(() => {
@@ -256,6 +263,30 @@ const Page2048 = () => {
     if (boardType === 'hex') return v.toString(16).toUpperCase();
     return v;
   };
+
+  const handleShare = useCallback(async () => {
+    if (!won && !lost) return;
+    setShareMessage(null);
+    setSharing(true);
+    try {
+      const boardSnapshot = board.map((row) => [...row]);
+      const { action } = await shareGameResult({
+        board: boardSnapshot,
+        score: highest,
+        boardType,
+        status: won ? 'won' : 'lost',
+      });
+      setShareMessage(
+        action === 'copied'
+          ? 'Copied scorecard to clipboard.'
+          : 'Downloaded scorecard as PNG.'
+      );
+    } catch (error) {
+      setShareMessage('Unable to share right now. Please try again.');
+    } finally {
+      setSharing(false);
+    }
+  }, [won, lost, board, highest, boardType]);
 
   useEffect(() => {
     if (won || lost) {
@@ -319,7 +350,17 @@ const Page2048 = () => {
         )}
       </div>
       {(won || lost) && (
-        <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+        <div className="mt-4 space-y-2">
+          <div className="text-xl">{won ? 'You win!' : 'Game over'}</div>
+          <button
+            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={handleShare}
+            disabled={sharing}
+          >
+            {sharing ? 'Preparing share card…' : 'Share'}
+          </button>
+          {shareMessage && <div className="text-sm text-gray-300">{shareMessage}</div>}
+        </div>
       )}
     </div>
   );
