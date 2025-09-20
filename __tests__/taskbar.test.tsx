@@ -16,6 +16,8 @@ describe('Taskbar', () => {
         closed_windows={{ app1: false }}
         minimized_windows={{ app1: false }}
         focused_windows={{ app1: true }}
+        window_workspaces={{ app1: 'ws_1' }}
+        activeWorkspace="ws_1"
         openApp={openApp}
         minimize={minimize}
       />
@@ -35,6 +37,8 @@ describe('Taskbar', () => {
         closed_windows={{ app1: false }}
         minimized_windows={{ app1: true }}
         focused_windows={{ app1: false }}
+        window_workspaces={{ app1: 'ws_1' }}
+        activeWorkspace="ws_1"
         openApp={openApp}
         minimize={minimize}
       />

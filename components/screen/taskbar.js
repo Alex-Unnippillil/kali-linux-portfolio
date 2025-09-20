@@ -2,7 +2,12 @@ import React from 'react';
 import Image from 'next/image';
 
 export default function Taskbar(props) {
-    const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const { window_workspaces = {}, activeWorkspace } = props;
+    const runningApps = props.apps.filter(
+        app =>
+            props.closed_windows[app.id] === false &&
+            window_workspaces[app.id] === activeWorkspace
+    );
 
     const handleClick = (app) => {
         const id = app.id;
