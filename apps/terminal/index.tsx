@@ -11,6 +11,9 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { useTab } from '../../components/ui/TabbedWindow';
+import type { TerminalPaneSnapshot } from '../../modules/terminal/sessionStore';
+import type { CommandRestoreBehavior } from '../../utils/settings/terminal';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -65,10 +68,15 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
+  sessionId?: string;
+  initialSnapshot?: TerminalPaneSnapshot | null;
+  onSnapshot?: (snapshot: TerminalPaneSnapshot) => void;
+  snapshotIntervalMs?: number;
+  restoreBehavior?: CommandRestoreBehavior;
 }
 
 export interface TerminalHandle {
-  runCommand: (cmd: string) => void;
+  runCommand: (cmd: string) => Promise<void> | void;
   getContent: () => string;
 }
 
@@ -76,7 +84,18 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
+  (
+    {
+      openApp,
+      sessionId,
+      initialSnapshot = null,
+      onSnapshot,
+      snapshotIntervalMs = 15000,
+      restoreBehavior = 'prompt',
+    },
+    ref,
+  ) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -97,7 +116,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       aliasesRef.current[n] = v;
     },
     runWorker: async () => {},
+    cwd: '~',
+    setCwd: () => {},
   });
+  const lastCommandRef = useRef<string | undefined>(
+    initialSnapshot?.lastCommand,
+  );
+  const cwdRef = useRef(initialSnapshot?.cwd ?? '~');
+  const createdAtRef = useRef<number>(initialSnapshot?.createdAt ?? Date.now());
+  const replayedRef = useRef(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -105,6 +132,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const [ready, setReady] = useState(false);
+  const tabContext = useTab();
+  const snapshotInterval = snapshotIntervalMs ?? 15000;
+  const restoreMode: CommandRestoreBehavior = restoreBehavior ?? 'prompt';
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -147,8 +178,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
+    const cwd = cwdRef.current || '~';
     termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+      `\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m${cwd}\x1b[0m\x1b[1;34m]\x1b[0m`,
     );
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
@@ -192,6 +224,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.runWorker = runWorker;
+  contextRef.current.files = filesRef.current;
+  contextRef.current.history = historyRef.current;
+  contextRef.current.aliases = aliasesRef.current;
+  contextRef.current.cwd = cwdRef.current;
+  contextRef.current.setCwd = (dir: string) => {
+    const next = dir && dir.trim() ? dir : '~';
+    cwdRef.current = next;
+    contextRef.current.cwd = next;
+  };
+
+  const makeSnapshot = useCallback((): TerminalPaneSnapshot | null => {
+    if (!sessionId) return null;
+    return {
+      id: sessionId,
+      scrollback: contentRef.current,
+      history: [...historyRef.current],
+      cwd: cwdRef.current,
+      lastCommand: lastCommandRef.current,
+      createdAt: createdAtRef.current,
+      updatedAt: Date.now(),
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     registryRef.current = {
@@ -212,6 +266,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           deleteFile('history.txt', dirRef.current);
         }
         setOverflow({ top: false, bottom: false });
+        if (onSnapshot) {
+          const snapshot = makeSnapshot();
+          if (snapshot) onSnapshot(snapshot);
+        }
       },
       open: (arg) => {
         if (!arg) {
@@ -223,8 +281,29 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       },
       date: () => writeLine(new Date().toString()),
       about: () => writeLine('This terminal is powered by xterm.js'),
+      pwd: () => writeLine(contextRef.current.cwd),
+      cd: (arg) => {
+        const target = arg?.trim();
+        if (!target) {
+          writeLine(contextRef.current.cwd);
+          return;
+        }
+        contextRef.current.setCwd(target);
+        writeLine(`Changed directory to ${contextRef.current.cwd}`);
+        if (onSnapshot) {
+          const snapshot = makeSnapshot();
+          if (snapshot) onSnapshot(snapshot);
+        }
+      },
     };
-    }, [openApp, opfsSupported, deleteFile, writeLine]);
+  }, [
+    openApp,
+    opfsSupported,
+    deleteFile,
+    writeLine,
+    onSnapshot,
+    makeSnapshot,
+  ]);
 
   useEffect(() => {
     if (typeof Worker === 'function') {
@@ -237,18 +316,27 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
     const runCommand = useCallback(
       async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
+        const trimmed = cmd.trim();
+        if (!trimmed) return;
+        const [name, ...rest] = trimmed.split(/\s+/);
         const expanded =
           aliasesRef.current[name]
             ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
+            : trimmed;
         const [cmdName, ...cmdRest] = expanded.split(/\s+/);
         const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
+        historyRef.current.push(expanded);
+        contextRef.current.history = historyRef.current;
+        lastCommandRef.current = expanded;
+        tabContext.setTitle(expanded);
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
         else if (cmdName) await runWorker(expanded);
+        const snapshot = makeSnapshot();
+        if (snapshot && onSnapshot) {
+          onSnapshot(snapshot);
+        }
       },
-      [runWorker],
+      [makeSnapshot, onSnapshot, runWorker, tabContext],
     );
 
     const autocomplete = useCallback(() => {
@@ -294,6 +382,69 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }));
 
   useEffect(() => {
+    if (!sessionId || !onSnapshot) return;
+    const handleSnapshot = () => {
+      const snapshot = makeSnapshot();
+      if (snapshot) onSnapshot(snapshot);
+    };
+    window.addEventListener('beforeunload', handleSnapshot);
+    return () => {
+      handleSnapshot();
+      window.removeEventListener('beforeunload', handleSnapshot);
+    };
+  }, [sessionId, onSnapshot, makeSnapshot]);
+
+  useEffect(() => {
+    if (!sessionId || !onSnapshot) return;
+    if (!snapshotInterval || snapshotInterval <= 0) return;
+    const id = window.setInterval(() => {
+      const snapshot = makeSnapshot();
+      if (snapshot) onSnapshot(snapshot);
+    }, snapshotInterval);
+    return () => window.clearInterval(id);
+  }, [sessionId, onSnapshot, makeSnapshot, snapshotInterval]);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!initialSnapshot || initialSnapshot.history.length === 0) return;
+    if (replayedRef.current) return;
+    if (restoreMode === 'never') {
+      replayedRef.current = true;
+      return;
+    }
+    let shouldReplay = restoreMode === 'always';
+    if (!shouldReplay) {
+      const canPrompt =
+        typeof window !== 'undefined' && typeof window.confirm === 'function';
+      if (canPrompt) {
+        shouldReplay = window.confirm(
+          'Re-run the commands from your previous session? Choose Cancel to skip.',
+        );
+      }
+    }
+    if (!shouldReplay) {
+      replayedRef.current = true;
+      writeLine('Previous commands were not re-run.');
+      prompt();
+      return;
+    }
+    replayedRef.current = true;
+    writeLine('Replaying previous session commands…');
+    (async () => {
+      for (const command of initialSnapshot.history) {
+        await runCommand(command);
+      }
+    })();
+  }, [
+    ready,
+    initialSnapshot,
+    restoreMode,
+    runCommand,
+    writeLine,
+    prompt,
+  ]);
+
+  useEffect(() => {
     let disposed = false;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
@@ -325,24 +476,44 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
-      if (opfsSupported) {
+      let restoredFromSnapshot = false;
+      if (initialSnapshot) {
+        restoredFromSnapshot = true;
+        historyRef.current = [...initialSnapshot.history];
+        contextRef.current.history = historyRef.current;
+        cwdRef.current = initialSnapshot.cwd ?? cwdRef.current;
+        contextRef.current.cwd = cwdRef.current;
+        lastCommandRef.current = initialSnapshot.lastCommand;
+        contentRef.current = initialSnapshot.scrollback ?? '';
+        if (contentRef.current) {
+          const lines = contentRef.current.split('\n');
+          lines.forEach((line, index) => {
+            if (index === lines.length - 1 && line === '') return;
+            termRef.current?.writeln(line);
+          });
+        }
+        if (initialSnapshot.lastCommand) {
+          tabContext.setTitle(initialSnapshot.lastCommand);
+        }
+      } else if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
         if (existing) {
-          existing
-            .split('\n')
-            .filter(Boolean)
-            .forEach((l) => {
-              if (termRef.current) termRef.current.writeln(l);
-            });
+          existing.split('\n').forEach((l, index, arr) => {
+            if (index === arr.length - 1 && l === '') return;
+            if (termRef.current) termRef.current.writeln(l);
+          });
           contentRef.current = existing.endsWith('\n')
             ? existing
             : `${existing}\n`;
         }
       }
-      writeLine('Welcome to the web terminal!');
-      writeLine('Type "help" to see available commands.');
+      if (!restoredFromSnapshot) {
+        writeLine('Welcome to the web terminal!');
+        writeLine('Type "help" to see available commands.');
+      }
       prompt();
+      setReady(true);
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
@@ -378,7 +549,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      initialSnapshot,
+      tabContext,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
