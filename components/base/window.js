@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { applyDragResistance } from '../../src/wm/dragHelpers';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -336,30 +337,29 @@ export class Window extends Component {
         }
     }
 
-    applyEdgeResistance = (node, data) => {
+    applyEdgeResistance = (node, data, event) => {
         if (!node || !data) return;
-        const threshold = 30;
-        const resistance = 0.35; // how much to slow near edges
-        let { x, y } = data;
-        const maxX = this.state.parentSize.width;
-        const maxY = this.state.parentSize.height;
 
-        const resist = (pos, min, max) => {
-            if (pos < min) return min;
-            if (pos < min + threshold) return min + (pos - min) * resistance;
-            if (pos > max) return max;
-            if (pos > max - threshold) return max - (max - pos) * resistance;
-            return pos;
-        }
+        const resistedPosition = applyDragResistance(
+            { x: data.x, y: data.y },
+            {
+                minX: 0,
+                minY: 0,
+                maxX: this.state.parentSize.width,
+                maxY: this.state.parentSize.height,
+            },
+            {
+                bypass: Boolean(event && event.shiftKey),
+                devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : undefined,
+            }
+        );
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        node.style.transform = `translate(${resistedPosition.x}px, ${resistedPosition.y}px)`;
     }
 
     handleDrag = (e, data) => {
         if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+            this.applyEdgeResistance(data.node, data, e);
         }
         this.checkOverlap();
         this.checkSnapPreview();
