@@ -1,0 +1,46 @@
+import { ThemeDefinition } from './types';
+
+export const neonTheme: ThemeDefinition = {
+  metadata: {
+    id: 'neon',
+    name: 'Synthwave Grid',
+    description: 'High energy neon palette with laser magenta accents for retro futurism vibes.',
+    version: '1.0.0',
+    mode: 'dark',
+    tags: ['neon', 'retro', 'dark'],
+    createdAt: '2024-01-01T00:00:00.000Z',
+    attribution: {
+      author: 'Kali Linux Portfolio Maintainers',
+      license: 'CC BY-SA 4.0',
+      source: 'Inspired by classic synthwave poster palettes',
+    },
+  },
+  colors: {
+    background: '#000000',
+    surface: '#111111',
+    surfaceAlt: '#1a1a1a',
+    muted: '#222222',
+    text: '#ffffff',
+    textMuted: '#d4d4d4',
+    accent: '#ff00ff',
+    accentMuted: '#b300ff',
+    accentContrast: '#0a0a0a',
+    border: '#333333',
+    borderStrong: '#ff00ff',
+    focus: '#ff00ff',
+    selection: '#39ff14',
+    success: '#39ff14',
+    warning: '#ffb347',
+    danger: '#ff4f81',
+    info: '#39c0ff',
+    terminal: '#39ff14',
+  },
+  typography: {
+    fontFamily: "'Ubuntu', sans-serif",
+    headingFamily: "'Orbitron', 'Ubuntu', sans-serif",
+    monospaceFamily: "'Fira Code', 'Ubuntu Mono', monospace",
+    baseFontSize: '16px',
+    lineHeight: 1.55,
+    letterSpacing: '0.02em',
+  },
+};

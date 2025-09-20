@@ -1,3 +1,7 @@
+import type { ThemeDefinition } from '../styles/themes';
+import { defaultTheme } from '../styles/themes';
+import { applyThemeTokens, getThemeDefinition } from './themeTokens';
+
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
@@ -8,16 +12,21 @@ export const THEME_UNLOCKS: Record<string, number> = {
   matrix: 1000,
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
+const FALLBACK_THEME = defaultTheme;
 
-export const isDarkTheme = (theme: string): boolean =>
-  DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
+export const isDarkTheme = (theme: string): boolean => {
+  const definition = getThemeDefinition(theme);
+  return definition ? definition.metadata.mode === 'dark' : false;
+};
 
 export const getTheme = (): string => {
   if (typeof window === 'undefined') return 'default';
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored) return stored;
+    if (stored) {
+      const definition = getThemeDefinition(stored);
+      if (definition) return stored;
+    }
     const prefersDark = window.matchMedia?.(
       '(prefers-color-scheme: dark)'
     ).matches;
@@ -27,15 +36,18 @@ export const getTheme = (): string => {
   }
 };
 
-export const setTheme = (theme: string): void => {
+export const setTheme = (theme: string, override?: ThemeDefinition): void => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(THEME_KEY, theme);
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.toggle('dark', isDarkTheme(theme));
   } catch {
     /* ignore storage errors */
   }
+  const definition =
+    override ??
+    getThemeDefinition(theme) ??
+    FALLBACK_THEME;
+  applyThemeTokens(definition);
 };
 
 export const getUnlockedThemes = (highScore: number): string[] =>

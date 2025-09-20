@@ -3,25 +3,26 @@
 import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
-import { kaliTheme } from '../../styles/themes/kali';
+import { defaultTheme } from '../../styles/themes';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
 export default function VsCode() {
+  const theme = defaultTheme.colors;
   return (
     <div
       className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
-      style={{ backgroundColor: kaliTheme.background, color: kaliTheme.text }}
+      style={{ backgroundColor: theme.background, color: theme.text }}
     >
       <aside
         className="flex flex-col items-center gap-2 p-1"
-        style={{ width: SIDEBAR_WIDTH, backgroundColor: kaliTheme.sidebar }}
+        style={{ width: SIDEBAR_WIDTH, backgroundColor: theme.surface }}
       >
         <div
           className="rounded"
           style={{
             width: ICON_SIZE,
             height: ICON_SIZE,
-            backgroundColor: kaliTheme.accent,
+            backgroundColor: theme.accent,
           }}
         />
         <div
@@ -29,14 +30,14 @@ export default function VsCode() {
           style={{
             width: ICON_SIZE,
             height: ICON_SIZE,
-            backgroundColor: kaliTheme.accent,
+            backgroundColor: theme.accent,
           }}
         />
       </aside>
       <div className="flex-1 flex flex-col border border-black/20 rounded-md overflow-hidden">
         <div
           className="flex items-center justify-end gap-2 px-2 py-1 border-b border-black/20"
-          style={{ backgroundColor: kaliTheme.background }}
+          style={{ backgroundColor: theme.background }}
         >
           <button aria-label="Minimize">
             <MinimizeIcon />
@@ -48,7 +49,7 @@ export default function VsCode() {
             <CloseIcon />
           </button>
         </div>
-        <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
+        <div className="relative flex-1" style={{ backgroundColor: theme.background }}>
           <ExternalFrame
             src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
             title="VsCode"
@@ -67,7 +68,7 @@ export default function VsCode() {
         </div>
         <div
           className="flex items-center gap-2 px-2 py-1 border-t border-black/20"
-          style={{ backgroundColor: kaliTheme.sidebar }}
+          style={{ backgroundColor: theme.surface }}
         >
           <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
             <svg

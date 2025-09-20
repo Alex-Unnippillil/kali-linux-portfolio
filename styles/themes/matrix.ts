@@ -1,0 +1,46 @@
+import { ThemeDefinition } from './types';
+
+export const matrixTheme: ThemeDefinition = {
+  metadata: {
+    id: 'matrix',
+    name: 'Matrix Rain',
+    description: 'Monochrome phosphor greens inspired by falling code rain.',
+    version: '1.0.0',
+    mode: 'dark',
+    tags: ['matrix', 'terminal', 'dark'],
+    createdAt: '2024-01-01T00:00:00.000Z',
+    attribution: {
+      author: 'Kali Linux Portfolio Maintainers',
+      license: 'CC BY-SA 4.0',
+      source: 'Classic sci-fi green terminal aesthetic',
+    },
+  },
+  colors: {
+    background: '#000000',
+    surface: '#001100',
+    surfaceAlt: '#002200',
+    muted: '#003300',
+    text: '#00ff00',
+    textMuted: '#66ff66',
+    accent: '#00ff00',
+    accentMuted: '#009900',
+    accentContrast: '#001100',
+    border: '#003300',
+    borderStrong: '#00ff00',
+    focus: '#00ff00',
+    selection: '#004400',
+    success: '#00ff66',
+    warning: '#ccff33',
+    danger: '#ff4d4d',
+    info: '#2ee59d',
+    terminal: '#00ff00',
+  },
+  typography: {
+    fontFamily: "'Ubuntu', sans-serif",
+    headingFamily: "'Ubuntu', sans-serif",
+    monospaceFamily: "'Source Code Pro', 'Fira Code', monospace",
+    baseFontSize: '16px',
+    lineHeight: 1.5,
+    letterSpacing: '0.03em',
+  },
+};
