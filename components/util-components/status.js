@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import Image from 'next/image';
+import Toast from '../ui/Toast';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+
+const { subscribeStatusToast } = require('../../utils/statusToast');
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const pingServer = async () => {
@@ -38,8 +42,26 @@ export default function Status() {
     };
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeStatusToast((message) => {
+      if (!message) return;
+      setToast({ id: Date.now(), message });
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   return (
-    <div className="flex justify-center items-center">
+    <>
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+      <div className="flex justify-center items-center">
       <span
         className="mx-1.5 relative"
         title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
@@ -79,6 +101,7 @@ export default function Status() {
       <span className="mx-1">
         <SmallArrow angle="down" className=" status-symbol" />
       </span>
-    </div>
+      </div>
+    </>
   );
 }
