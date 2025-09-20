@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import PersistenceToggle from "./storage/PersistenceToggle";
 
 export default function Settings() {
   const {
@@ -286,6 +287,7 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
+          <PersistenceToggle />
         </>
       )}
         <input
