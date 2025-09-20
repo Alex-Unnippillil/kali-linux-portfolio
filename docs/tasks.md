@@ -80,6 +80,9 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 ### QR Tool
 - Add camera select drop-down and "download QR" button after generation.
 
+### Screen Recorder
+- Document hotkeys (Shift+S for full screen, Shift+W for window, Shift+R for region, Enter to confirm, Esc to cancel) and keep annotation tools discoverable in overlay.
+
 ### ASCII Art
 - Support text-to-ASCII and image-to-ASCII via hidden canvas sampling.
 
