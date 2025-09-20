@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useRef } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow from '../../components/ui/TabbedWindow';
+import type { AppTabDefinition } from '../../types/apps';
 import HydraApp from '../../components/apps/hydra';
 import StrategyTrainer from './components/StrategyTrainer';
 
 const HydraPreview: React.FC = () => {
   const countRef = useRef(1);
 
-  const createTab = (): TabDefinition => {
+  const createTab = (): AppTabDefinition => {
     const id = Date.now().toString();
     return {
       id,

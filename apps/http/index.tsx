@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow from '../../components/ui/TabbedWindow';
+import type { AppTabDefinition } from '../../types/apps';
 
 const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
@@ -66,7 +67,7 @@ const HTTPBuilder: React.FC = () => {
 const HTTPPreview: React.FC = () => {
   const countRef = useRef(1);
 
-  const createTab = (): TabDefinition => {
+  const createTab = (): AppTabDefinition => {
     const id = Date.now().toString();
     return { id, title: `Request ${countRef.current++}`, content: <HTTPBuilder /> };
   };

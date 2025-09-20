@@ -1,27 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
-
-function middleEllipsis(text: string, max = 30) {
-  if (text.length <= max) return text;
-  const half = Math.floor((max - 1) / 2);
-  return `${text.slice(0, half)}…${text.slice(text.length - half)}`;
-}
-
-export interface TabDefinition {
-  id: string;
-  title: string;
-  content: React.ReactNode;
-  closable?: boolean;
-  onActivate?: () => void;
-  onDeactivate?: () => void;
-  onClose?: () => void;
-}
-
-interface TabbedWindowProps {
-  initialTabs: TabDefinition[];
-  onNewTab?: () => TabDefinition;
-  onTabsChange?: (tabs: TabDefinition[]) => void;
-  className?: string;
-}
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import TabbedTitlebar from '../core/TabbedTitlebar';
+import type { AppTabDefinition, DraggedTabPayload } from '../../types/apps';
 
 interface TabContextValue {
   id: string;
@@ -32,29 +18,59 @@ interface TabContextValue {
 const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
 export const useTab = () => useContext(TabContext);
 
+interface TabbedWindowProps {
+  id?: string;
+  initialTabs: AppTabDefinition[];
+  onNewTab?: () => AppTabDefinition;
+  onTabsChange?: (tabs: AppTabDefinition[]) => void;
+  onTabDetached?: (tab: AppTabDefinition) => void;
+  className?: string;
+}
+
+function createWindowId() {
+  return `tab-window-${Math.random().toString(36).slice(2)}`;
+}
+
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
+  id,
   initialTabs,
   onNewTab,
   onTabsChange,
+  onTabDetached,
   className = '',
 }) => {
-  const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
-  const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
-  const prevActive = useRef<string>('');
-  const dragSrc = useRef<number | null>(null);
+  const windowIdRef = useRef(id ?? createWindowId());
+  const [tabs, setTabs] = useState<AppTabDefinition[]>(initialTabs);
+  const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id ?? '');
+  const tabsRef = useRef<AppTabDefinition[]>(initialTabs);
+  const prevActiveRef = useRef<string>('');
 
   useEffect(() => {
-    if (prevActive.current !== activeId) {
-      const prev = tabs.find((t) => t.id === prevActive.current);
-      const next = tabs.find((t) => t.id === activeId);
-      if (prev && prev.onDeactivate) prev.onDeactivate();
-      if (next && next.onActivate) next.onActivate();
-      prevActive.current = activeId;
+    const prevId = prevActiveRef.current;
+    const prevTab = tabsRef.current.find((tab) => tab.id === prevId);
+    const nextTab = tabs.find((tab) => tab.id === activeId);
+    if (prevTab && prevTab !== nextTab) {
+      prevTab.onDeactivate?.();
     }
+    if (nextTab && prevId !== nextTab.id) {
+      nextTab.onActivate?.();
+    }
+    prevActiveRef.current = nextTab?.id ?? '';
+    tabsRef.current = tabs;
   }, [activeId, tabs]);
 
-  const updateTabs = useCallback(
-    (updater: (prev: TabDefinition[]) => TabDefinition[]) => {
+  const setActive = useCallback(
+    (idToActivate: string) => {
+      if (!idToActivate || idToActivate === activeId) return;
+      const exists = tabsRef.current.some((tab) => tab.id === idToActivate);
+      if (!exists) return;
+      setActiveId(idToActivate);
+    },
+    [activeId],
+  );
+
+  const applyTabs = useCallback(
+    (updater: (prev: AppTabDefinition[]) => AppTabDefinition[]) => {
       setTabs((prev) => {
         const next = updater(prev);
         onTabsChange?.(next);
@@ -64,160 +80,172 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     [onTabsChange],
   );
 
-  const setActive = useCallback(
-    (id: string) => {
-      setActiveId(id);
+  const addTab = useCallback(() => {
+    if (!onNewTab) return;
+    const tab = onNewTab();
+    applyTabs((prev) => [...prev, tab]);
+    setActiveId(tab.id);
+  }, [applyTabs, onNewTab]);
+
+  const extractTab = useCallback(
+    (tabId: string, options: { allowEmpty?: boolean } = {}) => {
+      let removed: AppTabDefinition | null = null;
+      applyTabs((prev) => {
+        const idx = prev.findIndex((tab) => tab.id === tabId);
+        if (idx === -1) return prev;
+        const next = [...prev];
+        [removed] = next.splice(idx, 1);
+        if (next.length === 0) {
+          if (onNewTab && !options.allowEmpty) {
+            const fresh = onNewTab();
+            next.push(fresh);
+            setActiveId(fresh.id);
+          } else {
+            setActiveId('');
+          }
+        } else if (tabId === activeId) {
+          const fallback = next[idx] || next[idx - 1] || next[0];
+          setActiveId(fallback?.id ?? '');
+        }
+        return next;
+      });
+      return removed;
+    },
+    [activeId, applyTabs, onNewTab],
+  );
+
+  const closeTab = useCallback(
+    (tabId: string) => {
+      const removed = extractTab(tabId, { allowEmpty: false });
+      removed?.onClose?.();
+    },
+    [extractTab],
+  );
+
+  const reorderTab = useCallback(
+    (tabId: string, beforeTabId?: string) => {
+      applyTabs((prev) => {
+        const currentIndex = prev.findIndex((tab) => tab.id === tabId);
+        if (currentIndex === -1) return prev;
+        const next = [...prev];
+        const [tab] = next.splice(currentIndex, 1);
+        let insertIndex = beforeTabId ? next.findIndex((t) => t.id === beforeTabId) : next.length;
+        if (insertIndex < 0) insertIndex = next.length;
+        next.splice(insertIndex, 0, tab);
+        return next;
+      });
+    },
+    [applyTabs],
+  );
+
+  const insertTab = useCallback(
+    (tab: AppTabDefinition, beforeTabId?: string) => {
+      applyTabs((prev) => {
+        const next = [...prev];
+        let insertIndex = beforeTabId ? next.findIndex((t) => t.id === beforeTabId) : next.length;
+        if (insertIndex < 0) insertIndex = next.length;
+        next.splice(insertIndex, 0, tab);
+        return next;
+      });
+      setActiveId(tab.id);
+    },
+    [applyTabs],
+  );
+
+  const getDragPayload = useCallback(
+    (tabId: string): DraggedTabPayload | null => {
+      const tab = tabsRef.current.find((t) => t.id === tabId);
+      if (!tab) return null;
+      return {
+        tab,
+        sourceWindowId: windowIdRef.current,
+        onRemove: () => extractTab(tabId, { allowEmpty: true }),
+        onDetach: onTabDetached
+          ? () => {
+              const removed = extractTab(tabId, { allowEmpty: true });
+              if (removed) {
+                onTabDetached(removed);
+              }
+              return removed;
+            }
+          : undefined,
+      };
+    },
+    [extractTab, onTabDetached],
+  );
+
+  const handleExternalDrop = useCallback(
+    (payload: DraggedTabPayload, beforeTabId?: string) => {
+      const incoming = payload.onRemove(windowIdRef.current, beforeTabId) ?? payload.tab;
+      insertTab(incoming, beforeTabId);
+    },
+    [insertTab],
+  );
+
+  const handleDetach = useCallback(
+    (payload: DraggedTabPayload) => {
+      payload.onDetach?.();
     },
     [],
   );
 
-  const closeTab = useCallback(
-    (id: string) => {
-      updateTabs((prev) => {
-        const idx = prev.findIndex((t) => t.id === id);
-        const removed = prev[idx];
-        const next = prev.filter((t) => t.id !== id);
-        if (removed && removed.onClose) removed.onClose();
-        if (id === activeId && next.length > 0) {
-          const fallback = next[idx] || next[idx - 1];
-          setActiveId(fallback.id);
-        } else if (next.length === 0 && onNewTab) {
-          const tab = onNewTab();
-          next.push(tab);
-          setActiveId(tab.id);
-        }
-        return next;
-      });
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.ctrlKey && event.key.toLowerCase() === 'w') {
+        event.preventDefault();
+        closeTab(activeId);
+        return;
+      }
+      if (event.ctrlKey && event.key.toLowerCase() === 't') {
+        event.preventDefault();
+        addTab();
+        return;
+      }
+      if (event.ctrlKey && event.key === 'Tab') {
+        event.preventDefault();
+        if (tabsRef.current.length === 0) return;
+        const idx = tabsRef.current.findIndex((tab) => tab.id === activeId);
+        const nextIdx = event.shiftKey
+          ? (idx - 1 + tabsRef.current.length) % tabsRef.current.length
+          : (idx + 1) % tabsRef.current.length;
+        const nextTab = tabsRef.current[nextIdx];
+        if (nextTab) setActiveId(nextTab.id);
+        return;
+      }
     },
-    [activeId, onNewTab, updateTabs],
+    [activeId, addTab, closeTab],
   );
-
-  const addTab = useCallback(() => {
-    if (!onNewTab) return;
-    const tab = onNewTab();
-    updateTabs((prev) => [...prev, tab]);
-    setActiveId(tab.id);
-  }, [onNewTab, updateTabs]);
-
-  const handleDragStart = (index: number) => (e: React.DragEvent) => {
-    dragSrc.current = index;
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (index: number) => (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (index: number) => (e: React.DragEvent) => {
-    e.preventDefault();
-    const src = dragSrc.current;
-    if (src === null || src === index) return;
-    updateTabs((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(src, 1);
-      next.splice(index, 0, moved);
-      return next;
-    });
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.ctrlKey && e.key.toLowerCase() === 'w') {
-      e.preventDefault();
-      closeTab(activeId);
-      return;
-    }
-    if (e.ctrlKey && e.key.toLowerCase() === 't') {
-      e.preventDefault();
-      addTab();
-      return;
-    }
-    if (e.ctrlKey && e.key === 'Tab') {
-      e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx = e.shiftKey
-          ? (idx - 1 + prev.length) % prev.length
-          : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
-      return;
-    }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx =
-          e.key === 'ArrowLeft'
-            ? (idx - 1 + prev.length) % prev.length
-            : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
-    }
-  };
 
   return (
     <div
-      className={`flex flex-col w-full h-full ${className}`.trim()}
+      className={`flex h-full w-full flex-col ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      data-testid="tabbed-window"
+      data-window-id={windowIdRef.current}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
-        {tabs.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
-            draggable
-            onDragStart={handleDragStart(i)}
-            onDragOver={handleDragOver(i)}
-            onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
-          >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
-              <button
-                className="p-0.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
-                }}
-                aria-label="Close Tab"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        {onNewTab && (
-          <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
-            onClick={addTab}
-            aria-label="New Tab"
-          >
-            +
-          </button>
-        )}
-      </div>
-      <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
+      <TabbedTitlebar
+        windowId={windowIdRef.current}
+        tabs={tabs}
+        activeTabId={activeId}
+        onSelect={setActive}
+        onClose={closeTab}
+        onReorder={reorderTab}
+        onDropExternal={handleExternalDrop}
+        requestDetach={handleDetach}
+        requestNewTab={onNewTab ? addTab : undefined}
+        getDragPayload={getDragPayload}
+      />
+      <div className="relative flex-grow overflow-hidden">
+        {tabs.map((tab) => (
           <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
+            key={tab.id}
+            value={{ id: tab.id, active: tab.id === activeId, close: () => closeTab(tab.id) }}
           >
             <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+              className={`absolute inset-0 h-full w-full ${tab.id === activeId ? 'block' : 'hidden'}`}
             >
-              {t.content}
+              {tab.content}
             </div>
           </TabContext.Provider>
         ))}
