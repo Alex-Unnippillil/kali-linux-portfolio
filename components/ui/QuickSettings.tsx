@@ -2,6 +2,8 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { usePresentationMode } from '../common/PresentationModeContext';
+import useKiosk from '../../hooks/useKiosk';
 
 interface Props {
   open: boolean;
@@ -12,6 +14,9 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const { enabled: presentationEnabled, toggle: togglePresentation } = usePresentationMode();
+  const { restrictions } = useKiosk();
+  const quickSettingsLocked = restrictions.disableQuickSettings;
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -27,10 +32,16 @@ const QuickSettings = ({ open }: Props) => {
         open ? '' : 'hidden'
       }`}
     >
+      {quickSettingsLocked && (
+        <p className="px-4 pb-3 text-xs text-ubt-grey">
+          Controlled by kiosk profile. Presentation mode and toggles are locked.
+        </p>
+      )}
       <div className="px-4 pb-2">
         <button
           className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          onClick={() => !quickSettingsLocked && setTheme(theme === 'light' ? 'dark' : 'light')}
+          disabled={quickSettingsLocked}
         >
           <span>Theme</span>
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
@@ -38,11 +49,21 @@ const QuickSettings = ({ open }: Props) => {
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
+        <input
+          type="checkbox"
+          checked={sound}
+          onChange={() => setSound(!sound)}
+          disabled={quickSettingsLocked}
+        />
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+        <input
+          type="checkbox"
+          checked={online}
+          onChange={() => setOnline(!online)}
+          disabled={quickSettingsLocked}
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
@@ -50,6 +71,16 @@ const QuickSettings = ({ open }: Props) => {
           type="checkbox"
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
+          disabled={quickSettingsLocked}
+        />
+      </div>
+      <div className="px-4 pt-2 flex justify-between">
+        <span>Presentation mode</span>
+        <input
+          type="checkbox"
+          checked={presentationEnabled}
+          onChange={() => togglePresentation()}
+          disabled={quickSettingsLocked}
         />
       </div>
     </div>

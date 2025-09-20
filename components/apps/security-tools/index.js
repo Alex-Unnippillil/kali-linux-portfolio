@@ -4,6 +4,7 @@ import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
+import KioskProfilePanel from '../../common/KioskProfilePanel';
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -129,7 +130,8 @@ export default function SecurityTools() {
   return (
     <LabMode>
       <div className="w-full h-full bg-ub-dark text-white p-2 overflow-auto flex">
-        <div className="flex-1 pr-2">
+        <div className="flex-1 pr-2 space-y-3">
+          <KioskProfilePanel compact />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}

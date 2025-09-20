@@ -3,6 +3,8 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useKiosk from '../../hooks/useKiosk';
+import kioskManager from '../../modules/kiosk/manager';
 
 type AppMeta = {
   id: string;
@@ -27,6 +29,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { activeProfile } = useKiosk();
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -63,8 +66,11 @@ const WhiskerMenu: React.FC = () => {
       const q = query.toLowerCase();
       list = list.filter(a => a.title.toLowerCase().includes(q));
     }
+    if (activeProfile) {
+      list = list.filter(app => kioskManager.canLaunchApp(app.id));
+    }
     return list;
-  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps, activeProfile]);
 
   useEffect(() => {
     if (!open) return;
