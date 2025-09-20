@@ -1,0 +1,62 @@
+[
+  {
+    "token": "--color-ub-grey",
+    "value": "#0F1317",
+    "name": "Surface / Base",
+    "url": "https://design.unnippillil.com/tokens/color-ub-grey"
+  },
+  {
+    "token": "--color-ub-cool-grey",
+    "value": "#1A1F26",
+    "name": "Surface / Raised",
+    "url": "https://design.unnippillil.com/tokens/color-ub-cool-grey"
+  },
+  {
+    "token": "--color-ub-warm-grey",
+    "value": "#7D7F83",
+    "name": "Neutral / Warm Grey",
+    "url": "https://design.unnippillil.com/tokens/color-ub-warm-grey"
+  },
+  {
+    "token": "--color-ubt-grey",
+    "value": "#F6F6F5",
+    "name": "Text / Primary",
+    "url": "https://design.unnippillil.com/tokens/color-ubt-grey"
+  },
+  {
+    "token": "--color-ubt-cool-grey",
+    "value": "#333333",
+    "name": "Text / Secondary",
+    "url": "https://design.unnippillil.com/tokens/color-ubt-cool-grey"
+  },
+  {
+    "token": "--color-text",
+    "value": "#F5F5F5",
+    "name": "Text / Default",
+    "url": "https://design.unnippillil.com/tokens/color-text"
+  },
+  {
+    "token": "--color-ub-orange",
+    "value": "#1793D1",
+    "name": "Accent / Primary",
+    "url": "https://design.unnippillil.com/tokens/color-ub-orange"
+  },
+  {
+    "token": "--game-color-success",
+    "value": "#15803D",
+    "name": "Game / Success",
+    "url": "https://design.unnippillil.com/tokens/game-color-success"
+  },
+  {
+    "token": "--game-color-warning",
+    "value": "#D97706",
+    "name": "Game / Warning",
+    "url": "https://design.unnippillil.com/tokens/game-color-warning"
+  },
+  {
+    "token": "--game-color-danger",
+    "value": "#B91C1C",
+    "name": "Game / Danger",
+    "url": "https://design.unnippillil.com/tokens/game-color-danger"
+  }
+]
