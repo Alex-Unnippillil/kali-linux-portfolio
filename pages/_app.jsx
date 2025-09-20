@@ -14,8 +14,8 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
-import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { initA2HS } from '@/src/pwa/a2hs';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -25,14 +25,16 @@ const ubuntu = Ubuntu({
 });
 
 
+if (typeof window !== 'undefined') {
+  initA2HS();
+}
+
 function MyApp(props) {
   const { Component, pageProps } = props;
 
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
-      window.initA2HS();
-    }
+    initA2HS();
     const initAnalytics = async () => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
@@ -148,7 +150,6 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
-      <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"

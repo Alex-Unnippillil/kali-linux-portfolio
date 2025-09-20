@@ -1,27 +1,19 @@
 "use client";
 
-import { useEffect, useState } from 'react';
 import { trackEvent } from '@/lib/analytics-client';
-import { showA2HS } from '@/src/pwa/a2hs';
+import useInstallPrompt from '@/hooks/useInstallPrompt';
 
 const InstallButton: React.FC = () => {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const handler = () => setVisible(true);
-    (window as any).addEventListener('a2hs:available', handler);
-    return () => (window as any).removeEventListener('a2hs:available', handler);
-  }, []);
+  const { available, requestInstall } = useInstallPrompt();
 
   const handleInstall = async () => {
-    const shown = await showA2HS();
+    const shown = await requestInstall();
     if (shown) {
       trackEvent('cta_click', { location: 'install_button' });
-      setVisible(false);
     }
   };
 
-  if (!visible) return null;
+  if (!available) return null;
 
   return (
     <button
