@@ -1,0 +1,52 @@
+{
+  "id": "wps-four-way",
+  "title": "WPA2 4-Way Handshake",
+  "capture": {
+    "source": "lab-capture-01.cap",
+    "tool": "airmon-ng replay",
+    "notes": "Synthetic capture that mirrors a clean WPA2 four-way handshake for teaching purposes."
+  },
+  "timeUnit": "milliseconds",
+  "participants": [
+    { "id": "ap", "label": "Access Point", "accent": "#60a5fa" },
+    { "id": "client", "label": "Client Station", "accent": "#34d399" }
+  ],
+  "messages": [
+    {
+      "step": "M1",
+      "from": "ap",
+      "to": "client",
+      "summary": "ANonce + RSN parameters",
+      "description": "Authenticator sends its ANonce and RSN information elements to kick off the handshake.",
+      "relativeTime": 0,
+      "frame": 12
+    },
+    {
+      "step": "M2",
+      "from": "client",
+      "to": "ap",
+      "summary": "SNonce + MIC",
+      "description": "Supplicant replies with its SNonce and a MIC computed from the PTK seed values.",
+      "relativeTime": 0.512,
+      "frame": 13
+    },
+    {
+      "step": "M3",
+      "from": "ap",
+      "to": "client",
+      "summary": "Install PTK + GTK",
+      "description": "Authenticator installs the PTK, sends the GTK encrypted under it, and instructs installation.",
+      "relativeTime": 1.024,
+      "frame": 14
+    },
+    {
+      "step": "M4",
+      "from": "client",
+      "to": "ap",
+      "summary": "PTK install ack",
+      "description": "Supplicant confirms the PTK installation and completes the four-way handshake.",
+      "relativeTime": 1.488,
+      "frame": 15
+    }
+  ]
+}
