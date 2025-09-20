@@ -23,6 +23,12 @@ export interface City {
   forecast?: ForecastDay[];
 }
 
+export interface ManualCityEntry {
+  name: string;
+  lat: string;
+  lon: string;
+}
+
 export interface CityGroup {
   name: string;
   cities: City[];
@@ -51,6 +57,22 @@ export default function useWeatherState() {
   return usePersistentState<City[]>('weather-cities', [], isCityArray);
 }
 
+const isManualCityEntry = (v: unknown): v is ManualCityEntry =>
+  Boolean(
+    v &&
+      typeof (v as ManualCityEntry).name === 'string' &&
+      typeof (v as ManualCityEntry).lat === 'string' &&
+      typeof (v as ManualCityEntry).lon === 'string',
+  );
+
+export function useManualCityEntry() {
+  return usePersistentState<ManualCityEntry>(
+    'weather-manual-city-entry',
+    { name: '', lat: '', lon: '' },
+    isManualCityEntry,
+  );
+}
+
 const isCityGroup = (v: any): v is CityGroup =>
   v && typeof v.name === 'string' && isCityArray(v.cities);
 
@@ -66,5 +88,17 @@ const isStringOrNull = (v: unknown): v is string | null =>
 
 export function useCurrentGroup() {
   return usePersistentState<string | null>('weather-current-group', null, isStringOrNull);
+}
+
+const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
+
+const isCityOrNull = (v: unknown): v is City | null => v === null || isCity(v);
+
+export function useGeolocationOptOut() {
+  return usePersistentState<boolean>('weather-geolocation-opt-out', false, isBoolean);
+}
+
+export function useLastLocation() {
+  return usePersistentState<City | null>('weather-last-location', null, isCityOrNull);
 }
 
