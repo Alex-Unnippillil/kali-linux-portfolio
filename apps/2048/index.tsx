@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
+import useInputController, { MOVE_THROTTLE_MS, MoveDirection } from './inputController';
 
 const SIZE = 4;
 
@@ -65,6 +66,56 @@ const checkHighest = (board: number[][]) => {
   return m;
 };
 
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+
+const useMoveAnimation = (prefersReducedMotion: boolean) => {
+  const [progress, setProgress] = useState(1);
+  const frameRef = useRef<number | null>(null);
+
+  const cancelFrame = useCallback(() => {
+    if (frameRef.current !== null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+  }, []);
+
+  const trigger = useCallback(() => {
+    if (prefersReducedMotion) {
+      cancelFrame();
+      setProgress(1);
+      return;
+    }
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      setProgress(1);
+      return;
+    }
+    cancelFrame();
+    const start = Date.now();
+    const step = () => {
+      const raw = Math.min((Date.now() - start) / MOVE_THROTTLE_MS, 1);
+      setProgress(easeOutCubic(raw));
+      if (raw < 1) {
+        frameRef.current = window.requestAnimationFrame(step);
+      }
+    };
+    setProgress(0);
+    frameRef.current = window.requestAnimationFrame(step);
+  }, [cancelFrame, prefersReducedMotion]);
+
+  useEffect(() => () => {
+    cancelFrame();
+  }, [cancelFrame]);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      cancelFrame();
+      setProgress(1);
+    }
+  }, [cancelFrame, prefersReducedMotion]);
+
+  return { progress, trigger } as const;
+};
+
 const addRandomTile = (b: number[][], rand: () => number) => {
   const empty: [number, number][] = [];
   b.forEach((row, r) =>
@@ -113,6 +164,7 @@ const saveReplay = (replay: any) => {
 const Page2048 = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
   // Skip tile transition classes if the user prefers reduced motion
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const rngRef = useRef(mulberry32(0));
   const seedRef = useRef(0);
   const [board, setBoard] = useState<number[][]>(
@@ -127,6 +179,7 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const { progress: moveProgress, trigger: triggerMoveAnimation } = useMoveAnimation(prefersReducedMotion);
 
   useEffect(() => {
     let mounted = true;
@@ -172,7 +225,7 @@ const Page2048 = () => {
   }, [hard, moves, boardType]);
 
   const handleMove = useCallback(
-    (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
+    (dir: MoveDirection) => {
       if (won || lost) return;
       let moved: number[][] | undefined;
       if (dir === 'ArrowLeft') moved = moveLeft(board);
@@ -180,6 +233,7 @@ const Page2048 = () => {
       if (dir === 'ArrowUp') moved = moveUp(board);
       if (dir === 'ArrowDown') moved = moveDown(board);
       if (!moved || boardsEqual(board, moved)) return;
+      triggerMoveAnimation();
       setHistory((h) => [...h, board.map((row) => [...row])]);
       addRandomTile(moved, rngRef.current);
       const newHighest = checkHighest(moved);
@@ -193,7 +247,7 @@ const Page2048 = () => {
       if (newHighest >= 2048) setWon(true);
       else if (!hasMoves(moved)) setLost(true);
     },
-    [board, won, lost, highest, boardType, resetTimer]
+    [board, won, lost, highest, boardType, resetTimer, triggerMoveAnimation]
   );
 
   const handleUndo = useCallback(() => {
@@ -225,25 +279,12 @@ const Page2048 = () => {
     resetTimer();
   }, [resetTimer]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-        handleMove(e.key as any);
-        return;
-      }
-      if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        restart();
-        return;
-      }
-      if (['u', 'U', 'Backspace'].includes(e.key)) {
-        e.preventDefault();
-        handleUndo();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [handleMove, restart, handleUndo]);
+  useInputController({
+    containerRef,
+    onMove: handleMove,
+    onUndo: handleUndo,
+    onRestart: restart,
+  });
 
   const close = () => {
     if (typeof document !== 'undefined') {
@@ -256,6 +297,18 @@ const Page2048 = () => {
     if (boardType === 'hex') return v.toString(16).toUpperCase();
     return v;
   };
+
+  const tileAnimationStyle = useMemo<CSSProperties | undefined>(() => {
+    if (prefersReducedMotion) return undefined;
+    const scale = 0.94 + 0.06 * moveProgress;
+    const opacity = 0.7 + 0.3 * moveProgress;
+    return {
+      transform: `scale(${scale})`,
+      opacity,
+      transition: 'none',
+      willChange: 'transform, opacity',
+    };
+  }, [moveProgress, prefersReducedMotion]);
 
   useEffect(() => {
     if (won || lost) {
@@ -275,7 +328,7 @@ const Page2048 = () => {
   }, [won, lost, moves, boardType, hard, highest]);
 
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+    <div ref={containerRef} className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <div className="flex space-x-2">
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={restart}>
           Restart
@@ -305,12 +358,13 @@ const Page2048 = () => {
           row.map((cell, cIdx) => (
             <div
               key={`${rIdx}-${cIdx}`}
-              className={`w-full aspect-square ${prefersReducedMotion ? '' : 'transition-transform transition-opacity'}`}
+              className="w-full aspect-square"
             >
               <div
                 className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
                   cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
                 }`}
+                style={tileAnimationStyle}
               >
                 {displayCell(cell)}
               </div>
