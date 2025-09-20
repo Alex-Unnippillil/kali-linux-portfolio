@@ -79,7 +79,7 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
     <span className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {name}
       {show && info && (
-        <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-ubt-cool-grey shadow">
+        <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-ubt-cool-grey elevation-1">
           <div className="font-bold">{info.name}</div>
           {info.subscriberCount && <div>{info.subscriberCount} subs</div>}
         </div>

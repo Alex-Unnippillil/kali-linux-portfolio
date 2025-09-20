@@ -357,7 +357,7 @@ const Solitaire = () => {
     ghost.style.top = '-1000px';
     ghost.style.left = '-1000px';
     ghost.style.pointerEvents = 'none';
-    ghost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+    ghost.style.boxShadow = 'var(--shadow-elevation-3)';
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 32, 48);
     dragImageRef.current = ghost;
@@ -694,7 +694,7 @@ const Solitaire = () => {
             className="absolute transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{
               transform: `translate(${c.x}px, ${c.y}px) rotate(${c.angle}deg)`,
-              boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+              boxShadow: 'var(--shadow-elevation-3)',
             }}
           >
             {renderCard(c)}

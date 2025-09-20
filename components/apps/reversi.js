@@ -393,13 +393,13 @@ const Reversi = () => {
         />
         <div className="absolute top-1 left-1 flex items-center space-x-1 text-sm">
           <div
-            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-black' : 'bg-gray-700'} shadow`}
+            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-black' : 'bg-gray-700'} elevation-1`}
           />
           <span>{score.black}</span>
         </div>
         <div className="absolute top-1 right-1 flex items-center space-x-1 text-sm">
           <div
-            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-white' : 'bg-gray-200'} shadow`}
+            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-white' : 'bg-gray-200'} elevation-1`}
           />
           <span>{score.white}</span>
         </div>

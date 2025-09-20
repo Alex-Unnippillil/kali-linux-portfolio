@@ -87,7 +87,7 @@ const DummyForm: React.FC = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
+      <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 elevation-2">
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
         {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}

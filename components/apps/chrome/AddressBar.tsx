@@ -240,7 +240,7 @@ const AddressBar: React.FC<AddressBarProps> = ({
         />
       </div>
       {suggestions.length > 0 && (
-        <ul className="absolute left-0 right-0 bg-white text-black mt-0.5 max-h-48 overflow-auto z-10 shadow">
+        <ul className="absolute left-0 right-0 bg-white text-black mt-0.5 max-h-48 overflow-auto z-10 elevation-1">
           {suggestions.map((s, i) => {
             const fav = favorites.find((f) => f.url === s);
             return (
@@ -261,7 +261,7 @@ const AddressBar: React.FC<AddressBarProps> = ({
       )}
       {menu && (
         <ul
-          className="absolute bg-white text-black shadow border z-20"
+          className="absolute bg-white text-black elevation-1 border z-20"
           style={{ left: menu.x, top: menu.y }}
         >
           <li

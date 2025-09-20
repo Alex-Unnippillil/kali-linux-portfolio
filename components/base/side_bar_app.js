@@ -132,7 +132,7 @@ export class SideBarApp extends Component {
                         className={
                             (this.state.showTitle ? " visible " : " invisible ") +
                             " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
-                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
+                            " rounded border border-gray-400 border-opacity-40 elevation-3 overflow-hidden bg-black bg-opacity-50"
                         }
                     >
                         <Image
