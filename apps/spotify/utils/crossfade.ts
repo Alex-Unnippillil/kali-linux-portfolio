@@ -8,6 +8,41 @@ export default class CrossfadePlayer {
   private analyser: AnalyserNode | null = null;
   private current = 0;
   private startTime = 0;
+  private bufferCache = new Map<string, AudioBuffer>();
+  private pendingBuffers = new Map<string, Promise<AudioBuffer | null>>();
+
+  private async loadBuffer(url: string) {
+    this.ensureContext();
+    const ctx = this.ctx;
+    if (!ctx) return null;
+
+    const cached = this.bufferCache.get(url);
+    if (cached) return cached;
+
+    const pending = this.pendingBuffers.get(url);
+    if (pending) return pending;
+
+    const loader = (async () => {
+      try {
+        const res = await fetch(url);
+        const arr = await res.arrayBuffer();
+        const buffer = await ctx.decodeAudioData(arr);
+        this.bufferCache.set(url, buffer);
+        return buffer;
+      } catch {
+        return null;
+      } finally {
+        this.pendingBuffers.delete(url);
+      }
+    })();
+
+    this.pendingBuffers.set(url, loader);
+    return loader;
+  }
+
+  async preload(url: string) {
+    await this.loadBuffer(url);
+  }
 
   private ensureContext() {
     if (this.ctx) return;
@@ -27,33 +62,59 @@ export default class CrossfadePlayer {
     this.analyser = analyser;
   }
 
-  async play(url: string, fadeSec = 0, offset = 0) {
+  async play(url: string, fadeSec = 0, offset = 0, options: { gapless?: boolean } = {}) {
     this.ensureContext();
     const ctx = this.ctx;
     const gains = this.gains;
     if (!ctx || !gains) return;
     try {
-      const res = await fetch(url);
-      const arr = await res.arrayBuffer();
-      const buffer = await ctx.decodeAudioData(arr);
+      const buffer = await this.loadBuffer(url);
+      if (!buffer) return;
       const nextIndex = (this.current + 1) % 2;
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       src.connect(gains[nextIndex]);
+      const previousIndex = this.current;
+      const previousSource = this.sources[previousIndex];
+      const previousGain = gains[previousIndex];
+      if (previousSource) previousSource.onended = null;
+
+      const gapless = options.gapless ?? false;
       const now = ctx.currentTime;
-      src.start(0, offset);
-      this.startTime = now - offset;
+      const previousDuration = previousSource?.buffer?.duration ?? 0;
+      const scheduledStart =
+        gapless && previousSource && previousDuration
+          ? this.startTime + previousDuration - Math.min(fadeSec, previousDuration)
+          : now;
+      const startAt = Math.max(now, scheduledStart);
+      const fadeEnd = startAt + fadeSec;
+
+      gains[nextIndex].gain.cancelScheduledValues(now);
+      gains[nextIndex].gain.setValueAtTime(fadeSec > 0 ? 0 : 1, startAt);
       if (fadeSec > 0) {
-        gains[nextIndex].gain.setValueAtTime(0, now);
-        gains[nextIndex].gain.linearRampToValueAtTime(1, now + fadeSec);
-        gains[this.current].gain.setValueAtTime(1, now);
-        gains[this.current].gain.linearRampToValueAtTime(0, now + fadeSec);
-        this.sources[this.current]?.stop(now + fadeSec);
-      } else {
-        gains[nextIndex].gain.setValueAtTime(1, now);
-        gains[this.current].gain.setValueAtTime(0, now);
-        this.sources[this.current]?.stop();
+        gains[nextIndex].gain.linearRampToValueAtTime(1, fadeEnd);
       }
+
+      if (previousGain) {
+        previousGain.gain.cancelScheduledValues(now);
+        if (fadeSec > 0) {
+          previousGain.gain.setValueAtTime(1, startAt);
+          previousGain.gain.linearRampToValueAtTime(0, fadeEnd);
+        } else {
+          previousGain.gain.setValueAtTime(0, startAt);
+        }
+      }
+
+      if (fadeSec > 0) {
+        previousSource?.stop(fadeEnd);
+      } else if (gapless && previousSource) {
+        previousSource.stop(startAt);
+      } else {
+        previousSource?.stop();
+      }
+
+      src.start(startAt, offset);
+      this.startTime = startAt - offset;
       this.sources[nextIndex] = src;
       this.current = nextIndex;
     } catch {
@@ -73,7 +134,7 @@ export default class CrossfadePlayer {
 
   getCurrentTime() {
     if (!this.ctx) return 0;
-    return this.ctx.currentTime - this.startTime;
+    return Math.max(0, this.ctx.currentTime - this.startTime);
   }
 
   getDuration() {
@@ -107,6 +168,8 @@ export default class CrossfadePlayer {
       this.analyser = null;
       this.startTime = 0;
     }
+    this.bufferCache.clear();
+    this.pendingBuffers.clear();
   }
 }
 

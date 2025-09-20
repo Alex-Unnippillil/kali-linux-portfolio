@@ -101,12 +101,45 @@ const SpotifyApp = () => {
       [track, ...r.filter((t) => t.url !== track.url)].slice(0, 10),
     );
     playerRef.current
-      ?.play(track.url, crossfade)
+      ?.play(track.url, crossfade, 0, { gapless })
       .then(() => {
         setDuration(playerRef.current?.getDuration() ?? 0);
         setProgress(0);
       });
-  }, [current, queue, setRecent, crossfade]);
+  }, [current, queue, setRecent, crossfade, gapless]);
+
+  useEffect(() => {
+    if (!gapless) return;
+    const player = playerRef.current;
+    if (!player) return;
+    if (!queue.length) return;
+    const nextTrack = queue[(current + 1) % queue.length];
+    if (nextTrack) player.preload(nextTrack.url);
+
+    const durationSec = player.getDuration();
+    const currentTime = player.getCurrentTime();
+    if (!durationSec) return;
+
+    const fadeLead = Math.min(crossfade, durationSec);
+    const guard = 0.05;
+    const waitSeconds = Math.max(0, durationSec - currentTime - fadeLead - guard);
+    const timer = window.setTimeout(() => {
+      if (!queue.length) return;
+      if (queue.length === 1) {
+        const [onlyTrack] = queue;
+        player
+          .play(onlyTrack.url, crossfade, 0, { gapless: true })
+          .then(() => {
+            setDuration(player.getDuration() ?? 0);
+            setProgress(0);
+          });
+        return;
+      }
+      setCurrent((i) => (i + 1) % queue.length);
+    }, waitSeconds * 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [gapless, current, queue, crossfade, setCurrent]);
 
   useEffect(() => {
     let raf: number;
