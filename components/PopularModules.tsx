@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import List, { type ListRef } from 'rc-virtual-list';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import { useVirtualGrid } from '../hooks/useVirtualGrid';
 
 interface Module {
   id: string;
@@ -26,15 +28,43 @@ const PopularModules: React.FC = () => {
   const [options, setOptions] = useState<Record<string, string>>({});
   const [logFilter, setLogFilter] = useState<string>('');
 
-  const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
-  let listed = filter ? modules.filter((m) => m.tags.includes(filter)) : modules;
-  listed = search
-    ? listed.filter(
-        (m) =>
-          m.name.toLowerCase().includes(search.toLowerCase()) ||
-          m.description.toLowerCase().includes(search.toLowerCase())
-      )
-    : listed;
+  const { containerRef, height: modulesHeight, columns, recalculate } =
+    useVirtualGrid({ minHeight: 280, viewportOffset: 32 });
+  const listRef = useRef<ListRef | null>(null);
+
+  const tags = useMemo(
+    () => Array.from(new Set(modules.flatMap((m) => m.tags))),
+    [modules]
+  );
+
+  const listed = useMemo(() => {
+    const base = filter
+      ? modules.filter((m) => m.tags.includes(filter))
+      : modules;
+    if (!search) return base;
+    const lower = search.toLowerCase();
+    return base.filter(
+      (m) =>
+        m.name.toLowerCase().includes(lower) ||
+        m.description.toLowerCase().includes(lower)
+    );
+  }, [modules, filter, search]);
+
+  const moduleRows = useMemo(() => {
+    if (!listed.length) return [] as Module[][];
+    const size = Math.max(columns, 1);
+    const rows: Module[][] = [];
+    for (let i = 0; i < listed.length; i += size) {
+      rows.push(listed.slice(i, i + size));
+    }
+    return rows;
+  }, [listed, columns]);
+
+  const estimatedRowHeight = useMemo(() => {
+    if (columns >= 3) return 220;
+    if (columns === 2) return 240;
+    return 200;
+  }, [columns]);
 
   const handleSelect = (m: Module) => {
     setSelected(m);
@@ -49,11 +79,15 @@ const PopularModules: React.FC = () => {
         .join('')}`
     : '';
 
-  const filteredLog = selected
-    ? selected.log.filter((l) =>
-        l.message.toLowerCase().includes(logFilter.toLowerCase())
-      )
-    : [];
+  const filteredLog = useMemo(
+    () =>
+      selected
+        ? selected.log.filter((l) =>
+            l.message.toLowerCase().includes(logFilter.toLowerCase())
+          )
+        : [],
+    [selected, logFilter]
+  );
   const copyLogs = () => {
     const text = filteredLog.map((l) => l.message).join('\n');
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -73,6 +107,14 @@ const PopularModules: React.FC = () => {
       .then((data) => setUpdateAvailable(data.needsUpdate))
       .catch(() => setUpdateAvailable(false));
   }, [version]);
+
+  useEffect(() => {
+    listRef.current?.scrollTo(0);
+  }, [moduleRows]);
+
+  useEffect(() => {
+    recalculate();
+  }, [filter, search, updateMessage, updateAvailable, modules.length, tags.length, recalculate]);
 
   const handleUpdate = async () => {
     try {
@@ -226,27 +268,67 @@ const PopularModules: React.FC = () => {
           </button>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {listed.map((m) => (
-          <button
-            key={m.id}
-            onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      <div ref={containerRef} className="mt-4">
+        {moduleRows.length === 0 ? (
+          <p className="text-sm text-gray-300">
+            No modules match your filters.
+          </p>
+        ) : (
+          <List
+            ref={listRef}
+            data={moduleRows}
+            height={modulesHeight}
+            itemHeight={estimatedRowHeight}
+            itemKey={(row, rowIndex) =>
+              row.map((item) => item.id).join('|') || `row-${rowIndex}`
+            }
+            fullHeight={false}
+            style={{ width: '100%' }}
           >
-            <h3 className="font-semibold">{m.name}</h3>
-            <p className="text-sm text-gray-300">{m.description}</p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {m.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 text-xs rounded bg-gray-700"
+            {(row, rowIndex, { style }) => (
+              <div
+                style={{
+                  ...style,
+                  width: '100%',
+                  paddingBottom:
+                    rowIndex === moduleRows.length - 1 ? 0 : 16,
+                }}
+                className="box-border"
+              >
+                <div
+                  className="grid gap-4"
+                  style={{
+                    gridTemplateColumns: `repeat(${Math.min(
+                      columns,
+                      row.length
+                    )}, minmax(0, 1fr))`,
+                  }}
                 >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </button>
-        ))}
+                  {row.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => handleSelect(m)}
+                      className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    >
+                      <h3 className="font-semibold">{m.name}</h3>
+                      <p className="text-sm text-gray-300">{m.description}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {m.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-2 py-0.5 text-xs rounded bg-gray-700"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </List>
+        )}
       </div>
       {selected ? (
         <div className="space-y-2">
