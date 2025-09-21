@@ -15,12 +15,6 @@ const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const TwitterIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-    <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.05 4.24 4.24 0 0 0-7.24 3.87A12.05 12.05 0 0 1 3 4.79a4.24 4.24 0 0 0 1.32 5.67 4.2 4.2 0 0 1-1.92-.53v.06a4.26 4.26 0 0 0 3.41 4.17 4.24 4.24 0 0 1-1.91.07 4.27 4.27 0 0 0 3.97 2.95A8.53 8.53 0 0 1 2 19.54a12.06 12.06 0 0 0 6.29 1.84c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.35-.02-.53A8.34 8.34 0 0 0 22.46 6z" />
-  </svg>
-);
-
 interface Quote {
   content: string;
   author: string;
@@ -285,13 +279,6 @@ export default function QuoteApp() {
     copyToClipboard(text);
   };
 
-  const tweetQuote = () => {
-    if (!current) return;
-    const text = `"${current.content}" — ${current.author}`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  };
-
   const startPlaylist = () => {
     if (!playlist.length) return;
     const order = shuffle
@@ -350,13 +337,6 @@ export default function QuoteApp() {
                   aria-label="Copy quote"
                 >
                   <CopyIcon className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={tweetQuote}
-                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
-                  aria-label="Tweet quote"
-                >
-                  <TwitterIcon className="w-6 h-6" />
                 </button>
               </div>
               <div className="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">

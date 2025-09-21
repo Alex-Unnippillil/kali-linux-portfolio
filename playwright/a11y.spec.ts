@@ -19,7 +19,6 @@ const urls = [
   // Additional resource-heavy apps
   '/apps/vscode',
   '/apps/spotify',
-  '/apps/x',
   '/apps/chrome',
   '/apps/trash',
   '/apps/gedit',

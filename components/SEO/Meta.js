@@ -29,14 +29,6 @@ export default function Meta() {
             <meta itemProp="description"
                 content="Alex Unnippillil Personal Portfolio Website" />
             <meta itemProp="image" content="images/logos/fevicon.png" />
-            {/* Twitter */}
-            <meta name="twitter:card" content="summary" />
-            <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website" />
-            <meta name="twitter:description"
-                content="Alex Unnippillil Personal Portfolio Website" />
-            <meta name="twitter:site" content="alexunnippillil" />
-            <meta name="twitter:creator" content="unnippillil" />
-            <meta name="twitter:image:src" content="images/logos/logo_1024.png" />
             {/* Open Graph general (Facebook, Pinterest & Google+) */}
             <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website " />
             <meta name="og:description"

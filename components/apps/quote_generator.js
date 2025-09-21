@@ -200,13 +200,6 @@ const QuoteGenerator = () => {
     }
   };
 
-  const tweetQuote = () => {
-    if (!current) return;
-    const text = `"${current.content}" - ${current.author}`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
-  };
-
   const dataUrlToFile = (dataUrl, filename) => {
     const arr = dataUrl.split(",");
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -301,12 +294,6 @@ const QuoteGenerator = () => {
             onClick={copyQuote}
           >
             Copy
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={tweetQuote}
-          >
-            Tweet
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"

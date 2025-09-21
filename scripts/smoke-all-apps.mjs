@@ -52,7 +52,6 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
     '/apps/weather_widget',
     '/apps/wireshark',
     '/apps/word_search',
-    '/apps/x',
   ];
 
   let hadError = false;
