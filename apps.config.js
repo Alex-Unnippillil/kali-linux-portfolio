@@ -1,6 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
-import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
@@ -648,15 +647,6 @@ const apps = [
     screen: displayVsCode,
     defaultWidth: 85,
     defaultHeight: 85,
-  },
-  {
-    id: 'x',
-    title: 'X',
-    icon: '/themes/Yaru/apps/x.png',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayX,
   },
   {
     id: 'spotify',

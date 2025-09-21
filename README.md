@@ -240,11 +240,6 @@ These external domains are whitelisted in the default CSP. Update this list when
 
 | Domain | Purpose |
 | --- | --- |
-| `platform.twitter.com` | Twitter widgets and scripts |
-| `syndication.twitter.com` | Twitter embed scripts |
-| `cdn.syndication.twimg.com` | Twitter asset CDN |
-| `*.twitter.com` | Additional Twitter content |
-| `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
 | `example.com` | Chrome app demo origin |
 | `developer.mozilla.org` | Chrome app demo origin |
@@ -369,7 +364,6 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Spotify | /apps/spotify | Utility / Media |
 | Youtube | /apps/youtube | Utility / Media |
 | Weather | /apps/weather | Utility / Media |
-| X / Twitter | /apps/x | Utility / Media |
 | Todoist | /apps/todoist | Utility / Media |
 | Gedit | /apps/gedit | Utility / Media |
 | Settings | /apps/settings | Utility / Media |
