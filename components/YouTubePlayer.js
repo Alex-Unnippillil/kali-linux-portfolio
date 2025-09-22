@@ -302,13 +302,14 @@ export default function YouTubePlayer({ videoId }) {
             </button>
             {supported ? (
               <>
-                <input
-                  type="search"
-                  placeholder="Search notes"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="mb-2 bg-black/80 border border-white/20 p-1"
-                />
+              <input
+                type="search"
+                placeholder="Search notes"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="mb-2 bg-black/80 border border-white/20 p-1"
+                aria-label="Search notes"
+              />
                 {search && results.length > 0 && (
                   <ul className="mb-2 overflow-auto max-h-24 border border-white/20 p-1">
                     {results.map((r) => (
@@ -318,12 +319,13 @@ export default function YouTubePlayer({ videoId }) {
                     ))}
                   </ul>
                 )}
-                <textarea
-                  value={notes}
-                  onChange={handleNoteChange}
-                  className="flex-1 bg-black/80 border border-white/20 p-1"
-                  placeholder="Write notes…"
-                />
+              <textarea
+                value={notes}
+                onChange={handleNoteChange}
+                className="flex-1 bg-black/80 border border-white/20 p-1"
+                placeholder="Write notes…"
+                aria-label="Video notes"
+              />
               </>
             ) : (
               <p className="pr-4">OPFS not supported.</p>

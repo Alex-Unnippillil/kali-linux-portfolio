@@ -77,11 +77,11 @@ export default function InputLab() {
           <label htmlFor="input-lab-text" className="mb-1 block text-sm font-medium">
             Text
           </label>
-          <input
-            id="input-lab-text"
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+            <input
+              id="input-lab-text"
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
             onCompositionStart={(e) =>
               logEvent('compositionstart', { data: e.data })
             }
@@ -106,9 +106,10 @@ export default function InputLab() {
                 handleCaret(e);
               }
             }}
-            onClick={handleCaret}
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
-          />
+              onClick={handleCaret}
+              className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+              aria-label="Input text"
+            />
           {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
         </div>
       </form>

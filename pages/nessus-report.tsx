@@ -153,26 +153,28 @@ const NessusReport: React.FC = () => {
         ))}
 
       </div>
-      <div className="flex items-center space-x-2 mb-4 flex-wrap">
-        <label htmlFor="report-file" className="text-sm">
-          Import report
-        </label>
-        <input
-          id="report-file"
-          type="file"
-          accept=".json"
-          className="text-black p-1 rounded"
-          onChange={handleFile}
-        />
+        <div className="flex items-center space-x-2 mb-4 flex-wrap">
+          <label htmlFor="report-file" className="text-sm">
+            Import report
+          </label>
+          <input
+            id="report-file"
+            type="file"
+            accept=".json"
+            className="text-black p-1 rounded"
+            onChange={handleFile}
+            aria-label="Import Nessus report"
+          />
         <label htmlFor="severity-filter" className="text-sm">
           Filter severity
         </label>
-        <select
-          id="severity-filter"
-          className="text-black p-1 rounded"
-          value={severity}
-          onChange={(e) => setSeverity(e.target.value)}
-        >
+          <select
+            id="severity-filter"
+            className="text-black p-1 rounded"
+            value={severity}
+            onChange={(e) => setSeverity(e.target.value)}
+            aria-label="Filter by severity"
+          >
           {['All', 'Critical', 'High', 'Medium', 'Low'].map((s) => (
             <option key={s} value={s}>
               {s}
@@ -182,12 +184,13 @@ const NessusReport: React.FC = () => {
         <label htmlFor="host-filter" className="text-sm">
           Filter host
         </label>
-        <select
-          id="host-filter"
-          className="text-black p-1 rounded"
-          value={host}
-          onChange={(e) => setHost(e.target.value)}
-        >
+          <select
+            id="host-filter"
+            className="text-black p-1 rounded"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            aria-label="Filter by host"
+          >
           {['All', ...hosts].map((h) => (
             <option key={h} value={h}>
               {h}
@@ -197,12 +200,13 @@ const NessusReport: React.FC = () => {
         <label htmlFor="family-filter" className="text-sm">
           Filter family
         </label>
-        <select
-          id="family-filter"
-          className="text-black p-1 rounded"
-          value={family}
-          onChange={(e) => setFamily(e.target.value)}
-        >
+          <select
+            id="family-filter"
+            className="text-black p-1 rounded"
+            value={family}
+            onChange={(e) => setFamily(e.target.value)}
+            aria-label="Filter by plugin family"
+          >
           {['All', ...families].map((f) => (
             <option key={f} value={f}>
               {f}

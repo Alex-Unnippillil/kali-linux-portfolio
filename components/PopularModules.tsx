@@ -198,13 +198,14 @@ const PopularModules: React.FC = () => {
         )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
-      <input
-        type="text"
-        placeholder="Search modules"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-2 text-black rounded"
-      />
+        <input
+          type="text"
+          placeholder="Search modules"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full p-2 text-black rounded"
+          aria-label="Search modules"
+        />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
@@ -290,6 +291,7 @@ const PopularModules: React.FC = () => {
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
                 className="w-full p-1 mt-1 text-black rounded"
+                aria-label="Filter logs"
               />
             </label>
             <button

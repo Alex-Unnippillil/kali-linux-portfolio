@@ -52,12 +52,13 @@ const HostSection: React.FC<{ host: Host }> = ({ host }) => {
           ))}
         </div>
       )}
-      <textarea
-        className="w-full p-1 rounded text-black"
-        placeholder="Annotations"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
+        <textarea
+          className="w-full p-1 rounded text-black"
+          placeholder="Annotations"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          aria-label="Host annotations"
+        />
     </div>
   );
 };

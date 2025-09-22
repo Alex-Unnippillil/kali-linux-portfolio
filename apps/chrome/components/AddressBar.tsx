@@ -77,6 +77,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
         onClick={goBack}
         disabled={index <= 0}
         className="px-2 border rounded"
+        aria-label="Go back"
       >
         ◀
       </button>
@@ -85,6 +86,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
         onClick={goForward}
         disabled={index >= history.length - 1}
         className="px-2 border rounded"
+        aria-label="Go forward"
       >
         ▶
       </button>
@@ -93,6 +95,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && go()}
+        aria-label="Address bar"
       />
       <button type="button" onClick={go} className="px-2 border rounded">
         Go
@@ -101,6 +104,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
         type="button"
         onClick={addBookmark}
         className="px-2 border rounded"
+        aria-label="Add bookmark"
       >
         Bookmark
       </button>
@@ -109,6 +113,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
           onChange={navigateBookmark}
           className="border px-2 py-1 rounded"
           defaultValue=""
+          aria-label="Bookmark list"
         >
           <option value="" disabled>
             Bookmarks

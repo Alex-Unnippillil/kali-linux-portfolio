@@ -87,12 +87,13 @@ const HeaderLab: React.FC = () => {
   return (
     <div className="space-y-4">
       <h2 className="text-lg mb-2">Header Lab</h2>
-      <textarea
-        className="w-full h-40 p-2 rounded text-black"
-        placeholder="Paste raw HTTP response headers here"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-      />
+        <textarea
+          className="w-full h-40 p-2 rounded text-black"
+          placeholder="Paste raw HTTP response headers here"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          aria-label="HTTP response headers"
+        />
       {Object.keys(headers).length > 0 && (
         <div>
           <h3 className="text-md mb-1">Parsed Headers</h3>

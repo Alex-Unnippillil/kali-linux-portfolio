@@ -32,32 +32,34 @@ const StrategyTrainer: React.FC = () => {
   return (
     <div className="mt-8 p-4 bg-gray-800 rounded">
       <h2 className="text-xl mb-4">Strategy Trainer</h2>
-      <div className="mb-4">
-        <label className="block mb-1">
-          Parallelism: {parallelism}
-        </label>
-        <input
-          type="range"
-          min={1}
-          max={16}
-          value={parallelism}
-          onChange={(e) => setParallelism(Number(e.target.value))}
-          className="w-full"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block mb-1">
-          Lockout Threshold: {lockout}
-        </label>
-        <input
-          type="range"
-          min={1}
-          max={50}
-          value={lockout}
-          onChange={(e) => setLockout(Number(e.target.value))}
-          className="w-full"
-        />
-      </div>
+        <div className="mb-4">
+          <label className="block mb-1">
+            Parallelism: {parallelism}
+          </label>
+          <input
+            type="range"
+            min={1}
+            max={16}
+            value={parallelism}
+            onChange={(e) => setParallelism(Number(e.target.value))}
+            className="w-full"
+            aria-label="Parallelism"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-1">
+            Lockout Threshold: {lockout}
+          </label>
+          <input
+            type="range"
+            min={1}
+            max={50}
+            value={lockout}
+            onChange={(e) => setLockout(Number(e.target.value))}
+            className="w-full"
+            aria-label="Lockout threshold"
+          />
+        </div>
       <svg width={WIDTH} height={HEIGHT} className="bg-black">
         <polyline
           points={path}

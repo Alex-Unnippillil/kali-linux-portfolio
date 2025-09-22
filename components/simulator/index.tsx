@@ -159,10 +159,10 @@ const Simulator: React.FC = () => {
 
   return (
     <div className="space-y-4" aria-label="Simulator">
-      <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
-        <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
-      </div>
+        <div className="flex items-center space-x-2">
+          <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} aria-label="Toggle lab mode" />
+          <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
+        </div>
       {!labMode && (
         <div className="bg-yellow-100 text-yellow-800 p-2" role="alert">
           {LAB_BANNER}

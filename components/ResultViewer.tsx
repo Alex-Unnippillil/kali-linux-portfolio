@@ -68,7 +68,12 @@ export default function ResultViewer({ data }: ViewerProps) {
           <div className="mb-2">
             <label>
               Filter:
-              <input value={filter} onChange={(e) => setFilter(e.target.value)} className="border p-1 text-black ml-1" />
+              <input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="border p-1 text-black ml-1"
+                aria-label="Filter results"
+              />
             </label>
             {keys.map((k) => (
               <button key={k} onClick={() => setSortKey(k)} className="px-2 py-1 bg-ub-cool-grey text-white ml-2">

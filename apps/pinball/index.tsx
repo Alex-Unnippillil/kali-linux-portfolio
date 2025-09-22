@@ -266,35 +266,38 @@ export default function Pinball() {
 
   return (
     <div className="flex flex-col items-center space-y-2">
-      <div className="flex space-x-4">
-        <label className="flex flex-col text-xs">
-          Power
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.1"
-            value={power}
-            onChange={(e) => setPower(parseFloat(e.target.value))}
-          />
-        </label>
-        <label className="flex flex-col text-xs">
-          Bounce
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={bounce}
-            onChange={(e) => setBounce(parseFloat(e.target.value))}
-          />
-        </label>
-        <label className="flex flex-col text-xs">
-          Theme
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
-          >
+        <div className="flex space-x-4">
+          <label className="flex flex-col text-xs">
+            Power
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={power}
+              onChange={(e) => setPower(parseFloat(e.target.value))}
+              aria-label="Plunger power"
+            />
+          </label>
+          <label className="flex flex-col text-xs">
+            Bounce
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={bounce}
+              onChange={(e) => setBounce(parseFloat(e.target.value))}
+              aria-label="Flipper bounce"
+            />
+          </label>
+          <label className="flex flex-col text-xs">
+            Theme
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
+              aria-label="Pinball theme"
+            >
             {Object.keys(themes).map((t) => (
               <option key={t} value={t}>
                 {t}

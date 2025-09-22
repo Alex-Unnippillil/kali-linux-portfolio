@@ -43,14 +43,15 @@ const HydraPreview: React.FC = () => {
             <label htmlFor="target" className="mb-2 block text-sm font-medium">
               Target Host
             </label>
-            <input
-              id="target"
-              className="mb-4 w-full rounded border p-2"
-              type="text"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder="example.com or 192.168.1.1"
-            />
+              <input
+                id="target"
+                className="mb-4 w-full rounded border p-2"
+                type="text"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="example.com or 192.168.1.1"
+                aria-label="Target host"
+              />
           </div>
         )}
         {step === 1 && (
@@ -58,12 +59,13 @@ const HydraPreview: React.FC = () => {
             <label htmlFor="protocol" className="mb-2 block text-sm font-medium">
               Protocol
             </label>
-            <select
-              id="protocol"
-              className="mb-4 w-full rounded border p-2"
-              value={protocol}
-              onChange={(e) => setProtocol(e.target.value)}
-            >
+              <select
+                id="protocol"
+                className="mb-4 w-full rounded border p-2"
+                value={protocol}
+                onChange={(e) => setProtocol(e.target.value)}
+                aria-label="Protocol"
+              >
               {protocols.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -77,14 +79,15 @@ const HydraPreview: React.FC = () => {
             <label htmlFor="wordlist" className="mb-2 block text-sm font-medium">
               Wordlist Path
             </label>
-            <input
-              id="wordlist"
-              className="mb-4 w-full rounded border p-2"
-              type="text"
-              value={wordlist}
-              onChange={(e) => setWordlist(e.target.value)}
-              placeholder="/usr/share/wordlists/rockyou.txt"
-            />
+              <input
+                id="wordlist"
+                className="mb-4 w-full rounded border p-2"
+                type="text"
+                value={wordlist}
+                onChange={(e) => setWordlist(e.target.value)}
+                placeholder="/usr/share/wordlists/rockyou.txt"
+                aria-label="Wordlist path"
+              />
           </div>
         )}
         {step === 3 && (

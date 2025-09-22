@@ -56,6 +56,7 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
         multiple
         onChange={handleChange}
         className="text-sm"
+        aria-label="Upload attachments"
       />
     </div>
   );

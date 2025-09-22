@@ -124,11 +124,11 @@ const NmapNSE: React.FC = () => {
       </header>
       <div className="flex flex-1">
         {/* script browser */}
-        <aside className="w-1/3 border-r border-gray-700 flex flex-col">
-          <div className="sticky top-0 p-2 bg-gray-900 z-10 flex flex-wrap items-center gap-2">
-            {tags.map((tag) => (
-              <button
-                key={tag}
+          <aside className="w-1/3 border-r border-gray-700 flex flex-col">
+            <div className="sticky top-0 p-2 bg-gray-900 z-10 flex flex-wrap items-center gap-2">
+              {tags.map((tag) => (
+                <button
+                  key={tag}
                 className={`h-6 px-2 rounded-full text-xs capitalize bg-gray-700 hover:bg-gray-600 flex items-center ${
                   activeTag === tag ? 'bg-blue-600' : ''
                 }`}
@@ -136,14 +136,15 @@ const NmapNSE: React.FC = () => {
               >
                 {tag}
               </button>
-            ))}
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
-              className="h-6 px-2 rounded text-black font-mono flex-1"
-            />
+              ))}
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search"
+                className="h-6 px-2 rounded text-black font-mono flex-1"
+                aria-label="Search scripts"
+              />
             <button
               className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50"
               onClick={run}

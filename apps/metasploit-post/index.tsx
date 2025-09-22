@@ -130,20 +130,29 @@ const EvidenceVault: React.FC = () => {
   return (
     <div className="mt-4">
       <h3 className="font-semibold mb-2">Evidence Vault</h3>
-      <textarea
-        className="w-full p-2 mb-2 text-black"
-        placeholder="Note"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <input type="file" className="mb-2" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-      <input
-        className="w-full p-2 mb-2 text-black"
-        placeholder="Tags (comma separated)"
-        value={tags}
-        onChange={(e) => setTags(e.target.value)}
-      />
-      <button onClick={addItem} className="px-3 py-1 bg-blue-600 rounded">Add</button>
+        <textarea
+          className="w-full p-2 mb-2 text-black"
+          placeholder="Note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          aria-label="Evidence note"
+        />
+        <input
+          type="file"
+          className="mb-2"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          aria-label="Attach evidence file"
+        />
+        <input
+          className="w-full p-2 mb-2 text-black"
+          placeholder="Tags (comma separated)"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          aria-label="Tags"
+        />
+        <button onClick={addItem} className="px-3 py-1 bg-blue-600 rounded" aria-label="Add evidence entry">
+          Add
+        </button>
       <ul className="mt-4 list-disc pl-6">
         {items.map((i) => (
           <li key={i.id} className="mb-2">

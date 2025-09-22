@@ -114,17 +114,18 @@ export default function GameShell({
       >
         Import
       </button>
-      <input
-        type="file"
-        accept="application/json"
-        ref={fileRef}
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files && e.target.files[0];
-          if (file) handleImport(file);
-          if (e.target) e.target.value = '';
-        }}
-      />
+        <input
+          type="file"
+          accept="application/json"
+          ref={fileRef}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleImport(file);
+            if (e.target) e.target.value = '';
+          }}
+          aria-label="Import settings file"
+        />
     </div>
   );
 }

@@ -68,32 +68,66 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div>
-        <label htmlFor="length" className="mr-2">Length:</label>
-        <input
-          id="length"
-          type="number"
-          min={4}
-          max={64}
-          value={length}
-          onChange={(e) => setLength(parseInt(e.target.value, 10) || 0)}
-          className="text-black px-2"
-        />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useLower} onChange={(e) => setUseLower(e.target.checked)} /> Lowercase</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useUpper} onChange={(e) => setUseUpper(e.target.checked)} /> Uppercase</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useNumbers} onChange={(e) => setUseNumbers(e.target.checked)} /> Numbers</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useSymbols} onChange={(e) => setUseSymbols(e.target.checked)} /> Symbols</label>
-      </div>
-      <div className="flex space-x-2 items-center">
-        <input
-          data-testid="password-display"
-          type="text"
-          readOnly
-          value={password}
-          className="flex-1 text-black px-2 py-1 font-mono leading-[1.2] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
-        />
+        <div>
+          <label htmlFor="length" className="mr-2">Length:</label>
+          <input
+            id="length"
+            type="number"
+            min={4}
+            max={64}
+            value={length}
+            onChange={(e) => setLength(parseInt(e.target.value, 10) || 0)}
+            className="text-black px-2"
+            aria-label="Password length"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={useLower}
+              onChange={(e) => setUseLower(e.target.checked)}
+              aria-label="Include lowercase characters"
+            />
+            Lowercase
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={useUpper}
+              onChange={(e) => setUseUpper(e.target.checked)}
+              aria-label="Include uppercase characters"
+            />
+            Uppercase
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={useNumbers}
+              onChange={(e) => setUseNumbers(e.target.checked)}
+              aria-label="Include numbers"
+            />
+            Numbers
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={useSymbols}
+              onChange={(e) => setUseSymbols(e.target.checked)}
+              aria-label="Include symbols"
+            />
+            Symbols
+          </label>
+        </div>
+        <div className="flex space-x-2 items-center">
+          <input
+            data-testid="password-display"
+            type="text"
+            readOnly
+            value={password}
+            className="flex-1 text-black px-2 py-1 font-mono leading-[1.2] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+            aria-label="Generated password"
+          />
         <button
           type="button"
           onClick={copyToClipboard}

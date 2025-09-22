@@ -54,35 +54,38 @@ export default function ResultDiff() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
-        <label className="flex-1 text-sm">
-          <span className="block mb-1">Report A</span>
-          <input
-            type="file"
-            accept="application/json"
-            onChange={(e) => loadFile(e, setLeft)}
-            className="block w-full text-black"
-          />
-        </label>
-        <label className="flex-1 text-sm">
-          <span className="block mb-1">Report B</span>
-          <input
-            type="file"
-            accept="application/json"
-            onChange={(e) => loadFile(e, setRight)}
-            className="block w-full text-black"
-          />
-        </label>
-      </div>
-      <div className="text-sm">
-        <label>
-          Filter:
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="ml-2 p-1 rounded text-black"
-          />
-        </label>
-      </div>
+          <label className="flex-1 text-sm">
+            <span className="block mb-1">Report A</span>
+            <input
+              type="file"
+              accept="application/json"
+              onChange={(e) => loadFile(e, setLeft)}
+              className="block w-full text-black"
+              aria-label="Upload report A"
+            />
+          </label>
+          <label className="flex-1 text-sm">
+            <span className="block mb-1">Report B</span>
+            <input
+              type="file"
+              accept="application/json"
+              onChange={(e) => loadFile(e, setRight)}
+              className="block w-full text-black"
+              aria-label="Upload report B"
+            />
+          </label>
+        </div>
+        <div className="text-sm">
+          <label>
+            Filter:
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="ml-2 p-1 rounded text-black"
+              aria-label="Filter findings"
+            />
+          </label>
+        </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <div>
           <h3 className="font-bold mb-2">Report A</h3>

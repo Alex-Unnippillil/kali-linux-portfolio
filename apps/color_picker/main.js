@@ -1,4 +1,3 @@
-/* eslint-disable no-top-level-window/no-top-level-window-or-document */
 const colors = [];
 const input = document.getElementById('color-input');
 const swatches = document.getElementById('swatches');

@@ -205,14 +205,15 @@ export default function ProjectGalleryPage() {
 
   return (
     <div className="p-4 space-y-4 text-black">
-      <div className="flex flex-wrap gap-2 items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-2 py-1 border rounded"
-        />
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-2 py-1 border rounded"
+            aria-label="Search projects"
+          />
         <FilterChip
           label="Playable"
           active={demoOnly}
