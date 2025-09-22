@@ -140,6 +140,7 @@ const MetasploitPage: React.FC = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full p-1 mb-2 border rounded"
+          aria-label="Search modules"
         />
         <div className="flex flex-wrap gap-1 mb-2">
           <button
@@ -199,6 +200,7 @@ const MetasploitPage: React.FC = () => {
               type="text"
               placeholder="Payload options..."
               className="border p-1 w-full"
+              aria-label="Payload options"
             />
             <button
               onClick={handleGenerate}

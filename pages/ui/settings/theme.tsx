@@ -8,15 +8,18 @@ import { useSettings } from '../../../hooks/useSettings';
 function Toggle({
   checked,
   onChange,
+  ariaLabel,
 }: {
   checked: boolean;
   onChange: (val: boolean) => void;
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
       className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
@@ -52,13 +55,14 @@ export default function ThemeSettings() {
           </li>
         </ul>
       </nav>
-      <div className="flex-1 p-4 overflow-y-auto">
-        <h1 className="text-xl mb-4">Theme</h1>
-        <select
-          value={theme}
-          onChange={handleChange}
-          className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-        >
+        <div className="flex-1 p-4 overflow-y-auto">
+          <h1 className="text-xl mb-4">Theme</h1>
+          <select
+            value={theme}
+            onChange={handleChange}
+            className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            aria-label="Theme selection"
+          >
           <option value="default">Default</option>
           <option value="dark">Dark</option>
           <option value="neon">Neon</option>
@@ -67,14 +71,15 @@ export default function ThemeSettings() {
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Panel Icons</h2>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-6 h-6 bg-ubt-grey rounded"></span>
-            <Toggle
-              checked={panelSize === 32}
-              onChange={(val) => setPanelSize(val ? 32 : 16)}
-            />
-            <span className="w-6 h-6 bg-ubt-grey rounded"></span>
-          </div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+              <Toggle
+                checked={panelSize === 32}
+                onChange={(val) => setPanelSize(val ? 32 : 16)}
+                ariaLabel="Toggle large panel icons"
+              />
+              <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+            </div>
           <div className="flex gap-2 p-2 bg-ub-cool-grey rounded">
             <div
               className="bg-ubt-grey rounded"
@@ -93,14 +98,15 @@ export default function ThemeSettings() {
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Grid Icons</h2>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-6 h-6 bg-ubt-grey rounded"></span>
-            <Toggle
-              checked={gridSize === 96}
-              onChange={(val) => setGridSize(val ? 96 : 64)}
-            />
-            <span className="w-6 h-6 bg-ubt-grey rounded"></span>
-          </div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+              <Toggle
+                checked={gridSize === 96}
+                onChange={(val) => setGridSize(val ? 96 : 64)}
+                ariaLabel="Toggle large grid icons"
+              />
+              <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+            </div>
           <div className="grid grid-cols-2 gap-2 p-2 bg-ub-cool-grey rounded">
             {[1, 2, 3, 4].map((n) => (
               <div

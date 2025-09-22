@@ -478,18 +478,19 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
             {padMap.jump}
           </button>
         </div>
-        <div className="pt-2">
-          Buffer:
-          <input
-            type="range"
-            min={0}
-            max={300}
-            value={bufferWindow}
-            onChange={(e) => setBufferWindow(Number(e.target.value))}
-            className="mx-1"
-          />
-          {bufferWindow}ms
-        </div>
+          <div className="pt-2">
+            Buffer:
+            <input
+              type="range"
+              min={0}
+              max={300}
+              value={bufferWindow}
+              onChange={(e) => setBufferWindow(Number(e.target.value))}
+              className="mx-1"
+              aria-label="Input buffer window"
+            />
+            {bufferWindow}ms
+          </div>
       </div>
     </div>
   );

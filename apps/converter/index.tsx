@@ -173,12 +173,13 @@ export default function Converter() {
           </button>
         ))}
       </div>
-      <div className="mb-4 flex items-center gap-2">
-        <select
-          className="text-black p-1 rounded"
-          value={notation}
-          onChange={(e) => setNotation(e.target.value as Notation)}
-        >
+        <div className="mb-4 flex items-center gap-2">
+          <select
+            className="text-black p-1 rounded"
+            value={notation}
+            onChange={(e) => setNotation(e.target.value as Notation)}
+            aria-label="Select notation"
+          >
           <option value="fixed">Fixed</option>
           <option value="engineering">Engineering</option>
           <option value="scientific">Scientific</option>
@@ -211,14 +212,15 @@ export default function Converter() {
                 {formatNumber(fromValue, notation, trailingZeros)}
               </span>
             </div>
-            <select
-              className="text-black p-1 rounded"
-              value={fromUnit}
-              onChange={(e) => {
-                setFromUnit(e.target.value);
-                if (fromValue) convertFrom(fromValue);
-              }}
-            >
+              <select
+                className="text-black p-1 rounded"
+                value={fromUnit}
+                onChange={(e) => {
+                  setFromUnit(e.target.value);
+                  if (fromValue) convertFrom(fromValue);
+                }}
+                aria-label="From unit"
+              >
               {units.map((u) => (
                 <option key={u} value={u}>
                   {u}
@@ -255,14 +257,15 @@ export default function Converter() {
                 {formatNumber(toValue, notation, trailingZeros)}
               </span>
             </div>
-            <select
-              className="text-black p-1 rounded"
-              value={toUnit}
-              onChange={(e) => {
-                setToUnit(e.target.value);
-                if (toValue) convertTo(toValue);
-              }}
-            >
+              <select
+                className="text-black p-1 rounded"
+                value={toUnit}
+                onChange={(e) => {
+                  setToUnit(e.target.value);
+                  if (toValue) convertTo(toValue);
+                }}
+                aria-label="To unit"
+              >
               {units.map((u) => (
                 <option key={u} value={u}>
                   {u}

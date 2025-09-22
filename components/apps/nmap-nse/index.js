@@ -435,7 +435,13 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
+      {toast && (
+        <Toast
+          message={toast}
+          onClose={() => setToast('')}
+          politeness="assertive"
+        />
+      )}
     </div>
   );
 };

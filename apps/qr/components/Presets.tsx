@@ -100,6 +100,7 @@ const Presets: React.FC<Props> = ({
             value={preset}
             onChange={(e) => setPreset(e.target.value as Preset)}
             className="ml-2 rounded p-1 text-black"
+            aria-label="Select QR preset"
           >
             <option value="text">Text</option>
             <option value="url">URL</option>
@@ -116,6 +117,7 @@ const Presets: React.FC<Props> = ({
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="w-full mt-1 rounded p-1 text-black"
+              aria-label="Text content"
             />
           </label>
         )}
@@ -129,6 +131,7 @@ const Presets: React.FC<Props> = ({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="w-full mt-1 rounded p-1 text-black"
+              aria-label="URL"
             />
           </label>
         )}
@@ -142,6 +145,7 @@ const Presets: React.FC<Props> = ({
                 value={wifi.ssid}
                 onChange={(e) => setWifi({ ...wifi, ssid: e.target.value })}
                 className="w-full mt-1 rounded p-1 text-black"
+                aria-label="WiFi SSID"
               />
             </label>
             <label className="block">
@@ -151,6 +155,7 @@ const Presets: React.FC<Props> = ({
                 value={wifi.password}
                 onChange={(e) => setWifi({ ...wifi, password: e.target.value })}
                 className="w-full mt-1 rounded p-1 text-black"
+                aria-label="WiFi password"
               />
             </label>
             <label className="block">
@@ -161,6 +166,7 @@ const Presets: React.FC<Props> = ({
                   setWifi({ ...wifi, encryption: e.target.value as WifiData['encryption'] })
                 }
                 className="w-full mt-1 rounded p-1 text-black"
+                aria-label="WiFi encryption"
               >
                 <option value="WPA">WPA/WPA2</option>
                 <option value="WEP">WEP</option>

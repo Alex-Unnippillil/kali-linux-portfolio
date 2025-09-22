@@ -179,48 +179,53 @@ const InputHub = () => {
           {emailjsReady ? 'EmailJS: Online' : 'EmailJS: Offline'}
         </span>
       </div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <input
-          className="p-1 border"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          className="p-1 border"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <select
-          className="p-1 border"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          <input
+            className="p-1 border"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            aria-label="Name"
+          />
+          <input
+            className="p-1 border"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            aria-label="Email"
+          />
+          <select
+            className="p-1 border"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            aria-label="Subject"
+          >
           {subjectTemplates.map((s) => (
             <option key={s} value={s}>
               {s}
             </option>
           ))}
         </select>
-        <textarea
-          className="p-1 border"
-          placeholder="Message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          required
-        />
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={useCaptcha}
-            onChange={(e) => setUseCaptcha(e.target.checked)}
-            disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+          <textarea
+            className="p-1 border"
+            placeholder="Message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            required
+            aria-label="Message"
           />
-          <span>Use reCAPTCHA</span>
-        </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={useCaptcha}
+              onChange={(e) => setUseCaptcha(e.target.checked)}
+              disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+              aria-label="Use reCAPTCHA"
+            />
+            <span>Use reCAPTCHA</span>
+          </label>
         <button type="submit" className="bg-blue-500 text-white px-2 py-1">
           Send
         </button>

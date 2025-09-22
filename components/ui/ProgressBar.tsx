@@ -14,6 +14,7 @@ export default function ProgressBar({ progress, className = '' }: ProgressBarPro
       aria-valuenow={Math.round(clamped)}
       aria-valuemin={0}
       aria-valuemax={100}
+      aria-label="Progress"
     >
       <div
         className="h-full bg-blue-500 transition-all duration-200"

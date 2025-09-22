@@ -6,6 +6,7 @@ interface ToastProps {
   onAction?: () => void;
   onClose?: () => void;
   duration?: number;
+  politeness?: 'polite' | 'assertive';
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -14,6 +15,7 @@ const Toast: React.FC<ToastProps> = ({
   onAction,
   onClose,
   duration = 6000,
+  politeness = 'polite',
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
@@ -30,8 +32,8 @@ const Toast: React.FC<ToastProps> = ({
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role={politeness === 'assertive' ? 'alert' : 'status'}
+      aria-live={politeness}
       className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
     >
       <span>{message}</span>

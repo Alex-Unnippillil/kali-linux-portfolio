@@ -191,15 +191,16 @@ const Hashcat: React.FC = () => {
         </div>
       </div>
 
-      {showMask && (
-        <div>
-          <label className="block mb-1">Mask</label>
-          <input
-            type="text"
-            value={mask}
-            onChange={(e) => setMask(e.target.value)}
-            className="text-black p-1 w-full font-mono mb-2"
-          />
+        {showMask && (
+          <div>
+            <label className="block mb-1">Mask</label>
+            <input
+              type="text"
+              value={mask}
+              onChange={(e) => setMask(e.target.value)}
+              className="text-black p-1 w-full font-mono mb-2"
+              aria-label="Mask pattern"
+            />
           <div className="space-x-2">
             {['?l', '?u', '?d', '?s', '?a'].map((t) => (
               <button
@@ -226,14 +227,15 @@ const Hashcat: React.FC = () => {
 
       <div>
         <label className="block mb-1">Hash</label>
-        <div className="flex space-x-2">
-          <input
-            type={showHash ? 'text' : 'password'}
-            value={hashInput}
-            onChange={(e) => setHashInput(e.target.value)}
-            className="text-black p-1 w-full font-mono"
-            placeholder="Paste hash here"
-          />
+          <div className="flex space-x-2">
+            <input
+              type={showHash ? 'text' : 'password'}
+              value={hashInput}
+              onChange={(e) => setHashInput(e.target.value)}
+              className="text-black p-1 w-full font-mono"
+              placeholder="Paste hash here"
+              aria-label="Hash input"
+            />
           <button
             type="button"
             onClick={() => setShowHash((s) => !s)}
@@ -247,14 +249,15 @@ const Hashcat: React.FC = () => {
 
       <div>
         <label className="block mb-1">Dictionaries</label>
-        <div className="flex space-x-2 mb-2">
-          <input
-            type="text"
-            value={dictInput}
-            onChange={(e) => setDictInput(e.target.value)}
-            className="text-black p-1 flex-1"
-            placeholder="rockyou.txt"
-          />
+          <div className="flex space-x-2 mb-2">
+            <input
+              type="text"
+              value={dictInput}
+              onChange={(e) => setDictInput(e.target.value)}
+              className="text-black p-1 flex-1"
+              placeholder="rockyou.txt"
+              aria-label="Dictionary name"
+            />
           <button
             type="button"
             onClick={addDictionary}
@@ -270,25 +273,27 @@ const Hashcat: React.FC = () => {
               className="bg-gray-700 px-2 py-1 rounded-full text-sm flex items-center"
             >
               {d}
-              <button
-                type="button"
-                onClick={() => removeDictionary(d)}
-                className="ml-1"
-              >
-                ×
-              </button>
+                <button
+                  type="button"
+                  onClick={() => removeDictionary(d)}
+                  className="ml-1"
+                  aria-label={`Remove ${d}`}
+                >
+                  ×
+                </button>
             </span>
           ))}
         </div>
       </div>
 
-      <div>
-        <label className="block mb-1">Rule Set</label>
-        <select
-          value={ruleSet}
-          onChange={(e) => setRuleSet(e.target.value)}
-          className="text-black p-1 rounded"
-        >
+        <div>
+          <label className="block mb-1">Rule Set</label>
+          <select
+            value={ruleSet}
+            onChange={(e) => setRuleSet(e.target.value)}
+            className="text-black p-1 rounded"
+            aria-label="Rule set"
+          >
           {ruleOptions.map((r) => (
             <option key={r} value={r}>
               {r === 'none' ? 'None' : r}

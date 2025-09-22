@@ -30,16 +30,22 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
-  const recentApps = useMemo(() => {
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
-    } catch {
-      return [];
-    }
-  }, [allApps, open]);
+  const [recentApps, setRecentApps] = useState<AppMeta[]>([]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
+
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
+      const resolved = ids
+        .map(id => allApps.find(a => a.id === id))
+        .filter(Boolean) as AppMeta[];
+      setRecentApps(resolved);
+    } catch {
+      setRecentApps([]);
+    }
+  }, [open, allApps]);
 
   const currentApps = useMemo(() => {
     let list: AppMeta[];
@@ -154,13 +160,14 @@ const WhiskerMenu: React.FC = () => {
             ))}
           </div>
           <div className="p-3">
-            <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
+              <input
+                className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+                placeholder="Search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                autoFocus
+                aria-label="Search applications"
+              />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
                 <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>

@@ -38,14 +38,15 @@ const VideoGallery: React.FC = () => {
   );
 
   return (
-    <main className="p-4">
-      <input
-        type="text"
-        placeholder="Search videos..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="mb-4 w-full max-w-md px-4 py-2 border rounded"
-      />
+      <main className="p-4">
+        <input
+          type="text"
+          placeholder="Search videos..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="mb-4 w-full max-w-md px-4 py-2 border rounded"
+          aria-label="Search videos"
+        />
       {playing && (
         <div className="mb-4 w-full max-w-2xl aspect-video">
           <iframe

@@ -37,15 +37,16 @@ const StressSandbox: React.FC = () => {
       <label htmlFor="listSize" className="block text-sm mb-1">
         List size: {size}
       </label>
-      <input
-        id="listSize"
-        type="range"
-        min={1}
-        max={5000}
-        value={size}
-        onChange={(e) => setSize(Number(e.target.value))}
-        className="w-full mb-2"
-      />
+        <input
+          id="listSize"
+          type="range"
+          min={1}
+          max={5000}
+          value={size}
+          onChange={(e) => setSize(Number(e.target.value))}
+          className="w-full mb-2"
+          aria-label="List size"
+        />
       <p className="text-sm mb-2">
         Capture: {captureMs.toFixed(2)} ms | Replay: {replayMs.toFixed(2)} ms
       </p>

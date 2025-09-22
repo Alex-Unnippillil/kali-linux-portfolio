@@ -62,6 +62,7 @@ const HtmlRewriterApp: React.FC = () => {
             className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
             value={ruleText}
             onChange={(e) => setRuleText(e.target.value)}
+            aria-label="Rewrite rules JSON"
           />
           {error && <p className="text-red-400 mt-1">{error}</p>}
         </div>
@@ -71,6 +72,7 @@ const HtmlRewriterApp: React.FC = () => {
             className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
             value={html}
             onChange={(e) => setHtml(e.target.value)}
+            aria-label="Sample HTML"
           />
         </div>
       </div>

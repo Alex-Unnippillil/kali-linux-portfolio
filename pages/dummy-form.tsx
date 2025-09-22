@@ -93,28 +93,31 @@ const DummyForm: React.FC = () => {
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
         {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
         <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
-        <input
-          id="name"
-          className="mb-4 w-full rounded border p-2"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+          <input
+            id="name"
+            className="mb-4 w-full rounded border p-2"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-label="Name"
+          />
         <label className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
-        <input
-          id="email"
-          className="mb-4 w-full rounded border p-2"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          <input
+            id="email"
+            className="mb-4 w-full rounded border p-2"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-label="Email"
+          />
         <label className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
-        <textarea
-          id="message"
-          className="mb-4 w-full rounded border p-2"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-        />
+          <textarea
+            id="message"
+            className="mb-4 w-full rounded border p-2"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            aria-label="Message"
+          />
         <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
         <p className="mt-4 text-xs text-gray-500">
           This form posts to a dummy endpoint. No data is stored. By submitting, you consent to this temporary processing of your information.

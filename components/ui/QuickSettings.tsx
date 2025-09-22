@@ -36,22 +36,23 @@ const QuickSettings = ({ open }: Props) => {
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
         </button>
       </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
-      </div>
-      <div className="px-4 flex justify-between">
-        <span>Reduced motion</span>
-        <input
-          type="checkbox"
-          checked={reduceMotion}
-          onChange={() => setReduceMotion(!reduceMotion)}
-        />
-      </div>
+        <div className="px-4 pb-2 flex justify-between">
+          <span>Sound</span>
+          <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} aria-label="Toggle sound" />
+        </div>
+        <div className="px-4 pb-2 flex justify-between">
+          <span>Network</span>
+          <input type="checkbox" checked={online} onChange={() => setOnline(!online)} aria-label="Toggle network" />
+        </div>
+        <div className="px-4 flex justify-between">
+          <span>Reduced motion</span>
+          <input
+            type="checkbox"
+            checked={reduceMotion}
+            onChange={() => setReduceMotion(!reduceMotion)}
+            aria-label="Toggle reduced motion"
+          />
+        </div>
     </div>
   );
 };

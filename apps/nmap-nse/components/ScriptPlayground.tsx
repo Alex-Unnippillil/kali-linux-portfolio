@@ -39,42 +39,46 @@ const ScriptPlayground: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white h-full">
       <h2 className="text-xl mb-4">Script Metadata</h2>
-      <label className="block mb-2">
-        <span className="block mb-1">Name</span>
-        <input
-          type="text"
-          value={script.name}
-          onChange={update('name')}
-          className="w-full p-2 rounded text-black"
-        />
-      </label>
-      <label className="block mb-2">
-        <span className="block mb-1">Description</span>
-        <textarea
-          value={script.description}
-          onChange={update('description')}
-          className="w-full p-2 rounded text-black"
-          rows={3}
-        />
-      </label>
-      <label className="block mb-2">
-        <span className="block mb-1">Categories (comma separated)</span>
-        <input
-          type="text"
-          value={script.categories}
-          onChange={update('categories')}
-          className="w-full p-2 rounded text-black"
-        />
-      </label>
-      <label className="block mb-4">
-        <span className="block mb-1">Script</span>
-        <textarea
-          value={script.code}
-          onChange={update('code')}
-          className="w-full p-2 rounded text-black font-mono"
-          rows={6}
-        />
-      </label>
+        <label className="block mb-2">
+          <span className="block mb-1">Name</span>
+          <input
+            type="text"
+            value={script.name}
+            onChange={update('name')}
+            className="w-full p-2 rounded text-black"
+            aria-label="Script name"
+          />
+        </label>
+        <label className="block mb-2">
+          <span className="block mb-1">Description</span>
+          <textarea
+            value={script.description}
+            onChange={update('description')}
+            className="w-full p-2 rounded text-black"
+            rows={3}
+            aria-label="Script description"
+          />
+        </label>
+        <label className="block mb-2">
+          <span className="block mb-1">Categories (comma separated)</span>
+          <input
+            type="text"
+            value={script.categories}
+            onChange={update('categories')}
+            className="w-full p-2 rounded text-black"
+            aria-label="Script categories"
+          />
+        </label>
+        <label className="block mb-4">
+          <span className="block mb-1">Script</span>
+          <textarea
+            value={script.code}
+            onChange={update('code')}
+            className="w-full p-2 rounded text-black font-mono"
+            rows={6}
+            aria-label="Nmap script"
+          />
+        </label>
       <div>
         <h3 className="text-lg mb-2">Simulated Output</h3>
         <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">

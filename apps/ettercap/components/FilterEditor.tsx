@@ -70,6 +70,7 @@ export default function FilterEditor() {
           id="sampleSelect"
           className="border p-1"
           onChange={(e) => loadSample(Number(e.target.value))}
+          aria-label="Load sample filter"
         >
           {samples.map((s, i) => (
             <option key={s.name} value={i}>
@@ -85,11 +86,12 @@ export default function FilterEditor() {
           Save
         </button>
       </div>
-      <textarea
-        className="w-full h-32 border p-2 font-mono"
-        value={filterText}
-        onChange={(e) => setFilterText(e.target.value)}
-      />
+        <textarea
+          className="w-full h-32 border p-2 font-mono"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          aria-label="Filter definition"
+        />
       <div className="grid grid-cols-2 gap-4">
         <div>
           <h3 className="font-bold mb-2">Before</h3>

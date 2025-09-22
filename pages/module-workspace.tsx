@@ -103,15 +103,16 @@ const ModuleWorkspace: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
-      <section className="space-y-2">
-        <h1 className="text-xl font-semibold">Workspaces</h1>
-        <div className="flex gap-2">
-          <input
-            value={newWorkspace}
-            onChange={(e) => setNewWorkspace(e.target.value)}
-            placeholder="New workspace"
-            className="p-1 rounded text-black"
-          />
+        <section className="space-y-2">
+          <h1 className="text-xl font-semibold">Workspaces</h1>
+          <div className="flex gap-2">
+            <input
+              value={newWorkspace}
+              onChange={(e) => setNewWorkspace(e.target.value)}
+              placeholder="New workspace"
+              className="p-1 rounded text-black"
+              aria-label="Workspace name"
+            />
           <button
             onClick={addWorkspace}
             className="px-2 py-1 bg-ub-orange rounded text-black"
@@ -171,23 +172,24 @@ const ModuleWorkspace: React.FC = () => {
           {selected && (
             <div className="space-y-2">
               <h2 className="font-semibold">Command Composer</h2>
-              {selected.options.map((opt) => (
-                <div key={opt.name}>
-                  <label className="block text-sm">
-                    {opt.name} {opt.required ? '*' : ''}
-                    <input
-                      value={optionValues[opt.name]}
-                      onChange={(e) =>
-                        setOptionValues({
-                          ...optionValues,
-                          [opt.name]: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full p-1 rounded text-black"
-                    />
-                  </label>
-                </div>
-              ))}
+                {selected.options.map((opt) => (
+                  <div key={opt.name}>
+                    <label className="block text-sm">
+                      {opt.name} {opt.required ? '*' : ''}
+                      <input
+                        value={optionValues[opt.name]}
+                        onChange={(e) =>
+                          setOptionValues({
+                            ...optionValues,
+                            [opt.name]: e.target.value,
+                          })
+                        }
+                        className="mt-1 w-full p-1 rounded text-black"
+                        aria-label={`${opt.name} option`}
+                      />
+                    </label>
+                  </div>
+                ))}
               <button
                 onClick={runCommand}
                 className="px-2 py-1 bg-green-600 rounded text-black"

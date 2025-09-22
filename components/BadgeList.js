@@ -52,14 +52,15 @@ const BadgeList = ({ badges, className = '' }) => {
       <label htmlFor="badge-filter" className="mb-1">
         Filter skills
       </label>
-      <input
-        id="badge-filter"
-        type="text"
-        placeholder="Filter skills"
-        className="mb-2 px-2 py-1 rounded text-black font-normal"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <input
+          id="badge-filter"
+          type="text"
+          placeholder="Filter skills"
+          className="mb-2 px-2 py-1 rounded text-black font-normal"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          aria-label="Filter skills"
+        />
       <div ref={listRef} className="flex flex-wrap justify-center items-start w-full">
         {listVisible &&
           filteredBadges.map((badge) => (

@@ -119,6 +119,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
               setVol(v);
               send({ type: "volume", value: v });
             }}
+            aria-label="Volume"
           />
         </div>
       );
@@ -129,12 +130,20 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        className="w-full h-auto"
+        aria-label="Video player"
+      />
       {pipSupported && (
         <button
           type="button"
           onClick={togglePiP}
           className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-label={isPip ? "Exit picture in picture" : "Enter picture in picture"}
         >
           {isPip ? "Exit PiP" : "PiP"}
         </button>
@@ -144,6 +153,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
           type="button"
           onClick={openDocPip}
           className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-label="Open document picture in picture"
         >
           Doc-PiP
         </button>

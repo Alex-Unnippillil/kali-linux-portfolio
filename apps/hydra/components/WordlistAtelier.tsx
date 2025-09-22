@@ -87,13 +87,14 @@ const WordlistAtelier: React.FC = () => {
   return (
     <div className="space-y-4 p-4 bg-gray-900 text-white">
       <h2 className="text-xl font-bold">Wordlist Atelier</h2>
-      <textarea
-        className="w-full p-2 rounded text-black"
-        rows={4}
-        value={baseWords}
-        onChange={(e) => setBaseWords(e.target.value)}
-        placeholder="One word per line"
-      />
+        <textarea
+          className="w-full p-2 rounded text-black"
+          rows={4}
+          value={baseWords}
+          onChange={(e) => setBaseWords(e.target.value)}
+          placeholder="One word per line"
+          aria-label="Base words"
+        />
       <div className="space-x-4">
         <label>
           <input

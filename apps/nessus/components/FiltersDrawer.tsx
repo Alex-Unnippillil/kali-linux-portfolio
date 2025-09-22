@@ -34,16 +34,17 @@ export default function FiltersDrawer({
         <h3 className="text-lg mb-4">Filters</h3>
         <div className="mb-6">
           <h4 className="font-semibold mb-2">Severity</h4>
-          {severities.map((sev) => (
-            <label key={sev} className="flex items-center gap-2 mb-1">
-              <input
-                type="checkbox"
-                checked={severityFilters[sev]}
-                onChange={() => toggleSeverity(sev)}
-              />
-              {sev}
-            </label>
-          ))}
+            {severities.map((sev) => (
+              <label key={sev} className="flex items-center gap-2 mb-1">
+                <input
+                  type="checkbox"
+                  checked={severityFilters[sev]}
+                  onChange={() => toggleSeverity(sev)}
+                  aria-label={`Toggle ${sev} severity`}
+                />
+                {sev}
+              </label>
+            ))}
         </div>
         <div>
           <h4 className="font-semibold mb-2">Tags</h4>

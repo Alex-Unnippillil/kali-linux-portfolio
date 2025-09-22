@@ -114,18 +114,20 @@ const NiktoReport: React.FC = () => {
           </div>
         ))}
       </div>
-      <div className="flex space-x-2 mb-4">
-        <input
-          placeholder="Filter by path"
-          className="p-2 rounded text-black"
-          value={pathFilter}
-          onChange={(e) => setPathFilter(e.target.value)}
-        />
-        <select
-          className="p-2 rounded text-black"
-          value={severity}
-          onChange={(e) => setSeverity(e.target.value)}
-        >
+        <div className="flex space-x-2 mb-4">
+          <input
+            placeholder="Filter by path"
+            className="p-2 rounded text-black"
+            value={pathFilter}
+            onChange={(e) => setPathFilter(e.target.value)}
+            aria-label="Filter findings by path"
+          />
+          <select
+            className="p-2 rounded text-black"
+            value={severity}
+            onChange={(e) => setSeverity(e.target.value)}
+            aria-label="Filter findings by severity"
+          >
           {['All', 'Info', 'Low', 'Medium', 'High'].map((s) => (
             <option key={s} value={s}>
               {s}

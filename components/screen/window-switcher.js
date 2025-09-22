@@ -58,15 +58,16 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-          placeholder="Search windows"
-        />
+        <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+            placeholder="Search windows"
+            aria-label="Search open windows"
+          />
         <ul>
           {filtered.map((w, i) => (
             <li

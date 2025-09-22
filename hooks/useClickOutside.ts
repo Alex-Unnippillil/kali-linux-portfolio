@@ -13,7 +13,9 @@ export function useClickOutside(
   handler: (evt: Event) => void,
   opts: Options = {}
 ) {
-  const { enabled = true, events = ['pointerdown'], onEscape = true } = opts;
+const DEFAULT_EVENTS: Array<keyof DocumentEventMap> = ['pointerdown'];
+
+const { enabled = true, events = DEFAULT_EVENTS, onEscape = true } = opts;
 
   useEffect(() => {
     if (!enabled) return;
@@ -42,5 +44,5 @@ export function useClickOutside(
       events.forEach(e => document.removeEventListener(e, onDoc, true));
       if (onEscape) document.removeEventListener('keydown', onDoc, true);
     };
-  }, [refs, handler, enabled, events.join('|'), onEscape]);
+  }, [refs, handler, enabled, events, onEscape]);
 }

@@ -26,14 +26,15 @@ export default function AdminMessages() {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex gap-2">
-        <input
-          type="password"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          className="border p-2 flex-grow"
-          placeholder="Admin key"
-        />
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            className="border p-2 flex-grow"
+            placeholder="Admin key"
+            aria-label="Admin access key"
+          />
         <button onClick={fetchMessages} className="border px-4 py-2">
           Load
         </button>

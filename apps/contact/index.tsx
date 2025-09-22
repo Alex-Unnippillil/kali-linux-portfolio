@@ -144,14 +144,15 @@ const ContactApp: React.FC = () => {
           <label htmlFor="contact-name" className="mb-[6px] block text-sm">
             Name
           </label>
-          <div className="relative">
-            <input
-              id="contact-name"
-              className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <div className="relative">
+              <input
+                id="contact-name"
+                className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                aria-label="Your name"
+              />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
               xmlns="http://www.w3.org/2000/svg"
@@ -173,16 +174,17 @@ const ContactApp: React.FC = () => {
             Email
           </label>
           <div className="relative">
-            <input
-              id="contact-email"
-              type="email"
-              className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              aria-invalid={!!emailError}
-              aria-describedby={emailError ? "contact-email-error" : undefined}
-            />
+              <input
+                id="contact-email"
+                type="email"
+                className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                aria-invalid={!!emailError}
+                aria-describedby={emailError ? "contact-email-error" : undefined}
+                aria-label="Email address"
+              />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
               xmlns="http://www.w3.org/2000/svg"
@@ -209,16 +211,17 @@ const ContactApp: React.FC = () => {
             Message
           </label>
           <div className="relative">
-            <textarea
-              id="contact-message"
-              className="w-full rounded border border-gray-700 bg-gray-800 p-2 pl-10 text-white"
-              rows={4}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              required
-              aria-invalid={!!messageError}
-              aria-describedby={messageError ? "contact-message-error" : undefined}
-            />
+              <textarea
+                id="contact-message"
+                className="w-full rounded border border-gray-700 bg-gray-800 p-2 pl-10 text-white"
+                rows={4}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                required
+                aria-invalid={!!messageError}
+                aria-describedby={messageError ? "contact-message-error" : undefined}
+                aria-label="Message"
+              />
             <svg
               className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
               xmlns="http://www.w3.org/2000/svg"
@@ -240,14 +243,16 @@ const ContactApp: React.FC = () => {
             </FormError>
           )}
         </div>
-        <input
-          type="text"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
-          className="hidden"
-          tabIndex={-1}
-          autoComplete="off"
-        />
+          <input
+            type="text"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            className="hidden"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            aria-label="Leave this field blank"
+          />
         {error && <FormError>{error}</FormError>}
         <button
           type="submit"
