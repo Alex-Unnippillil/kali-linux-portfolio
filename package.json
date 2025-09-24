@@ -142,15 +142,13 @@
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
-    "workbox-build": "7.1.1",
     "ws": "^8.18.0"
   },
   "resolutions": {
     "source-map": "^0.7.6",
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
-    "glob@npm:^7.1.6": "npm:glob@^9.3.5",
-    "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1"
+    "glob@npm:^7.1.6": "npm:glob@^9.3.5"
   },
   "packageManager": "yarn@4.9.2"
 }

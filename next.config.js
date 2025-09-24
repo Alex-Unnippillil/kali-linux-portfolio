@@ -81,6 +81,54 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/fonts\.(?:gstatic|googleapis)\.com\/.*$/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'google-fonts',
+          expiration: {
+            maxEntries: 16,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+        },
+      },
+      {
+        urlPattern: ({ url }) => url.pathname.startsWith('/pieces/'),
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'sprite-images',
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 60 * 60 * 24 * 30,
+          },
+        },
+      },
+      {
+        urlPattern: ({ url }) =>
+          url.pathname.endsWith('.svg') &&
+          (url.pathname.startsWith('/apps/') || url.pathname.startsWith('/icons/')),
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'app-icons',
+          expiration: {
+            maxEntries: 48,
+            maxAgeSeconds: 60 * 60 * 24 * 30,
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/api\.github\.com\/.*$/i,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'github-api',
+          networkTimeoutSeconds: 3,
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+    ],
   },
 });
 
