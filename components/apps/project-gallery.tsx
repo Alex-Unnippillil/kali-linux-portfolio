@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
+import MiniEditor from './mini-editor';
 
 interface Project {
   id: number;
@@ -20,8 +20,6 @@ interface Project {
 interface Props {
   openApp?: (id: string) => void;
 }
-
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
@@ -229,8 +227,10 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         <div className="mb-4 overflow-auto">
           <table className="w-full text-sm text-left" role="table">
             <thead>
-              <tr>
-                <th />
+                <tr>
+                  <th scope="col">
+                    <span className="sr-only">Project attribute</span>
+                  </th>
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -267,12 +267,12 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                 loading="lazy"
               />
               <div className="w-full md:w-1/2 h-48">
-                <Editor
+                <MiniEditor
                   height="100%"
                   theme="vs-dark"
                   language={project.language}
                   value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
+                  options={{ readOnly: true }}
                 />
               </div>
             </div>
