@@ -61,6 +61,22 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const githubApiRuntimeCaching = {
+  urlPattern: /^https:\/\/api\.github\.com\/repos\/.*/i,
+  handler: 'NetworkFirst',
+  options: {
+    cacheName: 'github-api',
+    networkTimeoutSeconds: 3,
+    cacheableResponse: {
+      statuses: [0, 200],
+    },
+    expiration: {
+      maxEntries: 32,
+      maxAgeSeconds: 60 * 60,
+    },
+  },
+};
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
@@ -81,6 +97,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
+    runtimeCaching: [githubApiRuntimeCaching],
   },
 });
 
