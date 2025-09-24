@@ -29,12 +29,13 @@ const getPort = () =>
 (async () => {
   try {
     const yarnVersion = execSync('yarn --version', { encoding: 'utf8' }).trim();
-    const nextVersion = require('next/package.json').version;
     console.log(`node: ${process.version}`);
     console.log(`yarn: ${yarnVersion}`);
-    console.log(`next: ${nextVersion}`);
 
     await run('yarn', ['install', '--immutable']);
+
+    const nextVersion = require('next/package.json').version;
+    console.log(`next: ${nextVersion}`);
     await run('yarn', ['lint']);
     await run('yarn', ['tsc', '--noEmit']);
     await run('yarn', ['build']);
