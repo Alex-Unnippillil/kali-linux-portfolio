@@ -11,12 +11,15 @@ describe('Gedit component', () => {
   beforeEach(() => {
     init.mockClear();
     send.mockClear();
+    const mockGA = jest.requireMock('react-ga4') as { event: jest.Mock };
+    mockGA.event.mockClear();
     process.env.NEXT_PUBLIC_SERVICE_ID = 'service';
     process.env.NEXT_PUBLIC_TEMPLATE_ID = 'template';
     process.env.NEXT_PUBLIC_USER_ID = 'user';
+    delete process.env.NEXT_PUBLIC_ENABLE_ANALYTICS;
   });
 
-  it('sends message when fields are valid', async () => {
+  it('sends message when fields are valid without logging analytics', async () => {
     send.mockResolvedValueOnce({});
     render(<Gedit />);
     fireEvent.change(screen.getByPlaceholderText('Your Email / Name :'), { target: { value: 'Alex' } });
@@ -25,6 +28,22 @@ describe('Gedit component', () => {
     fireEvent.click(screen.getByText('Send'));
 
     await waitFor(() => expect(send).toHaveBeenCalled());
+    const mockGA = jest.requireMock('react-ga4') as { event: jest.Mock };
+    expect(mockGA.event).not.toHaveBeenCalled();
+  });
+
+  it('logs analytics event when enabled', async () => {
+    send.mockResolvedValueOnce({});
+    process.env.NEXT_PUBLIC_ENABLE_ANALYTICS = 'true';
+    render(<Gedit />);
+    fireEvent.change(screen.getByPlaceholderText('Your Email / Name :'), { target: { value: 'Alex' } });
+    fireEvent.change(screen.getByPlaceholderText(/subject/), { target: { value: 'Hi' } });
+    fireEvent.change(screen.getByPlaceholderText('Message'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByText('Send'));
+
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    const mockGA = jest.requireMock('react-ga4') as { event: jest.Mock };
+    expect(mockGA.event).toHaveBeenCalledWith({ category: 'contact', action: 'submit_success' });
   });
 
   it('does not send when name is empty', () => {
@@ -33,5 +52,17 @@ describe('Gedit component', () => {
     fireEvent.click(screen.getByText('Send'));
     expect(send).not.toHaveBeenCalled();
     expect(screen.getByText('Name must not be empty')).toBeInTheDocument();
+  });
+
+  it('shows an error message when EmailJS fails', async () => {
+    send.mockRejectedValueOnce(new Error('Network error'));
+    render(<Gedit />);
+    fireEvent.change(screen.getByPlaceholderText('Your Email / Name :'), { target: { value: 'Alex' } });
+    fireEvent.change(screen.getByPlaceholderText(/subject/), { target: { value: 'Hi' } });
+    fireEvent.change(screen.getByPlaceholderText('Message'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByText('Send'));
+
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Message failed to send. Please try again later.');
   });
 });
