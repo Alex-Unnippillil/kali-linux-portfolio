@@ -43,6 +43,7 @@ const Snake = () => {
 
   const rafRef = useRef();
   const lastRef = useRef(0);
+  const accumulatorRef = useRef(0);
   const runningRef = useRef(true);
   const audioCtx = useRef(null);
   const haptics = useGameHaptics();
@@ -291,12 +292,17 @@ const Snake = () => {
   /** Main animation loop driven by requestAnimationFrame. */
   const loop = useCallback(
     (time) => {
-      rafRef.current = requestAnimationFrame(loop);
-      if (runningRef.current && time - lastRef.current > speedRef.current) {
-        lastRef.current = time;
-        update();
+      const delta = Math.min(Math.max(time - lastRef.current, 0), 50);
+      lastRef.current = time;
+      if (runningRef.current) {
+        accumulatorRef.current += delta;
+        while (accumulatorRef.current >= speedRef.current) {
+          update();
+          accumulatorRef.current -= speedRef.current;
+        }
       }
       draw();
+      rafRef.current = requestAnimationFrame(loop);
     },
     [update, draw]
   );
@@ -306,6 +312,8 @@ const Snake = () => {
   }, [running]);
 
   useEffect(() => {
+    lastRef.current = performance.now();
+    accumulatorRef.current = 0;
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
   }, [loop]);
@@ -316,7 +324,7 @@ const Snake = () => {
     const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
     if (curr.x + x === 0 && curr.y + y === 0) return;
     queue.push({ x, y });
-  });
+  }, 'snake');
 
   useEffect(() => {
     if (gameOver && score > highScore) {
@@ -342,6 +350,8 @@ const Snake = () => {
     ];
     dirRef.current = { x: 1, y: 0 };
     moveQueueRef.current = [];
+    lastRef.current = performance.now();
+    accumulatorRef.current = 0;
     playingRef.current = false;
     playbackRef.current = [];
     playbackIndexRef.current = 0;

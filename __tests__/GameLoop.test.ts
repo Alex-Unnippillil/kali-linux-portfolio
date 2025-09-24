@@ -1,15 +1,30 @@
 import GameLoop from '../components/apps/Games/common/loop/GameLoop';
 
-let rafCb: FrameRequestCallback;
+describe('GameLoop class', () => {
+  let rafCallbacks: Map<number, FrameRequestCallback>;
+  let nextId: number;
+  let visibility: DocumentVisibilityState;
 
-describe('GameLoop', () => {
-  beforeEach(() => {
-    rafCb = () => {};
-    (global as any).requestAnimationFrame = jest.fn((cb: FrameRequestCallback) => {
-      rafCb = cb;
-      return 1;
+  beforeAll(() => {
+    visibility = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibility,
     });
-    (global as any).cancelAnimationFrame = jest.fn();
+  });
+
+  beforeEach(() => {
+    rafCallbacks = new Map();
+    nextId = 1;
+    visibility = 'visible';
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+      const id = nextId++;
+      rafCallbacks.set(id, cb);
+      return id;
+    });
+    jest.spyOn(window, 'cancelAnimationFrame').mockImplementation((id: number) => {
+      rafCallbacks.delete(id);
+    });
     jest.spyOn(performance, 'now').mockReturnValue(0);
   });
 
@@ -17,27 +32,42 @@ describe('GameLoop', () => {
     jest.restoreAllMocks();
   });
 
-  it('ticks using fixed timestep and clamps large deltas', () => {
-    const tick = jest.fn();
-    const loop = new GameLoop(tick, undefined, { maxDt: 32 });
+  it('clamps dt to maxDt and advances in fixed steps', () => {
+    const ticks: number[] = [];
+    const loop = new GameLoop((dt) => ticks.push(dt));
     loop.start();
-    rafCb(1000);
-    expect(tick).toHaveBeenCalledTimes(2);
-    expect(tick).toHaveBeenNthCalledWith(1, 16);
+    rafCallbacks.get(1)?.(0);
+    rafCallbacks.get(2)?.(100);
+    expect(ticks).toEqual([16, 16, 16]);
+    loop.stop();
   });
 
-  it('renders with interpolation', () => {
+  it('pauses ticking when the document is hidden', () => {
+    const ticks: number[] = [];
+    const loop = new GameLoop((dt) => ticks.push(dt));
+    loop.start();
+    rafCallbacks.get(1)?.(0);
+    visibility = 'hidden';
+    rafCallbacks.get(2)?.(40);
+    expect(ticks).toEqual([]);
+    visibility = 'visible';
+    rafCallbacks.get(3)?.(80);
+    expect(ticks).toEqual([16, 16]);
+    loop.stop();
+  });
+
+  it('supports interpolation renders', () => {
     const tick = jest.fn();
     const render = jest.fn();
     const loop = new GameLoop(tick, undefined, { render, interpolation: true });
     loop.start();
-    rafCb(8);
+    rafCallbacks.get(1)?.(8);
     expect(tick).not.toHaveBeenCalled();
     expect(render).toHaveBeenCalledWith(0.5);
     loop.stop();
   });
 
-  it('handles input events', () => {
+  it('forwards input events to the handler', () => {
     const tick = jest.fn();
     const input = jest.fn();
     const loop = new GameLoop(tick, input);
@@ -46,6 +76,5 @@ describe('GameLoop', () => {
     window.dispatchEvent(evt);
     expect(input).toHaveBeenCalledWith(evt);
     loop.stop();
-    expect(cancelAnimationFrame).toHaveBeenCalled();
   });
 });

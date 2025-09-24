@@ -16,22 +16,14 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   void getDailySeed;
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  const visibilityRef = useRef(true);
+  const updatePauseRef = useRef<() => void>(() => {});
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersRef = useRef(prefersReducedMotion);
   // Pause the game loop entirely when reduced motion is requested
   useEffect(() => {
     prefersRef.current = prefersReducedMotion;
-    if (!gameRef.current) return;
-    const scene = gameRef.current.scene.getScene('level') as Phaser.Scene & {
-      matter: Phaser.Physics.Matter.MatterPhysics;
-    };
-    if (prefersReducedMotion) {
-      scene.scene.pause();
-      scene.matter.world.pause();
-    } else {
-      scene.scene.resume();
-      scene.matter.world.resume();
-    }
+    updatePauseRef.current();
   }, [prefersReducedMotion]);
   const controls = useRef({
     left: false,
@@ -364,11 +356,24 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     });
     gameRef.current = game;
 
-    const handleVisibility = () => {
-      const scene = game.scene.getScene('level') as Phaser.Scene & {
-        matter: Phaser.Physics.Matter.MatterPhysics;
-      };
-      if (document.visibilityState === 'hidden' || prefersRef.current) {
+    const getScene = () => {
+      try {
+        return game.scene.getScene('level') as Phaser.Scene & {
+          matter: Phaser.Physics.Matter.MatterPhysics;
+        };
+      } catch {
+        return null;
+      }
+    };
+
+    const applyPauseState = () => {
+      const scene = getScene();
+      if (!scene) return;
+      const shouldPause =
+        document.visibilityState === 'hidden' ||
+        prefersRef.current ||
+        !visibilityRef.current;
+      if (shouldPause) {
         scene.scene.pause();
         scene.matter.world.pause();
       } else {
@@ -376,13 +381,43 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         scene.matter.world.resume();
       }
     };
+
+    updatePauseRef.current = applyPauseState;
+
+    const handleVisibility = () => {
+      applyPauseState();
+    };
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleVisibility);
-    handleVisibility();
+
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== 'undefined' && containerRef.current) {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          visibilityRef.current = entry.isIntersecting;
+          applyPauseState();
+        },
+        { threshold: 0.1 },
+      );
+      observer.observe(containerRef.current);
+    }
+
+    applyPauseState();
 
     return () => {
+      updatePauseRef.current = () => {};
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
+      observer?.disconnect();
+      if (typeof game.scene.isActive === 'function' && game.scene.isActive('level')) {
+        game.scene.stop('level');
+      } else {
+        try {
+          game.scene.stop('level');
+        } catch {
+          /* ignore */
+        }
+      }
       game.destroy(true);
       gameRef.current = null;
     };

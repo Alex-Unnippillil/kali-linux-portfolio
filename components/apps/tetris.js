@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import { PieceGenerator } from '../../games/tetris/logic';
+import InputRemap from './Games/common/input-remap/InputRemap';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
+import useGameSaves from './Games/common/save';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -225,7 +228,11 @@ const Tetris = () => {
   const [lines, setLines] = useState(0);
   const [highScore, setHighScore] = usePersistentState('tetris-high-score', 0);
   const [maxLevel, setMaxLevel] = usePersistentState('tetris-max-level', 1);
-  const [keyBindings, setKeyBindings] = usePersistentState('tetris-keys', defaultKeys);
+  const [keyBindings, setKeyBinding] = useInputMapping('tetris', defaultKeys);
+  const keyMapRef = useRef(keyBindings);
+  useEffect(() => {
+    keyMapRef.current = keyBindings;
+  }, [keyBindings]);
   const [showSettings, setShowSettings] = useState(false);
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = usePersistentState('tetris-sound', true);
@@ -235,6 +242,7 @@ const Tetris = () => {
   const [sprintTime, setSprintTime] = useState(0);
   const [bestTime, setBestTime] = usePersistentState('tetris-best-time', null);
   const [finishTime, setFinishTime] = useState(null);
+  const { saveSlot, loadSlot } = useGameSaves('tetris');
 
   const [glow, setGlow] = useState([]);
   const [danger, setDanger] = useState(false);
@@ -548,45 +556,49 @@ const Tetris = () => {
     lastRotateRef.current = false;
   }, [canHold, getPiece, hold, next]);
 
-  const actionFromKey = useCallback(
-    (key, code) => {
-      const entry = Object.entries(keyBindings).find(
-        ([, k]) =>
-          k.toLowerCase() === key.toLowerCase() ||
-          k.toLowerCase() === code.toLowerCase()
-      );
-      return entry ? entry[0] : null;
-    },
-    [keyBindings],
-  );
+  const matchesBinding = (binding, event) => {
+    if (!binding) return false;
+    const normalized = binding.toLowerCase();
+    const key = event.key.toLowerCase();
+    const code = event.code?.toLowerCase?.() ?? '';
+    if (normalized === key || normalized === code) return true;
+    if (binding === ' ' && code === 'space') return true;
+    if (binding === 'Space' && event.key === ' ') return true;
+    return false;
+  };
+
+  const getActionFromEvent = (event) => {
+    const map = keyMapRef.current;
+    for (const [action, binding] of Object.entries(map)) {
+      if (matchesBinding(binding, event)) return action;
+    }
+    return null;
+  };
 
   const togglePause = useCallback(() => setPaused((p) => !p), [setPaused]);
   const toggleSound = useCallback(() => setSound((s) => !s), [setSound]);
 
-  const handleKeyDown = useCallback(
-    (e) => {
-      const action = actionFromKey(e.key, e.code);
-      if (!action) return;
-      e.preventDefault();
-        if (action === 'left' || action === 'right') {
-          const dir = action === 'left' ? -1 : 1;
-          move(dir);
-          if (!keyHeld.current[action]) {
-            keyHeld.current[action] = true;
-            dasTimer.current[action] = setTimeout(() => {
-              const step = (time) => {
-                if (!keyHeld.current[action]) return;
-                if (!arrTimeRef.current[action]) arrTimeRef.current[action] = time;
-                if (time - arrTimeRef.current[action] >= arr) {
-                  move(dir);
-                  arrTimeRef.current[action] = time;
-                }
-                arrTimer.current[action] = requestAnimationFrame(step);
-              };
+  const pressAction = useCallback(
+    (action) => {
+      if (action === 'left' || action === 'right') {
+        const dir = action === 'left' ? -1 : 1;
+        move(dir);
+        if (!keyHeld.current[action]) {
+          keyHeld.current[action] = true;
+          dasTimer.current[action] = setTimeout(() => {
+            const step = (time) => {
+              if (!keyHeld.current[action]) return;
+              if (!arrTimeRef.current[action]) arrTimeRef.current[action] = time;
+              if (time - arrTimeRef.current[action] >= arr) {
+                move(dir);
+                arrTimeRef.current[action] = time;
+              }
               arrTimer.current[action] = requestAnimationFrame(step);
-            }, das);
-          }
-        } else if (action === 'down') moveDown(true);
+            };
+            arrTimer.current[action] = requestAnimationFrame(step);
+          }, das);
+        }
+      } else if (action === 'down') moveDown(true);
       else if (action === 'rotate') rotatePiece();
       else if (action === 'drop') hardDrop();
       else if (action === 'hold') holdPiece();
@@ -595,27 +607,44 @@ const Tetris = () => {
       else if (action === 'sound') toggleSound();
       else if (action === 'settings') setShowSettings((s) => !s);
     },
-    [actionFromKey, arr, das, hardDrop, holdPiece, move, moveDown, rotatePiece, resetGame, togglePause, toggleSound],
+    [arr, das, hardDrop, holdPiece, move, moveDown, rotatePiece, resetGame, setShowSettings, togglePause, toggleSound],
+  );
+
+  const releaseAction = useCallback((action) => {
+    if (action === 'left' || action === 'right') {
+      keyHeld.current[action] = false;
+      if (dasTimer.current[action]) {
+        clearTimeout(dasTimer.current[action]);
+        dasTimer.current[action] = null;
+      }
+      if (arrTimer.current[action]) {
+        cancelAnimationFrame(arrTimer.current[action]);
+        arrTimer.current[action] = null;
+        arrTimeRef.current[action] = 0;
+      }
+    }
+    if (action === 'down') {
+      softDropRef.current = false;
+    }
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e) => {
+      const action = getActionFromEvent(e);
+      if (!action) return;
+      e.preventDefault();
+      pressAction(action);
+    },
+    [pressAction],
   );
 
   const handleKeyUp = useCallback(
     (e) => {
-      const action = actionFromKey(e.key, e.code);
+      const action = getActionFromEvent(e);
       if (!action) return;
-        if (action === 'left' || action === 'right') {
-          keyHeld.current[action] = false;
-          if (dasTimer.current[action]) {
-            clearTimeout(dasTimer.current[action]);
-            dasTimer.current[action] = null;
-          }
-          if (arrTimer.current[action]) {
-            cancelAnimationFrame(arrTimer.current[action]);
-            arrTimer.current[action] = null;
-            arrTimeRef.current[action] = 0;
-          }
-        }
+      releaseAction(action);
     },
-    [actionFromKey],
+    [releaseAction],
   );
 
   useEffect(() => {
@@ -630,6 +659,42 @@ const Tetris = () => {
       Object.values(arrTimers).forEach((r) => r && cancelAnimationFrame(r));
     };
   }, [handleKeyDown, handleKeyUp]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') setPaused(true);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) setPaused(true);
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(canvasRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const legacy = window.localStorage.getItem('tetris-keys');
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        Object.entries(parsed).forEach(([action, key]) => {
+          setKeyBinding(action, key);
+        });
+        window.localStorage.removeItem('tetris-keys');
+      }
+    } catch {
+      /* ignore legacy mapping errors */
+    }
+  }, [setKeyBinding]);
 
   const draw = useCallback(
     (ctx) => {
@@ -679,7 +744,7 @@ const Tetris = () => {
   useEffect(() => {
     const ctx = canvasRef.current.getContext('2d');
     const loop = (time = 0) => {
-      const delta = time - lastTime.current;
+      const delta = Math.min(Math.max(time - lastTime.current, 0), 50);
       lastTime.current = time;
       if (!paused) {
         if (mode === 'sprint' && sprintStartRef.current) {
@@ -687,9 +752,9 @@ const Tetris = () => {
         }
         dropCounter.current += delta;
         const interval = softDropRef.current ? dropInterval / 10 : dropInterval;
-        if (dropCounter.current > interval) {
+        while (dropCounter.current >= interval) {
           moveDown(softDropRef.current);
-          dropCounter.current = 0;
+          dropCounter.current -= interval;
         }
         draw(ctx);
       }
@@ -698,6 +763,95 @@ const Tetris = () => {
     animationRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationRef.current);
   }, [draw, moveDown, paused, dropInterval, mode]);
+
+  const clonePieceState = useCallback(
+    (pieceData) =>
+      pieceData
+        ? {
+            ...pieceData,
+            shape: pieceData.shape.map((row) => [...row]),
+          }
+        : null,
+    [],
+  );
+
+  const createSnapshot = useCallback(
+    () => ({
+      board: boardRef.current.map((row) => [...row]),
+      piece: clonePieceState(pieceRef.current),
+      pos: { ...posRef.current },
+      next: next.map(clonePieceState),
+      hold: clonePieceState(hold),
+      canHold,
+      score,
+      level,
+      lines,
+      mode,
+      useBag,
+      sprintElapsed: sprintTime,
+      generator: generatorRef.current.serialize(),
+    }),
+    [clonePieceState, hold, canHold, next, score, level, lines, mode, sprintTime, useBag],
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const snapshot = createSnapshot();
+      saveSlot({ name: 'autosave', data: snapshot });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [createSnapshot, saveSlot]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadSlot('autosave').then((snapshot) => {
+      if (!snapshot || cancelled) return;
+      try {
+        if (snapshot.board) setBoard(snapshot.board.map((row) => [...row]));
+        if (snapshot.piece) setPiece(clonePieceState(snapshot.piece));
+        if (snapshot.next) setNext(snapshot.next.map(clonePieceState));
+        if (snapshot.hold !== undefined) setHold(clonePieceState(snapshot.hold));
+        if (typeof snapshot.canHold === 'boolean') setCanHold(snapshot.canHold);
+        if (typeof snapshot.score === 'number') setScore(snapshot.score);
+        if (typeof snapshot.level === 'number') setLevel(snapshot.level);
+        if (typeof snapshot.lines === 'number') setLines(snapshot.lines);
+        if (snapshot.mode) setMode(snapshot.mode);
+        if (typeof snapshot.useBag === 'boolean') setUseBag(snapshot.useBag);
+        if (snapshot.generator) generatorRef.current.load(snapshot.generator);
+        if (snapshot.pos) setPos(snapshot.pos);
+        if (typeof snapshot.sprintElapsed === 'number') {
+          setSprintTime(snapshot.sprintElapsed);
+          sprintStartRef.current =
+            snapshot.mode === 'sprint'
+              ? Date.now() - snapshot.sprintElapsed
+              : null;
+        }
+        setPaused(false);
+        dropCounter.current = 0;
+        lastTime.current = performance.now();
+      } catch {
+        /* ignore invalid snapshot */
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [clonePieceState, loadSlot, setUseBag]);
+
+  const bindControl = (action) => ({
+    onTouchStart: (e) => {
+      e.preventDefault();
+      pressAction(action);
+    },
+    onTouchEnd: () => releaseAction(action),
+    onTouchCancel: () => releaseAction(action),
+    onMouseDown: (e) => {
+      e.preventDefault();
+      pressAction(action);
+    },
+    onMouseUp: () => releaseAction(action),
+    onMouseLeave: () => releaseAction(action),
+  });
 
   const cellPreview = (p) => (
     p.shape.map((row, r) =>
@@ -790,6 +944,60 @@ const Tetris = () => {
       {paused && finishTime === null && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">Paused</div>
       )}
+      <div className="absolute bottom-4 left-1/2 flex flex-col gap-2 md:hidden transform -translate-x-1/2">
+        <div className="flex gap-3 justify-center">
+          <button
+            type="button"
+            aria-label="Move left"
+            className="w-12 h-12 rounded-full bg-gray-700 bg-opacity-80 text-xl"
+            {...bindControl('left')}
+          >
+            ◀
+          </button>
+          <button
+            type="button"
+            aria-label="Soft drop"
+            className="w-12 h-12 rounded-full bg-gray-700 bg-opacity-80 text-xl"
+            {...bindControl('down')}
+          >
+            ⬇
+          </button>
+          <button
+            type="button"
+            aria-label="Move right"
+            className="w-12 h-12 rounded-full bg-gray-700 bg-opacity-80 text-xl"
+            {...bindControl('right')}
+          >
+            ▶
+          </button>
+        </div>
+        <div className="flex gap-3 justify-center">
+          <button
+            type="button"
+            aria-label="Rotate"
+            className="w-12 h-12 rounded-full bg-gray-700 bg-opacity-80 text-xl"
+            {...bindControl('rotate')}
+          >
+            ⟳
+          </button>
+          <button
+            type="button"
+            aria-label="Hard drop"
+            className="w-16 h-12 rounded-full bg-gray-700 bg-opacity-80 text-sm"
+            {...bindControl('drop')}
+          >
+            Drop
+          </button>
+          <button
+            type="button"
+            aria-label="Hold piece"
+            className="w-16 h-12 rounded-full bg-gray-700 bg-opacity-80 text-sm"
+            {...bindControl('hold')}
+          >
+            Hold
+          </button>
+        </div>
+      </div>
       {showSettings && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-gray-800 p-4 rounded">
@@ -823,16 +1031,7 @@ const Tetris = () => {
               />
             </div>
             <h3 className="mb-2 text-center">Key Bindings</h3>
-            {Object.keys(keyBindings).map((k) => (
-              <div key={k} className="flex items-center mb-2">
-                <label className="w-24 capitalize">{k}</label>
-                <input
-                  className="text-black px-1"
-                  value={keyBindings[k]}
-                  onChange={(e) => setKeyBindings({ ...keyBindings, [k]: e.target.value })}
-                />
-              </div>
-            ))}
+            <InputRemap mapping={keyBindings} setKey={setKeyBinding} actions={defaultKeys} />
             <button className="mt-2 px-2 py-1 bg-blue-500" onClick={() => setShowSettings(false)}>
               Close
             </button>

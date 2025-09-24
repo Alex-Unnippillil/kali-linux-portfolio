@@ -7,6 +7,7 @@ import {
   movePlayer,
   physics,
 } from '../../public/apps/platformer/engine.js';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
 
 const TILE_SIZE = 16;
 
@@ -31,6 +32,17 @@ const Platformer = () => {
   const canvasRef = useRef(null);
   const resetRef = useRef(() => {});
   const reduceMotion = useRef(false);
+  const [mapping] = useInputMapping('platformer', {
+    left: 'ArrowLeft',
+    right: 'ArrowRight',
+    jump: 'Space',
+    pause: 'p',
+  });
+  const mappingRef = useRef(mapping);
+  useEffect(() => {
+    mappingRef.current = mapping;
+  }, [mapping]);
+  const controlsRef = useRef({ left: false, right: false, jump: false });
 
   const [levels, setLevels] = useState([]);
   const [levelData, setLevelData] = useState(null);
@@ -102,13 +114,43 @@ const Platformer = () => {
     bgLayers[0].stars = genStars(40);
     bgLayers[1].stars = genStars(20);
 
-    const keys = {};
+    const matches = (binding, event) => {
+      if (!binding) return false;
+      const normalized = binding.toLowerCase();
+      const key = event.key.toLowerCase();
+      const code = event.code?.toLowerCase?.() ?? '';
+      if (normalized === key || normalized === code) return true;
+      if (binding === ' ' && code === 'space') return true;
+      if (binding === 'Space' && event.key === ' ') return true;
+      return false;
+    };
+
     const handleDown = (e) => {
-      keys[e.code] = true;
-      if (e.code === 'KeyP') setPaused((p) => !p);
+      const map = mappingRef.current;
+      let handled = false;
+      if (matches(map.left, e)) {
+        controlsRef.current.left = true;
+        handled = true;
+      }
+      if (matches(map.right, e)) {
+        controlsRef.current.right = true;
+        handled = true;
+      }
+      if (matches(map.jump, e)) {
+        controlsRef.current.jump = true;
+        handled = true;
+      }
+      if (matches(map.pause, e)) {
+        setPaused((p) => !p);
+        handled = true;
+      }
+      if (handled) e.preventDefault();
     };
     const handleUp = (e) => {
-      keys[e.code] = false;
+      const map = mappingRef.current;
+      if (matches(map.left, e)) controlsRef.current.left = false;
+      if (matches(map.right, e)) controlsRef.current.right = false;
+      if (matches(map.jump, e)) controlsRef.current.jump = false;
     };
     window.addEventListener('keydown', handleDown);
     window.addEventListener('keyup', handleUp);
@@ -131,11 +173,7 @@ const Platformer = () => {
     let last = performance.now();
     let frame;
     const update = (dt) => {
-      const input = {
-        left: keys['ArrowLeft'],
-        right: keys['ArrowRight'],
-        jump: keys['Space'],
-      };
+      const input = { ...controlsRef.current };
       const vyBefore = player.vy;
       updatePhysics(player, input, dt);
       movePlayer(player, tiles, TILE_SIZE, dt);
@@ -259,6 +297,49 @@ const Platformer = () => {
     };
   }, [levelData, paused, sound, setProgress, progress.checkpoint, progress.highscore]);
 
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') setPaused(true);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) setPaused(true);
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(canvasRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const bindControl = (action) => ({
+    onTouchStart: (e) => {
+      e.preventDefault();
+      controlsRef.current[action] = true;
+    },
+    onTouchEnd: () => {
+      controlsRef.current[action] = false;
+    },
+    onTouchCancel: () => {
+      controlsRef.current[action] = false;
+    },
+    onMouseDown: (e) => {
+      e.preventDefault();
+      controlsRef.current[action] = true;
+    },
+    onMouseUp: () => {
+      controlsRef.current[action] = false;
+    },
+    onMouseLeave: () => {
+      controlsRef.current[action] = false;
+    },
+  });
+
   const levelPath = levels[progress.level];
   if (!levelPath)
     return (
@@ -293,6 +374,32 @@ const Platformer = () => {
           className="px-1 bg-gray-700 text-white"
         >
           Sound: {sound ? 'On' : 'Off'}
+        </button>
+      </div>
+      <div className="absolute bottom-4 left-1/2 flex gap-3 md:hidden transform -translate-x-1/2">
+        <button
+          type="button"
+          aria-label="Move left"
+          className="w-12 h-12 rounded-full bg-gray-700 bg-opacity-80 text-white text-xl"
+          {...bindControl('left')}
+        >
+          ◀
+        </button>
+        <button
+          type="button"
+          aria-label="Jump"
+          className="w-12 h-12 rounded-full bg-gray-700 bg-opacity-80 text-white text-sm"
+          {...bindControl('jump')}
+        >
+          Jump
+        </button>
+        <button
+          type="button"
+          aria-label="Move right"
+          className="w-12 h-12 rounded-full bg-gray-700 bg-opacity-80 text-white text-xl"
+          {...bindControl('right')}
+        >
+          ▶
         </button>
       </div>
       <div aria-live="polite" className="sr-only">{ariaMsg}</div>

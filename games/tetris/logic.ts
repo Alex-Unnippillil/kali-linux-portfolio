@@ -20,6 +20,7 @@ export class PieceGenerator {
   }
 
   setMode(mode: RandomMode) {
+    if (this.mode === mode) return;
     this.mode = mode;
     if (mode === 'seven-bag') {
       this.bag = [];
@@ -34,5 +35,17 @@ export class PieceGenerator {
       return this.bag.pop()!;
     }
     return PIECES[Math.floor(Math.random() * PIECES.length)];
+  }
+
+  serialize() {
+    return {
+      mode: this.mode,
+      bag: [...this.bag],
+    };
+  }
+
+  load(state: { mode: RandomMode; bag?: Tetromino[] }) {
+    this.mode = state.mode;
+    this.bag = state.bag ? [...state.bag] : [];
   }
 }
