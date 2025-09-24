@@ -255,11 +255,12 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
+| `react.dev` | React documentation embed |
 | `vercel.live` | Vercel toolbar |
 
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
-- Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
+- Inline styles are stripped in production, so keep `style-src` free of `'unsafe-inline'` when adding new features.
 - If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
 
 ---
