@@ -1,4 +1,5 @@
 const CHUNK_SIZE = 64 * 1024; // 64KB
+const MAX_DATA_SIZE = 1024 * 1024; // 1MB cap
 
 export interface RunMessage {
   action: 'run';
@@ -35,6 +36,18 @@ async function* chunkString(text: string, size = CHUNK_SIZE): Stream {
   for (let i = 0; i < text.length; i += size) {
     yield text.slice(i, i + size);
   }
+}
+
+async function streamToString(
+  stream: Stream,
+  limit = MAX_DATA_SIZE,
+): Promise<string | null> {
+  let out = '';
+  for await (const chunk of stream) {
+    out += chunk;
+    if (out.length > limit) return null;
+  }
+  return out;
 }
 
 type CommandHandler = (args: string[], input: Stream, ctx: Context) => Stream;
@@ -118,6 +131,46 @@ const handlers: Record<string, CommandHandler> = {
     }
     yield String(count) + '\n';
   },
+  hash: (args, input) =>
+    (async function* () {
+      let text = args.join(' ').trim();
+      if (!text) {
+        const piped = await streamToString(input);
+        if (piped === null) {
+          yield 'hash: input too large\n';
+          return;
+        }
+        text = piped.trim();
+      }
+      if (!text) {
+        yield 'hash: provide text or pipe data\n';
+        return;
+      }
+
+      yield `[*] Starting hash simulation for "${text}"\n`;
+
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(text);
+      const data = bytes.length > 0 ? bytes : new Uint8Array([0]);
+      const iterations = Math.max(200_000, data.length * 120_000);
+      const steps = 5;
+      const chunkSize = Math.ceil(iterations / steps);
+      let acc = 0;
+
+      for (let step = 0; step < steps; step += 1) {
+        const start = step * chunkSize;
+        const end = Math.min(iterations, start + chunkSize);
+        for (let i = start; i < end; i += 1) {
+          const value = data[i % data.length];
+          acc = (acc + (value + i) * 2654435761) >>> 0;
+        }
+        const progress = Math.round(((step + 1) / steps) * 100);
+        yield `[*] Progress ${progress}%\n`;
+      }
+
+      const hash = acc.toString(16).padStart(8, '0');
+      yield `[*] Fake hash result: ${hash}\n`;
+    })(),
 };
 
 function buildPipeline(command: string, ctx: Context): Stream {

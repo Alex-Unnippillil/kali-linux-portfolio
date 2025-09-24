@@ -387,6 +387,7 @@ play/pause and track controls include keyboard hotkeys.
 ### Terminal Commands
 - `clear` – clears the terminal display.
 - `help` – lists available commands.
+- `hash <text>` – simulates a long-running hashing routine in a worker.
 
 ### Games
 | Game | Route | Category |
