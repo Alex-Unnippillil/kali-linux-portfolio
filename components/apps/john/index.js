@@ -35,6 +35,7 @@ const JohnApp = () => {
   const workerRef = useRef(null);
   const statsWorkerRef = useRef(null);
   const controllerRef = useRef(null);
+  const fallbackProgressRef = useRef({ intervalId: null, total: 0, completed: 0 });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -60,12 +61,24 @@ const JohnApp = () => {
     () => () => {
       workerRef.current?.terminate();
       statsWorkerRef.current?.terminate();
+      if (fallbackProgressRef.current.intervalId) {
+        clearInterval(fallbackProgressRef.current.intervalId);
+        fallbackProgressRef.current.intervalId = null;
+      }
     },
     []
   );
 
   const startProgress = (total) => {
     if (workerRef.current) workerRef.current.terminate();
+    if (fallbackProgressRef.current.intervalId) {
+      clearInterval(fallbackProgressRef.current.intervalId);
+      fallbackProgressRef.current.intervalId = null;
+    }
+    fallbackProgressRef.current.total = total;
+    fallbackProgressRef.current.completed = 0;
+    setProgress(0);
+    setPhase('wordlist');
     if (typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
@@ -74,16 +87,37 @@ const JohnApp = () => {
         setPhase(p);
       };
       workerRef.current.postMessage({ type: 'init', total });
+    } else {
+      fallbackProgressRef.current.intervalId = setInterval(() => {
+        setProgress((prev) => (prev < 95 ? Math.min(prev + 5, 95) : prev));
+      }, 200);
     }
   };
 
   const incrementProgress = (p) => {
-    workerRef.current?.postMessage({ type: 'increment', phase: p });
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'increment', phase: p });
+    } else {
+      setPhase(p);
+      fallbackProgressRef.current.completed += 1;
+      const { total, completed } = fallbackProgressRef.current;
+      if (total) {
+        const raw = (completed / total) * 100;
+        const capped = completed >= total ? 100 : Math.min(raw, 95);
+        setProgress((prev) => (prev < capped ? capped : prev));
+      }
+    }
   };
 
   const stopProgress = () => {
     workerRef.current?.terminate();
     workerRef.current = null;
+    if (fallbackProgressRef.current.intervalId) {
+      clearInterval(fallbackProgressRef.current.intervalId);
+      fallbackProgressRef.current.intervalId = null;
+    }
+    fallbackProgressRef.current.total = 0;
+    fallbackProgressRef.current.completed = 0;
   };
 
   const initStatsWorker = () => {
