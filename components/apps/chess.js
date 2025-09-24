@@ -321,6 +321,11 @@ const ChessGame = () => {
   const [analysisMoves, setAnalysisMoves] = useState([]);
   const [analysisDepth, setAnalysisDepth] = useState(2);
   const pgnInputRef = useRef(null);
+  const stockfishWorkerRef = useRef(null);
+  const stockfishReadyRef = useRef(false);
+  const analysisFenRef = useRef("");
+  const analysisBufferRef = useRef(new Map());
+  const pendingFenRef = useRef("");
   const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
   useEffect(() => {
@@ -379,6 +384,139 @@ const ChessGame = () => {
     updateMateHints();
   }, [updateMateHints]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof Worker === "undefined") {
+      return undefined;
+    }
+
+    const worker = new Worker(
+      new URL("../../workers/stockfish.worker.ts", import.meta.url),
+    );
+    stockfishWorkerRef.current = worker;
+
+    const parseInfo = (line) => {
+      if (!analysisFenRef.current && pendingFenRef.current) {
+        analysisFenRef.current = pendingFenRef.current;
+        pendingFenRef.current = "";
+      }
+      const fen = analysisFenRef.current;
+      if (!fen) return;
+
+      const tokens = line.split(" ");
+      const pvIndex = tokens.indexOf("pv");
+      if (pvIndex === -1) return;
+
+      const multipvIndex = tokens.indexOf("multipv");
+      const multipv =
+        multipvIndex === -1 ? 1 : Number(tokens[multipvIndex + 1]);
+      if (!Number.isFinite(multipv) || multipv < 1 || multipv > 3) return;
+
+      const scoreIndex = tokens.indexOf("score");
+      if (scoreIndex === -1) return;
+
+      const scoreType = tokens[scoreIndex + 1];
+      const scoreValue = Number(tokens[scoreIndex + 2]);
+      if (!scoreType || !Number.isFinite(scoreValue)) return;
+
+      let cpValue = 0;
+      let mateValue = null;
+      if (scoreType === "cp") {
+        cpValue = scoreValue;
+      } else if (scoreType === "mate") {
+        mateValue = scoreValue;
+        cpValue = scoreValue > 0 ? 32000 - scoreValue * 100 : -32000 - scoreValue * 100;
+      } else {
+        return;
+      }
+
+      const pvMoves = tokens.slice(pvIndex + 1);
+      if (pvMoves.length === 0) return;
+
+      const uciMove = pvMoves[0];
+
+      if (!(analysisBufferRef.current instanceof Map)) {
+        analysisBufferRef.current = new Map();
+      }
+
+      analysisBufferRef.current.set(multipv, {
+        move: uciMove,
+        evaluation: cpValue,
+        mate: mateValue,
+      });
+
+      const chess = new Chess(fen);
+      const verboseMoves = chess.moves({ verbose: true });
+
+      const results = Array.from(analysisBufferRef.current.entries())
+        .sort((a, b) => a[0] - b[0])
+        .slice(0, 3)
+        .map(([, entry]) => {
+          const match = verboseMoves.find(
+            (m) => m.from + m.to + (m.promotion || "") === entry.move,
+          );
+          if (match) {
+            return {
+              from: match.from,
+              to: match.to,
+              san: match.san,
+              evaluation: entry.evaluation,
+              mate: entry.mate,
+            };
+          }
+          return {
+            from: entry.move.slice(0, 2),
+            to: entry.move.slice(2, 4),
+            san: entry.move,
+            evaluation: entry.evaluation,
+            mate: entry.mate,
+          };
+        });
+
+      setAnalysisMoves(results);
+      if (multipv === 1) {
+        setEvalScore(cpValue);
+      }
+    };
+
+    const handleMessage = ({ data }) => {
+      if (typeof data !== "string") return;
+
+      if (data === "uciok") {
+        worker.postMessage("isready");
+        return;
+      }
+
+      if (data === "readyok") {
+        stockfishReadyRef.current = true;
+        return;
+      }
+
+      if (!analysisFenRef.current) return;
+
+      if (data.startsWith("info")) {
+        parseInfo(data);
+      } else if (data.startsWith("bestmove")) {
+        analysisFenRef.current = "";
+        analysisBufferRef.current = new Map();
+        pendingFenRef.current = "";
+      }
+    };
+
+    worker.addEventListener("message", handleMessage);
+    worker.postMessage("uci");
+
+    return () => {
+      worker.removeEventListener("message", handleMessage);
+      stockfishReadyRef.current = false;
+      analysisFenRef.current = "";
+      analysisBufferRef.current = new Map();
+      pendingFenRef.current = "";
+      worker.postMessage({ type: "quit" });
+      worker.terminate();
+      stockfishWorkerRef.current = null;
+    };
+  }, []);
+
   const addTrail = (from, to) => {
     const fx = (from & 15) * SQ + SQ / 2;
     const fy = (7 - (from >> 4)) * SQ + SQ / 2;
@@ -420,8 +558,28 @@ const ChessGame = () => {
   }, [showHints]);
 
   const runAnalysis = () => {
-    const suggestions = suggestMoves(chessRef.current.fen(), analysisDepth);
-    setAnalysisMoves(suggestions);
+    const fen = chessRef.current.fen();
+    if (!stockfishWorkerRef.current || !stockfishReadyRef.current) {
+      const suggestions = suggestMoves(fen, analysisDepth);
+      setAnalysisMoves(suggestions);
+      analysisFenRef.current = "";
+      analysisBufferRef.current = new Map();
+      pendingFenRef.current = "";
+      return;
+    }
+
+    pendingFenRef.current = fen;
+    analysisFenRef.current = "";
+    analysisBufferRef.current = new Map();
+    setAnalysisMoves([]);
+    stockfishWorkerRef.current.postMessage({ type: "stop" });
+    const searchDepth = Math.max(8, analysisDepth * 6);
+    stockfishWorkerRef.current.postMessage({
+      type: "analyze",
+      fen,
+      depth: searchDepth,
+      multiPv: 3,
+    });
   };
 
   useEffect(() => {
@@ -693,6 +851,13 @@ const ChessGame = () => {
     setPaused(false);
     setStatus("Your move");
     lastMoveRef.current = null;
+    setAnalysisMoves([]);
+    analysisFenRef.current = "";
+    analysisBufferRef.current = new Map();
+    pendingFenRef.current = "";
+    if (stockfishWorkerRef.current) {
+      stockfishWorkerRef.current.postMessage({ type: "stop" });
+    }
   };
 
   const togglePause = () => setPaused((p) => !p);
@@ -877,6 +1042,7 @@ const ChessGame = () => {
             <div
               className="h-4 bg-gray-700"
               role="progressbar"
+              aria-label="Evaluation score"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={evalPercent.toFixed(0)}
@@ -897,7 +1063,10 @@ const ChessGame = () => {
               <ol className="list-decimal ml-4">
                 {analysisMoves.map((m, idx) => (
                   <li key={idx}>
-                    {m.san} ({(m.evaluation / 100).toFixed(2)})
+                    {m.san}{" "}
+                    {typeof m.mate === "number"
+                      ? `(Mate in ${m.mate})`
+                      : `(${(m.evaluation / 100).toFixed(2)})`}
                   </li>
                 ))}
               </ol>
