@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -21,7 +20,14 @@ interface Props {
   openApp?: (id: string) => void;
 }
 
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+const CodePreview: React.FC<{ code: string; language: string }> = ({ code, language }) => (
+  <pre
+    className="h-full w-full overflow-auto bg-gray-900 text-green-100 text-xs font-mono p-2"
+    aria-label={`${language} code snippet`}
+  >
+    <code>{code}</code>
+  </pre>
+);
 
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
@@ -267,13 +273,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                 loading="lazy"
               />
               <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
-                />
+                <CodePreview code={project.snippet} language={project.language} />
               </div>
             </div>
             <div className="p-4 space-y-2">

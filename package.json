@@ -29,7 +29,6 @@
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
     "@emailjs/browser": "^3.10.0",
-    "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
@@ -69,7 +68,6 @@
     "marked": "^16.2.1",
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",
-    "monaco-editor": "^0.52.2",
     "next": "15.5.2",
     "pcap-parser": "^0.2.1",
     "pdfjs-dist": "^5.4.54",

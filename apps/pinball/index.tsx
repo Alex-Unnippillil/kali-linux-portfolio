@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Engine, Render, World, Bodies, Body, Runner, Events } from "matter-js";
 import { useTiltSensor } from "./tilt";
+
+type MatterLib = typeof import("matter-js");
+type MatterBody = import("matter-js").Body;
+type MatterEngine = import("matter-js").Engine;
 
 const themes: Record<string, { bg: string; flipper: string }> = {
   classic: { bg: "#0b3d91", flipper: "#ffd700" },
@@ -14,10 +17,12 @@ export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // References for core Matter.js entities
 
-  const engineRef = useRef<Engine | null>(null);
-  const leftFlipperRef = useRef<Body | null>(null);
-  const rightFlipperRef = useRef<Body | null>(null);
-  const ballRef = useRef<Body | null>(null);
+  const engineRef = useRef<MatterEngine | null>(null);
+  const leftFlipperRef = useRef<MatterBody | null>(null);
+  const rightFlipperRef = useRef<MatterBody | null>(null);
+  const ballRef = useRef<MatterBody | null>(null);
+  const matterRef = useRef<MatterLib | null>(null);
+  const [matter, setMatter] = useState<MatterLib | null>(null);
   const sparksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const laneGlowRef = useRef<{ left: boolean; right: boolean }>({
     left: false,
@@ -43,8 +48,8 @@ export default function Pinball() {
     const now = Date.now();
     nudgesRef.current = nudgesRef.current.filter((t) => now - t < 3000);
     nudgesRef.current.push(now);
-    if (ballRef.current) {
-      Body.applyForce(ballRef.current, ballRef.current.position, {
+    if (ballRef.current && matterRef.current) {
+      matterRef.current.Body.applyForce(ballRef.current, ballRef.current.position, {
         x: 0.02,
         y: 0,
       });
@@ -65,7 +70,21 @@ export default function Pinball() {
   useTiltSensor(25, handleTilt);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    let mounted = true;
+    import("matter-js").then((mod) => {
+      if (!mounted) return;
+      const lib = (mod.default || mod) as MatterLib;
+      matterRef.current = lib;
+      setMatter(lib);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current || !matter) return;
+    const { Engine, Render, World, Bodies, Body, Runner, Events } = matter;
     const engine = Engine.create();
     engine.gravity.y = 1;
     const render = Render.create({
@@ -230,7 +249,7 @@ export default function Pinball() {
       World.clear(engine.world, false);
       Engine.clear(engine);
     };
-  }, [theme, power, bounce, tilt, tryNudge]);
+  }, [theme, power, bounce, tilt, tryNudge, matter]);
 
   useEffect(() => {
     let raf: number;
