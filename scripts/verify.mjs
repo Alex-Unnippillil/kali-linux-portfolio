@@ -5,6 +5,10 @@ import waitOn from 'wait-on';
 
 const require = createRequire(import.meta.url);
 
+const buildTimestamp = process.env.BUILD_TIME ?? new Date().toISOString();
+process.env.BUILD_TIME = buildTimestamp;
+const { version: packageVersion } = require('../package.json');
+
 const run = (cmd, args = [], opts = {}) => new Promise((resolve, reject) => {
   const child = spawn(cmd, args, { stdio: 'inherit', ...opts });
   child.on('exit', (code) => {
@@ -53,6 +57,29 @@ const getPort = () =>
       }
       console.log(`✓ ${route}`);
     }
+
+    const healthUrl = `http://localhost:${port}/api/healthz`;
+    const healthRes = await fetch(healthUrl);
+    if (!healthRes.ok) {
+      throw new Error(`Health check failed: status ${healthRes.status}`);
+    }
+    const health = await healthRes.json();
+    if (health.version !== packageVersion) {
+      throw new Error(
+        `Health check version mismatch: expected ${packageVersion}, received ${health.version}`,
+      );
+    }
+    if (health.node !== process.version) {
+      throw new Error(
+        `Health check node mismatch: expected ${process.version}, received ${health.node}`,
+      );
+    }
+    if (health.buildTime !== buildTimestamp) {
+      throw new Error(
+        `Health check buildTime mismatch: expected ${buildTimestamp}, received ${health.buildTime}`,
+      );
+    }
+    console.log(`✓ /api/healthz (${health.version} @ ${health.node})`);
 
     console.log('verify: PASS');
     server.kill();
