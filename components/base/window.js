@@ -8,6 +8,16 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const FOCUSABLE_SELECTORS = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+    '[role="button"]'
+].join(',');
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -34,6 +44,7 @@ export class Window extends Component {
             lastSize: null,
             grabbed: false,
         }
+        this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
@@ -56,6 +67,140 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (!prevProps.isFocused && this.props.isFocused) {
+            const node = this.getWindowElement();
+            if (
+                typeof document !== 'undefined' &&
+                node &&
+                typeof node.focus === 'function' &&
+                (!document.activeElement || !node.contains(document.activeElement))
+            ) {
+                node.focus({ preventScroll: true });
+            }
+        }
+    }
+
+    getWindowElement = () => {
+        if (this.windowRef.current) {
+            return this.windowRef.current;
+        }
+        return typeof document !== 'undefined' ? document.getElementById(this.id) : null;
+    }
+
+    getFocusableElements = (root = this.getWindowElement()) => {
+        if (!root) return [];
+        const focusable = Array.from(root.querySelectorAll(FOCUSABLE_SELECTORS));
+        return focusable.filter((el) => {
+            if (!(el instanceof HTMLElement)) return false;
+            if (el.hasAttribute('disabled')) return false;
+            if (el.getAttribute('aria-hidden') === 'true') return false;
+            if (el.hasAttribute('data-focus-trap-exclude')) return false;
+            const rects = el.getClientRects();
+            return rects.length > 0;
+        });
+    }
+
+    handleTabNavigation = (event) => {
+        if (!event) return;
+        const container = this.getWindowElement();
+        if (!container) return;
+        const focusable = this.getFocusableElements(container);
+        const stopEvent = () => {
+            if (typeof event.preventDefault === 'function') event.preventDefault();
+            if (typeof event.stopPropagation === 'function') event.stopPropagation();
+        };
+
+        if (focusable.length === 0) {
+            stopEvent();
+            container.focus({ preventScroll: true });
+            return;
+        }
+        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+        const currentIndex = focusable.indexOf(activeElement);
+        let nextIndex = 0;
+        if (event.shiftKey) {
+            if (currentIndex <= 0) {
+                nextIndex = focusable.length - 1;
+            } else {
+                nextIndex = currentIndex - 1;
+            }
+        } else {
+            if (currentIndex === -1 || currentIndex === focusable.length - 1) {
+                nextIndex = 0;
+            } else {
+                nextIndex = currentIndex + 1;
+            }
+        }
+        stopEvent();
+        const nextElement = focusable[nextIndex];
+        if (nextElement && typeof nextElement.focus === 'function') {
+            nextElement.focus({ preventScroll: true });
+        }
+        this.focusWindow();
+    }
+
+    handleArrowSnap = (key) => {
+        const { snapped } = this.state;
+        if (key === 'ArrowLeft') {
+            const map = {
+                right: 'left',
+                top: 'top-left',
+                bottom: 'bottom-left',
+                'top-right': 'top-left',
+                'bottom-right': 'bottom-left',
+                'top-left': 'top-left',
+                'bottom-left': 'bottom-left'
+            };
+            const next = map[snapped] || 'left';
+            this.snapWindow(next);
+            return true;
+        }
+        if (key === 'ArrowRight') {
+            const map = {
+                left: 'right',
+                top: 'top-right',
+                bottom: 'bottom-right',
+                'top-left': 'top-right',
+                'bottom-left': 'bottom-right',
+                'top-right': 'top-right',
+                'bottom-right': 'bottom-right'
+            };
+            const next = map[snapped] || 'right';
+            this.snapWindow(next);
+            return true;
+        }
+        if (key === 'ArrowUp') {
+            const map = {
+                bottom: 'top',
+                left: 'top-left',
+                right: 'top-right',
+                'bottom-left': 'top-left',
+                'bottom-right': 'top-right',
+                'top-left': 'top-left',
+                'top-right': 'top-right'
+            };
+            const next = map[snapped] || 'top';
+            this.snapWindow(next);
+            return true;
+        }
+        if (key === 'ArrowDown') {
+            const map = {
+                top: 'bottom',
+                left: 'bottom-left',
+                right: 'bottom-right',
+                'top-left': 'bottom-left',
+                'top-right': 'bottom-right',
+                'bottom-left': 'bottom-left',
+                'bottom-right': 'bottom-right'
+            };
+            const next = map[snapped] || 'bottom';
+            this.snapWindow(next);
+            return true;
+        }
+        return false;
     }
 
     componentWillUnmount() {
@@ -248,44 +393,12 @@ export class Window extends Component {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                lastSize: null
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, lastSize: null }, this.resizeBoundries);
         }
-    }
-
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     checkOverlap = () => {
@@ -330,6 +443,10 @@ export class Window extends Component {
         else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (rect.bottom >= window.innerHeight - threshold) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -519,49 +636,81 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        if (!e) return;
+        const stopEvent = () => {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        };
         if (e.key === 'Escape') {
-            this.closeWindow();
-        } else if (e.key === 'Tab') {
-            this.focusWindow();
-        } else if (e.altKey) {
+            if (this.props.isFocused) {
+                stopEvent();
+                this.closeWindow();
+            }
+            return;
+        }
+
+        if (e.key === 'Tab') {
+            this.handleTabNavigation(e);
+            return;
+        }
+
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            return;
+        }
+
+        const container = this.getWindowElement();
+        const currentTarget = e.currentTarget instanceof HTMLElement ? e.currentTarget : container;
+        const targetElement = e.target instanceof HTMLElement ? e.target : currentTarget;
+        const isChromeTarget = !!currentTarget && !!targetElement && (
+            targetElement === currentTarget ||
+            (!!targetElement.closest && targetElement.closest('[data-window-chrome="true"]'))
+        );
+
+        if (e.altKey) {
+            if (!isChromeTarget) return;
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.snapWindow('top');
             }
             this.focusWindow();
-        } else if (e.shiftKey) {
+            return;
+        }
+
+        if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            if (!isChromeTarget) return;
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
+            return;
+        }
+
+        if (isChromeTarget && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+            const handled = this.handleArrowSnap(e.key);
+            if (handled) {
+                stopEvent();
+                this.focusWindow();
+            }
         }
     }
 
@@ -585,30 +734,81 @@ export class Window extends Component {
     }
 
     snapWindow = (pos) => {
+        if (typeof window === 'undefined') return;
+        const node = this.getWindowElement();
+        if (!node) return;
         this.focusWindow();
+        this.setWinowsPosition();
         const { width, height } = this.state;
+        const halfWidth = window.innerWidth / 2;
+        const halfHeight = window.innerHeight / 2;
+        const bottomOffset = `${Math.max(halfHeight - 2, 0)}px`;
         let newWidth = width;
         let newHeight = height;
         let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        switch (pos) {
+            case 'left':
+                newWidth = 50;
+                newHeight = 96.3;
+                transform = 'translate(-1pt,-2pt)';
+                break;
+            case 'right':
+                newWidth = 50;
+                newHeight = 96.3;
+                transform = `translate(${halfWidth}px,-2pt)`;
+                break;
+            case 'top':
+                newWidth = 100.2;
+                newHeight = 50;
+                transform = 'translate(-1pt,-2pt)';
+                break;
+            case 'bottom':
+                newWidth = 100.2;
+                newHeight = 50;
+                transform = `translate(-1pt, ${bottomOffset})`;
+                break;
+            case 'top-left':
+                newWidth = 50;
+                newHeight = 50;
+                transform = 'translate(-1pt,-2pt)';
+                break;
+            case 'top-right':
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(${halfWidth}px,-2pt)`;
+                break;
+            case 'bottom-left':
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(-1pt, ${bottomOffset})`;
+                break;
+            case 'bottom-right':
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(${halfWidth}px, ${bottomOffset})`;
+                break;
+            default:
+                break;
         }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
+        if (!transform) return;
+        node.style.transform = transform;
+        const lastSize = this.state.snapped && this.state.lastSize
+            ? this.state.lastSize
+            : { width, height };
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
-            lastSize: { width, height },
+            lastSize,
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            if (this.props.hideSideBar) {
+                const shouldHide = ['left', 'top-left', 'bottom-left'].includes(pos);
+                this.props.hideSideBar(this.id, shouldHide);
+            }
+        });
     }
 
     render() {
@@ -640,10 +840,12 @@ export class Window extends Component {
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
+                        ref={this.windowRef}
+                        data-testid="desktop-window"
+                        data-focused={this.props.isFocused ? 'true' : 'false'}
                         onKeyDown={this.handleKeyDown}
+                        onFocusCapture={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -659,6 +861,8 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
                         />
+                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
@@ -675,12 +879,16 @@ export default Window
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+    const label = typeof title === 'string' ? `${title} window title bar` : 'Window title bar';
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-label={label}
+            data-testid="window-title-bar"
+            data-window-chrome="true"
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
@@ -705,6 +913,17 @@ export class WindowYBorder extends Component {
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Resize window horizontally"
+                    data-testid="window-resize-handle-horizontal"
+                    data-window-chrome="true"
+                    onKeyDown={(event) => {
+                        if ((event.key === 'Enter' || event.key === ' ' || event.key === 'Space') && typeof this.props.resize === 'function') {
+                            event.preventDefault();
+                            this.props.resize();
+                        }
+                    }}
                 ></div>
             )
         }
@@ -724,6 +943,17 @@ export class WindowXBorder extends Component {
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Resize window vertically"
+                    data-testid="window-resize-handle-vertical"
+                    data-window-chrome="true"
+                    onKeyDown={(event) => {
+                        if ((event.key === 'Enter' || event.key === ' ' || event.key === 'Space') && typeof this.props.resize === 'function') {
+                            event.preventDefault();
+                            this.props.resize();
+                        }
+                    }}
                 ></div>
             )
         }
@@ -734,11 +964,18 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div
+            className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]"
+            data-testid="window-control-strip"
+            data-window-chrome="true"
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"
+                    role="button"
                     aria-label="Window pin"
+                    data-testid="window-pin-button"
+                    data-window-chrome="true"
                     className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                     onClick={togglePin}
                 >
@@ -754,7 +991,10 @@ export function WindowEditButtons(props) {
             )}
             <button
                 type="button"
+                role="button"
                 aria-label="Window minimize"
+                data-testid="window-minimize-button"
+                data-window-chrome="true"
                 className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.minimize}
             >
@@ -772,7 +1012,10 @@ export function WindowEditButtons(props) {
                     ? (
                         <button
                             type="button"
+                            role="button"
                             aria-label="Window restore"
+                            data-testid="window-restore-button"
+                            data-window-chrome="true"
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
@@ -788,7 +1031,10 @@ export function WindowEditButtons(props) {
                     ) : (
                         <button
                             type="button"
+                            role="button"
                             aria-label="Window maximize"
+                            data-testid="window-maximize-button"
+                            data-window-chrome="true"
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
@@ -806,8 +1052,11 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 id={`close-${props.id}`}
+                role="button"
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                data-testid="window-close-button"
+                data-window-chrome="true"
+                className="mx-1 cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.close}
             >
                 <NextImage

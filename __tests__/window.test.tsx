@@ -255,6 +255,175 @@ describe('Window snapping finalize and release', () => {
   });
 });
 
+describe('Window focus and keyboard management', () => {
+  it('cycles focus with Tab and Shift+Tab inside the window', async () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => (
+          <div>
+            <button type="button">First control</button>
+            <button type="button">Second control</button>
+          </div>
+        )}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    await screen.findByTestId('window-title-bar');
+    const container = screen.getByTestId('desktop-window');
+    const focusables = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+    expect(focusables.length).toBeGreaterThan(0);
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const rectList = () => {
+      const rect = {
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        top: 0,
+        left: 0,
+        right: 10,
+        bottom: 10,
+        toJSON: () => ({}),
+      };
+      return {
+        length: 1,
+        item: () => rect,
+        0: rect,
+        [Symbol.iterator]: function* iterator() {
+          yield rect;
+        },
+        toJSON: () => [rect],
+      } as any;
+    };
+    const rectSpies = focusables.map((el) =>
+      jest.spyOn(el, 'getClientRects').mockReturnValue(rectList())
+    );
+    const firstFocus = jest.spyOn(first, 'focus');
+    const lastFocus = jest.spyOn(last, 'focus');
+    let active: Element | null = container;
+    const originalActive = Object.getOwnPropertyDescriptor(document, 'activeElement');
+    const setActiveGetter = () => {
+      Object.defineProperty(document, 'activeElement', {
+        configurable: true,
+        get: () => active,
+      });
+    };
+    setActiveGetter();
+    firstFocus.mockImplementation(() => {
+      active = first;
+    });
+    lastFocus.mockImplementation(() => {
+      active = last;
+    });
+
+    try {
+      active = container;
+
+      const tabEvent: any = {
+        shiftKey: false,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      };
+      act(() => {
+        ref.current!.handleTabNavigation(tabEvent);
+      });
+      expect(firstFocus).toHaveBeenCalled();
+      expect(tabEvent.preventDefault).toHaveBeenCalled();
+      firstFocus.mockClear();
+      lastFocus.mockClear();
+
+      active = first;
+      const shiftTabEvent: any = {
+        shiftKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      };
+      act(() => {
+        ref.current!.handleTabNavigation(shiftTabEvent);
+      });
+      expect(lastFocus).toHaveBeenCalled();
+      expect(shiftTabEvent.preventDefault).toHaveBeenCalled();
+      firstFocus.mockClear();
+      lastFocus.mockClear();
+
+      active = last;
+      const wrapEvent: any = {
+        shiftKey: false,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      };
+      act(() => {
+        ref.current!.handleTabNavigation(wrapEvent);
+      });
+      expect(firstFocus).toHaveBeenCalled();
+      expect(wrapEvent.preventDefault).toHaveBeenCalled();
+    } finally {
+      if (originalActive) {
+        Object.defineProperty(document, 'activeElement', originalActive);
+      } else {
+        delete (document as any).activeElement;
+      }
+      rectSpies.forEach((spy) => spy.mockRestore());
+      firstFocus.mockRestore();
+      lastFocus.mockRestore();
+    }
+  });
+
+  it('snaps to corners using sequential arrow keys', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = screen.getByTestId('desktop-window');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowLeft' });
+    });
+    expect(ref.current!.state.snapped).toBe('left');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowUp' });
+    });
+    expect(ref.current!.state.snapped).toBe('top-left');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowRight' });
+    });
+    expect(ref.current!.state.snapped).toBe('top-right');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowDown' });
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-right');
+  });
+});
+
 describe('Window keyboard dragging', () => {
   it('moves window using arrow keys with grabbed state', () => {
     render(
