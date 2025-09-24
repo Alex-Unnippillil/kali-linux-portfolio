@@ -218,6 +218,7 @@ const Minesweeper = () => {
   const rightDown = useRef(false);
   const chorded = useRef(false);
   const flagAnim = useRef({});
+  const lastRightClickRef = useRef(0);
 
   useEffect(() => {
     initWorker();
@@ -828,7 +829,11 @@ const Minesweeper = () => {
         leftDown.current = false;
         chorded.current = true;
       } else if (!chorded.current) {
-        toggleFlag(x, y);
+        const now = Date.now();
+        if (now - lastRightClickRef.current >= 250) {
+          toggleFlag(x, y);
+          lastRightClickRef.current = now;
+        }
       }
       rightDown.current = false;
     }
@@ -853,6 +858,11 @@ const Minesweeper = () => {
 
   const handleContextMenu = (e) => {
     e.preventDefault();
+    const now = Date.now();
+    if (now - lastRightClickRef.current < 250) {
+      return;
+    }
+    lastRightClickRef.current = now;
     if (e.clientX === 0 && e.clientY === 0) {
       toggleFlag(cursor.x, cursor.y);
     }
