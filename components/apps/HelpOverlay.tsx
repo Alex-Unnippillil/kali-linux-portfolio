@@ -85,7 +85,13 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   platformer: {
     objective: "Reach the end of the level.",
-    controls: "Arrow keys move, up to jump.",
+    controls: "Arrow keys move, space to jump, P to pause.",
+    actions: {
+      left: "ArrowLeft",
+      right: "ArrowRight",
+      jump: "Space",
+      pause: "p",
+    },
   },
   pong: {
     objective: "Hit the ball past your opponent.",
@@ -101,7 +107,13 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   snake: {
     objective: "Grow by eating food and avoid collisions.",
-    controls: "Arrow keys to move, space to pause.",
+    controls: "Arrow keys to move.",
+    actions: {
+      up: "ArrowUp",
+      down: "ArrowDown",
+      left: "ArrowLeft",
+      right: "ArrowRight",
+    },
   },
   sokoban: {
     objective: "Push all boxes onto target squares.",
@@ -119,6 +131,18 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   tetris: {
     objective: "Clear lines by completing horizontal rows.",
     controls: "Arrow keys move, up rotates, space drops.",
+    actions: {
+      left: "ArrowLeft",
+      right: "ArrowRight",
+      down: "ArrowDown",
+      rotate: "ArrowUp",
+      drop: "Space",
+      hold: "Shift",
+      pause: "p",
+      reset: "r",
+      sound: "m",
+      settings: "s",
+    },
   },
   "tower-defense": {
     objective: "Stop enemies before they reach the end.",

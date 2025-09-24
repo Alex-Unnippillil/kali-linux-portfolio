@@ -25,7 +25,7 @@ export default class GameLoop {
     this.tickHandler = tick;
     this.inputHandler = input;
     this.step = options.fps ? 1000 / options.fps : 16; // default ~60fps
-    this.maxDt = options.maxDt ?? 100; // default clamp 100ms
+    this.maxDt = options.maxDt ?? 50; // clamp delta to 50ms by default
     this.renderHandler = options.render;
     this.interpolate = !!options.interpolation;
     this.loop = this.loop.bind(this);
@@ -34,6 +34,12 @@ export default class GameLoop {
 
   private loop(time: number) {
     if (!this.running) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      this.last = time;
+      this.accumulator = 0;
+      this.rafId = requestAnimationFrame(this.loop);
+      return;
+    }
     let dt = time - this.last;
     if (dt < 0) dt = 0;
     if (dt > this.maxDt) dt = this.maxDt;

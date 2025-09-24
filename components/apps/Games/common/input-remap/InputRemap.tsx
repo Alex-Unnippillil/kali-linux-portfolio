@@ -24,6 +24,12 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
     window.addEventListener('keydown', handler);
   };
 
+  const formatKey = (value?: string) => {
+    if (!value) return 'Unbound';
+    if (value === ' ') return 'Space';
+    return value.length === 1 ? value.toUpperCase() : value;
+  };
+
   return (
     <div className="space-y-2">
       {Object.keys(actions).map((action) => (
@@ -34,7 +40,7 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
             onClick={() => capture(action)}
             className="px-2 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
           >
-            {waiting === action ? 'Press key...' : mapping[action]}
+            {waiting === action ? 'Press key...' : formatKey(mapping[action])}
           </button>
         </div>
       ))}

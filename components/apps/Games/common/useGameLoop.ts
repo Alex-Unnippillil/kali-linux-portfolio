@@ -13,10 +13,17 @@ export default function useGameLoop(
 
   useEffect(() => {
     if (!running) return undefined;
+    if (typeof window === 'undefined') return undefined;
     let raf: number;
     let last = performance.now();
     const loop = (now: number) => {
-      const delta = (now - last) / 1000;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        last = now;
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      const deltaMs = now - last;
+      const delta = Math.min(Math.max(deltaMs, 0) / 1000, 0.05);
       last = now;
       cb.current(delta);
       raf = requestAnimationFrame(loop);
