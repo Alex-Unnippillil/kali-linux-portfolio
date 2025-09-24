@@ -1,6 +1,12 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
+import {
+  MAX_BATCH_ITEMS,
+  parseBatchCsv,
+  sanitizeInput,
+  validateQrText,
+} from '../../../utils/qrValidation';
 
 interface BatchItem {
   name: string;
@@ -20,6 +26,8 @@ const QRTool: React.FC = () => {
   const [svg, setSvg] = useState('');
   const [csv, setCsv] = useState('');
   const [batch, setBatch] = useState<BatchItem[]>([]);
+  const [error, setError] = useState('');
+  const [batchErrors, setBatchErrors] = useState<string[]>([]);
   const workerRef = React.useRef<Worker | null>(null);
 
   const initWorker = React.useCallback(() => {
@@ -69,17 +77,35 @@ const QRTool: React.FC = () => {
   }, [opts]);
 
   useEffect(() => {
-    const value = text || ' ';
-    encodeQr(value)
+    if (!text) {
+      setPng('');
+      setSvg('');
+      setError('');
+      return;
+    }
+    const { ok, sanitized, error: validationError } = validateQrText(text);
+    if (!ok) {
+      setError(validationError ?? 'Unable to encode value.');
+      setPng('');
+      setSvg('');
+      return;
+    }
+    setError('');
+    encodeQr(sanitized)
       .then(({ png: p, svg: s }) => {
         setPng(p);
         setSvg(s);
       })
       .catch(() => {
+        setError('Failed to generate QR code.');
         setPng('');
         setSvg('');
       });
   }, [text, opts, encodeQr]);
+
+  useEffect(() => () => {
+    workerRef.current?.terminate();
+  }, []);
 
   const downloadDataUrl = (dataUrl: string, filename: string) => {
     const link = document.createElement('a');
@@ -99,44 +125,64 @@ const QRTool: React.FC = () => {
   };
 
   const downloadPng = () => {
-    if (png) downloadDataUrl(png, 'qr.png');
+    if (png && !error) downloadDataUrl(png, 'qr.png');
   };
 
   const downloadSvg = () => {
-    if (svg) downloadSvgText(svg, 'qr.svg');
+    if (svg && !error) downloadSvgText(svg, 'qr.svg');
   };
 
   const generateBatch = async () => {
-    const lines = csv
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const items = await Promise.all(
-      lines.map(async (line, i) => {
-        const [val, nameCol] = line.split(',');
-        const value = val.trim();
-        const name = nameCol ? nameCol.trim() : `code-${i + 1}`;
+    setBatchErrors([]);
+    const { items, errors } = parseBatchCsv(csv);
+    if (errors.length) {
+      setBatch([]);
+      setBatchErrors(errors);
+      return;
+    }
+    const results = await Promise.allSettled(
+      items.map(async ({ value, name }) => {
         const pngData = await QRCode.toDataURL(value, opts);
-        const svgText = await QRCode.toString(value, { ...opts, type: 'svg' });
+        const svgText = await QRCode.toString(value, {
+          ...opts,
+          type: 'svg',
+        });
         return { name, png: pngData, svg: svgText };
       }),
     );
-    setBatch(items);
+    const successes: BatchItem[] = [];
+    const failures: string[] = [];
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        successes.push(result.value);
+      } else {
+        const line = items[index]?.line ?? index + 1;
+        failures.push(`Line ${line}: Failed to encode value.`);
+      }
+    });
+    setBatch(successes);
+    setBatchErrors(failures);
   };
 
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
       <div className="space-y-2">
-        <label htmlFor="qr-input" className="block">
-          <span className="text-sm">Text</span>
-          <input
-            id="qr-input"
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full rounded p-1 text-black"
-          />
-        </label>
+          <label htmlFor="qr-input" className="block">
+            <span className="text-sm">Text</span>
+            <input
+              id="qr-input"
+              type="text"
+              value={text}
+              onChange={(e) => setText(sanitizeInput(e.target.value))}
+              className="w-full rounded p-1 text-black"
+              aria-label="QR text input"
+            />
+          </label>
+        {error && (
+          <p className="text-xs text-red-300" role="alert">
+            {error}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="qr-error" className="flex items-center gap-1 text-sm">
             Error
@@ -159,6 +205,7 @@ const QRTool: React.FC = () => {
               type="checkbox"
               checked={invert}
               onChange={(e) => setInvert(e.target.checked)}
+              aria-label="Invert QR colors"
             />
             Invert
           </label>
@@ -166,6 +213,7 @@ const QRTool: React.FC = () => {
             type="button"
             onClick={downloadPng}
             className="px-2 py-1 bg-blue-600 rounded"
+            disabled={!png || Boolean(error)}
           >
             PNG
           </button>
@@ -173,23 +221,27 @@ const QRTool: React.FC = () => {
             type="button"
             onClick={downloadSvg}
             className="px-2 py-1 bg-blue-600 rounded"
+            disabled={!svg || Boolean(error)}
           >
             SVG
           </button>
         </div>
-        {png && <img src={png} alt="QR preview" className="h-48 w-48 bg-white" />}
+        {png && !error && (
+          <img src={png} alt="QR preview" className="h-48 w-48 bg-white" />
+        )}
       </div>
       <div className="space-y-2">
-        <label htmlFor="qr-csv" className="block">
-          <span className="text-sm">Batch CSV (text,name)</span>
-          <textarea
-            id="qr-csv"
-            rows={4}
-            value={csv}
-            onChange={(e) => setCsv(e.target.value)}
-            className="w-full rounded p-1 text-black"
-          />
-        </label>
+          <label htmlFor="qr-csv" className="block">
+            <span className="text-sm">Batch CSV (text,name)</span>
+            <textarea
+              id="qr-csv"
+              rows={4}
+              value={csv}
+              onChange={(e) => setCsv(sanitizeInput(e.target.value))}
+              className="w-full rounded p-1 text-black"
+              aria-label="Batch CSV rows"
+            />
+          </label>
         <button
           type="button"
           onClick={generateBatch}
@@ -197,6 +249,17 @@ const QRTool: React.FC = () => {
         >
           Generate Batch
         </button>
+        {batchErrors.length > 0 && (
+          <div className="space-y-1 text-xs text-red-300" role="alert">
+            {batchErrors.map((msg, idx) => (
+              <p key={`${msg}-${idx}`}>{msg}</p>
+            ))}
+            <p className="text-[11px] text-gray-300">
+              Limit batches to {MAX_BATCH_ITEMS} valid rows. Invalid lines are
+              skipped.
+            </p>
+          </div>
+        )}
         {batch.length > 0 && (
           <div className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-3">
             {batch.map((item) => (

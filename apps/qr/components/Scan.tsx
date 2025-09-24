@@ -1,8 +1,10 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 interface Props {
   onResult: (text: string) => void;
 }
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const Scan: React.FC<Props> = ({ onResult }) => {
   const [preview, setPreview] = useState('');
@@ -13,11 +15,18 @@ const Scan: React.FC<Props> = ({ onResult }) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
       if (!file || !file.type.startsWith('image/')) {
-        setError('');
+        setError('Drop a valid image file.');
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setError('File too large. Limit is 5 MB.');
         return;
       }
       const url = URL.createObjectURL(file);
-      setPreview(url);
+      setPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
       setError('');
       try {
         if ('BarcodeDetector' in window) {
@@ -41,6 +50,10 @@ const Scan: React.FC<Props> = ({ onResult }) => {
     },
     [onResult],
   );
+
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
 
   return (
     <div

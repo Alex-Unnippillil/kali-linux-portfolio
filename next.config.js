@@ -78,8 +78,45 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/apps/weather', revision: null },
       { url: '/apps/terminal', revision: null },
       { url: '/apps/checkers', revision: null },
+      { url: '/apps/qr', revision: null },
+      { url: '/apps/converter', revision: null },
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
+      { url: '/qr', revision: null },
+      { url: '/qr/vcard', revision: null },
+    ],
+    runtimeCaching: [
+      {
+        urlPattern: ({ url }) => {
+          const path = url.pathname;
+          return (
+            path.startsWith('/_next/static/chunks/pages/apps/qr') ||
+            path.startsWith('/_next/static/chunks/pages/qr') ||
+            path.startsWith('/_next/static/chunks/pages/apps/converter')
+          );
+        },
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'qr-and-converter-bundles',
+          expiration: {
+            maxEntries: 6,
+            maxAgeSeconds: 7 * 24 * 60 * 60,
+          },
+        },
+      },
+      {
+        urlPattern: ({ url }) =>
+          url.pathname.startsWith('/apps/qr') ||
+          url.pathname.startsWith('/apps/converter'),
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'app-shell-pages',
+          expiration: {
+            maxEntries: 8,
+            maxAgeSeconds: 7 * 24 * 60 * 60,
+          },
+        },
+      },
     ],
   },
 });
