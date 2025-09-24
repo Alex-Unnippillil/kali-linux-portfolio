@@ -14,18 +14,18 @@ const ContentSecurityPolicy = [
   "object-src 'none'",
   // Allow external images and data URIs for badges/icons
   "img-src 'self' https: data:",
-  // Allow inline styles
-  "style-src 'self' 'unsafe-inline'",
-  // Explicitly allow inline style tags
-  "style-src-elem 'self' 'unsafe-inline'",
+  // Allow styles from same origin only; inline styles removed in production
+  "style-src 'self'",
+  // Explicitly restrict style elements to same origin
+  "style-src-elem 'self'",
   // Restrict fonts to same origin
   "font-src 'self'",
   // External scripts required for embedded timelines
   "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
-  // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  // Allow iframes from the handful of embedded providers used in production
+  "frame-src 'self' https://stackblitz.com https://platform.twitter.com https://open.spotify.com https://www.youtube.com https://www.youtube-nocookie.com https://example.com https://developer.mozilla.org https://en.wikipedia.org https://react.dev",
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
