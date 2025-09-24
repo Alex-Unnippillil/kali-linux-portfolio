@@ -1068,4 +1068,6 @@ const apps = [
   ...games,
 ];
 
+export const Apps = Object.fromEntries(apps.map((app) => [app.id, app]));
+
 export default apps;
