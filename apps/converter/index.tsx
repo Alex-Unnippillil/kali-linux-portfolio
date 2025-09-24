@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import copyToClipboard from "../../utils/clipboard";
 
 type Rates = Record<string, number>;
@@ -34,6 +34,10 @@ const formatNumber = (
   return n.toLocaleString(undefined, opts);
 };
 
+const MAX_INPUT_LENGTH = 48;
+const MAX_ABSOLUTE_VALUE = 1e12;
+const NUMBER_PATTERN = /^[-+]?((\d+(\.\d*)?)|(\.\d+))(e[-+]?\d+)?$/i;
+
 function CopyButton({ value }: { value: string }) {
   return (
     <div className="relative group">
@@ -65,6 +69,9 @@ export default function Converter() {
   const [history, setHistory] = useState<
     { fromValue: string; fromUnit: string; toValue: string; toUnit: string }[]
   >([]);
+  const [error, setError] = useState("");
+
+  const units = useMemo(() => Object.keys(rates[active as Domain] || {}), [rates, active]);
 
   useEffect(() => {
     const saved = localStorage.getItem(HISTORY_KEY);
@@ -102,6 +109,7 @@ export default function Converter() {
     }
     setFromValue("");
     setToValue("");
+    setError("");
   }, [active, rates]);
 
   const addHistory = (
@@ -119,15 +127,47 @@ export default function Converter() {
       return newHistory;
     });
 
+  const validateNumericInput = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setError("");
+      return { valid: false, number: 0 };
+    }
+    if (trimmed.length > MAX_INPUT_LENGTH) {
+      setError(`Use ${MAX_INPUT_LENGTH} characters or fewer.`);
+      return { valid: false, number: 0 };
+    }
+    if (!NUMBER_PATTERN.test(trimmed)) {
+      setError("Enter a valid number.");
+      return { valid: false, number: 0 };
+    }
+    const numeric = Number(trimmed);
+    if (!Number.isFinite(numeric)) {
+      setError("Enter a valid number.");
+      return { valid: false, number: 0 };
+    }
+    if (Math.abs(numeric) > MAX_ABSOLUTE_VALUE) {
+      setError(`Value out of range (±${MAX_ABSOLUTE_VALUE}).`);
+      return { valid: false, number: 0 };
+    }
+    setError("");
+    return { valid: true, number: numeric };
+  };
+
   const convertFrom = (val: string) => {
     setFromValue(val);
-    const n = parseFloat(val);
-    if (isNaN(n)) {
+    const { valid, number } = validateNumericInput(val);
+    if (!valid) {
       setToValue("");
       return;
     }
     const data = rates[active as Domain];
-    const result = (n * data[toUnit]) / data[fromUnit];
+    if (!data?.[fromUnit] || !data?.[toUnit]) {
+      setError("Select valid units.");
+      setToValue("");
+      return;
+    }
+    const result = (number * data[toUnit]) / data[fromUnit];
     const out = result.toString();
     setToValue(out);
     addHistory(val, fromUnit, out, toUnit);
@@ -135,13 +175,18 @@ export default function Converter() {
 
   const convertTo = (val: string) => {
     setToValue(val);
-    const n = parseFloat(val);
-    if (isNaN(n)) {
+    const { valid, number } = validateNumericInput(val);
+    if (!valid) {
       setFromValue("");
       return;
     }
-    const data = rates[active];
-    const result = (n * data[fromUnit]) / data[toUnit];
+    const data = rates[active as Domain];
+    if (!data?.[fromUnit] || !data?.[toUnit]) {
+      setError("Select valid units.");
+      setFromValue("");
+      return;
+    }
+    const result = (number * data[fromUnit]) / data[toUnit];
     const out = result.toString();
     setFromValue(out);
     addHistory(out, fromUnit, val, toUnit);
@@ -152,9 +197,8 @@ export default function Converter() {
     setToUnit(fromUnit);
     setFromValue(toValue);
     setToValue(fromValue);
+    setError("");
   };
-
-  const units = Object.keys(rates[active as Domain] || {});
 
   return (
     <div className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto">
@@ -183,11 +227,13 @@ export default function Converter() {
           <option value="engineering">Engineering</option>
           <option value="scientific">Scientific</option>
         </select>
-        <label className="flex items-center gap-1 text-sm">
+        <label className="flex items-center gap-1 text-sm" htmlFor="trailing-zeros">
           <input
+            id="trailing-zeros"
             type="checkbox"
             checked={trailingZeros}
             onChange={(e) => setTrailingZeros(e.target.checked)}
+            aria-label="Toggle trailing zeros"
           />
           Trailing zeros
         </label>
@@ -274,6 +320,11 @@ export default function Converter() {
             />
           </div>
         </div>
+        {error && (
+          <p className="text-xs text-red-300" role="alert">
+            {error}
+          </p>
+        )}
         {history.length > 0 && (
           <div className="max-h-40 overflow-y-auto space-y-1">
             {history.map((h, i) => (

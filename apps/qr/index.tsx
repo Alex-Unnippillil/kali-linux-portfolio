@@ -1,15 +1,24 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect, ChangeEvent } from 'react';
+import dynamic from 'next/dynamic';
 import QRCode from 'qrcode';
 import Presets from './components/Presets';
-import Scan from './components/Scan';
 import {
   loadLastGeneration,
   loadLastScan,
   saveLastGeneration,
   saveLastScan,
 } from '../../utils/qrStorage';
+
+const Scan = dynamic(() => import('./components/Scan'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center text-sm text-gray-300">
+      Preparing scanner…
+    </div>
+  ),
+});
 
 export default function QR() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -22,6 +31,24 @@ export default function QR() {
   const [scanResult, setScanResult] = useState('');
   const [lastGen, setLastGen] = useState('');
   const [lastScan, setLastScan] = useState('');
+  const [generatorError, setGeneratorError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateStatus = () => setIsOffline(!window.navigator.onLine);
+    updateStatus();
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    return () => {
+      window.removeEventListener('online', updateStatus);
+      window.removeEventListener('offline', updateStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOffline) setMode('generate');
+  }, [isOffline]);
 
   useEffect(() => {
     setLastGen(loadLastGeneration());
@@ -29,11 +56,11 @@ export default function QR() {
   }, []);
 
   useEffect(() => {
-    if (payload) {
+    if (payload && !generatorError) {
       saveLastGeneration(payload);
       setLastGen(payload);
     }
-  }, [payload]);
+  }, [payload, generatorError]);
 
   useEffect(() => {
     if (scanResult) {
@@ -54,16 +81,16 @@ export default function QR() {
   );
 
   const downloadPng = useCallback(() => {
-    if (!payload || !canvasRef.current) return;
+    if (!payload || !canvasRef.current || generatorError) return;
     const data = canvasRef.current.toDataURL('image/png');
     const link = document.createElement('a');
     link.href = data;
     link.download = `qr-${size}.png`;
     link.click();
-  }, [payload, size]);
+  }, [payload, size, generatorError]);
 
   const downloadSvg = useCallback(async () => {
-    if (!payload) return;
+    if (!payload || generatorError) return;
     let svg = await QRCode.toString(payload, {
       margin,
       width: size,
@@ -83,7 +110,7 @@ export default function QR() {
     link.download = `qr-${size}.svg`;
     link.click();
     URL.revokeObjectURL(url);
-  }, [payload, size, margin, ecc, logo]);
+  }, [payload, size, margin, ecc, logo, generatorError]);
 
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
@@ -102,15 +129,28 @@ export default function QR() {
           onClick={() => setMode('scan')}
           className={`px-2 py-1 rounded ${
             mode === 'scan' ? 'bg-blue-600' : 'bg-gray-600'
-          }`}
+          } ${isOffline ? 'opacity-40 cursor-not-allowed' : ''}`}
+          disabled={isOffline}
+          aria-disabled={isOffline}
         >
           Scan
         </button>
       </div>
 
+      {isOffline && (
+        <p className="text-xs text-yellow-300" role="status">
+          Offline mode caches the generator. Reconnect to use scanning features.
+        </p>
+      )}
+
       <div className="w-64 aspect-square mx-auto">
         {mode === 'generate' ? (
-          <canvas ref={canvasRef} className="w-full h-full bg-white" />
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full bg-white"
+            role="img"
+            aria-label="Generated QR preview"
+          />
         ) : (
           <Scan onResult={setScanResult} />
         )}
@@ -125,6 +165,7 @@ export default function QR() {
             margin={margin}
             ecc={ecc}
             logo={logo}
+            onValidationChange={setGeneratorError}
           />
           <div className="flex items-center gap-2 flex-wrap">
             <label htmlFor="qr-size" className="text-sm flex items-center gap-1">
@@ -176,6 +217,7 @@ export default function QR() {
                 accept="image/*"
                 onChange={handleLogo}
                 className="ml-1 rounded p-1 text-black"
+                aria-label="Upload logo image"
               />
             </label>
             {logo && (
@@ -192,6 +234,7 @@ export default function QR() {
               onClick={downloadPng}
               className="p-1 bg-blue-600 rounded"
               aria-label="Download PNG"
+              disabled={!payload || Boolean(generatorError)}
             >
               <svg
                 className="w-6 h-6"
@@ -210,6 +253,7 @@ export default function QR() {
               onClick={downloadSvg}
               className="p-1 bg-blue-600 rounded"
               aria-label="Download SVG"
+              disabled={!payload || Boolean(generatorError)}
             >
               <svg
                 className="w-6 h-6"

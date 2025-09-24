@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import {
+  escapeWifiValue,
+  sanitizeInput,
+  validateQrText,
+} from '../../../utils/qrValidation';
 
 type Preset = 'text' | 'url' | 'wifi';
 
@@ -16,6 +21,7 @@ interface Props {
   margin: number;
   ecc: 'L' | 'M' | 'Q' | 'H';
   logo?: string | null;
+  onValidationChange?: (error: string | null) => void;
 }
 
 const Presets: React.FC<Props> = ({
@@ -25,31 +31,97 @@ const Presets: React.FC<Props> = ({
   margin,
   ecc,
   logo,
+  onValidationChange,
 }) => {
   const [preset, setPreset] = useState<Preset>('text');
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
   const [wifi, setWifi] = useState<WifiData>({ ssid: '', password: '', encryption: 'WPA' });
   const [payload, setPayload] = useState('');
+  const [presetError, setPresetError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onValidationChange?.(presetError);
+  }, [presetError, onValidationChange]);
+
+  const validateUrl = (value: string) => {
+    const cleaned = sanitizeInput(value).trim();
+    if (!cleaned) {
+      return { payload: '', error: 'Enter a URL to encode.' };
+    }
+    if (!/^[a-zA-Z][\w+.-]*:/.test(cleaned)) {
+      return {
+        payload: '',
+        error: 'Include the protocol, for example https://example.com.',
+      };
+    }
+    try {
+      const normalized = new URL(cleaned).toString();
+      const { ok, sanitized, error } = validateQrText(normalized);
+      return ok
+        ? { payload: sanitized, error: null }
+        : { payload: '', error: error ?? 'Invalid URL.' };
+    } catch {
+      return { payload: '', error: 'Enter a valid URL.' };
+    }
+  };
+
+  const validateWifi = ({
+    ssid,
+    password,
+    encryption,
+  }: WifiData): { payload: string; error: string | null } => {
+    const ssidValue = sanitizeInput(ssid).trim();
+    if (!ssidValue) {
+      return { payload: '', error: 'SSID is required.' };
+    }
+    const passwordValue = sanitizeInput(password);
+    if (encryption !== 'nopass' && passwordValue.length < 8) {
+      return { payload: '', error: 'Password must be at least 8 characters.' };
+    }
+    const encoded = `WIFI:T:${
+      encryption === 'nopass' ? '' : encryption
+    };S:${escapeWifiValue(ssidValue)};P:${
+      encryption === 'nopass' ? '' : escapeWifiValue(passwordValue)
+    };;`;
+    const { ok, sanitized, error } = validateQrText(encoded);
+    return ok
+      ? { payload: sanitized, error: null }
+      : { payload: '', error: error ?? 'Invalid Wi-Fi configuration.' };
+  };
 
   useEffect(() => {
     let value = '';
-    if (preset === 'text') value = text;
-    if (preset === 'url') value = url;
+    let error: string | null = null;
+    if (preset === 'text') {
+      if (!text) {
+        error = 'Enter text to encode.';
+      } else {
+        const { ok, sanitized, error: validationError } = validateQrText(text);
+        if (ok) value = sanitized;
+        else error = validationError ?? 'Invalid text.';
+      }
+    }
+    if (preset === 'url') {
+      const { payload: urlPayload, error: urlError } = validateUrl(url);
+      value = urlPayload;
+      error = urlError;
+    }
     if (preset === 'wifi') {
-      const { ssid, password, encryption } = wifi;
-      const enc = encryption === 'nopass' ? '' : encryption;
-      value = `WIFI:T:${enc};S:${ssid};P:${password};;`;
+      const { payload: wifiPayload, error: wifiError } = validateWifi(wifi);
+      value = wifiPayload;
+      error = wifiError;
     }
     setPayload(value);
     onPayloadChange?.(value);
+    setPresetError(error);
   }, [preset, text, url, wifi, onPayloadChange]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    if (!payload) {
+    if (!payload || presetError) {
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       return;
@@ -78,8 +150,9 @@ const Presets: React.FC<Props> = ({
       .catch(() => {
         const ctx = canvas.getContext('2d');
         if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setPresetError((prev) => prev ?? 'Failed to render QR code.');
       });
-  }, [payload, canvasRef, size, margin, ecc, logo]);
+  }, [payload, canvasRef, size, margin, ecc, logo, presetError]);
 
   const copyPayload = async () => {
     if (!payload) return;
@@ -114,8 +187,9 @@ const Presets: React.FC<Props> = ({
               id="preset-text"
               type="text"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => setText(sanitizeInput(e.target.value))}
               className="w-full mt-1 rounded p-1 text-black"
+              aria-label="Text payload"
             />
           </label>
         )}
@@ -127,40 +201,54 @@ const Presets: React.FC<Props> = ({
               id="preset-url"
               type="url"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => setUrl(sanitizeInput(e.target.value))}
               className="w-full mt-1 rounded p-1 text-black"
+              aria-label="URL payload"
             />
           </label>
         )}
 
         {preset === 'wifi' && (
           <div className="space-y-2 text-sm">
-            <label className="block">
+            <label className="block" htmlFor="wifi-ssid">
               SSID
               <input
+                id="wifi-ssid"
                 type="text"
                 value={wifi.ssid}
-                onChange={(e) => setWifi({ ...wifi, ssid: e.target.value })}
-                className="w-full mt-1 rounded p-1 text-black"
-              />
-            </label>
-            <label className="block">
-              Password
-              <input
-                type="text"
-                value={wifi.password}
-                onChange={(e) => setWifi({ ...wifi, password: e.target.value })}
-                className="w-full mt-1 rounded p-1 text-black"
-              />
-            </label>
-            <label className="block">
-              Encryption
-              <select
-                value={wifi.encryption}
                 onChange={(e) =>
-                  setWifi({ ...wifi, encryption: e.target.value as WifiData['encryption'] })
+                  setWifi({ ...wifi, ssid: sanitizeInput(e.target.value) })
                 }
                 className="w-full mt-1 rounded p-1 text-black"
+                aria-label="Wi-Fi SSID"
+              />
+            </label>
+            <label className="block" htmlFor="wifi-password">
+              Password
+              <input
+                id="wifi-password"
+                type="text"
+                value={wifi.password}
+                onChange={(e) =>
+                  setWifi({ ...wifi, password: sanitizeInput(e.target.value) })
+                }
+                className="w-full mt-1 rounded p-1 text-black"
+                aria-label="Wi-Fi password"
+              />
+            </label>
+            <label className="block" htmlFor="wifi-encryption">
+              Encryption
+              <select
+                id="wifi-encryption"
+                value={wifi.encryption}
+                onChange={(e) =>
+                  setWifi({
+                    ...wifi,
+                    encryption: e.target.value as WifiData['encryption'],
+                  })
+                }
+                className="w-full mt-1 rounded p-1 text-black"
+                aria-label="Wi-Fi encryption"
               >
                 <option value="WPA">WPA/WPA2</option>
                 <option value="WEP">WEP</option>
@@ -171,7 +259,13 @@ const Presets: React.FC<Props> = ({
         )}
       </div>
 
-      {payload && (
+      {presetError && (
+        <p className="text-xs text-red-300" role="alert">
+          {presetError}
+        </p>
+      )}
+
+      {payload && !presetError && (
         <div className="space-y-2">
           <p className="break-all text-sm">{payload}</p>
           <div className="flex gap-2">
