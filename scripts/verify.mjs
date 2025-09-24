@@ -40,18 +40,39 @@ const getPort = () =>
     await run('yarn', ['build']);
 
     const port = await getPort();
+    const baseUrl = `http://localhost:${port}`;
     const server = spawn('yarn', ['start', '-p', String(port)], { stdio: 'inherit' });
     process.on('exit', () => server.kill());
-    await waitOn({ resources: [`http://localhost:${port}`], timeout: 60000 });
+    await waitOn({ resources: [baseUrl], timeout: 60000 });
 
-    const routes = ['/', '/dummy-form', '/video-gallery', '/profile'];
-    for (const route of routes) {
-      const res = await fetch(`http://localhost:${port}${route}`);
+    const verifyRoute = async (path, { expectedStatus = 200, expectPoweredBy = true } = {}) => {
+      const res = await fetch(`${baseUrl}${path}`);
       const header = res.headers.get('x-powered-by');
-      if (res.status !== 200 || header !== 'Next.js') {
-        throw new Error(`Route ${route} failed: status ${res.status}, header ${header}`);
+
+      if (res.status !== expectedStatus) {
+        throw new Error(`Route ${path} failed: status ${res.status}`);
       }
-      console.log(`✓ ${route}`);
+
+      if (expectPoweredBy && header !== 'Next.js') {
+        throw new Error(`Route ${path} failed: header ${header}`);
+      }
+
+      console.log(`✓ ${path}`);
+    };
+
+    await verifyRoute('/api/healthz');
+
+    const routes = [
+      '/',
+      '/dummy-form',
+      '/video-gallery',
+      '/profile',
+      '/apps',
+      '/apps/2048',
+      '/apps/minesweeper',
+    ];
+    for (const route of routes) {
+      await verifyRoute(route);
     }
 
     console.log('verify: PASS');
