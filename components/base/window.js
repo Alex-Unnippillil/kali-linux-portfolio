@@ -14,14 +14,16 @@ export class Window extends Component {
         this.id = null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        const baseWidth = props.defaultWidth ?? (isPortrait ? 90 : 60);
+        const baseHeight = props.defaultHeight ?? 85;
         this.startX =
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = props.initialY ?? 10;
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: props.initialWidth ?? baseWidth,
+            height: props.initialHeight ?? baseHeight,
             closed: false,
             maximized: false,
             parentSize: {
@@ -56,6 +58,19 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.notifyGeometryChange();
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevState.width !== this.state.width ||
+            prevState.height !== this.state.height ||
+            prevState.maximized !== this.state.maximized ||
+            prevState.snapped !== this.state.snapped ||
+            prevProps.minimized !== this.props.minimized
+        ) {
+            this.notifyGeometryChange();
+        }
     }
 
     componentWillUnmount() {
@@ -71,7 +86,27 @@ export class Window extends Component {
         }
     }
 
+    notifyGeometryChange = () => {
+        if (typeof this.props.onGeometryChange === 'function') {
+            this.props.onGeometryChange(this.id, {
+                width: this.state.width,
+                height: this.state.height,
+                maximized: this.state.maximized,
+                snapped: this.state.snapped,
+                minimized: !!this.props.minimized,
+            });
+        }
+    }
+
     setDefaultWindowDimenstion = () => {
+        if (this.props.initialWidth !== undefined || this.props.initialHeight !== undefined) {
+            this.setState({
+                width: this.props.initialWidth ?? this.state.width,
+                height: this.props.initialHeight ?? this.state.height,
+            }, this.resizeBoundries);
+            return;
+        }
+
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
@@ -634,7 +669,11 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{
+                            width: `${this.state.width}%`,
+                            height: `${this.state.height}%`,
+                            zIndex: this.props.zIndex ?? (this.props.isFocused ? 30 : 20),
+                        }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
