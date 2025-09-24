@@ -7,6 +7,9 @@ function AppMenu(props) {
     useFocusTrap(menuRef, props.active)
     useRovingTabIndex(menuRef, props.active, 'vertical')
 
+    const hasContextApp = Boolean(props.contextApp)
+    const isPinnedActionDisabled = !hasContextApp || props.contextApp.disabled
+
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             props.onClose && props.onClose()
@@ -14,12 +17,19 @@ function AppMenu(props) {
     }
 
     const handlePin = () => {
+        if (isPinnedActionDisabled) {
+            return
+        }
         if (props.pinned) {
             props.unpinApp && props.unpinApp()
         } else {
             props.pinApp && props.pinApp()
         }
     }
+
+    const buttonClass = `w-full text-left cursor-default py-0.5 mb-1.5 ${
+        isPinnedActionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'
+    }`
 
     return (
         <div
@@ -35,7 +45,9 @@ function AppMenu(props) {
                 onClick={handlePin}
                 role="menuitem"
                 aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                disabled={isPinnedActionDisabled}
+                aria-disabled={isPinnedActionDisabled}
+                className={buttonClass}
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
             </button>

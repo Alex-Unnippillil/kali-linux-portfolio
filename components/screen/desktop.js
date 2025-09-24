@@ -864,6 +864,9 @@ export class Desktop extends Component {
     }
 
     render() {
+        const contextApp = this.state.context_app
+            ? apps.find((app) => app.id === this.state.context_app)
+            : null;
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -916,13 +919,15 @@ export class Desktop extends Component {
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
                     active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
+                    pinned={Boolean(this.initFavourite[this.state.context_app])}
+                    contextApp={contextApp}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
+                    contextApp={contextApp}
                     minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
                     onMinimize={() => {
                         const id = this.state.context_app;

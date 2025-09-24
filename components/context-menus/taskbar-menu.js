@@ -7,6 +7,8 @@ function TaskbarMenu(props) {
     useFocusTrap(menuRef, props.active);
     useRovingTabIndex(menuRef, props.active, 'vertical');
 
+    const hasContextApp = Boolean(props.contextApp);
+
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             props.onCloseMenu && props.onCloseMenu();
@@ -14,14 +16,25 @@ function TaskbarMenu(props) {
     };
 
     const handleMinimize = () => {
+        if (!hasContextApp) {
+            return;
+        }
         props.onMinimize && props.onMinimize();
         props.onCloseMenu && props.onCloseMenu();
     };
 
     const handleClose = () => {
+        if (!hasContextApp) {
+            return;
+        }
         props.onClose && props.onClose();
         props.onCloseMenu && props.onCloseMenu();
     };
+
+    const buttonClass = (disabled) =>
+        `w-full text-left cursor-default py-0.5 mb-1.5 ${
+            disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'
+        }`;
 
     return (
         <div
@@ -37,7 +50,9 @@ function TaskbarMenu(props) {
                 onClick={handleMinimize}
                 role="menuitem"
                 aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                disabled={!hasContextApp}
+                aria-disabled={!hasContextApp}
+                className={buttonClass(!hasContextApp)}
             >
                 <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
             </button>
@@ -46,7 +61,9 @@ function TaskbarMenu(props) {
                 onClick={handleClose}
                 role="menuitem"
                 aria-label="Close Window"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                disabled={!hasContextApp}
+                aria-disabled={!hasContextApp}
+                className={buttonClass(!hasContextApp)}
             >
                 <span className="ml-5">Close</span>
             </button>
