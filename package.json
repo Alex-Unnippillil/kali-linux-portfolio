@@ -17,6 +17,7 @@
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "a11y": "node scripts/a11y.mjs",
+    "presmoke": "node scripts/generate-smoke-list.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
