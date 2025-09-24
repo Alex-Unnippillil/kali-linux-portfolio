@@ -9,6 +9,7 @@ async function man(args: string, ctx: CommandContext) {
   const loaders: Record<string, () => Promise<string>> = {
     alias: () => fetch(new URL('../man/alias.txt', import.meta.url)).then((r) => r.text()),
     cat: () => fetch(new URL('../man/cat.txt', import.meta.url)).then((r) => r.text()),
+    hash: () => fetch(new URL('../man/hash.txt', import.meta.url)).then((r) => r.text()),
     grep: () => fetch(new URL('../man/grep.txt', import.meta.url)).then((r) => r.text()),
     history: () => fetch(new URL('../man/history.txt', import.meta.url)).then((r) => r.text()),
     jq: () => fetch(new URL('../man/jq.txt', import.meta.url)).then((r) => r.text()),
@@ -44,6 +45,8 @@ const registry: Record<string, CommandHandler> = {
   cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
   grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
   jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
+  hash: (args, ctx) =>
+    ctx.runWorker(args.trim() ? `hash ${args}` : 'hash'),
 };
 
 export default registry;

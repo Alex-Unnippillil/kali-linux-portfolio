@@ -1,0 +1,15 @@
+HASH
+    Simulate a CPU-intensive hashing run without blocking the UI.
+
+SYNOPSIS
+    hash <text>
+    <command> | hash
+
+DESCRIPTION
+    Runs a fake hashing routine inside a Web Worker. The worker performs
+    heavy computation in chunks and streams progress back to the terminal,
+    demonstrating how long-running tasks can stay responsive.
+
+EXAMPLES
+    hash secret
+    cat payload.txt | hash
