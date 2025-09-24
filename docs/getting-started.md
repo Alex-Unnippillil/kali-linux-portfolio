@@ -4,7 +4,7 @@ This project is built with [Next.js](https://nextjs.org/).
 
 ## Prerequisites
 
-- Node.js 20
+- Node.js 20.19.5 (install via `.nvmrc` to match CI and Vercel)
 - yarn or npm
 
 ## Installation
