@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Matter from 'matter-js';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
 
@@ -68,6 +67,18 @@ const Pinball = () => {
   const multiplierTimeout = useRef();
   const comboTimeout = useRef();
   const highScoreRef = useRef(0);
+  const [matter, setMatter] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    import('matter-js').then((mod) => {
+      if (!mounted) return;
+      setMatter(mod.default || mod);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     highScoreRef.current = highScore;
@@ -95,8 +106,8 @@ const Pinball = () => {
   }, [lightsEnabled]);
 
   useEffect(() => {
-    if (!canvasRef.current || editing) return;
-    const { Engine, Render, Runner, Bodies, Composite, Body, Constraint, Events } = Matter;
+    if (!canvasRef.current || editing || !matter) return;
+    const { Engine, Render, Runner, Bodies, Composite, Body, Constraint, Events } = matter;
     const engine = Engine.create();
     engine.positionIterations = 8;
     engine.velocityIterations = 6;
@@ -399,7 +410,16 @@ const Pinball = () => {
       clearTimeout(multiplierTimeout.current);
       clearTimeout(comboTimeout.current);
     };
-  }, [canvasRef, layout, editing, tilt, prefersReducedMotion, table, setHighScores]);
+  }, [
+    canvasRef,
+    layout,
+    editing,
+    tilt,
+    prefersReducedMotion,
+    table,
+    setHighScores,
+    matter,
+  ]);
 
   const handleClick = (e) => {
     if (!editing || !canvasRef.current) return;

@@ -1,8 +1,15 @@
 "use client";
 
-import Phaser from 'phaser';
 import { Howl } from 'howler';
 import { getDb } from '../../utils/safeIDB';
+
+let cachedPhaserPromise;
+const loadPhaser = async () => {
+  if (!cachedPhaserPromise) {
+    cachedPhaserPromise = import('phaser').then((mod) => mod.default || mod);
+  }
+  return cachedPhaserPromise;
+};
 
 // IndexedDB helpers for persistent highscore
 const DB_NAME = 'phaser-template';
@@ -41,69 +48,75 @@ async function setHighscore(score) {
 // Daily challenge seed based on YYYY-MM-DD
 export const dailySeed = new Date().toISOString().slice(0, 10);
 
-// Simple Phaser scene demonstrating fixed timestep physics and controls
-class GameScene extends Phaser.Scene {
-  constructor() {
-    super('game');
-    this.accumulator = 0;
-    this.fixedStep = 1 / 60; // 60 Hz physics
-    this.score = 0;
-    this.highscore = 0;
-  }
-
-  async create() {
-    this.highscore = await getHighscore();
-    this.scoreText = this.add.text(10, 10, 'Score: 0', { color: '#fff' });
-    this.highText = this.add.text(10, 30, `Highscore: ${this.highscore}`, { color: '#fff' });
-
-    // Input setup
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.input.keyboard.on('keydown-P', () => this.togglePause());
-    this.input.keyboard.on('keydown-R', () => this.scene.restart());
-    this.input.on('pointerdown', () => this.handleAction());
-
-    // Howler audio example
-    this.jumpSound = new Howl({ src: ['jump.mp3'], volume: 0.5 });
-  }
-
-  togglePause() {
-    if (this.scene.isPaused()) this.scene.resume();
-    else this.scene.pause();
-  }
-
-  handleAction() {
-    this.jumpSound.play();
-    this.score += 1;
-    this.scoreText.setText(`Score: ${this.score}`);
-  }
-
-  update(time, delta) {
-    const dt = delta / 1000;
-    this.accumulator += dt;
-
-    while (this.accumulator >= this.fixedStep) {
-      this.physicsStep(this.fixedStep);
-      this.accumulator -= this.fixedStep;
+const createGameScene = (Phaser) => {
+  // Simple Phaser scene demonstrating fixed timestep physics and controls
+  return class GameScene extends Phaser.Scene {
+    constructor() {
+      super('game');
+      this.accumulator = 0;
+      this.fixedStep = 1 / 60; // 60 Hz physics
+      this.score = 0;
+      this.highscore = 0;
     }
-  }
 
-  physicsStep(dt) {
-    // Example physics update
-    if (this.cursors.left.isDown) {
-      // move player left (placeholder)
+    async create() {
+      this.highscore = await getHighscore();
+      this.scoreText = this.add.text(10, 10, 'Score: 0', { color: '#fff' });
+      this.highText = this.add.text(10, 30, `Highscore: ${this.highscore}`, {
+        color: '#fff',
+      });
+
+      // Input setup
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.input.keyboard.on('keydown-P', () => this.togglePause());
+      this.input.keyboard.on('keydown-R', () => this.scene.restart());
+      this.input.on('pointerdown', () => this.handleAction());
+
+      // Howler audio example
+      this.jumpSound = new Howl({ src: ['jump.mp3'], volume: 0.5 });
     }
-  }
 
-  async gameOver() {
-    if (this.score > this.highscore) {
-      await setHighscore(this.score);
-      this.highscore = this.score;
-      this.highText.setText(`Highscore: ${this.highscore}`);
+    togglePause() {
+      if (this.scene.isPaused()) this.scene.resume();
+      else this.scene.pause();
     }
-  }
-}
 
-export function startPhaserGame(parent) {
+    handleAction() {
+      this.jumpSound.play();
+      this.score += 1;
+      this.scoreText.setText(`Score: ${this.score}`);
+    }
+
+    update(time, delta) {
+      const dt = delta / 1000;
+      this.accumulator += dt;
+
+      while (this.accumulator >= this.fixedStep) {
+        this.physicsStep(this.fixedStep);
+        this.accumulator -= this.fixedStep;
+      }
+    }
+
+    physicsStep(dt) {
+      // Example physics update
+      if (this.cursors.left.isDown) {
+        // move player left (placeholder)
+      }
+    }
+
+    async gameOver() {
+      if (this.score > this.highscore) {
+        await setHighscore(this.score);
+        this.highscore = this.score;
+        this.highText.setText(`Highscore: ${this.highscore}`);
+      }
+    }
+  };
+};
+
+export async function startPhaserGame(parent) {
+  const Phaser = await loadPhaser();
+  const GameScene = createGameScene(Phaser);
   const config = {
     type: Phaser.AUTO,
     width: 320,
