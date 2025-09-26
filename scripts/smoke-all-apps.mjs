@@ -3,6 +3,12 @@ import fs from 'fs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
+const writeLog = (results) => {
+  if (process.env.SMOKE_LOG) {
+    fs.writeFileSync(process.env.SMOKE_LOG, JSON.stringify(results, null, 2));
+  }
+};
+
 (async () => {
   const browsers = [
     { name: 'chromium', type: chromium },
@@ -55,7 +61,6 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
     '/apps/x',
   ];
 
-  let hadError = false;
   const results = [];
 
   for (const { name, type } of browsers) {
@@ -86,25 +91,26 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
       } catch (err) {
         error = err.message;
       }
+      const entry = { browser: name, route, error };
+
       if (error) {
-        hadError = true;
         console.error(`[${name}] Error on ${route}: ${error}`);
+        results.push(entry);
+        await page.close();
+        await context.close();
+        await browser.close();
+        writeLog(results);
+        process.exit(1);
       }
-      results.push({ browser: name, route, error });
+
       await page.close();
+      results.push(entry);
     }
 
     await browser.close();
   }
 
-  if (hadError) {
-    console.error('Completed with errors');
-  } else {
-    console.log('All app routes loaded without console errors.');
-  }
+  console.log('All app routes loaded without console errors.');
 
-  // Write results to log file if TEST_LOG env variable provided
-  if (process.env.SMOKE_LOG) {
-    fs.writeFileSync(process.env.SMOKE_LOG, JSON.stringify(results, null, 2));
-  }
+  writeLog(results);
 })();
