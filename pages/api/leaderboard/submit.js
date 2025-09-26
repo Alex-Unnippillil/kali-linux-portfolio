@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 export default async function handler(
   req,
@@ -6,7 +7,9 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    res.status(405).end('Method Not Allowed');
+    res
+      .status(405)
+      .json(createErrorResponse('Method not allowed'));
     return;
   }
 
@@ -17,7 +20,7 @@ export default async function handler(
     typeof username !== 'string' ||
     typeof score !== 'number'
   ) {
-    res.status(400).json({ error: 'Invalid payload' });
+    res.status(400).json(createErrorResponse('Invalid payload'));
     return;
   }
 
@@ -25,7 +28,9 @@ export default async function handler(
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     console.warn('Leaderboard submission disabled: missing Supabase env');
-    res.status(503).json({ error: 'Leaderboard unavailable' });
+    res
+      .status(503)
+      .json(createErrorResponse('Leaderboard unavailable'));
     return;
   }
 
@@ -35,7 +40,7 @@ export default async function handler(
     .insert({ game, username: username.slice(0, 50), score });
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json(createErrorResponse(error.message));
     return;
   }
 

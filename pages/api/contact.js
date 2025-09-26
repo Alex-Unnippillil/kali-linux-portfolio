@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -14,9 +15,15 @@ export default async function handler(req, res) {
     validateServerEnv(process.env);
   } catch {
     if (!process.env.RECAPTCHA_SECRET) {
-      res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
+      res.status(503).json({
+        ok: false,
+        code: 'recaptcha_disabled',
+        ...createErrorResponse('Captcha service not configured'),
+      });
     } else {
-      res.status(500).json({ ok: false });
+      res
+        .status(500)
+        .json({ ok: false, ...createErrorResponse('Server misconfiguration') });
     }
 
     return;
@@ -32,7 +39,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    res.status(405).json({ ok: false });
+    res
+      .status(405)
+      .json({ ok: false, ...createErrorResponse('Method not allowed') });
     return;
   }
 
@@ -53,7 +62,16 @@ export default async function handler(req, res) {
   }
   if (entry.count > RATE_LIMIT_MAX) {
     console.warn('Contact submission rejected', { ip, reason: 'rate_limit' });
-    res.status(429).json({ ok: false, code: 'rate_limit' });
+    const msRemaining = Math.max(0, entry.start + RATE_LIMIT_WINDOW_MS - now);
+    const retryAfterSeconds = Math.max(1, Math.ceil(msRemaining / 1000));
+    res.setHeader('Retry-After', String(retryAfterSeconds));
+    res.status(429).json({
+      ok: false,
+      code: 'rate_limit',
+      ...createErrorResponse('Rate limit exceeded', {
+        retryAfter: retryAfterSeconds,
+      }),
+    });
     return;
   }
 
@@ -61,7 +79,11 @@ export default async function handler(req, res) {
   const csrfCookie = req.cookies?.csrfToken;
   if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_csrf' });
-    res.status(403).json({ ok: false, code: 'invalid_csrf' });
+    res.status(403).json({
+      ok: false,
+      code: 'invalid_csrf',
+      ...createErrorResponse('Invalid CSRF token'),
+    });
     return;
   }
 
@@ -69,12 +91,20 @@ export default async function handler(req, res) {
   const secret = process.env.RECAPTCHA_SECRET;
   if (!secret) {
     console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
-    res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
+    res.status(503).json({
+      ok: false,
+      code: 'recaptcha_disabled',
+      ...createErrorResponse('Captcha service not configured'),
+    });
     return;
   }
   if (!recaptchaToken) {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
-    res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
+    res.status(400).json({
+      ok: false,
+      code: 'invalid_recaptcha',
+      ...createErrorResponse('Captcha verification failed'),
+    });
     return;
   }
   try {
@@ -94,12 +124,20 @@ export default async function handler(req, res) {
     const captcha = await verify.json();
     if (!captcha.success) {
       console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
-      res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
+      res.status(400).json({
+        ok: false,
+        code: 'invalid_recaptcha',
+        ...createErrorResponse('Captcha verification failed'),
+      });
       return;
     }
   } catch {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
-    res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
+    res.status(400).json({
+      ok: false,
+      code: 'invalid_recaptcha',
+      ...createErrorResponse('Captcha verification failed'),
+    });
     return;
   }
 
@@ -108,13 +146,21 @@ export default async function handler(req, res) {
     const parsed = contactSchema.parse({ ...rest, csrfToken: csrfHeader, recaptchaToken });
     if (parsed.honeypot) {
       console.warn('Contact submission rejected', { ip, reason: 'honeypot' });
-      res.status(400).json({ ok: false, code: 'invalid_input' });
+      res.status(400).json({
+        ok: false,
+        code: 'invalid_input',
+        ...createErrorResponse('Invalid input'),
+      });
       return;
     }
     sanitized = { name: parsed.name, email: parsed.email, message: parsed.message };
   } catch {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_input' });
-    res.status(400).json({ ok: false, code: 'invalid_input' });
+    res.status(400).json({
+      ok: false,
+      code: 'invalid_input',
+      ...createErrorResponse('Invalid input'),
+    });
     return;
   }
 

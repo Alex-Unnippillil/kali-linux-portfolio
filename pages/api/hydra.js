@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import path from 'path';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 const execFileAsync = promisify(execFile);
 const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
@@ -12,13 +13,13 @@ export default async function handler(req, res) {
     process.env.FEATURE_TOOL_APIS !== 'enabled' ||
     process.env.FEATURE_HYDRA !== 'enabled'
   ) {
-    res.status(501).json({ error: 'Not implemented' });
+    res.status(501).json(createErrorResponse('Not implemented'));
     return;
   }
   // Hydra is an optional external dependency. Environments without the
   // actual binary may stub this handler for demonstration purposes.
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json(createErrorResponse('Method not allowed'));
     return;
   }
 
@@ -33,13 +34,13 @@ export default async function handler(req, res) {
     try {
       await fs.copyFile(sessionFile, restoreFile);
     } catch {
-      res.status(400).json({ error: 'No saved session' });
+      res.status(400).json(createErrorResponse('No saved session'));
       return;
     }
     try {
       await execFileAsync('which', ['hydra']);
     } catch {
-      res.status(500).json({ error: 'Hydra not installed' });
+      res.status(500).json(createErrorResponse('Hydra not installed'));
       return;
     }
     try {
@@ -50,7 +51,7 @@ export default async function handler(req, res) {
       res.status(200).json({ output: stdout.toString() });
     } catch (error) {
       const msg = error.stderr?.toString() || error.message;
-      res.status(500).json({ error: msg });
+      res.status(500).json(createErrorResponse(msg));
     } finally {
       await fs.copyFile(restoreFile, sessionFile).catch(() => {});
     }
@@ -58,11 +59,11 @@ export default async function handler(req, res) {
   }
 
   if (!target || !service || !userList || !passList) {
-    res.status(400).json({ error: 'Missing parameters' });
+    res.status(400).json(createErrorResponse('Missing parameters'));
     return;
   }
   if (!allowed.has(service)) {
-    res.status(400).json({ error: 'Unsupported service' });
+    res.status(400).json(createErrorResponse('Unsupported service'));
     return;
   }
 
@@ -73,7 +74,7 @@ export default async function handler(req, res) {
     await fs.writeFile(userPath, userList);
     await fs.writeFile(passPath, passList);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json(createErrorResponse(err.message));
     return;
   }
 
@@ -84,7 +85,7 @@ export default async function handler(req, res) {
       fs.unlink(userPath).catch(() => {}),
       fs.unlink(passPath).catch(() => {}),
     ]);
-    res.status(500).json({ error: 'Hydra not installed' });
+    res.status(500).json(createErrorResponse('Hydra not installed'));
     return;
   }
 
@@ -98,7 +99,7 @@ export default async function handler(req, res) {
     res.status(200).json({ output: stdout.toString() });
   } catch (error) {
     const msg = error.stderr?.toString() || error.message;
-    res.status(500).json({ error: msg });
+    res.status(500).json(createErrorResponse(msg));
   } finally {
     await Promise.all([
       fs.unlink(userPath).catch(() => {}),

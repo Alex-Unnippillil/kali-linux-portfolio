@@ -1,18 +1,19 @@
 import modules from '../../components/apps/metasploit/modules.json';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 export default function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
-    res.status(501).json({ error: 'Not implemented' });
+    res.status(501).json(createErrorResponse('Not implemented'));
     return;
   }
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    return res.status(405).end('Method Not Allowed');
+    return res.status(405).json(createErrorResponse('Method not allowed'));
   }
 
   const { command } = req.body || {};
   if (!command || typeof command !== 'string') {
-    return res.status(400).json({ error: 'No command provided' });
+    return res.status(400).json(createErrorResponse('No command provided'));
   }
 
   const trimmed = command.trim();

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 export default function handler(req, res) {
   const { name } = req.query;
@@ -7,7 +8,7 @@ export default function handler(req, res) {
   const catalogDir = path.join(process.cwd(), 'plugins', 'catalog');
   const filePath = path.join(catalogDir, filename || '');
   if (!filePath.startsWith(catalogDir)) {
-    res.status(400).end('Invalid path');
+    res.status(400).json(createErrorResponse('Invalid path'));
     return;
   }
   try {
@@ -19,6 +20,6 @@ export default function handler(req, res) {
     }
     res.send(data);
   } catch {
-    res.status(404).end('Not found');
+    res.status(404).json(createErrorResponse('Not found'));
   }
 }
