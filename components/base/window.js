@@ -26,12 +26,21 @@ const computeSnapRegions = (viewportWidth, viewportHeight) => {
     const halfWidth = viewportWidth / 2;
     const availableHeight = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
     const topHeight = Math.min(availableHeight, viewportHeight / 2);
+    const cornerHeight = Math.max(0, availableHeight / 2);
+    const bottomTop = Math.max(0, availableHeight - cornerHeight);
     return {
         left: { left: 0, top: 0, width: halfWidth, height: availableHeight },
         right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
         top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
+        'top-left': { left: 0, top: 0, width: halfWidth, height: cornerHeight },
+        'top-right': { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: cornerHeight },
+        'bottom-left': { left: 0, top: bottomTop, width: halfWidth, height: cornerHeight },
+        'bottom-right': { left: viewportWidth - halfWidth, top: bottomTop, width: halfWidth, height: cornerHeight },
     };
 };
+
+const SNAP_SOURCE_DRAG = 'drag';
+const SNAP_SOURCE_KEYBOARD = 'keyboard';
 
 export class Window extends Component {
     constructor(props) {
@@ -55,13 +64,17 @@ export class Window extends Component {
             },
             snapPreview: null,
             snapPosition: null,
+            snapSource: null,
             snapped: null,
             lastSize: null,
             grabbed: false,
+            prefersReducedMotion: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._keyboardSnapKey = null;
+        this._reduceMotionMedia = null;
     }
 
     componentDidMount() {
@@ -81,6 +94,15 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            this._reduceMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+            this.setState({ prefersReducedMotion: this._reduceMotionMedia.matches });
+            if (typeof this._reduceMotionMedia.addEventListener === 'function') {
+                this._reduceMotionMedia.addEventListener('change', this.handleMotionPreferenceChange);
+            } else if (typeof this._reduceMotionMedia.addListener === 'function') {
+                this._reduceMotionMedia.addListener(this.handleMotionPreferenceChange);
+            }
+        }
     }
 
     componentWillUnmount() {
@@ -94,6 +116,17 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._reduceMotionMedia) {
+            if (typeof this._reduceMotionMedia.removeEventListener === 'function') {
+                this._reduceMotionMedia.removeEventListener('change', this.handleMotionPreferenceChange);
+            } else if (typeof this._reduceMotionMedia.removeListener === 'function') {
+                this._reduceMotionMedia.removeListener(this.handleMotionPreferenceChange);
+            }
+        }
+    }
+
+    handleMotionPreferenceChange = (event) => {
+        this.setState({ prefersReducedMotion: event.matches });
     }
 
     setDefaultWindowDimenstion = () => {
@@ -273,11 +306,15 @@ export class Window extends Component {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                snapPreview: null,
+                snapPosition: null,
+                snapSource: null,
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, snapPreview: null, snapPosition: null, snapSource: null }, this.resizeBoundries);
         }
+        this._keyboardSnapKey = null;
     }
 
     snapWindow = (position) => {
@@ -297,11 +334,13 @@ export class Window extends Component {
         this.setState({
             snapPreview: null,
             snapPosition: null,
+            snapSource: null,
             snapped: position,
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
         }, this.resizeBoundries);
+        this._keyboardSnapKey = null;
     }
 
     checkOverlap = () => {
@@ -329,6 +368,74 @@ export class Window extends Component {
         }
     }
 
+    setSnapPreviewState = (position, preview, source) => {
+        const samePosition = this.state.snapPosition === position && this.state.snapSource === source;
+        const samePreview =
+            this.state.snapPreview &&
+            this.state.snapPreview.left === preview.left &&
+            this.state.snapPreview.top === preview.top &&
+            this.state.snapPreview.width === preview.width &&
+            this.state.snapPreview.height === preview.height;
+        if (!samePosition || !samePreview) {
+            this.setState({ snapPreview: preview, snapPosition: position, snapSource: source });
+        }
+    }
+
+    clearSnapPreviewState = () => {
+        if (this.state.snapPreview || this.state.snapPosition || this.state.snapSource) {
+            this.setState({ snapPreview: null, snapPosition: null, snapSource: null });
+        }
+    }
+
+    clearKeyboardPreview = () => {
+        this._keyboardSnapKey = null;
+        if (this.state.snapSource === SNAP_SOURCE_KEYBOARD) {
+            this.clearSnapPreviewState();
+        }
+    }
+
+    getSnapPositionForShortcut = (key, shiftKey) => {
+        if (shiftKey) {
+            switch (key) {
+                case 'ArrowUp':
+                    return 'top-left';
+                case 'ArrowRight':
+                    return 'top-right';
+                case 'ArrowDown':
+                    return 'bottom-right';
+                case 'ArrowLeft':
+                    return 'bottom-left';
+                default:
+                    return null;
+            }
+        }
+        switch (key) {
+            case 'ArrowLeft':
+                return 'left';
+            case 'ArrowRight':
+                return 'right';
+            case 'ArrowUp':
+                return 'top';
+            default:
+                return null;
+        }
+    }
+
+    previewKeyboardSnap = (position, key) => {
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        if (!viewportWidth || !viewportHeight) return false;
+        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const preview = regions[position];
+        if (!preview || preview.width <= 0 || preview.height <= 0) {
+            this.clearKeyboardPreview();
+            return false;
+        }
+        this.setSnapPreviewState(position, preview, SNAP_SOURCE_KEYBOARD);
+        this._keyboardSnapKey = key;
+        return true;
+    }
+
     checkSnapPreview = () => {
         const node = document.getElementById(this.id);
         if (!node) return;
@@ -341,29 +448,34 @@ export class Window extends Component {
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const regions = computeSnapRegions(viewportWidth, viewportHeight);
 
+        const nearTop = rect.top <= verticalThreshold;
+        const nearLeft = rect.left <= horizontalThreshold;
+        const nearRight = viewportWidth - rect.right <= horizontalThreshold;
+        const bottomDistance = Math.abs(Math.max(0, viewportHeight - SNAP_BOTTOM_INSET) - rect.bottom);
+        const nearBottom = bottomDistance <= verticalThreshold;
+
         let candidate = null;
-        if (rect.top <= verticalThreshold && regions.top.height > 0) {
+        if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
+            candidate = { position: 'top-left', preview: regions['top-left'] };
+        } else if (nearTop && nearRight && regions['top-right'].width > 0 && regions['top-right'].height > 0) {
+            candidate = { position: 'top-right', preview: regions['top-right'] };
+        } else if (nearBottom && nearLeft && regions['bottom-left'].width > 0 && regions['bottom-left'].height > 0) {
+            candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
+        } else if (nearBottom && nearRight && regions['bottom-right'].width > 0 && regions['bottom-right'].height > 0) {
+            candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
+        } else if (nearTop && regions.top.height > 0) {
             candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
+        } else if (nearLeft && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
+        } else if (nearRight && regions.right.width > 0) {
             candidate = { position: 'right', preview: regions.right };
         }
 
         if (candidate) {
             const { position, preview } = candidate;
-            const samePosition = this.state.snapPosition === position;
-            const samePreview =
-                this.state.snapPreview &&
-                this.state.snapPreview.left === preview.left &&
-                this.state.snapPreview.top === preview.top &&
-                this.state.snapPreview.width === preview.width &&
-                this.state.snapPreview.height === preview.height;
-            if (!samePosition || !samePreview) {
-                this.setState({ snapPreview: preview, snapPosition: position });
-            }
-        } else if (this.state.snapPreview) {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setSnapPreviewState(position, preview, SNAP_SOURCE_DRAG);
+        } else if (this.state.snapSource === SNAP_SOURCE_DRAG) {
+            this.clearSnapPreviewState();
         }
     }
 
@@ -398,11 +510,11 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
-        if (snapPos) {
-            this.snapWindow(snapPos);
-        } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+        const { snapPosition, snapSource } = this.state;
+        if (snapSource === SNAP_SOURCE_DRAG && snapPosition) {
+            this.snapWindow(snapPosition);
+        } else if (snapSource !== SNAP_SOURCE_KEYBOARD) {
+            this.clearSnapPreviewState();
         }
     }
 
@@ -555,24 +667,27 @@ export class Window extends Component {
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
+            if (e.key === 'ArrowDown' && !e.shiftKey) {
                 e.preventDefault();
                 e.stopPropagation();
+                this.clearKeyboardPreview();
                 this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
+                this.focusWindow();
+                return;
             }
-            this.focusWindow();
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+                const position = this.getSnapPositionForShortcut(e.key, e.shiftKey);
+                if (position) {
+                    const previewed = this.previewKeyboardSnap(position, e.key);
+                    if (previewed) {
+                        this.focusWindow();
+                    }
+                } else {
+                    this.clearKeyboardPreview();
+                }
+            }
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
@@ -596,8 +711,30 @@ export class Window extends Component {
         }
     }
 
+    handleKeyUp = (e) => {
+        if (this.state.snapSource === SNAP_SOURCE_KEYBOARD) {
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                if (this._keyboardSnapKey === e.key && this.state.snapPosition) {
+                    this.snapWindow(this.state.snapPosition);
+                }
+            } else if (e.key === 'Alt') {
+                this.clearKeyboardPreview();
+            }
+        }
+    }
+
     handleSuperArrow = (e) => {
-        const key = e.detail;
+        const detail = e.detail;
+        const key = typeof detail === 'object' && detail !== null ? detail.key : detail;
+        const shiftKey = typeof detail === 'object' && detail !== null ? !!detail.shiftKey : false;
+        if (!key) return;
+        if (shiftKey) {
+            const position = this.getSnapPositionForShortcut(key, true);
+            if (position) {
+                this.snapWindow(position);
+            }
+            return;
+        }
         if (key === 'ArrowLeft') {
             if (this.state.snapped === 'left') this.unsnapWindow();
             else this.snapWindow('left');
@@ -616,12 +753,20 @@ export class Window extends Component {
     }
 
     render() {
+        const overlayClasses = [
+            'fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40',
+            this.state.prefersReducedMotion ? '' : 'transition-opacity duration-150'
+        ].filter(Boolean).join(' ');
+        const minimizedClasses = this.props.minimized
+            ? ['opacity-0 invisible', this.state.prefersReducedMotion ? '' : 'duration-200'].filter(Boolean).join(' ')
+            : '';
+        const maximizedTransition = this.state.maximized && !this.state.prefersReducedMotion ? 'duration-300' : '';
         return (
             <>
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                        className={overlayClasses}
                         style={{
                             left: `${this.state.snapPreview.left}px`,
                             top: `${this.state.snapPreview.top}px`,
@@ -650,8 +795,8 @@ export class Window extends Component {
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
-                            this.state.maximized ? 'duration-300' : '',
-                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+                            maximizedTransition,
+                            minimizedClasses,
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             this.props.isFocused ? 'z-30' : 'z-20',
@@ -665,6 +810,7 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onKeyUp={this.handleKeyUp}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
