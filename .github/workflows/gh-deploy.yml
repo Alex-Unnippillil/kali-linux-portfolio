@@ -13,9 +13,11 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: '.nvmrc'
           cache: 'yarn'
           cache-dependency-path: 'yarn.lock'
+      - name: Verify Node runtime
+        run: node scripts/check-node-version.mjs
       - name: Installing Packages
         run: yarn install --immutable
 
