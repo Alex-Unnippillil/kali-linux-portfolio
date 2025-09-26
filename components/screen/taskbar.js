@@ -18,7 +18,7 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center justify-between px-2 z-40" role="toolbar">
+        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center justify-between px-2 z-chrome" role="toolbar">
             <WorkspaceSwitcher
                 workspaces={workspaces}
                 activeWorkspace={props.activeWorkspace}
@@ -27,7 +27,7 @@ export default function Taskbar(props) {
             <div className="flex items-center overflow-x-auto">
                 {runningApps.map(app => (
 
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-chrome" role="toolbar">
             {runningApps.map(app => {
                 const isMinimized = Boolean(props.minimized_windows[app.id]);
                 const isFocused = Boolean(props.focused_windows[app.id]);

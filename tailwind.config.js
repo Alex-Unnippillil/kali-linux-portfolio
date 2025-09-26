@@ -76,6 +76,15 @@ module.exports = {
       },
       zIndex: {
         '-10': '-10',
+        background: 'var(--elevation-background)',
+        base: 'var(--elevation-base)',
+        surface: 'var(--elevation-surface)',
+        'window-resting': 'var(--elevation-window-resting)',
+        'window-focused': 'var(--elevation-window-focused)',
+        chrome: 'var(--elevation-chrome)',
+        popover: 'var(--elevation-popover)',
+        overlay: 'var(--elevation-overlay)',
+        critical: 'var(--elevation-critical)',
       },
       width: {
         'app-icon': '64px',

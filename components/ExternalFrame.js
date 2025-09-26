@@ -56,7 +56,7 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
             href={src}
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute top-2 right-2 z-10 px-2 py-1 text-xs bg-white text-black rounded opacity-0 focus-visible:opacity-100"
+            className="absolute top-2 right-2 z-surface px-2 py-1 text-xs bg-white text-black rounded opacity-0 focus-visible:opacity-100"
           >
             Open Externally
           </a>

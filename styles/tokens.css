@@ -61,6 +61,15 @@
   --radius-round: 9999px;
 
   /* Elevation */
+  --elevation-background: -10;
+  --elevation-base: 0;
+  --elevation-surface: 10;
+  --elevation-window-resting: 20;
+  --elevation-window-focused: 30;
+  --elevation-chrome: 40;
+  --elevation-popover: 50;
+  --elevation-overlay: 60;
+  --elevation-critical: 70;
   --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 
   /* Window chrome */
