@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -281,6 +286,54 @@ describe('Window keyboard dragging', () => {
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
+  });
+});
+
+describe('Window title bar interactions', () => {
+  it('toggles maximized state on double click', () => {
+    const ref = React.createRef<Window>();
+    const hideSideBar = jest.fn();
+    const originalMatchMedia = window.matchMedia;
+    (window as any).matchMedia = () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    });
+
+    try {
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={hideSideBar}
+          openApp={() => {}}
+          ref={ref}
+        />
+      );
+
+      const titleBar = screen.getByRole('button', { name: 'Test' });
+
+      act(() => {
+        fireEvent.doubleClick(titleBar);
+      });
+
+      expect(ref.current!.state.maximized).toBe(true);
+      expect(hideSideBar).toHaveBeenCalledWith('test-window', true);
+
+      act(() => {
+        fireEvent.doubleClick(titleBar);
+      });
+
+      expect(ref.current!.state.maximized).toBe(false);
+    } finally {
+      (window as any).matchMedia = originalMatchMedia;
+    }
   });
 });
 
