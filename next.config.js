@@ -4,6 +4,52 @@
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
+const NODE_CORE_MODULE_FALLBACKS = [
+  'assert',
+  'async_hooks',
+  'buffer',
+  'child_process',
+  'cluster',
+  'console',
+  'constants',
+  'crypto',
+  'dgram',
+  'diagnostics_channel',
+  'dns',
+  'domain',
+  'events',
+  'fs',
+  'fs/promises',
+  'http',
+  'http2',
+  'https',
+  'inspector',
+  'module',
+  'net',
+  'os',
+  'path',
+  'perf_hooks',
+  'process',
+  'punycode',
+  'querystring',
+  'readline',
+  'repl',
+  'stream',
+  'string_decoder',
+  'timers',
+  'tls',
+  'tty',
+  'url',
+  'util',
+  'v8',
+  'vm',
+  'worker_threads',
+  'zlib',
+].reduce((acc, moduleName) => {
+  acc[moduleName] = false;
+  return acc;
+}, {});
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Prevent injection of external base URIs
@@ -96,11 +142,12 @@ function configureWebpack(config, { isServer }) {
   };
   // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
-  config.resolve.fallback = {
-    ...(config.resolve.fallback || {}),
-    module: false,
-    async_hooks: false,
-  };
+  if (!isServer) {
+    config.resolve.fallback = {
+      ...(config.resolve.fallback || {}),
+      ...NODE_CORE_MODULE_FALLBACKS,
+    };
+  }
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
