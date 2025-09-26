@@ -512,6 +512,14 @@ export class Window extends Component {
         }
     }
 
+    handleTitleBarDoubleClick = () => {
+        if (this.state.maximized) {
+            this.restoreWindow();
+        } else {
+            this.maximizeWindow();
+        }
+    }
+
     releaseGrab = () => {
         if (this.state.grabbed) {
             this.handleStop();
@@ -648,6 +656,7 @@ export class Window extends Component {
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
                             grabbed={this.state.grabbed}
                         />
                         <WindowEditButtons
@@ -674,7 +683,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, onDoubleClick, grabbed }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +692,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
