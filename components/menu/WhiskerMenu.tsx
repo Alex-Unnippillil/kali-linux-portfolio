@@ -6,12 +6,18 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
+type ScreenFactory = ((addFolder: any, openApp: any) => JSX.Element) & {
+  prefetch?: () => void;
+  Component?: React.ComponentType<any>;
+};
+
 type AppMeta = {
   id: string;
   title: string;
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  screen?: ScreenFactory;
 };
 
 type CategorySource =
@@ -464,6 +470,7 @@ n
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    prefetch={app.screen?.prefetch}
                   />
                 </div>
               ))}
