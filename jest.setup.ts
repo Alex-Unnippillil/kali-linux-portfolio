@@ -7,6 +7,9 @@ if (typeof global.structuredClone !== 'function') {
 }
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
+import { toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
 
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore

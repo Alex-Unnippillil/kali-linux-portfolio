@@ -6,7 +6,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 
 1. **Snap-to-grid for move and resize**
    - **Accept:** Dragging and resizing snaps to an 8 px grid. Toggle in Settings.
-   - **Where:** `components/base/window/*`, `components/screen/desktop.js`, `hooks/usePersistentState.ts`.
+   - **Where:** `components/base/Window/*`, `components/screen/desktop.js`, `hooks/usePersistentState.ts`.
    - **Why:** Consistent rhythm improves perceived quality.
 
 2. **Window size presets**
