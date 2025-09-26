@@ -57,8 +57,18 @@ const securityHeaders = [
   },
 ];
 
+const analyzeSetting = process.env.ANALYZE;
+const analyzerMode =
+  analyzeSetting === 'json'
+    ? 'json'
+    : analyzeSetting === 'server'
+      ? 'server'
+      : 'static';
+
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
+  enabled: Boolean(analyzeSetting),
+  analyzerMode,
+  openAnalyzer: analyzerMode === 'server',
 });
 
 const withPWA = require('@ducanh2912/next-pwa').default({
