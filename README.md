@@ -22,15 +22,17 @@ Always test inside controlled labs and obtain written permission before performi
 ## Setup
 
 ### Requirements
-- **Node.js 20.19.5** (repo includes `.nvmrc`; run `nvm use`)
-- **Yarn** or **npm**
-- Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
+- **Node.js 20.16.0** (repo includes `.nvmrc`; run `nvm use`)
+- **Yarn 4** via Corepack (after selecting Node run `corepack enable` so the pinned Yarn version is available)
+
+Install Node first, then enable Yarn before running dependency installs so the workspace picks up the pinned toolchain.
 
 ### Install & Run (Dev)
 ```bash
 cp .env.local.example .env.local  # populate with required keys
-nvm install  # installs Node 20.19.5 from .nvmrc if needed
+nvm install  # installs Node 20.16.0 from .nvmrc if needed
 nvm use
+corepack enable  # exposes Yarn 4 pinned via packageManager
 yarn install
 yarn dev
 ```
@@ -269,7 +271,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 ### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
  - Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
- - Uses **Node 20.19.5** to match `package.json`.
+ - Uses **Node 20.16.0** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -483,7 +485,7 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Production Hardening Checklist
 
-- [x] **Pin Node to 20.19.5** across runtime and CI.
+- [x] **Pin Node to 20.16.0** across runtime and CI.
 - [ ] **Track Node.js `DEP0170` deprecation** for custom protocol URLs; update tooling/dependencies when Node fully removes support and ensure `yarn install` runs without related warnings.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
