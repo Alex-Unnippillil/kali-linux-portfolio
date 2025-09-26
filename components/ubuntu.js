@@ -7,12 +7,15 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { SettingsContext } from '../hooks/useSettings';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
+        static contextType = SettingsContext;
+
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
 			bg_image_name: 'wall-2',
 			booting_screen: true,
 			shutDownScreen: false
@@ -58,12 +61,16 @@ export default class Ubuntu extends Component {
 		}
 	};
 
-	lockScreen = () => {
-		// google analytics
-		ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Set Screen to Locked`
+        lockScreen = () => {
+                const { lockScreenOverlay } = this.context || {};
+                if (lockScreenOverlay === false) {
+                        return;
+                }
+                // google analytics
+                ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Set Screen to Locked`
 		});
 
                 const statusBar = document.getElementById('status-bar');
