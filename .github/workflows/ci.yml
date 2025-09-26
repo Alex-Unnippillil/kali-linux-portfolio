@@ -10,9 +10,33 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.x
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+          cache-dependency-path: |
+            yarn.lock
+            .yarn/install-state.gz
+      - name: Print tool versions
+        run: |
+          node -v
+          yarn -v
+      - name: Check Yarn constraints
+        run: |
+          set -o pipefail
+          yarn constraints 2>&1 | tee /tmp/yarn-constraints.log
+          ! grep -q "Done with warnings" /tmp/yarn-constraints.log
+          rm -f /tmp/yarn-constraints.log
+      - name: Ensure dependencies are deduplicated
+        run: |
+          set -o pipefail
+          yarn dedupe --check 2>&1 | tee /tmp/yarn-dedupe.log
+          ! grep -q "Done with warnings" /tmp/yarn-dedupe.log
+          rm -f /tmp/yarn-dedupe.log
+      - name: Install dependencies (immutable, no warnings)
+        run: |
+          set -o pipefail
+          yarn install --immutable --immutable-cache 2>&1 | tee /tmp/yarn-install.log
+          ! grep -q "Done with warnings" /tmp/yarn-install.log
+          rm -f /tmp/yarn-install.log
 
   lint:
     runs-on: ubuntu-latest
@@ -21,9 +45,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.x
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+          cache-dependency-path: |
+            yarn.lock
+            .yarn/install-state.gz
+      - name: Print tool versions
+        run: |
+          node -v
+          yarn -v
+      - name: Install dependencies (immutable, no warnings)
+        run: |
+          set -o pipefail
+          yarn install --immutable --immutable-cache 2>&1 | tee /tmp/yarn-install.log
+          ! grep -q "Done with warnings" /tmp/yarn-install.log
+          rm -f /tmp/yarn-install.log
       - run: npm run lint
 
   typecheck:
@@ -33,9 +69,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.x
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+          cache-dependency-path: |
+            yarn.lock
+            .yarn/install-state.gz
+      - name: Print tool versions
+        run: |
+          node -v
+          yarn -v
+      - name: Install dependencies (immutable, no warnings)
+        run: |
+          set -o pipefail
+          yarn install --immutable --immutable-cache 2>&1 | tee /tmp/yarn-install.log
+          ! grep -q "Done with warnings" /tmp/yarn-install.log
+          rm -f /tmp/yarn-install.log
       - run: npm run tsc -- --noEmit
 
   test:
@@ -45,9 +93,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.x
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+          cache-dependency-path: |
+            yarn.lock
+            .yarn/install-state.gz
+      - name: Print tool versions
+        run: |
+          node -v
+          yarn -v
+      - name: Install dependencies (immutable, no warnings)
+        run: |
+          set -o pipefail
+          yarn install --immutable --immutable-cache 2>&1 | tee /tmp/yarn-install.log
+          ! grep -q "Done with warnings" /tmp/yarn-install.log
+          rm -f /tmp/yarn-install.log
       - run: yarn test --coverage
 
   security:
@@ -57,9 +117,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.x
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+          cache-dependency-path: |
+            yarn.lock
+            .yarn/install-state.gz
+      - name: Print tool versions
+        run: |
+          node -v
+          yarn -v
+      - name: Install dependencies (immutable, no warnings)
+        run: |
+          set -o pipefail
+          yarn install --immutable --immutable-cache 2>&1 | tee /tmp/yarn-install.log
+          ! grep -q "Done with warnings" /tmp/yarn-install.log
+          rm -f /tmp/yarn-install.log
       - run: yarn npm audit
 
   vercel-preview:
@@ -73,9 +145,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.x
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+          cache-dependency-path: |
+            yarn.lock
+            .yarn/install-state.gz
+      - name: Print tool versions
+        run: |
+          node -v
+          yarn -v
+      - name: Install dependencies (immutable, no warnings)
+        run: |
+          set -o pipefail
+          yarn install --immutable --immutable-cache 2>&1 | tee /tmp/yarn-install.log
+          ! grep -q "Done with warnings" /tmp/yarn-install.log
+          rm -f /tmp/yarn-install.log
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
