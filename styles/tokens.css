@@ -60,6 +60,10 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+  /* Desktop controls */
+  --panel-size: 40px;
+  --panel-opacity: 0.5;
+  --workspace-count: 4;
 }
 
 /* High contrast theme */

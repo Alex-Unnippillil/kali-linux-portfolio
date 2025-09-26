@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import { useSettings } from '../../hooks/useSettings';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const {
+        panelPosition,
+        panelSize,
+        panelOpacity,
+        panelAutohide,
+        workspaceCount,
+        workspaceNames,
+    } = useSettings();
+    const [hovered, setHovered] = useState(false);
 
     const handleClick = (app) => {
         const id = app.id;
@@ -15,8 +25,27 @@ export default function Taskbar(props) {
         }
     };
 
+    const translate = panelAutohide && !hovered
+        ? (panelPosition === 'top' ? 'translateY(calc(-100% + 8px))' : 'translateY(calc(100% - 8px))')
+        : 'translateY(0)';
+
+    const panelStyle = {
+        height: `${panelSize}px`,
+        backgroundColor: `rgba(0, 0, 0, ${panelOpacity})`,
+        transform: translate,
+        transition: 'transform var(--motion-medium)',
+    };
+
+    const indicatorNames = workspaceNames.slice(0, workspaceCount);
+
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            className={`desktop-panel absolute left-0 w-full flex items-center z-40 ${panelPosition === 'top' ? 'top-0' : 'bottom-0'}`}
+            style={panelStyle}
+            role="toolbar"
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}
@@ -42,6 +71,20 @@ export default function Taskbar(props) {
                     )}
                 </button>
             ))}
+            {indicatorNames.length > 0 && (
+                <div className="ml-auto flex items-center gap-2 pr-3">
+                    {indicatorNames.map((name, index) => (
+                        <span
+                            key={`${name}-${index}`}
+                            title={name}
+                            className="px-2 py-1 text-xs rounded bg-white bg-opacity-10 text-white"
+                            aria-label={`Workspace ${index + 1}: ${name}`}
+                        >
+                            {index + 1}
+                        </span>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

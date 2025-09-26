@@ -20,10 +20,23 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getPanelPosition as loadPanelPosition,
+  setPanelPosition as savePanelPosition,
+  getPanelSize as loadPanelSize,
+  setPanelSize as savePanelSize,
+  getPanelOpacity as loadPanelOpacity,
+  setPanelOpacity as savePanelOpacity,
+  getPanelAutohide as loadPanelAutohide,
+  setPanelAutohide as savePanelAutohide,
+  getWorkspaceCount as loadWorkspaceCount,
+  setWorkspaceCount as saveWorkspaceCount,
+  getWorkspaceNames as loadWorkspaceNames,
+  setWorkspaceNames as saveWorkspaceNames,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+type PanelPosition = 'top' | 'bottom';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +76,12 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  panelPosition: PanelPosition;
+  panelSize: number;
+  panelOpacity: number;
+  panelAutohide: boolean;
+  workspaceCount: number;
+  workspaceNames: string[];
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +93,12 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setPanelPosition: (value: PanelPosition) => void;
+  setPanelSize: (value: number) => void;
+  setPanelOpacity: (value: number) => void;
+  setPanelAutohide: (value: boolean) => void;
+  setWorkspaceCount: (value: number) => void;
+  setWorkspaceNames: (value: string[]) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +113,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  panelPosition: (defaults.panelPosition || 'bottom') as PanelPosition,
+  panelSize: defaults.panelSize ?? 40,
+  panelOpacity: defaults.panelOpacity ?? 0.5,
+  panelAutohide: defaults.panelAutohide ?? false,
+  workspaceCount: defaults.workspaceCount ?? 4,
+  workspaceNames: defaults.workspaceNames ?? ['Desktop 1', 'Desktop 2', 'Desktop 3', 'Desktop 4'],
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +130,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setPanelPosition: () => {},
+  setPanelSize: () => {},
+  setPanelOpacity: () => {},
+  setPanelAutohide: () => {},
+  setWorkspaceCount: () => {},
+  setWorkspaceNames: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +150,67 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [panelPosition, setPanelPositionState] = useState<PanelPosition>(
+    ((defaults.panelPosition as PanelPosition) || 'bottom') as PanelPosition,
+  );
+  const [panelSize, setPanelSizeState] = useState<number>(defaults.panelSize ?? 40);
+  const [panelOpacity, setPanelOpacityState] = useState<number>(
+    defaults.panelOpacity ?? 0.5,
+  );
+  const [panelAutohide, setPanelAutohideState] = useState<boolean>(
+    defaults.panelAutohide ?? false,
+  );
+  const [workspaceCount, setWorkspaceCountState] = useState<number>(
+    defaults.workspaceCount ?? 4,
+  );
+  const [workspaceNames, setWorkspaceNamesState] = useState<string[]>(
+    defaults.workspaceNames ?? ['Desktop 1', 'Desktop 2', 'Desktop 3', 'Desktop 4'],
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
+
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(max, Math.max(min, value));
+
+  const updatePanelPosition = (value: PanelPosition) => {
+    setPanelPositionState(value);
+  };
+
+  const updatePanelSize = (value: number) => {
+    const normalized = Math.round(clamp(value, 32, 128));
+    setPanelSizeState(normalized);
+  };
+
+  const updatePanelOpacity = (value: number) => {
+    const numericValue = Number(value);
+    const safeValue = Number.isFinite(numericValue) ? numericValue : panelOpacity;
+    setPanelOpacityState(clamp(safeValue, 0.1, 1));
+  };
+
+  const updatePanelAutohide = (value: boolean) => {
+    setPanelAutohideState(value);
+  };
+
+  const updateWorkspaceCount = (value: number) => {
+    const normalized = Math.round(clamp(value, 1, 8));
+    setWorkspaceCountState(normalized);
+  };
+
+  const updateWorkspaceNames = (value: string[]) => {
+    setWorkspaceNamesState((prev) => {
+      const target = Math.max(workspaceCount, value.length);
+      const trimmed = value
+        .slice(0, target)
+        .map((name, idx) => name.trim() || `Desktop ${idx + 1}`);
+      if (trimmed.length === target) return trimmed;
+      const additions = Array.from({ length: target - trimmed.length }, (_, idx) => {
+        const index = trimmed.length + idx;
+        return (
+          defaults.workspaceNames?.[index] ?? `Desktop ${index + 1}`
+        );
+      });
+      return [...trimmed, ...additions];
+    });
+  };
 
   useEffect(() => {
     (async () => {
@@ -127,6 +224,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setPanelPositionState((await loadPanelPosition()) as PanelPosition);
+      setPanelSizeState(await loadPanelSize());
+      setPanelOpacityState(await loadPanelOpacity());
+      setPanelAutohideState(await loadPanelAutohide());
+      const loadedWorkspaceCount = await loadWorkspaceCount();
+      setWorkspaceCountState(loadedWorkspaceCount);
+      setWorkspaceNamesState(await loadWorkspaceNames());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +340,59 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    document.documentElement.dataset.panelPosition = panelPosition;
+    savePanelPosition(panelPosition);
+  }, [panelPosition]);
+
+  useEffect(() => {
+    const sizePx = `${panelSize}px`;
+    document.documentElement.style.setProperty('--panel-size', sizePx);
+    savePanelSize(panelSize);
+  }, [panelSize]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--panel-opacity',
+      panelOpacity.toString(),
+    );
+    savePanelOpacity(panelOpacity);
+  }, [panelOpacity]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('panel-autohide', panelAutohide);
+    savePanelAutohide(panelAutohide);
+  }, [panelAutohide]);
+
+  useEffect(() => {
+    setWorkspaceNamesState((prev) => {
+      if (prev.length >= workspaceCount) return prev.slice(0, workspaceCount);
+      const additions = Array.from(
+        { length: workspaceCount - prev.length },
+        (_, idx) => {
+          const index = prev.length + idx;
+          return (
+            defaults.workspaceNames?.[index] ?? `Desktop ${index + 1}`
+          );
+        },
+      );
+      return [...prev, ...additions];
+    });
+    document.documentElement.setAttribute(
+      'data-workspace-count',
+      workspaceCount.toString(),
+    );
+    saveWorkspaceCount(workspaceCount);
+  }, [workspaceCount]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      'data-workspace-names',
+      workspaceNames.slice(0, workspaceCount).join('|'),
+    );
+    saveWorkspaceNames(workspaceNames);
+  }, [workspaceNames, workspaceCount]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +407,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        panelPosition,
+        panelSize,
+        panelOpacity,
+        panelAutohide,
+        workspaceCount,
+        workspaceNames,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +424,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setPanelPosition: updatePanelPosition,
+        setPanelSize: updatePanelSize,
+        setPanelOpacity: updatePanelOpacity,
+        setPanelAutohide: updatePanelAutohide,
+        setWorkspaceCount: updateWorkspaceCount,
+        setWorkspaceNames: updateWorkspaceNames,
       }}
     >
       {children}
