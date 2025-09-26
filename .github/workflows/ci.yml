@@ -48,6 +48,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
+      - run: yarn test --runTestsByPath __tests__/iconAssets.test.ts
       - run: yarn test --coverage
 
   security:
