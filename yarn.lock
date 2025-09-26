@@ -30,16 +30,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"3d-force-graph@npm:^1.78":
-  version: 1.78.4
-  resolution: "3d-force-graph@npm:1.78.4"
+"3d-force-graph@npm:^1.79":
+  version: 1.79.0
+  resolution: "3d-force-graph@npm:1.79.0"
   dependencies:
     accessor-fn: "npm:1"
     kapsule: "npm:^1.16"
     three: "npm:>=0.118 <1"
     three-forcegraph: "npm:1"
     three-render-objects: "npm:^1.35"
-  checksum: 10c0/c44911a566110ff3371ee498f3b6c068ab850b2491d8601ff917968845980230ac7f29f06ebbf93eb59b597e9c81f83400bd3913071c2401956e8ac03a7ecc6b
+  checksum: 10c0/8dcaeec154318234fa4e18ed213f76dd8de001ed4894d0eee97afd1800a9b81fb20fb0b322a975c26ad61e786fc25233cbce11f52ac2d9cc9d00f5e9452cd5c7
   languageName: node
   linkType: hard
 
@@ -4527,7 +4527,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aframe@npm:^1.5.0":
+"aframe@npm:^1.7.1":
   version: 1.7.1
   resolution: "aframe@npm:1.7.1"
   dependencies:
@@ -7479,9 +7479,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"force-graph@npm:^1.50":
-  version: 1.50.1
-  resolution: "force-graph@npm:1.50.1"
+"force-graph@npm:^1.51":
+  version: 1.51.0
+  resolution: "force-graph@npm:1.51.0"
   dependencies:
     "@tweenjs/tween.js": "npm:18 - 25"
     accessor-fn: "npm:1"
@@ -7498,7 +7498,7 @@ __metadata:
     index-array-by: "npm:1"
     kapsule: "npm:^1.16"
     lodash-es: "npm:4"
-  checksum: 10c0/3481314ef7e20f165806035828b93141485121462e0d9e2a44894025e5bbef7dce6c9eeec6db09e183df3f71056969f2c922d93e4f0fb7350b09a40180efe727
+  checksum: 10c0/9d5da8ab573eb886ab7f3be00efc36c35f3cce58b32edfbb1eb655871395abca68e97ffbac061aefcc3408879f024b74db9a170f21be18f7098c28874b703d6b
   languageName: node
   linkType: hard
 
@@ -11872,19 +11872,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-force-graph@npm:^1.45.0":
-  version: 1.48.0
-  resolution: "react-force-graph@npm:1.48.0"
+"react-force-graph@npm:^1.48.0":
+  version: 1.48.1
+  resolution: "react-force-graph@npm:1.48.1"
   dependencies:
-    3d-force-graph: "npm:^1.78"
+    3d-force-graph: "npm:^1.79"
     3d-force-graph-ar: "npm:^1.10"
     3d-force-graph-vr: "npm:^3.1"
-    force-graph: "npm:^1.50"
+    force-graph: "npm:^1.51"
     prop-types: "npm:15"
     react-kapsule: "npm:^2.5"
   peerDependencies:
     react: "*"
-  checksum: 10c0/d9cd3e95249d4ff2dbdf050fda4cb49abccef0fcd3d0b6860d2481bdcd2583febc92d945f26ed54f40fb78a8c62a433bc7254975f8d457bc0c6d60a9a2fc3058
+  checksum: 10c0/f31a0f32b8f4065d0ebbc2127fdc94336a6040697d2aec8f8ce8e45de3fec95927ec1f1c742d91b258eface41cf17897e25ad5761cd38619cac6ac9031144133
   languageName: node
   linkType: hard
 
@@ -13395,7 +13395,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"three@npm:>=0.118 <1":
+"three@npm:>=0.118 <1, three@npm:^0.180.0":
   version: 0.180.0
   resolution: "three@npm:0.180.0"
   checksum: 10c0/2b5954b3e0946676cd606f126b1fbbe337ab6e72ae5a25b3eadbf1b8c502c17f21d851b9f5fe035edd48736306e339f143b5ee9cd4e91a2e614681abacef08de
@@ -13406,13 +13406,6 @@ __metadata:
   version: 0.164.1
   resolution: "three@npm:0.164.1"
   checksum: 10c0/f34dc945444fba814be542a907a2f6f2bed3189315604b8ef936d95513b2a4030807df63dcbb48b658bbe3d3e77a446cf2d164c1c08465578c23d4c278d76bb3
-  languageName: node
-  linkType: hard
-
-"three@npm:^0.179.1":
-  version: 0.179.1
-  resolution: "three@npm:0.179.1"
-  checksum: 10c0/563ba6d6a79b761b0a19b35141999edeec534cfef07e4ed2d480e2b7c30c290cb27bff0f43d81eaf60849af25b19a7950607db3ccf4aaa90a68d1394a2563f73
   languageName: node
   linkType: hard
 
@@ -13891,7 +13884,7 @@ __metadata:
     "@xterm/xterm": "npm:^5.5.0"
     "@zxing/browser": "npm:^0.1.5"
     "@zxing/library": "npm:^0.21.3"
-    aframe: "npm:^1.5.0"
+    aframe: "npm:^1.7.1"
     antd: "npm:5.27.2"
     autoprefixer: "npm:^10.4.13"
     bad-words: "npm:^3.0.4"
@@ -13946,7 +13939,7 @@ __metadata:
     react-cytoscapejs: "npm:^2.0.0"
     react-dom: "npm:19.1.1"
     react-draggable: "npm:^4.4.5"
-    react-force-graph: "npm:^1.45.0"
+    react-force-graph: "npm:^1.48.0"
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-leaflet: "npm:^5.0.0"
@@ -13960,7 +13953,7 @@ __metadata:
     swr: "npm:^2.2.5"
     tailwindcss: "npm:^3.2.4"
     test-exclude: "npm:7.0.1"
-    three: "npm:^0.179.1"
+    three: "npm:^0.180.0"
     turndown: "npm:^7.2.1"
     typescript: "npm:5.8.2"
     wait-on: "npm:^8.0.4"
