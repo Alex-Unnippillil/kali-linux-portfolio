@@ -164,6 +164,13 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.altKey && e.key === 'F4') {
+            e.preventDefault();
+            const focusedId = this.getFocusedWindowId();
+            if (focusedId) {
+                this.closeApp(focusedId);
+            }
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
@@ -464,6 +471,7 @@ export class Desktop extends Component {
                     title: app.title,
                     id: app.id,
                     screen: app.screen,
+                    icon: app.icon,
                     addFolder: this.addToDesktop,
                     closed: this.closeApp,
                     openApp: this.openApp,
