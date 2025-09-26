@@ -1,3 +1,5 @@
+import { safeLocalStorage } from './safeStorage';
+
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
@@ -16,7 +18,7 @@ export const isDarkTheme = (theme: string): boolean =>
 export const getTheme = (): string => {
   if (typeof window === 'undefined') return 'default';
   try {
-    const stored = window.localStorage.getItem(THEME_KEY);
+    const stored = safeLocalStorage?.getItem(THEME_KEY);
     if (stored) return stored;
     const prefersDark = window.matchMedia?.(
       '(prefers-color-scheme: dark)'
@@ -30,7 +32,7 @@ export const getTheme = (): string => {
 export const setTheme = (theme: string): void => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(THEME_KEY, theme);
+    safeLocalStorage?.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', isDarkTheme(theme));
   } catch {
