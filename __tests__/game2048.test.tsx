@@ -115,7 +115,7 @@ test.skip('skin selection changes tile class', async () => {
   const firstCell = container.querySelector('.grid div');
   expect(firstCell?.className).toContain('bg-gray-300');
   const select = getByLabelText('Skin');
-  fireEvent.change(select, { target: { value: 'neon' } });
+  fireEvent.change(select, { target: { value: 'kali-blue-deep' } });
   const updated = container.querySelector('.grid div');
   expect(updated?.className).not.toContain('bg-gray-300');
 });

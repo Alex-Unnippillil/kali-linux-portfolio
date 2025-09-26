@@ -27,7 +27,11 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             >
               {unlocked.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {t === 'kali-dark'
+                    ? 'Kali Dark'
+                    : t === 'kali-blue-deep'
+                      ? 'Kali Blue Deep'
+                      : t}
                 </option>
               ))}
             </select>

@@ -10,22 +10,35 @@
   --color-ub-med-abrgn: #1b1f24;
   --color-ub-drk-abrgn: #13171b;
   --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
+  --color-ub-gedit-dark: #021b33;
+  --color-ub-gedit-light: #003b70;
+  --color-ub-gedit-darker: #010d1a;
+  --color-ubt-grey: #f6f6f5;
+  --color-ubt-warm-grey: #aea79f;
   --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
+  --color-ubt-blue: #62a0ea;
+  --color-ubt-green: #73d216;
+  --color-ubt-gedit-orange: #f39a21;
+  --color-ubt-gedit-blue: #50b6c6;
+  --color-ubt-gedit-dark: #003b70;
   --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
-  --color-text: #F5F5F5;
+  --color-text: #f5f5f5;
+  --color-primary: #1793d1;
+  --color-secondary: #1a1f26;
+  --color-accent: #1793d1;
+  --color-muted: #2a2e36;
+  --color-surface: #1a1f26;
+  --color-inverse: #000000;
+  --color-border: #2a2e36;
+  --color-terminal: #00ff00;
+  --color-dark: #0c0f12;
+  --color-focus-ring: var(--color-accent);
+  --color-selection: var(--color-accent);
+  --color-control-accent: var(--color-accent);
   --kali-bg: rgba(15, 19, 23, 0.85);
+  accent-color: var(--color-control-accent);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -60,6 +73,46 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+}
+
+/* Theme overrides */
+#desktop[data-theme='kali-blue-deep'] {
+  --color-ub-grey: #050d1a;
+  --color-ub-warm-grey: #6c7a8c;
+  --color-ub-cool-grey: #0d1a2b;
+  --color-ub-orange: #1086ff;
+  --color-ub-lite-abrgn: #11203a;
+  --color-ub-med-abrgn: #0c172c;
+  --color-ub-drk-abrgn: #070f1d;
+  --color-ub-window-title: #030912;
+  --color-ub-gedit-dark: #08203f;
+  --color-ub-gedit-light: #0d3b73;
+  --color-ub-gedit-darker: #041226;
+  --color-ubt-grey: #eef4ff;
+  --color-ubt-warm-grey: #a3b1c6;
+  --color-ubt-cool-grey: #1f2c3f;
+  --color-ubt-blue: #4da3ff;
+  --color-ubt-green: #4dd38c;
+  --color-ubt-gedit-orange: #ffb347;
+  --color-ubt-gedit-blue: #4db5ff;
+  --color-ubt-gedit-dark: #0d3b73;
+  --color-ub-border-orange: #1086ff;
+  --color-ub-dark-grey: #13294b;
+  --color-bg: #040b18;
+  --color-text: #eef4ff;
+  --color-primary: #0f7ae5;
+  --color-secondary: #09152a;
+  --color-accent: #4db5ff;
+  --color-muted: #11233f;
+  --color-surface: #0b1a33;
+  --color-inverse: #02070f;
+  --color-border: #1c3760;
+  --color-terminal: #2cffb7;
+  --color-dark: #030a14;
+  --color-focus-ring: #4db5ff;
+  --color-selection: rgba(79, 181, 255, 0.45);
+  --color-control-accent: #4db5ff;
+  --kali-bg: rgba(4, 11, 24, 0.88);
 }
 
 /* High contrast theme */
