@@ -4527,7 +4527,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aframe@npm:^1.5.0":
+"aframe@npm:*, aframe@npm:^1.5.0":
   version: 1.7.1
   resolution: "aframe@npm:1.7.1"
   dependencies:
@@ -13395,7 +13395,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"three@npm:>=0.118 <1":
+"three@npm:*, three@npm:>=0.118 <1":
   version: 0.180.0
   resolution: "three@npm:0.180.0"
   checksum: 10c0/2b5954b3e0946676cd606f126b1fbbe337ab6e72ae5a25b3eadbf1b8c502c17f21d851b9f5fe035edd48736306e339f143b5ee9cd4e91a2e614681abacef08de
