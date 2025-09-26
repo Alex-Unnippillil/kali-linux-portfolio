@@ -9,7 +9,7 @@ const BackgroundImage = dynamic(
 );
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
-import Window from '../base/window';
+import Window, { KEYBOARD_MOVE_STEP, KEYBOARD_RESIZE_STEP } from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
@@ -19,6 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowMenu from '../context-menus/window-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -41,6 +42,7 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -58,8 +60,10 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                window: false,
             },
             context_app: null,
+            context_window: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
@@ -80,6 +84,14 @@ export class Desktop extends Component {
         window_positions: {},
         hideSideBar: false,
     });
+
+    registerWindowRef = (id) => (node) => {
+        if (node) {
+            this.windowRefs[id] = node;
+        } else {
+            delete this.windowRefs[id];
+        }
+    }
 
     cloneWorkspaceState = (state) => ({
         focused_windows: { ...state.focused_windows },
@@ -376,6 +388,7 @@ export class Desktop extends Component {
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+        const windowId = target ? target.dataset.windowId : null;
         switch (context) {
             case "desktop-area":
                 ReactGA.event({
@@ -398,6 +411,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Window Context Menu`
+                });
+                this.setState({ context_window: windowId }, () => this.showContextMenu(e, "window"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -414,6 +434,7 @@ export class Desktop extends Component {
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+        const windowId = target ? target.dataset.windowId : null;
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
         switch (context) {
@@ -428,6 +449,10 @@ export class Desktop extends Component {
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            case "window":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Window Context Menu` });
+                this.setState({ context_window: windowId }, () => this.showContextMenu(fakeEvent, "window"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -458,7 +483,45 @@ export class Desktop extends Component {
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
-        this.setState({ context_menus: menus, context_app: null });
+        this.setState({ context_menus: menus, context_app: null, context_window: null });
+    }
+
+    handleWindowMenuAction = (action) => {
+        const id = this.state.context_window;
+        const ref = id ? this.windowRefs[id] : null;
+        if (!id || !ref) {
+            this.hideAllContextMenu();
+            return;
+        }
+        switch (action) {
+            case 'move-up':
+                ref.nudgeWindow(0, -KEYBOARD_MOVE_STEP);
+                break;
+            case 'move-down':
+                ref.nudgeWindow(0, KEYBOARD_MOVE_STEP);
+                break;
+            case 'move-left':
+                ref.nudgeWindow(-KEYBOARD_MOVE_STEP, 0);
+                break;
+            case 'move-right':
+                ref.nudgeWindow(KEYBOARD_MOVE_STEP, 0);
+                break;
+            case 'shrink-height':
+                ref.resizeWindowByPercent(0, -KEYBOARD_RESIZE_STEP);
+                break;
+            case 'grow-height':
+                ref.resizeWindowByPercent(0, KEYBOARD_RESIZE_STEP);
+                break;
+            case 'shrink-width':
+                ref.resizeWindowByPercent(-KEYBOARD_RESIZE_STEP, 0);
+                break;
+            case 'grow-width':
+                ref.resizeWindowByPercent(KEYBOARD_RESIZE_STEP, 0);
+                break;
+            default:
+                break;
+        }
+        this.hideAllContextMenu();
     }
 
     getMenuPosition = (e) => {
@@ -641,7 +704,7 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window key={app.id} {...props} ref={this.registerWindowRef(app.id)} />
                 )
             }
         });
@@ -1143,6 +1206,11 @@ export class Desktop extends Component {
                         this.closeApp(id);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
+                />
+                <WindowMenu
+                    active={this.state.context_menus.window}
+                    onAction={this.handleWindowMenuAction}
+                    onClose={this.hideAllContextMenu}
                 />
 
                 {/* Folder Input Name Bar */}

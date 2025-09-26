@@ -12,6 +12,8 @@ const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_BOTTOM_INSET = 28;
+export const KEYBOARD_MOVE_STEP = 16;
+export const KEYBOARD_RESIZE_STEP = 2;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -208,6 +210,60 @@ export class Window extends Component {
             this._menuOpener.focus();
         }
         this._menuOpener = null;
+    }
+
+    nudgeWindow = (dx, dy) => {
+        if (!dx && !dy) return;
+        this.focusWindow();
+        if (this.state.maximized) {
+            this.restoreWindow();
+            return;
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+        let x;
+        let y;
+        if (match) {
+            x = parseFloat(match[1]);
+            y = parseFloat(match[2]);
+        } else {
+            const rect = node.getBoundingClientRect();
+            x = rect.left;
+            y = rect.top;
+        }
+        const maxX = this.state.parentSize?.width ?? 0;
+        const maxY = this.state.parentSize?.height ?? 0;
+        const nextX = clamp(x + dx, 0, maxX);
+        const nextY = clamp(y + dy, 0, maxY);
+        node.style.transform = `translate(${nextX}px, ${nextY}px)`;
+        this.checkOverlap();
+        this.checkSnapPreview();
+        this.setWinowsPosition();
+    }
+
+    resizeWindowByPercent = (dWidth, dHeight) => {
+        if (!dWidth && !dHeight) return;
+        if (this.props.resizable === false) return;
+        this.focusWindow();
+        if (this.state.maximized) {
+            this.restoreWindow();
+            return;
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        this.setState(prev => ({
+            width: clamp(prev.width + dWidth, 20, 100),
+            height: clamp(prev.height + dHeight, 20, 100)
+        }), () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+            this.setWinowsPosition();
+        });
     }
 
     changeCursorToMove = () => {
@@ -554,6 +610,21 @@ export class Window extends Component {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
+        } else if (e.ctrlKey && !e.altKey) {
+            const arrows = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+            if (arrows.includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.shiftKey && this.props.resizable !== false) {
+                    const deltaWidth = e.key === 'ArrowLeft' ? -KEYBOARD_RESIZE_STEP : e.key === 'ArrowRight' ? KEYBOARD_RESIZE_STEP : 0;
+                    const deltaHeight = e.key === 'ArrowUp' ? -KEYBOARD_RESIZE_STEP : e.key === 'ArrowDown' ? KEYBOARD_RESIZE_STEP : 0;
+                    this.resizeWindowByPercent(deltaWidth, deltaHeight);
+                } else {
+                    const deltaX = e.key === 'ArrowLeft' ? -KEYBOARD_MOVE_STEP : e.key === 'ArrowRight' ? KEYBOARD_MOVE_STEP : 0;
+                    const deltaY = e.key === 'ArrowUp' ? -KEYBOARD_MOVE_STEP : e.key === 'ArrowDown' ? KEYBOARD_MOVE_STEP : 0;
+                    this.nudgeWindow(deltaX, deltaY);
+                }
+            }
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -578,21 +649,20 @@ export class Window extends Component {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                this.resizeWindowByPercent(-step, 0);
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                this.resizeWindowByPercent(step, 0);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                this.resizeWindowByPercent(0, -step);
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                this.resizeWindowByPercent(0, step);
             }
-            this.focusWindow();
         }
     }
 
@@ -661,6 +731,8 @@ export class Window extends Component {
                             this.state.maximized ? styles.windowFrameMaximized : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
+                        data-context="window"
+                        data-window-id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
