@@ -107,6 +107,21 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
+// Minimal PointerEvent mock for environments without it
+if (typeof window !== 'undefined' && !('PointerEvent' in window)) {
+  class PointerEventMock extends Event {
+    pointerId: number;
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId ?? 0;
+    }
+  }
+  // @ts-ignore
+  window.PointerEvent = PointerEventMock as any;
+  // @ts-ignore
+  global.PointerEvent = PointerEventMock as any;
+}
+
 // Simple localStorage mock for environments without it
 if (typeof window !== 'undefined' && !window.localStorage) {
   const store: Record<string, string> = {};
