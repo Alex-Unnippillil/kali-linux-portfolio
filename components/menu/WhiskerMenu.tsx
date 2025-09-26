@@ -14,20 +14,39 @@ type AppMeta = {
   favourite?: boolean;
 };
 
-const CATEGORIES = [
+const FILTER_CATEGORIES = [
   { id: 'all', label: 'All' },
   { id: 'favorites', label: 'Favorites' },
   { id: 'recent', label: 'Recent' },
   { id: 'utilities', label: 'Utilities' },
-  { id: 'games', label: 'Games' }
-];
+  { id: 'games', label: 'Games' },
+] as const;
+
+const KALI_CATEGORIES = [
+  { id: 'information-gathering', label: 'Information Gathering', number: '01' },
+  { id: 'vulnerability-analysis', label: 'Vulnerability Analysis', number: '02' },
+  { id: 'web-application-analysis', label: 'Web Application Analysis', number: '03' },
+  { id: 'database-assessment', label: 'Database Assessment', number: '04' },
+  { id: 'password-attacks', label: 'Password Attacks', number: '05' },
+  { id: 'wireless-attacks', label: 'Wireless Attacks', number: '06' },
+  { id: 'reverse-engineering', label: 'Reverse Engineering', number: '07' },
+  { id: 'exploitation-tools', label: 'Exploitation Tools', number: '08' },
+  { id: 'sniffing-spoofing', label: 'Sniffing & Spoofing', number: '09' },
+  { id: 'post-exploitation', label: 'Post Exploitation', number: '10' },
+  { id: 'forensics', label: 'Forensics', number: '11' },
+  { id: 'reporting-tools', label: 'Reporting Tools', number: '12' },
+  { id: 'social-engineering-tools', label: 'Social Engineering Tools', number: '13' },
+  { id: 'hardware-hacking', label: 'Hardware Hacking', number: '14' },
+] as const;
+
+type FilterCategory = (typeof FILTER_CATEGORIES)[number]['id'];
 
 const TRANSITION_DURATION = 200;
 
 const WhiskerMenu: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const [category, setCategory] = useState('all');
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState<FilterCategory>('all');
+
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
@@ -47,8 +66,16 @@ const WhiskerMenu: React.FC = () => {
   }, [open]);
 
   const recentApps = useMemo(() => {
-    return recentIds.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
-  }, [allApps, recentIds]);
+    if (!open) {
+      return [];
+    }
+    try {
+      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
+      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+    } catch {
+      return [];
+    }
+  }, [allApps, open]);
 
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
@@ -213,8 +240,9 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex w-[180px] flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
+          <div className="flex flex-col bg-gray-800 p-2">
+            {FILTER_CATEGORIES.map(cat => (
+
               <button
                 key={cat.id}
                 className={`text-left px-3 py-2 rounded transition-colors duration-150 ${
@@ -225,6 +253,17 @@ const WhiskerMenu: React.FC = () => {
                 {cat.label}
               </button>
             ))}
+            <div className="mt-4 border-t border-gray-700 pt-3">
+              <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Kali Linux Groups</p>
+              <ul className="space-y-1 text-sm">
+                {KALI_CATEGORIES.map((cat) => (
+                  <li key={cat.id} className="flex items-baseline text-gray-300">
+                    <span className="font-mono text-ubt-blue mr-2 w-8">{cat.number}</span>
+                    <span>{cat.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
           <div className="flex-1 p-4">
             <input
