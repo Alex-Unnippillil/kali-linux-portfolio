@@ -1,56 +1,44 @@
-import Image from 'next/image';
+import type { SVGProps } from 'react';
+
+import CloseSvg from '@/public/themes/Yaru/window/window-close-symbolic.svg';
+import MaximizeSvg from '@/public/themes/Yaru/window/window-maximize-symbolic.svg';
+import MinimizeSvg from '@/public/themes/Yaru/window/window-minimize-symbolic.svg';
+import PinSvg from '@/public/themes/Yaru/window/window-pin-symbolic.svg';
+import RestoreSvg from '@/public/themes/Yaru/window/window-restore-symbolic.svg';
+
+const iconProps: SVGProps<SVGSVGElement> = {
+  width: 16,
+  height: 16,
+  focusable: false,
+  'aria-hidden': true,
+};
 
 export function CloseIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-close-symbolic.svg"
-      alt="Close"
-      width={16}
-      height={16}
-    />
+    <CloseSvg {...iconProps} title="Close" />
   );
 }
 
 export function MinimizeIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-minimize-symbolic.svg"
-      alt="Minimize"
-      width={16}
-      height={16}
-    />
+    <MinimizeSvg {...iconProps} title="Minimize" />
   );
 }
 
 export function MaximizeIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-maximize-symbolic.svg"
-      alt="Maximize"
-      width={16}
-      height={16}
-    />
+    <MaximizeSvg {...iconProps} title="Maximize" />
   );
 }
 
 export function RestoreIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-restore-symbolic.svg"
-      alt="Restore"
-      width={16}
-      height={16}
-    />
+    <RestoreSvg {...iconProps} title="Restore" />
   );
 }
 
 export function PinIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-pin-symbolic.svg"
-      alt="Pin"
-      width={16}
-      height={16}
-    />
+    <PinSvg {...iconProps} title="Pin" />
   );
 }
