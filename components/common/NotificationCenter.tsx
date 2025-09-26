@@ -1,79 +1,154 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 export interface AppNotification {
   id: string;
-  message: string;
-  date: number;
+  appId: string;
+  title: string;
+  body?: string;
+  timestamp: number;
+  read: boolean;
+}
+
+export interface PushNotificationInput {
+  appId: string;
+  title: string;
+  body?: string;
+  timestamp?: number;
 }
 
 interface NotificationsContextValue {
-  notifications: Record<string, AppNotification[]>;
-  pushNotification: (appId: string, message: string) => void;
+  notificationsByApp: Record<string, AppNotification[]>;
+  notifications: AppNotification[];
+  unreadCount: number;
+  pushNotification: (input: PushNotificationInput) => string;
+  dismissNotification: (appId: string, id: string) => void;
   clearNotifications: (appId?: string) => void;
+  markAllRead: (appId?: string) => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
-export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Record<string, AppNotification[]>>({});
+const createId = () => `ntf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const pushNotification = useCallback((appId: string, message: string) => {
-    setNotifications(prev => {
-      const list = prev[appId] ?? [];
-      const next = {
-        ...prev,
-        [appId]: [
-          ...list,
-          {
-            id: `${Date.now()}-${Math.random()}`,
-            message,
-            date: Date.now(),
-          },
-        ],
+export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+  const [notificationsByApp, setNotificationsByApp] = useState<
+    Record<string, AppNotification[]>
+  >({});
+
+  const pushNotification = useCallback((input: PushNotificationInput) => {
+    const id = createId();
+    const timestamp = input.timestamp ?? Date.now();
+    setNotificationsByApp(prev => {
+      const list = prev[input.appId] ?? [];
+      const nextNotification: AppNotification = {
+        id,
+        appId: input.appId,
+        title: input.title,
+        body: input.body,
+        timestamp,
+        read: false,
       };
+
+      return {
+        ...prev,
+        [input.appId]: [nextNotification, ...list],
+      };
+    });
+
+    return id;
+  }, []);
+
+  const dismissNotification = useCallback((appId: string, id: string) => {
+    setNotificationsByApp(prev => {
+      const list = prev[appId];
+      if (!list) return prev;
+      const filtered = list.filter(notification => notification.id !== id);
+      if (filtered.length === list.length) return prev;
+
+      const next = { ...prev };
+      if (filtered.length > 0) next[appId] = filtered;
+      else delete next[appId];
       return next;
     });
   }, []);
 
   const clearNotifications = useCallback((appId?: string) => {
-    setNotifications(prev => {
-      if (!appId) return {};
+    if (!appId) {
+      setNotificationsByApp({});
+      return;
+    }
+
+    setNotificationsByApp(prev => {
+      if (!(appId in prev)) return prev;
       const next = { ...prev };
       delete next[appId];
       return next;
     });
   }, []);
 
-  const totalCount = Object.values(notifications).reduce(
-    (sum, list) => sum + list.length,
-    0
+  const markAllRead = useCallback((appId?: string) => {
+    setNotificationsByApp(prev => {
+      if (appId) {
+        const list = prev[appId];
+        if (!list || list.every(notification => notification.read)) return prev;
+        return {
+          ...prev,
+          [appId]: list.map(notification => ({ ...notification, read: true })),
+        };
+      }
+
+      let changed = false;
+      const next: Record<string, AppNotification[]> = {};
+      Object.entries(prev).forEach(([key, list]) => {
+        const updated = list.map(notification => {
+          if (notification.read) return notification;
+          changed = true;
+          return { ...notification, read: true };
+        });
+        next[key] = updated;
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const notifications = useMemo(() =>
+    Object.values(notificationsByApp)
+      .flat()
+      .sort((a, b) => b.timestamp - a.timestamp),
+  [notificationsByApp]);
+
+  const unreadCount = useMemo(
+    () => notifications.reduce((sum, notification) => sum + (notification.read ? 0 : 1), 0),
+    [notifications],
   );
 
   useEffect(() => {
     const nav: any = navigator;
     if (nav && nav.setAppBadge) {
-      if (totalCount > 0) nav.setAppBadge(totalCount).catch(() => {});
+      if (unreadCount > 0) nav.setAppBadge(unreadCount).catch(() => {});
       else nav.clearAppBadge?.().catch(() => {});
     }
-  }, [totalCount]);
+  }, [unreadCount]);
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, pushNotification, clearNotifications }}
+      value={{
+        notificationsByApp,
+        notifications,
+        unreadCount,
+        pushNotification,
+        dismissNotification,
+        clearNotifications,
+        markAllRead,
+      }}
     >
       {children}
-      <div className="notification-center">
-        {Object.entries(notifications).map(([appId, list]) => (
-          <section key={appId} className="notification-group">
-            <h3>{appId}</h3>
-            <ul>
-              {list.map(n => (
-                <li key={n.id}>{n.message}</li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
     </NotificationsContext.Provider>
   );
 };
