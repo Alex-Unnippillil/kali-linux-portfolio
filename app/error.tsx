@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { reportClientError } from '../lib/client-error-reporter';
+import { reportClientError } from '../lib/client-error-reporter.mts';
 
 export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { createLogger, Logger } from '../../lib/logger';
+import { createLogger, Logger } from '../../lib/logger.mts';
 
 export interface Chat {
   id: string;

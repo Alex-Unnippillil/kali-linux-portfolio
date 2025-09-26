@@ -4,7 +4,7 @@ import type {
   SimulatorParserRequest,
   SimulatorParserResponse,
   ParsedLine,
-} from '../../workers/simulatorParser.worker';
+} from '../../workers/simulatorParser.worker.mts';
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
@@ -30,7 +30,7 @@ const Simulator: React.FC = () => {
 
   useEffect(() => {
     const worker = new Worker(
-      new URL('../../workers/simulatorParser.worker.ts', import.meta.url),
+      new URL('../../workers/simulatorParser.worker.mts', import.meta.url),
     );
     workerRef.current = worker;
     worker.onmessage = (e: MessageEvent<SimulatorParserResponse>) => {

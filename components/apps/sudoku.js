@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { generateSudoku, isValidPlacement } from '../../apps/games/sudoku';
-import { getHint } from '../../workers/sudokuSolver';
+import { getHint } from '../../workers/sudokuSolver.mts';
 import {
   createCell,
   cloneCell,
