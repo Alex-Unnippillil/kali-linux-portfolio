@@ -9,6 +9,7 @@
   --color-primary: #1793d1; /* kali blue accent */
   --color-secondary: #1a1f26; /* complementary dark */
   --color-accent: #1793d1; /* accent matches primary */
+  --kali-blue: var(--color-primary);
   /* Utility colors */
   --color-muted: #2a2e36; /* muted surfaces */
   --color-surface: #1a1f26; /* panel surfaces */
@@ -19,7 +20,13 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
+}
+
+body {
+  background: var(--kali-bg);
+  color: var(--kali-text);
 }
 
 /* Dark theme */
@@ -69,11 +76,26 @@ html[data-theme='matrix'] {
 }
 
 ::selection {
-  background: var(--color-selection);
-  color: var(--color-inverse);
+  background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
+  color: var(--kali-text);
 }
 
 *:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+html {
+  scrollbar-color: var(--kali-border, var(--color-border)) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--kali-border, var(--color-border));
+  border-radius: 6px;
 }

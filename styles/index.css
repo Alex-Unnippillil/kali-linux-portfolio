@@ -94,7 +94,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .notFocused {
-    filter: brightness(90%);
+    filter: brightness(0.85);
 }
 
 .root,
@@ -105,9 +105,9 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: var(--shadow-2);
+    -webkit-box-shadow: var(--shadow-2);
+    -moz-box-shadow: var(--shadow-2);
 }
 
 .closed-window {

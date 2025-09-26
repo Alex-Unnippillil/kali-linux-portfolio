@@ -1,3 +1,56 @@
+.windowFrame {
+  position: relative;
+  border: 1px solid var(--color-window-border);
+  border-radius: var(--radius-6);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+
+.windowFrame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-window-accent);
+  opacity: 0;
+  pointer-events: none;
+  border-top-left-radius: calc(var(--radius-6) - 1px);
+  border-top-right-radius: calc(var(--radius-6) - 1px);
+  transition: opacity var(--motion-fast) ease;
+  z-index: 2;
+}
+
+.windowFrameActive::before {
+  opacity: 1;
+}
+
+.windowFrameInactive {
+  filter: brightness(0.85);
+}
+
+.windowFrameMaximized {
+  border-radius: 0;
+}
+
+.windowFrameMaximized::before {
+  border-radius: 0;
+}
+
+.windowTitlebar {
+  height: 28px;
+  border-top-left-radius: calc(var(--radius-6) - 1px);
+  border-top-right-radius: calc(var(--radius-6) - 1px);
+  position: relative;
+  z-index: 1;
+}
+
+.windowControls {
+  height: 28px;
+}
+
 .windowYBorder {
   height: calc(100% - 10px);
   width: calc(100% + 10px);

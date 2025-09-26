@@ -342,6 +342,13 @@ describe('Window snapping finalize and release', () => {
     const snappedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
 
+    const keyboardEvent = {
+      key: 'ArrowDown',
+      altKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn()
+    } as unknown as KeyboardEvent;
+
     act(() => {
       ref.current!.handleKeyDown({
         key: 'ArrowDown',
@@ -349,6 +356,8 @@ describe('Window snapping finalize and release', () => {
         preventDefault: jest.fn(),
         stopPropagation: jest.fn()
       } as any);
+
+
     });
 
     expect(ref.current!.state.snapped).toBeNull();
