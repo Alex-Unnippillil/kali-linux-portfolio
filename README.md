@@ -72,16 +72,56 @@ To send text or links directly into the Sticky Notes app:
 
 ---
 
-## Environment Variables
+## Environment Configuration
 
-Copy `.env.local.example` to `.env.local` and fill in required API keys:
+### Required and Optional Variables
 
-- `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
-- `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
-- `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
+Copy `.env.local.example` to `.env.local` and adjust the values that apply to your deployment. The table below highlights the
+most commonly used keys, their purpose, and safe defaults for local mocks or preview deployments:
 
-See `.env.local.example` for the full list.
+| Variable | Purpose | Safe default for mock deployments |
+| --- | --- | --- |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | Enables Google Analytics wrapper on the client. | `false` |
+| `NEXT_PUBLIC_DEMO_MODE` | Forces simulated data flows for apps that expect APIs. | `true` when previewing without backend services |
+| `FEATURE_TOOL_APIS` | Toggles the simulated security tool API routes. | `disabled` |
+| `FEATURE_HYDRA` | Enables the Hydra brute-force simulator UI. | `disabled` |
+| `RECAPTCHA_SECRET` / `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Protects the contact form with reCAPTCHA v2/v3. | Leave blank to disable the check |
+| `NEXT_PUBLIC_SERVICE_ID`, `NEXT_PUBLIC_TEMPLATE_ID`, `NEXT_PUBLIC_USER_ID` | EmailJS configuration for the Gedit contact app. | Leave blank to hide send capabilities |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase connection details for optional features. | Leave blank to disable Supabase-backed functionality |
+
+The `.env.local.example` file documents every supported flag, including feature previews (`NEXT_PUBLIC_UI_EXPERIMENTS`) and
+external integrations (`NEXT_PUBLIC_YOUTUBE_API_KEY`, `NEXT_PUBLIC_CURRENCY_API_URL`). Leaving values empty disables the
+dependent features without breaking the UI.
+
+### Importing to Vercel
+
+1. Generate a local `.env.local` that contains the keys you plan to use. For preview-only deployments, start from the mock
+   defaults above (analytics off, features disabled).
+2. In the Vercel dashboard, open your project and navigate to **Settings → Environment Variables**.
+3. Use **Import** to upload the `.env.local` file directly, or copy/paste key-value pairs into the appropriate environment
+   targets (Development, Preview, Production).
+4. Trigger a redeploy so that the new variables are available to the Next.js runtime and Edge Functions.
+
+### Minimal Configuration Recipes
+
+- **Local development (no external services)**
+  ```bash
+  cp .env.local.example .env.local
+  # Update the file to set NEXT_PUBLIC_DEMO_MODE=true and FEATURE_TOOL_APIS=disabled
+  yarn install
+  yarn dev
+  ```
+
+- **Vercel preview deployment**
+  1. Import `.env.local` via the Vercel dashboard with the same mock-safe values (`NEXT_PUBLIC_ENABLE_ANALYTICS=false`,
+     `NEXT_PUBLIC_DEMO_MODE=true`, `FEATURE_TOOL_APIS=disabled`).
+  2. Push your branch or use `vercel --prebuilt` to deploy.
+  3. Verify the deployment at `https://<deployment>.vercel.app`—the UI will use canned data where APIs are disabled.
+
+- **Vercel production deployment with services**
+  1. Populate analytics, EmailJS, and Supabase keys with production values.
+  2. Enable `NEXT_PUBLIC_ENABLE_ANALYTICS=true` and any feature flags required for live integrations.
+  3. Trigger a production deploy from the `main` branch or via the Vercel dashboard.
 
 ---
 
