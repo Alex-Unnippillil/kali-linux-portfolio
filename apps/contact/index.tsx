@@ -8,6 +8,7 @@ import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import { useMobileInputSafeArea } from "@/hooks/useMobileInputSafeArea";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -24,6 +25,7 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
   });
 
 const ContactApp: React.FC = () => {
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -120,7 +122,10 @@ const ContactApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div
+      ref={safeAreaRef}
+      className="min-h-screen bg-gray-900 text-white p-4"
+    >
       <h1 className="mb-4 text-2xl">Contact</h1>
       <p className="mb-4 text-sm">
         Prefer email?{" "}

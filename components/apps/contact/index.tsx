@@ -9,6 +9,7 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -140,6 +141,7 @@ const uploadAttachments = async (files: File[]) => {
 };
 
 const ContactApp: React.FC = () => {
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -261,7 +263,7 @@ const ContactApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div ref={safeAreaRef} className="min-h-screen bg-gray-900 text-white p-6">
       <h1 className="mb-6 text-2xl">Contact</h1>
       {banner && (
         <div
