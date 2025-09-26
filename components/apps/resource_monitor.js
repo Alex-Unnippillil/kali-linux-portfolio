@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { publishResourceMetrics } from '../../utils/resourceMetricsChannel';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
@@ -15,6 +16,13 @@ const ResourceMonitor = () => {
   const animRef = useRef();
   const lastDrawRef = useRef(0);
   const THROTTLE_MS = 1000;
+
+  const latestMetricsRef = useRef({
+    fps: 0,
+    cpu: 0,
+    memory: null,
+    net: 0,
+  });
 
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
@@ -35,6 +43,14 @@ const ResourceMonitor = () => {
     workerRef.current.onmessage = (e) => {
       const { speed } = e.data || {};
       pushSample('net', speed);
+      latestMetricsRef.current = {
+        ...latestMetricsRef.current,
+        net: speed ?? 0,
+      };
+      publishResourceMetrics({
+        ...latestMetricsRef.current,
+        source: 'resource-monitor',
+      });
       scheduleDraw();
     };
     workerRef.current.postMessage({ type: 'start' });
@@ -70,6 +86,23 @@ const ResourceMonitor = () => {
         pushSample('cpu', cpu);
         pushSample('mem', mem);
         pushSample('fps', currentFps);
+        latestMetricsRef.current = {
+          ...latestMetricsRef.current,
+          cpu,
+          fps: currentFps,
+          memory:
+            performance && performance.memory
+              ? {
+                  percent: mem,
+                  usedJSHeapSize: performance.memory.usedJSHeapSize,
+                  totalJSHeapSize: performance.memory.totalJSHeapSize,
+                }
+              : { percent: mem },
+        };
+        publishResourceMetrics({
+          ...latestMetricsRef.current,
+          source: 'resource-monitor',
+        });
         scheduleDraw();
         lastSample = now;
       }
