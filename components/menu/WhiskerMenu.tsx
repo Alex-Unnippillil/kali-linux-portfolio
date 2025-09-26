@@ -5,6 +5,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useAppSearch from '../../hooks/useAppSearch';
 
 type AppMeta = {
   id: string;
@@ -117,7 +118,6 @@ const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<FilterCategory>('all');
 
-  const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
@@ -125,6 +125,7 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -185,14 +186,22 @@ const WhiskerMenu: React.FC = () => {
   }, [category, categoryConfigs]);
 n
 
-  const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
-    }
-    return list;
-  }, [currentCategory, query]);
+  const {
+    query,
+    setQuery,
+    results: searchResults,
+    highlight: highlightMatch,
+    metadata: searchMetadata,
+    reset: resetSearch,
+  } = useAppSearch(currentCategory?.apps ?? [], {
+    getLabel: (app) => app.title,
+    debounceMs: 120,
+  });
+
+  const currentApps = useMemo(
+    () => searchResults.map((result) => result.item),
+    [searchResults],
+  );
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem('whisker-menu-category');
@@ -207,9 +216,20 @@ n
   }, [currentCategory.id]);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      resetSearch();
+      return;
+    }
     setHighlight(0);
-  }, [isVisible, category, query]);
+  }, [isVisible, category, query, resetSearch]);
+
+  useEffect(() => {
+    resetSearch();
+  }, [currentCategory.id, resetSearch]);
+
+  useEffect(() => {
+    setHighlight((prev) => Math.min(prev, Math.max(currentApps.length - 1, 0)));
+  }, [currentApps.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -223,20 +243,26 @@ n
   };
 
   useEffect(() => {
-    if (!isOpen && isVisible) {
-      hideTimer.current = setTimeout(() => {
-        setIsVisible(false);
-      }, TRANSITION_DURATION);
-      return () => {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-      };
+    if (typeof window === 'undefined') {
+      return () => {};
     }
     if (isOpen) {
       if (hideTimer.current) {
         clearTimeout(hideTimer.current);
         hideTimer.current = null;
       }
+      return () => {};
     }
+
+    if (!isVisible) {
+      return () => {};
+    }
+
+    hideTimer.current = setTimeout(() => {
+      setIsVisible(false);
+      hideTimer.current = null;
+    }, TRANSITION_DURATION);
+
     return () => {
       if (hideTimer.current) {
         clearTimeout(hideTimer.current);
@@ -247,7 +273,11 @@ n
 
   const showMenu = useCallback(() => {
     setIsVisible(true);
-    requestAnimationFrame(() => setIsOpen(true));
+    const schedule =
+      typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame.bind(window)
+        : (cb: () => void) => setTimeout(cb, 16);
+    schedule(() => setIsOpen(true));
   }, []);
 
   const hideMenu = useCallback(() => {
@@ -449,6 +479,17 @@ n
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
+            <p
+              className="-mt-2 mb-2 text-xs text-gray-400"
+              role="status"
+              aria-live="polite"
+              data-testid="whisker-search-status"
+            >
+              {searchMetadata.hasQuery
+                ? `${searchMetadata.matched} of ${searchMetadata.total} apps match` +
+                  (searchMetadata.debouncedQuery ? ` "${searchMetadata.debouncedQuery}"` : '')
+                : `${searchMetadata.total} apps available`}
+            </p>
             <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
 
               {currentApps.map((app, idx) => (
@@ -462,6 +503,7 @@ n
                     id={app.id}
                     icon={app.icon}
                     name={app.title}
+                    displayName={highlightMatch(app.title)}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
                   />
