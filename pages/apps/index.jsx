@@ -19,7 +19,7 @@ const AppsPage = () => {
   }, []);
 
   const filteredApps = apps.filter(
-    (app) => !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
+    (app) => app.enabled !== false && !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
   );
 
   return (

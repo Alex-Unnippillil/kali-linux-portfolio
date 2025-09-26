@@ -26,15 +26,17 @@ export default function AppGrid({ openApp }) {
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
 
+  const availableApps = apps.filter((app) => app.enabled !== false);
+
   const filtered = useMemo(() => {
-    if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
-    return apps
+    if (!query) return availableApps.map((app) => ({ ...app, nodes: app.title }));
+    return availableApps
       .map((app) => {
         const { matched, nodes } = fuzzyHighlight(app.title, query);
         return matched ? { ...app, nodes } : null;
       })
       .filter(Boolean);
-  }, [query]);
+  }, [query, availableApps]);
 
   useEffect(() => {
     if (focusedIndex >= filtered.length) {

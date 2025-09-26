@@ -185,6 +185,24 @@ export const displaySudoku = () => <SudokuApp />;
 ```
 Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
 
+### App toggles
+
+Every entry exported from `apps.config.js` now carries a boolean toggle so tiles can be hidden without removing their metadata.
+To disable an app globally, update the `toggleOverrides` map and set the relevant id to `false`:
+
+```ts
+const toggleOverrides = {
+  apps: {
+    'metasploit': false,
+  },
+  utilities: {},
+  games: {},
+};
+```
+
+Toggles apply to the desktop, Whisker menu, and `/apps` index. The effective state is exported as `appToggleConfig`
+if you need to surface toggle status elsewhere in the UI or tests.
+
 ### Prefetching dynamic apps
 Dynamic app modules include a `webpackPrefetch` hint and expose a `prefetch()` helper. Desktop tiles call this helper on hover or
 keyboard focus so bundles are warmed before launch. When adding a new app, export a default component and register it with

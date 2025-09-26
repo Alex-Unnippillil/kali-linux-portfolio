@@ -10,6 +10,7 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  enabled?: boolean;
 };
 
 const CATEGORIES = [
@@ -28,7 +29,7 @@ const WhiskerMenu: React.FC = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const allApps: AppMeta[] = apps as any;
+  const allApps: AppMeta[] = (apps as any).filter((app: AppMeta) => app.enabled !== false);
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
     try {
@@ -38,8 +39,8 @@ const WhiskerMenu: React.FC = () => {
       return [];
     }
   }, [allApps, open]);
-  const utilityApps: AppMeta[] = utilities as any;
-  const gameApps: AppMeta[] = games as any;
+  const utilityApps: AppMeta[] = (utilities as any).filter((app: AppMeta) => app.enabled !== false);
+  const gameApps: AppMeta[] = (games as any).filter((app: AppMeta) => app.enabled !== false);
 
   const currentApps = useMemo(() => {
     let list: AppMeta[];
