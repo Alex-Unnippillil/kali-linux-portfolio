@@ -392,6 +392,7 @@ export class Desktop extends Component {
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
+        this.broadcastPinnedApps(pinnedApps);
     }
 
     updateAppsData = () => {
@@ -704,6 +705,15 @@ export class Desktop extends Component {
         this.setState({ closed_windows, favourite_apps }, this.saveSession);
     }
 
+    broadcastPinnedApps = (ids) => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.dispatchEvent(new CustomEvent('pinned-apps-changed', { detail: ids }));
+        } catch (e) {
+            // ignore dispatch errors when window is unavailable
+        }
+    }
+
     pinApp = (id) => {
         let favourite_apps = { ...this.state.favourite_apps }
         favourite_apps[id] = true
@@ -714,6 +724,7 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        this.broadcastPinnedApps(pinnedApps)
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -728,6 +739,7 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         pinnedApps = pinnedApps.filter(appId => appId !== id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        this.broadcastPinnedApps(pinnedApps)
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -838,8 +850,18 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input" className="flex w-full flex-col">
+                        <span className="mb-1">New folder name</span>
+                        <input
+                            className="outline-none mt-3 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                            id="folder-name-input"
+                            type="text"
+                            autoComplete="off"
+                            spellCheck="false"
+                            autoFocus={true}
+                            aria-label="New folder name"
+                        />
+                    </label>
                 </div>
                 <div className="flex">
                     <button
