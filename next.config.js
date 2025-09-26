@@ -96,11 +96,9 @@ function configureWebpack(config, { isServer }) {
   };
   // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
-  config.resolve.fallback = {
-    ...(config.resolve.fallback || {}),
-    module: false,
-    async_hooks: false,
-  };
+  config.resolve.fallback = config.resolve.fallback || {};
+  config.resolve.fallback.module = false;
+  config.resolve.fallback.async_hooks = false;
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
