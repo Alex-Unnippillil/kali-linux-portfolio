@@ -6,6 +6,7 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  useKaliWallpaper: false,
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -34,6 +35,17 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+export async function getUseKaliWallpaper() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.useKaliWallpaper;
+  const stored = window.localStorage.getItem('use-kali-wallpaper');
+  return stored === null ? DEFAULT_SETTINGS.useKaliWallpaper : stored === 'true';
+}
+
+export async function setUseKaliWallpaper(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('use-kali-wallpaper', value ? 'true' : 'false');
 }
 
 export async function getDensity() {
@@ -137,12 +149,14 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('use-kali-wallpaper');
 }
 
 export async function exportSettings() {
   const [
     accent,
     wallpaper,
+    useKaliWallpaper,
     density,
     reducedMotion,
     fontScale,
@@ -154,6 +168,7 @@ export async function exportSettings() {
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
+    getUseKaliWallpaper(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -175,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    useKaliWallpaper,
     theme,
   });
 }
@@ -191,6 +207,7 @@ export async function importSettings(json) {
   const {
     accent,
     wallpaper,
+    useKaliWallpaper,
     density,
     reducedMotion,
     fontScale,
@@ -203,6 +220,7 @@ export async function importSettings(json) {
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);

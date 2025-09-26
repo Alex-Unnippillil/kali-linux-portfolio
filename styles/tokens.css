@@ -26,6 +26,18 @@
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
+  --kali-blue: #1793d1;
+
+  /* Kali theme tokens */
+  --kali-blue: #1793d1;
+  --kali-blue-dark: #0f6fa1;
+  --kali-blue-glow: rgba(23, 147, 209, 0.35);
+  --kali-bg-solid: #0f1317;
+  --kali-panel: rgba(26, 31, 38, 0.9);
+  --kali-panel-border: rgba(255, 255, 255, 0.08);
+  --kali-panel-highlight: rgba(255, 255, 255, 0.05);
+  --kali-terminal-green: #00ff00;
+  --kali-terminal-text: #f5f5f5;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -45,7 +57,15 @@
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 8px;
+  --radius-6: 12px;
   --radius-round: 9999px;
+
+  /* Elevation */
+  --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+
+  /* Window chrome */
+  --color-window-border: #0d1a2a;
+  --color-window-accent: var(--color-primary);
 
   /* Motion durations */
   --motion-fast: 150ms;

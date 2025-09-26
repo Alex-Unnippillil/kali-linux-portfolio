@@ -4,18 +4,49 @@ import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import NotificationBell from '../ui/NotificationBell';
 import WhiskerMenu from '../menu/WhiskerMenu';
+import PlacesMenu from '../menu/PlacesMenu';
 
 export default class Navbar extends Component {
 	constructor() {
 		super();
-		this.state = {
-			status_card: false
-		};
-	}
+                this.state = {
+                        status_card: false,
+                        applicationsMenuOpen: false,
+                        placesMenuOpen: false
+                };
+        }
 
-	render() {
-		return (
+        render() {
+                return (
                         <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                                <button
+                                        type="button"
+                                        aria-haspopup="true"
+                                        aria-expanded={this.state.applicationsMenuOpen}
+                                        onClick={() =>
+                                                this.setState((prevState) => ({
+                                                        applicationsMenuOpen: !prevState.applicationsMenuOpen,
+                                                        placesMenuOpen: false
+                                                }))
+                                        }
+                                        className="px-3 h-8 flex items-center hover:bg-kali-menu-hover focus-ring"
+                                >
+                                        Applications
+                                </button>
+                                <button
+                                        type="button"
+                                        aria-haspopup="true"
+                                        aria-expanded={this.state.placesMenuOpen}
+                                        onClick={() =>
+                                                this.setState((prevState) => ({
+                                                        placesMenuOpen: !prevState.placesMenuOpen,
+                                                        applicationsMenuOpen: false
+                                                }))
+                                        }
+                                        className="px-3 h-8 flex items-center hover:bg-kali-menu-hover focus-ring"
+                                >
+                                        Places
+                                </button>
                                 <WhiskerMenu />
                                 <div className="flex items-center">
                                         <div
@@ -40,6 +71,7 @@ export default class Navbar extends Component {
                                                 <Status />
                                                 <QuickSettings open={this.state.status_card} />
                                         </button>
+
                                 </div>
 			</div>
 		);

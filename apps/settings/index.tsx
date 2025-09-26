@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import KaliWallpaper from "../../components/util-components/kali-wallpaper";
 
 export default function Settings() {
   const {
@@ -19,6 +20,8 @@ export default function Settings() {
     setAccent,
     wallpaper,
     setWallpaper,
+    useKaliWallpaper,
+    setUseKaliWallpaper,
     density,
     setDensity,
     reducedMotion,
@@ -54,6 +57,7 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+  const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -112,15 +116,17 @@ export default function Settings() {
       </div>
       {activeTab === "appearance" && (
         <>
-          <div
-            className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
-            style={{
-              backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
-              backgroundSize: "cover",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center center",
-            }}
-          ></div>
+          <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
+            {useKaliWallpaper ? (
+              <KaliWallpaper />
+            ) : (
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                aria-hidden="true"
+              />
+            )}
+          </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
@@ -151,6 +157,22 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey flex items-center">
+              <input
+                type="checkbox"
+                checked={useKaliWallpaper}
+                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+                className="mr-2"
+              />
+              Kali Gradient Wallpaper
+            </label>
+          </div>
+          {useKaliWallpaper && (
+            <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+              Your previous wallpaper selection is preserved for when you turn this off.
+            </p>
+          )}
+          <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
             <input
               id="wallpaper-slider"
@@ -158,7 +180,7 @@ export default function Settings() {
               min="0"
               max={wallpapers.length - 1}
               step="1"
-              value={wallpapers.indexOf(wallpaper)}
+              value={wallpaperIndex}
               onChange={(e) =>
                 changeBackground(wallpapers[parseInt(e.target.value, 10)])
               }
