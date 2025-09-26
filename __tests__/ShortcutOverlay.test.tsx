@@ -17,12 +17,12 @@ describe('ShortcutOverlay', () => {
     );
     render(<ShortcutOverlay />);
     fireEvent.keyDown(window, { key: 'a' });
-    expect(
-      screen.getByText('Show keyboard shortcuts')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Open settings')).toBeInTheDocument();
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveAttribute('data-conflict', 'true');
-    expect(items[1]).toHaveAttribute('data-conflict', 'true');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const showRow = screen
+      .getByText('Show keyboard shortcuts')
+      .closest('tr');
+    const settingsRow = screen.getByText('Open settings').closest('tr');
+    expect(showRow).toHaveAttribute('data-conflict', 'true');
+    expect(settingsRow).toHaveAttribute('data-conflict', 'true');
   });
 });

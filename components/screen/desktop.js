@@ -23,6 +23,10 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import {
+    getShortcutBinding,
+    matchesShortcut,
+} from '../../hooks/useShortcuts';
 
 export class Desktop extends Component {
     constructor() {
@@ -147,30 +151,141 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        const element = e.target instanceof HTMLElement ? e.target : null;
+        const isEditable = element && (
+            element.tagName === 'INPUT' ||
+            element.tagName === 'TEXTAREA' ||
+            element.isContentEditable
+        );
+        if (isEditable) return;
+
+        const forwardSwitcher = getShortcutBinding('window.switcher.forward');
+        if (forwardSwitcher && matchesShortcut(e, forwardSwitcher)) {
+            e.preventDefault();
+            if (!this.state.showWindowSwitcher) {
+                this.openWindowSwitcher();
+            } else {
+                this.cycleApps(1);
+            }
+            return;
+        }
+
+        const backwardSwitcher = getShortcutBinding('window.switcher.backward');
+        if (backwardSwitcher && matchesShortcut(e, backwardSwitcher)) {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+            this.cycleApps(-1);
+            return;
+        }
+
+        const sameAppForward = getShortcutBinding('window.switcher.sameApp');
+        if (sameAppForward && matchesShortcut(e, sameAppForward)) {
+            e.preventDefault();
+            this.cycleAppWindows(1);
+            return;
+        }
+
+        const sameAppBackward = getShortcutBinding('window.switcher.sameAppBackward');
+        if (sameAppBackward && matchesShortcut(e, sameAppBackward)) {
+            e.preventDefault();
+            this.cycleAppWindows(-1);
+            return;
+        }
+
+        const clipboardShortcut = getShortcutBinding('utilities.clipboard');
+        if (clipboardShortcut && matchesShortcut(e, clipboardShortcut)) {
             e.preventDefault();
             this.openApp('clipboard-manager');
+            return;
         }
-        else if (e.altKey && e.key === 'Tab') {
+
+        const settingsShortcut = getShortcutBinding('system.settings');
+        if (settingsShortcut && matchesShortcut(e, settingsShortcut)) {
             e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
+            this.openApp('settings');
+            return;
         }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
+
+        const screenshotShortcut = getShortcutBinding('system.screenshot');
+        if (screenshotShortcut && matchesShortcut(e, screenshotShortcut)) {
             e.preventDefault();
-            this.cycleAppWindows(e.shiftKey ? -1 : 1);
+            this.captureScreenshot();
+            return;
         }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+
+        const snapLeft = getShortcutBinding('window.snap.left');
+        if (snapLeft && matchesShortcut(e, snapLeft)) {
             e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
+            this.dispatchSnap('ArrowLeft');
+            return;
+        }
+
+        const snapRight = getShortcutBinding('window.snap.right');
+        if (snapRight && matchesShortcut(e, snapRight)) {
+            e.preventDefault();
+            this.dispatchSnap('ArrowRight');
+            return;
+        }
+
+        const snapUp = getShortcutBinding('window.snap.up');
+        if (snapUp && matchesShortcut(e, snapUp)) {
+            e.preventDefault();
+            this.dispatchSnap('ArrowUp');
+            return;
+        }
+
+        const snapDown = getShortcutBinding('window.snap.down');
+        if (snapDown && matchesShortcut(e, snapDown)) {
+            e.preventDefault();
+            this.dispatchSnap('ArrowDown');
+            return;
+        }
+
+        const dockShortcuts = [
+            { id: 'launcher.slot1', slot: 1 },
+            { id: 'launcher.slot2', slot: 2 },
+            { id: 'launcher.slot3', slot: 3 },
+            { id: 'launcher.slot4', slot: 4 },
+        ];
+        for (const { id, slot } of dockShortcuts) {
+            const binding = getShortcutBinding(id);
+            if (binding && matchesShortcut(e, binding)) {
+                e.preventDefault();
+                this.launchDockSlot(slot);
+                return;
             }
+        }
+    }
+
+    dispatchSnap = (direction) => {
+        const id = this.getFocusedWindowId();
+        if (id) {
+            const event = new CustomEvent('super-arrow', { detail: direction });
+            document.getElementById(id)?.dispatchEvent(event);
+        }
+    }
+
+    launchDockSlot = (slot) => {
+        const pinned = apps.filter(app => this.state.favourite_apps[app.id]);
+        const target = pinned[slot - 1];
+        if (!target) return;
+        this.openApp(target.id);
+    }
+
+    captureScreenshot = async () => {
+        const desktop = document.getElementById('desktop');
+        if (!desktop) return;
+        try {
+            const dataUrl = await toPng(desktop);
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.download = `kali-desktop-${timestamp}.png`;
+            link.click();
+        } catch (error) {
+            console.warn('Failed to capture screenshot', error);
         }
     }
 
