@@ -9,15 +9,16 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor(props) {
+                super(props);
+                this.desktopRef = React.createRef();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+        }
 
 	componentDidMount() {
 		this.getLocalData();
@@ -113,22 +114,30 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
+        openApp = (id) => {
+                this.desktopRef?.current?.openApp?.(id);
+        };
+
+        render() {
+                return (
+                        <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                                <LockScreen
+                                        isLocked={this.state.screen_locked}
+                                        bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} openApp={this.openApp} />
+                                <Desktop
+                                        ref={this.desktopRef}
+                                        bg_image_name={this.state.bg_image_name}
+                                        changeBackgroundImage={this.changeBackgroundImage}
+                                />
+                        </div>
+                );
+        }
 }
