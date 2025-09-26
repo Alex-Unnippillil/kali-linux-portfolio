@@ -113,7 +113,7 @@ const SerialTerminalApp: React.FC = () => {
         </p>
       )}
       {error && <FormError className="mb-2 mt-0">{error}</FormError>}
-      <pre className="h-[calc(100%-4rem)] overflow-auto whitespace-pre-wrap break-words">
+      <pre className="h-[calc(100%-4rem)] overflow-auto whitespace-pre-wrap break-words font-mono">
         {logs || 'No data'}
       </pre>
     </div>

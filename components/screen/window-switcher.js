@@ -57,7 +57,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white font-sans">
       <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
         <input
           ref={inputRef}

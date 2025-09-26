@@ -308,7 +308,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
-        fontFamily: '"Fira Code", monospace',
+        fontFamily: 'var(--font-family-mono)',
         theme: {
           background: '#0f1317',
           foreground: '#f5f5f5',

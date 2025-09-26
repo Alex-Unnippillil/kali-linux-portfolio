@@ -18,7 +18,7 @@ const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
  */
 export default function Terminal() {
   return (
-    <div className="h-full w-full overflow-y-auto">
+    <div className="h-full w-full overflow-y-auto font-sans">
       <HelpPanel appId="terminal" />
       <TerminalApp />
     </div>

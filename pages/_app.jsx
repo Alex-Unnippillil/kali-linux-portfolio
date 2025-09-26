@@ -17,11 +17,28 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
-import { Ubuntu } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 
-const ubuntu = Ubuntu({
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
+  display: 'swap',
+  variable: '--font-ui',
+  fallback: ['Helvetica Neue', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-terminal',
+  fallback: [
+    'SFMono-Regular',
+    'Menlo',
+    'Monaco',
+    'Consolas',
+    'Liberation Mono',
+    'Courier New',
+    'monospace',
+  ],
 });
 
 
@@ -149,7 +166,7 @@ function MyApp(props) {
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
-      <div className={ubuntu.className}>
+      <div className={`${inter.variable} ${jetBrainsMono.variable} ${inter.className}`}>
         <a
           href="#app-grid"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"

@@ -38,7 +38,7 @@ export default function PipeSandbox() {
       <button className="border px-2 py-1" onClick={run}>
         Run
       </button>
-      <pre className="whitespace-pre-wrap bg-black p-2 text-green-500">
+      <pre className="whitespace-pre-wrap bg-black p-2 text-green-500 font-mono">
         {output}
       </pre>
     </div>
