@@ -11,11 +11,13 @@ interface PluginInfo {
 }
 
 const PluginWalkthrough: React.FC = () => {
-  const data = plugins as PluginInfo[];
+  const data = (Array.isArray(plugins) ? plugins : []) as PluginInfo[];
   const [index, setIndex] = useState(0);
-  const current = data[index];
+  const hasData = data.length > 0;
+  const current = hasData ? data[index % data.length] : undefined;
 
   useEffect(() => {
+    if (!hasData) return;
     data.forEach((p) => {
       if (p.minVersion && p.minVersion !== VOLATILITY_VERSION) {
         console.warn(
@@ -23,10 +25,22 @@ const PluginWalkthrough: React.FC = () => {
         );
       }
     });
-  }, [data]);
+  }, [data, hasData]);
 
-  const next = () => setIndex((i) => (i + 1) % data.length);
-  const prev = () => setIndex((i) => (i - 1 + data.length) % data.length);
+  const next = () => hasData && setIndex((i) => (i + 1) % data.length);
+  const prev = () =>
+    hasData && setIndex((i) => (i - 1 + data.length) % data.length);
+
+  if (!current) {
+    return (
+      <div className="space-y-2 text-xs">
+        <p>No plugin data available.</p>
+      </div>
+    );
+  }
+
+  const output = typeof current.output === 'string' ? current.output : '';
+  const description = typeof current.description === 'string' ? current.description : '';
 
   return (
     <div className="space-y-2 text-xs">
@@ -46,9 +60,9 @@ const PluginWalkthrough: React.FC = () => {
           Requires Volatility {current.minVersion}
         </p>
       )}
-      <p>{current.description}</p>
+      <p>{description}</p>
       <pre className="bg-black p-2 rounded overflow-auto whitespace-pre-wrap">
-        {current.output}
+        {output}
       </pre>
     </div>
   );

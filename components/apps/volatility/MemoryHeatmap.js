@@ -14,6 +14,7 @@ const chipColors = {
 };
 
 const MemoryHeatmap = ({ data }) => {
+  const safeData = React.useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const canvasRef = useRef(null);
   const [filters, setFilters] = useState({
     process: true,
@@ -31,9 +32,9 @@ const MemoryHeatmap = ({ data }) => {
   }, []);
 
   useEffect(() => {
-    const count = data.filter((d) => filters[d.type]).length;
+    const count = safeData.filter((d) => filters[d.type]).length;
     setAnnouncement(`Displaying ${count} memory segments`);
-  }, [filters, data]);
+  }, [filters, safeData]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,7 +44,7 @@ const MemoryHeatmap = ({ data }) => {
     const draw = () => {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const filtered = data.filter((d) => filters[d.type]);
+      const filtered = safeData.filter((d) => filters[d.type]);
       filtered.forEach((cell) => {
         const x = cell.x - offset.x;
         const y = cell.y - offset.y;
@@ -63,7 +64,7 @@ const MemoryHeatmap = ({ data }) => {
 
     draw();
     return () => cancelAnimationFrame(frame);
-  }, [data, filters, offset]);
+  }, [safeData, filters, offset]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
