@@ -76,6 +76,17 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - id: deploy
+        run: |
+          url=$(npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} | tail -n 1)
+          echo "Preview deployment: ${url}"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+      - name: Run WASM smoke suite
+        if: steps.deploy.outputs.url != ''
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test playwright/wasm-routes.spec.ts
