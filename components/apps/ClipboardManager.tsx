@@ -38,7 +38,7 @@ const ClipboardManager: React.FC = () => {
       if (!dbp) return;
       const db = await dbp;
 
-      const all = await db.getAll(STORE_NAME);
+      const all = await db.getAll<ClipItem>(STORE_NAME);
       setItems(all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0)));
     } catch {
       // ignore errors
@@ -53,7 +53,7 @@ const ClipboardManager: React.FC = () => {
         if (!dbp) return;
         const db = await dbp;
 
-        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const tx = db.transaction<ClipItem>(STORE_NAME, 'readwrite');
         await tx.store.add({ text, created: Date.now() });
         await tx.done;
         await loadItems();

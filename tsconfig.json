@@ -3,7 +3,7 @@
     "target": "es2020",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowJs": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
@@ -15,10 +15,14 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": [],
+    "types": ["node", "react", "react-dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "idb": ["types/overrides/idb"],
+      "3d-force-graph": ["types/overrides/3d-force-graph"],
+      "three-forcegraph": ["types/overrides/three-forcegraph"],
+      "react-force-graph": ["types/overrides/react-force-graph"]
 
     }
   },

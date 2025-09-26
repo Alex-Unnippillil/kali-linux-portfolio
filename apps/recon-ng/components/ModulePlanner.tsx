@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import type { ForceGraphComponent } from 'react-force-graph';
 import usePersistentState from '../../../hooks/usePersistentState';
 
 interface ModuleDef {
@@ -19,10 +20,12 @@ const MODULES: Record<string, ModuleDef> = {
 const moduleNames = Object.keys(MODULES);
 const WORKSPACES = ['default', 'testing', 'production'];
 
+type PlannerNode = { id: string; x?: number; y?: number; [key: string]: unknown };
+type PlannerLink = { source: string | PlannerNode; target: string | PlannerNode; [key: string]: unknown };
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
   { ssr: false },
-);
+) as unknown as ForceGraphComponent<PlannerNode, PlannerLink>;
 
 const ModulePlanner: React.FC = () => {
   const [plan, setPlan] = usePersistentState<string[]>('reconng-plan', []);
@@ -49,7 +52,7 @@ const ModulePlanner: React.FC = () => {
 
   const graphData = useMemo(() => {
     const nodes = new Set<string>();
-    const links: { source: string; target: string }[] = [];
+    const links: PlannerLink[] = [];
 
     const visit = (m: string) => {
       if (nodes.has(m)) return;
@@ -63,7 +66,7 @@ const ModulePlanner: React.FC = () => {
     plan.forEach(visit);
 
     return {
-      nodes: Array.from(nodes).map((id) => ({ id })),
+      nodes: Array.from(nodes).map<PlannerNode>((id) => ({ id })),
       links,
     };
   }, [plan]);
@@ -118,13 +121,13 @@ const ModulePlanner: React.FC = () => {
         <div className="h-64 bg-black rounded">
           <ForceGraph2D
             graphData={graphData}
-            nodeCanvasObject={(node: any, ctx) => {
+            nodeCanvasObject={(node, ctx) => {
               ctx.fillStyle = 'lightblue';
               ctx.beginPath();
-              ctx.arc(node.x, node.y, 5, 0, 2 * Math.PI, false);
+              ctx.arc(node.x ?? 0, node.y ?? 0, 5, 0, 2 * Math.PI, false);
               ctx.fill();
               ctx.font = '10px sans-serif';
-              ctx.fillText(node.id, node.x + 6, node.y + 3);
+              ctx.fillText(node.id, (node.x ?? 0) + 6, (node.y ?? 0) + 3);
             }}
           />
         </div>

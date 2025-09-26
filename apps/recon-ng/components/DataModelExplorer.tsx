@@ -2,23 +2,28 @@
 
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import type { ForceGraphComponent } from 'react-force-graph';
 
 interface EntityNode {
   id: string;
   label: string;
   data: Record<string, unknown>;
+  x?: number;
+  y?: number;
+  [key: string]: unknown;
 }
 
 interface EntityLink {
   source: string;
   target: string;
   label?: string;
+  [key: string]: unknown;
 }
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
   { ssr: false }
-);
+) as unknown as ForceGraphComponent<EntityNode, EntityLink>;
 
 const mockData = {
   nodes: [
@@ -59,25 +64,23 @@ const DataModelExplorer: React.FC = () => {
         graphData={graphData}
         nodeId="id"
         onBackgroundClick={() => setMenu(null)}
-        onNodeClick={(node) => setSelected(node as EntityNode)}
+        onNodeClick={(node) => setSelected(node)}
         onNodeRightClick={(node, event) => {
           event.preventDefault();
           setMenu({
-            node: node as EntityNode,
-            x: (event as MouseEvent).clientX,
-            y: (event as MouseEvent).clientY,
+            node,
+            x: event.clientX,
+            y: event.clientY,
           });
         }}
         nodeCanvasObject={(node, ctx, globalScale) => {
-          const n = node as EntityNode & { x?: number; y?: number };
-          const label = n.label;
           const fontSize = 12 / globalScale;
           ctx.fillStyle = 'lightblue';
           ctx.beginPath();
-          ctx.arc(n.x ?? 0, n.y ?? 0, 5, 0, 2 * Math.PI, false);
+          ctx.arc(node.x ?? 0, node.y ?? 0, 5, 0, 2 * Math.PI, false);
           ctx.fill();
           ctx.font = `${fontSize}px sans-serif`;
-          ctx.fillText(label, (n.x ?? 0) + 8, (n.y ?? 0) + 3);
+          ctx.fillText(node.label, (node.x ?? 0) + 8, (node.y ?? 0) + 3);
         }}
         linkDirectionalArrowLength={4}
       />
