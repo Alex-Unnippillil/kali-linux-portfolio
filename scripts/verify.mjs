@@ -38,6 +38,7 @@ const getPort = () =>
     await run('yarn', ['lint']);
     await run('yarn', ['tsc', '--noEmit']);
     await run('yarn', ['build']);
+    await run('node', ['scripts/check-bundle-budgets.mjs']);
 
     const port = await getPort();
     const server = spawn('yarn', ['start', '-p', String(port)], { stdio: 'inherit' });
