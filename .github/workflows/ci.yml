@@ -12,7 +12,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: ./scripts/ci/yarn-install.sh
 
   lint:
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: ./scripts/ci/yarn-install.sh
       - run: npm run lint
 
   typecheck:
@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: ./scripts/ci/yarn-install.sh
       - run: npm run tsc -- --noEmit
 
   test:
@@ -47,7 +47,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: ./scripts/ci/yarn-install.sh
       - run: yarn test --coverage
 
   security:
@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: ./scripts/ci/yarn-install.sh
       - run: yarn npm audit
 
   vercel-preview:
@@ -75,7 +75,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: ./scripts/ci/yarn-install.sh
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
