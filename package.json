@@ -18,6 +18,8 @@
     "typecheck": "tsc --noEmit",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
+    "playwright:test": "playwright test --project=chromium",
+    "playwright:install": "playwright install chromium",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
