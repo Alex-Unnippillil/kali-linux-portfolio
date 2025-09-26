@@ -1,6 +1,7 @@
 import modules from '../../components/apps/metasploit/modules.json';
+import rateLimitEdge from '@/lib/rateLimitEdge';
 
-export default function handler(req, res) {
+function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
     res.status(501).json({ error: 'Not implemented' });
     return;
@@ -54,3 +55,5 @@ export default function handler(req, res) {
 
   return res.status(200).json({ output: 'Command not supported in mock environment.' });
 }
+
+export default rateLimitEdge(handler);

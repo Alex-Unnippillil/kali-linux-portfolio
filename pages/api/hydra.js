@@ -4,10 +4,12 @@ import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import path from 'path';
 
+import rateLimitEdge from '@/lib/rateLimitEdge';
+
 const execFileAsync = promisify(execFile);
 const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (
     process.env.FEATURE_TOOL_APIS !== 'enabled' ||
     process.env.FEATURE_HYDRA !== 'enabled'
@@ -107,3 +109,5 @@ export default async function handler(req, res) {
     await fs.copyFile(restoreFile, sessionFile).catch(() => {});
   }
 }
+
+export default rateLimitEdge(handler, { limit: 5 });

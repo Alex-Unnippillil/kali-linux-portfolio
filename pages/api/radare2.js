@@ -4,9 +4,11 @@ import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
+import rateLimitEdge from '@/lib/rateLimitEdge';
+
 const execFileAsync = promisify(execFile);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
     res.status(501).json({ error: 'Not implemented' });
     return;
@@ -65,4 +67,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
 }
+
+export default rateLimitEdge(handler, { limit: 5 });
 
