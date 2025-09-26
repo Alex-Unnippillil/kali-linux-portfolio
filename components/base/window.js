@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import ContextMenu from '../common/ContextMenu';
 import styles from './window.module.css';
 
 const EDGE_THRESHOLD_MIN = 48;
@@ -62,6 +63,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.titlebarRef = React.createRef();
     }
 
     componentDidMount() {
@@ -327,6 +329,52 @@ export class Window extends Component {
         if (root) {
             root.removeAttribute('inert');
         }
+    }
+
+    getContextMenuItems = () => {
+        const items = [];
+        if (typeof this.props.onToggleAlwaysOnTop === 'function') {
+            items.push({
+                label: (
+                    <div className="flex items-center justify-between gap-4 pr-1">
+                        <span>Always on Top</span>
+                        {this.props.alwaysOnTop ? <span aria-hidden="true">✓</span> : null}
+                    </div>
+                ),
+                onSelect: () => this.props.onToggleAlwaysOnTop(this.id, !this.props.alwaysOnTop),
+                role: 'menuitemcheckbox',
+                checked: !!this.props.alwaysOnTop,
+            });
+        }
+
+        const workspaces = Array.isArray(this.props.workspaces) ? this.props.workspaces : [];
+        if (workspaces.length && typeof this.props.onMoveToWorkspace === 'function') {
+            if (items.length) {
+                items.push({ type: 'separator' });
+            }
+            const selectedWorkspace =
+                typeof this.props.preferredWorkspace === 'number'
+                    ? this.props.preferredWorkspace
+                    : this.props.activeWorkspace;
+            workspaces.forEach((workspace) => {
+                items.push({
+                    label: (
+                        <div className="flex items-center justify-between gap-2 pr-1">
+                            <span>{workspace.label}</span>
+                            {workspace.id === this.props.activeWorkspace && (
+                                <span className="text-[11px] uppercase tracking-wide text-white/60">
+                                    current
+                                </span>
+                            )}
+                        </div>
+                    ),
+                    onSelect: () => this.props.onMoveToWorkspace(this.id, workspace.id, { activate: true }),
+                    role: 'menuitemradio',
+                    checked: workspace.id === selectedWorkspace,
+                });
+            });
+        }
+        return items;
     }
 
     checkSnapPreview = () => {
@@ -616,6 +664,10 @@ export class Window extends Component {
     }
 
     render() {
+        const menuItems = this.getContextMenuItems();
+        const zIndexClass = this.props.alwaysOnTop
+            ? (this.props.isFocused ? 'z-50' : 'z-40')
+            : (this.props.isFocused ? 'z-30' : 'z-20');
         return (
             <>
                 {this.state.snapPreview && (
@@ -654,7 +706,7 @@ export class Window extends Component {
                             this.props.minimized ? 'opacity-0 invisible duration-200' : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
-                            this.props.isFocused ? 'z-30' : 'z-20',
+                            zIndexClass,
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
@@ -676,6 +728,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            ref={this.titlebarRef}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -694,6 +747,9 @@ export class Window extends Component {
                                 context={this.props.context} />)}
                     </div>
                 </Draggable >
+                {menuItems.length > 0 && (
+                    <ContextMenu targetRef={this.titlebarRef} items={menuItems} />
+                )}
             </>
         )
     }
@@ -702,9 +758,13 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export const WindowTopBar = React.forwardRef(function WindowTopBar(
+    { title, onKeyDown, onBlur, grabbed, onPointerDown },
+    ref,
+) {
     return (
         <div
+            ref={ref}
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
@@ -716,7 +776,9 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
-}
+});
+
+WindowTopBar.displayName = 'WindowTopBar';
 
 // Window's Borders
 export class WindowYBorder extends Component {

@@ -24,6 +24,12 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import {
+    DEFAULT_WINDOW_PREFERENCES,
+    getWindowPreferences,
+    setWindowPreferences,
+    subscribeToWindowPreferences,
+} from '../../utils/windowStateStore';
 
 export class Desktop extends Component {
     constructor() {
@@ -53,6 +59,7 @@ export class Desktop extends Component {
             window_positions: {},
             desktop_apps: [],
             window_context: {},
+            window_preferences: {},
             context_menus: {
                 desktop: false,
                 default: false,
@@ -70,6 +77,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
         }
+        this.windowPrefsUnsubscribe = null;
     }
 
     createEmptyWorkspaceState = () => ({
@@ -222,9 +230,15 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.windowPrefsUnsubscribe = subscribeToWindowPreferences((prefs) => {
+            this.setState({ window_preferences: prefs });
+        });
     }
 
     componentWillUnmount() {
+        if (typeof this.windowPrefsUnsubscribe === 'function') {
+            this.windowPrefsUnsubscribe();
+        }
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
@@ -617,6 +631,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const prefs = this.state.window_preferences[app.id] || DEFAULT_WINDOW_PREFERENCES;
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -638,6 +653,16 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    alwaysOnTop: prefs.alwaysOnTop,
+                    workspaces: this.state.workspaces,
+                    activeWorkspace: this.state.activeWorkspace,
+                    preferredWorkspace: prefs.workspaceId,
+                    onToggleAlwaysOnTop: this.toggleAlwaysOnTop,
+                    onMoveToWorkspace: (windowId, workspaceId, extraOptions) =>
+                        this.moveWindowToWorkspace(windowId, workspaceId, {
+                            activate: true,
+                            ...extraOptions,
+                        }),
                 }
 
                 windowsJsx.push(
@@ -655,6 +680,69 @@ export class Desktop extends Component {
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
+    }
+
+    toggleAlwaysOnTop = (id, value) => {
+        const current = getWindowPreferences(id);
+        const nextValue = typeof value === 'boolean' ? value : !current.alwaysOnTop;
+        setWindowPreferences(id, { alwaysOnTop: nextValue });
+        if (nextValue) {
+            this.focus(id);
+        }
+    }
+
+    moveWindowToWorkspace = (id, workspaceId, options = {}) => {
+        if (typeof workspaceId !== 'number') return;
+        if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+        const { persistPreference = true, activate = false } = options;
+
+        if (persistPreference) {
+            setWindowPreferences(id, { workspaceId });
+        }
+
+        const currentWorkspace = this.state.activeWorkspace;
+        if (workspaceId === currentWorkspace) {
+            if (activate) {
+                this.focus(id);
+            }
+            return;
+        }
+
+        const currentStack = this.workspaceStacks[currentWorkspace] || [];
+        this.workspaceStacks[currentWorkspace] = currentStack.filter(winId => winId !== id);
+
+        const targetStack = this.workspaceStacks[workspaceId] || [];
+        if (!targetStack.includes(id)) {
+            targetStack.push(id);
+        }
+        this.workspaceStacks[workspaceId] = targetStack;
+
+        const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const targetSnapshot = this.cloneWorkspaceState(snapshot);
+        targetSnapshot.closed_windows[id] = false;
+        targetSnapshot.focused_windows[id] = false;
+        targetSnapshot.minimized_windows[id] = false;
+        targetSnapshot.overlapped_windows[id] = false;
+        if (this.state.window_positions[id]) {
+            targetSnapshot.window_positions[id] = { ...this.state.window_positions[id] };
+        }
+        this.workspaceSnapshots[workspaceId] = targetSnapshot;
+
+        const currentUpdate = {
+            closed_windows: { ...this.state.closed_windows, [id]: true },
+            minimized_windows: { ...this.state.minimized_windows, [id]: false },
+            focused_windows: { ...this.state.focused_windows, [id]: false },
+            overlapped_windows: { ...this.state.overlapped_windows, [id]: false },
+        };
+
+        this.setWorkspaceState(currentUpdate, () => {
+            this.saveSession();
+            this.giveFocusToLastApp();
+            if (activate) {
+                this.switchWorkspace(workspaceId);
+                setTimeout(() => this.focus(id), 0);
+            }
+        });
     }
 
     saveSession = () => {
@@ -842,6 +930,16 @@ export class Desktop extends Component {
                 this.setState(nextState, () => {
                     this.focus(objId);
                     this.saveSession();
+                    const preference = getWindowPreferences(objId);
+                    if (
+                        typeof preference.workspaceId === 'number' &&
+                        preference.workspaceId !== this.state.activeWorkspace
+                    ) {
+                        this.moveWindowToWorkspace(objId, preference.workspaceId, {
+                            persistPreference: false,
+                            activate: false,
+                        });
+                    }
                 });
                 this.getActiveStack().push(objId);
             }, 200);
