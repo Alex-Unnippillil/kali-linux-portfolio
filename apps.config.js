@@ -214,6 +214,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQr,
+    permissions: ['camera'],
   },
   {
     id: 'ascii-art',
@@ -711,6 +712,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFileExplorer,
+    permissions: ['fileSystemAccess'],
   },
   {
     id: 'resource-monitor',
@@ -729,6 +731,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayScreenRecorder,
+    permissions: ['screenCapture'],
   },
   {
     id: 'ettercap',
