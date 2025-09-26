@@ -8,6 +8,7 @@ import {
 } from './utils';
 import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
+import { runJohnSimulation, johnStoryboard } from '../../../apps/simulations/john';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -247,26 +248,14 @@ const JohnApp = () => {
         for (const h of hs) {
           if (signal.aborted) throw new Error('cancelled');
           incrementProgress('wordlist');
-          if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-            const res = await fetch('/api/john', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ hash: h, rules }),
-              signal,
-            });
-            const data = await res.json();
-            incrementProgress('rules');
-            results.push(
-              `${endpoint} (${identifyHashType(h)}): ${
-                data.output || data.error || 'No output'
-              }`
-            );
-          } else {
-            incrementProgress('rules');
-            results.push(
-              `${endpoint} (${identifyHashType(h)}): demo result`
-            );
-          }
+          const simulation = await runJohnSimulation({
+            hash: h,
+            rules: rules.join('\n'),
+          });
+          incrementProgress('rules');
+          results.push(
+            `${endpoint} (${simulation.hashType}): ${simulation.output}`
+          );
         }
       }
       setOutput(results.join('\n'));
@@ -503,6 +492,21 @@ const JohnApp = () => {
           </>
         )}
       </div>
+      {johnStoryboard.length > 0 && (
+        <div className="p-4 border-t border-gray-700 bg-gray-900 text-sm">
+          <h2 className="text-lg mb-2">Storyboard</h2>
+          <ol className="list-decimal list-inside space-y-2">
+            {johnStoryboard.map((step) => (
+              <li key={step.title}>
+                <div className="font-semibold">{step.title}</div>
+                <p className="text-gray-300">{step.example}</p>
+                <p className="text-gray-400 text-xs mt-1">{step.description}</p>
+                <p className="text-gray-500 text-xs">Takeaway: {step.takeaway}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 };

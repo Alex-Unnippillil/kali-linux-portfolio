@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import {
+  runHydraSimulation,
+  controlHydraSimulation,
+  hydraStoryboard,
+  hydraSampleScripts,
+} from '../../../apps/simulations/hydra';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -124,25 +130,15 @@ const HydraApp = () => {
     setAnnounce('Hydra resumed');
     announceRef.current = Date.now();
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            target: session.target,
-            service: session.service,
-            userList: user.content,
-            passList: pass.content,
-            resume: true,
-          }),
-        });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
-      } else {
-        setOutput('Hydra demo output: feature disabled in static export');
-        setAnnounce('Hydra finished (demo)');
-      }
+      const simulation = await runHydraSimulation({
+        target: session.target,
+        service: session.service,
+        userList: user.content,
+        passList: pass.content,
+        resume: true,
+      });
+      setOutput(simulation.output);
+      setAnnounce('Hydra finished');
     } catch (err) {
       setOutput(err.message);
       setAnnounce('Hydra failed');
@@ -329,24 +325,14 @@ const HydraApp = () => {
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            target,
-            service,
-            userList: user.content,
-            passList: pass.content,
-          }),
-        });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
-      } else {
-        setOutput('Hydra demo output: feature disabled in static export');
-        setAnnounce('Hydra finished (demo)');
-      }
+      const simulation = await runHydraSimulation({
+        target,
+        service,
+        userList: user.content,
+        passList: pass.content,
+      });
+      setOutput(simulation.output);
+      setAnnounce('Hydra finished');
     } catch (err) {
       setOutput(err.message);
       setAnnounce('Hydra failed');
@@ -396,24 +382,22 @@ const HydraApp = () => {
   const pauseHydra = async () => {
     setPaused(true);
     setAnnounce('Hydra paused');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pause' }),
-      });
+    try {
+      const { status } = await controlHydraSimulation('pause');
+      setOutput((prev) => (prev ? `${prev}\n${status}` : status));
+    } catch {
+      // ignore adapter errors
     }
   };
 
   const resumeHydra = async () => {
     setPaused(false);
     setAnnounce('Hydra resumed');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resume' }),
-      });
+    try {
+      const { status } = await controlHydraSimulation('resume');
+      setOutput((prev) => (prev ? `${prev}\n${status}` : status));
+    } catch {
+      // ignore adapter errors
     }
   };
 
@@ -424,12 +408,10 @@ const HydraApp = () => {
     setOutput('');
     setTimeline([]);
     startRef.current = null;
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel' }),
-      });
+    try {
+      await controlHydraSimulation('cancel');
+    } catch {
+      // ignore adapter errors
     }
     setAnnounce('Hydra cancelled');
     clearSession();
@@ -692,6 +674,40 @@ const HydraApp = () => {
         allow attackers to guess passwords without exploring the full candidate
         space.
       </p>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        <div className="bg-gray-800 p-3 rounded border border-gray-700">
+          <h2 className="text-lg mb-2">Sample Commands</h2>
+          <ul className="space-y-2 text-sm">
+            {hydraSampleScripts.map((script) => (
+              <li key={script.name}>
+                <div className="font-semibold">{script.name}</div>
+                <code className="block bg-black text-green-400 px-2 py-1 rounded my-1">
+                  {script.command}
+                </code>
+                <p className="text-gray-300">{script.note}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="bg-gray-800 p-3 rounded border border-gray-700">
+          <h2 className="text-lg mb-2">Storyboard</h2>
+          <ol className="list-decimal list-inside space-y-2 text-sm">
+            {hydraStoryboard.map((step) => (
+              <li key={step.title}>
+                <div className="font-semibold">{step.title}</div>
+                <code className="block bg-black text-green-400 px-2 py-1 rounded my-1">
+                  {step.command}
+                </code>
+                <p className="text-gray-300">{step.description}</p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Takeaway: {step.takeaway}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
 
       <div role="status" aria-live="polite" className="sr-only">
         {announce}
