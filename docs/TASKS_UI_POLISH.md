@@ -106,6 +106,16 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Accept:** 4 levels: dock, window inactive, active, modal; consistent blurs and offsets.
     - **Where:** CSS tokens.
 
+    | Token            | Utility class         | Intended surface          | Shadow value                                                                 |
+    | ---------------- | --------------------- | ------------------------- | ----------------------------------------------------------------------------- |
+    | `--shadow-0`     | `.shadow-elevation-0` | Flat surfaces / dock rail | `none`                                                                        |
+    | `--shadow-1`     | `.shadow-elevation-1` | Dock + pinned trays       | `0 1px 2px -1px color-mix(in srgb, var(--color-inverse), transparent 92%), 0 1px 4px 0 color-mix(in srgb, var(--color-inverse), transparent 94%)`             |
+    | `--shadow-2`     | `.shadow-elevation-2` | Menus, dropdown panels    | `0 6px 18px -4px color-mix(in srgb, var(--color-inverse), transparent 88%), 0 3px 8px -2px color-mix(in srgb, var(--color-inverse), transparent 90%)`         |
+    | `--shadow-3`     | `.shadow-elevation-3` | Active window chrome      | `0 12px 32px -6px color-mix(in srgb, var(--color-inverse), transparent 84%), 0 6px 16px -3px color-mix(in srgb, var(--color-inverse), transparent 88%)`       |
+    | `--shadow-4`     | `.shadow-elevation-4` | Modals & system dialogs   | `0 18px 48px -8px color-mix(in srgb, var(--color-inverse), transparent 80%), 0 12px 28px -6px color-mix(in srgb, var(--color-inverse), transparent 84%)`      |
+
+    > All values reuse `var(--color-inverse)` so they adapt automatically across light, dark, and neon themes. High contrast mode reduces elevation to focus outlines.
+
 25. **Accent color setting**
     - **Accept:** Choose from 6 accents; applies to focus, selection, controls; stored persistently.
     - **Where:** Settings app + CSS variables.

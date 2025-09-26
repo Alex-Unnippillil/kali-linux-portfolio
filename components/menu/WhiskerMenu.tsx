@@ -376,7 +376,7 @@ n
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
+          className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-elevation-2 rounded-md overflow-hidden transition-all duration-200 ease-out ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}

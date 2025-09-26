@@ -136,7 +136,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
                 left: position.left,
                 zIndex: 1000,
               }}
-              className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
+              className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-elevation-2 backdrop-blur"
             >
               {content}
             </div>,

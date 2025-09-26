@@ -27,6 +27,10 @@
   opacity: 1;
 }
 
+.windowFrameActive {
+  box-shadow: var(--shadow-3);
+}
+
 .windowFrameInactive {
   filter: brightness(0.85);
 }

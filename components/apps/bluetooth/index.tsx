@@ -152,7 +152,7 @@ const BluetoothApp: React.FC = () => {
       </div>
       {showPermissionModal && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-          <div className="w-64 rounded bg-gray-800 p-4 text-center">
+          <div className="w-64 rounded bg-gray-800 p-4 text-center shadow-elevation-4">
             <p className="mb-4">Allow access to Bluetooth devices?</p>
             <div className="flex justify-end gap-2">
               <button
@@ -180,7 +180,7 @@ const BluetoothApp: React.FC = () => {
       )}
       {pairingDevice && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-          <div className="w-64 rounded bg-gray-800 p-4 text-center">
+          <div className="w-64 rounded bg-gray-800 p-4 text-center shadow-elevation-4">
             <p className="mb-4">
               Pair with {pairingDevice.name || pairingDevice.address}?
             </p>

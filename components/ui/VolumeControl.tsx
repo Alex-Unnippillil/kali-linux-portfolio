@@ -128,7 +128,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-elevation-2"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={handleWheel}

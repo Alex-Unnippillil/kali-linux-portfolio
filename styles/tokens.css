@@ -61,7 +61,15 @@
   --radius-round: 9999px;
 
   /* Elevation */
-  --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+  --shadow-0: none;
+  --shadow-1: 0 1px 2px -1px color-mix(in srgb, var(--color-inverse), transparent 92%),
+    0 1px 4px 0 color-mix(in srgb, var(--color-inverse), transparent 94%);
+  --shadow-2: 0 6px 18px -4px color-mix(in srgb, var(--color-inverse), transparent 88%),
+    0 3px 8px -2px color-mix(in srgb, var(--color-inverse), transparent 90%);
+  --shadow-3: 0 12px 32px -6px color-mix(in srgb, var(--color-inverse), transparent 84%),
+    0 6px 16px -3px color-mix(in srgb, var(--color-inverse), transparent 88%);
+  --shadow-4: 0 18px 48px -8px color-mix(in srgb, var(--color-inverse), transparent 80%),
+    0 12px 28px -6px color-mix(in srgb, var(--color-inverse), transparent 84%);
 
   /* Window chrome */
   --color-window-border: #0d1a2a;
@@ -97,6 +105,11 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --shadow-0: none;
+  --shadow-1: 0 0 0 1px var(--color-text);
+  --shadow-2: 0 0 0 1px var(--color-text);
+  --shadow-3: 0 0 0 2px var(--color-text);
+  --shadow-4: 0 0 0 3px var(--color-text);
 }
 
 /* Dyslexia-friendly fonts */

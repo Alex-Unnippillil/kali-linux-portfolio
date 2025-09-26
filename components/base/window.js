@@ -655,7 +655,7 @@ export class Window extends Component {
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             this.props.isFocused ? 'z-30' : 'z-20',
-                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
+                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col',
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
