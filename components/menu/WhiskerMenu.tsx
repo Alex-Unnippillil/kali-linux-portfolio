@@ -22,7 +22,7 @@ const CATEGORIES = [
 
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState('all');
+  const [openMenu, setOpenMenu] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -43,7 +43,7 @@ const WhiskerMenu: React.FC = () => {
 
   const currentApps = useMemo(() => {
     let list: AppMeta[];
-    switch (category) {
+    switch (openMenu) {
       case 'favorites':
         list = favoriteApps;
         break;
@@ -64,12 +64,12 @@ const WhiskerMenu: React.FC = () => {
       list = list.filter(a => a.title.toLowerCase().includes(q));
     }
     return list;
-  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+  }, [openMenu, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
-  }, [open, category, query]);
+  }, [open, openMenu, query]);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -143,15 +143,23 @@ const WhiskerMenu: React.FC = () => {
           }}
         >
           <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
+            {CATEGORIES.map(cat => {
+              const isActive = openMenu === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  id={cat.id}
+                  className={`relative text-left px-2 py-1 rounded mb-1 transition-colors ${
+                    isActive
+                      ? "bg-gray-700 after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-kali-blue"
+                      : 'hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setOpenMenu(cat.id)}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
           </div>
           <div className="p-3">
             <input
