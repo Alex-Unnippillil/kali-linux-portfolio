@@ -7,6 +7,7 @@
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
+    "noEmit": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -19,9 +20,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-
-    }
+    },
+    "plugins": [{ "name": "next" }]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
 }
