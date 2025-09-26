@@ -74,14 +74,18 @@ To send text or links directly into the Sticky Notes app:
 
 ## Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill in required API keys:
+Copy `.env.local.example` to `.env.local` for a minimal boot. The template now only includes the keys that must be present to start the desktop experience:
 
-- `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
-- `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
-- `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
+- `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable or disable client-side analytics reporting (`false` by default).
+- `NEXT_PUBLIC_STATIC_EXPORT` – set to `'true'` while running `yarn export` so server-only routes stay disabled.
+- `FEATURE_TOOL_APIS` – gate simulated tool APIs (`enabled` or `disabled`).
+- `FEATURE_HYDRA` – secondary toggle for the Hydra API (`/api/hydra`).
+- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` – client-side key for the contact form.
+- `RECAPTCHA_SECRET` – server-side key required for contact form verification.
+- `CONTACT_RATE_LIMIT_SECRET` – random string used to sign contact form rate-limit tokens.
+- `CONTACT_JWT_SECRET` – random string used to sign temporary JWTs for contact uploads.
 
-See `.env.local.example` for the full list.
+Additional optional integrations (EmailJS, Supabase, etc.) are documented later in this README.
 
 ---
 
@@ -196,18 +200,33 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 
 Copy `.env.local.example` to `.env.local` and fill in required values.
 
+### Minimal configuration (`.env.local.example`)
+
+| Name | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | Enable or disable client-side analytics reporting (`false` by default). |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
+| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
+| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
+| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
+| `CONTACT_RATE_LIMIT_SECRET` | Random string used to sign contact form rate-limit tokens. |
+| `CONTACT_JWT_SECRET` | Random string used to sign temporary JWTs for contact uploads. |
+
+### Optional integrations
+
 | Name | Purpose |
 | --- | --- |
 | `NEXT_PUBLIC_TRACKING_ID` | GA4 measurement ID (e.g., `G-XXXXXXX`). |
+| `NEXT_PUBLIC_VERCEL_ENV` | Used by `reportWebVitals` to send preview build metrics. |
 | `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
 | `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
 | `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
-| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
+| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Enhances the YouTube app; falls back to Piped when unset. |
+| `NEXT_PUBLIC_CURRENCY_API_URL` | Enables live rates in the currency converter app. |
 | `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
-| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
 | `SUPABASE_URL` | Supabase project URL for server-side access. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
 | `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
@@ -215,10 +234,8 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
 | `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
-| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
-| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
-| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| `NEXT_PUBLIC_DEMO_MODE` | Turns on canned output for certain simulated tools. |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
@@ -295,6 +312,8 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
   - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
   - `RECAPTCHA_SECRET`
+  - `CONTACT_RATE_LIMIT_SECRET`
+  - `CONTACT_JWT_SECRET`
   - `ADMIN_READ_KEY` (set manually in Vercel or your host)
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
