@@ -192,6 +192,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@axe-core/react@npm:^4.10.2":
+  version: 4.10.2
+  resolution: "@axe-core/react@npm:4.10.2"
+  dependencies:
+    axe-core: "npm:~4.10.3"
+    requestidlecallback: "npm:^0.3.0"
+  checksum: 10c0/ca7f946f26a16789c374097867a03aa987cde6762a48cc434223c64e1c19f82342f365f17adb4fee5a40ad32b0df82fb4a44df503bb35df9b6778f9ea7eeabd2
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.10.4, @babel/code-frame@npm:^7.27.1":
   version: 7.27.1
   resolution: "@babel/code-frame@npm:7.27.1"
@@ -12120,6 +12130,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"requestidlecallback@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "requestidlecallback@npm:0.3.0"
+  checksum: 10c0/68a2ff3154788643ccf96436cfaf8ad5bbe2f4d3f4b4d7858ec74681bf7d6a487d17df6a238130ff1e73d0a4a85bdc44b5f945eb79ef7d5552e23fc6288e795f
+  languageName: node
+  linkType: hard
+
 "require-directory@npm:^2.1.1":
   version: 2.1.1
   resolution: "require-directory@npm:2.1.1"
@@ -13854,6 +13871,7 @@ __metadata:
   resolution: "unnippillil@workspace:."
   dependencies:
     "@axe-core/playwright": "npm:^4.10.2"
+    "@axe-core/react": "npm:^4.10.2"
     "@ducanh2912/next-pwa": "npm:^10.2.9"
     "@emailjs/browser": "npm:^3.10.0"
     "@eslint/eslintrc": "npm:^3.3.1"

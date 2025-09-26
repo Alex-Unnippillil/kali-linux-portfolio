@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useId } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { initAxe } from '../../utils/initAxe';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,9 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const searchInputId = useId();
+  const resultsId = useId();
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -70,6 +74,10 @@ const WhiskerMenu: React.FC = () => {
     if (!open) return;
     setHighlight(0);
   }, [open, category, query]);
+
+  useEffect(() => {
+    initAxe(React);
+  }, []);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -121,6 +129,9 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={menuId}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -136,34 +147,58 @@ const WhiskerMenu: React.FC = () => {
           ref={menuRef}
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}
+          id={menuId}
+          role="dialog"
+          aria-label="Application launcher"
+          aria-modal="false"
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-          <div className="p-3">
+          <nav aria-label="Filter applications" className="flex flex-col bg-gray-800 p-2">
+            <ul role="list" className="flex flex-col gap-1">
+              {CATEGORIES.map(cat => (
+                <li key={cat.id}>
+                  <button
+                    type="button"
+                    className={`text-left px-2 py-1 rounded w-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ub-border-orange ${category === cat.id ? 'bg-gray-700' : ''}`}
+                    onClick={() => setCategory(cat.id)}
+                    aria-pressed={category === cat.id}
+                  >
+                    {cat.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="p-3" role="search">
+            <label htmlFor={searchInputId} className="sr-only">
+              Search applications
+            </label>
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              id={searchInputId}
+              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none focus:ring-2 focus:ring-ub-border-orange"
               placeholder="Search"
+              type="search"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
+              aria-controls={resultsId}
             />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+            <div
+              id={resultsId}
+              className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto"
+              role="list"
+              aria-label="Application results"
+            >
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
+                <div
+                  key={app.id}
+                  className={idx === highlight ? 'ring-2 ring-ub-border-orange rounded' : 'rounded'}
+                  role="listitem"
+                >
                   <UbuntuApp
                     id={app.id}
                     icon={app.icon}
