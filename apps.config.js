@@ -114,6 +114,19 @@ const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
+const legacySecurityAppsEnabled =
+  process.env.NEXT_PUBLIC_ENABLE_LEGACY_SECURITY_APPS === 'true';
+
+const legacySecurityAllowList = new Set(
+  (process.env.NEXT_PUBLIC_LEGACY_APP_ALLOWLIST || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean),
+);
+
+const shouldEnableLegacyApp = (id) =>
+  legacySecurityAppsEnabled || legacySecurityAllowList.has(id);
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -605,7 +618,7 @@ const gameList = [
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
-const apps = [
+const baseApps = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -677,15 +690,6 @@ const apps = [
     screen: displayYouTube,
   },
   {
-    id: 'beef',
-    title: 'BeEF',
-    icon: '/themes/Yaru/apps/beef.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayBeef,
-  },
-  {
     id: 'about',
     title: 'About Alex',
     icon: '/themes/Yaru/system/user-home.png',
@@ -729,42 +733,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayScreenRecorder,
-  },
-  {
-    id: 'ettercap',
-    title: 'Ettercap',
-    icon: '/themes/Yaru/apps/ettercap.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayEttercap,
-  },
-  {
-    id: 'ble-sensor',
-    title: 'BLE Sensor',
-    icon: '/themes/Yaru/apps/bluetooth.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayBleSensor,
-  },
-  {
-    id: 'metasploit',
-    title: 'Metasploit',
-    icon: '/themes/Yaru/apps/metasploit.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayMetasploit,
-  },
-  {
-    id: 'wireshark',
-    title: 'Wireshark',
-    icon: '/themes/Yaru/apps/wireshark.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayWireshark,
   },
   {
     id: 'todoist',
@@ -812,6 +780,120 @@ const apps = [
     screen: displayConverter,
   },
   {
+    id: 'ssh',
+    title: 'SSH Builder',
+    icon: '/themes/Yaru/apps/ssh.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySSH,
+  },
+  {
+    id: 'http',
+    title: 'HTTP Builder',
+    icon: '/themes/Yaru/apps/http.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHTTP,
+  },
+  {
+    id: 'html-rewriter',
+    title: 'HTML Rewriter',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHtmlRewrite,
+  },
+  {
+    id: 'contact',
+    title: 'Contact',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContact,
+  },
+  {
+    id: 'weather',
+    title: 'Weather',
+    icon: '/themes/Yaru/apps/weather.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWeather,
+  },
+  {
+    id: 'weather-widget',
+    title: 'Weather Widget',
+    icon: '/themes/Yaru/apps/weather.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWeatherWidget,
+  },
+  {
+    id: 'serial-terminal',
+    title: 'Serial Terminal',
+    icon: '/themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySerialTerminal,
+  },
+];
+
+// Heavy security simulators are disabled by default for performance. They can
+// be reintroduced by setting NEXT_PUBLIC_ENABLE_LEGACY_SECURITY_APPS to "true"
+// or by allow-listing specific IDs via NEXT_PUBLIC_LEGACY_APP_ALLOWLIST.
+const legacySecurityApps = [
+  {
+    id: 'beef',
+    title: 'BeEF',
+    icon: '/themes/Yaru/apps/beef.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBeef,
+  },
+  {
+    id: 'ettercap',
+    title: 'Ettercap',
+    icon: '/themes/Yaru/apps/ettercap.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEttercap,
+  },
+  {
+    id: 'ble-sensor',
+    title: 'BLE Sensor',
+    icon: '/themes/Yaru/apps/bluetooth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBleSensor,
+  },
+  {
+    id: 'metasploit',
+    title: 'Metasploit',
+    icon: '/themes/Yaru/apps/metasploit.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMetasploit,
+  },
+  {
+    id: 'wireshark',
+    title: 'Wireshark',
+    icon: '/themes/Yaru/apps/wireshark.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWireshark,
+  },
+  {
     id: 'kismet',
     title: 'Kismet',
     icon: '/themes/Yaru/apps/kismet.svg',
@@ -847,7 +929,8 @@ const apps = [
     desktop_shortcut: false,
     screen: displayPluginManager,
   },
-  {    id: 'reaver',
+  {
+    id: 'reaver',
     title: 'Reaver',
     icon: '/themes/Yaru/apps/reaver.svg',
     disabled: false,
@@ -892,42 +975,6 @@ const apps = [
     screen: displayMimikatzOffline,
   },
   {
-    id: 'ssh',
-    title: 'SSH Builder',
-    icon: '/themes/Yaru/apps/ssh.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displaySSH,
-  },
-  {
-    id: 'http',
-    title: 'HTTP Builder',
-    icon: '/themes/Yaru/apps/http.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayHTTP,
-  },
-  {
-    id: 'html-rewriter',
-    title: 'HTML Rewriter',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayHtmlRewrite,
-  },
-  {
-    id: 'contact',
-    title: 'Contact',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayContact,
-  },
-  {
     id: 'hydra',
     title: 'Hydra',
     icon: '/themes/Yaru/apps/hydra.svg',
@@ -944,33 +991,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNmapNSE,
-  },
-  {
-    id: 'weather',
-    title: 'Weather',
-    icon: '/themes/Yaru/apps/weather.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayWeather,
-  },
-  {
-    id: 'weather-widget',
-    title: 'Weather Widget',
-    icon: '/themes/Yaru/apps/weather.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayWeatherWidget,
-  },
-  {
-    id: 'serial-terminal',
-    title: 'Serial Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displaySerialTerminal,
   },
   {
     id: 'radare2',
@@ -1062,6 +1082,15 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
+];
+
+const gatedLegacyApps = legacySecurityApps.filter(({ id }) =>
+  shouldEnableLegacyApp(id),
+);
+
+const apps = [
+  ...baseApps,
+  ...gatedLegacyApps,
   // Utilities are grouped separately
   ...utilities,
   // Games are included so they appear alongside apps
