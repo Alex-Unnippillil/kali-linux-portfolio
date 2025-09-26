@@ -2,10 +2,17 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import { safeLocalStorage } from './safeStorage';
+import {
+  DEFAULT_WALLPAPER,
+  LEGACY_WALLPAPER_STORAGE_KEY,
+  WALLPAPER_STORAGE_KEY,
+  normalizeWallpaper,
+} from '@/utils/wallpapers';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
-  wallpaper: 'wall-2',
+  wallpaper: DEFAULT_WALLPAPER,
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -27,13 +34,30 @@ export async function setAccent(accent) {
 }
 
 export async function getWallpaper() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  if (!safeLocalStorage) {
+    return DEFAULT_SETTINGS.wallpaper;
+  }
+  const stored = safeLocalStorage.getItem(WALLPAPER_STORAGE_KEY);
+  if (stored) {
+    const normalized = normalizeWallpaper(stored);
+    if (normalized !== stored) {
+      safeLocalStorage.setItem(WALLPAPER_STORAGE_KEY, normalized);
+    }
+    return normalized;
+  }
+  const legacy = safeLocalStorage.getItem(LEGACY_WALLPAPER_STORAGE_KEY);
+  if (legacy) {
+    const normalized = normalizeWallpaper(legacy);
+    safeLocalStorage.setItem(WALLPAPER_STORAGE_KEY, normalized);
+    safeLocalStorage.removeItem(LEGACY_WALLPAPER_STORAGE_KEY);
+    return normalized;
+  }
+  return DEFAULT_SETTINGS.wallpaper;
 }
 
 export async function setWallpaper(wallpaper) {
-  if (typeof window === 'undefined') return;
-  await set('bg-image', wallpaper);
+  if (!safeLocalStorage) return;
+  safeLocalStorage.setItem(WALLPAPER_STORAGE_KEY, normalizeWallpaper(wallpaper));
 }
 
 export async function getDensity() {
@@ -127,8 +151,9 @@ export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
     del('accent'),
-    del('bg-image'),
   ]);
+  safeLocalStorage?.removeItem(WALLPAPER_STORAGE_KEY);
+  safeLocalStorage?.removeItem(LEGACY_WALLPAPER_STORAGE_KEY);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');

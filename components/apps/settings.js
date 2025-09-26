@@ -1,19 +1,63 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import {
+    DEFAULT_WALLPAPER,
+    WALLPAPER_PRESETS,
+    getWallpaperId,
+    getWallpaperSrc,
+    isCustomWallpaper,
+    makePresetWallpaper,
+} from '@/utils/wallpapers';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
-    const fileInput = useRef(null);
+    const settingsFileInput = useRef(null);
+    const wallpaperFileInput = useRef(null);
 
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const wallpapers = useMemo(() => WALLPAPER_PRESETS, []);
+    const currentPresetId = getWallpaperId(wallpaper);
+    const isCustom = isCustomWallpaper(wallpaper);
+    const currentWallpaperSrc = useMemo(() => getWallpaperSrc(wallpaper), [wallpaper]);
 
-    const changeBackgroundImage = (e) => {
-        const name = e.currentTarget.dataset.path;
-        setWallpaper(name);
+    const changeBackgroundImage = (id) => {
+        setWallpaper(makePresetWallpaper(id));
     };
+    const wallpaperIndex = wallpapers.findIndex((preset) => preset.id === currentPresetId);
+    const applyDefaultWallpaper = useCallback(() => {
+        setWallpaper(DEFAULT_WALLPAPER);
+    }, [setWallpaper]);
+    const openWallpaperPicker = () => {
+        if (wallpaperFileInput.current) {
+            wallpaperFileInput.current.click();
+        }
+    };
+    const handleWallpaperUpload = useCallback((event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const maxSize = 5 * 1024 * 1024; // 5 MB
+        if (file.size > maxSize) {
+            if (typeof window !== 'undefined') {
+                window.alert('Please choose an image smaller than 5MB.');
+            }
+            event.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                setWallpaper(`custom:${reader.result}`);
+            }
+            event.target.value = '';
+        };
+        reader.onerror = () => {
+            console.error('Failed to read wallpaper file');
+            event.target.value = '';
+        };
+        reader.readAsDataURL(file);
+    }, [setWallpaper]);
 
     let hexToRgb = (hex) => {
         hex = hex.replace('#', '');
@@ -57,7 +101,7 @@ export function Settings() {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${currentWallpaperSrc})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Theme:</label>
@@ -86,6 +130,47 @@ export function Settings() {
                             style={{ backgroundColor: c }}
                         />
                     ))}
+                </div>
+            </div>
+            <div className="flex flex-col items-center my-4 gap-3">
+                <div className="flex flex-col items-center gap-2 sm:flex-row">
+                    <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
+                    <input
+                        id="wallpaper-slider"
+                        type="range"
+                        min="0"
+                        max={wallpapers.length - 1}
+                        step="1"
+                        value={wallpaperIndex >= 0 ? wallpaperIndex : 0}
+                        onChange={(e) => {
+                            const next = wallpapers[parseInt(e.target.value, 10)];
+                            if (next) {
+                                changeBackgroundImage(next.id);
+                            }
+                        }}
+                        className="ubuntu-slider"
+                        aria-label="Wallpaper"
+                        aria-valuetext={isCustom ? 'Custom wallpaper' : wallpapers[wallpaperIndex]?.name || 'Wallpaper'}
+                    />
+                    <span className="text-xs text-ubt-grey">
+                        {isCustom ? 'Custom image' : wallpapers[wallpaperIndex]?.name || 'Preset'}
+                    </span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3">
+                    <button
+                        type="button"
+                        onClick={openWallpaperPicker}
+                        className="px-3 py-1 rounded bg-ub-orange text-white"
+                    >
+                        Upload Wallpaper
+                    </button>
+                    <button
+                        type="button"
+                        onClick={applyDefaultWallpaper}
+                        className="px-3 py-1 rounded bg-ub-orange text-white"
+                    >
+                        Use Default
+                    </button>
                 </div>
             </div>
             <div className="flex justify-center my-4">
@@ -196,28 +281,28 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
-                {
-                    wallpapers.map((name, index) => (
+                {wallpapers.map((preset) => {
+                    const active = !isCustom && preset.id === currentPresetId;
+                    return (
                         <div
-                            key={name}
+                            key={preset.id}
                             role="button"
-                            aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
+                            aria-label={`Select ${preset.name}`}
+                            aria-pressed={active}
                             tabIndex="0"
-                            onClick={changeBackgroundImage}
-                            onFocus={changeBackgroundImage}
+                            onClick={() => changeBackgroundImage(preset.id)}
+                            onFocus={() => changeBackgroundImage(preset.id)}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    changeBackgroundImage(e);
+                                    changeBackgroundImage(preset.id);
                                 }
                             }}
-                            data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
+                            className={(active ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
+                            style={{ backgroundImage: `url(${preset.src})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
-                    ))
-                }
+                    );
+                })}
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
@@ -236,7 +321,7 @@ export function Settings() {
                     Export Settings
                 </button>
                 <button
-                    onClick={() => fileInput.current && fileInput.current.click()}
+                    onClick={() => settingsFileInput.current && settingsFileInput.current.click()}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Import Settings
@@ -260,8 +345,15 @@ export function Settings() {
             </div>
             <input
                 type="file"
+                accept="image/*"
+                ref={wallpaperFileInput}
+                onChange={handleWallpaperUpload}
+                className="hidden"
+            />
+            <input
+                type="file"
                 accept="application/json"
-                ref={fileInput}
+                ref={settingsFileInput}
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;

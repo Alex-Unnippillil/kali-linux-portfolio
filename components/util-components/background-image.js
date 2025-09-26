@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
+import { getWallpaperSrc } from '@/utils/wallpapers';
 
 export default function BackgroundImage() {
     const { wallpaper } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
+    const wallpaperSrc = useMemo(() => getWallpaperSrc(wallpaper), [wallpaper]);
 
     useEffect(() => {
         const img = new Image();
-        img.src = `/wallpapers/${wallpaper}.webp`;
+        setNeedsOverlay(false);
+        img.src = wallpaperSrc;
         img.onload = () => {
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
@@ -34,17 +37,49 @@ export default function BackgroundImage() {
             const contrast = (1.05) / (lum + 0.05); // white text luminance is 1
             setNeedsOverlay(contrast < 4.5);
         };
-    }, [wallpaper]);
+        img.onerror = () => {
+            setNeedsOverlay(false);
+        };
+    }, [wallpaperSrc]);
 
     return (
-        <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
+        <div
+            className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full"
+            style={{
+                '--wallpaper-object-fit': 'cover',
+                '--wallpaper-object-position': 'center',
+                '--wallpaper-vignette-color': 'rgba(15, 23, 42, 0.6)',
+                '--wallpaper-vignette-inner': '55%',
+                '--wallpaper-vignette-outer': '125%',
+                '--wallpaper-vignette-blend': 'soft-light',
+                '--wallpaper-contrast-gradient': 'rgba(15, 23, 42, 0.65)',
+            }}
+        >
             <img
-                src={`/wallpapers/${wallpaper}.webp`}
+                src={wallpaperSrc}
                 alt=""
-                className="w-full h-full object-cover"
+                className="w-full h-full"
+                style={{
+                    objectFit: 'var(--wallpaper-object-fit, cover)',
+                    objectPosition: 'var(--wallpaper-object-position, center)',
+                }}
             />
+            <div
+                className="pointer-events-none absolute inset-0"
+                aria-hidden="true"
+                style={{
+                    background: 'radial-gradient(circle at center, transparent var(--wallpaper-vignette-inner, 55%), var(--wallpaper-vignette-color, rgba(15, 23, 42, 0.6)) var(--wallpaper-vignette-outer, 125%))',
+                    mixBlendMode: 'var(--wallpaper-vignette-blend, soft-light)',
+                }}
+            ></div>
             {needsOverlay && (
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
+                <div
+                    className="pointer-events-none absolute inset-0"
+                    aria-hidden="true"
+                    style={{
+                        background: 'linear-gradient(to bottom, var(--wallpaper-contrast-gradient, rgba(0,0,0,0.6)), transparent)',
+                    }}
+                ></div>
             )}
         </div>
     )

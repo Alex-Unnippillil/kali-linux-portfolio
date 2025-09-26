@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useCallback, type ChangeEvent } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,14 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import {
+  DEFAULT_WALLPAPER,
+  WALLPAPER_PRESETS,
+  getWallpaperId,
+  getWallpaperSrc,
+  isCustomWallpaper,
+  makePresetWallpaper,
+} from "@/utils/wallpapers";
 
 export default function Settings() {
   const {
@@ -33,6 +41,7 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wallpaperInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -42,18 +51,51 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
+  const wallpapers = useMemo(() => WALLPAPER_PRESETS, []);
+  const currentPresetId = getWallpaperId(wallpaper);
+  const wallpaperIndex = wallpapers.findIndex((preset) => preset.id === currentPresetId);
+  const currentWallpaperSrc = useMemo(() => getWallpaperSrc(wallpaper), [wallpaper]);
+  const isCustomWallpaperSelected = isCustomWallpaper(wallpaper);
 
-  const changeBackground = (name: string) => setWallpaper(name);
+  const changeBackground = (id: string) => setWallpaper(makePresetWallpaper(id));
+  const sliderValue = wallpaperIndex >= 0 ? wallpaperIndex : 0;
+  const selectedWallpaperLabel = isCustomWallpaperSelected
+    ? "Custom image"
+    : wallpapers[wallpaperIndex]?.name ?? "Preset";
+
+  const applyDefaultWallpaper = useCallback(() => {
+    setWallpaper(DEFAULT_WALLPAPER);
+  }, [setWallpaper]);
+
+  const handleWallpaperUpload = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const maxSize = 5 * 1024 * 1024; // 5 MB
+      if (file.size > maxSize) {
+        if (typeof window !== "undefined") {
+          window.alert("Please choose an image smaller than 5MB.");
+        }
+        event.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setWallpaper(`custom:${reader.result}`);
+        }
+        event.target.value = "";
+      };
+      reader.onerror = () => {
+        console.error("Failed to read wallpaper file");
+        event.target.value = "";
+      };
+      reader.readAsDataURL(file);
+    },
+    [setWallpaper]
+  );
+
+  const openWallpaperPicker = () => wallpaperInputRef.current?.click();
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -115,7 +157,7 @@ export default function Settings() {
           <div
             className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
             style={{
-              backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
+              backgroundImage: `url(${currentWallpaperSrc})`,
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
@@ -150,48 +192,73 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
-            <input
-              id="wallpaper-slider"
-              type="range"
-              min="0"
-              max={wallpapers.length - 1}
-              step="1"
-              value={wallpapers.indexOf(wallpaper)}
-              onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
-              }
-              className="ubuntu-slider"
-              aria-label="Wallpaper"
-            />
+          <div className="flex flex-col items-center my-4 gap-3">
+            <div className="flex flex-col items-center gap-2 sm:flex-row">
+              <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">
+                Wallpaper:
+              </label>
+              <input
+                id="wallpaper-slider"
+                type="range"
+                min="0"
+                max={wallpapers.length - 1}
+                step="1"
+                value={sliderValue}
+                onChange={(e) => {
+                  const next = wallpapers[parseInt(e.target.value, 10)];
+                  if (next) {
+                    changeBackground(next.id);
+                  }
+                }}
+                className="ubuntu-slider"
+                aria-label="Wallpaper"
+                aria-valuetext={selectedWallpaperLabel}
+              />
+              <span className="text-xs text-ubt-grey">{selectedWallpaperLabel}</span>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={openWallpaperPicker}
+                className="px-3 py-1 rounded bg-ub-orange text-white"
+              >
+                Upload Wallpaper
+              </button>
+              <button
+                type="button"
+                onClick={applyDefaultWallpaper}
+                className="px-3 py-1 rounded bg-ub-orange text-white"
+              >
+                Use Default
+              </button>
+            </div>
           </div>
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
+            {wallpapers.map((preset) => (
               <div
-                key={name}
+                key={preset.id}
                 role="button"
-                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                aria-pressed={name === wallpaper}
+                aria-label={`Select ${preset.name}`}
+                aria-pressed={!isCustomWallpaperSelected && preset.id === currentPresetId}
                 tabIndex={0}
-                onClick={() => changeBackground(name)}
+                onClick={() => changeBackground(preset.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    changeBackground(name);
+                    changeBackground(preset.id);
                   }
                 }}
                 className={
-                  (name === wallpaper
+                  (!isCustomWallpaperSelected && preset.id === currentPresetId
                     ? " border-yellow-700 "
                     : " border-transparent ") +
                   " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
                 }
                 style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
+                  backgroundImage: `url(${preset.src})`,
                   backgroundSize: "cover",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
@@ -288,6 +355,14 @@ export default function Settings() {
           </div>
         </>
       )}
+        <input
+          type="file"
+          accept="image/*"
+          ref={wallpaperInputRef}
+          aria-label="Upload wallpaper"
+          onChange={handleWallpaperUpload}
+          className="hidden"
+        />
         <input
           type="file"
           accept="application/json"
