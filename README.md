@@ -85,6 +85,37 @@ See `.env.local.example` for the full list.
 
 ---
 
+## Feature Flags & Runtime Modes
+
+Feature flags are driven by environment variables that are read at build time for production deployments and at server start in development or preview builds. Always keep a copy of `.env.local` with the desired defaults and override values in your hosting provider's dashboard for each environment.
+
+### Setup workflow
+
+1. Duplicate `.env.local.example` into `.env.local` and set the local defaults you want to test.
+2. In Vercel (or your chosen host), configure the same variables separately for **Preview** and **Production** environments so that experimental features stay isolated.
+3. For static exports, set `NEXT_PUBLIC_STATIC_EXPORT="true"` to force client fallbacks when `/api/*` is unavailable.
+
+### Preview vs. production behaviour
+
+- **Local & Preview builds** (`yarn dev`, Vercel Preview): flag changes take effect after restarting the dev server or redeploying the preview. Use relaxed settings here to validate experiments without exposing them publicly.
+- **Production builds** (`yarn build && yarn start`, Vercel Production, GitHub Pages): flag values are baked in during the build. Confirm every required flag is defined before promoting a release so the UI renders the correct state with server APIs enabled or hidden.
+
+### Toggling the beta badge
+
+Set `NEXT_PUBLIC_SHOW_BETA=1` in the relevant environment to display the beta badge rendered by `components/BetaBadge.jsx`. Leave it unset (or any other value) to hide the badge for stable releases.
+
+### Diagnostics
+
+After starting the server, call the flag health endpoint to verify the effective values that the runtime is using:
+
+```bash
+curl http://localhost:3000/api/flags/health
+```
+
+The response lists each flag and whether it is currently active, which is useful for troubleshooting preview deployments before merging to production.
+
+---
+
 ## Scripts
 
 - `yarn install` – install project dependencies.
