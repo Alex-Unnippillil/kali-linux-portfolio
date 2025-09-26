@@ -1,79 +1,103 @@
-import React from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
-class ShortcutSelector extends React.Component {
-    constructor() {
-        super();
-        this.state = {
-            query: '',
-            apps: [],
-            unfilteredApps: [],
-        };
-    }
+function ShortcutSelector({ apps = [], games = [], onSelect, onClose }) {
+    const [query, setQuery] = useState('');
+    const containerRef = useRef(null);
+    const searchInputRef = useRef(null);
 
-    componentDidMount() {
-        const { apps = [], games = [] } = this.props;
+    const combinedApps = useMemo(() => {
         const combined = [...apps];
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.setState({ apps: combined, unfilteredApps: combined });
-    }
+        return combined;
+    }, [apps, games]);
 
-    handleChange = (e) => {
-        const value = e.target.value;
-        const { unfilteredApps } = this.state;
-        const apps =
-            value === '' || value === null
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
-                  );
-        this.setState({ query: value, apps });
-    };
+    const filteredApps = useMemo(() => {
+        if (!query) return combinedApps;
+        const lower = query.toLowerCase();
+        return combinedApps.filter((app) => app.title.toLowerCase().includes(lower));
+    }, [combinedApps, query]);
 
-    selectApp = (id) => {
-        if (typeof this.props.onSelect === 'function') {
-            this.props.onSelect(id);
+    const handleChange = useCallback((event) => {
+        setQuery(event.target.value);
+    }, []);
+
+    const handleClose = useCallback(() => {
+        if (typeof onClose === 'function') {
+            onClose();
         }
-    };
+    }, [onClose]);
 
-    renderApps = () => {
-        const apps = this.state.apps || [];
-        return apps.map((app) => (
-            <UbuntuApp
-                key={app.id}
-                name={app.title}
-                id={app.id}
-                icon={app.icon}
-                openApp={() => this.selectApp(app.id)}
-                disabled={app.disabled}
-                prefetch={app.screen?.prefetch}
-            />
-        ));
-    };
+    const handleSelect = useCallback(
+        (id) => {
+            if (typeof onSelect === 'function') {
+                onSelect(id);
+            }
+            handleClose();
+        },
+        [handleClose, onSelect],
+    );
 
-    render() {
-        return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
-                <input
-                    className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
-                    placeholder="Search"
-                    value={this.state.query}
-                    onChange={this.handleChange}
-                />
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
-                    {this.renderApps()}
-                </div>
+    useFocusTrap(true, containerRef, {
+        initialFocusRef: searchInputRef,
+        onEscape: handleClose,
+    });
+
+    return (
+        <div
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shortcut-selector-title"
+            className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim"
+            tabIndex={-1}
+        >
+            <header className="mt-8 mb-4 flex w-full max-w-4xl items-center justify-between px-6">
+                <h1 id="shortcut-selector-title" className="text-xl font-semibold text-white">
+                    Add shortcut
+                </h1>
                 <button
-                    className="mb-8 px-4 py-2 rounded bg-black bg-opacity-20 text-white"
-                    onClick={this.props.onClose}
+                    type="button"
+                    onClick={handleClose}
+                    className="rounded bg-black bg-opacity-30 px-3 py-1 text-sm text-white transition hover:bg-opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                    aria-label="Close shortcut selector"
                 >
-                    Cancel
+                    Close
                 </button>
+            </header>
+            <input
+                ref={searchInputRef}
+                className="mb-8 w-2/3 rounded bg-black bg-opacity-20 px-4 py-2 text-white focus:outline-none md:w-1/3"
+                placeholder="Search"
+                value={query}
+                onChange={handleChange}
+                aria-label="Search shortcuts"
+            />
+            <div className="grid grid-cols-3 gap-6 place-items-center pb-10 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                {filteredApps.map((app) => (
+                    <UbuntuApp
+                        key={app.id}
+                        name={app.title}
+                        id={app.id}
+                        icon={app.icon}
+                        openApp={() => handleSelect(app.id)}
+                        disabled={app.disabled}
+                        prefetch={app.screen?.prefetch}
+                    />
+                ))}
             </div>
-        );
-    }
+            <button
+                type="button"
+                className="mb-8 rounded bg-black bg-opacity-30 px-4 py-2 text-sm text-white transition hover:bg-opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                onClick={handleClose}
+            >
+                Cancel
+            </button>
+        </div>
+    );
 }
 
 export default ShortcutSelector;
