@@ -95,6 +95,15 @@ See `.env.local.example` for the full list.
 
 ---
 
+## Accessibility Workflow
+
+- Start the dev server with `yarn dev` in one terminal, then run `yarn a11y` in another to execute the Pa11y scan defined in [`pa11yci.json`](./pa11yci.json).
+- The scan covers the desktop shell (`/`), the launcher (`/apps`), and key productivity apps (`/apps/contact`, `/apps/settings`) under both default and high-contrast themes.
+- Findings are grouped by severity using Axe impact levels; the script exits with a non-zero status only when **critical** issues are detected so that moderate gaps remain visible without blocking deployments.
+- The **Accessibility** GitHub Actions workflow runs the same command on every pull request and will fail the check if critical issues are reported.
+
+---
+
 ## Local Development Tips
 
 - Run `yarn lint` and `yarn test` before committing changes.

@@ -13,7 +13,9 @@
   },
   "urls": [
     "http://localhost:3000",
-    "http://localhost:3000/apps"
+    "http://localhost:3000/apps",
+    "http://localhost:3000/apps/contact",
+    "http://localhost:3000/apps/settings"
   ],
   "scenarios": [
     {},
