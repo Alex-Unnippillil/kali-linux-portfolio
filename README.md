@@ -213,14 +213,14 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL exposed to the client. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
-| `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
+| `ADMIN_READ_KEY` | Secret key required by admin message APIs. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
-> In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
+> In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. The expected Vercel secret names are documented in [`docs/vercel-secrets.md`](docs/vercel-secrets.md).
 
 ---
 
