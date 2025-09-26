@@ -3,34 +3,67 @@ import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import { getTheme, getUnlockedThemes, setTheme } from '../utils/theme';
 
 
+const createStorageMock = () => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => (key in store ? store[key] : null),
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+};
+
 describe('theme persistence and unlocking', () => {
+  let desktop: HTMLElement;
+
   beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      value: createStorageMock(),
+      configurable: true,
+    });
     window.localStorage.clear();
     document.documentElement.dataset.theme = '';
     document.documentElement.className = '';
+    const existing = document.getElementById('desktop');
+    if (existing) existing.remove();
+    desktop = document.createElement('main');
+    desktop.id = 'desktop';
+    document.body.appendChild(desktop);
+  });
+
+  afterEach(() => {
+    if (desktop && desktop.parentNode) {
+      desktop.parentNode.removeChild(desktop);
+    }
   });
 
   test('theme persists across sessions', () => {
-    const { result } = renderHook(() => useSettings(), {
+    const { result, unmount } = renderHook(() => useSettings(), {
       wrapper: SettingsProvider,
     });
-    act(() => result.current.setTheme('dark'));
-    expect(result.current.theme).toBe('dark');
-    expect(getTheme()).toBe('dark');
-    expect(window.localStorage.getItem('app:theme')).toBe('dark');
+    act(() => result.current.setTheme('kali-blue-deep'));
+    expect(result.current.theme).toBe('kali-blue-deep');
+    expect(getTheme()).toBe('kali-blue-deep');
+    expect(window.localStorage.getItem('app:theme')).toBe('kali-blue-deep');
+    unmount();
 
   });
 
   test('themes unlock at score milestones', () => {
-    const unlocked = getUnlockedThemes(600);
-    expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
-    expect(unlocked).not.toContain('matrix');
+    const unlocked = getUnlockedThemes(0);
+    expect(unlocked).toEqual(expect.arrayContaining(['kali-dark', 'kali-blue-deep']));
   });
 
-  test('dark class applied for neon and matrix themes', () => {
-    setTheme('neon');
+  test('dark class applied for Kali themes', () => {
+    setTheme('kali-blue-deep');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    setTheme('matrix');
+    setTheme('kali-dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
@@ -38,35 +71,26 @@ describe('theme persistence and unlocking', () => {
     const style = document.createElement('style');
     style.innerHTML = `
       :root { --color-bg: white; }
-      html[data-theme='dark'] { --color-bg: black; }
-      html[data-theme='neon'] { --color-bg: red; }
+      #desktop[data-theme='kali-dark'] { --color-bg: black; }
+      #desktop[data-theme='kali-blue-deep'] { --color-bg: red; }
     `;
     document.head.appendChild(style);
 
-    setTheme('default');
-    expect(
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
-    ).toBe('white');
+    setTheme('kali-dark');
+    expect(getComputedStyle(desktop).getPropertyValue('--color-bg')).toBe('black');
 
-    setTheme('dark');
-    expect(
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
-    ).toBe('black');
-
-    setTheme('neon');
-    expect(
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
-    ).toBe('red');
+    setTheme('kali-blue-deep');
+    expect(getComputedStyle(desktop).getPropertyValue('--color-bg')).toBe('red');
   });
 
   test('defaults to system preference when no stored theme', () => {
     // simulate dark mode preference
     // @ts-ignore
     window.matchMedia = jest.fn().mockReturnValue({ matches: true });
-    expect(getTheme()).toBe('dark');
+    expect(getTheme()).toBe('kali-dark');
     // simulate light mode preference
     // @ts-ignore
     window.matchMedia = jest.fn().mockReturnValue({ matches: false });
-    expect(getTheme()).toBe('default');
+    expect(getTheme()).toBe('kali-blue-deep');
   });
 });

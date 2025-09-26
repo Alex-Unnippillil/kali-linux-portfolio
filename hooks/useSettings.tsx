@@ -87,7 +87,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
-  theme: 'default',
+  theme: 'kali-dark',
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
