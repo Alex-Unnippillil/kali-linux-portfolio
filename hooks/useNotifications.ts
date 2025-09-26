@@ -1,6 +1,11 @@
 import { useContext } from 'react';
 import { NotificationsContext } from '../components/common/NotificationCenter';
 
+export type {
+  AppNotification,
+  PushNotificationInput,
+} from '../components/common/NotificationCenter';
+
 export const useNotifications = () => {
   const ctx = useContext(NotificationsContext);
   if (!ctx) {
