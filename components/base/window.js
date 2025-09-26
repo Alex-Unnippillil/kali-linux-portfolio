@@ -375,6 +375,13 @@ export class Window extends Component {
         }
     }
 
+    handleWheelCapture = (event) => {
+        if (this.props.isFocused) return;
+        if (typeof this.props.routeScrollToFocused === 'function') {
+            this.props.routeScrollToFocused(event);
+        }
+    }
+
     focusWindow = () => {
         this.props.focus(this.id);
     }
@@ -641,6 +648,7 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onWheelCapture={this.handleWheelCapture}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
