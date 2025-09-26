@@ -24,6 +24,9 @@ describe('Taskbar', () => {
     fireEvent.click(button);
     expect(minimize).toHaveBeenCalledWith('app1');
     expect(button).toHaveAttribute('data-context', 'taskbar');
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button).toHaveAttribute('data-active', 'true');
+    expect(button.querySelector('[data-testid="running-indicator"]')).toBeTruthy();
   });
 
   it('restores minimized window on click', () => {
@@ -42,5 +45,8 @@ describe('Taskbar', () => {
     const button = screen.getByRole('button', { name: /app one/i });
     fireEvent.click(button);
     expect(openApp).toHaveBeenCalledWith('app1');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    expect(button).toHaveAttribute('data-active', 'false');
+    expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
   });
 });

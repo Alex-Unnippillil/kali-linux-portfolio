@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -57,7 +58,16 @@ export function Settings() {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
+                {useKaliWallpaper ? (
+                    <KaliWallpaper />
+                ) : (
+                    <div
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                        aria-hidden="true"
+                    />
+                )}
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Theme:</label>
@@ -72,6 +82,22 @@ export function Settings() {
                     <option value="matrix">Matrix</option>
                 </select>
             </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={useKaliWallpaper}
+                        onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Kali Gradient Wallpaper
+                </label>
+            </div>
+            {useKaliWallpaper && (
+                <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                    Your previous wallpaper selection is preserved for when you turn this off.
+                </p>
+            )}
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">

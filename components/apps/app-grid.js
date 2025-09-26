@@ -3,6 +3,11 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
+import DelayedTooltip from '../ui/DelayedTooltip';
+import AppTooltipContent from '../ui/AppTooltipContent';
+import { createRegistryMap, buildAppMetadata } from '../../lib/appRegistry';
+
+const registryMetadata = createRegistryMap(apps);
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -75,16 +80,34 @@ export default function AppGrid({ openApp }) {
     const index = rowIndex * data.columnCount + columnIndex;
     if (index >= data.items.length) return null;
     const app = data.items[index];
+    const meta = data.metadata[app.id] ?? buildAppMetadata(app);
     return (
-      <div style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
-        <UbuntuApp
-          id={app.id}
-          icon={app.icon}
-          name={app.title}
-          displayName={<>{app.nodes}</>}
-          openApp={() => openApp && openApp(app.id)}
-        />
-      </div>
+      <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
+        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+          <div
+            ref={ref}
+            style={{
+              ...style,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 12,
+            }}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            onFocus={onFocus}
+            onBlur={onBlur}
+          >
+            <UbuntuApp
+              id={app.id}
+              icon={app.icon}
+              name={app.title}
+              displayName={<>{app.nodes}</>}
+              openApp={() => openApp && openApp(app.id)}
+            />
+          </div>
+        )}
+      </DelayedTooltip>
     );
   };
 
@@ -113,7 +136,12 @@ export default function AppGrid({ openApp }) {
                 width={width}
                 className="scroll-smooth"
               >
-                {(props) => <Cell {...props} data={{ items: filtered, columnCount }} />}
+                {(props) => (
+                  <Cell
+                    {...props}
+                    data={{ items: filtered, columnCount, metadata: registryMetadata }}
+                  />
+                )}
               </Grid>
             );
           }}

@@ -1,25 +1,39 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import DelayedTooltip from '../../components/ui/DelayedTooltip';
+import AppTooltipContent from '../../components/ui/AppTooltipContent';
+import {
+  buildAppMetadata,
+  loadAppRegistry,
+} from '../../lib/appRegistry';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
   const [query, setQuery] = useState('');
+  const [metadata, setMetadata] = useState({});
 
   useEffect(() => {
     let isMounted = true;
-    import('../../apps.config').then((mod) => {
-      if (isMounted) {
-        setApps(mod.default);
-      }
-    });
+    (async () => {
+      const { apps: registry, metadata: registryMeta } = await loadAppRegistry();
+      if (!isMounted) return;
+      setApps(registry);
+      setMetadata(registryMeta);
+    })();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const filteredApps = apps.filter(
-    (app) => !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
+  const filteredApps = useMemo(
+    () =>
+      apps.filter(
+        (app) =>
+          !app.disabled &&
+          app.title.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [apps, query],
   );
 
   return (
@@ -40,26 +54,44 @@ const AppsPage = () => {
         tabIndex="-1"
         className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
       >
-        {filteredApps.map((app) => (
-          <Link
-            key={app.id}
-            href={`/apps/${app.id}`}
-            className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
-            aria-label={app.title}
-          >
-            {app.icon && (
-              <Image
-                src={app.icon}
-                alt=""
-                width={64}
-                height={64}
-                sizes="64px"
-                className="h-16 w-16"
-              />
-            )}
-            <span className="mt-2">{app.title}</span>
-          </Link>
-        ))}
+        {filteredApps.map((app) => {
+          const meta = metadata[app.id] ?? buildAppMetadata(app);
+          return (
+            <DelayedTooltip
+              key={app.id}
+              content={<AppTooltipContent meta={meta} />}
+            >
+              {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                <div
+                  ref={ref}
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                  className="flex flex-col items-center"
+                >
+                  <Link
+                    href={`/apps/${app.id}`}
+                    className="flex h-full w-full flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
+                    aria-label={app.title}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                  >
+                    {app.icon && (
+                      <Image
+                        src={app.icon}
+                        alt=""
+                        width={64}
+                        height={64}
+                        sizes="64px"
+                        className="h-16 w-16"
+                      />
+                    )}
+                    <span className="mt-2">{app.title}</span>
+                  </Link>
+                </div>
+              )}
+            </DelayedTooltip>
+          );
+        })}
       </div>
     </div>
   );
