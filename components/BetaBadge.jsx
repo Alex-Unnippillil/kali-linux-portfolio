@@ -1,5 +1,7 @@
+import { isBetaEnabled } from '../utils/showBeta';
+
 export default function BetaBadge() {
-  if (process.env.NEXT_PUBLIC_SHOW_BETA !== '1') return null;
+  if (!isBetaEnabled()) return null;
   return (
     <button
       type="button"
