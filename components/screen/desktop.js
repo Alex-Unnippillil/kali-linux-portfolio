@@ -864,6 +864,7 @@ export class Desktop extends Component {
     }
 
     render() {
+        const contextApp = apps.find(app => app.id === this.state.context_app)
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -920,6 +921,7 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    appName={contextApp ? contextApp.title : undefined}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
