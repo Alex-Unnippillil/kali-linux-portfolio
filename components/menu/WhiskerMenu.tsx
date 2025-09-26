@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
@@ -27,6 +27,13 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
+  const categoryRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const axeInitialized = useRef(false);
+
+  const menuId = 'whisker-menu-panel';
+  const treeId = 'whisker-menu-categories';
+  const listboxId = 'whisker-menu-apps';
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -66,15 +73,35 @@ const WhiskerMenu: React.FC = () => {
     return list;
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
+  const clampIndex = useCallback(
+    (value: number) => {
+      if (currentApps.length === 0) {
+        return 0;
+      }
+      return Math.min(Math.max(value, 0), currentApps.length - 1);
+    },
+    [currentApps.length]
+  );
+
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
   }, [open, category, query]);
 
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setOpen(false);
-  };
+  useEffect(() => {
+    setHighlight(h => clampIndex(h));
+  }, [clampIndex]);
+
+  const openSelectedApp = useCallback(
+    (app: AppMeta) => {
+      if (app.disabled) {
+        return;
+      }
+      window.dispatchEvent(new CustomEvent('open-app', { detail: app.id }));
+      setOpen(false);
+    },
+    []
+  );
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -86,21 +113,11 @@ const WhiskerMenu: React.FC = () => {
       if (!open) return;
       if (e.key === 'Escape') {
         setOpen(false);
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setHighlight(h => Math.max(h - 1, 0));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        const app = currentApps[highlight];
-        if (app) openSelectedApp(app.id);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, currentApps, highlight]);
+  }, [open]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -114,6 +131,120 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  useEffect(() => {
+    if (!open || axeInitialized.current) {
+      return;
+    }
+    if (typeof window === 'undefined' || process.env.NODE_ENV !== 'development') {
+      return;
+    }
+
+    let active = true;
+
+    const initAxe = async () => {
+      try {
+        const [{ default: axe }, ReactDOM] = await Promise.all([
+          import('@axe-core/react'),
+          import('react-dom'),
+        ]);
+        if (!active) {
+          return;
+        }
+        axeInitialized.current = true;
+        axe(React, ReactDOM, 1000, undefined, {
+          elementRef: menuRef,
+          resultTypes: ['violations'],
+        });
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.warn('Failed to initialize axe accessibility checks', error);
+        }
+      }
+    };
+
+    void initAxe();
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
+
+  const focusCategoryAt = useCallback((index: number) => {
+    const button = categoryRefs.current[index];
+    button?.focus();
+  }, []);
+
+  const handleCategoryKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const delta = event.key === 'ArrowDown' ? 1 : -1;
+        const nextIndex = Math.min(Math.max(index + delta, 0), CATEGORIES.length - 1);
+        if (nextIndex !== index) {
+          setCategory(CATEGORIES[nextIndex].id);
+          focusCategoryAt(nextIndex);
+        }
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        setCategory(CATEGORIES[0].id);
+        focusCategoryAt(0);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        const lastIndex = CATEGORIES.length - 1;
+        setCategory(CATEGORIES[lastIndex].id);
+        focusCategoryAt(lastIndex);
+      }
+    },
+    [focusCategoryAt]
+  );
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlight(prev => clampIndex(prev + 1));
+      listboxRef.current?.focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlight(prev => clampIndex(prev - 1));
+      listboxRef.current?.focus();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const app = currentApps[highlight];
+      if (app) {
+        openSelectedApp(app);
+      }
+    } else if (event.key === 'Escape') {
+      setOpen(false);
+    }
+  };
+
+  const activeOption = currentApps[highlight];
+  const activeOptionId = activeOption ? `whisker-option-${activeOption.id}` : undefined;
+
+  const handleListboxKeyDown = (event: React.KeyboardEvent<HTMLUListElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlight(prev => clampIndex(prev + 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlight(prev => clampIndex(prev - 1));
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      setHighlight(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      setHighlight(clampIndex(currentApps.length - 1));
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (activeOption) {
+        openSelectedApp(activeOption);
+      }
+    } else if (event.key === 'Escape') {
+      setOpen(false);
+    }
+  };
+
   return (
     <div className="relative">
       <button
@@ -121,6 +252,9 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -134,6 +268,9 @@ const WhiskerMenu: React.FC = () => {
       {open && (
         <div
           ref={menuRef}
+          id={menuId}
+          role="menu"
+          aria-label="Application launcher"
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}
           onBlur={(e) => {
@@ -142,16 +279,35 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
+          <div className="flex flex-col bg-gray-800 p-2" role="presentation">
+            <ul
+              id={treeId}
+              role="tree"
+              aria-label="Application categories"
+              aria-controls={listboxId}
+              className="flex flex-col"
+            >
+              {CATEGORIES.map((cat, idx) => {
+                const isActiveCategory = category === cat.id;
+                return (
+                  <li key={cat.id} role="none">
+                    <button
+                      ref={(el) => {
+                        categoryRefs.current[idx] = el;
+                      }}
+                      role="treeitem"
+                      aria-selected={isActiveCategory}
+                      tabIndex={isActiveCategory ? 0 : -1}
+                      className={`text-left px-2 py-1 rounded mb-1 ${isActiveCategory ? 'bg-gray-700' : ''}`}
+                      onClick={() => setCategory(cat.id)}
+                      onKeyDown={(event) => handleCategoryKeyDown(event, idx)}
+                    >
+                      {cat.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
           <div className="p-3">
             <input
@@ -159,21 +315,52 @@ const WhiskerMenu: React.FC = () => {
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               autoFocus
             />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-              {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
-              ))}
-            </div>
+            <ul
+              ref={listboxRef}
+              id={listboxId}
+              role="listbox"
+              aria-label="Applications"
+              className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto focus:outline-none"
+              tabIndex={0}
+              aria-activedescendant={activeOptionId}
+              onKeyDown={handleListboxKeyDown}
+            >
+              {currentApps.map((app, idx) => {
+                const optionId = `whisker-option-${app.id}`;
+                const isActive = idx === highlight;
+                return (
+                  <li key={app.id} role="none" className="list-none">
+                    <div
+                      id={optionId}
+                      role="option"
+                      aria-selected={isActive}
+                      aria-disabled={app.disabled || undefined}
+                      className={isActive ? 'ring-2 ring-ubb-orange rounded' : 'rounded'}
+                      onMouseEnter={() => setHighlight(idx)}
+                      onFocus={() => setHighlight(idx)}
+                      onClick={() => {
+                        setHighlight(idx);
+                        listboxRef.current?.focus();
+                      }}
+                      onDoubleClick={() => openSelectedApp(app)}
+                    >
+                      <UbuntuApp
+                        id={app.id}
+                        icon={app.icon}
+                        name={app.title}
+                        openApp={() => openSelectedApp(app)}
+                        disabled={app.disabled}
+                        roleOverride="presentation"
+                        tabIndexOverride={-1}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </div>
       )}

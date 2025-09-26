@@ -33,7 +33,7 @@ export class UbuntuApp extends Component {
     render() {
         return (
             <div
-                role="button"
+                role={this.props.roleOverride ?? "button"}
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
                 data-context="app"
@@ -46,7 +46,7 @@ export class UbuntuApp extends Component {
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                tabIndex={this.props.tabIndexOverride ?? (this.props.disabled ? -1 : 0)}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >
