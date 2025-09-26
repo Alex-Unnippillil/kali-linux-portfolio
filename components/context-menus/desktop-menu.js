@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import apps from '../../apps.config'
 import logger from '../../utils/logger'
+
+const DISPLAY_APP_ID = (() => {
+    const displayApp = apps.find(app => app.id === 'display') || apps.find(app => app.id === 'display-settings');
+    return displayApp ? displayApp.id : null;
+})();
 
 function DesktopMenu(props) {
 
@@ -15,6 +21,18 @@ function DesktopMenu(props) {
 
     const openTerminal = () => {
         props.openApp("terminal");
+    }
+
+    const openBackgroundPreferences = () => {
+        props.openApp("settings");
+    }
+
+    const openDisplaySettings = () => {
+        if (DISPLAY_APP_ID) {
+            props.openApp(DISPLAY_APP_ID);
+            return;
+        }
+        props.openApp("settings");
     }
 
     const openSettings = () => {
@@ -54,10 +72,10 @@ function DesktopMenu(props) {
                 onClick={props.addNewFolder}
                 type="button"
                 role="menuitem"
-                aria-label="New Folder"
+                aria-label="Create Folder"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">New Folder</span>
+                <span className="ml-5">Create Folder</span>
             </button>
             <button
                 onClick={props.openShortcutSelector}
@@ -69,36 +87,35 @@ function DesktopMenu(props) {
                 <span className="ml-5">Create Shortcut...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
-            </div>
-            <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
-            </div>
             <button
                 onClick={openTerminal}
                 type="button"
                 role="menuitem"
-                aria-label="Open in Terminal"
+                aria-label="Open Terminal Here"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Open in Terminal</span>
+                <span className="ml-5">Open Terminal Here</span>
             </button>
             <Devider />
             <button
-                onClick={openSettings}
+                onClick={openBackgroundPreferences}
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Change Background...</span>
+                <span className="ml-5">Change Background…</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
+            <button
+                onClick={openDisplaySettings}
+                type="button"
+                role="menuitem"
+                aria-label="Display Settings"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Display Settings…</span>
+            </button>
             <button
                 onClick={openSettings}
                 type="button"
