@@ -1,9 +1,38 @@
-.windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+.resizeHandle {
+  position: absolute;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
 }
 
-.windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+.resizeHandleLeft {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.resizeHandleRight {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.resizeHandleTop {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.resizeHandleBottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  cursor: ns-resize;
 }

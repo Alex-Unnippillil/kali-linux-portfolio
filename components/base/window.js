@@ -626,6 +626,7 @@ export class Window extends Component {
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
+                    cancel=".windowMainScreen, .windowMainScreen *"
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
@@ -642,8 +643,12 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowResizeHandles
+                                onHorizontalResize={this.handleHorizontalResize}
+                                onVerticalResize={this.handleVerticleResize}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -689,45 +694,53 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     )
 }
 
-// Window's Borders
-export class WindowYBorder extends Component {
+// Window resize handles
+export class WindowResizeHandles extends Component {
     componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
-
         this.trpImg = new window.Image(0, 0);
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
-    }
 
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+    handleDragStart = (event) => {
+        if (event.dataTransfer && this.trpImg) {
+            event.dataTransfer.setDragImage(this.trpImg, 0, 0);
         }
+    };
+
+    render() {
+        const { onHorizontalResize, onVerticalResize } = this.props;
+
+        return (
+            <div className="pointer-events-none absolute inset-0 z-30">
+                <div
+                    draggable
+                    onDragStart={this.handleDragStart}
+                    onDrag={onHorizontalResize}
+                    className={`${styles.resizeHandle} ${styles.resizeHandleLeft}`}
+                />
+                <div
+                    draggable
+                    onDragStart={this.handleDragStart}
+                    onDrag={onHorizontalResize}
+                    className={`${styles.resizeHandle} ${styles.resizeHandleRight}`}
+                />
+                <div
+                    draggable
+                    onDragStart={this.handleDragStart}
+                    onDrag={onVerticalResize}
+                    className={`${styles.resizeHandle} ${styles.resizeHandleTop}`}
+                />
+                <div
+                    draggable
+                    onDragStart={this.handleDragStart}
+                    onDrag={onVerticalResize}
+                    className={`${styles.resizeHandle} ${styles.resizeHandleBottom}`}
+                />
+            </div>
+        );
     }
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
