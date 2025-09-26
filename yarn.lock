@@ -5447,7 +5447,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"capstone-wasm@npm:^1.0.3":
+"capstone-wasm@npm:1.0.3":
   version: 1.0.3
   resolution: "capstone-wasm@npm:1.0.3"
   checksum: 10c0/0fc4ef46db73ee77a58f8138b64ac9e5320b880ba6c250d24f95644b9092b88822643cade698ca1c9d56c313de22e6cebcb940117dac727a8f5b3044ccab7056
@@ -13896,7 +13896,7 @@ __metadata:
     autoprefixer: "npm:^10.4.13"
     bad-words: "npm:^3.0.4"
     canvas-confetti: "npm:1.9.3"
-    capstone-wasm: "npm:^1.0.3"
+    capstone-wasm: "npm:1.0.3"
     chess.js: "npm:^1.0.0"
     chrono-node: "npm:^2.8.4"
     cron-parser: "npm:^5.3.0"
