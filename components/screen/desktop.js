@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 const BackgroundImage = dynamic(
@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { readAllWindowStates, writeWindowState } from '../../utils/windowPersistence';
 
 export class Desktop extends Component {
     constructor() {
@@ -40,6 +41,8 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
+            maximized_windows: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -62,6 +65,7 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            this.applyPersistedLayouts(this.props.initialLayouts);
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -89,6 +93,12 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.initialLayouts !== this.props.initialLayouts) {
+            this.applyPersistedLayouts(this.props.initialLayouts);
+        }
     }
 
     componentWillUnmount() {
@@ -460,6 +470,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const size = this.state.window_sizes[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -478,7 +489,12 @@ export class Desktop extends Component {
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
+                    initialWidth: size ? size.width : undefined,
+                    initialHeight: size ? size.height : undefined,
+                    initialMaximized: this.state.maximized_windows[app.id],
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onSizeChange: (width, height) => this.updateWindowSize(app.id, width, height),
+                    onMaximizeChange: (value) => this.setWindowMaximized(app.id, value),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -490,13 +506,55 @@ export class Desktop extends Component {
         return windowsJsx;
     }
 
+    applyPersistedLayouts(layouts = {}) {
+        if (!layouts || typeof layouts !== 'object') return;
+        this.setState(prev => {
+            const window_positions = { ...prev.window_positions };
+            const window_sizes = { ...prev.window_sizes };
+            const maximized_windows = { ...prev.maximized_windows };
+            Object.entries(layouts).forEach(([id, layout]) => {
+                if (layout.x !== undefined && layout.y !== undefined) {
+                    window_positions[id] = { x: layout.x, y: layout.y };
+                }
+                if (layout.width !== undefined && layout.height !== undefined) {
+                    window_sizes[id] = { width: layout.width, height: layout.height };
+                }
+                if (layout.maximized !== undefined) {
+                    maximized_windows[id] = layout.maximized;
+                }
+            });
+            return { window_positions, window_sizes, maximized_windows };
+        });
+    }
+
     updateWindowPosition = (id, x, y) => {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
+        const snappedX = snap(x);
+        const snappedY = snap(y);
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+            window_positions: { ...prev.window_positions, [id]: { x: snappedX, y: snappedY } }
+        }), () => {
+            writeWindowState(id, { x: snappedX, y: snappedY });
+            this.saveSession();
+        });
+    }
+
+    updateWindowSize = (id, width, height) => {
+        this.setState(prev => ({
+            window_sizes: { ...prev.window_sizes, [id]: { width, height } }
+        }), () => {
+            writeWindowState(id, { width, height });
+        });
+    }
+
+    setWindowMaximized = (id, maximized) => {
+        this.setState(prev => ({
+            maximized_windows: { ...prev.maximized_windows, [id]: maximized }
+        }), () => {
+            writeWindowState(id, { maximized });
+        });
     }
 
     saveSession = () => {
@@ -974,5 +1032,18 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const [initialLayouts, setInitialLayouts] = useState({});
+
+    useEffect(() => {
+        let mounted = true;
+        const layouts = readAllWindowStates();
+        if (mounted) {
+            setInitialLayouts(layouts);
+        }
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    return <Desktop {...props} snapEnabled={snapEnabled} initialLayouts={initialLayouts} />;
 }

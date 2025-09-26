@@ -18,12 +18,26 @@ export class Window extends Component {
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = props.initialY ?? 10;
+        const defaultWidth = props.defaultWidth
+            || (isPortrait
+                ? 90
+                : window.innerWidth < 640
+                    ? 85
+                    : 60);
+        const defaultHeight = props.defaultHeight
+            || (isPortrait
+                ? 85
+                : window.innerWidth < 640
+                    ? 60
+                    : 85);
+        const initialWidth = props.initialWidth ?? defaultWidth;
+        const initialHeight = props.initialHeight ?? defaultHeight;
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: initialWidth,
+            height: initialHeight,
             closed: false,
-            maximized: false,
+            maximized: props.initialMaximized ?? false,
             parentSize: {
                 height: 100,
                 width: 100
@@ -56,6 +70,14 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (this.state.maximized) {
+            const node = document.getElementById(this.id);
+            if (node) {
+                node.style.transform = `translate(-1pt,-2pt)`;
+            }
+            this.reportMaximize(true);
+            this.props.hideSideBar(this.id, true);
+        }
     }
 
     componentWillUnmount() {
@@ -72,10 +94,18 @@ export class Window extends Component {
     }
 
     setDefaultWindowDimenstion = () => {
+        if (this.props.initialWidth !== undefined && this.props.initialHeight !== undefined) {
+            this.resizeBoundries();
+            return;
+        }
+
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
-                this.resizeBoundries
+                () => {
+                    this.resizeBoundries();
+                    this.reportSize();
+                }
             );
             return;
         }
@@ -83,11 +113,20 @@ export class Window extends Component {
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 90 }, () => {
+                this.resizeBoundries();
+                this.reportSize();
+            });
         } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+            this.setState({ height: 60, width: 85 }, () => {
+                this.resizeBoundries();
+                this.reportSize();
+            });
         } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 60 }, () => {
+                this.resizeBoundries();
+                this.reportSize();
+            });
         }
     }
 
@@ -106,6 +145,18 @@ export class Window extends Component {
                 this.scheduleUsageCheck();
             }
         });
+    }
+
+    reportSize = () => {
+        if (typeof this.props.onSizeChange === 'function') {
+            this.props.onSizeChange(this.state.width, this.state.height);
+        }
+    }
+
+    reportMaximize = (value) => {
+        if (typeof this.props.onMaximizeChange === 'function') {
+            this.props.onMaximizeChange(value);
+        }
     }
 
     computeContentUsage = () => {
@@ -210,7 +261,10 @@ export class Window extends Component {
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        this.setState({ height: heightPercent }, () => {
+            this.resizeBoundries();
+            this.reportSize();
+        });
     }
 
     handleHorizontalResize = () => {
@@ -218,7 +272,10 @@ export class Window extends Component {
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        this.setState({ width: widthPercent }, () => {
+            this.resizeBoundries();
+            this.reportSize();
+        });
     }
 
     setWinowsPosition = () => {
@@ -249,9 +306,15 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.reportSize();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.reportSize();
+            });
         }
     }
 
@@ -285,7 +348,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.reportSize();
+        });
     }
 
     checkOverlap = () => {
@@ -423,7 +489,10 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false }, () => {
+                this.reportMaximize(false);
+                this.reportSize();
+            });
             this.checkOverlap();
             return;
         }
@@ -431,7 +500,10 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false }, () => {
+                    this.reportMaximize(false);
+                    this.reportSize();
+                });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -443,7 +515,10 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false }, () => {
+                    this.reportMaximize(false);
+                    this.reportSize();
+                });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -461,7 +536,10 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2 }, () => {
+                this.reportSize();
+                this.reportMaximize(true);
+            });
             this.props.hideSideBar(this.id, true);
         }
     }
