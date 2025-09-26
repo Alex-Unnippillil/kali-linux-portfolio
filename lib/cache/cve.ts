@@ -1,0 +1,5 @@
+export const CVE_CACHE_SECONDS = 3600;
+export const CVE_STALE_SECONDS = 3600;
+
+export const CVE_CACHE_MS = CVE_CACHE_SECONDS * 1000;
+export const CVE_STALE_MS = CVE_STALE_SECONDS * 1000;
