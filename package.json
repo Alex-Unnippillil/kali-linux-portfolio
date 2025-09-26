@@ -46,7 +46,7 @@
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
     "canvas-confetti": "1.9.3",
-    "capstone-wasm": "^1.0.3",
+    "capstone-wasm": "1.0.3",
     "chess.js": "^1.0.0",
     "chrono-node": "^2.8.4",
     "cron-parser": "^5.3.0",
