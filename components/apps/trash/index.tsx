@@ -25,6 +25,12 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
 
+  const notifyChange = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('trash-change'));
+    }
+  };
+
   useEffect(() => {
     const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
     const ms = purgeDays * 24 * 60 * 60 * 1000;
@@ -43,6 +49,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const persist = (next: TrashItem[]) => {
     setItems(next);
     localStorage.setItem('window-trash', JSON.stringify(next));
+    notifyChange();
   };
 
   const restore = useCallback(() => {
