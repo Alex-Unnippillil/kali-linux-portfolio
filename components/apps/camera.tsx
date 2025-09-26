@@ -5,8 +5,10 @@ import React, { useEffect, useRef, useState } from 'react';
 const CameraApp: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const captionTrackRef = useRef<HTMLTrackElement>(null);
   const [snapshot, setSnapshot] = useState<string>('');
   const [drawing, setDrawing] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
 
   useEffect(() => {
     let stream: MediaStream;
@@ -15,6 +17,7 @@ const CameraApp: React.FC = () => {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          videoRef.current.muted = true;
           await videoRef.current.play();
         }
       } catch {
@@ -35,6 +38,16 @@ const CameraApp: React.FC = () => {
     if (!video || !overlay) return;
     overlay.width = video.videoWidth;
     overlay.height = video.videoHeight;
+  };
+
+  useEffect(() => {
+    const track = captionTrackRef.current;
+    if (!track) return;
+    track.mode = captionsEnabled ? 'showing' : 'disabled';
+  }, [captionsEnabled]);
+
+  const toggleCaptions = () => {
+    setCaptionsEnabled((value) => !value);
   };
 
   const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -90,6 +103,9 @@ const CameraApp: React.FC = () => {
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto flex flex-col items-center space-y-4">
+      <p id="camera-video-description" className="sr-only">
+        Live camera preview with an annotation overlay. Captions describe how to interact with the tool.
+      </p>
       <div className="relative">
         <video
           ref={videoRef}
@@ -97,7 +113,19 @@ const CameraApp: React.FC = () => {
           onLoadedMetadata={handleLoaded}
           autoPlay
           playsInline
-        />
+          muted
+          aria-describedby="camera-video-description"
+          data-testid="camera-video"
+        >
+          <track
+            ref={captionTrackRef}
+            kind="captions"
+            srcLang="en"
+            src="/captions/camera-live.vtt"
+            label="Camera instructions"
+            default
+          />
+        </video>
         <canvas
           ref={overlayRef}
           className="absolute top-0 left-0 rounded cursor-crosshair"
@@ -108,6 +136,14 @@ const CameraApp: React.FC = () => {
         />
       </div>
       <div className="space-x-2">
+        <button
+          type="button"
+          onClick={toggleCaptions}
+          aria-pressed={captionsEnabled}
+          className="px-4 py-2 bg-purple-700 rounded"
+        >
+          {captionsEnabled ? 'Hide Captions' : 'Show Captions'}
+        </button>
         <button
           type="button"
           onClick={takeSnapshot}
