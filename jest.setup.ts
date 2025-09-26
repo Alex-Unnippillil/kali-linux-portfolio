@@ -80,20 +80,28 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   });
 }
 
+const globalContext = globalThis as typeof globalThis & {
+  matchMedia?: (query: string) => MediaQueryList;
+  IntersectionObserver?: typeof IntersectionObserver;
+  localStorage?: Storage;
+};
+
 // Basic matchMedia mock for libraries that expect it
-if (typeof window !== 'undefined' && !window.matchMedia) {
-  // @ts-ignore
-  window.matchMedia = () => ({
+if (!globalContext.matchMedia) {
+  globalContext.matchMedia = () => ({
     matches: false,
+    media: '',
+    onchange: null,
     addEventListener: () => {},
     removeEventListener: () => {},
     addListener: () => {},
     removeListener: () => {},
-  });
+    dispatchEvent: () => false,
+  } as MediaQueryList);
 }
 
 // Minimal IntersectionObserver mock so components relying on it don't crash in tests
-if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+if (!globalContext.IntersectionObserver) {
   class IntersectionObserverMock {
     constructor() {}
     observe() {}
@@ -101,17 +109,15 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
     disconnect() {}
     takeRecords() { return []; }
   }
-  // @ts-ignore
-  window.IntersectionObserver = IntersectionObserverMock;
+  globalContext.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
   // @ts-ignore
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
 // Simple localStorage mock for environments without it
-if (typeof window !== 'undefined' && !window.localStorage) {
+if (!globalContext.localStorage) {
   const store: Record<string, string> = {};
-  // @ts-ignore
-  window.localStorage = {
+  globalContext.localStorage = {
     getItem: (key: string) => (key in store ? store[key] : null),
     setItem: (key: string, value: string) => {
       store[key] = String(value);

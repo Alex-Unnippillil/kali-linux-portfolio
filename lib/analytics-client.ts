@@ -12,7 +12,6 @@ export function trackEvent(
 ) {
   try {
     // Dynamically require to avoid ESM issues in test environment
-    // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
     const { track } = require('@vercel/analytics');
     track(name, props);
   } catch {

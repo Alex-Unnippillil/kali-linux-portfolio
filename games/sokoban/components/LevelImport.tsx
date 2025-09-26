@@ -6,14 +6,14 @@ import { LevelPack, parseLevels } from "../../../apps/sokoban/levels";
 const STORAGE_KEY = "sokoban_packs";
 const FILE_NAME = "sokoban-packs.json";
 
-const hasOpfs =
-  typeof window !== "undefined" &&
+const hasOpfs = () =>
+  typeof navigator !== "undefined" &&
   "storage" in navigator &&
   Boolean((navigator.storage as any).getDirectory);
 
 export const loadLocalPacks = async (): Promise<LevelPack[]> => {
   if (typeof window === "undefined") return [];
-  if (hasOpfs) {
+  if (hasOpfs()) {
     try {
       const root = await (navigator.storage as any).getDirectory();
       const handle = await root.getFileHandle(FILE_NAME);
@@ -32,7 +32,7 @@ export const loadLocalPacks = async (): Promise<LevelPack[]> => {
 
 export const saveLocalPacks = async (packs: LevelPack[]): Promise<void> => {
   if (typeof window === "undefined") return;
-  if (hasOpfs) {
+  if (hasOpfs()) {
     const root = await (navigator.storage as any).getDirectory();
     const handle = await root.getFileHandle(FILE_NAME, { create: true });
     const writable = await handle.createWritable();

@@ -11,6 +11,11 @@ import {
 
 const BOARD_SIZE = 400;
 const CELL = BOARD_SIZE / SIZE;
+const DIFFICULTIES = {
+  easy: { depth: 2, weights: { mobility: 1, corners: 10, edges: 5 } },
+  medium: { depth: 3, weights: { mobility: 3, corners: 20, edges: 7 } },
+  hard: { depth: 4, weights: { mobility: 5, corners: 25, edges: 10 } },
+};
 
 const Reversi = () => {
   const canvasRef = useRef(null);
@@ -34,11 +39,6 @@ const Reversi = () => {
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [mobility, setMobility] = useState({ player: 0, ai: 0 });
   const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
-  const DIFFICULTIES = {
-    easy: { depth: 2, weights: { mobility: 1, corners: 10, edges: 5 } },
-    medium: { depth: 3, weights: { mobility: 3, corners: 20, edges: 7 } },
-    hard: { depth: 4, weights: { mobility: 5, corners: 25, edges: 10 } },
-  };
   const [difficulty, setDifficulty] = useState('medium');
   const [useBook, setUseBook] = useState(true);
   const [history, setHistory] = useState([]);
