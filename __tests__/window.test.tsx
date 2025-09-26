@@ -169,6 +169,41 @@ describe('Window snapping preview', () => {
   });
 });
 
+describe('Window titlebar interactions', () => {
+  it('toggles maximize state on double click', () => {
+    const hideSideBar = jest.fn();
+    const ref = React.createRef<Window>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={hideSideBar}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const titleBar = screen.getByRole('button', { name: 'Test' });
+
+    fireEvent.doubleClick(titleBar);
+
+    expect(ref.current!.state.maximized).toBe(true);
+    expect(ref.current!.state.cursorType).toBe('cursor-default');
+    expect(hideSideBar).toHaveBeenLastCalledWith('test-window', true);
+
+    fireEvent.doubleClick(titleBar);
+
+    expect(ref.current!.state.maximized).toBe(false);
+    expect(ref.current!.state.cursorType).toBe('cursor-default');
+    expect(hideSideBar).toHaveBeenLastCalledWith('test-window', false);
+  });
+});
+
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     setViewport(1024, 768);

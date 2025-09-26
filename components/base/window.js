@@ -62,6 +62,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._ignoreNextDragStart = false;
+        this._maximizedAtPointerDown = false;
     }
 
     componentDidMount() {
@@ -454,30 +456,38 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
-            this.checkOverlap();
+            this.setState({ maximized: false, cursorType: "cursor-default", grabbed: false }, () => {
+                this.checkOverlap();
+                this.props.hideSideBar(this.id, false);
+            });
+            return;
+        }
+
+        const finalizeRestore = () => {
+            node.style.transform = endTransform;
+            this.setState({ maximized: false, cursorType: "cursor-default", grabbed: false }, () => {
+                this.checkOverlap();
+                this.props.hideSideBar(this.id, false);
+            });
+            if (this._dockAnimation) {
+                this._dockAnimation.onfinish = null;
+            }
+        };
+
+        if (!node.animate) {
+            finalizeRestore();
             return;
         }
 
         if (this._dockAnimation) {
-            this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
-                this._dockAnimation.onfinish = null;
-            };
+            this._dockAnimation.onfinish = finalizeRestore;
             this._dockAnimation.reverse();
         } else {
             this._dockAnimation = node.animate(
                 [{ transform: startTransform }, { transform: endTransform }],
                 { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
-            this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
-                this._dockAnimation.onfinish = null;
-            };
+            this._dockAnimation.onfinish = finalizeRestore;
         }
     }
 
@@ -492,9 +502,39 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2, cursorType: "cursor-default", grabbed: false });
             this.props.hideSideBar(this.id, true);
         }
+    }
+
+    handleTitleBarDoubleClick = (event) => {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        if (this._maximizedAtPointerDown) {
+            this.restoreWindow();
+        } else {
+            this.maximizeWindow();
+        }
+        this._ignoreNextDragStart = false;
+    }
+
+    handleDragStart = () => {
+        if (this._ignoreNextDragStart) {
+            this._ignoreNextDragStart = false;
+            return false;
+        }
+        this.changeCursorToMove();
+        return undefined;
+    }
+
+    handleTitleBarPointerDown = (event) => {
+        this._maximizedAtPointerDown = this.state.maximized;
+        if (event?.detail >= 2) {
+            this._ignoreNextDragStart = true;
+        }
+        this.focusWindow();
     }
 
     closeWindow = () => {
@@ -638,7 +678,7 @@ export class Window extends Component {
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
@@ -675,7 +715,9 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
+                            onPointerDown={this.handleTitleBarPointerDown}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
+                            cursor={this.state.maximized ? "cursor-default" : "cursor-move"}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -702,16 +744,21 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, cursor }) {
     return (
         <div
-            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
+            className={[
+                styles.windowTitlebar,
+                'relative bg-ub-window-title px-3 text-white w-full select-none flex items-center',
+                cursor || ''
+            ].filter(Boolean).join(' ')}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
