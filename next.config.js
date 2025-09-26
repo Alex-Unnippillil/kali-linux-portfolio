@@ -124,6 +124,10 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    serverExternalPackages: [
+      '@supabase/supabase-js',
+      '@tinyhttp/cookie-signature',
+    ],
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
