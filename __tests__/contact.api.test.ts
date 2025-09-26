@@ -7,6 +7,7 @@ describe('contact api', () => {
     jest.restoreAllMocks();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
+    delete process.env.RATE_LIMIT_SECRET;
   });
 
   test('returns 200 when inputs pass', async () => {
@@ -14,6 +15,7 @@ describe('contact api', () => {
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
+    process.env.RATE_LIMIT_SECRET = 'rate-secret';
 
     const { req, res } = createMocks({
       method: 'POST',
@@ -50,6 +52,7 @@ describe('contact api', () => {
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
+    process.env.RATE_LIMIT_SECRET = 'rate-secret';
 
     const { req, res } = createMocks({
       method: 'POST',

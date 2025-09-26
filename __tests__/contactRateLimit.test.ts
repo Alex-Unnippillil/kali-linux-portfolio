@@ -6,6 +6,7 @@ describe('contact api rate limiter', () => {
     rateLimit.clear();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
+    delete process.env.RATE_LIMIT_SECRET;
   });
 
   it('removes stale IP entries', async () => {
@@ -18,6 +19,7 @@ describe('contact api rate limiter', () => {
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
+    process.env.RATE_LIMIT_SECRET = 'rate-secret';
     const req: any = {
       method: 'POST',
       headers: { 'x-csrf-token': 'token', cookie: 'csrfToken=token' },
