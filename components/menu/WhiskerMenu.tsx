@@ -5,6 +5,11 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+  clearRecentEntries,
+  readRecentEntries,
+  type RecentEntry,
+} from '../../utils/recentStorage';
 
 type AppMeta = {
   id: string;
@@ -118,7 +123,7 @@ const WhiskerMenu: React.FC = () => {
   const [category, setCategory] = useState<FilterCategory>('all');
 
   const [query, setQuery] = useState('');
-  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [recentEntries, setRecentEntries] = useState<RecentEntry[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -129,26 +134,30 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
-  useEffect(() => {
-    setRecentIds(readRecentAppIds());
+  const loadRecentEntries = useCallback(() => {
+    const entries = readRecentEntries().filter(entry => entry.type === 'app');
+    setRecentEntries(entries);
   }, []);
 
   useEffect(() => {
+    loadRecentEntries();
+  }, [loadRecentEntries]);
+
+  useEffect(() => {
     if (!open) return;
-    setRecentIds(readRecentAppIds());
-  }, [open]);
+    loadRecentEntries();
+  }, [open, loadRecentEntries]);
 
   const recentApps = useMemo(() => {
     if (!open) {
       return [];
     }
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
-    } catch {
-      return [];
-    }
-  }, [allApps, open]);
+    const entries = recentEntries;
+    const mapById = new Map(allApps.map(app => [app.id, app] as const));
+    return entries
+      .map(entry => mapById.get(entry.id))
+      .filter((app): app is AppMeta => Boolean(app));
+  }, [allApps, open, recentEntries]);
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
 
@@ -183,7 +192,7 @@ const WhiskerMenu: React.FC = () => {
     const found = categoryConfigs.find(cat => cat.id === category);
     return found ?? categoryConfigs[0];
   }, [category, categoryConfigs]);
-n
+
 
   const currentApps = useMemo(() => {
     let list = currentCategory?.apps ?? [];
@@ -313,13 +322,13 @@ n
 
   useEffect(() => {
     if (!isVisible) return;
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      setRecentApps(ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[]);
-    } catch {
-      setRecentApps([]);
-    }
-  }, [allApps, isVisible]);
+    loadRecentEntries();
+  }, [isVisible, loadRecentEntries]);
+
+  const handleClearRecents = useCallback(() => {
+    clearRecentEntries();
+    setRecentEntries([]);
+  }, []);
 
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
@@ -449,6 +458,22 @@ n
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
+            {currentCategory?.id === 'recent' && (
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs text-gray-300">
+                  {currentApps.length > 0 ? 'Last opened applications' : 'No recently opened applications yet.'}
+                </p>
+                {currentApps.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearRecents}
+                    className="text-xs font-semibold uppercase tracking-wide text-ubt-blue transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
             <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
 
               {currentApps.map((app, idx) => (
