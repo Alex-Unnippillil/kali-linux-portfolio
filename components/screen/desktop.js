@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -637,12 +638,7 @@ export class Desktop extends Component {
 
             safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
 
-            let recentApps = [];
-            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
-            recentApps = recentApps.filter(id => id !== objId);
-            recentApps.unshift(objId);
-            recentApps = recentApps.slice(0, 10);
-            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+            addRecentApp(objId);
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
