@@ -13,15 +13,17 @@ export default class Navbar extends Component {
 	}
 
 	render() {
-		return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                return (
+                        <div className="main-navbar-vp relative top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
                                 <WhiskerMenu />
-                                <div
-                                        className={
-                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
-                                        }
-                                >
-                                        <Clock />
+                                <div className="absolute left-1/2 -translate-x-1/2">
+                                        <div
+                                                className={
+                                                        'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+                                                }
+                                        >
+                                                <Clock />
+                                        </div>
                                 </div>
                                 <button
                                         type="button"
