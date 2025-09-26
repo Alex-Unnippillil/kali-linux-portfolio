@@ -79,6 +79,7 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
+- `RATE_LIMIT_SECRET` – authenticate rate-limit bypass checks issued from middleware/tests.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
 
 See `.env.local.example` for the full list.
@@ -208,6 +209,7 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
 | `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
+| `RATE_LIMIT_SECRET` | Shared secret used by middleware and tests to authenticate rate-limit bypass calls. |
 | `SUPABASE_URL` | Supabase project URL for server-side access. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
 | `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
@@ -295,6 +297,7 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
   - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
   - `RECAPTCHA_SECRET`
+  - `RATE_LIMIT_SECRET`
   - `ADMIN_READ_KEY` (set manually in Vercel or your host)
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).

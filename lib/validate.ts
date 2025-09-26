@@ -19,6 +19,7 @@ const publicEnvSchema = z.object({
 
 const serverEnvSchema = publicEnvSchema.extend({
   RECAPTCHA_SECRET: z.string(),
+  RATE_LIMIT_SECRET: z.string(),
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),

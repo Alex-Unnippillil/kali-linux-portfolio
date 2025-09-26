@@ -7,6 +7,11 @@ function nonce() {
 }
 
 export function middleware(req: NextRequest) {
+  const requestHeaders = new Headers(req.headers);
+  const rateLimitSecret = process.env.RATE_LIMIT_SECRET;
+  if (rateLimitSecret) {
+    requestHeaders.set('x-vercel-rate-limit-secret', rateLimitSecret);
+  }
   const n = nonce();
   const csp = [
     "default-src 'self'",
@@ -22,7 +27,7 @@ export function middleware(req: NextRequest) {
     "form-action 'self'"
   ].join('; ');
 
-  const res = NextResponse.next();
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
   return res;

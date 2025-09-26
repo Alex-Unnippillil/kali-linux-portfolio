@@ -5,6 +5,9 @@ if (typeof global.structuredClone !== 'function') {
   // @ts-ignore
   global.structuredClone = (val) => (val === undefined ? val : JSON.parse(JSON.stringify(val)));
 }
+if (!process.env.RATE_LIMIT_SECRET) {
+  process.env.RATE_LIMIT_SECRET = 'test-rate-limit-secret';
+}
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
 

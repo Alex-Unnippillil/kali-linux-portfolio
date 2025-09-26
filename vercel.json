@@ -4,5 +4,8 @@
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
     "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
+  },
+  "env": {
+    "RATE_LIMIT_SECRET": "@rate-limit-secret"
   }
 }
