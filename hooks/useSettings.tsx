@@ -24,7 +24,7 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { getTheme as loadTheme, applyTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -94,7 +94,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
-  theme: 'default',
+  theme: 'system',
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},

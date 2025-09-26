@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
 
+const THEME_LABELS: Record<string, string> = {
+  system: 'System (Auto)',
+  default: 'Kali',
+  light: 'Light',
+  dark: 'Dark',
+  neon: 'Neon',
+  matrix: 'Matrix',
+};
+
 interface Props {
   highScore?: number;
 }
@@ -27,7 +36,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             >
               {unlocked.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {THEME_LABELS[t] ?? t}
                 </option>
               ))}
             </select>
