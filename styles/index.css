@@ -110,6 +110,14 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -moz-box-shadow: var(--shadow-2);
 }
 
+.opened-window {
+    --window-scale-restored: 0.97;
+    --window-scale-maximized: 1;
+    --window-opacity-restored: 0.94;
+    --window-opacity-maximized: 1;
+    transform-origin: center center;
+}
+
 .closed-window {
     animation: closeWindow 200ms 1 forwards;
 }
