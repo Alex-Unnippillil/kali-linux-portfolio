@@ -1,4 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import { filterBetaItems } from './utils/showBeta';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -268,6 +269,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+    beta: true,
   },
   {
     id: 'subnet-calculator',
@@ -280,7 +282,7 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+export const utilities = filterBetaItems(utilityList);
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -603,9 +605,9 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = filterBetaItems(gameList).map((game) => ({ ...gameDefaults, ...game }));
 
-const apps = [
+const baseApps = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -846,6 +848,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPluginManager,
+    beta: true,
   },
   {    id: 'reaver',
     title: 'Reaver',
@@ -1067,5 +1070,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+const apps = filterBetaItems(baseApps);
 
 export default apps;

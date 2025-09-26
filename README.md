@@ -216,7 +216,7 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
-| `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
+| `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display the beta badge and surface app tiles marked with `beta: true` in `apps.config.js`. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
