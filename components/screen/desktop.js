@@ -432,26 +432,32 @@ export class Desktop extends Component {
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+        if (Object.keys(this.state.closed_windows).length === 0) return null;
 
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
+        const shortcuts = apps
+            .filter((app) => this.state.desktop_apps.includes(app.id))
+            .map((app) => (
+                <UbuntuApp
+                    key={app.id}
+                    name={app.title}
+                    id={app.id}
+                    icon={app.icon}
+                    openApp={this.openApp}
+                    disabled={this.state.disabled_apps[app.id]}
+                    prefetch={app.screen?.prefetch}
+                />
+            ));
 
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+        if (!shortcuts.length) return null;
+
+        return (
+            <div
+                className="desktop-app-grid self-start flex flex-wrap content-start items-start gap-[96px] px-6 py-8"
+                data-context="desktop-area"
+            >
+                {shortcuts}
+            </div>
+        );
     }
 
     renderWindows = () => {
