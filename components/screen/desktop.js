@@ -20,6 +20,7 @@ import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
+import { logEvent } from '../../utils/analytics';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
@@ -30,6 +31,9 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowOpenRequests = {};
+        this.isProduction = typeof process !== 'undefined' && process.env.NODE_ENV === 'production';
+        this.analyticsEnabled = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -610,6 +614,7 @@ export class Desktop extends Component {
             }
             return;
         } else {
+            this.markWindowRequested(objId);
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
@@ -618,7 +623,7 @@ export class Desktop extends Component {
             if (currentApp) {
                 frequentApps.forEach((app) => {
                     if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
+                        app.frequency += 1; // increase the frequency if app is found
                     }
                 });
             } else {
@@ -650,11 +655,53 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.logWindowOpenMetric(objId);
                 });
                 this.app_stack.push(objId);
             }, 200);
         }
     }
+
+
+    markWindowRequested = (appId) => {
+        if (typeof window === 'undefined') return;
+        const now = typeof performance !== 'undefined' && typeof performance.now === 'function'
+            ? performance.now()
+            : Date.now();
+        this.windowOpenRequests[appId] = now;
+    }
+
+    logWindowOpenMetric = (appId) => {
+        if (typeof window === 'undefined') return;
+        const requestedAt = this.windowOpenRequests[appId];
+        if (typeof requestedAt !== 'number') {
+            return;
+        }
+
+        const openedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
+            ? performance.now()
+            : Date.now();
+        const tOpen = Math.max(0, openedAt - requestedAt);
+        delete this.windowOpenRequests[appId];
+
+        if (!this.isProduction) {
+            try {
+                console.info(`[desktop] ${appId} t_open=${tOpen.toFixed(1)}ms`);
+            } catch (err) {
+                // ignore console errors
+            }
+        }
+
+        if (this.analyticsEnabled) {
+            logEvent({
+                category: 'Performance',
+                action: 'window-open',
+                label: appId,
+                value: Math.round(tOpen),
+            });
+        }
+    }
+
 
     closeApp = async (objId) => {
 
