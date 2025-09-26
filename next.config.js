@@ -101,10 +101,19 @@ function configureWebpack(config, { isServer }) {
     module: false,
     async_hooks: false,
   };
-  config.resolve.alias = {
+  const alias = {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
   };
+
+  if (isServer) {
+    alias['capstone-wasm'] = require('path').resolve(
+      __dirname,
+      'lib/capstone/server.ts',
+    );
+  }
+
+  config.resolve.alias = alias;
   if (isProd) {
     config.optimization = {
       ...(config.optimization || {}),
