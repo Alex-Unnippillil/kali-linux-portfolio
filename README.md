@@ -69,6 +69,7 @@ To send text or links directly into the Sticky Notes app:
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
+- See [docs/pwa.md](./docs/pwa.md) for offline behaviors, cache naming, and cache-busting guidance.
 
 ---
 
