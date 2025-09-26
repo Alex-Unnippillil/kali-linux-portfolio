@@ -12,6 +12,11 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+      - name: Prepare Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          yarn -v
       - run: yarn install --immutable --immutable-cache
 
   lint:
@@ -23,6 +28,11 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+      - name: Prepare Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          yarn -v
       - run: yarn install --immutable --immutable-cache
       - run: npm run lint
 
@@ -35,6 +45,11 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+      - name: Prepare Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          yarn -v
       - run: yarn install --immutable --immutable-cache
       - run: npm run tsc -- --noEmit
 
@@ -47,6 +62,11 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+      - name: Prepare Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          yarn -v
       - run: yarn install --immutable --immutable-cache
       - run: yarn test --coverage
 
@@ -59,6 +79,11 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+      - name: Prepare Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          yarn -v
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
 
@@ -75,6 +100,11 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+      - name: Prepare Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          yarn -v
       - run: yarn install --immutable --immutable-cache
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}

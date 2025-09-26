@@ -16,6 +16,11 @@ jobs:
           node-version: 20
           cache: 'yarn'
           cache-dependency-path: 'yarn.lock'
+      - name: Prepare Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          yarn -v
       - name: Installing Packages
         run: yarn install --immutable
 
