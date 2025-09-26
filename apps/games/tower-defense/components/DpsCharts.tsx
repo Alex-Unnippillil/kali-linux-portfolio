@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Tower, getTowerDPS, TowerType } from '..';
+import { type Tower, getTowerDPS, type TowerType } from '..';
 
 
 interface DpsChartsProps {

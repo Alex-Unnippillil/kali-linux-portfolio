@@ -5,8 +5,8 @@ import {
   saveCalibration,
   loadCalibration,
   GAMEPAD_PRESETS,
-  CalibrationData,
-  AxisRange,
+  type CalibrationData,
+  type AxisRange,
 } from "../utils/gamepad";
 
 export default function GamepadCalibration() {

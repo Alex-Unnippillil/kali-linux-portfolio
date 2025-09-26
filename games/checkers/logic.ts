@@ -1,7 +1,7 @@
 import {
-  Board,
-  Move,
-  Color,
+  type Board,
+  type Move,
+  type Color,
   getPieceMoves,
   getAllMoves,
   applyMove,

@@ -1,6 +1,6 @@
 import React from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import presets, { FilterPreset } from '../../../filters/presets';
+import presets, { type FilterPreset } from '../../../filters/presets';
 
 interface FilterHelperProps {
   value: string;

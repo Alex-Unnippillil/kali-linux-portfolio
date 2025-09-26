@@ -5,7 +5,7 @@ import GameShell from '../../components/games/GameShell';
 import { toPng } from 'html-to-image';
 import useOPFSLeaderboard from '../../hooks/useOPFSLeaderboard';
 import {
-  Board,
+  type Board,
   SIZE,
   setSize,
   addRandomTile,

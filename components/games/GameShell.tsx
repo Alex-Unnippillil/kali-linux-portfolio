@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, ReactNode, useRef } from 'react';
+import React, { useState, useCallback, type ReactNode, useRef } from 'react';
 import useOrientationGuard from '../../hooks/useOrientationGuard';
 import useGameInput from '../../hooks/useGameInput';
 import usePersistentState from '../../hooks/usePersistentState';

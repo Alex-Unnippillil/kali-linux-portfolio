@@ -1,7 +1,7 @@
 'use client';
 
 import WeatherIcon from './WeatherIcon';
-import { ForecastDay } from '../state';
+import type { ForecastDay } from '../state';
 
 export default function Forecast({ days }: { days: ForecastDay[] }) {
   return (

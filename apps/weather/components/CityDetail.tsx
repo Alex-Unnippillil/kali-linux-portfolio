@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { City } from '../state';
+import type { City } from '../state';
 
 interface Props {
   city: City;

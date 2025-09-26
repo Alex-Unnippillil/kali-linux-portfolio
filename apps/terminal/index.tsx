@@ -9,7 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
-import commandRegistry, { CommandContext } from './commands';
+import commandRegistry, { type CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (

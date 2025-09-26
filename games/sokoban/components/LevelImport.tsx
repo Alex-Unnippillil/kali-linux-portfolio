@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { LevelPack, parseLevels } from "../../../apps/sokoban/levels";
+import { type LevelPack, parseLevels } from "../../../apps/sokoban/levels";
 
 const STORAGE_KEY = "sokoban_packs";
 const FILE_NAME = "sokoban-packs.json";

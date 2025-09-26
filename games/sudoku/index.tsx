@@ -8,7 +8,7 @@ import {
   isValidPlacement,
 } from "../../apps/games/sudoku";
 import {
-  Cell,
+  type Cell,
   createCell,
   cloneCell,
   toggleCandidate,

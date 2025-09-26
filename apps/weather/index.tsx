@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import useWeatherState, {
-  City,
-  ForecastDay,
+  type City,
+  type ForecastDay,
   useWeatherGroups,
   useCurrentGroup,
 } from './state';

@@ -1,12 +1,12 @@
 import {
-  Board,
+  type Board,
   cloneBoard,
   moveLeft,
   moveRight,
   moveUp,
   moveDown,
   boardsEqual,
-  MoveResult,
+  type MoveResult,
 } from './logic';
 
 export type Direction = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
