@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Page2048 = dynamic(() => import('../../apps/2048'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/2048'), {
+  appName: '2048',
 });
-
-export default Page2048;

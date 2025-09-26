@@ -1,11 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const QRApp = dynamic(() => import('../../apps/qr'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/qr'), {
+  appName: 'QR Tool',
 });
-
-export default function QRPage() {
-  return <QRApp />;
-}
-

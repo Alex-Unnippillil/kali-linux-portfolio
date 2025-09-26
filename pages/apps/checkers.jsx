@@ -1,11 +1,5 @@
-import React from 'react';
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Checkers = dynamic(() => import('../../apps/checkers'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/checkers'), {
+  appName: 'Checkers',
 });
-
-export default function CheckersPage() {
-  return <Checkers />;
-}

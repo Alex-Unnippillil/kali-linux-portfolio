@@ -1,10 +1,11 @@
-import React from 'react';
-import dynamic from 'next/dynamic';
 import { getDailySeed } from '../../utils/dailySeed';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const WordSearch = dynamic(
+const WordSearch = createSuspenseAppPage(
   () => import('../../apps/word_search'),
-  { ssr: false, loading: () => <p>Loading...</p> },
+  {
+    appName: 'Word Search',
+  },
 );
 
 export default function WordSearchPage() {

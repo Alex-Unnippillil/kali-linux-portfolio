@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const PageSolitaire = dynamic(() => import('../../apps/solitaire'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/solitaire'), {
+  appName: 'Solitaire',
 });
-
-export default PageSolitaire;
