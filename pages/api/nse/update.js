@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 export default async function handler(_req, res) {
   try {
@@ -12,7 +13,9 @@ export default async function handler(_req, res) {
       headers: { 'User-Agent': 'kali-linux-portfolio' },
     });
     if (!response.ok) {
-      res.status(502).json({ error: 'Failed to query script repository' });
+      res
+        .status(502)
+        .json(createErrorResponse('Failed to query script repository'));
       return;
     }
     const json = await response.json();
@@ -20,6 +23,8 @@ export default async function handler(_req, res) {
 
     res.status(200).json({ updateAvailable: current !== latest, current, latest });
   } catch (e) {
-    res.status(500).json({ error: 'Unable to check script versions' });
+    res
+      .status(500)
+      .json(createErrorResponse('Unable to check script versions'));
   }
 }

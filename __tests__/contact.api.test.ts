@@ -74,4 +74,53 @@ describe('contact api', () => {
     expect(rateLimit.has('2.2.2.2')).toBe(true);
     expect(res._getStatusCode()).toBe(200);
   });
+
+  test('includes retryAfter when rate limit is exceeded', async () => {
+    (global as any).fetch = jest
+      .fn()
+      .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
+    process.env.RECAPTCHA_SECRET = 'secret';
+
+    const makeRequest = () => {
+      const { req, res } = createMocks({
+        method: 'POST',
+        headers: {
+          'x-csrf-token': 'token',
+          cookie: 'csrfToken=token',
+        },
+        cookies: { csrfToken: 'token' },
+        body: {
+          name: 'Alex',
+          email: 'alex@example.com',
+          message: 'Hello',
+          honeypot: '',
+          recaptchaToken: 'tok',
+        },
+      });
+      (req.socket as any).remoteAddress = '3.3.3.3';
+      return { req, res };
+    };
+
+    let limitedRes: any = null;
+    for (let i = 0; i < 10; i += 1) {
+      const { req, res } = makeRequest();
+      await handler(req as any, res as any);
+      if (res._getStatusCode() === 429) {
+        limitedRes = res;
+        break;
+      }
+    }
+
+    expect(limitedRes).toBeTruthy();
+    const data = limitedRes!._getJSONData();
+    expect(data).toMatchObject({
+      ok: false,
+      code: 'rate_limit',
+      error: expect.any(String),
+      retryAfter: expect.any(Number),
+    });
+    expect(limitedRes!.getHeader('Retry-After')).toBe(
+      String(data.retryAfter)
+    );
+  });
 });

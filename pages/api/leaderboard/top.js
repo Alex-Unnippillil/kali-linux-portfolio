@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 export default async function handler(
   req,
@@ -6,7 +7,7 @@ export default async function handler(
 ) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
-    res.status(405).end('Method Not Allowed');
+    res.status(405).json(createErrorResponse('Method not allowed'));
     return;
   }
 
@@ -17,7 +18,7 @@ export default async function handler(
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
     console.warn('Leaderboard read disabled: missing Supabase env');
-    res.status(503).json([]);
+    res.status(503).json(createErrorResponse('Leaderboard unavailable'));
     return;
   }
 
@@ -30,7 +31,7 @@ export default async function handler(
     .limit(limit);
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json(createErrorResponse(error.message));
     return;
   }
 

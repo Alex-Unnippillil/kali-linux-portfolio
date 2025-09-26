@@ -1,5 +1,6 @@
 import { getServiceClient } from '../../../lib/service-client';
 import { createLogger } from '../../../lib/logger';
+import createErrorResponse from '@/utils/apiErrorResponse';
 
 export default async function handler(
   req,
@@ -8,21 +9,21 @@ export default async function handler(
   const logger = createLogger(req.headers['x-correlation-id']);
   if (req.method !== 'GET') {
     logger.warn('method not allowed', { method: req.method });
-    res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json(createErrorResponse('Method not allowed'));
     return;
   }
 
   const key = req.headers['x-admin-key'];
   if (key !== process.env.ADMIN_READ_KEY) {
     logger.warn('unauthorized admin access attempt');
-    res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json(createErrorResponse('Unauthorized'));
     return;
   }
 
   const client = getServiceClient();
   if (!client) {
     logger.warn('supabase client not configured');
-    res.status(503).json({ error: 'Service unavailable' });
+    res.status(503).json(createErrorResponse('Service unavailable'));
     return;
   }
 
@@ -40,6 +41,6 @@ export default async function handler(
     res.status(200).json({ messages: data });
   } catch (err) {
     logger.error('failed to load admin messages', { err: err.message });
-    res.status(500).json({ error: err.message });
+    res.status(500).json(createErrorResponse(err.message));
   }
 }
