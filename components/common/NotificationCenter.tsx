@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useCallback, useEffect, useState } from 'react';
 
 export interface AppNotification {
