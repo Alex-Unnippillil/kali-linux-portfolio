@@ -179,8 +179,12 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <div
-                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none border"
+                    style={{
+                        backgroundColor: 'var(--kali-panel)',
+                        borderColor: 'var(--kali-panel-border)',
+                        color: 'var(--kali-text-strong)',
+                    }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
@@ -189,15 +193,24 @@ export function Settings() {
                     >
                         Accent
                     </button>
-                    <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-green-400' : 'text-red-400'}`}>
+                    <p
+                        className={`mt-2 text-sm text-center ${
+                            contrast >= 4.5
+                                ? 'text-[color:var(--kali-success)]'
+                                : 'text-[color:var(--kali-danger)]'
+                        }`}
+                    >
                         {`Contrast ${contrast.toFixed(2)}:1 ${contrast >= 4.5 ? 'Pass' : 'Fail'}`}
                     </p>
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
             </div>
-            <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
+            <div
+                className="flex flex-wrap justify-center items-center border-t"
+                style={{ borderColor: 'var(--kali-border-strong)' }}
+            >
                 {
-                    wallpapers.map((name, index) => (
+                    wallpapers.map((name) => (
                         <div
                             key={name}
                             role="button"
@@ -213,8 +226,14 @@ export function Settings() {
                                 }
                             }}
                             data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
+                            className="md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 transition-colors"
+                            style={{
+                                backgroundImage: `url(/wallpapers/${name}.webp)`,
+                                backgroundSize: "cover",
+                                backgroundRepeat: "no-repeat",
+                                backgroundPosition: "center center",
+                                borderColor: name === wallpaper ? 'var(--color-accent)' : 'transparent',
+                            }}
                         ></div>
                     ))
                 }

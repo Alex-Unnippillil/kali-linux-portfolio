@@ -30,7 +30,13 @@ export default function SideBar(props) {
             <nav
                 aria-label="Dock"
                 className={(props.hide ? " -translate-x-full " : "") +
-                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
+                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7"}
+                style={{
+                    backgroundColor: 'var(--kali-overlay-medium)',
+                    borderRight: '1px solid var(--kali-border-strong)',
+                    color: 'var(--kali-text-strong)',
+                    backdropFilter: 'blur(12px)',
+                }}
             >
                 {
                     (
@@ -52,7 +58,7 @@ export function AllApps(props) {
 
     return (
         <div
-            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
+            className={`w-10 h-10 rounded m-1 flex items-center justify-center transition-colors hover:bg-[color:var(--kali-taskbar-hover)] focus-visible:outline-none`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
                 setTitle(true);
@@ -61,6 +67,7 @@ export function AllApps(props) {
                 setTitle(false);
             }}
             onClick={props.showApps}
+            role="button"
         >
             <div className="relative">
                 <Image
@@ -72,10 +79,13 @@ export function AllApps(props) {
                     sizes="28px"
                 />
                 <div
-                    className={
-                        (title ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
-                    }
+                    className={(title ? " visible " : " invisible ") +
+                        " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-sm rounded-md"}
+                    style={{
+                        backgroundColor: 'var(--kali-tooltip-bg)',
+                        border: `1px solid var(--kali-tooltip-border)`,
+                        color: 'var(--kali-text-strong)',
+                    }}
                 >
                     Show Applications
                 </div>

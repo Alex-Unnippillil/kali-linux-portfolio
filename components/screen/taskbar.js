@@ -16,7 +16,15 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            className="absolute bottom-0 left-0 w-full h-10 flex items-center z-40"
+            role="toolbar"
+            style={{
+                backgroundColor: 'var(--kali-taskbar-bg)',
+                color: 'var(--kali-text-strong)',
+                backdropFilter: 'blur(14px)',
+            }}
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}
@@ -25,8 +33,13 @@ export default function Taskbar(props) {
                     data-context="taskbar"
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}
-                    className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
-                        'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
+                    className="relative flex items-center mx-1 px-2 py-1 rounded transition-colors hover:bg-[color:var(--kali-taskbar-hover)] focus-visible:outline-none"
+                    style={{
+                        backgroundColor:
+                            props.focused_windows[app.id] && !props.minimized_windows[app.id]
+                                ? 'var(--kali-taskbar-active)'
+                                : 'transparent',
+                    }}
                 >
                     <Image
                         width={24}
@@ -36,9 +49,12 @@ export default function Taskbar(props) {
                         alt=""
                         sizes="24px"
                     />
-                    <span className="ml-1 text-sm text-white whitespace-nowrap">{app.title}</span>
+                    <span className="ml-1 text-sm text-[var(--kali-text-strong)] whitespace-nowrap">{app.title}</span>
                     {!props.focused_windows[app.id] && !props.minimized_windows[app.id] && (
-                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded" />
+                        <span
+                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 rounded"
+                            style={{ backgroundColor: 'var(--kali-taskbar-indicator)' }}
+                        />
                     )}
                 </button>
             ))}

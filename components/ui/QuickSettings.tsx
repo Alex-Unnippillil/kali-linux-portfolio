@@ -23,9 +23,15 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute rounded-md py-4 top-9 right-3 shadow border transition-opacity ${
         open ? '' : 'hidden'
       }`}
+      style={{
+        backgroundColor: 'var(--kali-panel)',
+        borderColor: 'var(--kali-panel-border)',
+        color: 'var(--kali-text-strong)',
+        boxShadow: '0 18px 36px color-mix(in srgb, var(--color-inverse), transparent 88%)',
+      }}
     >
       <div className="px-4 pb-2">
         <button

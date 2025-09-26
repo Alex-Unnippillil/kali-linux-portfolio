@@ -11,7 +11,7 @@ const FormError = ({ id, className = '', children }: FormErrorProps) => (
     id={id}
     role="status"
     aria-live="polite"
-    className={`text-red-600 text-sm mt-2 ${className}`.trim()}
+    className={`text-[color:var(--kali-danger)] text-sm mt-2 ${className}`.trim()}
   >
     {children}
   </p>
