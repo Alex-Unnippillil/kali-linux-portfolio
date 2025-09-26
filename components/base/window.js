@@ -69,6 +69,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.clearMaximizeAnimation();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -234,6 +235,70 @@ export class Window extends Component {
         }
     }
 
+    clearMaximizeAnimation = () => {
+        if (this._maximizeAnimation) {
+            this._maximizeAnimation.cancel();
+            this._maximizeAnimation = null;
+        }
+    }
+
+    prefersReducedMotion = () => {
+        if (typeof window === 'undefined' || !window.matchMedia) return false;
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    getStoredTranslate = (node) => {
+        if (!node) return 'translate(0px,0px)';
+        const x = node.style.getPropertyValue('--window-transform-x') || '0px';
+        const y = node.style.getPropertyValue('--window-transform-y') || '0px';
+        return `translate(${x},${y})`;
+    }
+
+    getCurrentTransform = (node) => {
+        if (!node) return 'translate(0px,0px)';
+        const inlineTransform = node.style.transform;
+        if (inlineTransform && inlineTransform !== 'none') {
+            return inlineTransform;
+        }
+        if (typeof window !== 'undefined') {
+            const computedTransform = window.getComputedStyle(node).transform;
+            if (computedTransform && computedTransform !== 'none') {
+                return computedTransform;
+            }
+        }
+        return this.getStoredTranslate(node);
+    }
+
+    playScaleOpacityAnimation = (node, config) => {
+        if (!node) return null;
+        const {
+            startTransform,
+            endTransform,
+            startScale,
+            endScale,
+            startOpacity,
+            endOpacity,
+            onFinish
+        } = config;
+        this.clearMaximizeAnimation();
+        const animation = node.animate(
+            [
+                { transform: `${startTransform} scale(${startScale})`, opacity: startOpacity },
+                { transform: `${endTransform} scale(${endScale})`, opacity: endOpacity }
+            ],
+            { duration: 140, easing: 'ease-out', fill: 'forwards' }
+        );
+        animation.onfinish = () => {
+            if (this._maximizeAnimation === animation) {
+                this._maximizeAnimation = null;
+            }
+            onFinish?.();
+        };
+        animation.oncancel = animation.onfinish;
+        this._maximizeAnimation = animation;
+        return animation;
+    }
+
     unsnapWindow = () => {
         if (!this.state.snapped) return;
         var r = document.querySelector("#" + this.id);
@@ -391,7 +456,9 @@ export class Window extends Component {
 
         const node = document.querySelector("#" + this.id);
         const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const prefersReducedMotion = this.prefersReducedMotion();
+
+        this.clearMaximizeAnimation();
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
@@ -413,13 +480,14 @@ export class Window extends Component {
 
     restoreWindow = () => {
         const node = document.querySelector("#" + this.id);
+        if (!node) return;
         this.setDefaultWindowDimenstion();
         // get previous position
-        let posx = node.style.getPropertyValue("--window-transform-x");
-        let posy = node.style.getPropertyValue("--window-transform-y");
-        const startTransform = node.style.transform;
-        const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const endTransform = this.getStoredTranslate(node);
+        const startTransform = this.getCurrentTransform(node);
+        const prefersReducedMotion = this.prefersReducedMotion();
+
+        this.clearMaximizeAnimation();
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
@@ -437,16 +505,19 @@ export class Window extends Component {
             };
             this._dockAnimation.reverse();
         } else {
-            this._dockAnimation = node.animate(
-                [{ transform: startTransform }, { transform: endTransform }],
-                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
-            );
-            this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
-                this._dockAnimation.onfinish = null;
-            };
+            this.playScaleOpacityAnimation(node, {
+                startTransform,
+                endTransform,
+                startScale: 'var(--window-scale-maximized)',
+                endScale: 'var(--window-scale-restored)',
+                startOpacity: 'var(--window-opacity-maximized)',
+                endOpacity: 'var(--window-opacity-restored)',
+                onFinish: () => {
+                    node.style.transform = endTransform;
+                    this.setState({ maximized: false });
+                    this.checkOverlap();
+                }
+            });
         }
     }
 
@@ -457,12 +528,35 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
-            var r = document.querySelector("#" + this.id);
+            const node = document.querySelector("#" + this.id);
+            if (!node) return;
             this.setWinowsPosition();
+            const startTransform = this.getCurrentTransform(node);
+            const endTransform = 'translate(-1pt,-2pt)';
+            const prefersReducedMotion = this.prefersReducedMotion();
+
+            this.clearMaximizeAnimation();
+
             // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
+            node.style.transform = endTransform;
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
+
+            if (prefersReducedMotion) {
+                return;
+            }
+
+            this.playScaleOpacityAnimation(node, {
+                startTransform,
+                endTransform,
+                startScale: 'var(--window-scale-restored)',
+                endScale: 'var(--window-scale-maximized)',
+                startOpacity: 'var(--window-opacity-restored)',
+                endOpacity: 'var(--window-opacity-maximized)',
+                onFinish: () => {
+                    node.style.transform = endTransform;
+                }
+            });
         }
     }
 
