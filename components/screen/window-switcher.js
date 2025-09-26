@@ -1,82 +1,100 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 
-export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(0);
-  const inputRef = useRef(null);
+const FALLBACK_ICON = '/themes/Yaru/status/about.svg';
 
-  const filtered = windows.filter((w) =>
-    w.title.toLowerCase().includes(query.toLowerCase())
-  );
-
+export default function WindowSwitcher({
+  windows = [],
+  selectedIndex = 0,
+  onCycle,
+  onSelect,
+  onClose,
+  onHighlight,
+}) {
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const handleKeyUp = (e) => {
-      if (e.key === 'Alt') {
-        const win = filtered[selected];
-        if (win && typeof onSelect === 'function') {
-          onSelect(win.id);
-        } else if (typeof onClose === 'function') {
-          onClose();
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        onCycle?.(1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        onCycle?.(-1);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose?.();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const win = windows[selectedIndex];
+        if (win) {
+          onSelect?.(win);
         }
       }
     };
+
+    const handleKeyUp = (e) => {
+      if (e.key === 'Alt') {
+        const win = windows[selectedIndex];
+        if (win) {
+          onSelect?.(win);
+        } else {
+          onClose?.();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [filtered, selected, onSelect, onClose]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [windows, selectedIndex, onCycle, onSelect, onClose]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      const dir = e.shiftKey ? -1 : 1;
-      setSelected((selected + dir + len) % len);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected + 1) % len);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected - 1 + len) % len);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (typeof onClose === 'function') onClose();
-    }
-  };
-
-  const handleChange = (e) => {
-    setQuery(e.target.value);
-    setSelected(0);
-  };
+  if (!windows.length) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-          placeholder="Search windows"
-        />
-        <ul>
-          {filtered.map((w, i) => (
-            <li
-              key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
-            >
-              {w.title}
-            </li>
-          ))}
-        </ul>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur"
+      role="presentation"
+      aria-hidden="false"
+    >
+      <div className="max-w-5xl w-full px-6">
+        <div
+          className="flex justify-center gap-6 overflow-x-auto py-8"
+          role="listbox"
+          aria-label="Open windows"
+        >
+          {windows.map((win, index) => {
+            const isActive = index === selectedIndex;
+            const preview = win.preview || win.thumbnail || win.icon || FALLBACK_ICON;
+            return (
+              <button
+                key={`${win.id}-${index}`}
+                type="button"
+                className={`flex w-40 flex-col items-center rounded-2xl px-4 py-5 transition-all duration-150 focus:outline-none focus-visible:ring-4 focus-visible:ring-ub-orange/80 ${
+                  isActive
+                    ? 'scale-105 bg-white text-ub-cool-grey shadow-2xl ring-4 ring-ub-orange/80'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}
+                onMouseEnter={() => onHighlight?.(index)}
+                onFocus={() => onHighlight?.(index)}
+                onClick={() => onSelect?.(win)}
+                role="option"
+                aria-selected={isActive}
+                title={win.title}
+              >
+                <div className={`flex h-24 w-full items-center justify-center overflow-hidden rounded-xl ${isActive ? 'bg-white/90' : 'bg-white/5'}`}>
+                  <img
+                    src={preview}
+                    alt={win.title}
+                    className="h-20 w-20 object-contain"
+                    draggable={false}
+                  />
+                </div>
+                <span className="mt-3 w-full truncate text-center text-sm font-medium">{win.title}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
