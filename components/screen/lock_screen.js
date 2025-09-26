@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';

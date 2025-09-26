@@ -1,3 +1,5 @@
+'use client';
+
 import React, { Component } from 'react';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
