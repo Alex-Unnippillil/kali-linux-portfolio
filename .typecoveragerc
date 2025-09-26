@@ -1,0 +1,38 @@
+{
+  "atLeast": 90,
+  "project": "tsconfig.json",
+  "include": [
+    "app/**/*.{ts,tsx}",
+    "apps/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "hooks/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "middleware.ts",
+    "modules/**/*.{ts,tsx}",
+    "pages/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,tsx}",
+    "src/**/*.{ts,tsx}",
+    "utils/**/*.{ts,tsx}",
+    "workers/**/*.{ts,tsx}"
+  ],
+  "exclude": [
+    "**/__tests__/**",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.stories.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    "playwright/**",
+    "tests/**"
+  ],
+  "ignoreFiles": [
+    "next-env.d.ts",
+    "types/**/*.d.ts"
+  ],
+  "ignoreCatch": true,
+  "detail": false,
+  "strict": true,
+  "cache": true
+}
