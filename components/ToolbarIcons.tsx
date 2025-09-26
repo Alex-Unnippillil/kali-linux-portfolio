@@ -1,56 +1,22 @@
-import Image from 'next/image';
+import { Icon } from './Icon';
+import { WINDOW_GLYPH_NAMES } from './icons/windowGlyphs';
 
 export function CloseIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-close-symbolic.svg"
-      alt="Close"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name={WINDOW_GLYPH_NAMES.close} size={16} alt="Close" />;
 }
 
 export function MinimizeIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-minimize-symbolic.svg"
-      alt="Minimize"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name={WINDOW_GLYPH_NAMES.minimize} size={16} alt="Minimize" />;
 }
 
 export function MaximizeIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-maximize-symbolic.svg"
-      alt="Maximize"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name={WINDOW_GLYPH_NAMES.maximize} size={16} alt="Maximize" />;
 }
 
 export function RestoreIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-restore-symbolic.svg"
-      alt="Restore"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name={WINDOW_GLYPH_NAMES.restore} size={16} alt="Restore" />;
 }
 
 export function PinIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-pin-symbolic.svg"
-      alt="Pin"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name={WINDOW_GLYPH_NAMES.pin} size={16} alt="Pin" />;
 }

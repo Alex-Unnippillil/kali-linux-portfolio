@@ -6,6 +6,8 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { Icon } from '../Icon';
+import { WINDOW_GLYPH_NAMES } from '../icons/windowGlyphs';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -646,18 +648,21 @@ export class Window extends Component {
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
+                            icon={this.props.icon}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
-                            id={this.id}
-                            allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            actions={(
+                                <WindowEditButtons
+                                    minimize={this.minimizeWindow}
+                                    maximize={this.maximizeWindow}
+                                    isMaximised={this.state.maximized}
+                                    close={this.closeWindow}
+                                    id={this.id}
+                                    allowMaximize={this.props.allowMaximize !== false}
+                                    pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                                />
+                            )}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -674,17 +679,30 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, icon, actions, onKeyDown, onBlur, grabbed }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center gap-3 h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold">
+                {icon ? (
+                    <NextImage
+                        src={icon.replace('./', '/')}
+                        alt=""
+                        width={18}
+                        height={18}
+                        className="h-[18px] w-[18px]"
+                        aria-hidden="true"
+                    />
+                ) : null}
+                <span className="truncate" title={title}>{title}</span>
+            </div>
+            {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
         </div>
     )
 }
@@ -734,37 +752,33 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div className="flex select-none items-center gap-1">
             {pipSupported && props.pip && (
                 <button
                     type="button"
                     aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/0 text-white/90 transition duration-150 ease-out hover:bg-white/10 hover:brightness-110 active:bg-white/20 active:brightness-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                     onClick={togglePin}
+                    onMouseDown={(e) => e.stopPropagation()}
                 >
-                    <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-4 w-4 inline"
-                        width={16}
-                        height={16}
-                        sizes="16px"
+                    <Icon
+                        name={WINDOW_GLYPH_NAMES.pin}
+                        aria-hidden
+                        className="pointer-events-none"
                     />
                 </button>
             )}
             <button
                 type="button"
                 aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/0 text-white/90 transition duration-150 ease-out hover:bg-white/10 hover:brightness-110 active:bg-white/20 active:brightness-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                 onClick={props.minimize}
+                onMouseDown={(e) => e.stopPropagation()}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
+                <Icon
+                    name={WINDOW_GLYPH_NAMES.minimize}
+                    aria-hidden
+                    className="pointer-events-none"
                 />
             </button>
             {props.allowMaximize && (
@@ -773,32 +787,28 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/0 text-white/90 transition duration-150 ease-out hover:bg-white/10 hover:brightness-110 active:bg-white/20 active:brightness-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                             onClick={props.maximize}
+                            onMouseDown={(e) => e.stopPropagation()}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
+                            <Icon
+                                name={WINDOW_GLYPH_NAMES.restore}
+                                aria-hidden
+                                className="pointer-events-none"
                             />
                         </button>
                     ) : (
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/0 text-white/90 transition duration-150 ease-out hover:bg-white/10 hover:brightness-110 active:bg-white/20 active:brightness-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                             onClick={props.maximize}
+                            onMouseDown={(e) => e.stopPropagation()}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
+                            <Icon
+                                name={WINDOW_GLYPH_NAMES.maximize}
+                                aria-hidden
+                                className="pointer-events-none"
                             />
                         </button>
                     )
@@ -807,16 +817,14 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/0 text-white transition duration-150 ease-out hover:bg-red-500/60 hover:brightness-110 active:bg-red-600/70 active:brightness-110 focus-visible:ring-2 focus-visible:ring-red-300 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                 onClick={props.close}
+                onMouseDown={(e) => e.stopPropagation()}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
+                <Icon
+                    name={WINDOW_GLYPH_NAMES.close}
+                    aria-hidden
+                    className="pointer-events-none"
                 />
             </button>
         </div>
