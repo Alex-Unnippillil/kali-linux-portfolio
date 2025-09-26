@@ -21,7 +21,8 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
-    "verify:all": "node scripts/verify.mjs"
+    "verify:all": "node scripts/verify.mjs",
+    "check:vercel-env": "tsx scripts/check-vercel-env.ts"
   },
   "engines": {
     "node": "20.19.5"
@@ -139,6 +140,7 @@
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
     "test-exclude": "7.0.1",
+    "tsx": "^4.20.6",
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
