@@ -2,10 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
-export interface MenuItem {
-  label: React.ReactNode;
-  onSelect: () => void;
-}
+export type MenuItem =
+  | {
+      type?: 'item';
+      label: React.ReactNode;
+      onSelect: () => void;
+      role?: 'menuitem' | 'menuitemcheckbox' | 'menuitemradio';
+      checked?: boolean;
+      disabled?: boolean;
+    }
+  | {
+      type: 'separator';
+    };
 
 interface ContextMenuProps {
   /** Element that triggers this context menu */
@@ -43,7 +51,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.shiftKey && e.key === 'F10') {
+      if (
+        (e.shiftKey && e.key === 'F10') ||
+        e.key === 'ContextMenu' ||
+        e.key === 'Apps'
+      ) {
         e.preventDefault();
         const rect = node.getBoundingClientRect();
         setPos({ x: rect.left, y: rect.bottom });
@@ -92,6 +104,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const firstButton = menuRef.current?.querySelector<HTMLButtonElement>(
+      'button:not([disabled])',
+    );
+    firstButton?.focus();
+  }, [open]);
+
+  if (!items.length) return null;
+
   return (
     <div
       role="menu"
@@ -101,20 +123,44 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       className={(open ? 'block ' : 'hidden ') +
         'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
     >
-      {items.map((item, i) => (
-        <button
-          key={i}
-          role="menuitem"
-          tabIndex={-1}
-          onClick={() => {
-            item.onSelect();
-            setOpen(false);
-          }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-        >
-          {item.label}
-        </button>
-      ))}
+      {items.map((item, i) => {
+        if (item.type === 'separator') {
+          return (
+            <div
+              key={`separator-${i}`}
+              role="none"
+              className="my-1 border-t border-gray-900/60"
+            />
+          );
+        }
+        const {
+          role = item.checked !== undefined ? 'menuitemcheckbox' : 'menuitem',
+          checked,
+          disabled,
+        } = item;
+        return (
+          <button
+            key={`item-${i}`}
+            role={role}
+            aria-checked={role !== 'menuitem' ? checked : undefined}
+            aria-disabled={disabled || undefined}
+            disabled={disabled}
+            tabIndex={-1}
+            onClick={() => {
+              if (disabled) return;
+              item.onSelect();
+              setOpen(false);
+            }}
+            className={`w-full text-left cursor-default py-1 px-3 text-sm transition-colors ${
+              disabled
+                ? 'text-white/40'
+                : 'hover:bg-gray-700 focus:bg-gray-700 focus:outline-none'
+            }`}
+          >
+            {item.label}
+          </button>
+        );
+      })}
     </div>
   );
 };
