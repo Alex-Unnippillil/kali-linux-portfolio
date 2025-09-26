@@ -9,19 +9,19 @@ export interface OPFSHook {
   ) => Promise<FileSystemDirectoryHandle | null>;
   readFile: (
     name: string,
-    dir?: FileSystemDirectoryHandle | null,
+    dir?: FileSystemDirectoryHandle | null | undefined,
   ) => Promise<string | null>;
   writeFile: (
     name: string,
     data: string | Blob,
-    dir?: FileSystemDirectoryHandle | null,
+    dir?: FileSystemDirectoryHandle | null | undefined,
   ) => Promise<boolean>;
   deleteFile: (
     name: string,
-    dir?: FileSystemDirectoryHandle | null,
+    dir?: FileSystemDirectoryHandle | null | undefined,
   ) => Promise<boolean>;
   listFiles: (
-    dir?: FileSystemDirectoryHandle | null,
+    dir?: FileSystemDirectoryHandle | null | undefined,
   ) => Promise<FileSystemFileHandle[]>;
 }
 
