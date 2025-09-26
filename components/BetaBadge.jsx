@@ -1,5 +1,7 @@
+import { isBetaBadgeEnabled } from '../lib/feature-flags';
+
 export default function BetaBadge() {
-  if (process.env.NEXT_PUBLIC_SHOW_BETA !== '1') return null;
+  if (!isBetaBadgeEnabled()) return null;
   return (
     <button
       type="button"

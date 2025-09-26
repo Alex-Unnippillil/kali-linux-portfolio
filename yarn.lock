@@ -1557,6 +1557,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@edge-runtime/cookies@npm:^5.0.2":
+  version: 5.0.2
+  resolution: "@edge-runtime/cookies@npm:5.0.2"
+  checksum: 10c0/4db80e80403c7086f1d269afdf8956c035d88b173c70ca9e912d58683b58c300a1df922dee74bb44f964f1fab7e446f8ed8d32fc9715a7c322671e03405a682a
+  languageName: node
+  linkType: hard
+
 "@emailjs/browser@npm:^3.10.0":
   version: 3.12.1
   resolution: "@emailjs/browser@npm:3.12.1"
@@ -7432,6 +7439,33 @@ __metadata:
   languageName: node
   linkType: hard
 
+"flags@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "flags@npm:4.0.1"
+  dependencies:
+    "@edge-runtime/cookies": "npm:^5.0.2"
+    jose: "npm:^5.2.1"
+  peerDependencies:
+    "@opentelemetry/api": ^1.7.0
+    "@sveltejs/kit": "*"
+    next: "*"
+    react: "*"
+    react-dom: "*"
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+    "@sveltejs/kit":
+      optional: true
+    next:
+      optional: true
+    react:
+      optional: true
+    react-dom:
+      optional: true
+  checksum: 10c0/e5382e988d35c22e731f2b31737f332f689401adbadb5a46d960f0fc342c94de9c384fb954ebcf78eadb14e5e644928c686d5b6893828e8b1225979cb377eed9
+  languageName: node
+  linkType: hard
+
 "flat-cache@npm:^4.0.0":
   version: 4.0.1
   resolution: "flat-cache@npm:4.0.1"
@@ -9181,6 +9215,13 @@ __metadata:
     "@sideway/formula": "npm:^3.0.1"
     "@sideway/pinpoint": "npm:^2.0.0"
   checksum: 10c0/9262aef1da3f1bec5b03caf50c46368899fe03b8ff26cbe3d53af4584dd1049079fc97230bbf1500b6149db7cc765b9ee45f0deb24bb6fc3fa06229d7148c17f
+  languageName: node
+  linkType: hard
+
+"jose@npm:^5.2.1":
+  version: 5.10.0
+  resolution: "jose@npm:5.10.0"
+  checksum: 10c0/e20d9fc58d7e402f2e5f04e824b8897d5579aae60e64cb88ebdea1395311c24537bf4892f7de413fab1acf11e922797fb1b42269bc8fc65089a3749265ccb7b0
   languageName: node
   linkType: hard
 
@@ -13911,6 +13952,7 @@ __metadata:
     fast-glob: "npm:^3.3.3"
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
+    flags: "npm:^4.0.1"
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"

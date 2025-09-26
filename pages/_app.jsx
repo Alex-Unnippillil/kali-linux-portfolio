@@ -10,6 +10,7 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
+import { FlagDefinitions, FlagValues } from 'flags/react';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
@@ -18,11 +19,17 @@ import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
+import {
+  featureFlagDefinitions,
+  getFeatureFlagValues,
+} from '../lib/feature-flags';
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+const flagValues = getFeatureFlagValues();
 
 
 function MyApp(props) {
@@ -149,6 +156,8 @@ function MyApp(props) {
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
+      <FlagDefinitions definitions={featureFlagDefinitions} />
+      <FlagValues values={flagValues} />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"
