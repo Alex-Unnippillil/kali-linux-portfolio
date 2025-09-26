@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
+import { addRecentFile } from '../../utils/recentStorage';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
 export async function openFileDialog(options = {}) {
@@ -91,6 +92,20 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+const buildPathFromSegments = (segments, leaf) => {
+  const parts = Array.isArray(segments)
+    ? segments
+        .map((segment) => (segment && typeof segment.name === 'string' ? segment.name : ''))
+        .filter((name) => name && name !== '/')
+    : [];
+  let base = parts.length ? `/${parts.join('/')}` : '/';
+  if (leaf && typeof leaf === 'string') {
+    const cleanedLeaf = leaf.replace(/^\/+/, '');
+    base = base === '/' ? `/${cleanedLeaf}` : `${base}/${cleanedLeaf}`;
+  }
+  return base.replace(/\/+$/, '') || '/';
+};
+
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -152,6 +167,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     const text = await file.text();
     setCurrentFile({ name: file.name });
     setContent(text);
+    addRecentFile({ path: `/${file.name}`, title: file.name });
   };
 
   const openFolder = async () => {
@@ -189,6 +205,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       text = await f.text();
     }
     setContent(text);
+    const fullPath = buildPathFromSegments(path, file.name);
+    addRecentFile({ path: fullPath, title: file.name });
   };
 
   const readDir = useCallback(async (handle) => {
