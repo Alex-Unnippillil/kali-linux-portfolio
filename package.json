@@ -142,7 +142,7 @@
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
-    "workbox-build": "7.1.1",
+    "workbox-build": "7.3.0",
     "ws": "^8.18.0"
   },
   "resolutions": {
@@ -150,7 +150,24 @@
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
     "glob@npm:^7.1.6": "npm:glob@^9.3.5",
-    "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1"
+    "workbox-background-sync@npm:7.1.0": "npm:workbox-background-sync@7.3.0",
+    "workbox-broadcast-update@npm:7.1.0": "npm:workbox-broadcast-update@7.3.0",
+    "workbox-cacheable-response@npm:7.1.0": "npm:workbox-cacheable-response@7.3.0",
+    "workbox-core@npm:7.1.0": "npm:workbox-core@7.3.0",
+    "workbox-expiration@npm:7.1.0": "npm:workbox-expiration@7.3.0",
+    "workbox-google-analytics@npm:7.1.0": "npm:workbox-google-analytics@7.3.0",
+    "workbox-navigation-preload@npm:7.1.0": "npm:workbox-navigation-preload@7.3.0",
+    "workbox-precaching@npm:7.1.0": "npm:workbox-precaching@7.3.0",
+    "workbox-range-requests@npm:7.1.0": "npm:workbox-range-requests@7.3.0",
+    "workbox-recipes@npm:7.1.0": "npm:workbox-recipes@7.3.0",
+    "workbox-routing@npm:7.1.0": "npm:workbox-routing@7.3.0",
+    "workbox-strategies@npm:7.1.0": "npm:workbox-strategies@7.3.0",
+    "workbox-streams@npm:7.1.0": "npm:workbox-streams@7.3.0",
+    "workbox-sw@npm:7.1.0": "npm:workbox-sw@7.3.0",
+    "workbox-window@npm:7.1.0": "npm:workbox-window@7.3.0",
+    "workbox-build@npm:7.1.0": "npm:workbox-build@7.3.0",
+    "workbox-build@npm:7.1.1": "npm:workbox-build@7.3.0",
+    "workbox-webpack-plugin@npm:7.1.0": "npm:workbox-webpack-plugin@7.3.0"
   },
   "packageManager": "yarn@4.9.2"
 }
