@@ -296,6 +296,7 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
   - `RECAPTCHA_SECRET`
   - `ADMIN_READ_KEY` (set manually in Vercel or your host)
+  - `NODE_VERSION=20.19.5` (keeps Vercel builds and serverless functions aligned with `.nvmrc`/`package.json`)
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
 - If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
