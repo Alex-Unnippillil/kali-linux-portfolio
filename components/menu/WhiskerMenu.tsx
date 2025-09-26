@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useId } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
@@ -27,6 +27,8 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const triggerId = useId();
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -115,12 +117,17 @@ const WhiskerMenu: React.FC = () => {
   }, [open]);
 
   return (
-    <div className="relative">
+    <div className="relative" role="none">
       <button
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        id={triggerId}
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -141,6 +148,9 @@ const WhiskerMenu: React.FC = () => {
               setOpen(false);
             }
           }}
+          id={menuId}
+          role="menu"
+          aria-labelledby={triggerId}
         >
           <div className="flex flex-col bg-gray-800 p-2">
             {CATEGORIES.map(cat => (
@@ -148,6 +158,8 @@ const WhiskerMenu: React.FC = () => {
                 key={cat.id}
                 className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
+                role="menuitem"
+                aria-pressed={category === cat.id}
               >
                 {cat.label}
               </button>
@@ -170,6 +182,7 @@ const WhiskerMenu: React.FC = () => {
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    role="menuitem"
                   />
                 </div>
               ))}
