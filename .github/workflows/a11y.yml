@@ -17,5 +17,5 @@ jobs:
       - run: |
           yarn dev &
           npx wait-on http://localhost:3000
-      - run: npx pa11y-ci --config pa11yci.json
+      - run: yarn a11y
       - run: npx playwright test playwright/a11y.spec.ts
