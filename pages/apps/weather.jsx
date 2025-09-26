@@ -1,16 +1,11 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const WeatherApp = dynamic(
-  () =>
-    import('../../apps/weather').catch((err) => {
-      console.error('Failed to load Weather app', err);
-      throw err;
-    }),
-  {
-    ssr: false,
-    loading: () => <p>Loading...</p>,
-  }
-);
+const loadWeatherApp = () =>
+  import('../../apps/weather').catch((err) => {
+    console.error('Failed to load Weather app', err);
+    throw err;
+  });
 
-export default WeatherApp;
-
+export default createSuspenseAppPage(loadWeatherApp, {
+  appName: 'Weather Dashboard',
+});
