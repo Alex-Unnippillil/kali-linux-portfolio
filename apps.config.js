@@ -657,6 +657,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayX,
+    category: 'messaging',
   },
   {
     id: 'spotify',
@@ -926,6 +927,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayContact,
+    category: 'messaging',
   },
   {
     id: 'hydra',
