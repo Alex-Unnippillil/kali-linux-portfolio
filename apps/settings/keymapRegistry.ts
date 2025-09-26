@@ -1,14 +1,11 @@
 import usePersistentState from '../../hooks/usePersistentState';
+import {
+  DEFAULT_SHORTCUTS,
+  ShortcutDefinition,
+} from '../../data/shortcuts';
+import { normalizeShortcut } from '../../utils/keyboard';
 
-export interface Shortcut {
-  description: string;
-  keys: string;
-}
-
-const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { description: 'Show keyboard shortcuts', keys: '?' },
-  { description: 'Open settings', keys: 'Ctrl+,' },
-];
+export type Shortcut = ShortcutDefinition;
 
 const validator = (value: unknown): value is Record<string, string> => {
   return (
@@ -24,7 +21,7 @@ const validator = (value: unknown): value is Record<string, string> => {
 export function useKeymap() {
   const initial = DEFAULT_SHORTCUTS.reduce<Record<string, string>>(
     (acc, s) => {
-      acc[s.description] = s.keys;
+      acc[s.description] = normalizeShortcut(s.keys);
       return acc;
     },
     {}
@@ -36,13 +33,13 @@ export function useKeymap() {
     validator
   );
 
-  const shortcuts = DEFAULT_SHORTCUTS.map(({ description, keys }) => ({
-    description,
-    keys: map[description] || keys,
+  const shortcuts: Shortcut[] = DEFAULT_SHORTCUTS.map((shortcut) => ({
+    ...shortcut,
+    keys: normalizeShortcut(map[shortcut.description] || shortcut.keys),
   }));
 
   const updateShortcut = (description: string, keys: string) =>
-    setMap({ ...map, [description]: keys });
+    setMap({ ...map, [description]: normalizeShortcut(keys) });
 
   return { shortcuts, updateShortcut };
 }

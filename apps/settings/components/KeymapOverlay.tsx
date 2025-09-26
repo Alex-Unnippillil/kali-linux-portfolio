@@ -1,23 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatKeyboardEvent } from '../../../utils/keyboard';
 import useKeymap from '../keymapRegistry';
 
 interface KeymapOverlayProps {
   open: boolean;
   onClose: () => void;
 }
-
-const formatEvent = (e: KeyboardEvent) => {
-  const parts = [
-    e.ctrlKey ? 'Ctrl' : '',
-    e.altKey ? 'Alt' : '',
-    e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
-    e.key.length === 1 ? e.key.toUpperCase() : e.key,
-  ];
-  return parts.filter(Boolean).join('+');
-};
 
 export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
   const { shortcuts, updateShortcut } = useKeymap();
@@ -27,7 +17,7 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
     if (!rebinding) return;
     const handler = (e: KeyboardEvent) => {
       e.preventDefault();
-      const combo = formatEvent(e);
+      const combo = formatKeyboardEvent(e);
       updateShortcut(rebinding, combo);
       setRebinding(null);
     };
