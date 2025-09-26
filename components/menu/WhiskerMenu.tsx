@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { readFavoriteIds, subscribeToFavoriteChanges } from '../../utils/favorites';
 
 type AppMeta = {
   id: string;
@@ -29,7 +30,21 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  useEffect(() => {
+    setFavoriteIds(readFavoriteIds());
+    const unsubscribe = subscribeToFavoriteChanges(() => {
+      setFavoriteIds(readFavoriteIds());
+    });
+    return unsubscribe;
+  }, []);
+  const favoriteApps = useMemo(() => {
+    if (favoriteIds.length > 0) {
+      const favouriteSet = new Set(favoriteIds);
+      return allApps.filter(app => favouriteSet.has(app.id));
+    }
+    return allApps.filter(a => a.favourite);
+  }, [allApps, favoriteIds]);
   const recentApps = useMemo(() => {
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
