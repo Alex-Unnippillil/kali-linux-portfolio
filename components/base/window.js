@@ -62,9 +62,26 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragFrame = null;
+        this._pendingDrag = null;
+        this._resizeFrame = null;
+        this._pendingResize = null;
+        this._isUnmounted = false;
+        this._requestFrame = (cb) => setTimeout(cb, 16);
+        this._cancelFrame = (id) => clearTimeout(id);
+        this._pendingSnapPosition = null;
     }
 
     componentDidMount() {
+        this._isUnmounted = false;
+        if (typeof window !== 'undefined') {
+            this._requestFrame = typeof window.requestAnimationFrame === 'function'
+                ? window.requestAnimationFrame.bind(window)
+                : (cb) => setTimeout(cb, 16);
+            this._cancelFrame = typeof window.cancelAnimationFrame === 'function'
+                ? window.cancelAnimationFrame.bind(window)
+                : (id) => clearTimeout(id);
+        }
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
 
@@ -84,6 +101,7 @@ export class Window extends Component {
     }
 
     componentWillUnmount() {
+        this._isUnmounted = true;
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
@@ -94,6 +112,16 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._dragFrame !== null) {
+            this._cancelFrame(this._dragFrame);
+            this._dragFrame = null;
+        }
+        if (this._resizeFrame !== null) {
+            this._cancelFrame(this._resizeFrame);
+            this._resizeFrame = null;
+        }
+        this._pendingDrag = null;
+        this._pendingResize = null;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -232,18 +260,12 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
-        const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        this.queueResize('height');
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
-        const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        this.queueResize('width');
     }
 
     setWinowsPosition = () => {
@@ -261,6 +283,7 @@ export class Window extends Component {
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
+        this._pendingSnapPosition = null;
         var r = document.querySelector("#" + this.id);
         if (r) {
             const x = r.style.getPropertyValue('--window-transform-x');
@@ -281,6 +304,7 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
+        this._pendingSnapPosition = null;
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -359,11 +383,60 @@ export class Window extends Component {
                 this.state.snapPreview.top === preview.top &&
                 this.state.snapPreview.width === preview.width &&
                 this.state.snapPreview.height === preview.height;
+            this._pendingSnapPosition = position;
             if (!samePosition || !samePreview) {
                 this.setState({ snapPreview: preview, snapPosition: position });
             }
         } else if (this.state.snapPreview) {
+            this._pendingSnapPosition = null;
             this.setState({ snapPreview: null, snapPosition: null });
+        } else {
+            this._pendingSnapPosition = null;
+        }
+    }
+
+    processPendingResize = () => {
+        if (this._isUnmounted) {
+            this._pendingResize = null;
+            return;
+        }
+        const pending = this._pendingResize;
+        this._pendingResize = null;
+        if (!pending) return;
+        const updates = {};
+        if (pending.height > 0) {
+            const px = (this.state.height / 100) * window.innerHeight + pending.height;
+            const snapped = this.snapToGrid(px);
+            const heightPercent = snapped / window.innerHeight * 100;
+            if (Math.abs(heightPercent - this.state.height) > 0.0001) {
+                updates.height = heightPercent;
+            }
+        }
+        if (pending.width > 0) {
+            const px = (this.state.width / 100) * window.innerWidth + pending.width;
+            const snapped = this.snapToGrid(px);
+            const widthPercent = snapped / window.innerWidth * 100;
+            if (Math.abs(widthPercent - this.state.width) > 0.0001) {
+                updates.width = widthPercent;
+            }
+        }
+        if (Object.keys(updates).length > 0) {
+            this.setState(updates, this.resizeBoundries);
+        }
+    }
+
+    queueResize = (dimension) => {
+        if (!this._pendingResize) {
+            this._pendingResize = { width: 0, height: 0 };
+        }
+        if (dimension === 'width' || dimension === 'height') {
+            this._pendingResize[dimension] += 1;
+        }
+        if (this._resizeFrame === null) {
+            this._resizeFrame = this._requestFrame(() => {
+                this._resizeFrame = null;
+                this.processPendingResize();
+            });
         }
     }
 
@@ -388,7 +461,15 @@ export class Window extends Component {
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
-    handleDrag = (e, data) => {
+    processPendingDrag = () => {
+        if (this._isUnmounted) {
+            this._pendingDrag = null;
+            return;
+        }
+        const pending = this._pendingDrag;
+        this._pendingDrag = null;
+        if (!pending) return;
+        const { data } = pending;
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
@@ -396,9 +477,25 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
+    handleDrag = (e, data) => {
+        this._pendingDrag = { e, data };
+        if (this._dragFrame === null) {
+            this._dragFrame = this._requestFrame(() => {
+                this._dragFrame = null;
+                this.processPendingDrag();
+            });
+        }
+    }
+
     handleStop = () => {
+        if (this._dragFrame !== null) {
+            this._cancelFrame(this._dragFrame);
+            this._dragFrame = null;
+        }
+        this.processPendingDrag();
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
+        const snapPos = this.state.snapPosition || this._pendingSnapPosition;
+        this._pendingSnapPosition = null;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
