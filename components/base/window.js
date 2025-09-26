@@ -8,6 +8,14 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const SNAP_TARGET_STYLES = {
+    left: { left: '0', top: '0', width: '50%', height: '100%' },
+    right: { left: '50%', top: '0', width: '50%', height: '100%' },
+    top: { left: '0', top: '0', width: '100%', height: '50%' },
+};
+
+const SNAP_POSITIONS = ['left', 'right', 'top'];
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -33,6 +41,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            showSnapGuides: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -193,11 +202,11 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.setState({ cursorType: "cursor-move", grabbed: true, showSnapGuides: true })
     }
 
     changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default", grabbed: false })
+        this.setState({ cursorType: "cursor-default", grabbed: false, showSnapGuides: false })
     }
 
     snapToGrid = (value) => {
@@ -320,20 +329,58 @@ export class Window extends Component {
         const threshold = 30;
         let snap = null;
         if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
+            snap = SNAP_TARGET_STYLES.left;
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
         else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
+            snap = SNAP_TARGET_STYLES.right;
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
+            snap = SNAP_TARGET_STYLES.top;
             this.setState({ snapPreview: snap, snapPosition: 'top' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
         }
+    }
+
+    ensureSnapGuidesVisible = () => {
+        if (!this.state.showSnapGuides) {
+            this.setState({ showSnapGuides: true });
+        }
+    }
+
+    getSnapRegionBounds = (position) => {
+        if (typeof window === 'undefined') return null;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        switch (position) {
+            case 'left':
+                return { left: 0, right: width / 2, top: 0, bottom: height };
+            case 'right':
+                return { left: width / 2, right: width, top: 0, bottom: height };
+            case 'top':
+                return { left: 0, right: width, top: 0, bottom: height / 2 };
+            default:
+                return null;
+        }
+    }
+
+    shouldSnapOnRelease = (position) => {
+        const node = document.querySelector("#" + this.id);
+        if (!node) return false;
+        const region = this.getSnapRegionBounds(position);
+        if (!region) return false;
+        const rect = node.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        return (
+            centerX >= region.left &&
+            centerX <= region.right &&
+            centerY >= region.top &&
+            centerY <= region.bottom
+        );
     }
 
     applyEdgeResistance = (node, data) => {
@@ -358,6 +405,7 @@ export class Window extends Component {
     }
 
     handleDrag = (e, data) => {
+        this.ensureSnapGuidesVisible();
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
@@ -366,13 +414,14 @@ export class Window extends Component {
     }
 
     handleStop = () => {
-        this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
-        if (snapPos) {
+        const shouldSnap = snapPos ? this.shouldSnapOnRelease(snapPos) : false;
+        if (shouldSnap && snapPos) {
             this.snapWindow(snapPos);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.changeCursorToDefault();
     }
 
     focusWindow = () => {
@@ -598,6 +647,10 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
@@ -614,12 +667,23 @@ export class Window extends Component {
     render() {
         return (
             <>
-                {this.state.snapPreview && (
-                    <div
-                        data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
-                    />
+                {this.state.showSnapGuides && (
+                    SNAP_POSITIONS.map((position) => {
+                        const style = SNAP_TARGET_STYLES[position];
+                        const isActive = this.state.snapPosition === position && this.state.snapPreview;
+                        return (
+                            <div
+                                key={position}
+                                data-snap-target={position}
+                                data-testid={isActive ? "snap-preview" : undefined}
+                                className={`fixed pointer-events-none z-40 transition-opacity duration-150 ${isActive
+                                    ? 'border-2 border-dashed border-blue-400 bg-blue-400 bg-opacity-20 shadow-lg'
+                                    : 'border border-dashed border-white border-opacity-10 bg-white bg-opacity-5'
+                                }`}
+                                style={{ left: style.left, top: style.top, width: style.width, height: style.height }}
+                            />
+                        );
+                    })
                 )}
                 <Draggable
                     axis="both"

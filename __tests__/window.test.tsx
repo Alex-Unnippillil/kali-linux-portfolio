@@ -80,6 +80,30 @@ describe('Window snapping preview', () => {
     expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
   });
 
+  it('shows snap targets while dragging', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    const targets = document.querySelectorAll('[data-snap-target]');
+    expect(targets.length).toBeGreaterThanOrEqual(3);
+  });
+
   it('hides preview when away from edge', () => {
     const ref = React.createRef<Window>();
     render(
@@ -160,6 +184,58 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.height).toBe(96.3);
   });
 
+  it('cancels snap when dropping outside preview region', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    winEl.getBoundingClientRect = () => ({
+      left: window.innerWidth * 0.75,
+      top: 10,
+      right: window.innerWidth * 0.75 + 100,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: window.innerWidth * 0.75,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBeNull();
+  });
+
   it('releases snap with Alt+ArrowDown restoring size', () => {
     const ref = React.createRef<Window>();
     render(
@@ -199,7 +275,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
