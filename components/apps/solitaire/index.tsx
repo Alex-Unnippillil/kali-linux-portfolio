@@ -792,7 +792,7 @@ const Solitaire = () => {
         </label>
       </div>
       <div className="flex space-x-4 mb-4">
-        <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onClick={draw}>
+        <div className="w-16 h-24 min-w-[24px] min-h-[24px] interactive-target" onClick={draw}>
           {game.stock.length ? renderFaceDown() : <div />}
         </div>
         <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onDragOver={(e) => e.preventDefault()}>

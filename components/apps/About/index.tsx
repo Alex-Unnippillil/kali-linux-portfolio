@@ -65,7 +65,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             (this.state.active_screen === section.id
               ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
               : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
-            ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
+            ' w-28 md:w-full md:rounded-none rounded-sm outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5 interactive-target'
           }
         >
           <Image
@@ -369,7 +369,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         ))}
       </div>
       {selected && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 cursor-pointer" onClick={() => setSelected(null)}>
           <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>

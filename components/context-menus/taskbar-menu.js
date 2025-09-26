@@ -30,14 +30,14 @@ function TaskbarMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
+            className={(props.active ? ' block ' : ' hidden ') + ' w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
         >
             <button
                 type="button"
                 onClick={handleMinimize}
                 role="menuitem"
                 aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-gray-700 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
             </button>
@@ -46,7 +46,7 @@ function TaskbarMenu(props) {
                 onClick={handleClose}
                 role="menuitem"
                 aria-label="Close Window"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-gray-700 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">Close</span>
             </button>
