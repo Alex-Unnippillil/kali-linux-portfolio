@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 export interface WorkspaceSummary {
   id: number;
@@ -11,6 +11,7 @@ export interface WorkspaceSummary {
 interface WorkspaceSwitcherProps {
   workspaces: WorkspaceSummary[];
   activeWorkspace: number;
+  previousWorkspace?: number | null;
   onSelect: (workspaceId: number) => void;
 }
 
@@ -28,8 +29,25 @@ function formatAriaLabel(workspace: WorkspaceSummary) {
 export default function WorkspaceSwitcher({
   workspaces,
   activeWorkspace,
+  previousWorkspace = null,
   onSelect,
 }: WorkspaceSwitcherProps) {
+  const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (previousWorkspace === null || previousWorkspace === activeWorkspace) {
+      setTransitionLabel(null);
+      setVisible(false);
+      return;
+    }
+    const label = `Workspace ${previousWorkspace + 1} → ${activeWorkspace + 1}`;
+    setTransitionLabel(label);
+    setVisible(true);
+    const timeout = window.setTimeout(() => setVisible(false), 1200);
+    return () => window.clearTimeout(timeout);
+  }, [previousWorkspace, activeWorkspace]);
+
   if (workspaces.length === 0) return null;
 
   return (
@@ -47,6 +65,7 @@ export default function WorkspaceSwitcher({
             tabIndex={tabIndex}
             aria-pressed={isActive}
             aria-label={formatAriaLabel(workspace)}
+            data-active={isActive ? "true" : "false"}
             onClick={() => onSelect(workspace.id)}
             className={`min-w-[28px] rounded-full px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-black ${
               isActive
@@ -63,6 +82,16 @@ export default function WorkspaceSwitcher({
           </button>
         );
       })}
+      {transitionLabel && (
+        <span
+          aria-live="polite"
+          className={`ml-2 rounded-full bg-white/10 px-2 py-1 text-[10px] text-white/80 transition-opacity duration-300 ${
+            visible ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {transitionLabel}
+        </span>
+      )}
     </nav>
   );
 }
