@@ -97,9 +97,9 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <div
           style={{
             padding: 8,
-            background: "black",
-            color: "white",
-            fontFamily: "sans-serif",
+            background: 'var(--kali-panel)',
+            color: 'var(--kali-text-strong)',
+            fontFamily: "var(--font-family-base)",
             display: "flex",
             gap: 8,
             alignItems: "center",
@@ -134,7 +134,11 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <button
           type="button"
           onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          className="absolute bottom-2 right-2 rounded px-2 py-1 text-xs transition-colors hover:bg-[color:var(--kali-taskbar-hover)]"
+          style={{
+            backgroundColor: 'var(--kali-overlay-medium)',
+            color: 'var(--kali-text-strong)',
+          }}
         >
           {isPip ? "Exit PiP" : "PiP"}
         </button>
@@ -143,7 +147,11 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <button
           type="button"
           onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          className="absolute bottom-2 right-16 rounded px-2 py-1 text-xs transition-colors hover:bg-[color:var(--kali-taskbar-hover)]"
+          style={{
+            backgroundColor: 'var(--kali-overlay-medium)',
+            color: 'var(--kali-text-strong)',
+          }}
         >
           Doc-PiP
         </button>

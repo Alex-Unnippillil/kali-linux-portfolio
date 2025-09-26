@@ -11,7 +11,10 @@ interface Props {
 
 const Breadcrumbs: React.FC<Props> = ({ path, onNavigate }) => {
   return (
-    <nav className="flex items-center space-x-1 text-white" aria-label="Breadcrumb">
+    <nav
+      className="flex items-center space-x-1 text-[var(--kali-text-strong)]"
+      aria-label="Breadcrumb"
+    >
       {path.map((seg, idx) => (
         <React.Fragment key={idx}>
           <button

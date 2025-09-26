@@ -836,17 +836,41 @@ export class Desktop extends Component {
         }
 
         return (
-            <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
-                <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
+            <div
+                className="absolute rounded-md top-1/2 left-1/2 text-center font-light text-sm transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50 shadow-xl"
+                style={{
+                    backgroundColor: 'var(--kali-panel)',
+                    border: '1px solid var(--kali-panel-border)',
+                    color: 'var(--kali-text-strong)',
+                    boxShadow: '0 24px 48px color-mix(in srgb, var(--color-inverse), transparent 85%)',
+                }}
+            >
+                <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6 gap-2">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input
+                        className="outline-none mt-3 px-1 w-10/12 context-menu-bg border-2 rounded py-1 placeholder:text-[color:var(--kali-text-subtle)]"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        style={{
+                            backgroundColor: 'var(--kali-input-bg)',
+                            borderColor: 'var(--color-accent)',
+                            color: 'var(--kali-text-strong)',
+                        }}
+                    />
                 </div>
                 <div className="flex">
                     <button
                         type="button"
                         onClick={addFolder}
                         aria-label="Create folder"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                        className="w-1/2 px-4 py-2 border border-r-0 transition-colors hover:bg-[color:var(--kali-taskbar-hover)] focus-visible:outline-none"
+                        style={{
+                            borderColor: 'var(--kali-border-strong)',
+                            color: 'var(--kali-text-strong)',
+                        }}
                     >
                         Create
                     </button>
@@ -854,7 +878,11 @@ export class Desktop extends Component {
                         type="button"
                         onClick={removeCard}
                         aria-label="Cancel folder creation"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                        className="w-1/2 px-4 py-2 border transition-colors hover:bg-[color:var(--kali-taskbar-hover)] focus-visible:outline-none"
+                        style={{
+                            borderColor: 'var(--kali-border-strong)',
+                            color: 'var(--kali-text-strong)',
+                        }}
                     >
                         Cancel
                     </button>

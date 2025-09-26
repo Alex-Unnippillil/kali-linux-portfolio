@@ -9,14 +9,14 @@ export default function ProgressBar({ progress, className = '' }: ProgressBarPro
   const clamped = Math.max(0, Math.min(progress, 100));
   return (
     <div
-      className={`w-32 h-2 bg-gray-300 rounded ${className}`}
+      className={`w-32 h-2 bg-[color:var(--kali-progress-track)] rounded ${className}`}
       role="progressbar"
       aria-valuenow={Math.round(clamped)}
       aria-valuemin={0}
       aria-valuemax={100}
     >
       <div
-        className="h-full bg-blue-500 transition-all duration-200"
+        className="h-full bg-[color:var(--kali-progress-fill)] transition-all duration-200"
         style={{ width: `${clamped}%` }}
       />
     </div>

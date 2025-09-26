@@ -57,21 +57,45 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center text-[var(--kali-text-strong)]"
+      style={{ backgroundColor: 'var(--kali-overlay-medium)' }}
+    >
+      <div
+        className="p-4 rounded border shadow-lg w-3/4 md:w-1/3"
+        style={{
+          backgroundColor: 'var(--kali-panel)',
+          borderColor: 'var(--kali-panel-border)',
+          boxShadow: '0 12px 30px color-mix(in srgb, var(--color-inverse), transparent 85%)',
+        }}
+      >
         <input
           ref={inputRef}
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+          className="w-full mb-4 px-2 py-1 rounded border placeholder:text-[color:var(--kali-text-subtle)] focus:outline-none focus-visible:outline-none"
           placeholder="Search windows"
+          style={{
+            backgroundColor: 'var(--kali-input-bg)',
+            borderColor: 'var(--kali-input-border)',
+            color: 'var(--kali-text-strong)',
+          }}
         />
         <ul>
           {filtered.map((w, i) => (
             <li
               key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
+              className="px-2 py-1 rounded transition-colors"
+              style={
+                i === selected
+                  ? {
+                      backgroundColor: 'var(--color-accent)',
+                      color: 'var(--color-inverse)',
+                    }
+                  : { color: 'var(--kali-text-strong)' }
+              }
+              aria-selected={i === selected}
             >
               {w.title}
             </li>

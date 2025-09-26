@@ -1,0 +1,204 @@
+/* Kali Linux design tokens */
+
+:root {
+  /* Base palette */
+  --color-bg: #0f1317;
+  --color-text: #f5f5f5;
+  --color-primary: #1793d1;
+  --color-secondary: #1a1f26;
+  --color-accent: var(--color-primary);
+  --color-muted: #2a2e36;
+  --color-surface: #1a1f26;
+  --color-inverse: #000000;
+  --color-border: #2a2e36;
+  --color-terminal: #00ff00;
+  --color-dark: #0c0f12;
+  --color-focus-ring: var(--color-accent);
+  --color-selection: var(--color-accent);
+  --color-control-accent: var(--color-accent);
+  accent-color: var(--color-control-accent);
+
+  /* Ubuntu compatibility tokens */
+  --color-ub-grey: var(--color-bg);
+  --color-ub-warm-grey: #7d7f83;
+  --color-ub-cool-grey: #1a1f26;
+  --color-ub-orange: var(--color-primary);
+  --color-ub-lite-abrgn: #22262c;
+  --color-ub-med-abrgn: #1b1f24;
+  --color-ub-drk-abrgn: #13171b;
+  --color-ub-window-title: #0c0f12;
+  --color-ub-gedit-dark: #021b33;
+  --color-ub-gedit-light: #003b70;
+  --color-ub-gedit-darker: #010d1a;
+  --color-ubt-grey: #f6f6f5;
+  --color-ubt-warm-grey: #aea79f;
+  --color-ubt-cool-grey: #333333;
+  --color-ubt-blue: #62a0ea;
+  --color-ubt-green: #73d216;
+  --color-ubt-gedit-orange: #f39a21;
+  --color-ubt-gedit-blue: #50b6c6;
+  --color-ubt-gedit-dark: #003b70;
+  --color-ub-border-orange: var(--color-primary);
+  --color-ub-dark-grey: #2a2e36;
+
+  /* Game palette tokens */
+  --game-color-secondary: #1d4ed8;
+  --game-color-success: #15803d;
+  --game-color-warning: #d97706;
+  --game-color-danger: #b91c1c;
+
+  /* Kali semantic tokens */
+  --kali-background: var(--color-bg);
+  --kali-background-glass: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  --kali-panel: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --kali-panel-border: color-mix(in srgb, var(--color-border) 82%, transparent);
+  --kali-overlay-soft: color-mix(in srgb, var(--color-bg) 35%, transparent);
+  --kali-overlay-medium: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  --kali-overlay-strong: color-mix(in srgb, var(--color-bg) 95%, transparent);
+  --kali-overlay-solid: color-mix(in srgb, var(--color-bg) 85%, #000000 15%);
+  --kali-taskbar-bg: color-mix(in srgb, var(--color-bg) 75%, transparent);
+  --kali-taskbar-hover: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --kali-taskbar-active: color-mix(in srgb, var(--color-text) 18%, transparent);
+  --kali-taskbar-indicator: var(--color-text);
+  --kali-tooltip-bg: color-mix(in srgb, var(--color-bg) 85%, transparent);
+  --kali-tooltip-border: color-mix(in srgb, var(--color-border) 72%, transparent);
+  --kali-text-strong: var(--color-text);
+  --kali-text-subtle: color-mix(in srgb, var(--color-text), transparent 45%);
+  --kali-border-strong: color-mix(in srgb, var(--color-border) 80%, transparent);
+  --kali-control-surface: color-mix(in srgb, var(--color-text) 92%, var(--color-bg) 8%);
+  --kali-control-hover: color-mix(in srgb, var(--color-text) 82%, var(--color-bg) 18%);
+  --kali-input-bg: color-mix(in srgb, var(--color-surface) 82%, var(--color-bg) 18%);
+  --kali-input-border: color-mix(in srgb, var(--color-border) 85%, transparent);
+  --kali-input-placeholder: color-mix(in srgb, var(--color-text), transparent 55%);
+  --kali-tab-background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --kali-tab-background-active: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  --kali-tab-divider: color-mix(in srgb, var(--color-border) 65%, transparent);
+  --kali-progress-track: color-mix(in srgb, var(--color-inverse), transparent 78%);
+  --kali-progress-fill: var(--color-accent);
+  --kali-danger: var(--game-color-danger);
+  --kali-success: var(--game-color-success);
+  --kali-warning: var(--game-color-warning);
+  --kali-terminal: var(--color-terminal);
+
+  /* Compatibility tokens for legacy selectors */
+  --kali-bg: var(--kali-background-glass);
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-round: 9999px;
+
+  /* Motion durations */
+  --motion-fast: 150ms;
+  --motion-medium: 300ms;
+  --motion-slow: 500ms;
+
+  /* Fonts */
+  --font-family-base: 'Ubuntu', sans-serif;
+  --font-multiplier: 1;
+
+  /* Minimum interactive target size */
+  --hit-area: 32px;
+
+  /* Focus outline */
+  --focus-outline-color: var(--color-accent);
+  --focus-outline-width: 2px;
+}
+
+/* High contrast theme */
+.high-contrast {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-ub-grey: #000000;
+  --color-ub-cool-grey: #000000;
+  --color-ubt-grey: #ffffff;
+  --color-ubt-cool-grey: #ffffff;
+  --color-ub-orange: #ffff00;
+  --color-ub-lite-abrgn: #00ffff;
+  --color-ub-border-orange: #ffff00;
+  --game-color-secondary: #ffff00;
+  --game-color-success: #00ffff;
+  --game-color-warning: #ff00ff;
+  --game-color-danger: #ff0000;
+  --kali-background: #000000;
+  --kali-background-glass: rgba(0, 0, 0, 0.95);
+  --kali-panel: #000000;
+  --kali-panel-border: #ffff00;
+  --kali-overlay-soft: rgba(255, 255, 0, 0.35);
+  --kali-overlay-medium: rgba(255, 255, 0, 0.5);
+  --kali-overlay-strong: rgba(0, 0, 0, 0.95);
+  --kali-overlay-solid: rgba(0, 0, 0, 0.98);
+  --kali-taskbar-bg: #000000;
+  --kali-taskbar-hover: rgba(255, 255, 0, 0.3);
+  --kali-taskbar-active: rgba(255, 255, 0, 0.5);
+  --kali-taskbar-indicator: #ffff00;
+  --kali-tooltip-bg: #000000;
+  --kali-tooltip-border: #ffff00;
+  --kali-text-strong: #ffffff;
+  --kali-text-subtle: #ffff00;
+  --kali-border-strong: #ffff00;
+  --kali-progress-fill: #ffff00;
+}
+
+/* Dyslexia-friendly fonts */
+.dyslexia {
+  --font-family-base: 'OpenDyslexic', 'Comic Sans MS', Arial, sans-serif;
+}
+
+/* Larger hit areas */
+.large-hit-area {
+  --hit-area: 48px;
+}
+
+/* Reduced motion */
+.reduced-motion {
+  --motion-fast: 0ms;
+  --motion-medium: 0ms;
+  --motion-slow: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-medium: 0ms;
+    --motion-slow: 0ms;
+  }
+}
+
+/* Optional high contrast via media query */
+@media (prefers-contrast: more) {
+  :root {
+    --color-bg: #000000;
+    --color-text: #ffffff;
+    --color-ub-grey: #000000;
+    --color-ub-cool-grey: #000000;
+    --color-ubt-grey: #ffffff;
+    --color-ubt-cool-grey: #ffffff;
+    --color-ub-orange: #ffff00;
+    --color-ub-lite-abrgn: #00ffff;
+    --color-ub-border-orange: #ffff00;
+    --kali-background: #000000;
+    --kali-background-glass: rgba(0, 0, 0, 0.95);
+    --kali-panel: #000000;
+    --kali-panel-border: #ffff00;
+    --kali-taskbar-bg: #000000;
+    --kali-taskbar-hover: rgba(255, 255, 0, 0.3);
+    --kali-taskbar-active: rgba(255, 255, 0, 0.5);
+    --kali-taskbar-indicator: #ffff00;
+    --kali-tooltip-bg: #000000;
+    --kali-tooltip-border: #ffff00;
+    --kali-text-strong: #ffffff;
+    --kali-text-subtle: #ffff00;
+    --kali-border-strong: #ffff00;
+    --kali-progress-fill: #ffff00;
+  }
+}

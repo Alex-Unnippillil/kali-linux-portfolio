@@ -32,7 +32,13 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed top-4 left-1/2 -translate-x-1/2 transform px-4 py-3 rounded-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      style={{
+        backgroundColor: 'var(--kali-panel)',
+        border: '1px solid var(--kali-panel-border)',
+        color: 'var(--kali-text-strong)',
+        boxShadow: '0 16px 32px color-mix(in srgb, var(--color-inverse), transparent 88%)',
+      }}
     >
       <span>{message}</span>
       {onAction && actionLabel && (

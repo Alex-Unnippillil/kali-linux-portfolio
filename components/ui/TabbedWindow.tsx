@@ -168,13 +168,27 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div
+        className="flex flex-shrink-0 text-sm overflow-x-auto border-b"
+        style={{
+          backgroundColor: 'var(--kali-tab-background)',
+          borderBottom: '1px solid var(--kali-tab-divider)',
+          color: 'var(--kali-text-strong)',
+        }}
+      >
         {tabs.map((t, i) => (
           <div
             key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
+            className="flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none border-b-2 transition-colors hover:bg-[color:var(--kali-taskbar-hover)]"
+            style={{
+              backgroundColor:
+                t.id === activeId
+                  ? 'var(--kali-tab-background-active)'
+                  : 'transparent',
+              borderBottomColor:
+                t.id === activeId ? 'var(--color-accent)' : 'transparent',
+              color: 'var(--kali-text-strong)',
+            }}
             draggable
             onDragStart={handleDragStart(i)}
             onDragOver={handleDragOver(i)}
@@ -184,7 +198,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="p-0.5"
+                className="p-0.5 text-[var(--kali-text-subtle)] hover:text-[var(--kali-text-strong)]"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);
@@ -198,7 +212,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="px-2 py-1 border-l hover:bg-[color:var(--kali-taskbar-hover)] focus-visible:outline-none"
+            style={{
+              backgroundColor: 'transparent',
+              borderColor: 'var(--kali-tab-divider)',
+              color: 'var(--kali-text-strong)',
+            }}
             onClick={addTab}
             aria-label="New Tab"
           >
