@@ -4,6 +4,12 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
+type WhiskerMenuProps = {
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+};
+
 type AppMeta = {
   id: string;
   title: string;
@@ -20,8 +26,7 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
-const WhiskerMenu: React.FC = () => {
-  const [open, setOpen] = useState(false);
+const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen, onToggle, onClose }) => {
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -37,7 +42,7 @@ const WhiskerMenu: React.FC = () => {
     } catch {
       return [];
     }
-  }, [allApps, open]);
+  }, [allApps, isOpen]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
@@ -67,25 +72,25 @@ const WhiskerMenu: React.FC = () => {
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     setHighlight(0);
-  }, [open, category, query]);
+  }, [isOpen, category, query]);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setOpen(false);
+    onClose();
   };
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
-        setOpen(o => !o);
+        onToggle();
         return;
       }
-      if (!open) return;
+      if (!isOpen) return;
       if (e.key === 'Escape') {
-        setOpen(false);
+        onClose();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setHighlight(h => Math.min(h + 1, currentApps.length - 1));
@@ -100,26 +105,28 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, currentApps, highlight]);
+  }, [isOpen, currentApps, highlight, onToggle, onClose]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (!open) return;
+      if (!isOpen) return;
       const target = e.target as Node;
       if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
-        setOpen(false);
+        onClose();
       }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+  }, [isOpen, onClose]);
 
   return (
     <div className="relative">
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        onClick={onToggle}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
@@ -131,14 +138,14 @@ const WhiskerMenu: React.FC = () => {
         />
         Applications
       </button>
-      {open && (
+      {isOpen && (
         <div
           ref={menuRef}
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              setOpen(false);
+              onClose();
             }
           }}
         >
