@@ -1,6 +1,8 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 
+/** @typedef {import('../../types/app').AppMeta} AppMeta */
+
 class AllApplications extends React.Component {
     constructor() {
         super();
@@ -13,8 +15,8 @@ class AllApplications extends React.Component {
 
     componentDidMount() {
         const { apps = [], games = [] } = this.props;
-        const combined = [...apps];
-        games.forEach((game) => {
+        const combined = /** @type {AppMeta[]} */ ([...apps]);
+        games.forEach((/** @type {AppMeta} */ game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         this.setState({ apps: combined, unfilteredApps: combined });

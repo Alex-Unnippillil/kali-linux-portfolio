@@ -24,6 +24,8 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+/** @typedef {import('../../types/app').AppMeta} AppMeta */
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -107,7 +109,7 @@ export class Desktop extends Component {
         try {
             const new_folders = JSON.parse(stored);
             new_folders.forEach(folder => {
-                apps.push({
+                apps.push(/** @type {AppMeta} */ ({
                     id: `new-folder-${folder.id}`,
                     title: folder.name,
                     icon: '/themes/Yaru/system/folder.png',
@@ -115,7 +117,7 @@ export class Desktop extends Component {
                     favourite: false,
                     desktop_shortcut: true,
                     screen: () => { },
-                });
+                }));
             });
             this.updateAppsData();
         } catch (e) {
@@ -214,7 +216,7 @@ export class Desktop extends Component {
     openWindowSwitcher = () => {
         const windows = this.app_stack
             .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
+            .map(id => /** @type {AppMeta | undefined} */ (apps.find(a => a.id === id)))
             .filter(Boolean);
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
@@ -346,14 +348,14 @@ export class Desktop extends Component {
         let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
             pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
+            apps.forEach((/** @type {AppMeta} */ app) => { app.favourite = pinnedApps.includes(app.id); });
         } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
+            pinnedApps = apps.filter((/** @type {AppMeta} */ app) => app.favourite).map(app => app.id);
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
-        apps.forEach((app) => {
+        apps.forEach((/** @type {AppMeta} */ app) => {
             focused_windows = {
                 ...focused_windows,
                 [app.id]: false,
@@ -397,7 +399,7 @@ export class Desktop extends Component {
     updateAppsData = () => {
         let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
         let desktop_apps = [];
-        apps.forEach((app) => {
+        apps.forEach((/** @type {AppMeta} */ app) => {
             focused_windows = {
                 ...focused_windows,
                 [app.id]: ((this.state.focused_windows[app.id] !== undefined || this.state.focused_windows[app.id] !== null) ? this.state.focused_windows[app.id] : false),
@@ -434,7 +436,7 @@ export class Desktop extends Component {
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
-        apps.forEach((app, index) => {
+        apps.forEach((/** @type {AppMeta} */ app, index) => {
             if (this.state.desktop_apps.includes(app.id)) {
 
                 const props = {
@@ -456,7 +458,7 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
-        apps.forEach((app, index) => {
+        apps.forEach((/** @type {AppMeta} */ app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
@@ -670,7 +672,7 @@ export class Desktop extends Component {
         }
 
         // persist in trash with autopurge
-        const appMeta = apps.find(a => a.id === objId) || {};
+        const appMeta = /** @type {AppMeta | undefined} */ (apps.find(a => a.id === objId)) || {};
         const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
         const ms = purgeDays * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -708,7 +710,7 @@ export class Desktop extends Component {
         let favourite_apps = { ...this.state.favourite_apps }
         favourite_apps[id] = true
         this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
+        const app = /** @type {AppMeta | undefined} */ (apps.find(a => a.id === id))
         if (app) app.favourite = true
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
@@ -722,7 +724,7 @@ export class Desktop extends Component {
         let favourite_apps = { ...this.state.favourite_apps }
         if (this.state.closed_windows[id]) favourite_apps[id] = false
         this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
+        const app = /** @type {AppMeta | undefined} */ (apps.find(a => a.id === id))
         if (app) app.favourite = false
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
