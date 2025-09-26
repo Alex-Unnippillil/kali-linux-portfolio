@@ -1,9 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import { ensureServerEnv } from "../../lib/runtime-env";
 
 export default async function handler(
   req,
   res,
 ) {
+  ensureServerEnv();
   if (req.method !== "POST") {
     res.status(405).json({ ok: false });
     return;
