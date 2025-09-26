@@ -8,6 +8,31 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const EDGE_THRESHOLD_MIN = 48;
+const EDGE_THRESHOLD_MAX = 160;
+const EDGE_THRESHOLD_RATIO = 0.05;
+const SNAP_BOTTOM_INSET = 28;
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
+
+const percentOf = (value, total) => {
+    if (!total) return 0;
+    return (value / total) * 100;
+};
+
+const computeSnapRegions = (viewportWidth, viewportHeight) => {
+    const halfWidth = viewportWidth / 2;
+    const availableHeight = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
+    const topHeight = Math.min(availableHeight, viewportHeight / 2);
+    return {
+        left: { left: 0, top: 0, width: halfWidth, height: availableHeight },
+        right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
+        top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
+    };
+};
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -257,34 +282,25 @@ export class Window extends Component {
 
     snapWindow = (position) => {
         this.setWinowsPosition();
+        this.focusWindow();
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        if (!viewportWidth || !viewportHeight) return;
+        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const region = regions[position];
+        if (!region) return;
         const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
+        const node = document.getElementById(this.id);
+        if (node) {
+            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
             lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
+            width: percentOf(region.width, viewportWidth),
+            height: percentOf(region.height, viewportHeight)
         }, this.resizeBoundries);
     }
 
@@ -314,25 +330,40 @@ export class Window extends Component {
     }
 
     checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
-        const threshold = 30;
-        let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        if (!viewportWidth || !viewportHeight) return;
+
+        const horizontalThreshold = computeEdgeThreshold(viewportWidth);
+        const verticalThreshold = computeEdgeThreshold(viewportHeight);
+        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+
+        let candidate = null;
+        if (rect.top <= verticalThreshold && regions.top.height > 0) {
+            candidate = { position: 'top', preview: regions.top };
+        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
+            candidate = { position: 'left', preview: regions.left };
+        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
+            candidate = { position: 'right', preview: regions.right };
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+
+        if (candidate) {
+            const { position, preview } = candidate;
+            const samePosition = this.state.snapPosition === position;
+            const samePreview =
+                this.state.snapPreview &&
+                this.state.snapPreview.left === preview.left &&
+                this.state.snapPreview.top === preview.top &&
+                this.state.snapPreview.width === preview.width &&
+                this.state.snapPreview.height === preview.height;
+            if (!samePosition || !samePreview) {
+                this.setState({ snapPreview: preview, snapPosition: position });
+            }
+        } else if (this.state.snapPreview) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -584,33 +615,6 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
-
     render() {
         return (
             <>
@@ -618,7 +622,15 @@ export class Window extends Component {
                     <div
                         data-testid="snap-preview"
                         className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
+                        style={{
+                            left: `${this.state.snapPreview.left}px`,
+                            top: `${this.state.snapPreview.top}px`,
+                            width: `${this.state.snapPreview.width}px`,
+                            height: `${this.state.snapPreview.height}px`,
+                            backdropFilter: 'brightness(1.2)',
+                            WebkitBackdropFilter: 'brightness(1.2)'
+
+                        }}
                     />
                 )}
                 <Draggable
@@ -635,12 +647,26 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={[
+                            this.state.cursorType,
+                            this.state.closed ? 'closed-window' : '',
+                            this.state.maximized ? 'duration-300' : '',
+                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+                            this.state.grabbed ? 'opacity-70' : '',
+                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
+                            this.props.isFocused ? 'z-30' : 'z-20',
+                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
+                            styles.windowFrame,
+                            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
+                            this.state.maximized ? styles.windowFrameMaximized : '',
+                        ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onPointerDown={this.focusWindow}
+                        onFocus={this.focusWindow}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
@@ -649,6 +675,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onPointerDown={this.focusWindow}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -657,13 +684,14 @@ export class Window extends Component {
                             close={this.closeWindow}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
                         />
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                                openApp={this.props.openApp}
+                                context={this.props.context} />)}
                     </div>
                 </Draggable >
             </>
@@ -674,15 +702,16 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onPointerDown={onPointerDown}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
@@ -734,7 +763,7 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -839,7 +868,7 @@ export class WindowMainScreen extends Component {
     render() {
         return (
             <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
             </div>
         )
     }

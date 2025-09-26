@@ -61,7 +61,87 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
-const withPWA = require('@ducanh2912/next-pwa').default({
+function sanitizeBuildId(rawId) {
+  if (!rawId) return undefined;
+  const trimmed = rawId.trim();
+  if (!trimmed) return undefined;
+  return trimmed.replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+const rawBuildId =
+  process.env.NEXT_PUBLIC_BUILD_ID ??
+  process.env.VERCEL_GIT_COMMIT_SHA ??
+  process.env.GITHUB_SHA;
+
+const resolvedBuildId = sanitizeBuildId(rawBuildId);
+
+if (resolvedBuildId) {
+  process.env.NEXT_PUBLIC_BUILD_ID = resolvedBuildId;
+}
+
+// Prefix Workbox-managed caches with the build identifier so new deployments
+// invalidate old cache groups automatically.
+const workboxCacheId = resolvedBuildId ? `kali-portfolio-${resolvedBuildId}` : undefined;
+
+const {
+  default: withPWAInit,
+  runtimeCaching: defaultRuntimeCaching,
+} = require('@ducanh2912/next-pwa');
+
+function buildAwareCacheName(name) {
+  if (!name) return name;
+  return resolvedBuildId ? `${name}-${resolvedBuildId}` : name;
+}
+
+const normalizedBasePath = (() => {
+  const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? process.env.BASE_PATH ?? '';
+  if (!rawBasePath) return '/';
+  const prefixed = rawBasePath.startsWith('/') ? rawBasePath : `/${rawBasePath}`;
+  return prefixed.endsWith('/') && prefixed !== '/' ? prefixed.slice(0, -1) : prefixed;
+})();
+
+const startUrlRuntimeCaching = {
+  urlPattern: ({ sameOrigin, url }) => {
+    if (!sameOrigin) return false;
+    const path = url.pathname.endsWith('/') && url.pathname !== '/' ? url.pathname.slice(0, -1) : url.pathname || '/';
+    return path === normalizedBasePath;
+  },
+  handler: 'NetworkFirst',
+  options: {
+    cacheName: buildAwareCacheName('start-url'),
+    plugins: [
+      {
+        cacheWillUpdate: async ({ response }) =>
+          response && response.type === 'opaqueredirect'
+            ? new Response(response.body, {
+                status: 200,
+                statusText: 'OK',
+                headers: response.headers,
+              })
+            : response,
+      },
+    ],
+  },
+};
+
+const runtimeCaching = [
+  startUrlRuntimeCaching,
+  ...defaultRuntimeCaching.map((entry) => ({
+    ...entry,
+    ...(entry.options
+      ? {
+          options: {
+            ...entry.options,
+            ...(entry.options.cacheName
+              ? { cacheName: buildAwareCacheName(entry.options.cacheName) }
+              : {}),
+          },
+        }
+      : {}),
+  })),
+];
+
+const withPWA = withPWAInit({
   dest: 'public',
   sw: 'sw.js',
   disable: process.env.NODE_ENV === 'development',
@@ -81,7 +161,10 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
+    runtimeCaching,
+    ...(workboxCacheId && { cacheId: workboxCacheId }),
   },
+  dynamicStartUrl: false,
 });
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
