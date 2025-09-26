@@ -1,0 +1,43 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": true,
+    "outDir": "./.tsbuild/client",
+    "tsBuildInfoFile": "./.tsbuild/client.tsbuildinfo"
+  },
+  "references": [{ "path": "./tsconfig.server.json" }],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    "apps/**/*.json",
+    "components/**/*.json",
+    "data/**/*.json",
+    "games/**/*.json",
+    "public/demo-data/**/*.json",
+    "public/quotes/**/*.json",
+    "quotes/**/*.json",
+    "templates/**/*.json"
+  ],
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "**/__tests__/**",
+    "app/api",
+    "app/api/**/*",
+    "pages/api",
+    "pages/api/**/*",
+    "chrome-extension",
+    "chrome-extension/**/*",
+    ".next",
+    "out",
+    "dist",
+    ".tsbuild",
+    ".tsbuild/**/*"
+  ]
+}
