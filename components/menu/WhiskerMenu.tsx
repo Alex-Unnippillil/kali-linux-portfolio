@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,10 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const launcherIcon = '/themes/Yaru/system/view-app-grid-symbolic.svg';
+  const launcherButtonId = 'panel-app-launcher';
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -69,7 +74,10 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
+    searchInputRef.current?.focus();
   }, [open, category, query]);
+
+  useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -115,27 +123,33 @@ const WhiskerMenu: React.FC = () => {
   }, [open]);
 
   return (
-    <div className="relative">
+    <div className="relative flex h-full items-center pl-2 pr-2">
       <button
         ref={buttonRef}
+        id={launcherButtonId}
         type="button"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls="desktop-app-menu"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="group flex h-7 w-7 items-center justify-center rounded-full outline-none transition duration-150 ease-in-out hover:bg-white hover:bg-opacity-10 focus-visible:ring-2 focus-visible:ring-ubb-orange"
+        aria-label="Open applications menu"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
+          src={launcherIcon}
+          alt="Applications menu"
+          width={20}
+          height={20}
+          className="h-5 w-5"
         />
-        Applications
       </button>
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
-          tabIndex={-1}
+          id="desktop-app-menu"
+          role="menu"
+          aria-labelledby={launcherButtonId}
+          className="absolute left-0 top-full z-50 mt-2 flex bg-ub-grey text-white shadow-lg"
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
@@ -146,7 +160,10 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                type="button"
+                role="menuitemradio"
+                aria-checked={category === cat.id}
+                className={`mb-1 rounded px-2 py-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-ubb-orange ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
@@ -155,11 +172,11 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="p-3">
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              ref={searchInputRef}
+              className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              autoFocus
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
