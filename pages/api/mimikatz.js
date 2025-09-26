@@ -1,8 +1,21 @@
 import modules from '../../components/apps/mimikatz/modules.json';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../utils/rateLimiter';
+
+const limiter = createRateLimiter();
 
 export default async function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
     res.status(501).json({ error: 'Not implemented' });
+    return;
+  }
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    res.status(429).json({ error: 'rate_limit_exceeded' });
     return;
   }
   if (req.method === 'GET') {

@@ -1,7 +1,14 @@
 import versionData from '../../../data/module-version.json';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../../utils/rateLimiter';
 
 const REMOTE_VERSION_URL =
   'https://raw.githubusercontent.com/unnipillil/kali-linux-portfolio/main/data/module-version.json';
+
+const limiter = createRateLimiter();
 
 function compareSemver(a, b) {
   const pa = a.split('.').map(Number);
@@ -17,6 +24,13 @@ export default async function handler(
   req,
   res,
 ) {
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    res.status(429).json({ error: 'rate_limit_exceeded' });
+    return;
+  }
+
   const currentParam = req.query.version;
   const current = Array.isArray(currentParam)
     ? currentParam[0]

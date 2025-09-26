@@ -1,7 +1,21 @@
 import fs from 'fs';
 import path from 'path';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../../utils/rateLimiter';
+
+const limiter = createRateLimiter();
 
 export default function handler(req, res) {
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    res.status(429).end('Rate limit exceeded');
+    return;
+  }
+
   const { name } = req.query;
   const filename = Array.isArray(name) ? name.join('/') : name;
   const catalogDir = path.join(process.cwd(), 'plugins', 'catalog');

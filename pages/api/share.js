@@ -1,6 +1,21 @@
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../utils/rateLimiter';
+
+const limiter = createRateLimiter();
+
 export default function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).end();
+    return;
+  }
+
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    res.status(429).json({ error: 'rate_limit_exceeded' });
     return;
   }
 

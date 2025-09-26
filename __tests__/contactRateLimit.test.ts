@@ -1,18 +1,24 @@
-import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
+import handler, {
+  contactRateLimiter,
+  RATE_LIMIT_WINDOW_MS,
+} from '../pages/api/contact';
 
 describe('contact api rate limiter', () => {
   afterEach(() => {
     jest.restoreAllMocks();
-    rateLimit.clear();
+    contactRateLimiter.reset();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
   });
 
   it('removes stale IP entries', async () => {
     const baseTime = 1_000_000;
-    jest.spyOn(Date, 'now').mockReturnValue(baseTime);
+    const dateSpy = jest.spyOn(Date, 'now');
+    dateSpy
+      .mockReturnValueOnce(baseTime - RATE_LIMIT_WINDOW_MS - 1)
+      .mockReturnValue(baseTime);
 
-    rateLimit.set('1.1.1.1', { count: 1, start: baseTime - RATE_LIMIT_WINDOW_MS - 1 });
+    contactRateLimiter.check('1.1.1.1');
 
     (global as any).fetch = jest
       .fn()
@@ -37,7 +43,7 @@ describe('contact api rate limiter', () => {
 
     await handler(req, res);
 
-    expect(rateLimit.has('1.1.1.1')).toBe(false);
-    expect(rateLimit.has('2.2.2.2')).toBe(true);
+    expect(contactRateLimiter.has('1.1.1.1')).toBe(false);
+    expect(contactRateLimiter.has('2.2.2.2')).toBe(true);
   });
 });

@@ -1,4 +1,11 @@
 import modules from '../../components/apps/metasploit/modules.json';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../utils/rateLimiter';
+
+const limiter = createRateLimiter();
 
 export default function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
@@ -8,6 +15,12 @@ export default function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end('Method Not Allowed');
+  }
+
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    return res.status(429).json({ error: 'rate_limit_exceeded' });
   }
 
   const { command } = req.body || {};
