@@ -40,7 +40,12 @@ const ShortcutOverlay: React.FC = () => {
       }
     };
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const showOverlay = () => setOpen(true);
+    window.addEventListener('command:show-shortcuts', showOverlay);
+    return () => {
+      window.removeEventListener('keydown', handler);
+      window.removeEventListener('command:show-shortcuts', showOverlay);
+    };
   }, [open, toggle, shortcuts]);
 
   const handleExport = () => {
