@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Toast from '../../../ui/Toast';
+import useNotifications from '../../../../hooks/useNotifications';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -10,19 +10,25 @@ export default function Overlay({
   onResume,
   muted: externalMuted,
   onToggleSound,
+  notificationAppId = 'Games',
 }: {
   onPause?: () => void;
   onResume?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
+  notificationAppId?: string;
 }) {
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(externalMuted ?? false);
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
-  const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+  const { pushNotification } = useNotifications();
+  const notify = useCallback(
+    (message: string) => pushNotification(notificationAppId, message),
+    [notificationAppId, pushNotification],
+  );
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -65,14 +71,14 @@ export default function Overlay({
   useEffect(() => {
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
-      setToast('Controller disconnected. Reconnect to resume.');
+      notify('Controller disconnected. Reconnect to resume.');
       setPaused(true);
       onPause?.();
     };
     const handleConnect = () => {
       if (pausedByDisconnect.current) {
         pausedByDisconnect.current = false;
-        setToast('');
+        notify('Controller reconnected. Press resume to continue.');
         setPaused(false);
         onResume?.();
       }
@@ -96,13 +102,6 @@ export default function Overlay({
         </button>
         <span className="fps">{fps} FPS</span>
       </div>
-      {toast && (
-        <Toast
-          message={toast}
-          onClose={() => setToast('')}
-          duration={1000000}
-        />
-      )}
     </>
   );
 }

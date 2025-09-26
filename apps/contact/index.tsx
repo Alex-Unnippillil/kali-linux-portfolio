@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import FormError from "../../components/ui/FormError";
-import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import useNotifications from "../../hooks/useNotifications";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -29,11 +29,15 @@ const ContactApp: React.FC = () => {
   const [message, setMessage] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const { pushNotification } = useNotifications();
+  const notify = useCallback(
+    (message: string) => pushNotification("Contact", message),
+    [pushNotification]
+  );
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -101,7 +105,7 @@ const ContactApp: React.FC = () => {
         recaptchaToken,
       });
       if (result.success) {
-        setToast("Message sent");
+        notify("Message sent");
         setName("");
         setEmail("");
         setMessage("");
@@ -261,7 +265,6 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );
 };
