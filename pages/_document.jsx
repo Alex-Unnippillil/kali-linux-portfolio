@@ -17,7 +17,7 @@ class MyDocument extends Document {
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
-          <meta name="theme-color" content="#0f1317" />
+          <meta name="theme-color" content="#0d1217" />
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>

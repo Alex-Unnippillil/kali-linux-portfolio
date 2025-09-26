@@ -20,7 +20,7 @@ export default function Meta() {
             <meta name="language" content="English" />
             <meta name="category" content="16" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <meta name="theme-color" content="#0f1317" />
+            <meta name="theme-color" content="#0d1217" />
 
             {/* Search Engine */}
             <meta name="image" content="images/logos/fevicon.png" />

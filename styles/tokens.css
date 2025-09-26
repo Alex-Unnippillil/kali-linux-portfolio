@@ -2,7 +2,7 @@
 
 :root {
   /* Theme colors */
-  --color-ub-grey: #0f1317;
+  --color-ub-grey: #0d1217;
   --color-ub-warm-grey: #7d7f83;
   --color-ub-cool-grey: #1a1f26;
   --color-ub-orange: #1793d1;
@@ -23,9 +23,9 @@
   --color-ubt-gedit-dark: #003B70;
   --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
+  --color-bg: #0d1217;
   --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  --kali-bg: rgba(13, 18, 23, 0.85);
 
   /* Kali theme tokens */
   --kali-blue: #1793d1;
