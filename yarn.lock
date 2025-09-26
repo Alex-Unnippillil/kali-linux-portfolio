@@ -4527,7 +4527,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aframe@npm:^1.5.0":
+"aframe@npm:^1.7.1":
   version: 1.7.1
   resolution: "aframe@npm:1.7.1"
   dependencies:
@@ -13395,7 +13395,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"three@npm:>=0.118 <1":
+"three@npm:>=0.118 <1, three@npm:^0.180.0":
   version: 0.180.0
   resolution: "three@npm:0.180.0"
   checksum: 10c0/2b5954b3e0946676cd606f126b1fbbe337ab6e72ae5a25b3eadbf1b8c502c17f21d851b9f5fe035edd48736306e339f143b5ee9cd4e91a2e614681abacef08de
@@ -13406,13 +13406,6 @@ __metadata:
   version: 0.164.1
   resolution: "three@npm:0.164.1"
   checksum: 10c0/f34dc945444fba814be542a907a2f6f2bed3189315604b8ef936d95513b2a4030807df63dcbb48b658bbe3d3e77a446cf2d164c1c08465578c23d4c278d76bb3
-  languageName: node
-  linkType: hard
-
-"three@npm:^0.179.1":
-  version: 0.179.1
-  resolution: "three@npm:0.179.1"
-  checksum: 10c0/563ba6d6a79b761b0a19b35141999edeec534cfef07e4ed2d480e2b7c30c290cb27bff0f43d81eaf60849af25b19a7950607db3ccf4aaa90a68d1394a2563f73
   languageName: node
   linkType: hard
 
@@ -13891,7 +13884,7 @@ __metadata:
     "@xterm/xterm": "npm:^5.5.0"
     "@zxing/browser": "npm:^0.1.5"
     "@zxing/library": "npm:^0.21.3"
-    aframe: "npm:^1.5.0"
+    aframe: "npm:^1.7.1"
     antd: "npm:5.27.2"
     autoprefixer: "npm:^10.4.13"
     bad-words: "npm:^3.0.4"
@@ -13960,7 +13953,7 @@ __metadata:
     swr: "npm:^2.2.5"
     tailwindcss: "npm:^3.2.4"
     test-exclude: "npm:7.0.1"
-    three: "npm:^0.179.1"
+    three: "npm:^0.180.0"
     turndown: "npm:^7.2.1"
     typescript: "npm:5.8.2"
     wait-on: "npm:^8.0.4"
