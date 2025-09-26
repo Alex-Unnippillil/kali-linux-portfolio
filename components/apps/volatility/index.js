@@ -12,9 +12,9 @@ const pstree = Array.isArray(memoryFixture.pstree)
   : [];
 const dlllist = memoryFixture.dlllist ?? {};
 const pslist = Array.isArray(pslistJson.rows) ? pslistJson.rows : [];
-const pslistColumns = pslistJson.columns ?? [];
+const pslistColumns = Array.isArray(pslistJson.columns) ? pslistJson.columns : [];
 const netscan = Array.isArray(netscanJson.rows) ? netscanJson.rows : [];
-const netscanColumns = netscanJson.columns ?? [];
+const netscanColumns = Array.isArray(netscanJson.columns) ? netscanJson.columns : [];
 const malfind = Array.isArray(memoryFixture.malfind)
   ? memoryFixture.malfind
   : [];
@@ -64,17 +64,19 @@ const glossary = {
 };
 
 const SortableTable = ({ columns, data, onRowClick }) => {
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const safeData = Array.isArray(data) ? data : [];
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
 
   const sorted = React.useMemo(() => {
-    if (!sort.key) return data;
-    const sortedData = [...data].sort((a, b) => {
+    if (!sort.key) return safeData;
+    const sortedData = [...safeData].sort((a, b) => {
       if (a[sort.key] < b[sort.key]) return sort.dir === 'asc' ? -1 : 1;
       if (a[sort.key] > b[sort.key]) return sort.dir === 'asc' ? 1 : -1;
       return 0;
     });
     return sortedData;
-  }, [data, sort]);
+  }, [safeData, sort]);
 
   const toggleSort = (key) => {
     setSort((prev) => ({
@@ -87,7 +89,7 @@ const SortableTable = ({ columns, data, onRowClick }) => {
     <table className="w-full text-xs table-auto">
       <thead>
         <tr>
-          {columns.map((col) => (
+          {safeColumns.map((col) => (
             <th
               key={col.key}
               onClick={() => toggleSort(col.key)}
@@ -105,7 +107,7 @@ const SortableTable = ({ columns, data, onRowClick }) => {
             className="odd:bg-gray-800 cursor-pointer"
             onClick={() => onRowClick && onRowClick(row)}
           >
-            {columns.map((col) => (
+            {safeColumns.map((col) => (
               <td key={col.key} className="px-2 py-1 whitespace-nowrap">
                 {col.render ? col.render(row) : row[col.key]}
               </td>
@@ -215,7 +217,7 @@ const VolatilityApp = () => {
                             { key: 'base', label: 'Base' },
                             { key: 'name', label: 'Name' },
                           ]}
-                          data={dlllist[selectedPid] || []}
+                          data={Array.isArray(dlllist[selectedPid]) ? dlllist[selectedPid] : []}
                           onRowClick={() => setFinding(glossary.dlllist)}
                         />
                       </>

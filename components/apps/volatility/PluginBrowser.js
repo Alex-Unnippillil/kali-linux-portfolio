@@ -7,22 +7,29 @@ const PluginBrowser = () => {
   const [category, setCategory] = useState('All');
   const [selected, setSelected] = useState(null);
 
-  const categories = useMemo(
-    () => ['All', ...Array.from(new Set(plugins.map((p) => p.category)))],
-    []
-  );
+  const pluginList = useMemo(() => (Array.isArray(plugins) ? plugins : []), []);
+
+  const categories = useMemo(() => {
+    const unique = new Set();
+    pluginList.forEach((p) => {
+      if (p?.category) {
+        unique.add(p.category);
+      }
+    });
+    return ['All', ...Array.from(unique)];
+  }, [pluginList]);
 
   useEffect(() => {
-    plugins.forEach((p) => {
+    pluginList.forEach((p) => {
       if (p.minVersion && p.minVersion !== VOLATILITY_VERSION) {
         console.warn(
           `Plugin ${p.name} requires Volatility ${p.minVersion} but version ${VOLATILITY_VERSION} is loaded.`
         );
       }
     });
-  }, []);
+  }, [pluginList]);
 
-  const filtered = plugins.filter(
+  const filtered = pluginList.filter(
     (p) => category === 'All' || p.category === category
   );
 
@@ -84,7 +91,7 @@ const PluginBrowser = () => {
           </a>
         </div>
       ))}
-      {selected && (
+      {selected && typeof selected.output === 'string' && (
         <div className="text-xs bg-black rounded overflow-auto">
           {selected.output.split('\n').map((line, i) => (
             <div key={i} className={`px-2 ${i % 2 ? 'bg-gray-900' : 'bg-gray-800'}`}>
