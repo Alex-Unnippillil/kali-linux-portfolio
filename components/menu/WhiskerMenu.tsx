@@ -4,6 +4,13 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
+type Props = {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  focusSearchSignal: number;
+};
+
 type AppMeta = {
   id: string;
   title: string;
@@ -20,13 +27,13 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
-const WhiskerMenu: React.FC = () => {
-  const [open, setOpen] = useState(false);
+const WhiskerMenu: React.FC<Props> = ({ open, onToggle, onClose, focusSearchSignal }) => {
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -73,19 +80,14 @@ const WhiskerMenu: React.FC = () => {
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setOpen(false);
+    onClose();
   };
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        setOpen(o => !o);
-        return;
-      }
       if (!open) return;
       if (e.key === 'Escape') {
-        setOpen(false);
+        onClose();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setHighlight(h => Math.min(h + 1, currentApps.length - 1));
@@ -100,26 +102,35 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, currentApps, highlight]);
+  }, [open, currentApps, highlight, onClose]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!open) return;
       const target = e.target as Node;
       if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
-        setOpen(false);
+        onClose();
       }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (open && focusSearchSignal > 0) {
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    }
+  }, [focusSearchSignal, open]);
 
   return (
     <div className="relative">
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={onToggle}
+        aria-haspopup="true"
+        aria-expanded={open}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
@@ -138,7 +149,7 @@ const WhiskerMenu: React.FC = () => {
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              setOpen(false);
+              onClose();
             }
           }}
         >
@@ -155,11 +166,12 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="p-3">
             <input
+              ref={searchRef}
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              autoFocus
+              autoFocus={open}
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
