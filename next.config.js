@@ -2,6 +2,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const path = require('path');
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
@@ -61,26 +62,31 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const offlineCacheEntries = [
+  '/',
+  '/apps',
+  '/apps/weather',
+  '/apps/terminal',
+  '/apps/checkers',
+  '/notes',
+  '/profile',
+  '/projects.json',
+  '/offline.html',
+  '/manifest.webmanifest',
+];
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
   disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
-    navigateFallback: '/offline.html',
-    additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
+    swSrc: path.join('public', 'workers', 'service-worker.js'),
+    swDest: path.join('public', 'sw.js'),
+    additionalManifestEntries: offlineCacheEntries.map((url) => ({
+      url,
+      revision: null,
+    })),
   },
 });
 
