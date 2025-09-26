@@ -87,6 +87,18 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
+const coerceBooleanEnv = (value, fallback = 'false') => {
+  if (value == null) return fallback;
+  const normalized = String(value).trim();
+  if (!normalized) return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(normalized.toLowerCase()) ? 'true' : 'false';
+};
+
+const resolvedKaliUiFlag = coerceBooleanEnv(
+  process.env.NEXT_PUBLIC_KALI_UI ?? process.env.KALI_UI,
+  'false'
+);
+
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
@@ -124,6 +136,9 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    env: {
+      NEXT_PUBLIC_KALI_UI: resolvedKaliUiFlag,
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
