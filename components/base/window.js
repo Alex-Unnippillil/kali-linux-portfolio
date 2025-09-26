@@ -646,6 +646,7 @@ export class Window extends Component {
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
+                            icon={this.props.icon}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
@@ -674,7 +675,8 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, icon, onKeyDown, onBlur, grabbed }) {
+    const normalizedIcon = typeof icon === 'string' ? icon.replace('./', '/') : null;
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -684,7 +686,18 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="flex items-center justify-center gap-2 w-full text-sm font-bold">
+                {normalizedIcon && (
+                    <NextImage
+                        src={normalizedIcon}
+                        alt={title + ' icon'}
+                        width={16}
+                        height={16}
+                        className="h-4 w-4"
+                    />
+                )}
+                <span className="truncate">{title}</span>
+            </div>
         </div>
     )
 }
