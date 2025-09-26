@@ -834,16 +834,16 @@ export class Desktop extends Component {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
                 this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-
-                const nextState = { closed_windows, favourite_apps, allAppsView: false };
-                if (context) {
-                    nextState.window_context = contextState;
-                }
-                this.setState(nextState, () => {
-                    this.focus(objId);
-                    this.saveSession();
+                    const nextState = { closed_windows, favourite_apps, allAppsView: false };
+                    if (context) {
+                        nextState.window_context = contextState;
+                    }
+                    this.setState(nextState, () => {
+                        this.focus(objId);
+                        this.saveSession();
+                    });
+                    this.getActiveStack().push(objId);
                 });
-                this.getActiveStack().push(objId);
             }, 200);
         }
     }
