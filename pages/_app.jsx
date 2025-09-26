@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from 'react';
-import { Analytics } from '@vercel/analytics/next';
+import { useEffect, useRef } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
@@ -28,21 +28,26 @@ const ubuntu = Ubuntu({
 function MyApp(props) {
   const { Component, pageProps } = props;
 
+  const analyticsInitializedRef = useRef(false);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }
-    const initAnalytics = async () => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
-    };
-    initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
+    if (!analyticsInitializedRef.current) {
+      analyticsInitializedRef.current = true;
+      const initAnalytics = async () => {
+        const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+        if (trackingId) {
+          const { default: ReactGA } = await import('react-ga4');
+          ReactGA.initialize(trackingId);
+        }
+      };
+      initAnalytics().catch((err) => {
+        console.error('Analytics initialization failed', err);
+      });
+    }
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
