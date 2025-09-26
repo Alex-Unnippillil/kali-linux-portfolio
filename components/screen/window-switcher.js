@@ -1,84 +1,141 @@
-import React, { useEffect, useState, useRef } from 'react';
+'use client';
 
-export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(0);
-  const inputRef = useRef(null);
+import React, { useEffect, useMemo, useRef } from 'react';
+import Image from 'next/image';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
-  const filtered = windows.filter((w) =>
-    w.title.toLowerCase().includes(query.toLowerCase())
-  );
+const normalizeIcon = (icon) => {
+  if (!icon) return null;
+  return icon.startsWith('./') ? icon.replace('./', '/') : icon;
+};
+
+const WindowSwitcher = ({
+  windows = [],
+  selectedIndex = 0,
+  onSelect,
+  onHover,
+  onClose,
+}) => {
+  const containerRef = useRef(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const selected = windows[selectedIndex] ?? null;
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    const node = containerRef.current;
+    if (node) {
+      node.focus();
+    }
+  }, [windows.length]);
 
   useEffect(() => {
-    const handleKeyUp = (e) => {
-      if (e.key === 'Alt') {
-        const win = filtered[selected];
-        if (win && typeof onSelect === 'function') {
-          onSelect(win.id);
-        } else if (typeof onClose === 'function') {
-          onClose();
-        }
+    const handleKey = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
+      } else if (event.key === 'Enter' && selected) {
+        event.preventDefault();
+        onSelect?.(selected.id);
       }
     };
-    window.addEventListener('keyup', handleKeyUp);
-    return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [filtered, selected, onSelect, onClose]);
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose, onSelect, selected]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      const dir = e.shiftKey ? -1 : 1;
-      setSelected((selected + dir + len) % len);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected + 1) % len);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected - 1 + len) % len);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (typeof onClose === 'function') onClose();
-    }
-  };
+  const itemClass = useMemo(
+    () =>
+      prefersReducedMotion
+        ? 'group flex flex-col rounded-lg border border-transparent bg-white/10 p-3 text-white focus:outline-none'
+        : 'group flex flex-col rounded-lg border border-transparent bg-white/10 p-3 text-white shadow-sm transition-transform duration-150 ease-out focus:outline-none hover:scale-[1.02] hover:border-orange-300/40',
+    [prefersReducedMotion],
+  );
 
-  const handleChange = (e) => {
-    setQuery(e.target.value);
-    setSelected(0);
-  };
+  if (!windows.length) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-          placeholder="Search windows"
-        />
-        <ul>
-          {filtered.map((w, i) => (
-            <li
-              key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
-            >
-              {w.title}
-            </li>
-          ))}
-        </ul>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Switch between open windows"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose?.();
+        }
+      }}
+    >
+      <div
+        ref={containerRef}
+        role="listbox"
+        tabIndex={-1}
+        aria-activedescendant={selected ? `window-switcher-${selected.id}` : undefined}
+        aria-describedby="window-switcher-help"
+        className={`w-full max-w-4xl rounded-xl border border-white/10 bg-neutral-900/90 p-6 shadow-2xl outline-none ${
+          prefersReducedMotion ? '' : 'backdrop-blur-md'
+        }`}
+      >
+        <p id="window-switcher-help" className="sr-only">
+          Use Tab or Shift plus Tab to change the highlighted window. Release Alt or press Enter to activate.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {windows.map((win, index) => {
+            const isSelected = index === selectedIndex;
+            const icon = normalizeIcon(win.icon);
+            return (
+              <button
+                key={win.id}
+                type="button"
+                id={`window-switcher-${win.id}`}
+                role="option"
+                aria-selected={isSelected}
+                className={`${itemClass} ${
+                  isSelected
+                    ? 'border-orange-400/80 bg-orange-500/20 shadow-lg'
+                    : 'hover:border-orange-300/40'
+                }`}
+                onMouseEnter={() => onHover?.(index)}
+                onFocus={() => onHover?.(index)}
+                onClick={() => onSelect?.(win.id)}
+              >
+                <div
+                  className={`mb-3 h-32 w-full overflow-hidden rounded-md border border-white/10 bg-neutral-950/60 ${
+                    prefersReducedMotion ? '' : 'transition-colors duration-200 ease-out group-hover:border-orange-300/50'
+                  }`}
+                >
+                  {win.preview ? (
+                    <img
+                      src={win.preview}
+                      alt={`Preview of ${win.title}`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : icon ? (
+                    <div className="flex h-full w-full items-center justify-center bg-neutral-900/80">
+                      <Image
+                        src={icon}
+                        alt=""
+                        width={64}
+                        height={64}
+                        className="h-16 w-16"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-white/60">
+                      No preview available
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-left">
+                  <span className="text-sm font-medium text-white">{win.title}</span>
+                  {win.isMinimized && (
+                    <span className="text-xs uppercase tracking-wide text-white/60">Minimized</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
-}
+};
 
+export default WindowSwitcher;

@@ -24,6 +24,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { windowStore } from '../../utils/windowStore';
 
 export class Desktop extends Component {
     constructor() {
@@ -64,12 +65,18 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            switcherIndex: 0,
+            windowPreviews: {},
             activeWorkspace: 0,
             workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
         }
+
+        this._isMounted = false;
+        this._skipNextAltRelease = false;
+        this._altTabOriginId = null;
     }
 
     createEmptyWorkspaceState = () => ({
@@ -117,6 +124,15 @@ export class Desktop extends Component {
 
     getActiveStack = () => this.workspaceStacks[this.state.activeWorkspace];
 
+    touchActiveStack = (id) => {
+        const stack = this.getActiveStack();
+        const index = stack.indexOf(id);
+        if (index !== -1) {
+            stack.splice(index, 1);
+        }
+        stack.unshift(id);
+    };
+
     mergeWorkspaceMaps = (current = {}, base = {}, validKeys = null) => {
         const keys = validKeys
             ? Array.from(validKeys)
@@ -150,6 +166,31 @@ export class Desktop extends Component {
         });
     };
 
+    syncWindowStoreFromState = () => {
+        const stack = [...this.getActiveStack()];
+        windowStore.reset();
+        stack.forEach((id) => {
+            if (this.state.closed_windows[id] === false) {
+                const meta = apps.find((app) => app.id === id) || { title: id };
+                windowStore.registerWindow(
+                    {
+                        id,
+                        title: meta.title || id,
+                        icon: meta.icon,
+                        minimized: Boolean(this.state.minimized_windows[id]),
+                        closed: false,
+                        preview: this.state.windowPreviews[id] || null,
+                    },
+                    { touchOrder: false },
+                );
+            }
+        });
+        const focusedId = this.getFocusedWindowId();
+        if (focusedId) {
+            windowStore.focusWindow(focusedId);
+        }
+    };
+
     getWorkspaceSummaries = () => {
         return this.state.workspaces.map((workspace) => {
             const snapshot = this.workspaceSnapshots[workspace.id] || this.createEmptyWorkspaceState();
@@ -176,8 +217,10 @@ export class Desktop extends Component {
             hideSideBar: snapshot.hideSideBar ?? false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            switcherIndex: 0,
         }, () => {
             this.giveFocusToLastApp();
+            this.syncWindowStoreFromState();
         });
     };
 
@@ -189,6 +232,9 @@ export class Desktop extends Component {
     };
 
     componentDidMount() {
+        this._isMounted = true;
+        windowStore.reset();
+        document.addEventListener('keyup', this.handleGlobalKeyUp);
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -225,10 +271,13 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this._isMounted = false;
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
+        document.removeEventListener('keyup', this.handleGlobalKeyUp);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        windowStore.reset();
     }
 
     checkForNewFolders = () => {
@@ -282,16 +331,37 @@ export class Desktop extends Component {
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
+            const direction = e.shiftKey ? -1 : 1;
             if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
+                this.openWindowSwitcher(direction);
+            } else {
+                this.stepWindowSwitcher(direction);
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+            return;
+        }
+
+        if (this.state.showWindowSwitcher) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.cancelWindowSwitcher();
+                return;
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.confirmWindowSwitcherSelection();
+                return;
+            }
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                const direction = e.key === 'ArrowLeft' ? -1 : 1;
+                this.stepWindowSwitcher(direction);
+                return;
+            }
+        }
+
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
@@ -309,6 +379,17 @@ export class Desktop extends Component {
                 const event = new CustomEvent('super-arrow', { detail: e.key });
                 document.getElementById(id)?.dispatchEvent(event);
             }
+        }
+    }
+
+    handleGlobalKeyUp = (e) => {
+        if (!this.state.showWindowSwitcher) return;
+        if (e.key === 'Alt' || e.key === 'AltGraph') {
+            if (this._skipNextAltRelease) {
+                this._skipNextAltRelease = false;
+                return;
+            }
+            this.confirmWindowSwitcherSelection();
         }
     }
 
@@ -350,23 +431,132 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
-    openWindowSwitcher = () => {
-        const windows = this.getActiveStack()
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+    getSwitcherWindows = () => {
+        const entries = windowStore.getWindows();
+        return entries.map((entry) => ({
+            id: entry.id,
+            title: entry.title || entry.id,
+            icon: entry.icon,
+            isMinimized: Boolean(entry.minimized),
+            preview:
+                this.state.windowPreviews[entry.id] ?? entry.preview ?? null,
+        }));
+    }
+
+    prepareWindowPreviews = (windows) => {
+        if (!windows.length) return;
+        windows.forEach((win) => {
+            if (this.state.windowPreviews[win.id]) return;
+            const node = typeof document !== 'undefined' ? document.getElementById(win.id) : null;
+            if (!node) return;
+            toPng(node, { cacheBust: true })
+                .then((dataUrl) => {
+                    if (!this._isMounted || !dataUrl) return;
+                    this.setState((prev) => ({
+                        windowPreviews: { ...prev.windowPreviews, [win.id]: dataUrl },
+                        switcherWindows: prev.switcherWindows.map((entry) =>
+                            entry.id === win.id ? { ...entry, preview: dataUrl } : entry,
+                        ),
+                    }));
+                    windowStore.setPreview(win.id, dataUrl);
+                })
+                .catch(() => {});
+        });
+    }
+
+    computeNextSwitcherIndex = (windows, referenceId, direction) => {
+        if (!windows.length) return 0;
+        const startIndex = referenceId
+            ? windows.findIndex((win) => win.id === referenceId)
+            : -1;
+        let nextId = referenceId;
+        if (windows.length > 1) {
+            const current = startIndex === -1 ? null : windows[startIndex];
+            const candidate = windowStore.cycleFocus(direction, current ? current.id : referenceId);
+            nextId = candidate ?? referenceId;
         }
+        const candidateIndex = nextId
+            ? windows.findIndex((win) => win.id === nextId)
+            : -1;
+        if (candidateIndex !== -1) return candidateIndex;
+        const firstOpen = windows.findIndex((win) => !win.isMinimized);
+        if (firstOpen !== -1) return firstOpen;
+        return 0;
+    }
+
+    openWindowSwitcher = (direction = 1) => {
+        const windows = this.getSwitcherWindows();
+        if (!windows.length) return;
+        const currentId = this.getFocusedWindowId();
+        const nextIndex = this.computeNextSwitcherIndex(windows, currentId, direction);
+        this._altTabOriginId = currentId;
+        this.setState({
+            showWindowSwitcher: true,
+            switcherWindows: windows,
+            switcherIndex: nextIndex,
+        }, () => {
+            this.prepareWindowPreviews(windows);
+        });
+    }
+
+    stepWindowSwitcher = (direction) => {
+        const windows = this.getSwitcherWindows();
+        if (!windows.length) return;
+        const current = this.state.switcherWindows[this.state.switcherIndex];
+        const reference = current ? current.id : this.getFocusedWindowId();
+        const nextIndex = this.computeNextSwitcherIndex(windows, reference, direction);
+        this.setState({
+            switcherWindows: windows,
+            switcherIndex: nextIndex,
+        }, () => {
+            this.prepareWindowPreviews(windows);
+        });
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.setState({
+            showWindowSwitcher: false,
+            switcherWindows: [],
+            switcherIndex: 0,
+        });
+        this._altTabOriginId = null;
+        this._skipNextAltRelease = false;
     }
 
-    selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
+    cancelWindowSwitcher = () => {
+        const origin = this._altTabOriginId;
+        this.closeWindowSwitcher();
+        if (origin) {
+            windowStore.focusWindow(origin);
+        }
+    }
+
+    confirmWindowSwitcherSelection = () => {
+        const selection = this.state.switcherWindows[this.state.switcherIndex];
+        this.closeWindowSwitcher();
+        const targetId = selection ? selection.id : this._altTabOriginId;
+        if (targetId) {
+            this.openApp(targetId);
+        }
+    }
+
+    selectWindowFromOverlay = (id) => {
+        if (!id) return;
+        this._skipNextAltRelease = true;
+        this.setState({
+            showWindowSwitcher: false,
+            switcherWindows: [],
+            switcherIndex: 0,
+        }, () => {
             this.openApp(id);
+        });
+        this._altTabOriginId = null;
+    }
+
+    hoverWindowFromOverlay = (index) => {
+        this.setState((prev) => {
+            if (!prev.switcherWindows[index]) return null;
+            return { switcherIndex: index };
         });
     }
 
@@ -535,6 +725,7 @@ export class Desktop extends Component {
             favourite_apps,
             desktop_apps
         }, () => {
+            this.syncWindowStoreFromState();
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
@@ -584,7 +775,7 @@ export class Desktop extends Component {
             disabled_apps,
             favourite_apps,
             desktop_apps
-        });
+        }, this.syncWindowStoreFromState);
         this.initFavourite = { ...favourite_apps };
     }
 
@@ -706,6 +897,7 @@ export class Desktop extends Component {
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
         this.setWorkspaceState({ minimized_windows, focused_windows });
+        windowStore.setMinimized(objId, true);
 
         this.hideSideBar(null, false);
 
@@ -759,6 +951,8 @@ export class Desktop extends Component {
             ? { ...this.state.window_context, [objId]: context }
             : this.state.window_context;
 
+        const appMeta = apps.find(app => app.id === objId) || {};
+
 
         // google analytics
         ReactGA.event({
@@ -771,34 +965,41 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setWorkspaceState({ minimized_windows }, this.saveSession);
-
-            const reopen = () => {
-                // if it's minimised, restore its last position
-                if (this.state.minimized_windows[objId]) {
-                    this.focus(objId);
-                    var r = document.querySelector("#" + objId);
-                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
-                    minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+            const restoreWindow = () => {
+                if (context) {
+                    this.setState({ window_context: contextState }, () => {
+                        this.focus(objId);
+                        this.saveSession();
+                    });
                 } else {
                     this.focus(objId);
                     this.saveSession();
                 }
             };
-            if (context) {
-                this.setState({ window_context: contextState }, reopen);
-            } else {
-                reopen();
+
+            if (this.state.minimized_windows[objId]) {
+                const r = typeof document !== 'undefined' ? document.querySelector(`#${objId}`) : null;
+                this.focus(objId);
+                if (r) {
+                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                }
+                const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+                this.setWorkspaceState({ minimized_windows }, this.saveSession);
+                windowStore.setMinimized(objId, false);
             }
+
+            windowStore.registerWindow(
+                {
+                    id: objId,
+                    title: appMeta.title || objId,
+                    icon: appMeta.icon,
+                    minimized: false,
+                    closed: false,
+                },
+                { touchOrder: false },
+            );
+
+            restoreWindow();
             return;
         } else {
             let closed_windows = this.state.closed_windows;
@@ -833,17 +1034,23 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-
-                const nextState = { closed_windows, favourite_apps, allAppsView: false };
-                if (context) {
-                    nextState.window_context = contextState;
-                }
-                this.setState(nextState, () => {
-                    this.focus(objId);
-                    this.saveSession();
+                windowStore.registerWindow({
+                    id: objId,
+                    title: appMeta.title || objId,
+                    icon: appMeta.icon,
+                    minimized: false,
+                    closed: false,
                 });
-                this.getActiveStack().push(objId);
+                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                    const nextState = { closed_windows, favourite_apps, allAppsView: false };
+                    if (context) {
+                        nextState.window_context = contextState;
+                    }
+                    this.setState(nextState, () => {
+                        this.focus(objId);
+                        this.saveSession();
+                    });
+                });
             }, 200);
         }
     }
@@ -902,6 +1109,7 @@ export class Desktop extends Component {
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
         this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        windowStore.removeWindow(objId);
     }
 
     pinApp = (id) => {
@@ -933,8 +1141,9 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
+        this.touchActiveStack(objId);
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
         for (let key in focused_windows) {
@@ -945,6 +1154,7 @@ export class Desktop extends Component {
             }
         }
         this.setWorkspaceState({ focused_windows });
+        windowStore.focusWindow(objId);
     }
 
     addNewFolder = () => {
@@ -1168,8 +1378,11 @@ export class Desktop extends Component {
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
-                        onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                        selectedIndex={this.state.switcherIndex}
+                        onSelect={this.selectWindowFromOverlay}
+                        onHover={this.hoverWindowFromOverlay}
+                        onClose={this.cancelWindowSwitcher}
+                    /> : null}
 
             </main>
         )
