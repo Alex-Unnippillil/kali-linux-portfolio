@@ -17,6 +17,8 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { refreshSearchIndex } from '../lib/search';
+import { createIdleTaskManager, idleTaskDefaults } from '../utils/idleTaskManager';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -79,6 +81,19 @@ function MyApp(props) {
         console.error('Service worker setup failed', err);
       });
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return () => {};
+
+    const manager = createIdleTaskManager(() => refreshSearchIndex(), {
+      idleTimeout: idleTaskDefaults.idleTimeout,
+      refreshInterval: idleTaskDefaults.refreshInterval,
+    });
+
+    return () => {
+      manager.stop();
+    };
   }, []);
 
   useEffect(() => {
