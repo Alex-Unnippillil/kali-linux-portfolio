@@ -12,6 +12,8 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
+import ProjectGallerySkeleton from './components/skeletons/ProjectGallerySkeleton';
+import Radare2Skeleton from './components/skeletons/Radare2Skeleton';
 
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
@@ -63,13 +65,15 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
-const Radare2App = createDynamicApp('radare2', 'Radare2');
+const Radare2App = createDynamicApp('radare2', 'Radare2', { suspense: true });
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
-const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
+const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery', {
+  suspense: true,
+});
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
@@ -154,13 +158,19 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
-const displayRadare2 = createDisplay(Radare2App);
+const displayRadare2 = createDisplay(Radare2App, {
+  suspense: true,
+  fallback: () => <Radare2Skeleton />,
+});
 const displayAboutAlex = createDisplay(AboutAlexApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
-const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayProjectGallery = createDisplay(ProjectGalleryApp, {
+  suspense: true,
+  fallback: () => <ProjectGallerySkeleton />,
+});
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);

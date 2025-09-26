@@ -1,8 +1,9 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
+import LazyAppBoundary from '../components/util-components/LazyAppBoundary';
 import { logEvent } from './analytics';
 
-export const createDynamicApp = (id, title) =>
+export const createDynamicApp = (id, title, options = {}) =>
   dynamic(
     async () => {
       try {
@@ -22,22 +23,27 @@ export const createDynamicApp = (id, title) =>
     },
     {
       ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${title}...`}
-        </div>
-      ),
+      ...(options.suspense
+        ? { suspense: true }
+        : {
+            loading: () => (
+              <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+                {`Loading ${title}...`}
+              </div>
+            ),
+          }),
     }
   );
 
-export const createDisplay = (Component) => {
+export const createDisplay = (Component, options = {}) => {
   const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
     ssr: false,
+    ...(options.suspense ? { suspense: true } : {}),
   });
   const Display = (addFolder, openApp, context) => {
     const extraProps =
       context && typeof context === 'object' ? context : undefined;
-    return (
+    const element = (
       <DynamicComponent
         addFolder={addFolder}
         openApp={openApp}
@@ -45,6 +51,21 @@ export const createDisplay = (Component) => {
         {...(extraProps || {})}
       />
     );
+
+    if (options.suspense) {
+      const fallback =
+        typeof options.fallback === 'function'
+          ? options.fallback()
+          : options.fallback || (
+              <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+                Loading…
+              </div>
+            );
+
+      return <LazyAppBoundary fallback={fallback}>{element}</LazyAppBoundary>;
+    }
+
+    return element;
   };
 
   Display.prefetch = () => {

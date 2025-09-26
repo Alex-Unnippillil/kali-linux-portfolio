@@ -1,11 +1,19 @@
+import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import WeatherSkeleton from '../skeletons/WeatherSkeleton';
 
 // Dynamically load the full Weather application. This remains the default
 // export so existing imports continue to work.
 const WeatherApp = dynamic(() => import('../../apps/weather'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  suspense: true,
 });
+
+export const WeatherSuspenseBoundary = () => (
+  <Suspense fallback={<WeatherSkeleton />}>
+    <WeatherApp />
+  </Suspense>
+);
 
 /**
  * A provider agnostic weather fetcher with basic service worker caching.
@@ -57,5 +65,5 @@ export async function fetchWeather(provider, opts = {}) {
 
 export default WeatherApp;
 
-export const displayWeather = () => <WeatherApp />;
+export const displayWeather = () => <WeatherSuspenseBoundary />;
 
