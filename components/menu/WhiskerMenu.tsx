@@ -4,6 +4,17 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
+const defaultMenuIcon = '/themes/Yaru/status/decompiler-symbolic.svg';
+
+const menuIconSource: string = (() => {
+  try {
+    const asset = require('../../public/themes/Kali/logo.svg');
+    return asset?.default ?? asset ?? defaultMenuIcon;
+  } catch {
+    return defaultMenuIcon;
+  }
+})();
+
 type AppMeta = {
   id: string;
   title: string;
@@ -31,6 +42,8 @@ const WhiskerMenu: React.FC = () => {
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
+    // Re-run the memo when the menu opens so the list reflects the latest recents.
+    void open;
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
       return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
@@ -123,10 +136,10 @@ const WhiskerMenu: React.FC = () => {
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          src={menuIconSource}
           alt="Menu"
-          width={16}
-          height={16}
+          width={20}
+          height={20}
           className="inline mr-1"
         />
         Applications
@@ -159,6 +172,7 @@ const WhiskerMenu: React.FC = () => {
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
+              aria-label="Search applications"
               autoFocus
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
