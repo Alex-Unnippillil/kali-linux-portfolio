@@ -105,6 +105,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
+    "@axe-core/react": "^4.10.2",
     "@eslint/eslintrc": "^3.3.1",
     "@next/bundle-analyzer": "15.5.2",
     "@playwright/test": "^1.55.0",

@@ -7,6 +7,7 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { initAxe } from '../utils/initAxe';
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -19,9 +20,10 @@ export default class Ubuntu extends Component {
 		};
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                initAxe(React);
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
