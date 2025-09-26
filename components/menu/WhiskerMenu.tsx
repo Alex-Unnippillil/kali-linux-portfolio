@@ -3,14 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
-
-type AppMeta = {
-  id: string;
-  title: string;
-  icon: string;
-  disabled?: boolean;
-  favourite?: boolean;
-};
+import type { AppMeta } from '../../types/app';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -30,12 +23,18 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
-  const recentApps = useMemo(() => {
+  const [recentApps, setRecentApps] = useState<AppMeta[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+      const mapped = ids
+        .map(id => allApps.find(a => a.id === id))
+        .filter(Boolean) as AppMeta[];
+      setRecentApps(mapped);
     } catch {
-      return [];
+      setRecentApps([]);
     }
   }, [allApps, open]);
   const utilityApps: AppMeta[] = utilities as any;
@@ -158,6 +157,7 @@ const WhiskerMenu: React.FC = () => {
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
               value={query}
+              aria-label="Search applications"
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
