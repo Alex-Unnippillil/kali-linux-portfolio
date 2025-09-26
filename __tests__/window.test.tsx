@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { animateSpring, prefersReducedMotion } from '../utils/motion';
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -9,6 +10,20 @@ const setViewport = (width: number, height: number) => {
 
 beforeEach(() => {
   setViewport(1440, 900);
+  (prefersReducedMotion as jest.Mock).mockReturnValue(false);
+  (animateSpring as jest.Mock).mockClear();
+});
+
+const createRect = (left: number, top: number, width: number, height: number) => ({
+  left,
+  top,
+  width,
+  height,
+  right: left + width,
+  bottom: top + height,
+  x: left,
+  y: top,
+  toJSON: () => ({}),
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -17,6 +32,14 @@ jest.mock('react-draggable', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
+jest.mock('../utils/motion', () => {
+  const actual = jest.requireActual('../utils/motion');
+  return {
+    ...actual,
+    animateSpring: jest.fn(() => ({ cancel: jest.fn(), isRunning: jest.fn(() => true) })),
+    prefersReducedMotion: jest.fn(() => false),
+  };
+});
 
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
@@ -48,6 +71,137 @@ describe('Window lifecycle', () => {
 
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
+  });
+});
+
+describe('Window minimize animation', () => {
+  const baseProps = {
+    title: 'Test',
+    screen: () => <div>content</div>,
+    focus: () => {},
+    closed: () => {},
+    hideSideBar: () => {},
+    openApp: () => {},
+  };
+
+  it('animates window toward dock icon', () => {
+    const dock = document.createElement('button');
+    dock.id = 'sidebar-test-window';
+    dock.getBoundingClientRect = jest.fn(() => createRect(20, 600, 48, 48));
+    document.body.appendChild(dock);
+
+    render(
+      <Window
+        id="test-window"
+        hasMinimised={() => {}}
+        {...baseProps}
+      />
+    );
+
+    const winEl = document.getElementById('test-window') as HTMLElement;
+    winEl.style.transform = 'translate(100px,100px) scale(1)';
+    winEl.getBoundingClientRect = jest.fn(() => createRect(100, 132, 320, 260));
+
+    fireEvent.click(screen.getByRole('button', { name: /window minimize/i }));
+
+    expect((animateSpring as jest.Mock).mock.calls.length).toBe(1);
+    const springArgs = (animateSpring as jest.Mock).mock.calls[0][0];
+    expect(springArgs.from.x).toBeCloseTo(100);
+    expect(springArgs.from.y).toBeCloseTo(100);
+    expect(springArgs.to.scale).toBeCloseTo(0.2);
+    expect(springArgs.to.x).toBeCloseTo(-116, 1);
+    expect(springArgs.to.y).toBeCloseTo(462, 1);
+
+    dock.remove();
+  });
+
+  it('respects reduced-motion preference when minimizing', () => {
+    (prefersReducedMotion as jest.Mock).mockReturnValue(true);
+    const dock = document.createElement('button');
+    dock.id = 'sidebar-test-window';
+    dock.getBoundingClientRect = jest.fn(() => createRect(20, 600, 48, 48));
+    document.body.appendChild(dock);
+
+    const hasMinimised = jest.fn();
+    render(
+      <Window
+        id="test-window"
+        hasMinimised={hasMinimised}
+        {...baseProps}
+      />
+    );
+
+    const winEl = document.getElementById('test-window') as HTMLElement;
+    winEl.style.transform = 'translate(100px,100px)';
+    winEl.getBoundingClientRect = jest.fn(() => createRect(100, 132, 320, 260));
+
+    fireEvent.click(screen.getByRole('button', { name: /window minimize/i }));
+
+    expect(animateSpring).not.toHaveBeenCalled();
+    expect(hasMinimised).toHaveBeenCalledWith('test-window');
+    expect(winEl.style.transform).toBe('translate(-116.0px,462.0px) scale(0.200)');
+
+    dock.remove();
+  });
+
+  it('restores from dock when minimized prop clears', () => {
+    const dock = document.createElement('button');
+    dock.id = 'sidebar-test-window';
+    dock.getBoundingClientRect = jest.fn(() => createRect(20, 600, 48, 48));
+    document.body.appendChild(dock);
+
+    const hasMinimised = jest.fn();
+    const { rerender } = render(
+      <Window
+        id="test-window"
+        minimized={false}
+        hasMinimised={hasMinimised}
+        {...baseProps}
+      />
+    );
+
+    const winEl = document.getElementById('test-window') as HTMLElement;
+    winEl.style.transform = 'translate(100px,100px) scale(1)';
+    winEl.getBoundingClientRect = jest.fn(() => createRect(100, 132, 320, 260));
+
+    fireEvent.click(screen.getByRole('button', { name: /window minimize/i }));
+
+    const minimizeArgs = (animateSpring as jest.Mock).mock.calls[0][0];
+    minimizeArgs.onComplete?.();
+    expect(hasMinimised).toHaveBeenCalledWith('test-window');
+
+    (animateSpring as jest.Mock).mockClear();
+
+    rerender(
+      <Window
+        id="test-window"
+        minimized
+        hasMinimised={hasMinimised}
+        {...baseProps}
+      />
+    );
+
+    rerender(
+      <Window
+        id="test-window"
+        minimized={false}
+        hasMinimised={hasMinimised}
+        {...baseProps}
+      />
+    );
+
+    expect((animateSpring as jest.Mock).mock.calls.length).toBe(1);
+    const restoreArgs = (animateSpring as jest.Mock).mock.calls[0][0];
+    expect(restoreArgs.from.x).toBeCloseTo(-116, 1);
+    expect(restoreArgs.from.y).toBeCloseTo(462, 1);
+    expect(restoreArgs.to.x).toBeCloseTo(100, 1);
+    expect(restoreArgs.to.y).toBeCloseTo(100, 1);
+    expect(restoreArgs.to.scale).toBeCloseTo(1);
+
+    restoreArgs.onComplete?.();
+    expect(winEl.style.transform).toBe('translate(100.0px,100.0px) scale(1.000)');
+
+    dock.remove();
   });
 });
 
