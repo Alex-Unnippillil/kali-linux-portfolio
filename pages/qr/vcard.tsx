@@ -119,6 +119,7 @@ const VCardPage: React.FC = () => {
               height={192}
               sizes="192px"
               className="h-48 w-48"
+              unoptimized
             />
           )}
           <div className="flex gap-2">
