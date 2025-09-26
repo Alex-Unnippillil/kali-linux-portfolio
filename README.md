@@ -23,7 +23,7 @@ Always test inside controlled labs and obtain written permission before performi
 
 ### Requirements
 - **Node.js 20.19.5** (repo includes `.nvmrc`; run `nvm use`)
-- **Yarn** or **npm**
+- **Yarn 4.9.2** (managed via [Corepack](https://nodejs.org/docs/latest/api/corepack.html))
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
@@ -31,6 +31,9 @@ Always test inside controlled labs and obtain written permission before performi
 cp .env.local.example .env.local  # populate with required keys
 nvm install  # installs Node 20.19.5 from .nvmrc if needed
 nvm use
+corepack enable
+corepack prepare yarn@4.9.2 --activate
+yarn -v  # confirm 4.9.2
 yarn install
 yarn dev
 ```

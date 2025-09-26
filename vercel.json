@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "installCommand": "corepack enable && corepack prepare yarn@4.9.2 --activate && yarn -v && yarn install",
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
     "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
