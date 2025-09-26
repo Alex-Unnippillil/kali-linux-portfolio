@@ -15,7 +15,7 @@ export default function LockScreen(props) {
         <div
             id="ubuntu-lock-screen"
             style={{ zIndex: "100", contentVisibility: 'auto' }}
-            className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
+            className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen font-sans"}>
             <img
                 src={`/wallpapers/${wallpaper}.webp`}
                 alt=""
