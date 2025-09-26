@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import {
+  runMetasploitCommand,
+  metasploitStoryboard,
+} from '../../../apps/simulations/metasploit';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -146,19 +150,14 @@ const MetasploitApp = ({
     if (!cmd) return;
     setLoading(true);
     try {
-      if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
-        setOutput(
-          (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
-        );
-      } else {
-        const res = await fetch('/api/metasploit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: cmd }),
-        });
-        const data = await res.json();
-        setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
-      }
+      const { output: response } = await runMetasploitCommand(cmd);
+      const demoNotice =
+        demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true'
+          ? '\n[simulation] network calls disabled'
+          : '';
+      setOutput(
+        (prev) => `${prev}\nmsf6 > ${cmd}\n${response}${demoNotice}`
+      );
     } catch (e) {
       setOutput((prev) => `${prev}\nError: ${e.message}`);
     } finally {
@@ -520,6 +519,23 @@ const MetasploitApp = ({
                 </div>
               </div>
             )}
+          </div>
+          <div className="mt-4 bg-gray-900 p-3 rounded border border-gray-800 text-sm">
+            <h2 className="text-lg mb-2">Storyboard</h2>
+            <ol className="list-decimal list-inside space-y-2">
+              {metasploitStoryboard.map((step) => (
+                <li key={step.title}>
+                  <div className="font-semibold">{step.title}</div>
+                  <code className="block bg-black text-green-400 px-2 py-1 rounded my-1">
+                    {step.command}
+                  </code>
+                  <p className="text-gray-300">{step.description}</p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Takeaway: {step.takeaway}
+                  </p>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
         <aside className="w-1/3 bg-ub-grey p-2 overflow-auto text-xs">

@@ -2,15 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
-
-interface Script {
-  name: string;
-  description: string;
-  example: string;
-  tag: string;
-}
-
-type ScriptData = Record<string, Omit<Script, 'tag'>[]>;
+import {
+  NmapScript,
+  NmapStoryboardStep,
+  loadNmapScripts,
+  loadNmapStoryboard,
+} from '../simulations/nmap';
 
 /**
  * Nmap NSE playground with a script browser on the left and
@@ -18,24 +15,23 @@ type ScriptData = Record<string, Omit<Script, 'tag'>[]>;
  * purely for learning/demo purposes.
  */
 const NmapNSE: React.FC = () => {
-  const [data, setData] = useState<Script[]>([]);
+  const [data, setData] = useState<NmapScript[]>([]);
   const [activeTag, setActiveTag] = useState('');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Script | null>(null);
+  const [selected, setSelected] = useState<NmapScript | null>(null);
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
   );
+  const [storyboard, setStoryboard] = useState<NmapStoryboardStep[]>([]);
 
   // load static script metadata
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/demo-data/nmap/scripts.json');
-        const json: ScriptData = await res.json();
-        const flat = Object.entries(json).flatMap(([tag, scripts]) =>
-          scripts.map((s) => ({ ...s, tag }))
-        );
-        setData(flat);
+        const scripts = await loadNmapScripts();
+        setData(scripts);
+        const story = await loadNmapStoryboard();
+        setStoryboard(story);
       } catch {
         /* ignore */
       }
@@ -43,15 +39,16 @@ const NmapNSE: React.FC = () => {
     load();
   }, []);
 
-  const tags = useMemo(() => Array.from(new Set(data.map((s) => s.tag))), [
-    data,
-  ]);
+  const tags = useMemo(
+    () => Array.from(new Set(data.flatMap((s) => s.tags))),
+    [data]
+  );
 
   const scripts = useMemo(
     () =>
       data.filter(
         (s) =>
-          (!activeTag || s.tag === activeTag) &&
+          (!activeTag || s.tags.includes(activeTag)) &&
           s.name.toLowerCase().includes(search.toLowerCase())
       ),
     [activeTag, data, search]
@@ -173,14 +170,30 @@ const NmapNSE: React.FC = () => {
             <div>
               <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
               <p className="mb-4">{selected.description}</p>
-              <p className="mb-2 text-sm">Tag: {selected.tag}</p>
-              <CollapsibleSection title="Sample Output" tag={selected.tag}>
+              <p className="mb-2 text-sm">
+                Tags:{' '}
+                {selected.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-block mr-1 px-2 py-0.5 bg-gray-800 rounded"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </p>
+              <CollapsibleSection
+                title="Sample Output"
+                tag={selected.tags[0] || ''}
+              >
                 <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
                   {selected.example}
                 </pre>
               </CollapsibleSection>
               {result && (
-                <CollapsibleSection title="Result" tag={selected.tag}>
+                <CollapsibleSection
+                  title="Result"
+                  tag={selected.tags[0] || ''}
+                >
                   <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
                     {JSON.stringify(result, null, 2)}
                   </pre>
@@ -210,6 +223,23 @@ const NmapNSE: React.FC = () => {
           )}
         </main>
       </div>
+      {storyboard.length > 0 && (
+        <section className="p-4 border-t border-gray-800 bg-gray-900">
+          <h2 className="text-xl font-mono mb-2">Storyboard</h2>
+          <ol className="space-y-2 list-decimal list-inside text-sm">
+            {storyboard.map((step, idx) => (
+              <li key={idx}>
+                <div className="font-semibold">{step.title}</div>
+                <code className="block text-xs bg-black text-green-400 px-2 py-1 rounded my-1">
+                  {step.command}
+                </code>
+                <p className="text-gray-300">{step.description}</p>
+                <p className="text-gray-400 text-xs mt-1">Takeaway: {step.takeaway}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
     </div>
   );
 };
