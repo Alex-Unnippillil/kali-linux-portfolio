@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ContextMenuPanel from '../context-menus/context-menu-panel';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -104,6 +105,7 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [rowMenu, setRowMenu] = useState({ open: false, x: 0, y: 0, label: '', section: '' });
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -121,6 +123,20 @@ export default function FileExplorer() {
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
   }, []);
+
+  useEffect(() => {
+    if (!rowMenu.open) return;
+    const handleMouseDown = (e) => {
+      const menu = document.getElementById('list-row-menu');
+      if (menu && !menu.contains(e.target)) {
+        setRowMenu((prev) => ({ ...prev, open: false }));
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [rowMenu.open]);
 
   useEffect(() => {
     if (!opfsSupported || !root) return;
@@ -187,6 +203,64 @@ export default function FileExplorer() {
     }
     setContent(text);
   };
+
+  const handleRowKeyDown = (event, label, section) => {
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+      event.preventDefault();
+      const rect = event.currentTarget.getBoundingClientRect();
+      setRowMenu({
+        open: true,
+        x: rect.left,
+        y: rect.bottom,
+        label,
+        section,
+      });
+    }
+  };
+
+  const handleRowContextMenu = (event, label, section) => {
+    event.preventDefault();
+    setRowMenu({
+      open: true,
+      x: event.clientX,
+      y: event.clientY,
+      label,
+      section,
+    });
+  };
+
+  const rowMenuGroups = useMemo(() => ([
+    {
+      id: 'list-actions',
+      label: 'List Actions',
+      items: [
+        {
+          id: 'pin-panel',
+          icon: '📌',
+          label: 'Pin to Panel',
+          feedback: ({ anchor }) => `Would pin ${anchor || 'item'} to panel`,
+        },
+        {
+          id: 'favorite',
+          icon: '⭐',
+          label: 'Add to Favorites',
+          feedback: ({ anchor }) => `Would add ${anchor || 'item'} to favorites`,
+        },
+      ],
+    },
+    {
+      id: 'row-advanced',
+      label: 'Permissions',
+      items: [
+        {
+          id: 'open-root',
+          icon: '🛡️',
+          label: 'Open as root',
+          feedback: ({ anchor }) => `Would open ${anchor || 'item'} with root privileges`,
+        },
+      ],
+    },
+  ]), []);
 
   const readDir = async (handle) => {
     const ds = [];
@@ -319,8 +393,13 @@ export default function FileExplorer() {
           {recent.map((r, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 focus:bg-black focus:bg-opacity-30 outline-none"
               onClick={() => openRecent(r)}
+              onContextMenu={(event) => handleRowContextMenu(event, r.name, 'Recent')}
+              onKeyDown={(event) => handleRowKeyDown(event, r.name, 'Recent')}
+              tabIndex={0}
+              role="menuitem"
+              aria-label={`Recent directory ${r.name}`}
             >
               {r.name}
             </div>
@@ -329,8 +408,13 @@ export default function FileExplorer() {
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 focus:bg-black focus:bg-opacity-30 outline-none"
               onClick={() => openDir(d)}
+              onContextMenu={(event) => handleRowContextMenu(event, d.name, 'Directory')}
+              onKeyDown={(event) => handleRowKeyDown(event, d.name, 'Directory')}
+              tabIndex={0}
+              role="menuitem"
+              aria-label={`Directory ${d.name}`}
             >
               {d.name}
             </div>
@@ -339,8 +423,13 @@ export default function FileExplorer() {
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 focus:bg-black focus:bg-opacity-30 outline-none"
               onClick={() => openFile(f)}
+              onContextMenu={(event) => handleRowContextMenu(event, f.name, 'File')}
+              onKeyDown={(event) => handleRowKeyDown(event, f.name, 'File')}
+              tabIndex={0}
+              role="menuitem"
+              aria-label={`File ${f.name}`}
             >
               {f.name}
             </div>
@@ -370,6 +459,15 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
+      <ContextMenuPanel
+        id="list-row-menu"
+        active={rowMenu.open}
+        groups={rowMenuGroups}
+        onClose={() => setRowMenu((prev) => ({ ...prev, open: false }))}
+        anchorLabel={rowMenu.label}
+        ariaLabel={`${rowMenu.section || 'List'} context menu`}
+        style={rowMenu.open ? { left: rowMenu.x, top: rowMenu.y } : undefined}
+      />
     </div>
   );
 }

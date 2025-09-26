@@ -1,45 +1,65 @@
-import React, { useRef } from 'react'
-import useFocusTrap from '../../hooks/useFocusTrap'
-import useRovingTabIndex from '../../hooks/useRovingTabIndex'
+import React, { useMemo } from 'react'
+import ContextMenuPanel from './context-menu-panel'
 
 function AppMenu(props) {
-    const menuRef = useRef(null)
-    useFocusTrap(menuRef, props.active)
-    useRovingTabIndex(menuRef, props.active, 'vertical')
+    const { active, pinned, pinApp, unpinApp, onClose, appName } = props
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-            props.onClose && props.onClose()
-        }
-    }
+    const favouriteLabel = pinned ? 'Remove from Favorites' : 'Add to Favorites'
 
-    const handlePin = () => {
-        if (props.pinned) {
-            props.unpinApp && props.unpinApp()
-        } else {
-            props.pinApp && props.pinApp()
-        }
-    }
+    const groups = useMemo(() => [
+        {
+            id: 'desktop-actions',
+            label: 'Desktop Actions',
+            items: [
+                {
+                    id: 'pin-panel',
+                    icon: '📌',
+                    label: pinned ? 'Unpin from Panel' : 'Pin to Panel',
+                    feedback: ({ anchor }) => `${pinned ? 'Would unpin' : 'Would pin'} ${anchor || 'item'} ${pinned ? 'from' : 'to'} panel`,
+                    closeOnSelect: false,
+                },
+                {
+                    id: 'favorites',
+                    icon: '⭐',
+                    label: favouriteLabel,
+                    onSelect: () => {
+                        if (pinned) {
+                            unpinApp && unpinApp()
+                        } else {
+                            pinApp && pinApp()
+                        }
+                    },
+                    feedback: ({ anchor }) => pinned
+                        ? `Removed ${anchor || 'item'} from favorites`
+                        : `Added ${anchor || 'item'} to favorites`,
+                    closeOnSelect: true,
+                },
+            ],
+        },
+        {
+            id: 'advanced',
+            label: 'Permissions',
+            items: [
+                {
+                    id: 'open-root',
+                    icon: '🛡️',
+                    label: 'Open as root',
+                    feedback: ({ anchor }) => `Would open ${anchor || 'item'} with root privileges`,
+                    closeOnSelect: false,
+                },
+            ],
+        },
+    ], [favouriteLabel, pinApp, pinned, unpinApp])
 
     return (
-        <div
+        <ContextMenuPanel
             id="app-menu"
-            role="menu"
-            aria-hidden={!props.active}
-            ref={menuRef}
-            onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
-        >
-            <button
-                type="button"
-                onClick={handlePin}
-                role="menuitem"
-                aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
-            </button>
-        </div>
+            active={active}
+            groups={groups}
+            onClose={onClose}
+            anchorLabel={appName}
+            ariaLabel="Application context menu"
+        />
     )
 }
 
