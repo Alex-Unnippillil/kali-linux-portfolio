@@ -198,8 +198,15 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
 
+    const keyboardEvent = {
+      key: 'ArrowDown',
+      altKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn()
+    } as unknown as KeyboardEvent;
+
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown(keyboardEvent);
     });
 
     expect(ref.current!.state.snapped).toBeNull();

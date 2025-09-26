@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -51,6 +52,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            window_context: {},
             context_menus: {
                 desktop: false,
                 default: false,
@@ -635,6 +637,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    context: this.state.window_context[app.id],
                 }
 
                 windowsJsx.push(
@@ -733,13 +736,29 @@ export class Desktop extends Component {
     }
 
     handleOpenAppEvent = (e) => {
-        const id = e.detail;
-        if (id) {
-            this.openApp(id);
+        const detail = e.detail;
+        if (!detail) return;
+        if (typeof detail === 'string') {
+            this.openApp(detail);
+            return;
+        }
+        if (typeof detail === 'object' && detail.id) {
+            const { id, ...context } = detail;
+            this.openApp(id, context);
         }
     }
 
-    openApp = (objId) => {
+    openApp = (objId, params) => {
+        const context = params && typeof params === 'object'
+            ? {
+                ...params,
+                ...(params.path && !params.initialPath ? { initialPath: params.path } : {}),
+            }
+            : undefined;
+        const contextState = context
+            ? { ...this.state.window_context, [objId]: context }
+            : this.state.window_context;
+
 
         // google analytics
         ReactGA.event({
@@ -760,9 +779,25 @@ export class Desktop extends Component {
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
                 this.setWorkspaceState({ minimized_windows }, this.saveSession);
+
+            const reopen = () => {
+                // if it's minimised, restore its last position
+                if (this.state.minimized_windows[objId]) {
+                    this.focus(objId);
+                    var r = document.querySelector("#" + objId);
+                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                    let minimized_windows = this.state.minimized_windows;
+                    minimized_windows[objId] = false;
+                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                } else {
+                    this.focus(objId);
+                    this.saveSession();
+                }
+            };
+            if (context) {
+                this.setState({ window_context: contextState }, reopen);
             } else {
-                this.focus(objId);
-                this.saveSession();
+                reopen();
             }
             return;
         } else {
@@ -793,17 +828,18 @@ export class Desktop extends Component {
 
             safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
 
-            let recentApps = [];
-            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
-            recentApps = recentApps.filter(id => id !== objId);
-            recentApps.unshift(objId);
-            recentApps = recentApps.slice(0, 10);
-            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+            addRecentApp(objId);
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
                 this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+
+                const nextState = { closed_windows, favourite_apps, allAppsView: false };
+                if (context) {
+                    nextState.window_context = contextState;
+                }
+                this.setState(nextState, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -862,6 +898,10 @@ export class Desktop extends Component {
         closed_windows[objId] = true; // closes the app's window
 
         this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
+
+        const window_context = { ...this.state.window_context };
+        delete window_context[objId];
+        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
     }
 
     pinApp = (id) => {

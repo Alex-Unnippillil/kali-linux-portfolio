@@ -13,6 +13,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable
+      - run: yarn dedupe --check
       - run: npx playwright install --with-deps
       - run: |
           yarn dev &
