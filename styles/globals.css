@@ -77,3 +77,18 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+html {
+  scrollbar-color: var(--kali-border, var(--color-border)) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--kali-border, var(--color-border));
+  border-radius: 6px;
+}
