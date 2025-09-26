@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import Toast from '../ui/Toast';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.launchCooldowns = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +54,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            toastMessage: null,
         }
     }
 
@@ -594,6 +597,14 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        const now = Date.now();
+        if (this.state.closed_windows[objId] !== false) {
+            if (this.launchCooldowns[objId] && now - this.launchCooldowns[objId] < 250) {
+                return;
+            }
+            this.launchCooldowns[objId] = now;
+        }
+
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
             // if it's minimised, restore its last position
@@ -615,10 +626,15 @@ export class Desktop extends Component {
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
+            const appMeta = apps.find(a => a.id === objId);
+            const toastMessage = {
+                id: Date.now(),
+                text: `${appMeta?.title || objId} opened`,
+            };
             if (currentApp) {
                 frequentApps.forEach((app) => {
                     if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
+                        app.frequency += 1; // increase the frequency if app is found
                     }
                 });
             } else {
@@ -647,7 +663,7 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, toastMessage }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -966,6 +982,15 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                {this.state.toastMessage && (
+                    <Toast
+                        key={this.state.toastMessage.id}
+                        message={this.state.toastMessage.text}
+                        onClose={() => this.setState({ toastMessage: null })}
+                        duration={3000}
+                    />
+                )}
 
             </main>
         )
