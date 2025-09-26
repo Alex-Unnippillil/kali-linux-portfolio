@@ -27,6 +27,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -68,8 +69,16 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     if (!open) return;
-    setHighlight(0);
-  }, [open, category, query]);
+    setHighlight(currentApps.length > 0 ? 0 : -1);
+  }, [open, category, query, currentApps.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -88,13 +97,22 @@ const WhiskerMenu: React.FC = () => {
         setOpen(false);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        setHighlight(h => {
+          if (currentApps.length === 0) return -1;
+          if (h < 0) return 0;
+          return Math.min(h + 1, currentApps.length - 1);
+        });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlight(h => Math.max(h - 1, 0));
+        setHighlight(h => {
+          if (currentApps.length === 0) return -1;
+          if (h <= 0) return 0;
+          return h - 1;
+        });
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const app = currentApps[highlight];
+        const index = highlight < 0 ? 0 : highlight;
+        const app = currentApps[index];
         if (app) openSelectedApp(app.id);
       }
     };
@@ -153,17 +171,20 @@ const WhiskerMenu: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="p-3">
-            <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
+          <div className="p-3 w-96">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-200">Applications</h2>
+              <input
+                ref={searchInputRef}
+                className="w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+                placeholder="Type to search…"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+            </div>
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
+                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange rounded-md' : ''}>
                   <UbuntuApp
                     id={app.id}
                     icon={app.icon}
