@@ -477,7 +477,7 @@ play/pause and track controls include keyboard hotkeys.
    ```
 3. Add metadata (icon, title) where appropriate.
 4. If the app needs persistent state, use `usePersistentState(key, initial, validator)`.
-5. If the app embeds external sites, **whitelist** the domain in `next.config.js` CSP (`connect-src`, `frame-src`, `img-src`) and `images.domains`.
+5. If the app embeds external sites, **whitelist** the domain in `next.config.js` CSP (`connect-src`, `frame-src`, `img-src`) and `images.remotePatterns`.
 
 ---
 

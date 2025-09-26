@@ -216,7 +216,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Where:** Gedit app; env vars already specified in README.
 
 51. **Chrome app permissions UI**
-    - **Accept:** Explicit message about sandboxed iframes and limited capabilities; tighten CSP and image domains for embeds.
+    - **Accept:** Explicit message about sandboxed iframes and limited capabilities; tighten CSP and image remote patterns for embeds.
     - **Where:** Chrome app; `next.config.js` CSP list.
 
 52. **Project Gallery lazy loading**
