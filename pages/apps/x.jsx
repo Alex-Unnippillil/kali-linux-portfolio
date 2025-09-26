@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const PageX = dynamic(() => import('../../apps/x'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/x'), {
+  appName: 'Project X',
 });
-
-export default PageX;

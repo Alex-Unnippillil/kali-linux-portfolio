@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const SSHPreview = dynamic(() => import('../../apps/ssh'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/ssh'), {
+  appName: 'SSH Command Builder',
 });
-
-export default function SSHPage() {
-  return <SSHPreview />;
-}
