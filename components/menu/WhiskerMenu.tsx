@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import { readRecentAppIds } from '../../utils/recentStorage';
 
 type AppMeta = {
   id: string;
@@ -29,6 +29,7 @@ const WhiskerMenu: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -36,7 +37,19 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
-  const [recentApps, setRecentApps] = useState<AppMeta[]>([]);
+  useEffect(() => {
+    setRecentIds(readRecentAppIds());
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setRecentIds(readRecentAppIds());
+  }, [open]);
+
+  const recentApps = useMemo(() => {
+    return recentIds.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+  }, [allApps, recentIds]);
+
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
