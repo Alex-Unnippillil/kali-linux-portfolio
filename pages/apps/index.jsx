@@ -35,32 +35,53 @@ const AppsPage = () => {
         placeholder="Search apps"
         className="mb-4 w-full rounded border p-2"
       />
-      <div
-        id="app-grid"
-        tabIndex="-1"
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
-      >
-        {filteredApps.map((app) => (
-          <Link
-            key={app.id}
-            href={`/apps/${app.id}`}
-            className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
-            aria-label={app.title}
-          >
-            {app.icon && (
-              <Image
-                src={app.icon}
-                alt=""
-                width={64}
-                height={64}
-                sizes="64px"
-                className="h-16 w-16"
-              />
-            )}
-            <span className="mt-2">{app.title}</span>
-          </Link>
-        ))}
-      </div>
+      <ul id="app-grid" tabIndex="-1" className="space-y-1">
+        {filteredApps.map((app) => {
+          const hasSubmenu = Array.isArray(app.submenu) && app.submenu.length > 0;
+
+          return (
+            <li
+              key={app.id}
+              className="h-8 px-2 flex items-center rounded hover:bg-kali-menu-hover focus-within:bg-kali-menu-hover"
+            >
+              <Link
+                href={`/apps/${app.id}`}
+                className="flex w-full items-center gap-2 focus:outline-none focus:ring"
+                aria-label={app.title}
+              >
+                {app.icon && (
+                  <Image
+                    src={app.icon}
+                    alt=""
+                    width={18}
+                    height={18}
+                    sizes="18px"
+                    className="h-[18px] w-[18px]"
+                  />
+                )}
+                <span className="flex-1 text-left text-sm">{app.title}</span>
+                {hasSubmenu && (
+                  <svg
+                    aria-hidden="true"
+                    className="h-4 w-4 text-kali-subtle"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M6 4l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 };
