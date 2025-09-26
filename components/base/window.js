@@ -12,6 +12,8 @@ const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_BOTTOM_INSET = 28;
+const EDGE_RESISTANCE_OVERSHOOT_LIMIT = 160;
+const EDGE_RESISTANCE_EASING_POWER = 2;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -31,6 +33,73 @@ const computeSnapRegions = (viewportWidth, viewportHeight) => {
         right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
         top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
     };
+};
+
+const getClientFromEvent = (event) => {
+    if (!event) return null;
+    if ('touches' in event && event.touches && event.touches.length > 0) {
+        const touch = event.touches[0];
+        return { x: touch.clientX, y: touch.clientY };
+    }
+    if ('clientX' in event && 'clientY' in event) {
+        return { x: event.clientX, y: event.clientY };
+    }
+    return null;
+};
+
+const parseTranslate = (transform) => {
+    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform || '');
+    if (match) {
+        return { x: parseFloat(match[1]) || 0, y: parseFloat(match[2]) || 0 };
+    }
+    return { x: 0, y: 0 };
+};
+
+const applyAxisResistance = (raw, min, max, zone, enabled) => {
+    const lowerLimit = min - EDGE_RESISTANCE_OVERSHOOT_LIMIT;
+    const upperLimit = max + EDGE_RESISTANCE_OVERSHOOT_LIMIT;
+    const constrained = clamp(raw, lowerLimit, upperLimit);
+
+    if (!enabled || zone <= 0 || max <= min) {
+        return {
+            value: clamp(constrained, min, max),
+            overshootStart: Math.max(0, min - constrained),
+            overshootEnd: Math.max(0, constrained - max),
+        };
+    }
+
+    const effectiveZone = Math.min(zone, Math.max(0, max - min));
+    if (effectiveZone === 0) {
+        return {
+            value: clamp(constrained, min, max),
+            overshootStart: Math.max(0, min - constrained),
+            overshootEnd: Math.max(0, constrained - max),
+        };
+    }
+
+    let value = constrained;
+    let overshootStart = 0;
+    let overshootEnd = 0;
+
+    if (constrained < min) {
+        overshootStart = min - constrained;
+        value = min;
+    } else if (constrained < min + effectiveZone) {
+        const delta = constrained - min;
+        const progress = Math.max(0, Math.min(1, delta / effectiveZone));
+        value = min + Math.pow(progress, EDGE_RESISTANCE_EASING_POWER) * effectiveZone;
+    } else if (constrained > max) {
+        overshootEnd = constrained - max;
+        value = max;
+    } else if (constrained > max - effectiveZone) {
+        const delta = max - constrained;
+        const progress = Math.max(0, Math.min(1, delta / effectiveZone));
+        value = max - Math.pow(progress, EDGE_RESISTANCE_EASING_POWER) * effectiveZone;
+    } else {
+        value = constrained;
+    }
+
+    return { value: clamp(value, min, max), overshootStart, overshootEnd };
 };
 
 export class Window extends Component {
@@ -62,6 +131,15 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        const initialX = typeof this.startX === 'number' ? this.startX : 0;
+        const initialY = typeof this.startY === 'number' ? this.startY : 0;
+        this._dragStartClient = null;
+        this._dragStartPosition = { x: initialX, y: initialY };
+        this._rawPosition = { x: initialX, y: initialY };
+        this._lastAppliedPosition = { x: initialX, y: initialY };
+        this._edgeResistanceState = { left: 0, right: 0, top: 0 };
+        this._edgeResistanceEnabled = true;
+        this._reduceMotionMedia = null;
     }
 
     componentDidMount() {
@@ -78,6 +156,23 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            this._reduceMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+            this.updateEdgeResistancePreference(this._reduceMotionMedia.matches);
+            const listener = this.handleReducedMotionChange;
+            if (typeof this._reduceMotionMedia.addEventListener === 'function') {
+                this._reduceMotionMedia.addEventListener('change', listener);
+            } else if (typeof this._reduceMotionMedia.addListener === 'function') {
+                this._reduceMotionMedia.addListener(listener);
+            }
+        } else {
+            this.updateEdgeResistancePreference(false);
+        }
+        if (root) {
+            const { x, y } = this.getCurrentTransformPosition(root);
+            this._rawPosition = { x, y };
+            this._dragStartPosition = { x, y };
+        }
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -91,6 +186,14 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        if (this._reduceMotionMedia) {
+            const listener = this.handleReducedMotionChange;
+            if (typeof this._reduceMotionMedia.removeEventListener === 'function') {
+                this._reduceMotionMedia.removeEventListener('change', listener);
+            } else if (typeof this._reduceMotionMedia.removeListener === 'function') {
+                this._reduceMotionMedia.removeListener(listener);
+            }
+        }
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -210,7 +313,56 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
-    changeCursorToMove = () => {
+    resetEdgeResistanceState = () => {
+        this._edgeResistanceState = { left: 0, right: 0, top: 0 };
+    }
+
+    updateEdgeResistancePreference = (shouldReduce) => {
+        this._edgeResistanceEnabled = !shouldReduce;
+        if (shouldReduce) {
+            this.resetEdgeResistanceState();
+        }
+    }
+
+    handleReducedMotionChange = (event) => {
+        this.updateEdgeResistancePreference(Boolean(event?.matches));
+    }
+
+    getCurrentTransformPosition = (node) => {
+        if (!node) return { x: 0, y: 0 };
+        if (node.style && node.style.transform) {
+            const parsed = parseTranslate(node.style.transform);
+            if (parsed) return parsed;
+        }
+        const rect = node.getBoundingClientRect();
+        return { x: rect.left || 0, y: rect.top || 0 };
+    }
+
+    applyEdgeResistanceToCoordinates = (rawX, rawY) => {
+        const parentSize = this.state.parentSize || {};
+        const maxX = typeof parentSize.width === 'number' ? parentSize.width : 0;
+        const maxY = typeof parentSize.height === 'number' ? parentSize.height : 0;
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : maxX;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : maxY;
+        const horizontalZone = maxX > 0 ? Math.min(computeEdgeThreshold(viewportWidth || maxX), maxX) : 0;
+        const verticalZone = maxY > 0 ? Math.min(computeEdgeThreshold(viewportHeight || maxY), maxY) : 0;
+        const axisX = applyAxisResistance(rawX, 0, maxX, horizontalZone, this._edgeResistanceEnabled);
+        const axisY = applyAxisResistance(rawY, 0, maxY, verticalZone, this._edgeResistanceEnabled);
+        this._edgeResistanceState = {
+            left: axisX.overshootStart,
+            right: axisX.overshootEnd,
+            top: axisY.overshootStart,
+        };
+        return { x: axisX.value, y: axisY.value };
+    }
+
+    updateRawFromTransformString = (transform) => {
+        const parsed = parseTranslate(transform);
+        this._rawPosition = { x: parsed.x, y: parsed.y };
+        this._lastAppliedPosition = { x: parsed.x, y: parsed.y };
+    }
+
+    changeCursorToMove = (event, data) => {
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
@@ -218,6 +370,20 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
+        const client = getClientFromEvent(event);
+        this._dragStartClient = client;
+        if (data && typeof data.x === 'number' && typeof data.y === 'number') {
+            this._dragStartPosition = { x: data.x, y: data.y };
+            this._rawPosition = { x: data.x, y: data.y };
+        } else {
+            const node = document.getElementById(this.id);
+            if (node) {
+                const { x, y } = this.getCurrentTransformPosition(node);
+                this._dragStartPosition = { x, y };
+                this._rawPosition = { x, y };
+            }
+        }
+        this.resetEdgeResistanceState();
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
 
@@ -267,8 +433,15 @@ export class Window extends Component {
             const y = r.style.getPropertyValue('--window-transform-y');
             if (x && y) {
                 r.style.transform = `translate(${x},${y})`;
+                const parsedX = parseFloat(x);
+                const parsedY = parseFloat(y);
+                if (!Number.isNaN(parsedX) && !Number.isNaN(parsedY)) {
+                    this._rawPosition = { x: parsedX, y: parsedY };
+                    this._lastAppliedPosition = { x: parsedX, y: parsedY };
+                }
             }
         }
+        this.resetEdgeResistanceState();
         if (this.state.lastSize) {
             this.setState({
                 width: this.state.lastSize.width,
@@ -294,6 +467,9 @@ export class Window extends Component {
         if (node) {
             node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
+        this._rawPosition = { x: region.left, y: region.top };
+        this._lastAppliedPosition = { x: region.left, y: region.top };
+        this.resetEdgeResistanceState();
         this.setState({
             snapPreview: null,
             snapPosition: null,
@@ -341,12 +517,27 @@ export class Window extends Component {
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const regions = computeSnapRegions(viewportWidth, viewportHeight);
 
+        const requireOvershoot = this._edgeResistanceEnabled;
+        const overshoot = this._edgeResistanceState || { left: 0, right: 0, top: 0 };
+
         let candidate = null;
-        if (rect.top <= verticalThreshold && regions.top.height > 0) {
+        if (
+            rect.top <= verticalThreshold &&
+            regions.top.height > 0 &&
+            (!requireOvershoot || overshoot.top > 0)
+        ) {
             candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
+        } else if (
+            rect.left <= horizontalThreshold &&
+            regions.left.width > 0 &&
+            (!requireOvershoot || overshoot.left > 0)
+        ) {
             candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
+        } else if (
+            viewportWidth - rect.right <= horizontalThreshold &&
+            regions.right.width > 0 &&
+            (!requireOvershoot || overshoot.right > 0)
+        ) {
             candidate = { position: 'right', preview: regions.right };
         }
 
@@ -367,30 +558,24 @@ export class Window extends Component {
         }
     }
 
-    applyEdgeResistance = (node, data) => {
+    applyEdgeResistance = (node, data, event) => {
         if (!node || !data) return;
-        const threshold = 30;
-        const resistance = 0.35; // how much to slow near edges
-        let { x, y } = data;
-        const maxX = this.state.parentSize.width;
-        const maxY = this.state.parentSize.height;
-
-        const resist = (pos, min, max) => {
-            if (pos < min) return min;
-            if (pos < min + threshold) return min + (pos - min) * resistance;
-            if (pos > max) return max;
-            if (pos > max - threshold) return max - (max - pos) * resistance;
-            return pos;
+        const client = getClientFromEvent(event);
+        let rawX = typeof data.x === 'number' ? data.x : 0;
+        let rawY = typeof data.y === 'number' ? data.y : 0;
+        if (client && this._dragStartClient) {
+            rawX = this._dragStartPosition.x + (client.x - this._dragStartClient.x);
+            rawY = this._dragStartPosition.y + (client.y - this._dragStartClient.y);
         }
-
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        const applied = this.applyEdgeResistanceToCoordinates(rawX, rawY);
+        this._rawPosition = { x: rawX, y: rawY };
+        this._lastAppliedPosition = applied;
+        node.style.transform = `translate(${applied.x}px, ${applied.y}px)`;
     }
 
     handleDrag = (e, data) => {
         if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+            this.applyEdgeResistance(data.node, data, e);
         }
         this.checkOverlap();
         this.checkSnapPreview();
@@ -398,6 +583,12 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
+        this._dragStartClient = null;
+        if (this._lastAppliedPosition) {
+            this._dragStartPosition = { ...this._lastAppliedPosition };
+            this._rawPosition = { ...this._lastAppliedPosition };
+        }
+        this.resetEdgeResistanceState();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
@@ -454,6 +645,8 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
+            this.updateRawFromTransformString(endTransform);
+            this.resetEdgeResistanceState();
             this.setState({ maximized: false });
             this.checkOverlap();
             return;
@@ -462,6 +655,8 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
+                this.updateRawFromTransformString(endTransform);
+                this.resetEdgeResistanceState();
                 this.setState({ maximized: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
@@ -474,6 +669,8 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
+                this.updateRawFromTransformString(endTransform);
+                this.resetEdgeResistanceState();
                 this.setState({ maximized: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
@@ -529,12 +726,13 @@ export class Window extends Component {
                 e.stopPropagation();
                 const node = document.getElementById(this.id);
                 if (node) {
-                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
-                    let x = match ? parseFloat(match[1]) : 0;
-                    let y = match ? parseFloat(match[2]) : 0;
-                    x += dx;
-                    y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
+                    const currentRaw = this._rawPosition || this.getCurrentTransformPosition(node);
+                    const rawX = (currentRaw?.x || 0) + dx;
+                    const rawY = (currentRaw?.y || 0) + dy;
+                    const applied = this.applyEdgeResistanceToCoordinates(rawX, rawY);
+                    this._rawPosition = { x: rawX, y: rawY };
+                    this._lastAppliedPosition = applied;
+                    node.style.transform = `translate(${applied.x}px, ${applied.y}px)`;
                     this.checkOverlap();
                     this.checkSnapPreview();
                     this.setWinowsPosition();
