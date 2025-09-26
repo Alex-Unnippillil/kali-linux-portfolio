@@ -31,9 +31,11 @@ export class UbuntuApp extends Component {
     }
 
     render() {
+        const ariaRole = this.props.role || 'button';
+
         return (
             <div
-                role="button"
+                role={ariaRole}
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
                 data-context="app"
