@@ -14,7 +14,7 @@ const config = [
     },
   },
   {
-    files: ['utils/qrStorage.ts', 'utils/safeStorage.ts', 'utils/sync.ts'],
+    files: ['utils/*{storage,Storage,IDB,idb}.ts', 'utils/sync.ts'],
     rules: {
       'no-restricted-globals': ['error', 'window', 'document'],
     },
