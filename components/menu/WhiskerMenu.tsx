@@ -4,12 +4,18 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
+type ScreenFactory = ((addFolder: any, openApp: any) => JSX.Element) & {
+  prefetch?: () => void;
+  Component?: React.ComponentType<any>;
+};
+
 type AppMeta = {
   id: string;
   title: string;
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  screen?: ScreenFactory;
 };
 
 const CATEGORIES = [
@@ -170,6 +176,7 @@ const WhiskerMenu: React.FC = () => {
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    prefetch={app.screen?.prefetch}
                   />
                 </div>
               ))}

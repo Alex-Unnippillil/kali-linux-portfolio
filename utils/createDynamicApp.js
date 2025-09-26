@@ -44,6 +44,8 @@ export const createDisplay = (Component) => {
     }
   };
 
+  Display.Component = Component;
+
   return Display;
 };
 
