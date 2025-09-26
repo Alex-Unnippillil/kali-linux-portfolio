@@ -52,6 +52,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            switcherIndex: 0,
         }
     }
 
@@ -150,15 +151,24 @@ export class Desktop extends Component {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
+                this.openWindowSwitcher(e.shiftKey ? -1 : 1);
+            } else {
+                this.cycleWindowSwitcher(e.shiftKey ? -1 : 1);
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+            return;
+        }
+
+        if (this.state.showWindowSwitcher) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.closeWindowSwitcher();
+            }
+            return;
+        }
+
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
@@ -211,23 +221,92 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
-    openWindowSwitcher = () => {
-        const windows = this.app_stack
+    buildWindowSwitcherList = () => {
+        return this.app_stack
             .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+            .map(id => {
+                const baseId = id.split('#')[0];
+                const meta = apps.find(a => a.id === id) || apps.find(a => a.id === baseId);
+                if (!meta) {
+                    return {
+                        id,
+                        appId: baseId,
+                        title: baseId.replace(/[-_]/g, ' '),
+                        icon: '/themes/Yaru/status/about.svg',
+                    };
+                }
+                return {
+                    id,
+                    appId: meta.id || baseId,
+                    title: meta.title || baseId,
+                    icon: meta.thumbnail || meta.icon || '/themes/Yaru/status/about.svg',
+                    thumbnail: meta.thumbnail,
+                    preview: meta.preview,
+                };
+            });
+    }
+
+    openWindowSwitcher = (direction = 1) => {
+        const windows = this.buildWindowSwitcherList();
+        if (!windows.length) return;
+
+        const currentId = this.getFocusedWindowId();
+        let nextIndex = direction > 0 ? 0 : windows.length - 1;
+        if (currentId) {
+            const currentIndex = windows.findIndex(win => win.id === currentId || win.appId === currentId);
+            if (currentIndex !== -1) {
+                nextIndex = (currentIndex + direction + windows.length) % windows.length;
+            }
         }
+
+        this.setState({
+            showWindowSwitcher: true,
+            switcherWindows: windows,
+            switcherIndex: nextIndex,
+        });
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.setState({ showWindowSwitcher: false, switcherWindows: [], switcherIndex: 0 });
     }
 
-    selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
-            this.openApp(id);
+    cycleWindowSwitcher = (direction) => {
+        this.setState((state) => {
+            const len = state.switcherWindows.length;
+            if (!len) {
+                return null;
+            }
+            const nextIndex = (state.switcherIndex + direction + len) % len;
+            return { switcherIndex: nextIndex };
+        });
+    }
+
+    highlightWindowSwitcher = (index) => {
+        this.setState((state) => {
+            if (index < 0 || index >= state.switcherWindows.length) {
+                return null;
+            }
+            if (state.switcherIndex === index) {
+                return null;
+            }
+            return { switcherIndex: index };
+        });
+    }
+
+    selectWindow = (win) => {
+        if (!win) {
+            this.closeWindowSwitcher();
+            return;
+        }
+
+        this.setState({ showWindowSwitcher: false, switcherWindows: [], switcherIndex: 0 }, () => {
+            const targetId = win.appId || win.id;
+            if (targetId) {
+                this.openApp(targetId);
+                if (win.id && win.id !== targetId) {
+                    this.focus(win.id);
+                }
+            }
         });
     }
 
@@ -964,6 +1043,9 @@ export class Desktop extends Component {
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
+                        selectedIndex={this.state.switcherIndex}
+                        onCycle={this.cycleWindowSwitcher}
+                        onHighlight={this.highlightWindowSwitcher}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
 
