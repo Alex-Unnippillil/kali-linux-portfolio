@@ -24,6 +24,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useContextMenuLongPress from '../../hooks/useContextMenuLongPress';
 
 export class Desktop extends Component {
     constructor() {
@@ -1178,5 +1179,6 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
+    useContextMenuLongPress();
     return <Desktop {...props} snapEnabled={snapEnabled} />;
 }
