@@ -5,6 +5,6 @@ import KismetApp from '../components/apps/kismet.jsx';
 describe('KismetApp', () => {
   it('renders file input', () => {
     render(<KismetApp />);
-    expect(screen.getByLabelText(/pcap file/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/upload pcap file/i)).toBeInTheDocument();
   });
 });

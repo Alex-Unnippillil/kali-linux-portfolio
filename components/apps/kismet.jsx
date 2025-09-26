@@ -152,13 +152,21 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 
   return (
     <div className="p-4 text-white space-y-4">
-      <input
-        type="file"
-        accept=".pcap"
-        onChange={handleFile}
-        aria-label="pcap file"
-        className="block"
-      />
+      <div>
+        <label
+          htmlFor="kismet-pcap-upload"
+          className="block text-sm font-semibold text-gray-200"
+        >
+          Upload PCAP file
+        </label>
+        <input
+          id="kismet-pcap-upload"
+          type="file"
+          accept=".pcap"
+          onChange={handleFile}
+          className="mt-1 block"
+        />
+      </div>
 
       {networks.length > 0 && (
         <>
