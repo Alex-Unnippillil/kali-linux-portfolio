@@ -7,8 +7,10 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import useAppSearch from '../../hooks/useAppSearch';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -99,7 +101,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     runWorker: async () => {},
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
@@ -410,6 +411,33 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
+  const commandItems = Object.keys(registryRef.current).map((id) => ({ id }));
+
+  const {
+    query: paletteInput,
+    setQuery: setPaletteInput,
+    results: paletteResults,
+    highlight: highlightCommand,
+    metadata: paletteMetadata,
+    reset: resetPalette,
+  } = useAppSearch(commandItems, {
+    getLabel: (item) => item.id,
+    filter: (item, { normalizedQuery }) =>
+      !normalizedQuery || item.id.toLowerCase().startsWith(normalizedQuery),
+    debounceMs: 120,
+  });
+
+  useEffect(() => {
+    if (!paletteOpen) {
+      resetPalette();
+    }
+  }, [paletteOpen, resetPalette]);
+
+  const mappedPaletteResults = useMemo(
+    () => paletteResults.map((result) => result.item),
+    [paletteResults],
+  );
+
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
@@ -422,25 +450,44 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  runCommand(paletteInput);
-                  setPaletteInput('');
+                  const targetCommand =
+                    mappedPaletteResults[0]?.id || paletteInput.trim();
+                  if (targetCommand) {
+                    runCommand(targetCommand);
+                  }
+                  resetPalette();
                   setPaletteOpen(false);
                   termRef.current?.focus();
                 } else if (e.key === 'Escape') {
                   setPaletteOpen(false);
+                  resetPalette();
                   termRef.current?.focus();
                 }
               }}
             />
-            <ul className="max-h-40 overflow-y-auto">
-              {Object.keys(registryRef.current)
-                .filter((c) => c.startsWith(paletteInput))
-                .map((c) => (
-                  <li key={c} className="text-white">
-                    {c}
-                  </li>
-                ))}
+            <ul className="max-h-40 overflow-y-auto text-sm">
+              {mappedPaletteResults.map((command) => (
+                <li key={command.id} className="text-white py-0.5">
+                  {highlightCommand(command.id)}
+                </li>
+              ))}
+              {!paletteMetadata.isSearching && paletteMetadata.hasQuery &&
+                mappedPaletteResults.length === 0 && (
+                  <li className="text-gray-400">No commands found</li>
+                )}
             </ul>
+            <p
+              className="mt-2 text-xs text-gray-400"
+              role="status"
+              aria-live="polite"
+            >
+              {paletteMetadata.hasQuery
+                ? `${paletteMetadata.matched} of ${paletteMetadata.total} commands match` +
+                  (paletteMetadata.debouncedQuery
+                    ? ` "${paletteMetadata.debouncedQuery}"`
+                    : '')
+                : `${paletteMetadata.total} commands available`}
+            </p>
           </div>
         </div>
       )}
