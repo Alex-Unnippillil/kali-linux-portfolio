@@ -19,7 +19,13 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
+}
+
+body {
+  background: var(--kali-bg);
+  color: var(--kali-text);
 }
 
 /* Dark theme */
@@ -69,8 +75,8 @@ html[data-theme='matrix'] {
 }
 
 ::selection {
-  background: var(--color-selection);
-  color: var(--color-inverse);
+  background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
+  color: var(--kali-text);
 }
 
 *:focus-visible {
