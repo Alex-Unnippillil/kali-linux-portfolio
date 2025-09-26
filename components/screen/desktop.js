@@ -11,14 +11,56 @@ import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
-import AllApplications from '../screen/all-applications'
-import ShortcutSelector from '../screen/shortcut-selector'
-import WindowSwitcher from '../screen/window-switcher'
-import DesktopMenu from '../context-menus/desktop-menu';
-import DefaultMenu from '../context-menus/default';
-import AppMenu from '../context-menus/app-menu';
+const AllApplications = dynamic(
+    () => import('../screen/all-applications'),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+);
+const ShortcutSelector = dynamic(
+    () => import('../screen/shortcut-selector'),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+);
+const WindowSwitcher = dynamic(
+    () => import('../screen/window-switcher'),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+);
+const DesktopMenu = dynamic(
+    () => import('../context-menus/desktop-menu'),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+);
+const DefaultMenu = dynamic(
+    () => import('../context-menus/default'),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+);
+const AppMenu = dynamic(
+    () => import('../context-menus/app-menu'),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+);
 import Taskbar from './taskbar';
-import TaskbarMenu from '../context-menus/taskbar-menu';
+const TaskbarMenu = dynamic(
+    () => import('../context-menus/taskbar-menu'),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+);
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
