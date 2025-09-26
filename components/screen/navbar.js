@@ -3,6 +3,13 @@ import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
+import KaliApplicationsMenu from '../menu/KaliApplicationsMenu';
+import KaliPlacesMenu from '../menu/KaliPlacesMenu';
+
+const isTruthy = value =>
+        typeof value === 'string' && ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+
+const enableKaliUi = isTruthy(process.env.NEXT_PUBLIC_KALI_UI || '');
 
 export default class Navbar extends Component {
 	constructor() {
@@ -15,7 +22,14 @@ export default class Navbar extends Component {
 	render() {
 		return (
                         <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-                                <WhiskerMenu />
+                                {enableKaliUi ? (
+                                        <div className="flex items-center">
+                                                <KaliApplicationsMenu />
+                                                <KaliPlacesMenu />
+                                        </div>
+                                ) : (
+                                        <WhiskerMenu />
+                                )}
                                 <div
                                         className={
                                                 'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
