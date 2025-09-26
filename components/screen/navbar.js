@@ -1,21 +1,59 @@
 import React, { Component } from 'react';
+import dynamic from 'next/dynamic';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
-import WhiskerMenu from '../menu/WhiskerMenu';
+
+const loadWhiskerMenu = () => import('../menu/WhiskerMenu');
+const WhiskerMenu = dynamic(loadWhiskerMenu, {
+        ssr: false,
+        loading: () => (
+                <button
+                        type="button"
+                        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1 opacity-70 cursor-wait"
+                        aria-disabled="true"
+                >
+                        <span
+                                aria-hidden="true"
+                                className="inline-block mr-1 h-4 w-4 rounded-full bg-white bg-opacity-40 animate-pulse"
+                        />
+                        Applications
+                </button>
+        ),
+});
+
+const prefetchWhiskerMenu = () => {
+        if (typeof WhiskerMenu.preload === 'function') {
+                WhiskerMenu.preload();
+        } else {
+                loadWhiskerMenu();
+        }
+};
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
-		this.state = {
-			status_card: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        status_card: false
+                };
+                this.whiskerPrefetched = false;
+        }
 
-	render() {
-		return (
+        prefetchWhiskerMenu = () => {
+                if (this.whiskerPrefetched) return;
+                this.whiskerPrefetched = true;
+                prefetchWhiskerMenu();
+        };
+
+        render() {
+                return (
                         <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-                                <WhiskerMenu />
+                                <div
+                                        onMouseEnter={this.prefetchWhiskerMenu}
+                                        onFocusCapture={this.prefetchWhiskerMenu}
+                                >
+                                        <WhiskerMenu />
+                                </div>
                                 <div
                                         className={
                                                 'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'

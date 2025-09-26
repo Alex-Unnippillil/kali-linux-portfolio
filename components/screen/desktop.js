@@ -7,13 +7,14 @@ const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
     { ssr: false }
 );
+const loadWindowSwitcher = () => import('../screen/window-switcher');
+const WindowSwitcher = dynamic(loadWindowSwitcher, { ssr: false, loading: () => null });
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
-import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowSwitcherPrefetched = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +54,16 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+        }
+    }
+
+    prefetchWindowSwitcher = () => {
+        if (this.windowSwitcherPrefetched) return;
+        this.windowSwitcherPrefetched = true;
+        if (typeof WindowSwitcher.preload === 'function') {
+            WindowSwitcher.preload();
+        } else {
+            loadWindowSwitcher();
         }
     }
 
@@ -149,6 +161,7 @@ export class Desktop extends Component {
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
+            this.prefetchWindowSwitcher();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
             }
@@ -158,6 +171,7 @@ export class Desktop extends Component {
         }
         else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
+            this.prefetchWindowSwitcher();
             this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
@@ -212,6 +226,7 @@ export class Desktop extends Component {
     }
 
     openWindowSwitcher = () => {
+        this.prefetchWindowSwitcher();
         const windows = this.app_stack
             .filter(id => this.state.closed_windows[id] === false)
             .map(id => apps.find(a => a.id === id))
@@ -865,7 +880,13 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                onMouseEnter={this.prefetchWindowSwitcher}
+                onFocusCapture={this.prefetchWindowSwitcher}
+            >
 
                 {/* Window Area */}
                 <div

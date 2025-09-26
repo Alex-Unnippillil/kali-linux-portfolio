@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -15,6 +15,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
+import dynamic from 'next/dynamic';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
@@ -24,9 +25,26 @@ const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
 });
 
+const loadNotificationCenter = () => import('../components/common/NotificationCenter');
+const NotificationCenter = dynamic(loadNotificationCenter, {
+  ssr: false,
+  loading: ({ children }) => children,
+});
+
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+
+  const notificationPrefetchedRef = useRef(false);
+  const prefetchNotificationCenter = useCallback(() => {
+    if (notificationPrefetchedRef.current) return;
+    notificationPrefetchedRef.current = true;
+    if (typeof NotificationCenter.preload === 'function') {
+      NotificationCenter.preload();
+    } else {
+      loadNotificationCenter();
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -149,7 +167,11 @@ function MyApp(props) {
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
-      <div className={ubuntu.className}>
+      <div
+        className={ubuntu.className}
+        onMouseEnter={prefetchNotificationCenter}
+        onFocusCapture={prefetchNotificationCenter}
+      >
         <a
           href="#app-grid"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
@@ -157,21 +179,23 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
-            <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
+          <NotificationCenter>
+            <PipPortalProvider>
+              <div aria-live="polite" id="live-region" />
+              <Component {...pageProps} />
+              <ShortcutOverlay />
+              <Analytics
+                beforeSend={(e) => {
+                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                  const evt = e;
+                  if (evt.metadata?.email) delete evt.metadata.email;
+                  return e;
+                }}
+              />
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-          </PipPortalProvider>
+              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            </PipPortalProvider>
+          </NotificationCenter>
         </SettingsProvider>
       </div>
     </ErrorBoundary>
