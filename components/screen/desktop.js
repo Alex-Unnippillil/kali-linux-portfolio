@@ -14,7 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
-import DesktopMenu from '../context-menus/desktop-menu';
+import DesktopMenu from '../context-menus/DesktopMenu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
@@ -46,6 +46,9 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+            },
+            context_positions: {
+                desktop: null,
             },
             context_app: null,
             showNameBar: false,
@@ -298,7 +301,19 @@ export class Desktop extends Component {
 
     showContextMenu = (e, menuName /* context menu name */) => {
         let { posx, posy } = this.getMenuPosition(e);
+        if (menuName === "desktop") {
+            this.setState({
+                context_positions: { ...this.state.context_positions, desktop: { x: posx, y: posy } },
+                context_menus: { ...this.state.context_menus, desktop: true },
+            });
+            return;
+        }
         let contextMenu = document.getElementById(`${menuName}-menu`);
+
+        if (!contextMenu) {
+            this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+            return;
+        }
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -908,10 +923,14 @@ export class Desktop extends Component {
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    position={this.state.context_positions.desktop}
+                    onClose={this.hideAllContextMenu}
+                    onAddNewFolder={this.addNewFolder}
+                    onOpenShortcutSelector={this.openShortcutSelector}
+                    onOpenTerminal={() => this.openApp('terminal')}
+                    onChangeWallpaper={() => this.openApp('settings')}
+                    onDisplaySettings={() => this.openApp('settings')}
+                    onClearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
