@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import FormError from '../ui/FormError';
+import useDynamicVirtualizer from '../../hooks/useDynamicVirtualizer';
 
 interface USBEndpoint {
   direction: 'in' | 'out';
@@ -46,6 +47,23 @@ const WebUSBApp: React.FC = () => {
   const [message, setMessage] = useState('');
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const logContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const estimateLogSize = useCallback(() => 24, []);
+
+  const { virtualizer: logVirtualizer, measureElement: measureLogElement } =
+    useDynamicVirtualizer<HTMLDivElement>({
+      count: log.length,
+      estimateSize: estimateLogSize,
+      overscan: 6,
+      scrollRef: logContainerRef,
+    });
+
+  useEffect(() => {
+    logVirtualizer.measure();
+    if (log.length === 0) return;
+    logVirtualizer.scrollToIndex(log.length - 1, { align: 'end' });
+  }, [log.length, logVirtualizer]);
 
   const handleConnect = async () => {
     if (useMock || !supported) {
@@ -171,10 +189,40 @@ const WebUSBApp: React.FC = () => {
           Send
         </button>
       </div>
-      <div className="h-[calc(100%-8rem)] overflow-auto rounded bg-gray-800 p-2 text-sm">
-        {log.map((line, idx) => (
-          <p key={idx}>{line}</p>
-        ))}
+      <div
+        ref={logContainerRef}
+        className="h-[calc(100%-8rem)] overflow-auto rounded bg-gray-800 p-2 text-sm"
+        role="log"
+        aria-live="polite"
+      >
+        {log.length === 0 ? (
+          <p className="text-xs text-gray-300">No data</p>
+        ) : (
+          <div style={{ height: logVirtualizer.getTotalSize(), position: 'relative' }}>
+            {logVirtualizer.getVirtualItems().map((virtualRow) => {
+              const line = log[virtualRow.index];
+              if (!line) return null;
+              return (
+                <p
+                  key={virtualRow.key}
+                  ref={measureLogElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="whitespace-pre-wrap break-words"
+                  aria-setsize={log.length}
+                  aria-posinset={virtualRow.index + 1}
+                >
+                  {line}
+                </p>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
