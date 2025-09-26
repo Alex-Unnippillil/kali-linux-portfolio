@@ -7,6 +7,9 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const [confirmingReset, setConfirmingReset] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
+    const [resetError, setResetError] = useState(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -100,8 +103,9 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label htmlFor="font-scale-slider" className="mr-2 text-ubt-grey">Font Size:</label>
                 <input
+                    id="font-scale-slider"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -109,71 +113,84 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Adjust font size"
                 />
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={reducedMotion}
-                        onChange={(e) => setReducedMotion(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="reduced-motion-toggle"
+                    type="checkbox"
+                    checked={reducedMotion}
+                    onChange={(e) => setReducedMotion(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="reduced-motion-label"
+                />
+                <label id="reduced-motion-label" htmlFor="reduced-motion-toggle" className="text-ubt-grey">
                     Reduced Motion
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={largeHitAreas}
-                        onChange={(e) => setLargeHitAreas(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="large-hit-areas-toggle"
+                    type="checkbox"
+                    checked={largeHitAreas}
+                    onChange={(e) => setLargeHitAreas(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="large-hit-areas-label"
+                />
+                <label id="large-hit-areas-label" htmlFor="large-hit-areas-toggle" className="text-ubt-grey">
                     Large Hit Areas
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={highContrast}
-                        onChange={(e) => setHighContrast(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="high-contrast-toggle"
+                    type="checkbox"
+                    checked={highContrast}
+                    onChange={(e) => setHighContrast(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="high-contrast-label"
+                />
+                <label id="high-contrast-label" htmlFor="high-contrast-toggle" className="text-ubt-grey">
                     High Contrast
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={allowNetwork}
-                        onChange={(e) => setAllowNetwork(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="allow-network-toggle"
+                    type="checkbox"
+                    checked={allowNetwork}
+                    onChange={(e) => setAllowNetwork(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="allow-network-label"
+                />
+                <label id="allow-network-label" htmlFor="allow-network-toggle" className="text-ubt-grey">
                     Allow Network Requests
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={haptics}
-                        onChange={(e) => setHaptics(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="haptics-toggle"
+                    type="checkbox"
+                    checked={haptics}
+                    onChange={(e) => setHaptics(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="haptics-label"
+                />
+                <label id="haptics-label" htmlFor="haptics-toggle" className="text-ubt-grey">
                     Haptics
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={pongSpin}
-                        onChange={(e) => setPongSpin(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="pong-spin-toggle"
+                    type="checkbox"
+                    checked={pongSpin}
+                    onChange={(e) => setPongSpin(e.target.checked)}
+                    className="mr-2"
+                    aria-labelledby="pong-spin-label"
+                />
+                <label id="pong-spin-label" htmlFor="pong-spin-toggle" className="text-ubt-grey">
                     Pong Spin
                 </label>
             </div>
@@ -242,26 +259,20 @@ export function Settings() {
                     Import Settings
                 </button>
                 <button
-                    onClick={async () => {
-                        await resetSettings();
-                        setAccent(defaults.accent);
-                        setWallpaper(defaults.wallpaper);
-                        setDensity(defaults.density);
-                        setReducedMotion(defaults.reducedMotion);
-                        setLargeHitAreas(defaults.largeHitAreas);
-                        setFontScale(defaults.fontScale);
-                        setHighContrast(defaults.highContrast);
-                        setTheme('default');
+                    onClick={() => {
+                        setConfirmingReset(true);
+                        setResetError(null);
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
-                    Reset Desktop
+                    Reset to Defaults
                 </button>
             </div>
             <input
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
@@ -283,6 +294,65 @@ export function Settings() {
                 }}
                 className="hidden"
             />
+            {confirmingReset && (
+                <div role="alertdialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4">
+                    <div className="w-full max-w-md rounded-lg bg-ub-cool-grey p-6 text-white shadow-lg">
+                        <h2 className="text-xl font-semibold">Reset desktop?</h2>
+                        <p className="mt-3 text-sm text-ubt-grey">
+                            This will clear pinned apps, shortcuts, trash history, and appearance preferences before reloading the desktop with factory defaults. This action cannot be undone.
+                        </p>
+                        {resetError && (
+                            <p className="mt-3 rounded bg-red-900 bg-opacity-40 p-2 text-sm text-red-200">
+                                {resetError}
+                            </p>
+                        )}
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!isResetting) setConfirmingReset(false);
+                                }}
+                                className="rounded bg-transparent px-4 py-2 text-ubt-grey hover:text-white"
+                                disabled={isResetting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setIsResetting(true);
+                                    setResetError(null);
+                                    try {
+                                        await resetSettings();
+                                        setAccent(defaults.accent);
+                                        setWallpaper(defaults.wallpaper);
+                                        setDensity(defaults.density);
+                                        setReducedMotion(defaults.reducedMotion);
+                                        setLargeHitAreas(defaults.largeHitAreas);
+                                        setFontScale(defaults.fontScale);
+                                        setHighContrast(defaults.highContrast);
+                                        setPongSpin(defaults.pongSpin);
+                                        setAllowNetwork(defaults.allowNetwork);
+                                        setHaptics(defaults.haptics);
+                                        setTheme('default');
+                                        window.setTimeout(() => {
+                                            window.location.reload();
+                                        }, 50);
+                                    } catch (error) {
+                                        console.error('Failed to reset settings', error);
+                                        setResetError('Failed to reset settings. Please try again.');
+                                        setIsResetting(false);
+                                    }
+                                }}
+                                className="rounded bg-ub-orange px-4 py-2 font-semibold text-white disabled:opacity-60"
+                                disabled={isResetting}
+                            >
+                                {isResetting ? 'Resetting…' : 'Reset'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
