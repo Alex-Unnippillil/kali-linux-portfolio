@@ -15,7 +15,10 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": [],
+    "types": [
+      "web-bluetooth",
+      "wicg-file-system-access"
+    ],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
