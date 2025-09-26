@@ -567,3 +567,52 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window accessibility affordances', () => {
+  it('provides labeled controls with focus tooltips', () => {
+    jest.useFakeTimers();
+
+    try {
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+        />
+      );
+
+      const minimizeButton = screen.getByRole('button', { name: /window minimize/i });
+      const maximizeButton = screen.getByRole('button', { name: /window maximize/i });
+      const closeButton = screen.getByRole('button', { name: /window close/i });
+
+      expect(minimizeButton).toHaveAttribute('aria-label', 'Window minimize');
+      expect(maximizeButton).toHaveAttribute('aria-label', 'Window maximize');
+      expect(closeButton).toHaveAttribute('aria-label', 'Window close');
+
+      fireEvent.focus(minimizeButton);
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+
+      const tooltip = screen.getByRole('tooltip');
+      expect(tooltip).toHaveTextContent(/minimize window/i);
+      const describedBy = minimizeButton.getAttribute('aria-describedby');
+      expect(describedBy).toBe(tooltip.id);
+
+      fireEvent.blur(minimizeButton);
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      expect(minimizeButton).not.toHaveAttribute('aria-describedby');
+      expect(screen.queryByRole('tooltip')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
