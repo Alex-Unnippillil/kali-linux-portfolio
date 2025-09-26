@@ -29,7 +29,7 @@ export async function getSeed(game: string, date: string): Promise<string | unde
     const dbp = openDB();
     if (!dbp) return undefined;
     const db = await dbp;
-    return (await db.get(STORE_SEEDS, `${game}-${date}`)) as string | undefined;
+    return db.get<string>(STORE_SEEDS, `${game}-${date}`);
   } catch {
     return undefined;
   }
@@ -40,7 +40,7 @@ export async function setSeed(game: string, date: string, seed: string): Promise
     const dbp = openDB();
     if (!dbp) return;
     const db = await dbp;
-    await db.put(STORE_SEEDS, seed, `${game}-${date}`);
+    await db.put<string>(STORE_SEEDS, seed, `${game}-${date}`);
   } catch {
     // ignore
   }
@@ -62,7 +62,7 @@ export async function getReplay<T = any>(game: string, id: string): Promise<T | 
     const dbp = openDB();
     if (!dbp) return undefined;
     const db = await dbp;
-    return (await db.get(STORE_REPLAYS, `${game}-${id}`)) as T | undefined;
+    return db.get<T>(STORE_REPLAYS, `${game}-${id}`);
   } catch {
     return undefined;
   }

@@ -1,5 +1,6 @@
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
+// @ts-ignore - Next.js generates this file at build time; fallback types live in docs/type-safety.md
 /// <reference path="./.next/types/routes.d.ts" />
 
 // NOTE: This file should not be edited

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import type { ForceGraphComponent, ForceGraphMethods } from "react-force-graph";
 
 interface Block {
   addr: string;
@@ -13,13 +14,25 @@ interface GraphViewProps {
   theme: string;
 }
 
+type GraphNode = {
+  id: string;
+  x?: number;
+  y?: number;
+};
+
+type GraphLink = {
+  source: string | GraphNode;
+  target: string | GraphNode;
+  [key: string]: unknown;
+};
+
 const ForceGraph2D = dynamic(
   () => import("react-force-graph").then((mod) => mod.ForceGraph2D),
   { ssr: false },
-);
+) as unknown as ForceGraphComponent<GraphNode, GraphLink>;
 
 const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
-  const fgRef = useRef<any | null>(null);
+  const fgRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | null>(null);
   const [center, setCenter] = useState({ x: 0, y: 0 });
   const [selected, setSelected] = useState<Block | null>(null);
   const [colors, setColors] = useState({
@@ -31,8 +44,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
   });
 
   const graphData = useMemo(() => {
-    const nodes = blocks.map((b) => ({ id: b.addr }));
-    const links: { source: string; target: string }[] = [];
+    const nodes: GraphNode[] = blocks.map((b) => ({ id: b.addr }));
+    const links: GraphLink[] = [];
     blocks.forEach((b) =>
       (b.edges || []).forEach((e) => links.push({ source: b.addr, target: e })),
     );
@@ -109,19 +122,19 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
   };
 
   const nodeCanvasObject = (
-    node: any,
+    node: GraphNode,
     ctx: CanvasRenderingContext2D,
     globalScale: number,
   ) => {
     const label = node.id;
     const fontSize = 12 / globalScale;
-    const isSelected = selected && selected.addr === node.id;
+    const isSelected = selected?.addr === node.id;
     ctx.font = `${fontSize}px Sans-Serif`;
     const textWidth = ctx.measureText(label).width;
     const width = textWidth + 8;
     const height = fontSize + 6;
-    const x = node.x - width / 2;
-    const y = node.y - height / 2;
+    const x = (node.x ?? 0) - width / 2;
+    const y = (node.y ?? 0) - height / 2;
     ctx.fillStyle = isSelected ? colors.accent : colors.surface;
     ctx.strokeStyle = colors.accent;
     ctx.lineWidth = 1;
@@ -131,11 +144,11 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
     ctx.fillStyle = isSelected ? "#000" : colors.text;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(label, node.x, node.y);
+    ctx.fillText(label, node.x ?? 0, node.y ?? 0);
   };
 
   const nodePointerAreaPaint = (
-    node: any,
+    node: GraphNode,
     color: string,
     ctx: CanvasRenderingContext2D,
     globalScale: number,
@@ -146,35 +159,27 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
     const textWidth = ctx.measureText(label).width;
     const width = textWidth + 8;
     const height = fontSize + 6;
-    const x = node.x - width / 2;
-    const y = node.y - height / 2;
+    const x = (node.x ?? 0) - width / 2;
+    const y = (node.y ?? 0) - height / 2;
     roundRect(ctx, x, y, width, height, 6);
     ctx.fillStyle = color;
     ctx.fill();
   };
 
-  const handleNodeClick = (node: any) => {
+  const handleNodeClick = (node: GraphNode) => {
     const block = blocks.find((b) => b.addr === node.id) || null;
     setSelected(block);
   };
 
-  const linkColor = (link: any) => {
-    if (
-      selected &&
-      typeof link.source !== "string" &&
-      link.source.id === selected.addr
-    ) {
+  const linkColor = (link: GraphLink) => {
+    if (selected && typeof link.source !== "string" && link.source.id === selected.addr) {
       return colors.accent;
     }
     return colors.border;
   };
 
-  const linkWidth = (link: any) => {
-    if (
-      selected &&
-      typeof link.source !== "string" &&
-      link.source.id === selected.addr
-    ) {
+  const linkWidth = (link: GraphLink) => {
+    if (selected && typeof link.source !== "string" && link.source.id === selected.addr) {
       return 2;
     }
     return 1;

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import type { ForceGraphComponent, ForceGraphProps } from 'react-force-graph';
 
 interface CytoscapeNode {
   data: { id: string; label: string };
@@ -23,17 +24,19 @@ interface ReconChainData {
 interface GraphNode {
   id: string;
   label: string;
+  x?: number;
+  y?: number;
+  [key: string]: unknown;
 }
 
-interface GraphLink {
-  source: string;
-  target: string;
-}
+type GraphLink = { source: string | GraphNode; target: string | GraphNode; [key: string]: unknown };
+
+type ReconGraphProps = ForceGraphProps<GraphNode, GraphLink>;
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
   { ssr: false },
-);
+) as unknown as ForceGraphComponent<GraphNode, GraphLink>;
 
 const ReconGraph: React.FC = () => {
   const [data, setData] = useState<ReconChainData | null>(null);
@@ -86,14 +89,14 @@ const ReconGraph: React.FC = () => {
         <ForceGraph2D
           graphData={graphData}
           nodeId="id"
-          nodeCanvasObject={(node: any, ctx) => {
+          nodeCanvasObject={(node, ctx) => {
             ctx.fillStyle = 'lightblue';
             ctx.beginPath();
-            ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI, false);
+            ctx.arc(node.x ?? 0, node.y ?? 0, 4, 0, 2 * Math.PI, false);
             ctx.fill();
             ctx.font = '8px sans-serif';
             const label = node.label || node.id;
-            ctx.fillText(label, node.x + 6, node.y + 2);
+            ctx.fillText(label, (node.x ?? 0) + 6, (node.y ?? 0) + 2);
           }}
           linkDirectionalArrowLength={4}
         />
