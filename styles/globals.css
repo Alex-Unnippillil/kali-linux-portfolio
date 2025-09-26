@@ -68,6 +68,23 @@ html[data-theme='matrix'] {
 
 }
 
+.ubuntu-app__ripple {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.35);
+  transform: scale(0);
+  animation: ubuntu-app-ripple 450ms ease-out;
+  opacity: 0.75;
+}
+
+@keyframes ubuntu-app-ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
