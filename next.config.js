@@ -124,6 +124,9 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    // Only emit browser source maps when explicitly enabled to keep production builds lean.
+    productionBrowserSourceMaps:
+      process.env.ENABLE_PRODUCTION_SOURCEMAPS === 'true',
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
