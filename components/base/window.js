@@ -687,7 +687,7 @@ export class Window extends Component {
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
                         />
                         {(this.id === "settings"
-                            ? <Settings />
+                            ? <Settings context={this.props.context} />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp}

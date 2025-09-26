@@ -14,6 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import QuickSearchOverlay from '../common/QuickSearchOverlay';
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -24,6 +25,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { warmQuickSearchIndex } from '../../lib/quickSearch';
 
 export class Desktop extends Component {
     constructor() {
@@ -69,6 +71,7 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
+            showQuickSearch: false,
         }
     }
 
@@ -192,6 +195,8 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        warmQuickSearchIndex();
+
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
@@ -280,7 +285,11 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'p') {
+            e.preventDefault();
+            this.setState((prev) => ({ showQuickSearch: !prev.showQuickSearch }));
+        }
+        else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
@@ -748,6 +757,23 @@ export class Desktop extends Component {
         }
     }
 
+    openQuickFile = (item) => {
+        if (!item || !item.path) return;
+        if (typeof window !== 'undefined') {
+            window.open(item.path, '_blank', 'noopener,noreferrer');
+        }
+    }
+
+    openQuickSetting = (item) => {
+        if (!item) return;
+        this.openApp('settings', { section: item.section, settingId: item.settingId });
+        this.setState({ showQuickSearch: false });
+    }
+
+    closeQuickSearch = () => {
+        this.setState({ showQuickSearch: false });
+    }
+
     openApp = (objId, params) => {
         const context = params && typeof params === 'object'
             ? {
@@ -779,6 +805,7 @@ export class Desktop extends Component {
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
                 this.setWorkspaceState({ minimized_windows }, this.saveSession);
+            }
 
             const reopen = () => {
                 // if it's minimised, restore its last position
@@ -833,13 +860,11 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-
                 const nextState = { closed_windows, favourite_apps, allAppsView: false };
                 if (context) {
                     nextState.window_context = contextState;
                 }
-                this.setState(nextState, () => {
+                this.setWorkspaceState(nextState, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -1170,6 +1195,14 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <QuickSearchOverlay
+                    open={this.state.showQuickSearch}
+                    onClose={this.closeQuickSearch}
+                    openApp={this.openApp}
+                    openFile={this.openQuickFile}
+                    openSetting={this.openQuickSetting}
+                />
 
             </main>
         )
