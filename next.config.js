@@ -51,6 +51,10 @@ const securityHeaders = [
     value: 'camera=(), microphone=(), geolocation=*',
   },
   {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
     // Allow same-origin framing so the PDF resume renders in an <object>
     key: 'X-Frame-Options',
     value: 'SAMEORIGIN',
@@ -146,8 +150,8 @@ module.exports = withBundleAnalyzer(
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
     },
-    // Security headers are skipped outside production; remove !isProd check to restore them for development.
-    ...(isStaticExport || !isProd
+    // Apply security headers in all non-export builds so local environments mirror production protections.
+    ...(isStaticExport
       ? {}
       : {
           async headers() {
