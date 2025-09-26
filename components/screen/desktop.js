@@ -14,6 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import MobileAppSwitcher from './mobile-app-switcher';
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -24,6 +25,8 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+
+const MOBILE_HEADER_HEIGHT = 56;
 
 export class Desktop extends Component {
     constructor() {
@@ -69,7 +72,11 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
+            isMobile: false,
         }
+        this.touchStartX = null;
+        this.touchStartY = null;
+        this.mobileGestureAttached = false;
     }
 
     createEmptyWorkspaceState = () => ({
@@ -192,6 +199,9 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        this.updateViewportMode();
+        window.addEventListener('resize', this.updateViewportMode);
+
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
@@ -229,7 +239,139 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('resize', this.updateViewportMode);
+        this.detachMobileGestures();
     }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (this.state.isMobile && !prevState.isMobile) {
+            this.attachMobileGestures();
+        } else if (!this.state.isMobile && prevState.isMobile) {
+            this.detachMobileGestures();
+        }
+
+        if (
+            this.state.isMobile &&
+            (
+                prevState.isMobile !== this.state.isMobile ||
+                prevState.closed_windows !== this.state.closed_windows ||
+                prevState.minimized_windows !== this.state.minimized_windows ||
+                prevState.focused_windows !== this.state.focused_windows
+            )
+        ) {
+            this.ensureMobileFocus();
+        }
+    }
+
+    updateViewportMode = () => {
+        if (typeof window === 'undefined') return;
+        const isMobile = window.innerWidth < 768;
+        if (this.state.isMobile === isMobile) {
+            if (isMobile) {
+                this.attachMobileGestures();
+            }
+            return;
+        }
+        this.setState({ isMobile }, () => {
+            if (this.state.isMobile) {
+                this.attachMobileGestures();
+                this.ensureMobileFocus();
+            } else {
+                this.detachMobileGestures();
+            }
+        });
+    };
+
+    attachMobileGestures = () => {
+        if (!this.state.isMobile || this.mobileGestureAttached) return;
+        const area = document.getElementById('window-area');
+        if (!area) return;
+        area.addEventListener('touchstart', this.handleTouchStart, { passive: true });
+        area.addEventListener('touchend', this.handleTouchEnd, { passive: true });
+        this.mobileGestureAttached = true;
+    };
+
+    detachMobileGestures = () => {
+        if (!this.mobileGestureAttached) return;
+        const area = document.getElementById('window-area');
+        if (area) {
+            area.removeEventListener('touchstart', this.handleTouchStart);
+            area.removeEventListener('touchend', this.handleTouchEnd);
+        }
+        this.mobileGestureAttached = false;
+    };
+
+    handleTouchStart = (event) => {
+        if (!this.state.isMobile) return;
+        if (!event.touches || event.touches.length === 0) return;
+        const touch = event.touches[0];
+        this.touchStartX = touch.clientX;
+        this.touchStartY = touch.clientY;
+    };
+
+    handleTouchEnd = (event) => {
+        if (!this.state.isMobile) return;
+        if (!event.changedTouches || event.changedTouches.length === 0) return;
+        if (this.touchStartX === null || this.touchStartY === null) return;
+        const touch = event.changedTouches[0];
+        const dx = touch.clientX - this.touchStartX;
+        const dy = touch.clientY - this.touchStartY;
+        this.touchStartX = null;
+        this.touchStartY = null;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+            const direction = dx > 0 ? -1 : 1;
+            this.cycleApps(direction);
+        }
+    };
+
+    getMobileWindowList = () => {
+        const stack = this.getActiveStack();
+        const seen = new Set();
+        const windowsList = [];
+        const addWindow = (id) => {
+            if (seen.has(id)) return;
+            if (this.state.closed_windows[id] === false && !this.state.minimized_windows[id]) {
+                const meta = apps.find(a => a.id === id);
+                if (meta) {
+                    windowsList.push({ id, title: meta.title, icon: meta.icon });
+                    seen.add(id);
+                }
+            }
+        };
+        stack.forEach(addWindow);
+        apps.forEach(app => addWindow(app.id));
+        return windowsList;
+    };
+
+    getMobileActiveWindowId = (windowsList) => {
+        if (!windowsList || !windowsList.length) return null;
+        const focused = windowsList.find(window => this.state.focused_windows[window.id]);
+        return focused ? focused.id : windowsList[0].id;
+    };
+
+    ensureMobileFocus = () => {
+        if (!this.state.isMobile) return;
+        const windowsList = this.getMobileWindowList();
+        if (!windowsList.length) return;
+        const hasFocused = windowsList.some(window => this.state.focused_windows[window.id]);
+        if (!hasFocused) {
+            this.focus(windowsList[0].id);
+        }
+    };
+
+    handleMobileSelect = (id) => {
+        if (!id) return;
+        if (this.state.closed_windows[id]) {
+            this.openApp(id);
+            return;
+        }
+        if (this.state.minimized_windows[id]) {
+            this.openApp(id);
+            return;
+        }
+        if (this.getFocusedWindowId() === id) return;
+        this.focus(id);
+    };
 
     checkForNewFolders = () => {
         const stored = safeLocalStorage?.getItem('new_folders');
@@ -589,6 +731,7 @@ export class Desktop extends Component {
     }
 
     renderDesktopApps = () => {
+        if (this.state.isMobile) return null;
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
         apps.forEach((app, index) => {
@@ -611,8 +754,9 @@ export class Desktop extends Component {
         return appsJsx;
     }
 
-    renderWindows = () => {
+    renderWindows = (activeMobileId = null) => {
         let windowsJsx = [];
+        const isMobile = this.state.isMobile;
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
@@ -629,8 +773,8 @@ export class Desktop extends Component {
                     hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
-                    resizable: app.resizable,
-                    allowMaximize: app.allowMaximize,
+                    resizable: isMobile ? false : app.resizable,
+                    allowMaximize: isMobile ? false : app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
@@ -638,6 +782,8 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    isMobile,
+                    isMobileActive: !isMobile || app.id === activeMobileId,
                 }
 
                 windowsJsx.push(
@@ -833,13 +979,11 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-
                 const nextState = { closed_windows, favourite_apps, allAppsView: false };
                 if (context) {
                     nextState.window_context = contextState;
                 }
-                this.setState(nextState, () => {
+                this.setWorkspaceState(nextState, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -1065,8 +1209,28 @@ export class Desktop extends Component {
 
     render() {
         const workspaceSummaries = this.getWorkspaceSummaries();
+        const { isMobile } = this.state;
+        const mobileWindows = isMobile ? this.getMobileWindowList() : [];
+        const activeMobileId = isMobile ? this.getMobileActiveWindowId(mobileWindows) : null;
+        const mainClasses = [
+            'h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent',
+            isMobile ? 'pt-16' : 'pt-8',
+        ].join(' ');
+        const windowAreaStyle = isMobile
+            ? { top: `${MOBILE_HEADER_HEIGHT}px`, height: `calc(100% - ${MOBILE_HEADER_HEIGHT}px)` }
+            : undefined;
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main id="desktop" role="main" className={mainClasses}>
+
+                {isMobile && (
+                    <MobileAppSwitcher
+                        windows={mobileWindows}
+                        activeId={activeMobileId}
+                        onSelect={this.handleMobileSelect}
+                        onOpenApplications={this.showAllApps}
+                        onOpenSwitcher={this.openWindowSwitcher}
+                    />
+                )}
 
                 {/* Window Area */}
                 <div
@@ -1074,40 +1238,45 @@ export class Desktop extends Component {
                     role="main"
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
+                    style={windowAreaStyle}
                 >
-                    {this.renderWindows()}
+                    {this.renderWindows(activeMobileId)}
                 </div>
 
                 {/* Background Image */}
                 <BackgroundImage />
 
                 {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
-                    hide={this.state.hideSideBar}
-                    hideSideBar={this.hideSideBar}
-                    favourite_apps={this.state.favourite_apps}
-                    showAllApps={this.showAllApps}
-                    allAppsView={this.state.allAppsView}
-                    closed_windows={this.state.closed_windows}
-                    focused_windows={this.state.focused_windows}
-                    isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                {!isMobile && (
+                    <SideBar apps={apps}
+                        hide={this.state.hideSideBar}
+                        hideSideBar={this.hideSideBar}
+                        favourite_apps={this.state.favourite_apps}
+                        showAllApps={this.showAllApps}
+                        allAppsView={this.state.allAppsView}
+                        closed_windows={this.state.closed_windows}
+                        focused_windows={this.state.focused_windows}
+                        isMinimized={this.state.minimized_windows}
+                        openAppByAppId={this.openApp} />
+                )}
 
                 {/* Taskbar */}
-                <Taskbar
-                    apps={apps}
-                    closed_windows={this.state.closed_windows}
-                    minimized_windows={this.state.minimized_windows}
-                    focused_windows={this.state.focused_windows}
-                    openApp={this.openApp}
-                    minimize={this.hasMinimised}
-                    workspaces={workspaceSummaries}
-                    activeWorkspace={this.state.activeWorkspace}
-                    onSelectWorkspace={this.switchWorkspace}
-                />
+                {!isMobile && (
+                    <Taskbar
+                        apps={apps}
+                        closed_windows={this.state.closed_windows}
+                        minimized_windows={this.state.minimized_windows}
+                        focused_windows={this.state.focused_windows}
+                        openApp={this.openApp}
+                        minimize={this.hasMinimised}
+                        workspaces={workspaceSummaries}
+                        activeWorkspace={this.state.activeWorkspace}
+                        onSelectWorkspace={this.switchWorkspace}
+                    />
+                )}
 
                 {/* Desktop Apps */}
-                {this.renderDesktopApps()}
+                {!isMobile && this.renderDesktopApps()}
 
                 {/* Context Menus */}
                 <DesktopMenu
