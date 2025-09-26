@@ -1,24 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
-import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
-import { safeLocalStorage } from '../../utils/safeStorage';
-
-type AppMeta = {
-  id: string;
-  title: string;
-  icon: string;
-  disabled?: boolean;
-  favourite?: boolean;
-};
-
-const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'favorites', label: 'Favorites' },
-  { id: 'recent', label: 'Recent' },
-  { id: 'utilities', label: 'Utilities' },
-  { id: 'games', label: 'Games' }
-];
+import ApplicationsMenu, { AppMeta } from './ApplicationsMenu';
+import { dispatchOpenApp } from '../../utils/appPersistence';
+import useRecentApps from '../../hooks/useRecentApps';
+import useFavoriteApps from '../../hooks/useFavoriteApps';
 
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -29,15 +15,19 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
-  const recentApps = useMemo(() => {
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
-    } catch {
-      return [];
-    }
-  }, [allApps, open]);
+  const favoriteIds = useFavoriteApps();
+  const recentIds = useRecentApps();
+  const favoriteApps = useMemo(
+    () => allApps.filter(a => favoriteIds.includes(a.id) || a.favourite),
+    [allApps, favoriteIds],
+  );
+  const recentApps = useMemo(
+    () =>
+      recentIds
+        .map(id => allApps.find(a => a.id === id))
+        .filter(Boolean) as AppMeta[],
+    [allApps, recentIds],
+  );
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
@@ -72,7 +62,8 @@ const WhiskerMenu: React.FC = () => {
   }, [open, category, query]);
 
   const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+    if (!id) return;
+    dispatchOpenApp(id);
     setOpen(false);
   };
 
@@ -132,50 +123,21 @@ const WhiskerMenu: React.FC = () => {
         Applications
       </button>
       {open && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
-          tabIndex={-1}
+        <ApplicationsMenu
+          menuRef={menuRef}
+          category={category}
+          onCategoryChange={setCategory}
+          query={query}
+          onQueryChange={setQuery}
+          apps={currentApps}
+          highlight={highlight}
+          onOpenApp={openSelectedApp}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
             }
           }}
-        >
-          <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-          <div className="p-3">
-            <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-              {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        />
       )}
     </div>
   );
