@@ -26,7 +26,7 @@ jobs:
         run: yarn lint
 
       - name: Type Check
-        run: yarn tsc --noEmit
+        run: yarn typecheck
 
       - name: Building
         run: yarn build
