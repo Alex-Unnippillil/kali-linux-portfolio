@@ -147,13 +147,13 @@ const SpotifyApp = () => {
 
   return (
     <div
-      className={`h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col ${
-        mini ? "p-2" : "p-4"
+      className={`h-full w-full bg-kali-background text-kali-text flex flex-col ${
+        mini ? "p-space-2" : "p-space-4"
       }`}
       tabIndex={0}
       onKeyDown={handleKey}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-space-2">
         <div className="space-x-1.5">
           <button
             onClick={previous}
@@ -180,7 +180,7 @@ const SpotifyApp = () => {
             ⏭
           </button>
         </div>
-        <div className="space-x-4 text-sm flex items-center">
+        <div className="space-x-space-4 text-sm flex items-center">
           <label className="flex items-center space-x-1">
             <span>Crossfade</span>
             <input
@@ -201,7 +201,7 @@ const SpotifyApp = () => {
           </label>
           <button
             onClick={() => setMini(!mini)}
-            className="border px-2 py-1 rounded"
+            className="border px-space-2 py-space-1 rounded-control"
           >
             {mini ? "Full" : "Mini"}
           </button>
@@ -218,13 +218,13 @@ const SpotifyApp = () => {
             playerRef.current?.seek(t);
             setProgress(t);
           }}
-          className="w-full h-1 mb-2"
+          className="w-full h-1 mb-space-2"
           disabled={!queue.length}
         />
       )}
       {currentTrack && (
-        <div className="mt-2">
-          <div className="relative w-32 aspect-square mb-2 shadow-lg overflow-hidden">
+        <div className="mt-space-2">
+          <div className="relative w-32 aspect-square mb-space-2 shadow-elevated overflow-hidden">
             {currentTrack.cover ? (
               <img
                 src={currentTrack.cover}
@@ -232,36 +232,36 @@ const SpotifyApp = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-[var(--color-muted)]" />
+              <div className="w-full h-full bg-kali-muted" />
             )}
             <div className="absolute inset-0 bg-black/40" />
           </div>
-          <p className="mb-2">{currentTrack.title}</p>
+          <p className="mb-space-2">{currentTrack.title}</p>
           {analyser && <Visualizer analyser={analyser} />}
           <Lyrics title={currentTrack.title} player={playerRef.current} />
         </div>
       )}
       {!mini && (
-        <div className="flex-1 overflow-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex-1 overflow-auto mt-space-4 grid grid-cols-1 md:grid-cols-2 gap-space-4">
           <div className="hidden md:block">
-            <h2 className="mb-2 text-lg">Playlist JSON</h2>
+            <h2 className="mb-space-2 text-lg">Playlist JSON</h2>
             <textarea
-              className="w-full h-40 text-black p-1"
+              className="w-full h-40 text-black p-space-1"
               value={playlistText}
               onChange={(e) => setPlaylistText(e.target.value)}
             />
             <button
               onClick={loadPlaylist}
-              className="mt-2 rounded bg-blue-600 px-2 py-1 text-sm"
+              className="mt-space-2 rounded-control bg-kali-primary px-space-2 py-space-1 text-sm text-kali-inverse"
             >
               Load Playlist
             </button>
-            <h2 className="mt-4 mb-2 text-lg">Queue</h2>
-            <ul className="max-h-40 overflow-auto border border-gray-700 rounded">
+            <h2 className="mt-space-4 mb-space-2 text-lg">Queue</h2>
+            <ul className="max-h-40 overflow-auto border border-gray-700 rounded-panel">
               {queue.map((t, i) => (
                 <li key={t.url} className={i === current ? "bg-gray-700" : ""}>
                   <button
-                    className="w-full text-left px-2 py-1 hover:bg-gray-600 focus:outline-none"
+                    className="w-full text-left px-space-2 py-space-1 hover:bg-gray-600 focus:outline-none"
                     onClick={() => setCurrent(i)}
                   >
                     {t.title || t.url}
@@ -271,12 +271,12 @@ const SpotifyApp = () => {
             </ul>
           </div>
           <div>
-            <h2 className="mb-2 text-lg">Recently Played</h2>
-            <ul className="max-h-72 overflow-auto border border-gray-700 rounded">
+            <h2 className="mb-space-2 text-lg">Recently Played</h2>
+            <ul className="max-h-72 overflow-auto border border-gray-700 rounded-panel">
               {recent.map((t) => (
                 <li
                   key={t.url}
-                  className="px-2 py-1 border-b border-gray-700 last:border-b-0"
+                  className="px-space-2 py-space-1 border-b border-gray-700 last:border-b-0"
                 >
                   {t.title || t.url}
                 </li>

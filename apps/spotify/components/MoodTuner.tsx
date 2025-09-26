@@ -81,8 +81,8 @@ const MoodTuner = () => {
   const index = moods.indexOf(mood);
 
   return (
-    <div className="h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col">
-      <div className="p-2 flex items-center gap-2 bg-black bg-opacity-30">
+    <div className="h-full w-full bg-kali-background text-kali-text flex flex-col">
+      <div className="p-space-2 flex items-center gap-space-2 bg-black bg-opacity-30">
         <input
           type="range"
           min={0}
@@ -105,7 +105,7 @@ const MoodTuner = () => {
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
           />
-          <div className="flex justify-center space-x-4 p-2 bg-black bg-opacity-30">
+          <div className="flex justify-center space-x-space-4 p-space-2 bg-black bg-opacity-30">
             <button
               onClick={previous}
               title="Prev (P)"

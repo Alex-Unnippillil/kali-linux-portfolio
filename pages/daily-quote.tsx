@@ -56,10 +56,10 @@ export default function DailyQuote() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-ub-cool-grey text-white p-space-4">
       <div
         ref={cardRef}
-        className="group relative p-6 rounded text-center bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 text-white"
+        className="group relative p-space-6 rounded-panel text-center bg-gradient-to-br from-kali-primary/30 to-kali-secondary/30 text-white"
       >
         {quote ? (
           <div key={quote.content} className="animate-quote">
@@ -73,17 +73,17 @@ export default function DailyQuote() {
               {quote.content}
             </p>
             <p className="text-sm text-white/80">— {quote.author}</p>
-            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+            <div className="absolute top-space-2 right-space-2 flex gap-space-2 opacity-0 group-hover:opacity-100 transition">
               <button
                 onClick={copyQuote}
-                className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                className="p-space-1 bg-black/30 hover:bg-black/50 rounded-control"
                 aria-label="Copy quote"
               >
                 <CopyIcon className="w-6 h-6" />
               </button>
               <button
                 onClick={tweetQuote}
-                className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                className="p-space-1 bg-black/30 hover:bg-black/50 rounded-control"
                 aria-label="Tweet quote"
               >
                 <TwitterIcon className="w-6 h-6" />
@@ -94,9 +94,9 @@ export default function DailyQuote() {
           <p>Loading...</p>
         )}
       </div>
-      <div className="flex gap-2 mt-4">
+      <div className="flex gap-space-2 mt-space-4">
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-space-4 py-space-2 bg-gray-700 hover:bg-gray-600 rounded-control"
           onClick={exportCard}
           disabled={!quote}
         >

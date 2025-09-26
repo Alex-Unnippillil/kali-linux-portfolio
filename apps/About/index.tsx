@@ -31,28 +31,28 @@ function LinkedInIcon({ className }: { className?: string }) {
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen w-full bg-[var(--kali-bg)] text-sm">
-      <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
-        <section className="flex items-center mb-8">
+    <div className="min-h-screen w-full bg-kali-backdrop text-sm">
+      <div className="max-w-screen-md mx-auto my-space-4 sm:my-space-6 p-space-4 sm:p-space-6">
+        <section className="flex items-center mb-space-6">
           <Image
             src="/images/logos/bitmoji.png"
             alt="Alex Unnippillil"
             width={128}
             height={128}
-            className="w-32 h-32 rounded-full"
+            className="w-32 h-32 rounded-pill"
             priority
           />
-          <div className="ml-4 flex-1 space-y-1.5">
+          <div className="ml-space-4 flex-1 space-y-space-1-5">
             <h1 className="text-xl font-bold">Alex Unnippillil</h1>
             <p className="text-gray-200">Cybersecurity Specialist</p>
           </div>
-          <div className="ml-4 flex gap-3">
+          <div className="ml-space-4 flex gap-space-3">
             <a
               href="https://github.com/unnippillil"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub"
-              className="text-white"
+              className="text-kali-text"
             >
               <GitHubIcon className="w-6 h-6" />
             </a>
@@ -61,7 +61,7 @@ export default function AboutPage() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="LinkedIn"
-              className="text-white"
+              className="text-kali-text"
             >
               <LinkedInIcon className="w-6 h-6" />
             </a>

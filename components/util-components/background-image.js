@@ -42,7 +42,7 @@ export default function BackgroundImage() {
     }, [bgImageName, useKaliWallpaper]);
 
     return (
-        <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
+        <div className="bg-ubuntu-img absolute z-underlay top-0 right-0 overflow-hidden h-full w-full">
             {useKaliWallpaper || bgImageName === 'kali-gradient' ? (
                 <KaliWallpaper />
             ) : (

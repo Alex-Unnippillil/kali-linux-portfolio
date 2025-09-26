@@ -23,7 +23,7 @@ const DRAGON_PATH = "M256 62c-63 0-117 31-152 80 69-21 121 12 150 38 23 21 29 44
 function KaliDragon({ className = '' }) {
   return (
     <svg
-      className={`pointer-events-none text-cyan-300/80 drop-shadow-[0_0_25px_rgba(23,147,209,0.55)] ${className}`}
+      className={`pointer-events-none text-cyan-300/80 drop-shadow-glow ${className}`}
       viewBox="0 0 512 512"
       role="img"
       aria-label="Stylized Kali dragon"
