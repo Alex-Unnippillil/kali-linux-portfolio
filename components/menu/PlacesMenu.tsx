@@ -94,9 +94,11 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
         })}
       </ul>
     </nav>
+
   );
 };
 
 export default PlacesMenu;
 
 export { KALI_ICON_MAP, resolveKaliIcon };
+
