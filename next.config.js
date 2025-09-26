@@ -214,17 +214,57 @@ module.exports = withBundleAnalyzer(
     },
     images: {
       unoptimized: true,
-      domains: [
-        'opengraph.githubassets.com',
-        'raw.githubusercontent.com',
-        'avatars.githubusercontent.com',
-        'i.ytimg.com',
-        'yt3.ggpht.com',
-        'i.scdn.co',
-        'www.google.com',
-        'example.com',
-        'developer.mozilla.org',
-        'en.wikipedia.org',
+      remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: 'opengraph.githubassets.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'raw.githubusercontent.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'avatars.githubusercontent.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'i.ytimg.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'yt3.ggpht.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'i.scdn.co',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'www.google.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'example.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'developer.mozilla.org',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'en.wikipedia.org',
+          pathname: '/**',
+        },
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
