@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
-import AutoSizer from 'react-virtualized-auto-sizer';
-import { Grid } from 'react-window';
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -22,8 +21,10 @@ function fuzzyHighlight(text, query) {
 
 export default function AppGrid({ openApp }) {
   const [query, setQuery] = useState('');
-  const gridRef = useRef(null);
+  const parentRef = useRef(null);
   const columnCountRef = useRef(1);
+  const scrollToIndexRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [focusedIndex, setFocusedIndex] = useState(0);
 
   const filtered = useMemo(() => {
@@ -42,6 +43,28 @@ export default function AppGrid({ openApp }) {
     }
   }, [filtered, focusedIndex]);
 
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const updateWidth = () => {
+      const width = el.clientWidth;
+      setContainerWidth((prev) => (prev === width ? prev : width));
+    };
+    updateWidth();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const width = entry.contentRect.width;
+      setContainerWidth((prev) => (prev === width ? prev : width));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const getColumnCount = (width) => {
     if (width >= 1024) return 8;
     if (width >= 768) return 6;
@@ -49,9 +72,41 @@ export default function AppGrid({ openApp }) {
     return 3;
   };
 
+  const columnCount = useMemo(() => getColumnCount(containerWidth), [containerWidth]);
+  columnCountRef.current = columnCount;
+  const rowCount = useMemo(
+    () => (columnCount > 0 ? Math.ceil(filtered.length / columnCount) : 0),
+    [filtered.length, columnCount]
+  );
+
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 112,
+    overscan: 3,
+  });
+
+  useEffect(() => {
+    scrollToIndexRef.current = (index) => {
+      if (!filtered.length) return;
+      const target = Math.floor(index / columnCountRef.current);
+      rowVirtualizer.scrollToIndex(target, { align: 'nearest' });
+    };
+  }, [filtered.length, rowVirtualizer]);
+
+  useEffect(() => {
+    if (!filtered.length) {
+      rowVirtualizer.scrollToOffset(0);
+      return;
+    }
+    const rowIndex = Math.floor(focusedIndex / columnCountRef.current);
+    rowVirtualizer.scrollToIndex(rowIndex, { align: 'nearest' });
+  }, [focusedIndex, filtered.length, rowVirtualizer]);
+
   const handleKeyDown = useCallback(
     (e) => {
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      if (!filtered.length) return;
       e.preventDefault();
       const colCount = columnCountRef.current;
       let idx = focusedIndex;
@@ -60,33 +115,16 @@ export default function AppGrid({ openApp }) {
       if (e.key === 'ArrowDown') idx = Math.min(idx + colCount, filtered.length - 1);
       if (e.key === 'ArrowUp') idx = Math.max(idx - colCount, 0);
       setFocusedIndex(idx);
-      const row = Math.floor(idx / colCount);
-      const col = idx % colCount;
-      gridRef.current?.scrollToCell({ rowIndex: row, columnIndex: col, rowAlign: 'smart', columnAlign: 'smart' });
+      scrollToIndexRef.current?.(idx);
       setTimeout(() => {
-        const el = document.getElementById('app-' + filtered[idx].id);
+        const targetApp = filtered[idx];
+        if (!targetApp) return;
+        const el = document.getElementById('app-' + targetApp.id);
         el?.focus();
       }, 0);
     },
     [filtered, focusedIndex]
   );
-
-  const Cell = ({ columnIndex, rowIndex, style, data }) => {
-    const index = rowIndex * data.columnCount + columnIndex;
-    if (index >= data.items.length) return null;
-    const app = data.items[index];
-    return (
-      <div style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
-        <UbuntuApp
-          id={app.id}
-          icon={app.icon}
-          name={app.title}
-          displayName={<>{app.nodes}</>}
-          openApp={() => openApp && openApp(app.id)}
-        />
-      </div>
-    );
-  };
 
   return (
     <div className="flex flex-col items-center h-full">
@@ -96,28 +134,57 @@ export default function AppGrid({ openApp }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
-        <AutoSizer>
-          {({ height, width }) => {
-            const columnCount = getColumnCount(width);
-            columnCountRef.current = columnCount;
-            const rowCount = Math.ceil(filtered.length / columnCount);
+      <div
+        ref={parentRef}
+        className="w-full flex-1 h-[70vh] overflow-y-auto outline-none scroll-smooth"
+        onKeyDown={handleKeyDown}
+      >
+        <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const startIndex = virtualRow.index * columnCountRef.current;
+            const items = [];
+            for (let columnIndex = 0; columnIndex < columnCountRef.current; columnIndex++) {
+              const index = startIndex + columnIndex;
+              if (index >= filtered.length) {
+                items.push(
+                  <div key={`empty-${virtualRow.index}-${columnIndex}`} />
+                );
+                continue;
+              }
+              const app = filtered[index];
+              items.push(
+                <div
+                  key={app.id}
+                  className={`flex justify-center items-center p-3 ${index === focusedIndex ? 'ring-2 ring-ubb-orange rounded' : ''}`}
+                >
+                  <UbuntuApp
+                    id={app.id}
+                    icon={app.icon}
+                    name={app.title}
+                    displayName={<>{app.nodes}</>}
+                    openApp={() => openApp && openApp(app.id)}
+                  />
+                </div>
+              );
+            }
             return (
-              <Grid
-                gridRef={gridRef}
-                columnCount={columnCount}
-                columnWidth={width / columnCount}
-                height={height}
-                rowCount={rowCount}
-                rowHeight={112}
-                width={width}
-                className="scroll-smooth"
+              <div
+                key={virtualRow.key}
+                className="grid gap-2"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                  gridTemplateColumns: `repeat(${columnCountRef.current}, minmax(0, 1fr))`,
+                }}
               >
-                {(props) => <Cell {...props} data={{ items: filtered, columnCount }} />}
-              </Grid>
+                {items}
+              </div>
             );
-          }}
-        </AutoSizer>
+          })}
+        </div>
       </div>
     </div>
   );
