@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import Image from 'next/image';
+import { createPortal } from 'react-dom';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 type AppMeta = {
   id: string;
@@ -27,6 +29,10 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const menuId = useId();
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -71,6 +77,32 @@ const WhiskerMenu: React.FC = () => {
     setHighlight(0);
   }, [open, category, query]);
 
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const updatePosition = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    setMenuPosition({
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, updatePosition]);
+
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
     setOpen(false);
@@ -114,12 +146,68 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    searchRef.current?.focus();
+  }, [open, category]);
+
+  useFocusTrap(menuRef, open);
+
+  const menuContent = (
+    <div
+      ref={menuRef}
+      className="z-50 flex bg-ub-grey text-white shadow-lg outline-none"
+      style={{ position: 'absolute', top: menuPosition.top, left: menuPosition.left }}
+      id={menuId}
+      tabIndex={-1}
+      role="menu"
+      aria-label="Applications menu"
+    >
+      <div className="flex flex-col bg-gray-800 p-2">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+            onClick={() => setCategory(cat.id)}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+      <div className="p-3">
+        <input
+          ref={searchRef}
+          className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+          placeholder="Search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+        />
+        <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+          {currentApps.map((app, idx) => (
+            <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
+              <UbuntuApp
+                id={app.id}
+                icon={app.icon}
+                name={app.title}
+                openApp={() => openSelectedApp(app.id)}
+                disabled={app.disabled}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative">
       <button
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
@@ -131,52 +219,7 @@ const WhiskerMenu: React.FC = () => {
         />
         Applications
       </button>
-      {open && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
-          tabIndex={-1}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              setOpen(false);
-            }
-          }}
-        >
-          <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-          <div className="p-3">
-            <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-              {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {mounted && open ? createPortal(menuContent, document.body) : null}
     </div>
   );
 };
