@@ -1,7 +1,57 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
-import { getTheme, setTheme } from './theme';
+import { getTheme, setTheme, THEME_KEY } from './theme';
+
+const DESKTOP_STORAGE_KEYS = [
+  'density',
+  'reduced-motion',
+  'font-scale',
+  'high-contrast',
+  'large-hit-areas',
+  'pong-spin',
+  'allow-network',
+  'haptics',
+  'snap-enabled',
+  'desktop-session',
+  'desktop:simulator:prefs',
+  'pinnedApps',
+  'frequentApps',
+  'recentApps',
+  'app_shortcuts',
+  'window-trash',
+  'window-trash-history',
+  'trash-purge-days',
+  'new_folders',
+  'screen-locked',
+  'shut-down',
+  'booting_screen',
+  'bg-image',
+  THEME_KEY,
+];
+
+const clearDesktopStorage = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const storage = window.localStorage;
+    const keys = new Set([...DESKTOP_STORAGE_KEYS]);
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (key && key.startsWith('desktop:')) {
+        keys.add(key);
+      }
+    }
+    keys.forEach((key) => {
+      try {
+        window.localStorage.removeItem(key);
+      } catch (err) {
+        console.warn('Failed to remove desktop storage key', key, err);
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to clear desktop storage', err);
+  }
+};
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -129,14 +179,7 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
+  clearDesktopStorage();
 }
 
 export async function exportSettings() {
@@ -215,3 +258,5 @@ export async function importSettings(json) {
 }
 
 export const defaults = DEFAULT_SETTINGS;
+
+export { DESKTOP_STORAGE_KEYS, clearDesktopStorage };

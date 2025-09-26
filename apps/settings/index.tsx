@@ -31,8 +31,14 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    setLargeHitAreas,
+    setPongSpin,
+    setAllowNetwork,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -85,22 +91,35 @@ export default function Settings() {
     }
   };
 
-  const handleReset = async () => {
-    if (
-      !window.confirm(
-        "Reset desktop to default settings? This will clear all saved data."
-      )
-    )
-      return;
-    await resetSettings();
-    window.localStorage.clear();
-    setAccent(defaults.accent);
-    setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
-    setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
-    setHighContrast(defaults.highContrast);
-    setTheme("default");
+  const performReset = async () => {
+    setIsResetting(true);
+    setResetError(null);
+    try {
+      await resetSettings();
+      setAccent(defaults.accent);
+      setWallpaper(defaults.wallpaper);
+      setDensity(defaults.density as any);
+      setReducedMotion(defaults.reducedMotion);
+      setFontScale(defaults.fontScale);
+      setHighContrast(defaults.highContrast);
+      setHaptics(defaults.haptics);
+      setLargeHitAreas(defaults.largeHitAreas);
+      setPongSpin(defaults.pongSpin);
+      setAllowNetwork(defaults.allowNetwork);
+      setTheme("default");
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 50);
+    } catch (error) {
+      console.error("Failed to reset settings", error);
+      setResetError("Failed to reset settings. Please try again.");
+      setIsResetting(false);
+    }
+  };
+
+  const handleResetConfirm = () => {
+    setConfirmingReset(true);
+    setResetError(null);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -201,10 +220,10 @@ export default function Settings() {
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
-              onClick={handleReset}
+              onClick={handleResetConfirm}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
-              Reset Desktop
+              Reset to Defaults
             </button>
           </div>
         </>
@@ -301,6 +320,48 @@ export default function Settings() {
           className="hidden"
         />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
+      {confirmingReset && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
+        >
+          <div className="w-full max-w-md rounded-lg bg-ub-cool-grey p-6 text-white shadow-lg">
+            <h2 className="text-xl font-semibold">Reset desktop?</h2>
+            <p className="mt-3 text-sm text-ubt-grey">
+              This will clear pinned apps, shortcuts, trash history, and appearance preferences
+              before reloading the desktop with factory defaults. This action cannot be undone.
+            </p>
+            {resetError && (
+              <p className="mt-3 rounded bg-red-900 bg-opacity-40 p-2 text-sm text-red-200">
+                {resetError}
+              </p>
+            )}
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isResetting) {
+                    setConfirmingReset(false);
+                  }
+                }}
+                className="rounded bg-transparent px-4 py-2 text-ubt-grey hover:text-white"
+                disabled={isResetting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={performReset}
+                className="rounded bg-ub-orange px-4 py-2 font-semibold text-white disabled:opacity-60"
+                disabled={isResetting}
+              >
+                {isResetting ? "Resetting…" : "Reset"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
