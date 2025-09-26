@@ -16,8 +16,13 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { validateEnv } from '../lib/env';
 
 import { Ubuntu } from 'next/font/google';
+
+if (typeof window === 'undefined') {
+  validateEnv();
+}
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
