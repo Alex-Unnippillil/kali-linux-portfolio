@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import ContextMenu from '../common/ContextMenu';
 
 type AppMeta = {
   id: string;
@@ -10,6 +11,50 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+};
+
+type AppGridItemProps = {
+  app: AppMeta;
+  highlighted: boolean;
+  onOpen: () => void;
+  onAddFavorite: () => void;
+  onAddPanel: () => void;
+  onAddDesktop: () => void;
+};
+
+const FAVORITES_STORAGE_KEY = 'kali-favorites';
+
+const AppGridItem: React.FC<AppGridItemProps> = ({
+  app,
+  highlighted,
+  onOpen,
+  onAddFavorite,
+  onAddPanel,
+  onAddDesktop,
+}) => {
+  const tileRef = useRef<HTMLDivElement>(null);
+
+  const menuItems = useMemo(
+    () => [
+      { label: 'Add to Favorites', onSelect: onAddFavorite },
+      { label: 'Add to Panel', onSelect: onAddPanel },
+      { label: 'Add to Desktop', onSelect: onAddDesktop },
+    ],
+    [onAddFavorite, onAddPanel, onAddDesktop],
+  );
+
+  return (
+    <div ref={tileRef} className={`relative ${highlighted ? 'ring-2 ring-ubb-orange rounded' : ''}`}>
+      <UbuntuApp
+        id={app.id}
+        icon={app.icon}
+        name={app.title}
+        openApp={onOpen}
+        disabled={app.disabled}
+      />
+      <ContextMenu targetRef={tileRef} items={menuItems} />
+    </div>
+  );
 };
 
 const CATEGORIES = [
@@ -25,11 +70,52 @@ const WhiskerMenu: React.FC = () => {
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const loadFavoriteIds = useCallback(() => {
+    if (!safeLocalStorage) return;
+    try {
+      const raw = JSON.parse(safeLocalStorage.getItem(FAVORITES_STORAGE_KEY) || '[]');
+      if (Array.isArray(raw)) {
+        const filtered = raw.filter((id): id is string => typeof id === 'string');
+        const unique = Array.from(new Set(filtered));
+        setFavoriteIds(prev => {
+          const sameLength = prev.length === unique.length && prev.every((val, idx) => val === unique[idx]);
+          if (!sameLength) {
+            if (unique.length !== filtered.length) {
+              safeLocalStorage?.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(unique));
+            }
+            return unique;
+          }
+          return prev;
+        });
+      } else {
+        setFavoriteIds([]);
+        safeLocalStorage?.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([]));
+      }
+    } catch {
+      setFavoriteIds([]);
+      safeLocalStorage?.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([]));
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFavoriteIds();
+  }, [loadFavoriteIds]);
+
+  useEffect(() => {
+    if (open) {
+      loadFavoriteIds();
+    }
+  }, [open, loadFavoriteIds]);
+
+  const favoriteApps = allApps.filter(app => {
+    if (app.favourite) return true;
+    return favoriteIds.includes(app.id);
+  });
   const recentApps = useMemo(() => {
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
@@ -64,7 +150,7 @@ const WhiskerMenu: React.FC = () => {
       list = list.filter(a => a.title.toLowerCase().includes(q));
     }
     return list;
-  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+  }, [category, query, allApps, favoriteApps, favoriteIds, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
     if (!open) return;
@@ -113,6 +199,31 @@ const WhiskerMenu: React.FC = () => {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
+
+  const addToFavorites = useCallback((id: string) => {
+    const app = allApps.find(a => a.id === id);
+    if (app?.favourite) return;
+    setFavoriteIds(prev => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      safeLocalStorage?.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [allApps]);
+
+  const dispatchDesktopEvent = useCallback((type: string, id: string) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent(type, { detail: id }));
+  }, []);
+
+  const addToPanel = useCallback((id: string) => {
+    dispatchDesktopEvent('desktop-pin-app', id);
+    setFavoriteIds(prev => [...prev]);
+  }, [dispatchDesktopEvent]);
+
+  const addToDesktop = useCallback((id: string) => {
+    dispatchDesktopEvent('desktop-add-shortcut', id);
+  }, [dispatchDesktopEvent]);
 
   return (
     <div className="relative">
@@ -163,15 +274,15 @@ const WhiskerMenu: React.FC = () => {
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
+                <AppGridItem
+                  key={app.id}
+                  app={app}
+                  highlighted={idx === highlight}
+                  onOpen={() => openSelectedApp(app.id)}
+                  onAddFavorite={() => addToFavorites(app.id)}
+                  onAddPanel={() => addToPanel(app.id)}
+                  onAddDesktop={() => addToDesktop(app.id)}
+                />
               ))}
             </div>
           </div>

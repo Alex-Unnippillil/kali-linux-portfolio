@@ -89,6 +89,8 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('desktop-pin-app', this.handleExternalPin);
+        window.addEventListener('desktop-add-shortcut', this.handleExternalAddShortcut);
     }
 
     componentWillUnmount() {
@@ -96,6 +98,38 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('desktop-pin-app', this.handleExternalPin);
+        window.removeEventListener('desktop-add-shortcut', this.handleExternalAddShortcut);
+    }
+
+    handleExternalPin = (event) => {
+        const id = event && event.detail;
+        if (typeof id !== 'string' || !id) return;
+        this.pinApp(id);
+    }
+
+    handleExternalAddShortcut = (event) => {
+        const id = event && event.detail;
+        if (typeof id !== 'string' || !id) return;
+        this.addShortcutToDesktop(id);
+    }
+
+    getPinnedIds = () => {
+        try {
+            const stored = JSON.parse(safeLocalStorage?.getItem('kali-pinned') || '[]');
+            if (Array.isArray(stored)) {
+                return stored.filter(id => typeof id === 'string');
+            }
+        } catch (e) {
+            // ignore and fall back to defaults
+        }
+        return [];
+    }
+
+    savePinnedIds = (ids) => {
+        const unique = Array.from(new Set((ids || []).filter(id => typeof id === 'string')));
+        safeLocalStorage?.setItem('kali-pinned', JSON.stringify(unique));
+        return unique;
     }
 
     checkForNewFolders = () => {
@@ -343,14 +377,12 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
-        } else {
+        let pinnedApps = this.getPinnedIds();
+        if (!pinnedApps.length) {
             pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
+        pinnedApps = this.savePinnedIds(pinnedApps);
+        apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -710,10 +742,7 @@ export class Desktop extends Component {
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        this.savePinnedIds([...this.getPinnedIds(), id])
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -724,10 +753,8 @@ export class Desktop extends Component {
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const pinnedApps = this.getPinnedIds().filter(appId => appId !== id)
+        this.savePinnedIds(pinnedApps)
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
