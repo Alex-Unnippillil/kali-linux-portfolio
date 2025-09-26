@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 type AppMeta = {
   id: string;
@@ -27,14 +28,24 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const lastRecentRef = useRef<AppMeta[]>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useFocusTrap(menuRef, open);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
+    if (!open) {
+      return lastRecentRef.current;
+    }
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+      const mapped = ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+      lastRecentRef.current = mapped;
+      return mapped;
     } catch {
+      lastRecentRef.current = [];
       return [];
     }
   }, [allApps, open]);
@@ -69,7 +80,20 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
-  }, [open, category, query]);
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setHighlight(h => {
+      if (currentApps.length === 0) {
+        return 0;
+      }
+      return Math.min(h, currentApps.length - 1);
+    });
+  }, [open, currentApps.length]);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -84,15 +108,38 @@ const WhiskerMenu: React.FC = () => {
         return;
       }
       if (!open) return;
+      const noModifiers = !e.altKey && !e.metaKey && !e.ctrlKey && !e.shiftKey;
+      const altOnly = e.altKey && !e.metaKey && !e.ctrlKey && !e.shiftKey;
+
       if (e.key === 'Escape') {
         setOpen(false);
-      } else if (e.key === 'ArrowDown') {
+        requestAnimationFrame(() => buttonRef.current?.focus());
+      } else if (altOnly && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        setCategory(current => {
+          const index = CATEGORIES.findIndex(cat => cat.id === current);
+          if (index === -1) return current;
+          const direction = e.key === 'ArrowRight' ? 1 : -1;
+          const nextIndex = (index + direction + CATEGORIES.length) % CATEGORIES.length;
+          return CATEGORIES[nextIndex].id;
+        });
+      } else if (noModifiers && e.key === 'ArrowDown') {
+        if (currentApps.length === 0) return;
         e.preventDefault();
         setHighlight(h => Math.min(h + 1, currentApps.length - 1));
-      } else if (e.key === 'ArrowUp') {
+      } else if (noModifiers && e.key === 'ArrowUp') {
+        if (currentApps.length === 0) return;
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
-      } else if (e.key === 'Enter') {
+      } else if (noModifiers && e.key === 'PageDown') {
+        if (currentApps.length === 0) return;
+        e.preventDefault();
+        setHighlight(h => Math.min(h + 10, currentApps.length - 1));
+      } else if (noModifiers && e.key === 'PageUp') {
+        if (currentApps.length === 0) return;
+        e.preventDefault();
+        setHighlight(h => Math.max(h - 10, 0));
+      } else if (noModifiers && e.key === 'Enter') {
         e.preventDefault();
         const app = currentApps[highlight];
         if (app) openSelectedApp(app.id);
@@ -159,6 +206,8 @@ const WhiskerMenu: React.FC = () => {
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
+              ref={searchInputRef}
+              aria-label="Search applications"
               autoFocus
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
