@@ -3,6 +3,72 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+  KALI_CATEGORIES,
+  KALI_TOOL_REGISTRY,
+  type KaliCategoryId,
+  type KaliSubcategoryId,
+} from '../../data/kali';
+
+type FilterKind = 'builtin' | 'kali-category' | 'kali-subcategory';
+
+interface FilterOption {
+  id: string;
+  label: string;
+  kind: FilterKind;
+  categoryId?: KaliCategoryId;
+  subcategoryId?: KaliSubcategoryId;
+}
+
+const BUILTIN_FILTERS: FilterOption[] = [
+  { id: 'all', label: 'All', kind: 'builtin' },
+  { id: 'favorites', label: 'Favorites', kind: 'builtin' },
+  { id: 'recent', label: 'Recent', kind: 'builtin' },
+  { id: 'utilities', label: 'Utilities', kind: 'builtin' },
+  { id: 'games', label: 'Games', kind: 'builtin' },
+];
+
+const KALI_FILTER_GROUPS = KALI_CATEGORIES.map((category) => ({
+  option: {
+    id: `kali:${category.id}`,
+    label: category.shortLabel,
+    kind: 'kali-category' as const,
+    categoryId: category.id,
+  },
+  subOptions: category.subcategories.map((subcategory) => ({
+    id: `kali:${category.id}:${subcategory.id}`,
+    label: subcategory.label,
+    kind: 'kali-subcategory' as const,
+    categoryId: category.id,
+    subcategoryId: subcategory.id,
+  })),
+}));
+
+const FILTER_LOOKUP = new Map<string, FilterOption>();
+
+BUILTIN_FILTERS.forEach((filter) => FILTER_LOOKUP.set(filter.id, filter));
+KALI_FILTER_GROUPS.forEach(({ option, subOptions }) => {
+  FILTER_LOOKUP.set(option.id, option);
+  subOptions.forEach((sub) => FILTER_LOOKUP.set(sub.id, sub));
+});
+
+const CATEGORY_APP_LOOKUP = (() => {
+  const map = new Map<string, Set<string>>();
+  const register = (key: string, appId: string) => {
+    if (!map.has(key)) {
+      map.set(key, new Set([appId]));
+    } else {
+      map.get(key)!.add(appId);
+    }
+  };
+  KALI_TOOL_REGISTRY.forEach((entry) => {
+    register(`kali:${entry.categoryId}`, entry.appId);
+    if (entry.subcategoryId) {
+      register(`kali:${entry.categoryId}:${entry.subcategoryId}`, entry.appId);
+    }
+  });
+  return map;
+})();
 
 type AppMeta = {
   id: string;
@@ -12,17 +78,9 @@ type AppMeta = {
   favourite?: boolean;
 };
 
-const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'favorites', label: 'Favorites' },
-  { id: 'recent', label: 'Recent' },
-  { id: 'utilities', label: 'Utilities' },
-  { id: 'games', label: 'Games' }
-];
-
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState('all');
+  const [activeFilterId, setActiveFilterId] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -41,21 +99,39 @@ const WhiskerMenu: React.FC = () => {
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
+  const activeFilter = FILTER_LOOKUP.get(activeFilterId) ?? BUILTIN_FILTERS[0];
+
   const currentApps = useMemo(() => {
     let list: AppMeta[];
-    switch (category) {
-      case 'favorites':
-        list = favoriteApps;
+    switch (activeFilter.kind) {
+      case 'builtin':
+        switch (activeFilter.id) {
+          case 'favorites':
+            list = favoriteApps;
+            break;
+          case 'recent':
+            list = recentApps;
+            break;
+          case 'utilities':
+            list = utilityApps;
+            break;
+          case 'games':
+            list = gameApps;
+            break;
+          default:
+            list = allApps;
+        }
         break;
-      case 'recent':
-        list = recentApps;
+      case 'kali-category':
+      case 'kali-subcategory': {
+        const allowed = CATEGORY_APP_LOOKUP.get(activeFilter.id);
+        if (!allowed || allowed.size === 0) {
+          list = [];
+        } else {
+          list = allApps.filter((app) => allowed.has(app.id));
+        }
         break;
-      case 'utilities':
-        list = utilityApps;
-        break;
-      case 'games':
-        list = gameApps;
-        break;
+      }
       default:
         list = allApps;
     }
@@ -64,12 +140,12 @@ const WhiskerMenu: React.FC = () => {
       list = list.filter(a => a.title.toLowerCase().includes(q));
     }
     return list;
-  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+  }, [activeFilter, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
-  }, [open, category, query]);
+  }, [open, activeFilterId, query]);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -143,14 +219,34 @@ const WhiskerMenu: React.FC = () => {
           }}
         >
           <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
+            {BUILTIN_FILTERS.map((cat) => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
+                className={`text-left px-2 py-1 rounded mb-1 ${activeFilterId === cat.id ? 'bg-gray-700' : ''}`}
+                onClick={() => setActiveFilterId(cat.id)}
               >
                 {cat.label}
               </button>
+            ))}
+            <div className="mt-2 text-xs uppercase tracking-wide text-gray-400">Kali Categories</div>
+            {KALI_FILTER_GROUPS.map(({ option, subOptions }) => (
+              <div key={option.id} className="mb-1">
+                <button
+                  className={`text-left px-2 py-1 rounded w-full ${activeFilterId === option.id ? 'bg-gray-700' : ''}`}
+                  onClick={() => setActiveFilterId(option.id)}
+                >
+                  {option.label}
+                </button>
+                {subOptions.map((sub) => (
+                  <button
+                    key={sub.id}
+                    className={`text-left px-4 py-1 rounded w-full text-sm ${activeFilterId === sub.id ? 'bg-gray-700' : ''}`}
+                    onClick={() => setActiveFilterId(sub.id)}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
           <div className="p-3">
