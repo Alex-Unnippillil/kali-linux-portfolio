@@ -5,7 +5,7 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "tsc -p tsconfig.gamepad.json",
+    "prebuild": "node scripts/optimize-icons.mjs && tsc -p tsconfig.gamepad.json",
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node scripts/safe-copy.mjs",
@@ -21,7 +21,8 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
-    "verify:all": "node scripts/verify.mjs"
+    "verify:all": "node scripts/verify.mjs",
+    "svgo:icons": "node scripts/optimize-icons.mjs"
   },
   "engines": {
     "node": "20.19.5"
@@ -138,6 +139,7 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "svgo": "^3.3.2",
     "test-exclude": "7.0.1",
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
