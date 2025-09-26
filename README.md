@@ -54,6 +54,8 @@ yarn export && npx serve out
 ```
 Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
+> `NEXT_PUBLIC_STATIC_EXPORT=true` switches `next.config.js` to `output: 'export'` and causes `next build` to populate `.next/export/` and `export-detail.json`. Keep the flag unset when running the serverful build so `/api/*` routes remain available.
+
 ### Install as PWA for Sharing
 
 To send text or links directly into the Sticky Notes app:
@@ -215,7 +217,7 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
 | `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
-| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` so Next.js enables `output: 'export'` and writes `.next/export`; leave unset for serverful builds so API routes stay active. |
 | `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
