@@ -12,6 +12,7 @@
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
+    "dedupe:check": "yarn dedupe --check",
     "test:watch": "jest --watch",
     "lint": "eslint . --max-warnings=0",
     "tsc": "tsc",
