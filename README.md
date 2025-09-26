@@ -81,7 +81,7 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
 
-See `.env.local.example` for the full list.
+See `.env.local.example` for the full list. To confirm deployment parity, run `yarn check:vercel-env` (requires access to the Vercel project or a valid `VERCEL_TOKEN`) and ensure every key from the example file exists in the remote environment.
 
 ---
 
@@ -92,6 +92,7 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn check:vercel-env` – compare `.env.local.example` with `vercel env ls` output and fail if any keys are missing remotely.
 
 ---
 
