@@ -67,6 +67,27 @@ const WhiskerMenu: React.FC = () => {
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
+    const storedCategory = safeLocalStorage?.getItem('kali-last-cat');
+    const defaultCategory = favoriteApps.length > 0 ? 'favorites' : 'all';
+    const isValidCategory = CATEGORIES.some(cat => cat.id === storedCategory);
+
+    if (isValidCategory && storedCategory) {
+      if (storedCategory === 'favorites' && favoriteApps.length === 0) {
+        setCategory(prev => (prev !== defaultCategory ? defaultCategory : prev));
+      } else {
+        setCategory(prev => (prev !== storedCategory ? storedCategory : prev));
+      }
+    } else {
+      setCategory(prev => (prev !== defaultCategory ? defaultCategory : prev));
+    }
+  }, [favoriteApps]);
+
+  useEffect(() => {
+    if (!safeLocalStorage) return;
+    safeLocalStorage.setItem('kali-last-cat', category);
+  }, [category]);
+
+  useEffect(() => {
     if (!open) return;
     setHighlight(0);
   }, [open, category, query]);
