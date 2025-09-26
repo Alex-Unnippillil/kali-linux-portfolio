@@ -10,10 +10,10 @@ import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
-  screens: Record<string, React.ReactNode> = {};
+class AboutAlex extends Component {
+  screens = {};
 
-  constructor(props: unknown) {
+  constructor(props) {
     super(props);
     this.state = {
       screen: <></>,
@@ -37,10 +37,10 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       lastVisitedScreen = 'about';
     }
 
-    this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
+    this.changeScreen({ id: lastVisitedScreen });
   }
 
-  changeScreen = (e: any) => {
+  changeScreen = (e) => {
     const screen = e.id || e.target.id;
     localStorage.setItem('about-section', screen);
     ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
@@ -82,11 +82,11 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     </>
   );
 
-  handleNavKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  handleNavKeyDown = (e) => {
     const tabs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')
+      e.currentTarget.querySelectorAll('[role="tab"]')
     );
-    let index = tabs.indexOf(document.activeElement as HTMLElement);
+    let index = tabs.indexOf(document.activeElement);
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
       e.preventDefault();
       index = (index + 1) % tabs.length;
@@ -260,7 +260,7 @@ const workerApps = [
 ];
 
 function WorkerStatus() {
-  const [status, setStatus] = React.useState<Record<string, string>>({});
+  const [status, setStatus] = React.useState({});
 
   React.useEffect(() => {
     workerApps.forEach((app) => {
@@ -342,9 +342,9 @@ function Education() {
   );
 }
 
-const SkillSection = ({ title, badges }: { title: string; badges: { src: string; alt: string; description: string }[] }) => {
+const SkillSection = ({ title, badges }) => {
   const [filter, setFilter] = React.useState('');
-  const [selected, setSelected] = React.useState<any>(null);
+  const [selected, setSelected] = React.useState(null);
   const filteredBadges = badges.filter((b) => b.alt.toLowerCase().includes(filter.toLowerCase()));
   return (
     <div className="px-2 w-full">
@@ -383,7 +383,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   );
 };
 
-function Skills({ skills }: { skills: any }) {
+function Skills({ skills }) {
   const { networkingSecurity, softwaresOperating, languagesTools, frameworksLibraries } = skills;
   return (
     <>
@@ -419,8 +419,8 @@ function Skills({ skills }: { skills: any }) {
   );
 }
 
-function Projects({ projects }: { projects: any[] }) {
-  const tag_colors: Record<string, string> = {
+function Projects({ projects }) {
+  const tag_colors = {
     python: 'green-400',
     javascript: 'yellow-300',
     html5: 'red-400',
@@ -457,7 +457,7 @@ function Projects({ projects }: { projects: any[] }) {
                 <div className="text-gray-300 font-light text-sm">{project.date}</div>
               </div>
               <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
-                {project.description.map((desc: string) => (
+                {project.description.map((desc) => (
                   <li key={desc} className="list-disc mt-1 text-gray-100">
                     {desc}
                   </li>
@@ -465,7 +465,7 @@ function Projects({ projects }: { projects: any[] }) {
               </ul>
               <div className="flex flex-wrap items-start justify-start text-xs py-2">
                 {project.domains
-                  ? project.domains.map((domain: string) => {
+                  ? project.domains.map((domain) => {
                       const borderColorClass = `border-${tag_colors[domain]}`;
                       const textColorClass = `text-${tag_colors[domain]}`;
                       return (
