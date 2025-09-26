@@ -4,7 +4,8 @@ import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import NotificationBell from '../ui/NotificationBell';
 import WhiskerMenu from '../menu/WhiskerMenu';
-import PlacesMenu from '../menu/PlacesMenu';
+import PerformanceGraph from '../ui/PerformanceGraph';
+
 
 export default class Navbar extends Component {
 	constructor() {
@@ -16,64 +17,37 @@ export default class Navbar extends Component {
                 };
         }
 
-        render() {
-                return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-                                <button
-                                        type="button"
-                                        aria-haspopup="true"
-                                        aria-expanded={this.state.applicationsMenuOpen}
-                                        onClick={() =>
-                                                this.setState((prevState) => ({
-                                                        applicationsMenuOpen: !prevState.applicationsMenuOpen,
-                                                        placesMenuOpen: false
-                                                }))
-                                        }
-                                        className="px-3 h-8 flex items-center hover:bg-kali-menu-hover focus-ring"
-                                >
-                                        Applications
-                                </button>
-                                <button
-                                        type="button"
-                                        aria-haspopup="true"
-                                        aria-expanded={this.state.placesMenuOpen}
-                                        onClick={() =>
-                                                this.setState((prevState) => ({
-                                                        placesMenuOpen: !prevState.placesMenuOpen,
-                                                        applicationsMenuOpen: false
-                                                }))
-                                        }
-                                        className="px-3 h-8 flex items-center hover:bg-kali-menu-hover focus-ring"
-                                >
-                                        Places
-                                </button>
-                                <WhiskerMenu />
-                                <div className="flex items-center">
-                                        <div
-                                                className={
-                                                        'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
-                                                }
-                                        >
-                                                <Clock />
-                                        </div>
-                                        <NotificationBell />
-                                        <button
-                                                type="button"
-                                                id="status-bar"
-                                                aria-label="System status"
-                                                onClick={() => {
-                                                        this.setState({ status_card: !this.state.status_card });
-                                                }}
-                                                className={
-                                                        'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-                                                }
-                                        >
-                                                <Status />
-                                                <QuickSettings open={this.state.status_card} />
-                                        </button>
+		render() {
+			return (
+				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+					<div className="flex items-center">
+						<WhiskerMenu />
+						<PerformanceGraph />
+					</div>
+					<div
+						className={
+							'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+						}
+					>
+						<Clock />
+					</div>
+					<button
+						type="button"
+						id="status-bar"
+						aria-label="System status"
+						onClick={() => {
+							this.setState({ status_card: !this.state.status_card });
+						}}
+						className={
+							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
+						}
+					>
+						<Status />
+						<QuickSettings open={this.state.status_card} />
+					</button>
+				</div>
+			);
+		}
 
-                                </div>
-			</div>
-		);
-	}
+
 }
