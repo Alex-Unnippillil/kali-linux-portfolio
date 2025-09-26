@@ -63,6 +63,14 @@ To send text or links directly into the Sticky Notes app:
 3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
 4. The shared content will appear as a new note.
 
+### Deep links into desktop apps
+
+- Append query parameters to the root URL to open an app with prefilled state:
+  - `/?app=terminal&cmd=help` launches the terminal and runs `help` after the session boots.
+  - Other apps receive the same props, enabling bookmarks that prefill forms or focus a specific workspace.
+- The desktop restores saved window size, position, and dock preferences before applying the deep link, so reopening an app via URL keeps the previous layout intact.
+- All additional parameters are forwarded to the app component as props, making it easy to hydrate complex state from links or bookmarks.
+
 ### Service Worker (SW)
 
 - Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.

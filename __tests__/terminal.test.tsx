@@ -51,6 +51,13 @@ describe('Terminal component', () => {
     expect(ref.current.getContent()).toContain('help');
   });
 
+  it('runs an initial command when provided', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} initialCommand="help" />);
+    await act(async () => {});
+    expect(ref.current.getContent()).toContain('Available commands');
+  });
+
   it('invokes openApp for open command', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
