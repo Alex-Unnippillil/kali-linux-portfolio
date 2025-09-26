@@ -37,18 +37,20 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
+        const canMeasure = typeof window !== "undefined";
         const isPortrait =
-            typeof window !== "undefined" && window.innerHeight > window.innerWidth;
-        this.startX =
-            props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? 10;
+            canMeasure && window.innerHeight > window.innerWidth;
+        const isMobile = Boolean(props?.isMobile);
+        this.startX = isMobile
+            ? 0
+            : (props.initialX ?? (isPortrait ? window.innerWidth * 0.05 : 60));
+        this.startY = isMobile ? 0 : (props.initialY ?? 10);
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: isMobile ? 100 : props.defaultWidth || (isPortrait ? 90 : 60),
+            height: isMobile ? 100 : props.defaultHeight || 85,
             closed: false,
-            maximized: false,
+            maximized: isMobile ? true : false,
             parentSize: {
                 height: 100,
                 width: 100
@@ -66,7 +68,7 @@ export class Window extends Component {
 
     componentDidMount() {
         this.id = this.props.id;
-        this.setDefaultWindowDimenstion();
+        this.initializeWindowSize();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -96,7 +98,50 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps) {
+        if (this.props.isMobile && !prevProps.isMobile) {
+            this.initializeWindowSize();
+        } else if (!this.props.isMobile && prevProps.isMobile) {
+            const canMeasure = typeof window !== 'undefined';
+            if (canMeasure) {
+                const isPortrait = window.innerHeight > window.innerWidth;
+                this.startX = this.props.initialX ?? (isPortrait ? window.innerWidth * 0.05 : 60);
+                this.startY = this.props.initialY ?? 10;
+            } else {
+                this.startX = this.props.initialX ?? 60;
+                this.startY = this.props.initialY ?? 10;
+            }
+            this.setState({ maximized: false }, () => {
+                this.setDefaultWindowDimenstion();
+            });
+        }
+    }
+
+    initializeWindowSize = () => {
+        const canMeasure = typeof window !== 'undefined';
+        if (this.props.isMobile) {
+            this.startX = 0;
+            this.startY = 0;
+            this.setState({ height: 100, width: 100, maximized: true }, this.resizeBoundries);
+            return;
+        }
+        if (!canMeasure) {
+            return;
+        }
+        const isPortrait = window.innerHeight > window.innerWidth;
+        this.startX = this.props.initialX ?? (isPortrait ? window.innerWidth * 0.05 : 60);
+        this.startY = this.props.initialY ?? 10;
+        this.setDefaultWindowDimenstion();
+    };
+
     setDefaultWindowDimenstion = () => {
+        if (this.props.isMobile) {
+            this.setState({ height: 100, width: 100, maximized: true }, this.resizeBoundries);
+            return;
+        }
+        if (typeof window === 'undefined') {
+            return;
+        }
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
@@ -117,6 +162,17 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
+        if (typeof window === 'undefined') return;
+        if (this.props.isMobile) {
+            this.setState({
+                parentSize: { height: 0, width: 0 }
+            }, () => {
+                if (this._uiExperiments) {
+                    this.scheduleUsageCheck();
+                }
+            });
+            return;
+        }
         this.setState({
             parentSize: {
                 height: window.innerHeight //parent height
@@ -616,6 +672,35 @@ export class Window extends Component {
     }
 
     render() {
+        const isMobile = Boolean(this.props.isMobile);
+        const isMobileActive = !isMobile || this.props.isMobileActive;
+        const frameStyle = {
+            width: isMobile ? '100%' : `${this.state.width}%`,
+            height: isMobile ? '100%' : `${this.state.height}%`,
+            ...(isMobile && !isMobileActive ? { display: 'none' } : {}),
+        };
+        const frameClasses = [
+            this.state.cursorType,
+            this.state.closed ? 'closed-window' : '',
+            this.state.maximized ? 'duration-300' : '',
+            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+            this.state.grabbed ? 'opacity-70' : '',
+            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
+            this.props.isFocused ? 'z-30' : 'z-20',
+            'opened-window overflow-hidden flex flex-col window-shadow main-window',
+            isMobile ? 'fixed inset-0 w-full h-full max-w-none max-h-none rounded-none' : 'absolute min-w-1/4 min-h-1/4',
+            styles.windowFrame,
+            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
+            this.state.maximized ? styles.windowFrameMaximized : '',
+        ].filter(Boolean).join(' ');
+        const draggablePositionProps = isMobile
+            ? { position: { x: 0, y: 0 } }
+            : { defaultPosition: { x: this.startX, y: this.startY } };
+        const bounds = isMobile
+            ? false
+            : { left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height };
+        const tabIndex = isMobile && !isMobileActive ? -1 : 0;
+        const ariaHidden = isMobile && !isMobileActive ? 'true' : undefined;
         return (
             <>
                 {this.state.snapPreview && (
@@ -642,28 +727,18 @@ export class Window extends Component {
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
-                    defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    disabled={isMobile}
+                    bounds={bounds}
+                    {...draggablePositionProps}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={[
-                            this.state.cursorType,
-                            this.state.closed ? 'closed-window' : '',
-                            this.state.maximized ? 'duration-300' : '',
-                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
-                            this.state.grabbed ? 'opacity-70' : '',
-                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
-                            this.props.isFocused ? 'z-30' : 'z-20',
-                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
-                            styles.windowFrame,
-                            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
-                            this.state.maximized ? styles.windowFrameMaximized : '',
-                        ].filter(Boolean).join(' ')}
+                        style={frameStyle}
+                        className={frameClasses}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
-                        tabIndex={0}
+                        aria-hidden={ariaHidden}
+                        tabIndex={tabIndex}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}

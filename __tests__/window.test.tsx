@@ -51,6 +51,51 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window mobile layout', () => {
+  it('expands to full screen on mobile', () => {
+    const { container } = render(
+      <Window
+        id="mobile-window"
+        title="Mobile"
+        screen={() => <div>mobile</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        isMobile
+        isMobileActive
+      />
+    );
+
+    const element = container.querySelector('#mobile-window') as HTMLElement;
+    expect(element).toHaveStyle({ width: '100%', height: '100%' });
+    expect(element.className).toMatch(/fixed/);
+  });
+
+  it('hides inactive windows on mobile', () => {
+    const { container } = render(
+      <Window
+        id="mobile-window-hidden"
+        title="Hidden"
+        screen={() => <div>hidden</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        isMobile
+        isMobileActive={false}
+      />
+    );
+
+    const element = container.querySelector('#mobile-window-hidden') as HTMLElement;
+    expect(element).toHaveAttribute('aria-hidden', 'true');
+    expect(element).toHaveStyle({ display: 'none' });
+    expect(element.tabIndex).toBe(-1);
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     setViewport(1920, 1080);
