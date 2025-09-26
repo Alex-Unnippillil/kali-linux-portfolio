@@ -617,8 +617,15 @@ export class Window extends Component {
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
+                        className="fixed pointer-events-none z-40 transition-opacity"
+                        style={{
+                            left: this.state.snapPreview.left,
+                            top: this.state.snapPreview.top,
+                            width: this.state.snapPreview.width,
+                            height: this.state.snapPreview.height,
+                            backgroundColor: 'var(--kali-blue)',
+                            opacity: 0.35
+                        }}
                     />
                 )}
                 <Draggable
