@@ -19,6 +19,11 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  /* Typography */
+  --font-ui: "Ubuntu", "Cantarell", "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Ubuntu Mono", "Fira Code", "Fira Mono", "Liberation Mono", Menlo, Consolas,
+    monospace;
   accent-color: var(--color-control-accent);
 }
 

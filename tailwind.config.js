@@ -1,4 +1,5 @@
 const plugin = require('tailwindcss/plugin');
+const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
   darkMode: 'class',
@@ -38,7 +39,9 @@ module.exports = {
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
       },
       fontFamily: {
-        ubuntu: ['Ubuntu', 'sans-serif'],
+        sans: ['var(--font-ui)', ...defaultTheme.fontFamily.sans],
+        mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
+        ubuntu: ['var(--font-ui)', ...defaultTheme.fontFamily.sans],
       },
       minWidth: {
         '0': '0',
