@@ -35,6 +35,7 @@ const getPort = () =>
     console.log(`next: ${nextVersion}`);
 
     await run('yarn', ['install', '--immutable']);
+    await run('node', ['scripts/check-security-headers.mjs']);
     await run('yarn', ['lint']);
     await run('yarn', ['tsc', '--noEmit']);
     await run('yarn', ['build']);
