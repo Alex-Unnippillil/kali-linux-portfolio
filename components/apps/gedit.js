@@ -147,7 +147,7 @@ export class Gedit extends Component {
                 <div className="flex items-center justify-between w-full bg-ub-gedit-light bg-opacity-60 border-b border-t border-blue-400 text-sm">
                     <span className="font-bold ml-2">Send a Message to Me</span>
                     <div className="flex">
-                        <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</div>
+                        <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80 interactive-target">Send</div>
                     </div>
                 </div>
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">

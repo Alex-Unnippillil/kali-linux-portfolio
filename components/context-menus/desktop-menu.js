@@ -48,14 +48,14 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? " block " : " hidden ") + " w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
                 onClick={props.addNewFolder}
                 type="button"
                 role="menuitem"
                 aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">New Folder</span>
             </button>
@@ -64,7 +64,7 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
@@ -81,7 +81,7 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">Open in Terminal</span>
             </button>
@@ -91,7 +91,7 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">Change Background...</span>
             </button>
@@ -104,7 +104,7 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">Settings</span>
             </button>
@@ -114,7 +114,7 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
@@ -124,7 +124,7 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 cursor-pointer"
             >
                 <span className="ml-5">Clear Session</span>
             </button>

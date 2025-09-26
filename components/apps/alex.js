@@ -67,7 +67,7 @@ export class AboutAlex extends Component {
                         id={section.id}
                         tabIndex="0"
                         onFocus={this.changeScreen}
-                        className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
+                        className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5 interactive-target"}
                     >
                         <Image
                             className=" w-3 md:w-4"
@@ -90,7 +90,7 @@ export class AboutAlex extends Component {
                 <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
                     {this.renderNavLinks()}
                 </div>
-                <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1">
+                <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1 interactive-target">
                     <div className=" w-3.5 border-t border-white"></div>
                     <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
                     <div className=" w-3.5 border-t border-white"></div>

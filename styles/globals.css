@@ -77,3 +77,39 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+/* Interaction utilities */
+.interactive-target {
+  cursor: pointer;
+  min-height: var(--hit-area);
+  min-width: var(--hit-area);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.interactive-icon {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--hit-area);
+  min-height: var(--hit-area);
+  border-radius: var(--radius-round);
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.draggable-chrome {
+  cursor: move;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-app-region: drag;
+}
+
+.draggable-chrome .chrome-action {
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  min-width: var(--hit-area);
+  min-height: var(--hit-area);
+}
