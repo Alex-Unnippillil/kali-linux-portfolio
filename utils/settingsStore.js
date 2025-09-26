@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  lockScreenOverlay: true,
 };
 
 export async function getAccent() {
@@ -123,6 +124,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getLockScreenOverlay() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockScreenOverlay;
+  const stored = window.localStorage.getItem('lock-screen-overlay');
+  return stored === null ? DEFAULT_SETTINGS.lockScreenOverlay : stored === 'true';
+}
+
+export async function setLockScreenOverlay(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('lock-screen-overlay', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('lock-screen-overlay');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    lockScreenOverlay,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getLockScreenOverlay(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    lockScreenOverlay,
     theme,
   });
 }
@@ -199,6 +215,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    lockScreenOverlay,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +228,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (lockScreenOverlay !== undefined) await setLockScreenOverlay(lockScreenOverlay);
   if (theme !== undefined) setTheme(theme);
 }
 
