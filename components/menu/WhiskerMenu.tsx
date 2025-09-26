@@ -83,6 +83,17 @@ const WhiskerMenu: React.FC = () => {
         setOpen(o => !o);
         return;
       }
+      if (
+        e.key === 'F1' &&
+        e.altKey &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.shiftKey
+      ) {
+        e.preventDefault();
+        setOpen(o => !o);
+        return;
+      }
       if (!open) return;
       if (e.key === 'Escape') {
         setOpen(false);
