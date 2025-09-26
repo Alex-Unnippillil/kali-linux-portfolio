@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const appsContainerRef = useRef<HTMLDivElement>(null);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -66,10 +68,29 @@ const WhiskerMenu: React.FC = () => {
     return list;
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
+  const columns = 3;
+  const rowCount = Math.ceil(currentApps.length / columns);
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => appsContainerRef.current,
+    estimateSize: () => 112,
+    overscan: 3,
+  });
+
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
-  }, [open, category, query]);
+    rowVirtualizer.scrollToOffset(0);
+  }, [open, category, query, currentApps.length, rowVirtualizer]);
+
+  useEffect(() => {
+    if (!open || !currentApps.length) {
+      rowVirtualizer.scrollToOffset(0);
+      return;
+    }
+    const rowIndex = Math.floor(highlight / columns);
+    rowVirtualizer.scrollToIndex(rowIndex, { align: 'nearest' });
+  }, [highlight, open, currentApps.length, rowVirtualizer]);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -161,18 +182,56 @@ const WhiskerMenu: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-              {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
-              ))}
+            <div
+              ref={appsContainerRef}
+              className="max-h-64 overflow-y-auto outline-none scroll-smooth"
+            >
+              <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const startIndex = virtualRow.index * columns;
+                  const items = [] as React.ReactNode[];
+                  for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
+                    const index = startIndex + columnIndex;
+                    if (index >= currentApps.length) {
+                      items.push(
+                        <div key={`empty-${virtualRow.index}-${columnIndex}`} />
+                      );
+                      continue;
+                    }
+                    const app = currentApps[index];
+                    items.push(
+                      <div
+                        key={app.id}
+                        className={`${index === highlight ? 'ring-2 ring-ubb-orange rounded' : ''}`}
+                      >
+                        <UbuntuApp
+                          id={app.id}
+                          icon={app.icon}
+                          name={app.title}
+                          openApp={() => openSelectedApp(app.id)}
+                          disabled={app.disabled}
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={virtualRow.key}
+                      className="grid gap-2"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {items}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
