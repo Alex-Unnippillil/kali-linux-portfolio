@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Image from 'next/image';
+import { BatteryFull, Wifi, WifiOff } from "lucide-react";
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
@@ -37,33 +37,51 @@ export default function Status() {
     };
   }, []);
 
+  const networkStatusLabel = online
+    ? allowNetwork
+      ? "Online"
+      : "Online (requests blocked)"
+    : "Offline";
+
   return (
     <div className="flex justify-center items-center">
       <span
-        className="mx-1.5 relative"
-        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
+        className="mx-1.5 relative inline-flex"
+        role="img"
+        aria-label={networkStatusLabel}
+        title={networkStatusLabel}
       >
-        <Image
-          width={16}
-          height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
-          alt={online ? "online" : "offline"}
-          className="inline status-symbol w-4 h-4"
-          sizes="16px"
-        />
+        {online ? (
+          <Wifi
+            aria-hidden="true"
+            focusable="false"
+            className="status-symbol h-4 w-4"
+            strokeWidth={2}
+          />
+        ) : (
+          <WifiOff
+            aria-hidden="true"
+            focusable="false"
+            className="status-symbol h-4 w-4"
+            strokeWidth={2}
+          />
+        )}
         {!allowNetwork && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
         )}
       </span>
       <VolumeControl className="mx-1.5" />
-      <span className="mx-1.5">
-        <Image
-          width={16}
-          height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
-          alt="ubuntu battry"
-          className="inline status-symbol w-4 h-4"
-          sizes="16px"
+      <span
+        className="mx-1.5 inline-flex"
+        role="img"
+        aria-label="Battery level: good"
+        title="Battery level: good"
+      >
+        <BatteryFull
+          aria-hidden="true"
+          focusable="false"
+          className="status-symbol h-4 w-4"
+          strokeWidth={2}
         />
       </span>
       <span className="mx-1">

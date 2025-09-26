@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { Bell } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 
 const focusableSelector =
@@ -156,16 +157,7 @@ const NotificationBell: React.FC = () => {
         onClick={togglePanel}
         className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
       >
-        <svg
-          aria-hidden="true"
-          focusable="false"
-          className="h-5 w-5"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path d="M10 2a4 4 0 00-4 4v1.09c0 .471-.158.93-.45 1.3L4.3 10.2A1 1 0 005 11.8h10a1 1 0 00.7-1.6l-1.25-1.81a2 2 0 01-.45-1.3V6a4 4 0 00-4-4z" />
-          <path d="M7 12a3 3 0 006 0H7z" />
-        </svg>
+        <Bell aria-hidden="true" focusable="false" className="h-5 w-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
