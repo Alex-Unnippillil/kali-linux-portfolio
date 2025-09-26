@@ -922,6 +922,7 @@ export class Desktop extends Component {
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
+                    appId={this.state.context_app}
                     active={this.state.context_menus.taskbar}
                     minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
                     onMinimize={() => {
