@@ -54,6 +54,9 @@ module.exports = {
           backdrop: 'var(--kali-bg)',
         },
       },
+      boxShadow: {
+        'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
+      },
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
       },
