@@ -65,6 +65,11 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
+  initialCommand?: string;
+  command?: string;
+  cmd?: string;
+  context?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface TerminalHandle {
@@ -76,7 +81,7 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, initialCommand, command, cmd }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -88,6 +93,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const requestedCommandRef = useRef<string | null>(null);
+  const executedCommandRef = useRef<string | null>(null);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -235,58 +242,87 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => workerRef.current?.terminate();
   }, []);
 
-    const runCommand = useCallback(
-      async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
-        const expanded =
-          aliasesRef.current[name]
-            ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
-        const [cmdName, ...cmdRest] = expanded.split(/\s+/);
-        const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
-        if (handler) await handler(cmdRest.join(' '), contextRef.current);
-        else if (cmdName) await runWorker(expanded);
-      },
-      [runWorker],
-    );
+  const runCommand = useCallback(
+    async (cmd: string) => {
+      const [name, ...rest] = cmd.trim().split(/\s+/);
+      const expanded =
+        aliasesRef.current[name]
+          ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
+          : cmd;
+      const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+      const handler = registryRef.current[cmdName];
+      historyRef.current.push(cmd);
+      if (handler) await handler(cmdRest.join(' '), contextRef.current);
+      else if (cmdName) await runWorker(expanded);
+    },
+    [runWorker],
+  );
 
-    const autocomplete = useCallback(() => {
-      const current = commandRef.current;
-      const registry = registryRef.current;
-      const matches = Object.keys(registry).filter((c) => c.startsWith(current));
-      if (matches.length === 1) {
-        const completion = matches[0].slice(current.length);
-        termRef.current?.write(completion);
-        commandRef.current = matches[0];
-      } else if (matches.length > 1) {
-        writeLine(matches.join('  '));
-        prompt();
-        termRef.current?.write(commandRef.current);
+  const executeCommand = useCallback(
+    (commandToRun: string) => {
+      const trimmed = commandToRun.trim();
+      if (!trimmed) return;
+      const term = termRef.current;
+      if (term) {
+        term.write(trimmed);
+        term.writeln('');
       }
-    }, [prompt, writeLine]);
+      commandRef.current = trimmed;
+      runCommand(trimmed);
+      commandRef.current = '';
+      prompt();
+    },
+    [runCommand, prompt],
+  );
 
-    const handleInput = useCallback(
-      (data: string) => {
-        for (const ch of data) {
-          if (ch === '\r') {
-            termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
-            commandRef.current = '';
-            prompt();
-          } else if (ch === '\u007F') {
-            if (commandRef.current.length > 0) {
-              termRef.current?.write('\b \b');
-              commandRef.current = commandRef.current.slice(0, -1);
-            }
-          } else {
-            commandRef.current += ch;
-            termRef.current?.write(ch);
+  useEffect(() => {
+    const candidate = [initialCommand, command, cmd]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .find((value) => value.length > 0);
+    if (!candidate) return;
+    requestedCommandRef.current = candidate;
+    if (termRef.current && executedCommandRef.current !== candidate) {
+      executedCommandRef.current = candidate;
+      executeCommand(candidate);
+    }
+  }, [initialCommand, command, cmd, executeCommand]);
+
+  const autocomplete = useCallback(() => {
+    const current = commandRef.current;
+    const registry = registryRef.current;
+    const matches = Object.keys(registry).filter((c) => c.startsWith(current));
+    if (matches.length === 1) {
+      const completion = matches[0].slice(current.length);
+      termRef.current?.write(completion);
+      commandRef.current = matches[0];
+    } else if (matches.length > 1) {
+      writeLine(matches.join('  '));
+      prompt();
+      termRef.current?.write(commandRef.current);
+    }
+  }, [prompt, writeLine]);
+
+  const handleInput = useCallback(
+    (data: string) => {
+      for (const ch of data) {
+        if (ch === '\r') {
+          termRef.current?.writeln('');
+          runCommand(commandRef.current.trim());
+          commandRef.current = '';
+          prompt();
+        } else if (ch === '\u007F') {
+          if (commandRef.current.length > 0) {
+            termRef.current?.write('\b \b');
+            commandRef.current = commandRef.current.slice(0, -1);
           }
+        } else {
+          commandRef.current += ch;
+          termRef.current?.write(ch);
         }
-      },
-      [runCommand, prompt],
-    );
+      }
+    },
+    [runCommand, prompt],
+  );
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
@@ -373,12 +409,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       });
       updateOverflow();
       term.onScroll?.(updateOverflow);
+      const pending = requestedCommandRef.current;
+      if (pending && executedCommandRef.current !== pending) {
+        executedCommandRef.current = pending;
+        executeCommand(pending);
+      }
     })();
     return () => {
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow, executeCommand]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();

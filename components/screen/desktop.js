@@ -2,6 +2,7 @@
 
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
+import { deepLinkSignature, hasDeepLink, normalizeDeepLinkContext } from '../../lib/deepLink';
 
 const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
@@ -26,8 +27,8 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
@@ -41,6 +42,7 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.lastDeepLinkSignature = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -69,7 +71,7 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
-        }
+        };
     }
 
     createEmptyWorkspaceState = () => ({
@@ -114,6 +116,23 @@ export class Desktop extends Component {
             this.setState(updater, callback);
         }
     };
+
+
+    applyDeepLink = (link) => {
+        if (!hasDeepLink(link)) {
+            this.lastDeepLinkSignature = null;
+            return;
+        }
+        const context = normalizeDeepLinkContext(link.app, link.context);
+        const signature = deepLinkSignature({ app: link.app, context });
+        if (signature && signature === this.lastDeepLinkSignature) {
+            return;
+        }
+        this.lastDeepLinkSignature = signature;
+        this.openApp(link.app, context);
+    };
+
+    deepLinkEquals = (a, b) => deepLinkSignature(a) === deepLinkSignature(b);
 
     getActiveStack = () => this.workspaceStacks[this.state.activeWorkspace];
 
@@ -194,6 +213,7 @@ export class Desktop extends Component {
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
+            const hasLink = hasDeepLink(this.props.deepLink);
             const positions = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
@@ -210,9 +230,10 @@ export class Desktop extends Component {
                 this.setWorkspaceState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
-            } else {
+            } else if (!hasLink) {
                 this.openApp('about-alex');
             }
+            this.applyDeepLink(this.props.deepLink);
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -222,6 +243,12 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps) {
+        if (!this.deepLinkEquals(prevProps.deepLink, this.props.deepLink)) {
+            this.applyDeepLink(this.props.deepLink);
+        }
     }
 
     componentWillUnmount() {
@@ -759,11 +786,10 @@ export class Desktop extends Component {
             ? { ...this.state.window_context, [objId]: context }
             : this.state.window_context;
 
-
         // google analytics
         ReactGA.event({
             category: `Open App`,
-            action: `Opened ${objId} window`
+            action: `Opened ${objId} window`,
         });
 
         // if the app is disabled
@@ -771,71 +797,62 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setWorkspaceState({ minimized_windows }, this.saveSession);
-
             const reopen = () => {
-                // if it's minimised, restore its last position
                 if (this.state.minimized_windows[objId]) {
                     this.focus(objId);
-                    var r = document.querySelector("#" + objId);
-                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
-                    minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                    const r = document.querySelector(`#${objId}`);
+                    if (r) {
+                        r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                    }
+                    const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+                    this.setWorkspaceState({ minimized_windows }, this.saveSession);
                 } else {
                     this.focus(objId);
                     this.saveSession();
                 }
             };
+
             if (context) {
                 this.setState({ window_context: contextState }, reopen);
             } else {
                 reopen();
             }
             return;
+        }
+
+        let frequentApps = [];
+        try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
+        const currentApp = frequentApps.find(app => app.id === objId);
+        if (currentApp) {
+            frequentApps = frequentApps.map((app) =>
+                app.id === currentApp.id
+                    ? { ...app, frequency: app.frequency + 1 }
+                    : app,
+            );
         } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
+            frequentApps.push({ id: objId, frequency: 1 }); // new app opened
+        }
+
+        frequentApps.sort((a, b) => {
+            if (a.frequency < b.frequency) {
+                return 1;
             }
+            if (a.frequency > b.frequency) {
+                return -1;
+            }
+            return 0; // sort according to decreasing frequencies
+        });
 
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
-                }
-                if (a.frequency > b.frequency) {
-                    return -1;
-                }
-                return 0; // sort according to decreasing frequencies
-            });
+        safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
 
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
+        addRecentApp(objId);
 
-            addRecentApp(objId);
-
-            setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-
-                const nextState = { closed_windows, favourite_apps, allAppsView: false };
+        setTimeout(() => {
+            const closed_windows = { ...this.state.closed_windows, [objId]: false };
+            const favourite_apps = { ...this.state.favourite_apps, [objId]: true };
+            const workspaceState = { closed_windows, favourite_apps, allAppsView: false };
+            this.setWorkspaceState(workspaceState, () => {
+                const nextState = { ...workspaceState };
                 if (context) {
                     nextState.window_context = contextState;
                 }
@@ -844,9 +861,9 @@ export class Desktop extends Component {
                     this.saveSession();
                 });
                 this.getActiveStack().push(objId);
-            }, 200);
-        }
-    }
+            });
+        }, 200);
+    };
 
     closeApp = async (objId) => {
 
@@ -1023,9 +1040,9 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) };
 
-    renderNameBar = () => {
+    renderNameBar() {
         let addFolder = () => {
             let folder_name = document.getElementById("folder-name-input").value;
             this.addToDesktop(folder_name);
@@ -1172,7 +1189,7 @@ export class Desktop extends Component {
                         onClose={this.closeWindowSwitcher} /> : null}
 
             </main>
-        )
+        );
     }
 }
 
