@@ -68,6 +68,25 @@ html[data-theme='matrix'] {
 
 }
 
+/* High contrast theme */
+html[data-theme='contrast'] {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-primary: #ffff00;
+  --color-secondary: #000000;
+  --color-accent: #ff9900;
+  --color-muted: #1a1a1a;
+  --color-surface: #000000;
+  --color-inverse: #000000;
+  --color-border: #ffffff;
+  --color-terminal: #00ffff;
+  --color-dark: #000000;
+  --color-focus-ring: #ffff00;
+  --color-selection: #ff9900;
+  --color-control-accent: #ffff00;
+  accent-color: var(--color-control-accent);
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
