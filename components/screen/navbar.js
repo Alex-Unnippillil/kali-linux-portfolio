@@ -12,9 +12,9 @@ export default class Navbar extends Component {
 		};
 	}
 
-	render() {
-		return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+		render() {
+			return (
+                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-kali-panel h-8 border-b border-kali-border text-[13px] select-none z-50">
                                 <WhiskerMenu />
                                 <div
                                         className={
