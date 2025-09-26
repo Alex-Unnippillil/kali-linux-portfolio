@@ -1,5 +1,11 @@
 {
   "name": "eslint-plugin-no-top-level-window",
   "version": "1.0.0",
-  "main": "index.js"
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "build": "node -e \"console.log('eslint plugin: no build step')\"",
+    "lint": "eslint --config ./eslint.config.mjs --max-warnings=0 .",
+    "typecheck": "node -e \"process.exit(0)\""
+  }
 }
