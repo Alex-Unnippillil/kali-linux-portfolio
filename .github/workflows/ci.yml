@@ -61,6 +61,7 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
+      - run: yarn check:secrets
 
   vercel-preview:
     runs-on: ubuntu-latest
