@@ -3,9 +3,15 @@ import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import path from 'path';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../utils/rateLimiter';
 
 const execFileAsync = promisify(execFile);
 const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
+const limiter = createRateLimiter({ max: 5 });
 
 export default async function handler(req, res) {
   if (
@@ -19,6 +25,13 @@ export default async function handler(req, res) {
   // actual binary may stub this handler for demonstration purposes.
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    res.status(429).json({ error: 'rate_limit_exceeded' });
     return;
   }
 

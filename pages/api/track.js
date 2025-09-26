@@ -1,4 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from "../../utils/rateLimiter";
+
+const limiter = createRateLimiter();
 
 export default async function handler(
   req,
@@ -6,6 +13,13 @@ export default async function handler(
 ) {
   if (req.method !== "POST") {
     res.status(405).json({ ok: false });
+    return;
+  }
+
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    res.status(429).json({ ok: false, code: "rate_limit" });
     return;
   }
 

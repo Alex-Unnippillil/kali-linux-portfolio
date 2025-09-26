@@ -1,5 +1,12 @@
 import { getServiceClient } from '../../../lib/service-client';
 import { createLogger } from '../../../lib/logger';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../../utils/rateLimiter';
+
+const limiter = createRateLimiter({ max: 10 });
 
 export default async function handler(
   req,
@@ -9,6 +16,14 @@ export default async function handler(
   if (req.method !== 'GET') {
     logger.warn('method not allowed', { method: req.method });
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    logger.warn('admin messages rate limited');
+    res.status(429).json({ error: 'rate_limit_exceeded' });
     return;
   }
 

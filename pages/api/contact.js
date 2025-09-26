@@ -2,12 +2,20 @@ import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../utils/rateLimiter';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 
-export const rateLimit = new Map();
+export const contactRateLimiter = createRateLimiter({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX,
+});
 
 export default async function handler(req, res) {
   try {
@@ -36,22 +44,10 @@ export default async function handler(req, res) {
     return;
   }
 
-  const ip =
-    req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-  const now = Date.now();
-  const entry = rateLimit.get(ip) || { count: 0, start: now };
-  if (now - entry.start > RATE_LIMIT_WINDOW_MS) {
-    entry.count = 0;
-    entry.start = now;
-  }
-  entry.count += 1;
-  rateLimit.set(ip, entry);
-  for (const [key, value] of rateLimit) {
-    if (now - value.start > RATE_LIMIT_WINDOW_MS) {
-      rateLimit.delete(key);
-    }
-  }
-  if (entry.count > RATE_LIMIT_MAX) {
+  const ip = getRequestIp(req);
+  const rate = contactRateLimiter.check(ip);
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
     console.warn('Contact submission rejected', { ip, reason: 'rate_limit' });
     res.status(429).json({ ok: false, code: 'rate_limit' });
     return;

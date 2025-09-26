@@ -1,8 +1,14 @@
 import fs from 'fs';
 import path from 'path';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../../utils/rateLimiter';
 
 const filePath = path.join(process.cwd(), 'data', 'pacman-leaderboard.json');
 const MAX_ENTRIES = 10;
+const limiter = createRateLimiter();
 
 function readBoard() {
   try {
@@ -27,6 +33,15 @@ export default function handler(
   req,
   res,
 ) {
+  if (req.method === 'GET' || req.method === 'POST') {
+    const rate = limiter.check(getRequestIp(req));
+    setRateLimitHeaders(res, rate);
+    if (!rate.ok) {
+      res.status(429).json({ error: 'rate_limit_exceeded' });
+      return;
+    }
+  }
+
   if (req.method === 'GET') {
     res.status(200).json(readBoard());
     return;

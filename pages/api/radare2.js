@@ -3,8 +3,14 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../utils/rateLimiter';
 
 const execFileAsync = promisify(execFile);
+const limiter = createRateLimiter({ max: 5 });
 
 export default async function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
@@ -16,6 +22,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    return res.status(429).json({ error: 'rate_limit_exceeded' });
   }
 
   const { action, hex, file } = req.body || {};

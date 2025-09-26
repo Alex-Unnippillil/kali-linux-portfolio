@@ -1,7 +1,21 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
+import {
+  createRateLimiter,
+  getRequestIp,
+  setRateLimitHeaders,
+} from '../../../utils/rateLimiter';
 
-export default async function handler(_req, res) {
+const limiter = createRateLimiter({ windowMs: 300_000 });
+
+export default async function handler(req, res) {
+  const rate = limiter.check(getRequestIp(req));
+  setRateLimitHeaders(res, rate);
+  if (!rate.ok) {
+    res.status(429).json({ error: 'rate_limit_exceeded' });
+    return;
+  }
+
   try {
     const versionPath = path.join(process.cwd(), 'public', 'demo-data', 'nmap', 'script-db-version.json');
     const raw = await readFile(versionPath, 'utf8');
