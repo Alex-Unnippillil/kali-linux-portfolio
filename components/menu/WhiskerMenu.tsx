@@ -5,14 +5,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
-
-type AppMeta = {
-  id: string;
-  title: string;
-  icon: string;
-  disabled?: boolean;
-  favourite?: boolean;
-};
+import type { AppMeta } from '../../types/app';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
