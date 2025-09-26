@@ -10,7 +10,7 @@ interface ScriptEntry {
 }
 
 const examplesHref = new URL(
-  '../../../scripts/examples/terminal.ts',
+  '../../../scripts/examples/terminal.js',
   import.meta.url,
 ).href;
 

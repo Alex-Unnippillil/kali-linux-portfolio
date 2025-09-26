@@ -20,7 +20,7 @@ const HashConverter = () => {
 
   useEffect(() => {
     workerRef.current = new Worker(
-      new URL('../../../workers/hash-worker.ts', import.meta.url),
+      new URL('../../../workers/hash-worker.js', import.meta.url),
     );
 
     workerRef.current.onmessage = (e) => {

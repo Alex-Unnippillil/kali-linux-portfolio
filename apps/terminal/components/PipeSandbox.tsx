@@ -12,7 +12,7 @@ export default function PipeSandbox() {
     setOutput('');
     if (typeof Worker !== 'undefined') {
       const worker = new Worker(
-        new URL('../workers/pipelineWorker.ts', import.meta.url),
+        new URL('../workers/pipelineWorker.js', import.meta.url),
       );
       worker.onmessage = (e: MessageEvent<any>) => {
         const { type, chunk } = e.data || {};

@@ -74,7 +74,7 @@ const FigletApp: React.FC = () => {
 
   useEffect(() => {
     if (typeof window !== "undefined" && typeof Worker === "function") {
-      workerRef.current = new Worker(new URL("./worker.ts", import.meta.url));
+      workerRef.current = new Worker(new URL("./worker.js", import.meta.url));
       workerRef.current.onmessage = (e: MessageEvent<any>) => {
         if (e.data?.type === "font") {
           setFonts((prev) => [
