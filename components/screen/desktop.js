@@ -23,6 +23,8 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import PermissionDialog from '../common/PermissionDialog';
+import { checkPermissions, requestPermissions, getPermissionDetails } from '../../utils/permissionHandler';
 
 export class Desktop extends Component {
     constructor() {
@@ -52,7 +54,11 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            permissionRequest: null,
+            permissionFallback: null,
         }
+        this.permissionGrants = {};
+        this.permissionFallbackTimer = null;
     }
 
     componentDidMount() {
@@ -96,6 +102,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.clearPermissionFallbackTimer();
     }
 
     checkForNewFolders = () => {
@@ -583,7 +590,101 @@ export class Desktop extends Component {
         }
     }
 
-    openApp = (objId) => {
+    clearPermissionFallbackTimer = () => {
+        if (this.permissionFallbackTimer) {
+            clearTimeout(this.permissionFallbackTimer);
+            this.permissionFallbackTimer = null;
+        }
+    }
+
+    showPermissionFallback = (title, message) => {
+        this.clearPermissionFallbackTimer();
+        this.setState({ permissionFallback: { title, message } });
+        this.permissionFallbackTimer = window.setTimeout(() => {
+            this.setState({ permissionFallback: null });
+            this.permissionFallbackTimer = null;
+        }, 6000);
+    }
+
+    dismissPermissionFallback = () => {
+        this.clearPermissionFallbackTimer();
+        this.setState({ permissionFallback: null });
+    }
+
+    openApp = (objId, options = {}) => {
+        const skipPreflight = options && options.skipPreflight === true;
+        this.openAppWithPermissions(objId, skipPreflight).catch(() => { });
+    }
+
+    openAppWithPermissions = async (objId, skipPreflight = false) => {
+        if (!objId) return;
+
+        if (this.state.disabled_apps[objId]) return;
+
+        if (skipPreflight) {
+            this.performOpenApp(objId);
+            return;
+        }
+
+        if (this.state.closed_windows[objId] === false) {
+            this.performOpenApp(objId);
+            return;
+        }
+
+        const appMeta = apps.find(app => app.id === objId) || {};
+        const requirements = Array.isArray(appMeta.permissions) ? appMeta.permissions : [];
+
+        if (requirements.length) {
+            try {
+                const statuses = await checkPermissions(requirements);
+                const normalized = { ...statuses };
+                requirements.forEach((kind) => {
+                    if (this.permissionGrants[kind] && normalized[kind] === 'prompt') {
+                        normalized[kind] = 'granted';
+                    }
+                    if (normalized[kind] === 'granted') {
+                        this.permissionGrants[kind] = true;
+                    }
+                });
+                const needsPrompt = requirements.some((kind) => normalized[kind] !== 'granted');
+                if (needsPrompt) {
+                    this.setState({
+                        permissionRequest: {
+                            appId: objId,
+                            title: appMeta.title || objId,
+                            icon: appMeta.icon,
+                            requirements,
+                            statuses: normalized,
+                            busy: false,
+                            error: null,
+                        },
+                    });
+                    return;
+                }
+            } catch (err) {
+                const fallbackStatuses = requirements.reduce((acc, kind) => {
+                    acc[kind] = 'prompt';
+                    return acc;
+                }, {});
+                this.setState({
+                    permissionRequest: {
+                        appId: objId,
+                        title: appMeta.title || objId,
+                        icon: appMeta.icon,
+                        requirements,
+                        statuses: fallbackStatuses,
+                        busy: false,
+                        error: null,
+                    },
+                });
+                return;
+            }
+        }
+
+        this.performOpenApp(objId);
+    }
+
+    performOpenApp = (objId) => {
 
         // google analytics
         ReactGA.event({
@@ -600,7 +701,9 @@ export class Desktop extends Component {
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
                 var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                if (r) {
+                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                }
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
                 this.setState({ minimized_windows: minimized_windows }, this.saveSession);
@@ -609,53 +712,131 @@ export class Desktop extends Component {
                 this.saveSession();
             }
             return;
-        } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
-            }
+        }
 
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
+        let closed_windows = this.state.closed_windows;
+        let favourite_apps = this.state.favourite_apps;
+        let frequentApps = [];
+        try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
+        var currentApp = frequentApps.find(app => app.id === objId);
+        if (currentApp) {
+            frequentApps.forEach((app) => {
+                if (app.id === currentApp.id) {
+                    app.frequency += 1; // increase the frequency if app is found
                 }
-                if (a.frequency > b.frequency) {
-                    return -1;
+            });
+        } else {
+            frequentApps.push({ id: objId, frequency: 1 }); // new app opened
+        }
+
+        frequentApps.sort((a, b) => {
+            if (a.frequency < b.frequency) {
+                return 1;
+            }
+            if (a.frequency > b.frequency) {
+                return -1;
+            }
+            return 0; // sort according to decreasing frequencies
+        });
+
+        safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
+
+        let recentApps = [];
+        try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
+        recentApps = recentApps.filter(id => id !== objId);
+        recentApps.unshift(objId);
+        recentApps = recentApps.slice(0, 10);
+        safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+
+        setTimeout(() => {
+            favourite_apps[objId] = true; // adds opened app to sideBar
+            closed_windows[objId] = false; // openes app's window
+            this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.focus(objId);
+                this.saveSession();
+            });
+            this.app_stack.push(objId);
+        }, 200);
+    }
+
+    handlePermissionGrant = async () => {
+        const request = this.state.permissionRequest;
+        if (!request) return;
+
+        this.setState({
+            permissionRequest: { ...request, busy: true, error: null },
+        });
+
+        try {
+            const result = await requestPermissions(request.requirements);
+            const merged = { ...request.statuses, ...result };
+            const allGranted = request.requirements.every((kind) => merged[kind] === 'granted');
+
+            request.requirements.forEach((kind) => {
+                if (merged[kind] === 'granted') {
+                    this.permissionGrants[kind] = true;
                 }
-                return 0; // sort according to decreasing frequencies
             });
 
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
-
-            let recentApps = [];
-            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
-            recentApps = recentApps.filter(id => id !== objId);
-            recentApps.unshift(objId);
-            recentApps = recentApps.slice(0, 10);
-            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
-
-            setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    this.focus(objId);
-                    this.saveSession();
+            if (allGranted) {
+                this.setState({ permissionRequest: null }, () => {
+                    this.performOpenApp(request.appId);
                 });
-                this.app_stack.push(objId);
-            }, 200);
+                return;
+            }
+
+            const unsupported = request.requirements.filter((kind) => merged[kind] === 'unsupported');
+            const denied = request.requirements.filter((kind) => merged[kind] === 'denied');
+            let error = 'We could not obtain the requested permissions.';
+            if (unsupported.length) {
+                const names = unsupported.map((kind) => getPermissionDetails(kind).title).join(', ');
+                error = `${names} ${unsupported.length > 1 ? 'are' : 'is'} not supported in this browser.`;
+            } else if (denied.length) {
+                const names = denied.map((kind) => getPermissionDetails(kind).title).join(', ');
+                error = `${names} permission was denied. Adjust your browser settings and try again.`;
+            }
+
+            this.setState({
+                permissionRequest: { ...request, statuses: merged, busy: false, error },
+            });
+        } catch (err) {
+            this.setState({
+                permissionRequest: {
+                    ...request,
+                    busy: false,
+                    error: 'Unable to request permissions right now. Please retry.',
+                },
+            });
         }
     }
 
+    handlePermissionCancel = () => {
+        const request = this.state.permissionRequest;
+        if (!request) return;
+        this.setState({ permissionRequest: null });
+        const capabilities = request.requirements
+            .map((kind) => getPermissionDetails(kind).title.toLowerCase())
+            .join(', ');
+        this.showPermissionFallback(
+            request.title,
+            `${request.title} will stay closed until it can access ${capabilities}.`,
+        );
+    }
+
+    handlePermissionContinue = () => {
+        const request = this.state.permissionRequest;
+        if (!request) return;
+        const capabilities = request.requirements
+            .map((kind) => getPermissionDetails(kind).title.toLowerCase())
+            .join(', ');
+        this.setState({ permissionRequest: null }, () => {
+            this.showPermissionFallback(
+                request.title,
+                `${request.title} will open without ${capabilities}. Some features may be limited.`,
+            );
+            this.performOpenApp(request.appId);
+        });
+    }
     closeApp = async (objId) => {
 
         // capture window snapshot
@@ -966,6 +1147,39 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                {this.state.permissionRequest && (
+                    <PermissionDialog
+                        appTitle={this.state.permissionRequest.title}
+                        appIcon={this.state.permissionRequest.icon}
+                        requirements={this.state.permissionRequest.requirements}
+                        statuses={this.state.permissionRequest.statuses}
+                        busy={this.state.permissionRequest.busy}
+                        error={this.state.permissionRequest.error}
+                        onGrant={this.handlePermissionGrant}
+                        onCancel={this.handlePermissionCancel}
+                        onContinue={this.handlePermissionContinue}
+                    />
+                )}
+
+                {this.state.permissionFallback && (
+                    <div className="fixed bottom-24 left-1/2 z-40 w-[90%] max-w-md -translate-x-1/2 rounded-md border border-white/10 bg-ub-cool-grey/95 px-4 py-3 text-white shadow-lg">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-1">
+                                <p className="font-semibold">{this.state.permissionFallback.title}</p>
+                                <p className="mt-1 text-sm text-white/80">{this.state.permissionFallback.message}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={this.dismissPermissionFallback}
+                                aria-label="Dismiss permission notice"
+                                className="ml-2 text-lg leading-none text-white/70 hover:text-white"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                )}
 
             </main>
         )
