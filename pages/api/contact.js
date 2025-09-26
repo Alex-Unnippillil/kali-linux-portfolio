@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
-import { validateServerEnv } from '../../lib/validate';
+import { assertServerEnv } from '../../lib/runtime-env';
 import { getServiceSupabase } from '../../lib/supabase';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
@@ -11,7 +11,7 @@ export const rateLimit = new Map();
 
 export default async function handler(req, res) {
   try {
-    validateServerEnv(process.env);
+    assertServerEnv();
   } catch {
     if (!process.env.RECAPTCHA_SECRET) {
       res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
