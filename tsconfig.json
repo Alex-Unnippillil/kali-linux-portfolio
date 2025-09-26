@@ -19,9 +19,46 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
-  "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
+  "include": [
+    "next-env.d.ts",
+    "app/**/*",
+    "apps/**/*",
+    "calc/**/*",
+    "components/**/*",
+    "filters/**/*",
+    "games/**/*",
+    "hooks/**/*",
+    "lib/**/*",
+    "modules/**/*",
+    "pages/**/*",
+    "player/**/*",
+    "plugins/**/*",
+    "scanner/**/*",
+    "src/**/*",
+    "styles/**/*",
+    "types/**/*",
+    "utils/**/*",
+    "workers/**/*",
+    "middleware.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "__mocks__",
+    "tests",
+    "playwright",
+    "docs",
+    "templates",
+    "scripts/examples",
+    "components/apps/archive",
+    "components/apps/kismet",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/*.stories.*",
+    "**/*.e2e.*",
+    "**/__tests__/**",
+    "**/__mocks__/**"
+  ]
 }
