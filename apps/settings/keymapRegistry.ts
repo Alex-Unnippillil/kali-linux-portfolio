@@ -8,6 +8,14 @@ export interface Shortcut {
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Cycle windows', keys: 'Alt+Tab' },
+  { description: 'Cycle windows within app', keys: 'Alt+`' },
+  { description: 'Snap window left', keys: 'Alt+ArrowLeft' },
+  { description: 'Snap window right', keys: 'Alt+ArrowRight' },
+  { description: 'Maximize window', keys: 'Alt+ArrowUp' },
+  { description: 'Restore window', keys: 'Alt+ArrowDown' },
+  { description: 'Previous workspace', keys: 'Ctrl+Alt+ArrowLeft' },
+  { description: 'Next workspace', keys: 'Ctrl+Alt+ArrowRight' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {

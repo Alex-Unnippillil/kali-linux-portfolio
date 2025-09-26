@@ -22,15 +22,24 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
-const computeSnapRegions = (viewportWidth, viewportHeight) => {
-    const halfWidth = viewportWidth / 2;
-    const availableHeight = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
-    const topHeight = Math.min(availableHeight, viewportHeight / 2);
+const computeSnapRegions = ({ width, height, offsetX = 0, offsetY = 0 }) => {
+    const halfWidth = width / 2;
+    const availableHeight = Math.max(0, height - SNAP_BOTTOM_INSET);
+    const topHeight = Math.min(availableHeight, height / 2);
     return {
-        left: { left: 0, top: 0, width: halfWidth, height: availableHeight },
-        right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
+        left: { left: offsetX, top: offsetY, width: halfWidth, height: availableHeight },
+        right: { left: offsetX + width - halfWidth, top: offsetY, width: halfWidth, height: availableHeight },
+        top: { left: offsetX, top: offsetY, width, height: topHeight },
     };
+};
+
+const parseNumber = (value, fallback = 0) => {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+    if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+    return fallback;
 };
 
 export class Window extends Component {
@@ -56,12 +65,55 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
             snapped: null,
-            lastSize: null,
+            restoreSnapshot: null,
             grabbed: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+    }
+
+    getViewportMetrics = () => {
+        const context = this.props.context;
+        let candidate = null;
+        if (context && typeof context === 'object') {
+            const candidates = [
+                context.viewport,
+                context.bounds,
+                context.layout,
+                context.workspace?.bounds,
+                context.workspace,
+                context.display?.bounds,
+            ];
+            for (const item of candidates) {
+                if (item && typeof item === 'object') {
+                    candidate = item;
+                    break;
+                }
+            }
+        }
+
+        if (candidate) {
+            const width = parseNumber(candidate.width, typeof window !== 'undefined' ? window.innerWidth : 0);
+            const height = parseNumber(candidate.height, typeof window !== 'undefined' ? window.innerHeight : 0);
+            const offsetX = parseNumber(candidate.x ?? candidate.left ?? 0, 0);
+            const offsetY = parseNumber(candidate.y ?? candidate.top ?? 0, 0);
+            return { width, height, offsetX, offsetY };
+        }
+
+        if (typeof document !== 'undefined') {
+            const area = document.getElementById('window-area');
+            if (area) {
+                const rect = area.getBoundingClientRect();
+                return { width: rect.width, height: rect.height, offsetX: rect.left, offsetY: rect.top };
+            }
+        }
+
+        if (typeof window !== 'undefined') {
+            return { width: window.innerWidth, height: window.innerHeight, offsetX: 0, offsetY: 0 };
+        }
+
+        return { width: 0, height: 0, offsetX: 0, offsetY: 0 };
     }
 
     componentDidMount() {
@@ -105,11 +157,16 @@ export class Window extends Component {
             return;
         }
 
-        const isPortrait = window.innerHeight > window.innerWidth;
+        const metrics = this.getViewportMetrics();
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 720;
+        const viewportWidth = metrics.width || fallbackWidth;
+        const viewportHeight = metrics.height || fallbackHeight;
+        const isPortrait = viewportHeight > viewportWidth;
         if (isPortrait) {
-            this.startX = window.innerWidth * 0.05;
+            this.startX = viewportWidth * 0.05;
             this.setState({ height: 85, width: 90 }, this.resizeBoundries);
-        } else if (window.innerWidth < 640) {
+        } else if (viewportWidth < 640) {
             this.setState({ height: 60, width: 85 }, this.resizeBoundries);
         } else {
             this.setState({ height: 85, width: 60 }, this.resizeBoundries);
@@ -117,14 +174,21 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
+        const metrics = this.getViewportMetrics();
+        const viewportWidth = metrics.width || (typeof window !== 'undefined' ? window.innerWidth : 0);
+        const viewportHeight = metrics.height || (typeof window !== 'undefined' ? window.innerHeight : 0);
+        const height = Math.max(
+            0,
+            viewportHeight - (viewportHeight * (this.state.height / 100.0)) - SNAP_BOTTOM_INSET
+        );
+        const width = Math.max(
+            0,
+            viewportWidth - (viewportWidth * (this.state.width / 100.0))
+        );
         this.setState({
             parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
+                height,
+                width
             }
         }, () => {
             if (this._uiExperiments) {
@@ -232,50 +296,87 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
+        const metrics = this.getViewportMetrics();
+        const viewportHeight = metrics.height || (typeof window !== 'undefined' ? window.innerHeight : 0);
+        if (!viewportHeight) return;
+        const px = (this.state.height / 100) * viewportHeight + 1;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
+        const heightPercent = (snapped / viewportHeight) * 100;
         this.setState({ height: heightPercent }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
+        const metrics = this.getViewportMetrics();
+        const viewportWidth = metrics.width || (typeof window !== 'undefined' ? window.innerWidth : 0);
+        if (!viewportWidth) return;
+        const px = (this.state.width / 100) * viewportWidth + 1;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
+        const widthPercent = (snapped / viewportWidth) * 100;
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
-        const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        const node = document.querySelector("#" + this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const metrics = this.getViewportMetrics();
+        const x = this.snapToGrid(rect.left - metrics.offsetX);
+        const y = this.snapToGrid(rect.top - metrics.offsetY);
+        node.style.setProperty('--window-transform-x', `${x.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${y.toFixed(1)}px`);
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
     }
 
+    createRestoreSnapshot = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return this.state.restoreSnapshot;
+        const transformX = node.style.getPropertyValue('--window-transform-x') || '0px';
+        const transformY = node.style.getPropertyValue('--window-transform-y') || '0px';
+        return {
+            width: this.state.width,
+            height: this.state.height,
+            snapped: this.state.snapped,
+            maximized: this.state.maximized,
+            transformX,
+            transformY,
+            previous: this.state.restoreSnapshot || null,
+        };
+    }
+
+    applySnapshot = (snapshot) => {
+        if (!snapshot) return false;
+        const node = document.getElementById(this.id);
+        if (node) {
+            const fallbackX = node.style.getPropertyValue('--window-transform-x') || '0px';
+            const fallbackY = node.style.getPropertyValue('--window-transform-y') || '0px';
+            const x = snapshot.transformX ?? fallbackX;
+            const y = snapshot.transformY ?? fallbackY;
+            node.style.transform = `translate(${x},${y})`;
+            node.style.setProperty('--window-transform-x', x);
+            node.style.setProperty('--window-transform-y', y);
+        }
+        this.setState({
+            width: snapshot.width ?? this.state.width,
+            height: snapshot.height ?? this.state.height,
+            snapped: snapshot.snapped ?? null,
+            maximized: snapshot.maximized ?? false,
+            restoreSnapshot: snapshot.previous || null,
+            snapPreview: null,
+            snapPosition: null,
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
+        return true;
+    }
+
     unsnapWindow = () => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
-        if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
-            if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
-            }
-        }
-        if (this.state.lastSize) {
-            this.setState({
-                width: this.state.lastSize.width,
-                height: this.state.lastSize.height,
-                snapped: null
-            }, this.resizeBoundries);
-        } else {
+        const applied = this.applySnapshot(this.state.restoreSnapshot);
+        if (!applied) {
             this.setState({ snapped: null }, this.resizeBoundries);
         }
     }
@@ -283,24 +384,30 @@ export class Window extends Component {
     snapWindow = (position) => {
         this.setWinowsPosition();
         this.focusWindow();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        if (!viewportWidth || !viewportHeight) return;
-        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const metrics = this.getViewportMetrics();
+        if (!metrics.width || !metrics.height) return;
+        const regions = computeSnapRegions(metrics);
         const region = regions[position];
         if (!region) return;
-        const { width, height } = this.state;
+        const snapshot = (!this.state.snapped && !this.state.maximized)
+            ? this.createRestoreSnapshot()
+            : this.state.restoreSnapshot;
         const node = document.getElementById(this.id);
         if (node) {
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            const translateX = region.left - metrics.offsetX;
+            const translateY = region.top - metrics.offsetY;
+            node.style.transform = `translate(${translateX}px, ${translateY}px)`;
+            node.style.setProperty('--window-transform-x', `${translateX}px`);
+            node.style.setProperty('--window-transform-y', `${translateY}px`);
         }
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
-            lastSize: { width, height },
-            width: percentOf(region.width, viewportWidth),
-            height: percentOf(region.height, viewportHeight)
+            restoreSnapshot: snapshot,
+            maximized: false,
+            width: percentOf(region.width, metrics.width),
+            height: percentOf(region.height, metrics.height)
         }, this.resizeBoundries);
     }
 
@@ -333,20 +440,23 @@ export class Window extends Component {
         const node = document.getElementById(this.id);
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        if (!viewportWidth || !viewportHeight) return;
+        const metrics = this.getViewportMetrics();
+        if (!metrics.width || !metrics.height) return;
 
-        const horizontalThreshold = computeEdgeThreshold(viewportWidth);
-        const verticalThreshold = computeEdgeThreshold(viewportHeight);
-        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const localLeft = rect.left - metrics.offsetX;
+        const localTop = rect.top - metrics.offsetY;
+        const localRight = metrics.width - (localLeft + rect.width);
+
+        const horizontalThreshold = computeEdgeThreshold(metrics.width);
+        const verticalThreshold = computeEdgeThreshold(metrics.height);
+        const regions = computeSnapRegions(metrics);
 
         let candidate = null;
-        if (rect.top <= verticalThreshold && regions.top.height > 0) {
+        if (localTop <= verticalThreshold && regions.top.height > 0) {
             candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
+        } else if (localLeft <= horizontalThreshold && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
+        } else if (localRight <= horizontalThreshold && regions.right.width > 0) {
             candidate = { position: 'right', preview: regions.right };
         }
 
@@ -444,40 +554,53 @@ export class Window extends Component {
 
     restoreWindow = () => {
         const node = document.querySelector("#" + this.id);
-        this.setDefaultWindowDimenstion();
-        // get previous position
-        let posx = node.style.getPropertyValue("--window-transform-x");
-        let posy = node.style.getPropertyValue("--window-transform-y");
+        if (!node) return;
+        const snapshot = this.state.restoreSnapshot;
+        const fallbackX = node.style.getPropertyValue('--window-transform-x') || '0px';
+        const fallbackY = node.style.getPropertyValue('--window-transform-y') || '0px';
+        const targetX = snapshot?.transformX ?? fallbackX;
+        const targetY = snapshot?.transformY ?? fallbackY;
         const startTransform = node.style.transform;
-        const endTransform = `translate(${posx},${posy})`;
+        const endTransform = `translate(${targetX},${targetY})`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        if (prefersReducedMotion) {
+        const finalize = () => {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
-            this.checkOverlap();
+            if (snapshot) {
+                this.applySnapshot(snapshot);
+            } else {
+                this.setDefaultWindowDimenstion();
+                this.setState({ maximized: false, snapped: null, restoreSnapshot: null }, () => {
+                    this.checkOverlap();
+                });
+            }
+            if (!snapshot || !snapshot.snapped) {
+                this.props.hideSideBar(this.id, false);
+            }
+        };
+
+        if (prefersReducedMotion) {
+            finalize();
             return;
         }
 
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
+                finalize();
                 this._dockAnimation.onfinish = null;
             };
             this._dockAnimation.reverse();
-        } else {
-            this._dockAnimation = node.animate(
+        } else if (typeof node.animate === 'function') {
+            const animation = node.animate(
                 [{ transform: startTransform }, { transform: endTransform }],
                 { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
-            this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
-                this._dockAnimation.onfinish = null;
+            animation.onfinish = () => {
+                finalize();
+                animation.onfinish = null;
             };
+        } else {
+            finalize();
         }
     }
 
@@ -488,12 +611,23 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
-            var r = document.querySelector("#" + this.id);
+            const node = document.querySelector("#" + this.id);
+            if (!node) return;
             this.setWinowsPosition();
-            // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
-            this.props.hideSideBar(this.id, true);
+            const snapshot = this.createRestoreSnapshot();
+            node.style.transform = `translate(-1pt,-2pt)`;
+            node.style.setProperty('--window-transform-x', '-1pt');
+            node.style.setProperty('--window-transform-y', '-2pt');
+            this.setState({
+                maximized: true,
+                height: 96.3,
+                width: 100.2,
+                snapped: null,
+                restoreSnapshot: snapshot,
+            }, () => {
+                this.resizeBoundries();
+                this.props.hideSideBar(this.id, true);
+            });
         }
     }
 
@@ -558,7 +692,11 @@ export class Window extends Component {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.unsnapWindow();
+                if (this.state.maximized) {
+                    this.restoreWindow();
+                } else if (this.state.snapped) {
+                    this.unsnapWindow();
+                }
             } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -570,7 +708,7 @@ export class Window extends Component {
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.snapWindow('top');
+                this.maximizeWindow();
             }
             this.focusWindow();
         } else if (e.shiftKey) {

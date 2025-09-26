@@ -342,13 +342,6 @@ describe('Window snapping finalize and release', () => {
     const snappedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
 
-    const keyboardEvent = {
-      key: 'ArrowDown',
-      altKey: true,
-      preventDefault: jest.fn(),
-      stopPropagation: jest.fn()
-    } as unknown as KeyboardEvent;
-
     act(() => {
       ref.current!.handleKeyDown({
         key: 'ArrowDown',
@@ -413,6 +406,122 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+
+  it('restores snapped layout before unsnapping when maximizing via shortcuts', () => {
+    setViewport(1280, 720);
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 120,
+      right: 105,
+      bottom: 220,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 120,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('left');
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowUp',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.maximized).toBe(true);
+    expect(ref.current!.state.snapped).toBeNull();
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.maximized).toBe(false);
+    expect(ref.current!.state.snapped).toBe('left');
+    expect(ref.current!.state.width).toBeCloseTo(50, 1);
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.snapped).toBeNull();
+    expect(ref.current!.state.width).toBe(60);
+  });
+
+  it('uses workspace bounds when snapping with context layout', () => {
+    setViewport(1920, 1080);
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        context={{ workspace: { width: 1000, height: 600, x: 200, y: 100 } }}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 100,
+      right: 300,
+      bottom: 200,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 100,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      (ref.current as any).snapWindow('right');
+    });
+
+    expect(winEl.style.transform).toBe('translate(500px, 0px)');
+    expect(ref.current!.state.width).toBeCloseTo(50, 1);
   });
 });
 
