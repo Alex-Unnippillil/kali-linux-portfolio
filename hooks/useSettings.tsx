@@ -22,6 +22,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getShowStatusClock as loadShowStatusClock,
+  setShowStatusClock as saveShowStatusClock,
+  getShowStatusCpu as loadShowStatusCpu,
+  setShowStatusCpu as saveShowStatusCpu,
+  getShowStatusMemory as loadShowStatusMemory,
+  setShowStatusMemory as saveShowStatusMemory,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -66,6 +72,9 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  showStatusClock: boolean;
+  showStatusCpu: boolean;
+  showStatusMemory: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +87,9 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setShowStatusClock: (value: boolean) => void;
+  setShowStatusCpu: (value: boolean) => void;
+  setShowStatusMemory: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +106,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  showStatusClock: defaults.showStatusClock,
+  showStatusCpu: defaults.showStatusCpu,
+  showStatusMemory: defaults.showStatusMemory,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +121,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setShowStatusClock: () => {},
+  setShowStatusCpu: () => {},
+  setShowStatusMemory: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +139,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [showStatusClock, setShowStatusClock] = useState<boolean>(defaults.showStatusClock);
+  const [showStatusCpu, setShowStatusCpu] = useState<boolean>(defaults.showStatusCpu);
+  const [showStatusMemory, setShowStatusMemory] = useState<boolean>(defaults.showStatusMemory);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -138,6 +159,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setShowStatusClock(await loadShowStatusClock());
+      setShowStatusCpu(await loadShowStatusCpu());
+      setShowStatusMemory(await loadShowStatusMemory());
     })();
   }, []);
 
@@ -250,6 +274,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveShowStatusClock(showStatusClock);
+  }, [showStatusClock]);
+
+  useEffect(() => {
+    saveShowStatusCpu(showStatusCpu);
+  }, [showStatusCpu]);
+
+  useEffect(() => {
+    saveShowStatusMemory(showStatusMemory);
+  }, [showStatusMemory]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +303,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        showStatusClock,
+        showStatusCpu,
+        showStatusMemory,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +318,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setShowStatusClock,
+        setShowStatusCpu,
+        setShowStatusMemory,
         setTheme,
       }}
     >
