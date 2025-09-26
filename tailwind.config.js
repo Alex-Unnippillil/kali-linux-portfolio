@@ -1,4 +1,5 @@
 const plugin = require('tailwindcss/plugin');
+const { typographyScale, lineHeights } = require('./lib/typography-scale');
 
 module.exports = {
   darkMode: 'class',
@@ -58,7 +59,29 @@ module.exports = {
         'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
       },
       fontFamily: {
+        sans: ['var(--font-family-base)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-family-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
         ubuntu: ['Ubuntu', 'sans-serif'],
+      },
+      fontSize: {
+        xs: [typographyScale.body.xs, { lineHeight: lineHeights.standard }],
+        sm: [typographyScale.body.sm, { lineHeight: lineHeights.standard }],
+        base: [typographyScale.body.md, { lineHeight: lineHeights.standard }],
+        lg: [typographyScale.body.lg, { lineHeight: lineHeights.standard }],
+        xl: [typographyScale.heading.xs, { lineHeight: lineHeights.snug }],
+        '2xl': [typographyScale.heading.sm, { lineHeight: lineHeights.snug }],
+        '3xl': [typographyScale.heading.md, { lineHeight: lineHeights.tight }],
+        '4xl': [typographyScale.heading.lg, { lineHeight: lineHeights.tight }],
+        '5xl': [typographyScale.display.sm, { lineHeight: lineHeights.tight }],
+        '6xl': [typographyScale.display.md, { lineHeight: lineHeights.tight }],
+        '7xl': [typographyScale.display.lg, { lineHeight: lineHeights.tight }],
+      },
+      lineHeight: {
+        tight: String(lineHeights.tight),
+        snug: String(lineHeights.snug),
+        normal: String(lineHeights.standard),
+        relaxed: String(lineHeights.relaxed),
+        mono: String(lineHeights.mono),
       },
       minWidth: {
         '0': '0',

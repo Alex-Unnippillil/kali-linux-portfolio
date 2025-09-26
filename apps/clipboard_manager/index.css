@@ -1,4 +1,18 @@
-body { font-family: Arial, sans-serif; margin: 2rem; }
-button { margin-bottom: 1rem; }
-li { cursor: pointer; margin: 0.25rem 0; }
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  line-height: var(--line-height-standard);
+  margin: 2rem;
+}
+button {
+  margin-bottom: 1rem;
+  font-size: var(--font-size-body-md);
+  line-height: var(--line-height-standard);
+}
+li {
+  cursor: pointer;
+  margin: 0.25rem 0;
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-standard);
+}
 li:hover { text-decoration: underline; }
