@@ -76,6 +76,18 @@ describe('YouTube search app', () => {
     });
   });
 
+  it('applies high-contrast text tokens', () => {
+    const { container } = render(<YouTubeApp initialResults={mockVideos} />);
+    const root = container.querySelector('[data-testid="youtube-app-root"]');
+    expect(root).not.toBeNull();
+    expect(root as HTMLElement).toHaveClass('text-kali-muted-text');
+    const searchInput = screen.getByPlaceholderText('Search YouTube');
+    expect(searchInput).toHaveClass('text-kali-muted-text');
+    expect(
+      container.querySelectorAll('[class*="text-ubt-cool-grey"]').length,
+    ).toBe(0);
+  });
+
   it('saves named clips with timestamps', async () => {
     const user = userEvent.setup();
     let curTime = 0;

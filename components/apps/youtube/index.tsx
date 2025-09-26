@@ -79,9 +79,9 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
     <span className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {name}
       {show && info && (
-        <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-ubt-cool-grey shadow">
-          <div className="font-bold">{info.name}</div>
-          {info.subscriberCount && <div>{info.subscriberCount} subs</div>}
+        <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-kali-muted-text shadow">
+          <div className="font-semibold text-white">{info.name}</div>
+          {info.subscriberCount && <div className="text-[11px]">{info.subscriberCount} subs</div>}
         </div>
       )}
     </span>
@@ -116,8 +116,8 @@ function Sidebar({
   };
 
   return (
-    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
-      <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
+    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm text-kali-muted-text" role="complementary">
+      <h2 className="mb-[6px] text-lg font-semibold text-white">Queue</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
           <div
@@ -126,12 +126,12 @@ function Sidebar({
             onClick={() => onPlay(v)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.title}</div>
+            <div className="mt-1 text-sm font-semibold text-white">{v.title}</div>
           </div>
         ))}
         {!queue.length && <div className="text-ubt-grey">Empty</div>}
       </div>
-      <h2 className="mb-[6px] mt-[24px] text-lg font-semibold">Watch Later</h2>
+      <h2 className="mb-[6px] mt-[24px] text-lg font-semibold text-white">Watch Later</h2>
       <div data-testid="watch-later-list">
         {watchLater.map((v, i) => (
           <div
@@ -146,7 +146,7 @@ function Sidebar({
             onKeyDown={(e) => handleKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.name || v.title}</div>
+            <div className="mt-1 text-sm font-semibold text-white">{v.name || v.title}</div>
           </div>
         ))}
         {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
@@ -235,11 +235,11 @@ function VirtualGrid({
                     <span className="bg-black/70 px-1 text-white">HD</span>
                   </div>
                 </div>
-                <div className="mt-[6px] text-sm line-clamp-2">
+                <div className="mt-[6px] text-sm font-semibold text-white line-clamp-2">
                   {truncateTitle(v.title)}
                 </div>
               </div>
-              <div className="mt-[6px] flex justify-between text-xs">
+              <div className="mt-[6px] flex justify-between text-xs text-kali-muted-text">
                 <ChannelHovercard id={v.channelId} name={v.channelName} />
                 <div className="space-x-[6px]">
                   <button onClick={() => onQueue(v)}>Queue</button>
@@ -537,7 +537,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   ]);
 
   return (
-    <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey">
+    <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-kali-muted-text" data-testid="youtube-app-root">
       <div className="flex flex-1 flex-col">
         <form onSubmit={handleSearch} className="p-4">
           <input
@@ -545,7 +545,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search YouTube"
-            className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
+            className="w-full rounded bg-ub-cool-grey p-2 text-kali-muted-text placeholder:text-kali-muted-text placeholder:opacity-70"
           />
         </form>
         {current && (
@@ -569,7 +569,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
               <button
                 onClick={togglePlay}
                 aria-label={isPlaying ? 'Pause' : 'Play'}
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                className="text-kali-muted-text hover:text-ubt-green"
               >
                 {isPlaying ? (
                   <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
@@ -593,7 +593,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={markStart}
                 title="Set loop start (A)"
                 aria-label="Set loop start"
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                className="text-kali-muted-text hover:text-ubt-green"
               >
                 <span className="flex h-6 w-6 items-center justify-center">A</span>
               </button>
@@ -601,7 +601,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={markEnd}
                 title="Set loop end (B)"
                 aria-label="Set loop end"
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                className="text-kali-muted-text hover:text-ubt-green"
               >
                 <span className="flex h-6 w-6 items-center justify-center">B</span>
               </button>
@@ -609,7 +609,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={toggleLoop}
                 disabled={loopStart === null || loopEnd === null}
                 aria-label="Toggle loop"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+                className="text-kali-muted-text hover:text-ubt-green disabled:opacity-50"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -627,7 +627,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={shareClip}
                 disabled={loopStart === null || loopEnd === null}
                 aria-label="Copy share link"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+                className="text-kali-muted-text hover:text-ubt-green disabled:opacity-50"
               >
                 <span className="flex h-6 w-6 items-center justify-center">Link</span>
               </button>
@@ -635,14 +635,14 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={saveClip}
                 disabled={loopStart === null || loopEnd === null}
                 aria-label="Save clip"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+                className="text-kali-muted-text hover:text-ubt-green disabled:opacity-50"
               >
                 <span className="flex h-6 w-6 items-center justify-center">Save</span>
               </button>
               <button
                 onClick={downloadCurrent}
                 aria-label="Download video"
-                className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
+                className="ml-auto text-kali-muted-text hover:text-ubt-green"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
                   <path

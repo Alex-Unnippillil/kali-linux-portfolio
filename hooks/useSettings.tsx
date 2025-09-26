@@ -115,7 +115,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
+  const clampFontScaleValue = (value: number) => {
+    if (!Number.isFinite(value)) return 1;
+    return Math.min(1.5, Math.max(1, value));
+  };
+  const [fontScale, setFontScaleState] = useState<number>(() => clampFontScaleValue(defaults.fontScale));
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
@@ -131,7 +135,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setUseKaliWallpaper(await loadUseKaliWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
+      setFontScaleState(clampFontScaleValue(await loadFontScale()));
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
@@ -202,8 +206,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
+    const normalized = Number.isFinite(fontScale)
+      ? Math.min(1.5, Math.max(1, fontScale))
+      : 1;
+    if (normalized !== fontScale) {
+      setFontScaleState(normalized);
+      return;
+    }
+    document.documentElement.style.setProperty('--font-multiplier', normalized.toString());
+    saveFontScale(normalized);
   }, [fontScale]);
 
   useEffect(() => {
@@ -251,6 +262,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [haptics]);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+  const updateFontScale = (value: number) => setFontScaleState(clampFontScaleValue(value));
 
   return (
     <SettingsContext.Provider
@@ -273,7 +285,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setUseKaliWallpaper,
         setDensity,
         setReducedMotion,
-        setFontScale,
+        setFontScale: updateFontScale,
         setHighContrast,
         setLargeHitAreas,
         setPongSpin,
