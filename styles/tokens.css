@@ -26,6 +26,11 @@
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
+  --kali-border: rgba(255, 255, 255, 0.12);
+  --kali-window-gradient-active: linear-gradient(180deg, rgba(34, 38, 44, 0.92) 0%, rgba(17, 21, 26, 0.95) 100%);
+  --kali-window-gradient-inactive: linear-gradient(180deg, rgba(24, 28, 33, 0.9) 0%, rgba(11, 14, 18, 0.92) 100%);
+  --kali-topbar-gradient-active: linear-gradient(180deg, rgba(38, 45, 54, 0.95) 0%, rgba(18, 22, 29, 0.96) 100%);
+  --kali-topbar-gradient-inactive: linear-gradient(180deg, rgba(27, 33, 41, 0.92) 0%, rgba(12, 16, 22, 0.94) 100%);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;

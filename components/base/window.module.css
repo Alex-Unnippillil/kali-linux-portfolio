@@ -1,3 +1,35 @@
+.windowContainer {
+  border: 1px solid var(--kali-border);
+  background: var(--kali-window-gradient-active);
+  background-clip: padding-box;
+}
+
+.windowContainerInactive {
+  background: var(--kali-window-gradient-inactive);
+}
+
+.windowTopBar {
+  border: 1px solid var(--kali-border);
+  border-bottom: 0;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  background: var(--kali-topbar-gradient-active);
+  margin: -1px -1px 0;
+  padding-inline: 0.75rem;
+}
+
+.windowTopBarInactive {
+  background: var(--kali-topbar-gradient-inactive);
+}
+
+.windowTopBarHandle {
+  cursor: grab;
+}
+
+.windowTopBar[aria-grabbed="true"] {
+  cursor: grabbing;
+}
+
 .windowYBorder {
   height: calc(100% - 10px);
   width: calc(100% + 10px);
