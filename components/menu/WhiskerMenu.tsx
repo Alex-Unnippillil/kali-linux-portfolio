@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { getShortcutById, matchesShortcut } from '../../hooks/useShortcuts';
 
 type AppMeta = {
   id: string;
@@ -77,8 +78,9 @@ const WhiskerMenu: React.FC = () => {
   };
 
   useEffect(() => {
+    const toggleShortcut = getShortcutById('launcher.toggle');
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      if (toggleShortcut && matchesShortcut(e, toggleShortcut.binding)) {
         e.preventDefault();
         setOpen(o => !o);
         return;

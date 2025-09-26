@@ -1,14 +1,17 @@
 import usePersistentState from '../../hooks/usePersistentState';
+import {
+  GLOBAL_SHORTCUTS,
+  ShortcutDefinition,
+} from '../../hooks/useShortcuts';
 
 export interface Shortcut {
   description: string;
   keys: string;
 }
 
-const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { description: 'Show keyboard shortcuts', keys: '?' },
-  { description: 'Open settings', keys: 'Ctrl+,' },
-];
+const CUSTOMIZABLE_SHORTCUTS: ShortcutDefinition[] = GLOBAL_SHORTCUTS.filter(
+  (shortcut) => shortcut.customizable
+);
 
 const validator = (value: unknown): value is Record<string, string> => {
   return (
@@ -22,9 +25,9 @@ const validator = (value: unknown): value is Record<string, string> => {
 };
 
 export function useKeymap() {
-  const initial = DEFAULT_SHORTCUTS.reduce<Record<string, string>>(
+  const initial = CUSTOMIZABLE_SHORTCUTS.reduce<Record<string, string>>(
     (acc, s) => {
-      acc[s.description] = s.keys;
+      acc[s.description] = s.binding;
       return acc;
     },
     {}
@@ -36,15 +39,27 @@ export function useKeymap() {
     validator
   );
 
-  const shortcuts = DEFAULT_SHORTCUTS.map(({ description, keys }) => ({
+  const shortcutsWithMetadata = CUSTOMIZABLE_SHORTCUTS.map(
+    ({ id, description, binding }) => ({
+      id,
+      description,
+      keys: map[description] || binding,
+    })
+  );
+
+  const overrides = new Map(
+    shortcutsWithMetadata.map(({ id, keys }) => [id, keys] as const)
+  );
+
+  const shortcuts = shortcutsWithMetadata.map(({ description, keys }) => ({
     description,
-    keys: map[description] || keys,
+    keys,
   }));
 
   const updateShortcut = (description: string, keys: string) =>
     setMap({ ...map, [description]: keys });
 
-  return { shortcuts, updateShortcut };
+  return { shortcuts, overrides, updateShortcut };
 }
 
 export default useKeymap;
