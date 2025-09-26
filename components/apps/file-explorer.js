@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import useAppSearch from '../../hooks/useAppSearch';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
@@ -100,11 +101,25 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [recent, setRecent] = useState([]);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
+  const [searchItems, setSearchItems] = useState([]);
+  const [searching, setSearching] = useState(false);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    debouncedQuery: debouncedSearchQuery,
+    results: searchResults,
+    highlight: highlightSearch,
+    metadata: searchMetadata,
+    reset: resetSearch,
+  } = useAppSearch(searchItems, {
+    getLabel: (item) => `${item.file}:${item.text}`,
+    filter: () => true,
+    debounceMs: 250,
+  });
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -291,24 +306,53 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
   };
 
-  const runSearch = () => {
-    if (!dirHandle || !hasWorker) return;
-    setResults([]);
-    if (workerRef.current) workerRef.current.terminate();
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
-      workerRef.current.onmessage = (e) => {
-        const { file, line, text, done } = e.data;
-        if (done) {
-          workerRef.current?.terminate();
+  useEffect(() => {
+    if (!hasWorker) return undefined;
+    if (!dirHandle) return undefined;
+    const trimmed = debouncedSearchQuery.trim();
+    if (!trimmed) {
+      setSearchItems([]);
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      setSearching(false);
+      return undefined;
+    }
+
+    setSearching(true);
+    setSearchItems([]);
+    if (workerRef.current) {
+      workerRef.current.terminate();
+    }
+    const worker = new Worker(new URL('./find.worker.js', import.meta.url));
+    workerRef.current = worker;
+    worker.onmessage = (e) => {
+      const { file, line, text, done } = e.data || {};
+      if (done) {
+        if (workerRef.current === worker) {
+          workerRef.current.terminate();
           workerRef.current = null;
         } else {
-          setResults((r) => [...r, { file, line, text }]);
+          worker.terminate();
         }
-      };
-      workerRef.current.postMessage({ directoryHandle: dirHandle, query });
-    }
-  };
+        setSearching(false);
+      } else if (file) {
+        setSearchItems((prev) => [...prev, { file, line, text }]);
+      }
+    };
+    worker.postMessage({ directoryHandle: dirHandle, query: debouncedSearchQuery });
+
+    return () => {
+      worker.terminate();
+    };
+  }, [debouncedSearchQuery, dirHandle, hasWorker]);
+
+  useEffect(() => {
+    setSearchItems([]);
+    setSearching(false);
+    resetSearch();
+  }, [dirHandle, resetSearch]);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
@@ -410,20 +454,38 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           )}
           <div className="p-2 border-t border-gray-600">
             <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Find in files"
             />
-            <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
-              Search
-            </button>
-            <div className="max-h-40 overflow-auto mt-2">
-              {results.map((r, i) => (
-                <div key={i}>
-                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+            <div
+              className="mt-2 text-xs text-gray-300"
+              role="status"
+              aria-live="polite"
+            >
+              {!hasWorker
+                ? 'Search requires web worker support.'
+                : searchMetadata.hasQuery
+                    ? `${searchMetadata.matched} matches` +
+                      (searchMetadata.debouncedQuery
+                        ? ` for "${searchMetadata.debouncedQuery}"`
+                        : '')
+                    : 'Start typing to search this directory'}
+              {searching && hasWorker ? ' — Searching…' : ''}
+            </div>
+            <div className="max-h-40 overflow-auto mt-2 space-y-1">
+              {searchResults.map(({ item }, i) => (
+                <div key={`${item.file}-${item.line}-${i}`} className="text-sm">
+                  <span className="font-bold">{item.file}:{item.line}</span>{' '}
+                  {highlightSearch(item.text)}
                 </div>
               ))}
+              {!searching && hasWorker && searchMetadata.hasQuery &&
+                searchResults.length === 0 && (
+                  <div className="text-sm text-gray-400">No matches found</div>
+                )}
             </div>
           </div>
         </div>
