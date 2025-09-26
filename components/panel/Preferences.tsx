@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import usePanelPosition from "../../hooks/usePanelPosition";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -28,13 +29,7 @@ export default function Preferences() {
     const stored = localStorage.getItem(`${PANEL_PREFIX}length`);
     return stored ? parseInt(stored, 10) : 100;
   });
-  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(() => {
-    if (typeof window === "undefined") return "horizontal";
-    return (localStorage.getItem(`${PANEL_PREFIX}orientation`) as
-      | "horizontal"
-      | "vertical"
-      | null) || "horizontal";
-  });
+  const [panelPosition, setPanelPosition] = usePanelPosition();
   const [autohide, setAutohide] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
@@ -52,11 +47,6 @@ export default function Preferences() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}orientation`, orientation);
-  }, [orientation]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
 
@@ -67,19 +57,19 @@ export default function Preferences() {
         {active === "display" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label htmlFor="orientation" className="text-ubt-grey">
-                Orientation
+              <label htmlFor="panel-position" className="text-ubt-grey">
+                Dock position
               </label>
               <select
-                id="orientation"
-                value={orientation}
+                id="panel-position"
+                value={panelPosition}
                 onChange={(e) =>
-                  setOrientation(e.target.value as "horizontal" | "vertical")
+                  setPanelPosition(e.target.value === "bottom" ? "bottom" : "left")
                 }
                 className="bg-ub-cool-grey text-white px-2 py-1 rounded"
               >
-                <option value="horizontal">Horizontal</option>
-                <option value="vertical">Vertical</option>
+                <option value="left">Left</option>
+                <option value="bottom">Bottom</option>
               </select>
             </div>
             <div className="flex items-center justify-between">
