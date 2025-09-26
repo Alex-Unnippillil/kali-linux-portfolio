@@ -40,6 +40,8 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            windowOrder: [],
+            activeWindowId: null,
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -181,6 +183,21 @@ export class Desktop extends Component {
             }
         }
         return null;
+    }
+
+    touchAppStack = (objId) => {
+        if (!objId) return;
+        this.app_stack = this.app_stack.filter(id => id !== objId);
+        this.app_stack.push(objId);
+    }
+
+    getWindowZIndex = (id) => {
+        const baseZ = 100;
+        const orderIndex = this.state.windowOrder.indexOf(id);
+        if (orderIndex === -1) {
+            return baseZ;
+        }
+        return baseZ + orderIndex;
     }
 
     cycleApps = (direction) => {
@@ -387,7 +404,9 @@ export class Desktop extends Component {
             favourite_apps,
             overlapped_windows,
             minimized_windows,
-            desktop_apps
+            desktop_apps,
+            windowOrder: [],
+            activeWindowId: null,
         }, () => {
             if (typeof callback === 'function') callback();
         });
@@ -426,7 +445,9 @@ export class Desktop extends Component {
             disabled_apps,
             minimized_windows,
             favourite_apps,
-            desktop_apps
+            desktop_apps,
+            windowOrder: this.state.windowOrder.filter(id => closed_windows[id] === false),
+            activeWindowId: closed_windows[this.state.activeWindowId] === false ? this.state.activeWindowId : null,
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -460,6 +481,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const zIndex = this.getWindowZIndex(app.id);
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -480,6 +502,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    zIndex,
                 }
 
                 windowsJsx.push(
@@ -541,17 +564,16 @@ export class Desktop extends Component {
     }
 
     hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
-
-        // remove focus and minimise this window
-        minimized_windows[objId] = true;
-        focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
-
-        this.hideSideBar(null, false);
-
-        this.giveFocusToLastApp();
+        this.setState(prevState => {
+            const minimized_windows = { ...prevState.minimized_windows, [objId]: true };
+            const focused_windows = { ...prevState.focused_windows, [objId]: false };
+            const windowOrder = prevState.windowOrder.filter(id => id !== objId);
+            const activeWindowId = prevState.activeWindowId === objId ? null : prevState.activeWindowId;
+            return { minimized_windows, focused_windows, windowOrder, activeWindowId };
+        }, () => {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+        });
     }
 
     giveFocusToLastApp = () => {
@@ -651,7 +673,6 @@ export class Desktop extends Component {
                     this.focus(objId);
                     this.saveSession();
                 });
-                this.app_stack.push(objId);
             }, 200);
         }
     }
@@ -688,20 +709,35 @@ export class Desktop extends Component {
         this.updateTrashIcon();
 
         // remove app from the app stack
-        this.app_stack.splice(this.app_stack.indexOf(objId), 1);
+        const stackIndex = this.app_stack.indexOf(objId);
+        if (stackIndex !== -1) {
+            this.app_stack.splice(stackIndex, 1);
+        }
 
         this.giveFocusToLastApp();
 
         this.hideSideBar(null, false);
 
         // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
-
-        if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-        closed_windows[objId] = true; // closes the app's window
-
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState(prevState => {
+            const closed_windows = { ...prevState.closed_windows, [objId]: true };
+            const favourite_apps = { ...prevState.favourite_apps };
+            if (this.initFavourite[objId] === false) {
+                favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
+            }
+            const focused_windows = { ...prevState.focused_windows, [objId]: false };
+            const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+            const windowOrder = prevState.windowOrder.filter(id => id !== objId);
+            const activeWindowId = prevState.activeWindowId === objId ? null : prevState.activeWindowId;
+            return {
+                closed_windows,
+                favourite_apps,
+                focused_windows,
+                minimized_windows,
+                windowOrder,
+                activeWindowId,
+            };
+        }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -733,18 +769,49 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
+        if (!objId) return;
+        let shouldUpdateStack = false;
+        this.setState(prevState => {
+            if (prevState.closed_windows[objId]) {
+                return null;
             }
-        }
-        this.setState({ focused_windows });
+
+            const focused_windows = { ...prevState.focused_windows };
+            let hasFocusChange = false;
+            const keys = new Set([...Object.keys(focused_windows), objId]);
+            keys.forEach((key) => {
+                const next = key === objId;
+                if (focused_windows[key] !== next) {
+                    focused_windows[key] = next;
+                    hasFocusChange = true;
+                }
+            });
+
+            const filteredOrder = prevState.windowOrder.filter(
+                (id) => id !== objId && !prevState.closed_windows[id]
+            );
+            const nextOrder = [...filteredOrder, objId];
+            const prevOrder = prevState.windowOrder.filter(id => !prevState.closed_windows[id]);
+            const orderChanged =
+                prevOrder.length !== nextOrder.length ||
+                prevOrder.some((id, index) => id !== nextOrder[index]);
+
+            if (!hasFocusChange && !orderChanged && prevState.activeWindowId === objId) {
+                return null;
+            }
+
+            shouldUpdateStack = true;
+
+            return {
+                focused_windows,
+                activeWindowId: objId,
+                windowOrder: nextOrder,
+            };
+        }, () => {
+            if (shouldUpdateStack) {
+                this.touchAppStack(objId);
+            }
+        });
     }
 
     addNewFolder = () => {
@@ -898,6 +965,7 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     minimized_windows={this.state.minimized_windows}
                     focused_windows={this.state.focused_windows}
+                    activeWindowId={this.state.activeWindowId}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
                 />
