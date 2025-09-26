@@ -1,16 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
-import apps, { utilities, games } from '../../apps.config';
+import { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
-
-type AppMeta = {
-  id: string;
-  title: string;
-  icon: string;
-  disabled?: boolean;
-  favourite?: boolean;
-};
+import { getAppItems, filterAppsByQuery, LauncherAppItem } from './launcherSearch';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -28,21 +21,44 @@ const WhiskerMenu: React.FC = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
-  const recentApps = useMemo(() => {
+  const allApps = useMemo(() => getAppItems(), []);
+  const appMap = useMemo(() => {
+    const map = new Map<string, LauncherAppItem>();
+    allApps.forEach(app => {
+      map.set(app.id, app);
+    });
+    return map;
+  }, [allApps]);
+  const favoriteApps = useMemo(() => allApps.filter(app => app.favourite), [allApps]);
+  const [recentApps, setRecentApps] = useState<LauncherAppItem[]>([]);
+
+  useEffect(() => {
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+      setRecentApps(ids.map(id => appMap.get(id)).filter(Boolean) as LauncherAppItem[]);
     } catch {
-      return [];
+      setRecentApps([]);
     }
-  }, [allApps, open]);
-  const utilityApps: AppMeta[] = utilities as any;
-  const gameApps: AppMeta[] = games as any;
+  }, [appMap, open]);
+  const utilityIds = useMemo(
+    () => new Set((utilities as { id: string }[]).map(item => item.id)),
+    [],
+  );
+  const gameIds = useMemo(
+    () => new Set((games as { id: string }[]).map(item => item.id)),
+    [],
+  );
+  const utilityApps = useMemo(
+    () => allApps.filter(app => utilityIds.has(app.id)),
+    [allApps, utilityIds],
+  );
+  const gameApps = useMemo(
+    () => allApps.filter(app => gameIds.has(app.id)),
+    [allApps, gameIds],
+  );
 
-  const currentApps = useMemo(() => {
-    let list: AppMeta[];
+  const baseApps = useMemo(() => {
+    let list: LauncherAppItem[];
     switch (category) {
       case 'favorites':
         list = favoriteApps;
@@ -59,12 +75,13 @@ const WhiskerMenu: React.FC = () => {
       default:
         list = allApps;
     }
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
-    }
     return list;
-  }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+  }, [category, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+
+  const currentApps = useMemo(
+    () => filterAppsByQuery(baseApps, query),
+    [baseApps, query],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -88,7 +105,7 @@ const WhiskerMenu: React.FC = () => {
         setOpen(false);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        setHighlight(h => Math.min(h + 1, Math.max(currentApps.length - 1, 0)));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
@@ -157,6 +174,7 @@ const WhiskerMenu: React.FC = () => {
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
+              aria-label="Search applications"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
