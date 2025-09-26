@@ -9,6 +9,7 @@
   --color-primary: #1793d1; /* kali blue accent */
   --color-secondary: #1a1f26; /* complementary dark */
   --color-accent: #1793d1; /* accent matches primary */
+  --color-menu-hover: rgba(23, 147, 209, 0.18); /* subtle accent wash for menus */
   /* Utility colors */
   --color-muted: #2a2e36; /* muted surfaces */
   --color-surface: #1a1f26; /* panel surfaces */
@@ -29,6 +30,7 @@ html[data-theme='dark'] {
   --color-primary: #1e88e5;
   --color-secondary: #121212;
   --color-accent: #bb86fc;
+  --color-menu-hover: rgba(30, 136, 229, 0.28);
   --color-muted: #1f1f1f;
   --color-surface: #121212;
   --color-inverse: #ffffff;
@@ -44,6 +46,7 @@ html[data-theme='neon'] {
   --color-primary: #39ff14;
   --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
+  --color-menu-hover: rgba(57, 255, 20, 0.22);
   --color-muted: #222222;
   --color-surface: #111111;
   --color-inverse: #ffffff;
@@ -59,6 +62,7 @@ html[data-theme='matrix'] {
   --color-primary: #00ff00;
   --color-secondary: #001100;
   --color-accent: #00ff00;
+  --color-menu-hover: rgba(0, 255, 0, 0.18);
   --color-muted: #003300;
   --color-surface: #001100;
   --color-inverse: #ffffff;

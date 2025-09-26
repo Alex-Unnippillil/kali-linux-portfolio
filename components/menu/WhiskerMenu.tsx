@@ -143,15 +143,27 @@ const WhiskerMenu: React.FC = () => {
           }}
         >
           <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
+            {CATEGORIES.map(cat => {
+              const isActive = category === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`relative text-left px-2 py-1 rounded mb-1 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${
+                    isActive ? 'bg-kali-menu-hover' : 'hover:bg-kali-menu-hover'
+                  }`}
+                  onClick={() => setCategory(cat.id)}
+                >
+                  {isActive && (
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-0 top-0 bottom-0 w-0.5 rounded-full bg-[var(--color-primary)]"
+                    />
+                  )}
+                  {cat.label}
+                </button>
+              );
+            })}
           </div>
           <div className="p-3">
             <input
