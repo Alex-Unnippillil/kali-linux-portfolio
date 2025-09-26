@@ -36,6 +36,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
+      - run: yarn prebuild
       - run: npm run tsc -- --noEmit
 
   test:

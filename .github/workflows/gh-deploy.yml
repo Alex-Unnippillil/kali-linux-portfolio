@@ -28,6 +28,9 @@ jobs:
       - name: Type Check
         run: yarn tsc --noEmit
 
+      - name: Prebuild gamepad project
+        run: yarn prebuild
+
       - name: Building
         run: yarn build
         env:
