@@ -30,12 +30,16 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
-  const recentApps = useMemo(() => {
+  const [recentApps, setRecentApps] = useState<AppMeta[]>([]);
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+      setRecentApps(ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[]);
     } catch {
-      return [];
+      setRecentApps([]);
     }
   }, [allApps, open]);
   const utilityApps: AppMeta[] = utilities as any;
