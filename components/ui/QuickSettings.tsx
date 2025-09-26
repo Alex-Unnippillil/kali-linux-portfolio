@@ -23,7 +23,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute rounded-md shadow-kali-panel border border-kali-border bg-kali-menu py-4 top-full right-3 mt-2 ${
         open ? '' : 'hidden'
       }`}
     >
