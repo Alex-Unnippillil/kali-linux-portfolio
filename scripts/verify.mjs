@@ -54,6 +54,10 @@ const getPort = () =>
       console.log(`✓ ${route}`);
     }
 
+    await run('yarn', ['lighthouse'], {
+      env: { ...process.env, LHCI_URL: `http://localhost:${port}/` },
+    });
+
     console.log('verify: PASS');
     server.kill();
   } catch (err) {
