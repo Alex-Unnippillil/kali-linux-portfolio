@@ -19,6 +19,7 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --kali-focus: var(--color-focus-ring);
   accent-color: var(--color-control-accent);
 }
 
@@ -75,5 +76,10 @@ html[data-theme='matrix'] {
 
 *:focus-visible {
   outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.focus-ring {
+  outline: 2px solid var(--kali-focus);
   outline-offset: 2px;
 }
