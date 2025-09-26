@@ -204,6 +204,18 @@ const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
 
+const toggleOverrides = {
+  apps: {
+    // 'metasploit': false,
+  },
+  utilities: {
+    // 'qr': false,
+  },
+  games: {
+    // '2048': false,
+  },
+};
+
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
   {
@@ -279,8 +291,6 @@ const utilityList = [
     screen: displaySubnetCalculator,
   },
 ];
-
-export const utilities = utilityList;
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -603,9 +613,7 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
-
-const apps = [
+const primaryAppList = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -1062,10 +1070,40 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
-  // Utilities are grouped separately
-  ...utilities,
-  // Games are included so they appear alongside apps
-  ...games,
 ];
 
+const applyToggleConfig = (items, category) => {
+  const overrides = toggleOverrides[category] ?? {};
+  const toggles = {};
+  const enabledItems = [];
+
+  items.forEach((item) => {
+    const enabled = overrides[item.id] ?? true;
+    toggles[item.id] = enabled;
+    if (enabled) {
+      enabledItems.push({ ...item, enabled });
+    }
+  });
+
+  return { enabledItems, toggles };
+};
+
+const { enabledItems: enabledUtilities, toggles: utilityToggleState } = applyToggleConfig(utilityList, 'utilities');
+export const utilities = enabledUtilities;
+
+const gamesWithDefaults = gameList.map((game) => ({ ...gameDefaults, ...game }));
+const { enabledItems: enabledGames, toggles: gameToggleState } = applyToggleConfig(gamesWithDefaults, 'games');
+export const games = enabledGames;
+
+const { enabledItems: enabledPrimaryApps, toggles: appToggleState } = applyToggleConfig(primaryAppList, 'apps');
+
+const apps = [...enabledPrimaryApps, ...utilities, ...games];
+
+export const appToggleConfig = {
+  apps: appToggleState,
+  utilities: utilityToggleState,
+  games: gameToggleState,
+};
+
 export default apps;
+
