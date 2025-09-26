@@ -89,6 +89,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.lockBodyScroll();
     }
 
     componentWillUnmount() {
@@ -96,6 +97,104 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.unlockBodyScroll();
+    }
+
+    lockBodyScroll = () => {
+        if (typeof document === 'undefined') return;
+        document.body.classList.add('desktop-scroll-lock');
+    }
+
+    unlockBodyScroll = () => {
+        if (typeof document === 'undefined') return;
+        document.body.classList.remove('desktop-scroll-lock');
+    }
+
+    handleBackgroundWheel = (event) => {
+        const target = event.target;
+        if (!target) return;
+        if (typeof Element !== 'undefined' && !(target instanceof Element)) return;
+
+        const focusedId = this.getFocusedWindowId();
+        if (!focusedId) return;
+
+        const windowElement = target.closest('.opened-window');
+        if (windowElement && windowElement.id === focusedId) {
+            return;
+        }
+
+        const inWindowArea = !!target.closest('#window-area');
+        const onTaskbar = !!target.closest('[data-context="taskbar"]');
+        const onBackground = !!target.closest('.bg-ubuntu-img');
+
+        if (!inWindowArea && !onTaskbar && !onBackground) {
+            return;
+        }
+
+        this.routeScrollToFocused(event);
+    }
+
+    routeScrollToFocused = (event) => {
+        const focusedId = this.getFocusedWindowId();
+        if (!focusedId) return;
+
+        const scrollContainer = this.getWindowScrollContainer(focusedId);
+        if (!scrollContainer) return;
+
+        const { deltaX, deltaY } = this.normalizeWheelDelta(event, scrollContainer);
+        if (deltaX === 0 && deltaY === 0) return;
+
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+        if (event.nativeEvent && typeof event.nativeEvent.stopImmediatePropagation === 'function') {
+            event.nativeEvent.stopImmediatePropagation();
+        }
+
+        const canScrollHorizontally = scrollContainer.scrollWidth > scrollContainer.clientWidth;
+        const canScrollVertically = scrollContainer.scrollHeight > scrollContainer.clientHeight;
+
+        if (!canScrollHorizontally && !canScrollVertically) {
+            return;
+        }
+
+        scrollContainer.scrollBy({ left: deltaX, top: deltaY, behavior: 'auto' });
+    }
+
+    getWindowScrollContainer = (id) => {
+        if (typeof document === 'undefined') return null;
+        const root = document.getElementById(id);
+        if (!root) return null;
+        return root.querySelector('.windowMainScreen');
+    }
+
+    normalizeWheelDelta = (event, container) => {
+        const nativeEvent = event.nativeEvent ?? event;
+        let { deltaX = 0, deltaY = 0, deltaMode = 0 } = nativeEvent || {};
+
+        if (!Number.isFinite(deltaX)) deltaX = 0;
+        if (!Number.isFinite(deltaY)) deltaY = 0;
+
+        if (deltaMode === 1) {
+            const lineHeight = this.getApproxLineHeight(container);
+            deltaX *= lineHeight;
+            deltaY *= lineHeight;
+        } else if (deltaMode === 2) {
+            const height = container?.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 100);
+            deltaX *= height;
+            deltaY *= height;
+        }
+
+        return { deltaX, deltaY };
+    }
+
+    getApproxLineHeight = (element) => {
+        if (typeof window === 'undefined' || !element) return 16;
+        const style = window.getComputedStyle(element);
+        const lineHeight = parseFloat(style.lineHeight);
+        if (Number.isFinite(lineHeight)) return lineHeight;
+        const fontSize = parseFloat(style.fontSize);
+        if (Number.isFinite(fontSize)) return fontSize * 1.2;
+        return 16;
     }
 
     checkForNewFolders = () => {
@@ -480,6 +579,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    routeScrollToFocused: this.routeScrollToFocused,
                 }
 
                 windowsJsx.push(
@@ -865,7 +965,12 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                onWheelCapture={this.handleBackgroundWheel}
+            >
 
                 {/* Window Area */}
                 <div

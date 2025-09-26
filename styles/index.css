@@ -11,6 +11,11 @@ body{
     color: var(--color-text);
 }
 
+body.desktop-scroll-lock {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
