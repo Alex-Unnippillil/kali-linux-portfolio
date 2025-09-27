@@ -238,7 +238,7 @@ export default function Settings() {
             <input
               id="font-scale"
               type="range"
-              min="0.75"
+              min="1"
               max="1.5"
               step="0.05"
               value={fontScale}
