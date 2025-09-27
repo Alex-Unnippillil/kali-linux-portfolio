@@ -52,8 +52,8 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   const [points, setPoints] = useState<number[]>(() =>
     Array.from({ length: MAX_POINTS }, (_, index) => 0.32 + (index % 3) * 0.04)
   );
-  const timeoutRef = useRef<number>();
-  const frameRef = useRef<number>();
+  const timeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const frameRef = useRef<number | null>(null);
   const lastSampleRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
 
   useEffect(() => {
@@ -63,10 +63,10 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
 
     if (prefersReducedMotion) {
       setPoints(prev => prev.map(() => 0.28));
-      if (timeoutRef.current) {
+      if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current);
       }
-      if (frameRef.current) {
+      if (frameRef.current !== null) {
         cancelAnimationFrame(frameRef.current);
       }
       return undefined;
@@ -98,10 +98,10 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
 
     return () => {
       cancelled = true;
-      if (timeoutRef.current) {
+      if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current);
       }
-      if (frameRef.current) {
+      if (frameRef.current !== null) {
         cancelAnimationFrame(frameRef.current);
       }
     };
