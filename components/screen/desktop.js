@@ -1026,14 +1026,14 @@ export class Desktop extends Component {
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
 
     renderNameBar = () => {
-        let addFolder = () => {
+        const addFolder = () => {
             let folder_name = document.getElementById("folder-name-input").value;
             this.addToDesktop(folder_name);
-        }
+        };
 
-        let removeCard = () => {
+        const removeCard = () => {
             this.setState({ showNameBar: false });
-        }
+        };
 
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
@@ -1172,7 +1172,7 @@ export class Desktop extends Component {
                         onClose={this.closeWindowSwitcher} /> : null}
 
             </main>
-        )
+        );
     }
 }
 
