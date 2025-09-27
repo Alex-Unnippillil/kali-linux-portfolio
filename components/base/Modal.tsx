@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
-interface ModalProps {
+interface ModalProps extends React.HTMLAttributes<HTMLDivElement> {
     isOpen: boolean;
     onClose: () => void;
-    children: React.ReactNode;
     /**
      * Root element whose interaction should be disabled when the
      * modal is open. If a string is provided it is treated as an id.
@@ -27,7 +26,15 @@ const FOCUSABLE_SELECTORS = [
     '[contenteditable]'
 ].join(',');
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
+const Modal: React.FC<ModalProps> = ({
+    isOpen,
+    onClose,
+    children,
+    overlayRoot,
+    className,
+    onKeyDown,
+    ...rest
+}) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
@@ -49,7 +56,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
         return document.getElementById('__next') || document.body;
     }, [overlayRoot]);
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const trapFocusOnTab = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.key !== 'Tab') return;
         const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
         if (!elements || elements.length === 0) return;
@@ -64,6 +71,16 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             last.focus();
         }
     }, []);
+
+    const handleKeyDown = useCallback(
+        (event: React.KeyboardEvent<HTMLDivElement>) => {
+            trapFocusOnTab(event);
+            if (onKeyDown) {
+                onKeyDown(event);
+            }
+        },
+        [onKeyDown, trapFocusOnTab]
+    );
 
     useEffect(() => {
         if (!isOpen) return;
@@ -116,6 +133,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
+            className={className}
+            {...rest}
         >
             {children}
         </div>,
