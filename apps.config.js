@@ -1,17 +1,49 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/chrome';
-import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayWeather } from './components/apps/weather';
-import { displayClipboardManager } from './components/apps/ClipboardManager';
-import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayScreenRecorder } from './components/apps/screen-recorder';
-import { displayNikto } from './components/apps/nikto';
+const attachComponentMetadata = (entries) => {
+  entries.forEach((entry) => {
+    if (!entry.Component && entry.screen?.Component) {
+      entry.Component = entry.screen.Component;
+    }
+  });
+  return entries;
+};
+
+const ChromeApp = createDynamicApp('chrome', 'Google Chrome');
+const displayChrome = createDisplay(ChromeApp);
+
+const SpotifyApp = createDynamicApp('spotify', 'Spotify');
+const displaySpotify = createDisplay(SpotifyApp);
+
+const SettingsApp = createDynamicApp('settings', 'Settings');
+const displaySettings = createDisplay(SettingsApp);
+
+const XApp = createDynamicApp('x', 'X');
+const displayX = createDisplay(XApp);
+
+const GeditApp = createDynamicApp('gedit', 'Contact');
+const displayGedit = createDisplay(GeditApp);
+
+const TodoistApp = createDynamicApp('todoist', 'Todoist');
+const displayTodoist = createDisplay(TodoistApp);
+
+const WeatherApp = createDynamicApp('weather', 'Weather');
+const displayWeather = createDisplay(WeatherApp);
+
+const ClipboardManagerApp = createDynamicApp('ClipboardManager', 'Clipboard Manager');
+const displayClipboardManager = createDisplay(ClipboardManagerApp);
+
+const FigletApp = createDynamicApp('figlet', 'Figlet');
+const displayFiglet = createDisplay(FigletApp);
+
+const ResourceMonitorApp = createDynamicApp('resource_monitor', 'Resource Monitor');
+const displayResourceMonitor = createDisplay(ResourceMonitorApp);
+
+const ScreenRecorderApp = createDynamicApp('screen-recorder', 'Screen Recorder');
+const displayScreenRecorder = createDisplay(ScreenRecorderApp);
+
+const NiktoApp = createDynamicApp('nikto', 'Nikto');
+const displayNikto = createDisplay(NiktoApp);
 
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
@@ -279,6 +311,8 @@ const utilityList = [
     screen: displaySubnetCalculator,
   },
 ];
+
+attachComponentMetadata(utilityList);
 
 export const utilities = utilityList;
 
@@ -603,7 +637,13 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = gameList.map((game) => {
+  const entry = { ...gameDefaults, ...game };
+  if (!entry.Component && entry.screen?.Component) {
+    entry.Component = entry.screen.Component;
+  }
+  return entry;
+});
 
 const apps = [
   {
@@ -1067,5 +1107,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+attachComponentMetadata(apps);
 
 export default apps;

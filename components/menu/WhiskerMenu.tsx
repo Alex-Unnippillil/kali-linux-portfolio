@@ -7,12 +7,18 @@ import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
 
+type ScreenFactory = ((addFolder: any, openApp: any) => JSX.Element) & {
+  prefetch?: () => void;
+  Component?: React.ComponentType<any>;
+};
+
 type AppMeta = {
   id: string;
   title: string;
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  screen?: ScreenFactory;
 };
 
 type CategorySource =
@@ -481,6 +487,7 @@ const WhiskerMenu: React.FC = () => {
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    prefetch={app.screen?.prefetch}
                   />
                 </div>
               ))}
