@@ -1,4 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  subscribeSystemMetrics,
+  getLatestSystemMetrics,
+} from '../../utils/systemMetrics';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
@@ -49,34 +53,20 @@ const ResourceMonitor = () => {
 
   // Sampling loop using requestAnimationFrame
   useEffect(() => {
-    let raf;
-    let lastFrame = performance.now();
-    let lastSample = performance.now();
+    const latest = getLatestSystemMetrics();
+    if (!paused) setFps(latest.fps || 0);
 
-    const sample = (now) => {
-      const dt = now - lastFrame;
-      lastFrame = now;
-      const currentFps = 1000 / dt;
-      if (!paused) setFps(currentFps);
-
-      if (!paused && now - lastSample >= 1000) {
-        const target = 1000 / 60; // 60 FPS ideal frame time
-        const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
-        let mem = 0;
-        if (performance && performance.memory) {
-          const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-          mem = (usedJSHeapSize / totalJSHeapSize) * 100;
-        }
-        pushSample('cpu', cpu);
-        pushSample('mem', mem);
-        pushSample('fps', currentFps);
+    const unsubscribe = subscribeSystemMetrics((sample) => {
+      if (!paused) {
+        pushSample('cpu', sample.cpu);
+        pushSample('mem', sample.memory);
+        pushSample('fps', sample.fps);
+        setFps(sample.fps);
         scheduleDraw();
-        lastSample = now;
       }
-      raf = requestAnimationFrame(sample);
-    };
-    raf = requestAnimationFrame(sample);
-    return () => cancelAnimationFrame(raf);
+    });
+
+    return () => unsubscribe();
   }, [paused, scheduleDraw]);
 
   // Stress test animation – many moving windows
