@@ -280,6 +280,14 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        const target = e.target;
+        const isEditable = target && target instanceof HTMLElement && (
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable
+        );
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
@@ -302,7 +310,11 @@ export class Desktop extends Component {
             const direction = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
             this.shiftWorkspace(direction);
         }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        else if (
+            e.altKey &&
+            ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) &&
+            !isEditable
+        ) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {

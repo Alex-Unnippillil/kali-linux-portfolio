@@ -21,8 +21,12 @@ describe('ShortcutOverlay', () => {
       screen.getByText('Show keyboard shortcuts')
     ).toBeInTheDocument();
     expect(screen.getByText('Open settings')).toBeInTheDocument();
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveAttribute('data-conflict', 'true');
-    expect(items[1]).toHaveAttribute('data-conflict', 'true');
+    const conflictRows = screen
+      .getAllByRole('row')
+      .filter((row) => row.getAttribute('data-conflict') === 'true');
+    expect(conflictRows).toHaveLength(2);
+    conflictRows.forEach((row) => {
+      expect(row).toHaveAttribute('data-conflict', 'true');
+    });
   });
 });
