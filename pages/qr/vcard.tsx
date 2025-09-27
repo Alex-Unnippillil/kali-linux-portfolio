@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const VCardPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -11,6 +12,7 @@ const VCardPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [vcard, setVcard] = useState('');
   const [png, setPng] = useState('');
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [svg, setSvg] = useState('');
 
   useEffect(() => {
@@ -69,7 +71,10 @@ const VCardPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+    <div
+      ref={safeAreaRef}
+      className="flex min-h-screen flex-col items-center justify-center gap-4 p-4"
+    >
       <form className="w-full max-w-md space-y-2">
         <label className="block text-sm">
           Full Name

@@ -7,6 +7,7 @@ import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
 import Tabs from '../../components/Tabs';
 import FormError from '../../components/ui/FormError';
 import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const tabs = [
   { id: 'text', label: 'Text' },
@@ -31,6 +32,7 @@ const QRPage: React.FC = () => {
   const [qrPng, setQrPng] = useState('');
   const [qrSvg, setQrSvg] = useState('');
   const [fileName, setFileName] = useState('qr');
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [scanResult, setScanResult] = useState('');
   const [batch, setBatch] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -188,7 +190,10 @@ const QRPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-4">
+    <div
+      ref={safeAreaRef}
+      className="flex min-h-screen flex-col items-center justify-center gap-8 p-4"
+    >
       <div className="w-full max-w-md">
         <Tabs
           tabs={tabs}

@@ -2,15 +2,20 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const SSHBuilder: React.FC = () => {
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [user, setUser] = useState('');
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
   const command = `ssh ${user ? `${user}@` : ''}${host}${port ? ` -p ${port}` : ''}`.trim();
 
   return (
-    <div className="h-full bg-gray-900 p-4 text-white overflow-auto">
+    <div
+      ref={safeAreaRef}
+      className="h-full bg-gray-900 p-4 text-white overflow-auto"
+    >
       <h1 className="mb-4 text-2xl">SSH Command Builder</h1>
       <p className="mb-4 text-sm text-yellow-300">
         Generate an SSH command without executing it. Learn more at{' '}

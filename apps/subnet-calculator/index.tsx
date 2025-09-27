@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { HostRange } from '../../modules/networking/subnet';
 import { calculateSubnetInfo } from '../../modules/networking/subnet';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const formatHostRange = (range: HostRange) => {
   if (!range.firstHost || !range.lastHost) {
@@ -27,6 +28,7 @@ const Stat = ({ label, value }: StatProps) => (
 );
 
 const SubnetCalculator = () => {
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [ipAddress, setIpAddress] = useState('192.168.1.10');
   const [cidrInput, setCidrInput] = useState('24');
 
@@ -59,7 +61,10 @@ const SubnetCalculator = () => {
   }, [ipAddress, cidrInput]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <div
+      ref={safeAreaRef}
+      className="h-full w-full overflow-auto bg-ub-cool-grey text-white"
+    >
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold">Subnet Calculator</h1>
