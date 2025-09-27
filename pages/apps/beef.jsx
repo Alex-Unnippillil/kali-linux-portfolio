@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Beef = dynamic(() => import('../../apps/beef'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/beef'), {
+  appName: 'BeEF Console',
 });
-
-export default function BeefPage() {
-  return <Beef />;
-}

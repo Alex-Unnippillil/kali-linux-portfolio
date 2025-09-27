@@ -1,12 +1,5 @@
-import '../../utils/decimal';
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Calculator = dynamic(() => import('../../apps/calculator'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/calculator'), {
+  appName: 'Calculator',
 });
-
-export default function CalculatorPage() {
-  return <Calculator />;
-}
-

@@ -1,7 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const InputLab = dynamic(() => import('../../apps/input-lab'), { ssr: false });
-
-export default function InputLabPage() {
-  return <InputLab />;
-}
+export default createSuspenseAppPage(() => import('../../apps/input-lab'), {
+  appName: 'Input Lab',
+});

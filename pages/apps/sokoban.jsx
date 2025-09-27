@@ -1,14 +1,13 @@
-import React from 'react';
-import dynamic from 'next/dynamic';
 import { getDailySeed } from '../../utils/dailySeed';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Sokoban = dynamic(() => import('../../apps/sokoban'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
-
-const SokobanPage = () => (
-  <Sokoban getDailySeed={() => getDailySeed('sokoban')} />
+const Sokoban = createSuspenseAppPage(
+  () => import('../../apps/sokoban'),
+  {
+    appName: 'Sokoban',
+  },
 );
 
-export default SokobanPage;
+export default function SokobanPage() {
+  return <Sokoban getDailySeed={() => getDailySeed('sokoban')} />;
+}

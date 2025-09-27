@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const ContactApp = dynamic(() => import('../../apps/contact'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/contact'), {
+  appName: 'Contact',
 });
-
-export default function ContactPage() {
-  return <ContactApp />;
-}

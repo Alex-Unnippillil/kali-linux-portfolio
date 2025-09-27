@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const HTTPPreview = dynamic(() => import('../../apps/http'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/http'), {
+  appName: 'HTTP Builder',
 });
-
-export default function HTTPPage() {
-  return <HTTPPreview />;
-}

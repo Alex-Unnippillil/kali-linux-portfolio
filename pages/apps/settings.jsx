@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const SettingsApp = dynamic(() => import('../../apps/settings'), { ssr: false });
-
-export default function SettingsPage() {
-  return <SettingsApp />;
-}
-
+export default createSuspenseAppPage(() => import('../../apps/settings'), {
+  appName: 'Settings',
+});

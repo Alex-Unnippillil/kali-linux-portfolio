@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const TowerDefense = dynamic(() => import('../../apps/tower-defense'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/tower-defense'), {
+  appName: 'Tower Defense',
 });
-
-export default TowerDefense;

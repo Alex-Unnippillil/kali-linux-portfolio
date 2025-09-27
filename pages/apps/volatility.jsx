@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Volatility = dynamic(() => import('../../apps/volatility'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/volatility'), {
+  appName: 'Volatility Lab',
 });
-
-export default function VolatilityPage() {
-  return <Volatility />;
-}
