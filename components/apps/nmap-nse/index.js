@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Toast from '../../ui/Toast';
+import { useToast } from '../../ui/Toaster';
 import DiscoveryMap from './DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
@@ -84,7 +84,7 @@ const NmapNSEApp = () => {
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
-  const [toast, setToast] = useState('');
+  const toast = useToast();
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -131,13 +131,12 @@ const NmapNSEApp = () => {
     .trim();
 
   const copyCommand = async () => {
-    if (typeof window !== 'undefined') {
-      try {
-        await navigator.clipboard.writeText(command);
-        setToast('Command copied');
-      } catch (e) {
-        // ignore
-      }
+    if (typeof window === 'undefined') return;
+    try {
+      await navigator.clipboard.writeText(command);
+      toast.info('Command copied');
+    } catch (e) {
+      toast.error('Copy failed. Try again.');
     }
   };
 
@@ -148,9 +147,9 @@ const NmapNSEApp = () => {
     if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Output copied');
+      toast.info('Output copied');
     } catch (e) {
-      // ignore
+      toast.error('Copy failed. Try again.');
     }
   };
 
@@ -162,7 +161,7 @@ const NmapNSEApp = () => {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    setToast('Output selected');
+    toast.info('Output selected');
   };
 
   const handleOutputKey = (e) => {
@@ -435,7 +434,6 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };

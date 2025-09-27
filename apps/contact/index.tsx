@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
-import Toast from "../../components/ui/Toast";
+import { useToast } from "../../components/ui/Toaster";
 import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
@@ -29,7 +29,7 @@ const ContactApp: React.FC = () => {
   const [message, setMessage] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState("");
+  const toast = useToast();
   const [csrfToken, setCsrfToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
@@ -78,6 +78,7 @@ const ContactApp: React.FC = () => {
     if (hasValidationError) {
       setSubmitting(false);
       setError("Please fix the errors above and try again.");
+      toast.error("Please fix the errors above and try again.");
       trackEvent("contact_submit_error", { method: "form" });
       return;
     }
@@ -85,7 +86,9 @@ const ContactApp: React.FC = () => {
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
     if (!recaptchaToken) {
-      setError("Captcha verification failed. Please try again.");
+      const errorMessage = "Captcha verification failed. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
       setSubmitting(false);
       trackEvent("contact_submit_error", { method: "form" });
       return;
@@ -101,7 +104,7 @@ const ContactApp: React.FC = () => {
         recaptchaToken,
       });
       if (result.success) {
-        setToast("Message sent");
+        toast.success("Message sent");
         setName("");
         setEmail("");
         setMessage("");
@@ -109,14 +112,27 @@ const ContactApp: React.FC = () => {
         localStorage.removeItem(DRAFT_KEY);
         trackEvent("contact_submit", { method: "form" });
       } else {
-        setError(result.error || "Submission failed");
+        const errorMessage = result.error || "Submission failed";
+        setError(errorMessage);
+        toast.error(errorMessage);
         trackEvent("contact_submit_error", { method: "form" });
       }
     } catch {
-      setError("Submission failed");
+      const errorMessage = "Submission failed";
+      setError(errorMessage);
+      toast.error(errorMessage);
       trackEvent("contact_submit_error", { method: "form" });
     }
     setSubmitting(false);
+  };
+
+  const handleCopyEmail = async () => {
+    const copied = await copyToClipboard(EMAIL);
+    if (copied) {
+      toast.info("Email copied to clipboard");
+    } else {
+      toast.error("Copy failed. Try again.");
+    }
   };
 
   return (
@@ -126,7 +142,7 @@ const ContactApp: React.FC = () => {
         Prefer email?{" "}
         <button
           type="button"
-          onClick={() => copyToClipboard(EMAIL)}
+          onClick={handleCopyEmail}
           className="underline mr-2"
         >
           Copy address
@@ -261,7 +277,6 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );
 };

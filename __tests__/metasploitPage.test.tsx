@@ -1,10 +1,15 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import MetasploitPage from '../apps/metasploit';
+import { ToasterProvider } from '../components/ui/Toaster';
 
 describe('Metasploit page module filtering', () => {
   it('filters modules by search and shows tags', () => {
-    render(<MetasploitPage />);
+    render(
+      <ToasterProvider>
+        <MetasploitPage />
+      </ToasterProvider>,
+    );
 
     // expand tree to reveal a known module
     fireEvent.click(screen.getAllByText('auxiliary')[0]);

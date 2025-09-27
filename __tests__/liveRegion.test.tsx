@@ -1,14 +1,45 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
-import Toast from '../components/ui/Toast';
+import { ToasterProvider, useToast } from '../components/ui/Toaster';
 import FormError from '../components/ui/FormError';
 
+const SuccessToastTrigger = () => {
+  const { success } = useToast();
+  useEffect(() => {
+    success('Saved', { duration: 1000 });
+  }, [success]);
+  return null;
+};
+
+const ErrorToastTrigger = () => {
+  const { error } = useToast();
+  useEffect(() => {
+    error('Failed', { duration: 1000 });
+  }, [error]);
+  return null;
+};
+
 describe('live region components', () => {
-  it('Toast uses polite live region', () => {
-    const { unmount } = render(<Toast message="Saved" />);
-    const region = screen.getByRole('status');
+  it('success toasts use polite live regions', async () => {
+    render(
+      <ToasterProvider>
+        <SuccessToastTrigger />
+      </ToasterProvider>,
+    );
+
+    const region = await screen.findByRole('status');
     expect(region).toHaveAttribute('aria-live', 'polite');
-    unmount();
+  });
+
+  it('error toasts announce assertively', async () => {
+    render(
+      <ToasterProvider>
+        <ErrorToastTrigger />
+      </ToasterProvider>,
+    );
+
+    const region = await screen.findByRole('alert');
+    expect(region).toHaveAttribute('aria-live', 'assertive');
   });
 
   it('FormError announces politely', () => {
