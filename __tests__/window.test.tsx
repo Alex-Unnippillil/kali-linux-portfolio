@@ -7,6 +7,29 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
 
+type DragScenario = {
+  startClient: { x: number; y: number };
+  startPosition: { x: number; y: number };
+  moveClient: { x: number; y: number };
+  movePosition: { x: number; y: number };
+};
+
+const simulatePointerDrag = (ref: React.RefObject<Window>, node: HTMLElement, scenario: DragScenario) => {
+  const { startClient, startPosition, moveClient, movePosition } = scenario;
+  act(() => {
+    ref.current!.changeCursorToMove(
+      new MouseEvent('mousedown', { clientX: startClient.x, clientY: startClient.y }),
+      { node, x: startPosition.x, y: startPosition.y } as any
+    );
+  });
+  act(() => {
+    ref.current!.handleDrag(
+      new MouseEvent('mousemove', { clientX: moveClient.x, clientY: moveClient.y }),
+      { node, x: movePosition.x, y: movePosition.y } as any
+    );
+  });
+};
+
 beforeEach(() => {
   setViewport(1440, 900);
 });
@@ -83,8 +106,11 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 200, y: 200 },
+      startPosition: { x: 200, y: 200 },
+      moveClient: { x: -20, y: 210 },
+      movePosition: { x: 0, y: 210 },
     });
 
     const preview = screen.getByTestId('snap-preview');
@@ -122,8 +148,11 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 200, y: 200 },
+      startPosition: { x: 200, y: 200 },
+      moveClient: { x: 320, y: 220 },
+      movePosition: { x: 320, y: 220 },
     });
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
@@ -159,8 +188,11 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 450, y: 220 },
+      startPosition: { x: 400, y: 220 },
+      moveClient: { x: 460, y: -20 },
+      movePosition: { x: 400, y: 0 },
     });
 
     expect(ref.current!.state.snapPosition).toBe('top');
@@ -200,8 +232,11 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 220, y: 220 },
+      startPosition: { x: 220, y: 220 },
+      moveClient: { x: -40, y: 240 },
+      movePosition: { x: 0, y: 240 },
     });
     act(() => {
       ref.current!.handleStop();
@@ -244,8 +279,12 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    const parentWidth = ref.current!.state.parentSize.width;
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: parentWidth - 50, y: 260 },
+      startPosition: { x: parentWidth - 50, y: 260 },
+      moveClient: { x: parentWidth + 200, y: 280 },
+      movePosition: { x: parentWidth, y: 280 },
     });
     act(() => {
       ref.current!.handleStop();
@@ -288,8 +327,11 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 420, y: 250 },
+      startPosition: { x: 320, y: 250 },
+      moveClient: { x: 430, y: -40 },
+      movePosition: { x: 320, y: 0 },
     });
     act(() => {
       ref.current!.handleStop();
@@ -331,8 +373,11 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 220, y: 220 },
+      startPosition: { x: 220, y: 220 },
+      moveClient: { x: -40, y: 240 },
+      movePosition: { x: 0, y: 240 },
     });
     act(() => {
       ref.current!.handleStop();
@@ -341,13 +386,6 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
     const snappedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
-
-    const keyboardEvent = {
-      key: 'ArrowDown',
-      altKey: true,
-      preventDefault: jest.fn(),
-      stopPropagation: jest.fn()
-    } as unknown as KeyboardEvent;
 
     act(() => {
       ref.current!.handleKeyDown({
@@ -395,8 +433,11 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 240, y: 240 },
+      startPosition: { x: 240, y: 240 },
+      moveClient: { x: -30, y: 260 },
+      movePosition: { x: 0, y: 260 },
     });
     act(() => {
       ref.current!.handleStop();
@@ -475,11 +516,66 @@ describe('Edge resistance', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
+    simulatePointerDrag(ref, winEl, {
+      startClient: { x: 120, y: 120 },
+      startPosition: { x: 120, y: 120 },
+      moveClient: { x: -80, y: -40 },
+      movePosition: { x: 0, y: 0 },
     });
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+
+  it('allows snap preview without overshoot when reduced motion is enabled', () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = (() => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    })) as any;
+
+    try {
+      const ref = React.createRef<Window>();
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+      );
+
+      const winEl = document.getElementById('test-window')!;
+      winEl.getBoundingClientRect = () => ({
+        left: 5,
+        top: 150,
+        right: 105,
+        bottom: 250,
+        width: 100,
+        height: 100,
+        x: 5,
+        y: 150,
+        toJSON: () => {}
+      });
+
+      act(() => {
+        ref.current!.changeCursorToMove(undefined, { node: winEl, x: 200, y: 200 } as any);
+      });
+      act(() => {
+        ref.current!.handleDrag(undefined, { node: winEl, x: 0, y: 200 } as any);
+      });
+
+      expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 });
 
