@@ -4,5 +4,11 @@
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
     "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
+  },
+  "checks": {
+    "playwright": {
+      "command": "yarn playwright:install && yarn playwright:test",
+      "timeout": 900
+    }
   }
 }
