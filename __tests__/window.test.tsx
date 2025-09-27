@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Window from '../components/base/window';
+import Window, { KEYBOARD_MOVE_STEP, KEYBOARD_RESIZE_STEP } from '../components/base/window';
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -480,6 +480,79 @@ describe('Edge resistance', () => {
     });
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
+describe('Keyboard move and resize shortcuts', () => {
+  it('nudges window with Ctrl+Arrow keys', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    fireEvent.keyDown(winEl, { key: 'ArrowRight', ctrlKey: true });
+    expect(winEl.style.transform).toBe(`translate(${KEYBOARD_MOVE_STEP}px, 0px)`);
+
+    fireEvent.keyDown(winEl, { key: 'ArrowDown', ctrlKey: true });
+    expect(winEl.style.transform).toBe(`translate(${KEYBOARD_MOVE_STEP}px, ${KEYBOARD_MOVE_STEP}px)`);
+  });
+
+  it('resizes window with Ctrl+Shift+Arrow keys', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    const initialWidth = parseFloat(winEl.style.width);
+    const initialHeight = parseFloat(winEl.style.height);
+
+    fireEvent.keyDown(winEl, { key: 'ArrowRight', ctrlKey: true, shiftKey: true });
+    expect(parseFloat(winEl.style.width)).toBe(initialWidth + KEYBOARD_RESIZE_STEP);
+
+    fireEvent.keyDown(winEl, { key: 'ArrowDown', ctrlKey: true, shiftKey: true });
+    expect(parseFloat(winEl.style.height)).toBe(initialHeight + KEYBOARD_RESIZE_STEP);
   });
 });
 
