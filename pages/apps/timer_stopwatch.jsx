@@ -1,11 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const TimerStopwatch = dynamic(() => import('../../apps/timer_stopwatch'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/timer_stopwatch'), {
+  appName: 'Timer & Stopwatch',
 });
-
-export default function TimerStopwatchPage() {
-  return <TimerStopwatch />;
-}
-

@@ -1,10 +1,8 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../../utils/createSuspenseAppPage';
 
-const MimikatzOffline = dynamic(() => import('../../../apps/mimikatz/offline'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
-
-export default function MimikatzOfflinePage() {
-  return <MimikatzOffline />;
-}
+export default createSuspenseAppPage(
+  () => import('../../../apps/mimikatz/offline'),
+  {
+    appName: 'Mimikatz Offline',
+  },
+);

@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Wireshark = dynamic(() => import('../../apps/wireshark'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/wireshark'), {
+  appName: 'Wireshark',
 });
-
-export default function WiresharkPage() {
-  return <Wireshark />;
-}

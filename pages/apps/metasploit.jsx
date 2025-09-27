@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Metasploit = dynamic(() => import('../../apps/metasploit'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/metasploit'), {
+  appName: 'Metasploit',
 });
-
-export default function MetasploitPage() {
-  return <Metasploit />;
-}

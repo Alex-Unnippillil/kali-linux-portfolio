@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const VSCode = dynamic(() => import('../../apps/vscode'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/vscode'), {
+  appName: 'VS Code',
 });
-
-export default function VSCodePage() {
-  return <VSCode />;
-}

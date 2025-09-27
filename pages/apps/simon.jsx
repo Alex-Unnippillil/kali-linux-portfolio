@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Simon = dynamic(() => import('../../apps/simon'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/simon'), {
+  appName: 'Simon',
 });
-
-export default function SimonPage() {
-  return <Simon />;
-}

@@ -1,6 +1,7 @@
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DelayedTooltip from '../../components/ui/DelayedTooltip';
 import AppTooltipContent from '../../components/ui/AppTooltipContent';
 import {
@@ -12,6 +13,8 @@ const AppsPage = () => {
   const [apps, setApps] = useState([]);
   const [query, setQuery] = useState('');
   const [metadata, setMetadata] = useState({});
+  const router = useRouter();
+  const prefetchedRoutes = useRef(new Set());
 
   useEffect(() => {
     let isMounted = true;
@@ -25,6 +28,30 @@ const AppsPage = () => {
       isMounted = false;
     };
   }, []);
+
+  const prefetchRoute = useCallback(
+    (path) => {
+      if (
+        !path ||
+        prefetchedRoutes.current.has(path) ||
+        typeof router.prefetch !== 'function'
+      ) {
+        return;
+      }
+      prefetchedRoutes.current.add(path);
+      const maybePromise = router.prefetch(path);
+      if (maybePromise && typeof maybePromise.catch === 'function') {
+        maybePromise.catch((error) => {
+          prefetchedRoutes.current.delete(path);
+          if (process.env.NODE_ENV !== 'production') {
+            // eslint-disable-next-line no-console
+            console.warn(`Prefetch for ${path} failed`, error);
+          }
+        });
+      }
+    },
+    [router],
+  );
 
   const filteredApps = useMemo(
     () =>
@@ -56,6 +83,7 @@ const AppsPage = () => {
       >
         {filteredApps.map((app) => {
           const meta = metadata[app.id] ?? buildAppMetadata(app);
+          const href = `/apps/${app.id}`;
           return (
             <DelayedTooltip
               key={app.id}
@@ -64,15 +92,22 @@ const AppsPage = () => {
               {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
                 <div
                   ref={ref}
-                  onMouseEnter={onMouseEnter}
+                  onMouseEnter={(event) => {
+                    onMouseEnter(event);
+                    prefetchRoute(href);
+                  }}
                   onMouseLeave={onMouseLeave}
                   className="flex flex-col items-center"
                 >
                   <Link
-                    href={`/apps/${app.id}`}
+                    href={href}
+                    prefetch={false}
                     className="flex h-full w-full flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
                     aria-label={app.title}
-                    onFocus={onFocus}
+                    onFocus={(event) => {
+                      onFocus(event);
+                      prefetchRoute(href);
+                    }}
                     onBlur={onBlur}
                   >
                     {app.icon && (

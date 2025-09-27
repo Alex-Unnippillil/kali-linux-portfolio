@@ -1,10 +1,5 @@
-import dynamic from "next/dynamic";
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Converter = dynamic(() => import("../../apps/converter"), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/converter'), {
+  appName: 'Converter',
 });
-
-export default function ConverterPage() {
-  return <Converter />;
-}

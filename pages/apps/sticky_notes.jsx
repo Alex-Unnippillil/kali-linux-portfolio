@@ -1,11 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const StickyNotes = dynamic(() => import('../../apps/sticky_notes'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/sticky_notes'), {
+  appName: 'Sticky Notes',
 });
-
-export default function StickyNotesPage() {
-  return <StickyNotes />;
-}
-

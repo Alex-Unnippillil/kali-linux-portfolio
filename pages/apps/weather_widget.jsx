@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const WeatherWidget = dynamic(() => import('../../apps/weather_widget'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const WeatherWidget = createSuspenseAppPage(
+  () => import('../../apps/weather_widget'),
+  {
+    appName: 'Weather Widget',
+  },
+);
 
 // Display stored unit preference and the browser's location consent status.
 export default function WeatherWidgetPage() {
@@ -46,4 +48,3 @@ export default function WeatherWidgetPage() {
     </div>
   );
 }
-

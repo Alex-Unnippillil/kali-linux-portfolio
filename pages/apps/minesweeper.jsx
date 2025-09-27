@@ -1,11 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const Minesweeper = dynamic(() => import('../../apps/minesweeper'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/minesweeper'), {
+  appName: 'Minesweeper',
 });
-
-export default function MinesweeperPage() {
-  return <Minesweeper />;
-}
-

@@ -1,10 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const SubnetCalculator = dynamic(() => import('../../apps/subnet-calculator'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/subnet-calculator'), {
+  appName: 'Subnet Calculator',
 });
-
-export default function SubnetCalculatorPage() {
-  return <SubnetCalculator />;
-}

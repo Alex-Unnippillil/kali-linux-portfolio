@@ -1,9 +1,5 @@
-import dynamic from 'next/dynamic';
+import createSuspenseAppPage from '../../utils/createSuspenseAppPage';
 
-const SpotifyApp = dynamic(() => import('../../apps/spotify'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
+export default createSuspenseAppPage(() => import('../../apps/spotify'), {
+  appName: 'Spotify Player',
 });
-
-export default SpotifyApp;
-
