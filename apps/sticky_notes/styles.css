@@ -1,9 +1,12 @@
 body {
-  font-family: sans-serif;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  line-height: var(--line-height-standard);
   margin: 0;
   padding: 0;
   height: 100vh;
   background: var(--color-bg);
+  color: var(--color-text);
 }
 
 #add-note {
@@ -40,6 +43,9 @@ body {
   background: transparent;
   resize: none;
   outline: none;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-standard);
 }
 
 .note .controls {

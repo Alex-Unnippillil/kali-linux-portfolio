@@ -1,14 +1,93 @@
 @import './globals.css';
 
 html {
-    font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
+    font-size: var(--font-size-root);
 }
 
-body{
+body {
     font-family: var(--font-family-base);
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-standard);
+    letter-spacing: 0.01em;
+}
+
+p,
+ul,
+ol,
+dl,
+blockquote,
+pre,
+figure {
+    margin-block: 0 var(--type-stack-md);
+}
+
+li {
+    margin-block: 0;
+}
+
+small {
+    font-size: var(--font-size-body-xs);
+    line-height: var(--line-height-standard);
+}
+
+code,
+kbd,
+samp {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-mono-md);
+    line-height: var(--line-height-mono);
+}
+
+pre {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-mono-lg);
+    line-height: var(--line-height-mono);
+    margin-block-end: var(--type-stack-md);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin-block: 0 var(--type-stack-sm);
+    font-weight: 600;
+}
+
+h1 {
+    font-size: var(--font-size-display-md);
+    line-height: var(--line-height-tight);
+    margin-block-end: var(--type-stack-lg);
+}
+
+h2 {
+    font-size: var(--font-size-display-sm);
+    line-height: var(--line-height-tight);
+    margin-block-end: var(--type-stack-md);
+}
+
+h3 {
+    font-size: var(--font-size-heading-lg);
+    line-height: var(--line-height-snug);
+}
+
+h4 {
+    font-size: var(--font-size-heading-md);
+    line-height: var(--line-height-snug);
+}
+
+h5 {
+    font-size: var(--font-size-heading-sm);
+    line-height: var(--line-height-snug);
+}
+
+h6 {
+    font-size: var(--font-size-heading-xs);
+    line-height: var(--line-height-standard);
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
