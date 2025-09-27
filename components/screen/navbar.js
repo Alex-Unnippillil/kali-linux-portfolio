@@ -2,14 +2,13 @@ import React, { Component } from 'react';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
-import NotificationBell from '../ui/NotificationBell';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
+        constructor() {
+                super();
                 this.state = {
                         status_card: false,
                         applicationsMenuOpen: false,
@@ -17,10 +16,18 @@ export default class Navbar extends Component {
                 };
         }
 
-		render() {
-			return (
-				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-					<div className="flex items-center">
+        toggleStatusCard = () => {
+                this.setState((state) => ({ status_card: !state.status_card }));
+        };
+
+        closeStatusCard = () => {
+                this.setState({ status_card: false });
+        };
+
+                render() {
+                        return (
+                                <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                                        <div className="flex items-center">
 						<WhiskerMenu />
 						<PerformanceGraph />
 					</div>
@@ -31,23 +38,25 @@ export default class Navbar extends Component {
 					>
 						<Clock />
 					</div>
-					<button
-						type="button"
-						id="status-bar"
-						aria-label="System status"
-						onClick={() => {
-							this.setState({ status_card: !this.state.status_card });
-						}}
-						className={
-							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-						}
-					>
-						<Status />
-						<QuickSettings open={this.state.status_card} />
-					</button>
-				</div>
-			);
-		}
+                                        <div className="relative pr-3 pl-3">
+                                                <button
+                                                        type="button"
+                                                        id="status-bar"
+                                                        aria-label="System status"
+                                                        aria-haspopup="dialog"
+                                                        aria-expanded={this.state.status_card}
+                                                        onClick={this.toggleStatusCard}
+                                                        className={
+                                                                'outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1'
+                                                        }
+                                                >
+                                                        <Status />
+                                                </button>
+                                                <QuickSettings open={this.state.status_card} onClose={this.closeStatusCard} />
+                                        </div>
+                                </div>
+                        );
+                }
 
 
 }

@@ -39,7 +39,7 @@ export default function SideBar(props) {
                             : null
                     )
                 }
-                <AllApps showApps={props.showAllApps} />
+                <AllApps showApps={props.showAllApps} isOpen={props.allAppsView} />
             </nav>
             <div onMouseEnter={showSideBar} onMouseLeave={hideSideBar} className={"w-1 h-full absolute top-0 left-0 bg-transparent z-50"}></div>
         </>
@@ -51,8 +51,9 @@ export function AllApps(props) {
     const [title, setTitle] = useState(false);
 
     return (
-        <div
-            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
+        <button
+            type="button"
+            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
                 setTitle(true);
@@ -60,7 +61,12 @@ export function AllApps(props) {
             onMouseLeave={() => {
                 setTitle(false);
             }}
-            onClick={props.showApps}
+            onFocus={() => setTitle(true)}
+            onBlur={() => setTitle(false)}
+            onClick={() => props.showApps()}
+            aria-label="Show applications"
+            aria-haspopup="dialog"
+            aria-expanded={props.isOpen}
         >
             <div className="relative">
                 <Image
@@ -68,7 +74,7 @@ export function AllApps(props) {
                     height={28}
                     className="w-7"
                     src="/themes/Yaru/system/view-app-grid-symbolic.svg"
-                    alt="Ubuntu view app"
+                    alt="Open applications overview"
                     sizes="28px"
                 />
                 <div
@@ -80,6 +86,6 @@ export function AllApps(props) {
                     Show Applications
                 </div>
             </div>
-        </div>
+        </button>
     );
 }

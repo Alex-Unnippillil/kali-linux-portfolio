@@ -1023,7 +1023,15 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = (value) => {
+        this.setState((prevState) => ({
+            allAppsView: typeof value === 'boolean' ? value : !prevState.allAppsView,
+        }));
+    }
+
+    closeAllApps = () => {
+        this.setState({ allAppsView: false });
+    }
 
     renderNameBar = () => {
         let addFolder = () => {
@@ -1157,7 +1165,8 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        onClose={this.closeAllApps} /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
