@@ -1023,7 +1023,7 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
 
     renderNameBar = () => {
         let addFolder = () => {
@@ -1061,7 +1061,7 @@ export class Desktop extends Component {
                 </div>
             </div>
         );
-    }
+    };
 
     render() {
         const workspaceSummaries = this.getWorkspaceSummaries();
