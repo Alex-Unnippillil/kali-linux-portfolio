@@ -81,6 +81,9 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (typeof this.props.onSizeChange === 'function') {
+            this.props.onSizeChange(this.state.width, this.state.height);
+        }
     }
 
     componentWillUnmount() {
@@ -93,6 +96,15 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            (prevState.width !== this.state.width || prevState.height !== this.state.height) &&
+            typeof this.props.onSizeChange === 'function'
+        ) {
+            this.props.onSizeChange(this.state.width, this.state.height);
         }
     }
 
