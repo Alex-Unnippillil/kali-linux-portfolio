@@ -702,7 +702,51 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onPointerUp, onPointerCancel }) {
+    const capturedPointersRef = React.useRef(new Set());
+
+    const releasePointer = (event) => {
+        const target = event.currentTarget;
+        if (!target || !capturedPointersRef.current.has(event.pointerId)) return;
+        capturedPointersRef.current.delete(event.pointerId);
+        if (typeof target.releasePointerCapture === 'function') {
+            try {
+                target.releasePointerCapture(event.pointerId);
+            } catch (error) {
+                // Ignore browsers that do not support releasing captured pointers
+            }
+        }
+    };
+
+    const handlePointerDown = (event) => {
+        const target = event.currentTarget;
+        if (target && typeof target.setPointerCapture === 'function') {
+            try {
+                target.setPointerCapture(event.pointerId);
+                capturedPointersRef.current.add(event.pointerId);
+            } catch (error) {
+                // Ignore browsers that throw when pointer capture is unsupported
+            }
+        }
+        if (typeof onPointerDown === 'function') {
+            onPointerDown(event);
+        }
+    };
+
+    const handlePointerUp = (event) => {
+        releasePointer(event);
+        if (typeof onPointerUp === 'function') {
+            onPointerUp(event);
+        }
+    };
+
+    const handlePointerCancel = (event) => {
+        releasePointer(event);
+        if (typeof onPointerCancel === 'function') {
+            onPointerCancel(event);
+        }
+    };
+
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -711,7 +755,9 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
-            onPointerDown={onPointerDown}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
@@ -720,6 +766,11 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
 
 // Window's Borders
 export class WindowYBorder extends Component {
+    constructor(props) {
+        super(props);
+        this.capturedPointers = new Set();
+    }
+
     componentDidMount() {
         // Use the browser's Image constructor rather than the imported Next.js
         // Image component to avoid runtime errors when running in tests.
@@ -728,10 +779,48 @@ export class WindowYBorder extends Component {
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
+
+    handlePointerDown = (event) => {
+        const target = event.currentTarget;
+        if (target && typeof target.setPointerCapture === 'function') {
+            try {
+                target.setPointerCapture(event.pointerId);
+                this.capturedPointers.add(event.pointerId);
+            } catch (error) {
+                // Ignore pointer capture failures on unsupported browsers
+            }
+        }
+    };
+
+    releasePointer = (event) => {
+        if (!this.capturedPointers.has(event.pointerId)) return;
+        this.capturedPointers.delete(event.pointerId);
+        const target = event.currentTarget;
+        if (target && typeof target.releasePointerCapture === 'function') {
+            try {
+                target.releasePointerCapture(event.pointerId);
+            } catch (error) {
+                // Ignore errors from releasing uncaptured pointers
+            }
+        }
+    };
+
+    handlePointerUp = (event) => {
+        this.releasePointer(event);
+    };
+
+    handlePointerCancel = (event) => {
+        this.releasePointer(event);
+    };
+
     render() {
             return (
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                    data-testid="window-resize-horizontal"
+                    onPointerDown={this.handlePointerDown}
+                    onPointerUp={this.handlePointerUp}
+                    onPointerCancel={this.handlePointerCancel}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
                 ></div>
@@ -740,6 +829,11 @@ export class WindowYBorder extends Component {
     }
 
 export class WindowXBorder extends Component {
+    constructor(props) {
+        super(props);
+        this.capturedPointers = new Set();
+    }
+
     componentDidMount() {
         // Use the global Image constructor instead of Next.js Image component
 
@@ -747,10 +841,48 @@ export class WindowXBorder extends Component {
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
+
+    handlePointerDown = (event) => {
+        const target = event.currentTarget;
+        if (target && typeof target.setPointerCapture === 'function') {
+            try {
+                target.setPointerCapture(event.pointerId);
+                this.capturedPointers.add(event.pointerId);
+            } catch (error) {
+                // Ignore pointer capture failures on unsupported browsers
+            }
+        }
+    };
+
+    releasePointer = (event) => {
+        if (!this.capturedPointers.has(event.pointerId)) return;
+        this.capturedPointers.delete(event.pointerId);
+        const target = event.currentTarget;
+        if (target && typeof target.releasePointerCapture === 'function') {
+            try {
+                target.releasePointerCapture(event.pointerId);
+            } catch (error) {
+                // Ignore errors from releasing uncaptured pointers
+            }
+        }
+    };
+
+    handlePointerUp = (event) => {
+        this.releasePointer(event);
+    };
+
+    handlePointerCancel = (event) => {
+        this.releasePointer(event);
+    };
+
     render() {
             return (
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                    data-testid="window-resize-vertical"
+                    onPointerDown={this.handlePointerDown}
+                    onPointerUp={this.handlePointerUp}
+                    onPointerCancel={this.handlePointerCancel}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
                 ></div>

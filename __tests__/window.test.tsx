@@ -51,6 +51,84 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window pointer capture', () => {
+  const renderWindow = () =>
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+  it('captures and releases pointer events on the title bar', () => {
+    renderWindow();
+
+    const titleBar = screen.getByRole('button', { name: /test/i }) as HTMLElement & {
+      setPointerCapture: jest.Mock;
+      releasePointerCapture: jest.Mock;
+    };
+    titleBar.setPointerCapture = jest.fn();
+    titleBar.releasePointerCapture = jest.fn();
+
+    fireEvent.pointerDown(titleBar, { pointerId: 42 });
+    expect(titleBar.setPointerCapture).toHaveBeenCalledWith(42);
+
+    fireEvent.pointerUp(titleBar, { pointerId: 42 });
+    expect(titleBar.releasePointerCapture).toHaveBeenCalledWith(42);
+  });
+
+  it('releases pointer capture on title bar cancel events', () => {
+    renderWindow();
+
+    const titleBar = screen.getByRole('button', { name: /test/i }) as HTMLElement & {
+      setPointerCapture: jest.Mock;
+      releasePointerCapture: jest.Mock;
+    };
+    titleBar.setPointerCapture = jest.fn();
+    titleBar.releasePointerCapture = jest.fn();
+
+    fireEvent.pointerDown(titleBar, { pointerId: 7 });
+    expect(titleBar.setPointerCapture).toHaveBeenCalledWith(7);
+
+    fireEvent.pointerCancel(titleBar, { pointerId: 7 });
+    expect(titleBar.releasePointerCapture).toHaveBeenCalledWith(7);
+  });
+
+  it('captures and releases pointer events on resize handles', () => {
+    renderWindow();
+
+    const horizontalHandle = screen.getByTestId('window-resize-horizontal') as HTMLElement & {
+      setPointerCapture: jest.Mock;
+      releasePointerCapture: jest.Mock;
+    };
+    horizontalHandle.setPointerCapture = jest.fn();
+    horizontalHandle.releasePointerCapture = jest.fn();
+
+    fireEvent.pointerDown(horizontalHandle, { pointerId: 9 });
+    expect(horizontalHandle.setPointerCapture).toHaveBeenCalledWith(9);
+    fireEvent.pointerUp(horizontalHandle, { pointerId: 9 });
+    expect(horizontalHandle.releasePointerCapture).toHaveBeenCalledWith(9);
+
+    const verticalHandle = screen.getByTestId('window-resize-vertical') as HTMLElement & {
+      setPointerCapture: jest.Mock;
+      releasePointerCapture: jest.Mock;
+    };
+    verticalHandle.setPointerCapture = jest.fn();
+    verticalHandle.releasePointerCapture = jest.fn();
+
+    fireEvent.pointerDown(verticalHandle, { pointerId: 11 });
+    expect(verticalHandle.setPointerCapture).toHaveBeenCalledWith(11);
+    fireEvent.pointerCancel(verticalHandle, { pointerId: 11 });
+    expect(verticalHandle.releasePointerCapture).toHaveBeenCalledWith(11);
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     setViewport(1920, 1080);
