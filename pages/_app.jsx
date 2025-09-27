@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -28,6 +28,13 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const mainContentRef = useRef(null);
+
+  const focusMainContent = () => {
+    if (mainContentRef.current) {
+      mainContentRef.current.focus();
+    }
+  };
 
 
   useEffect(() => {
@@ -152,16 +159,24 @@ function MyApp(props) {
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+          href="#app-main-content"
+          onClick={focusMainContent}
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:p-3 focus:bg-white focus:text-black focus:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
         >
-          Skip to app grid
+          Skip to main content
         </a>
         <SettingsProvider>
           <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
+              <div
+                id="app-main-content"
+                ref={mainContentRef}
+                tabIndex={-1}
+                className="focus:outline-none"
+              >
+                <Component {...pageProps} />
+              </div>
               <ShortcutOverlay />
               <Analytics
                 beforeSend={(e) => {
