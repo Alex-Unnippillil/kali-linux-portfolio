@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import IdleIndexer from '../utils/searchIndexer';
 
 interface Module {
   id: string;
@@ -15,6 +16,24 @@ interface Module {
   options: { name: string; label: string }[];
 }
 
+const toSearchText = (item: Module): string => {
+  const parts: string[] = [item.name, item.description];
+  if (Array.isArray(item.tags)) parts.push(item.tags.join(' '));
+  if (Array.isArray(item.inputs)) parts.push(item.inputs.join(' '));
+  if (item.lab) parts.push(item.lab);
+  if (Array.isArray(item.options)) {
+    parts.push(item.options.map((o) => `${o.name} ${o.label}`).join(' '));
+  }
+  if (Array.isArray(item.log)) {
+    parts.push(item.log.map((entry) => `${entry.level} ${entry.message}`).join(' '));
+  }
+  if (Array.isArray(item.results)) {
+    parts.push(item.results.map((r) => `${r.target} ${r.status}`).join(' '));
+  }
+  if (item.data) parts.push(item.data);
+  return parts.filter(Boolean).join(' ').toLowerCase();
+};
+
 const PopularModules: React.FC = () => {
   const [modules, setModules] = useState<Module[]>(modulesData as Module[]);
   const [version, setVersion] = useState<string>(versionInfo.version);
@@ -25,15 +44,22 @@ const PopularModules: React.FC = () => {
   const [selected, setSelected] = useState<Module | null>(null);
   const [options, setOptions] = useState<Record<string, string>>({});
   const [logFilter, setLogFilter] = useState<string>('');
+  const [indexSnapshot, setIndexSnapshot] = useState<Map<string, string>>(new Map());
+  const indexerRef = useRef<IdleIndexer<Module, string> | null>(null);
+  const [isIndexing, setIsIndexing] = useState(false);
 
   const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
   let listed = filter ? modules.filter((m) => m.tags.includes(filter)) : modules;
-  listed = search
-    ? listed.filter(
-        (m) =>
-          m.name.toLowerCase().includes(search.toLowerCase()) ||
-          m.description.toLowerCase().includes(search.toLowerCase())
-      )
+  const normalizedQuery = useMemo(() => search.trim().toLowerCase(), [search]);
+  listed = normalizedQuery
+    ? listed.filter((m) => {
+        const indexed = indexSnapshot.get(m.id);
+        if (indexed) {
+          return indexed.includes(normalizedQuery);
+        }
+        const fallback = `${m.name} ${m.description}`.toLowerCase();
+        return fallback.includes(normalizedQuery);
+      })
     : listed;
 
   const handleSelect = (m: Module) => {
@@ -73,6 +99,41 @@ const PopularModules: React.FC = () => {
       .then((data) => setUpdateAvailable(data.needsUpdate))
       .catch(() => setUpdateAvailable(false));
   }, [version]);
+
+  useEffect(() => {
+    indexerRef.current = new IdleIndexer<Module, string>({
+      chunkSize: 40,
+      resumeDelay: 160,
+      getKey: (item) => item.id,
+      process: toSearchText,
+      onUpdate: (snapshot, done) => {
+        setIndexSnapshot(snapshot);
+        setIsIndexing(!done);
+      },
+    });
+    return () => {
+      indexerRef.current?.dispose();
+      indexerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!indexerRef.current) return;
+    if (process.env.NODE_ENV === 'test') {
+      const snapshot = new Map<string, string>();
+      modules.forEach((module) => {
+        snapshot.set(module.id, toSearchText(module));
+      });
+      setIndexSnapshot(snapshot);
+      setIsIndexing(false);
+      return;
+    }
+    indexerRef.current.schedule(modules);
+  }, [modules]);
+
+  useEffect(() => {
+    indexerRef.current?.interrupt();
+  }, [search]);
 
   const handleUpdate = async () => {
     try {
@@ -205,6 +266,11 @@ const PopularModules: React.FC = () => {
         onChange={(e) => setSearch(e.target.value)}
         className="w-full p-2 text-black rounded"
       />
+      {isIndexing && (
+        <p className="text-xs text-gray-300" aria-live="polite">
+          Building search index…
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
