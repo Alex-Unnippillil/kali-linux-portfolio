@@ -5,6 +5,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
 
 type AppMeta = {
   id: string;
@@ -20,15 +21,17 @@ type CategorySource =
   | { type: 'recent' }
   | { type: 'ids'; appIds: readonly string[] };
 
-type CategoryDefinition = {
+type CategoryDefinitionBase = {
   id: string;
   label: string;
   icon: string;
 } & CategorySource;
 
-type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
+const TRANSITION_DURATION = 180;
+const RECENT_STORAGE_KEY = 'recentApps';
+const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
-const CATEGORY_DEFINITIONS: readonly CategoryDefinition[] = [
+const CATEGORY_DEFINITIONS = [
   {
     id: 'all',
     label: 'All Applications',
@@ -110,11 +113,42 @@ const CATEGORY_DEFINITIONS: readonly CategoryDefinition[] = [
     type: 'ids',
     appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
   },
-];
+ ] as const satisfies readonly CategoryDefinitionBase[];
+
+type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
+type FilterCategory = CategoryDefinition['id'];
+
+const isFilterCategory = (value: string): value is FilterCategory =>
+  CATEGORY_DEFINITIONS.some(cat => cat.id === value);
+
+type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
+
+const KALI_CATEGORIES = BASE_KALI_CATEGORIES.map((category, index) => ({
+  ...category,
+  number: String(index + 1).padStart(2, '0'),
+}));
+
+const readRecentAppIds = (): string[] => {
+  try {
+    const stored = safeLocalStorage?.getItem(RECENT_STORAGE_KEY);
+    if (!stored) {
+      return [];
+    }
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((value): value is string => typeof value === 'string');
+  } catch {
+    return [];
+  }
+};
 
 
 const WhiskerMenu: React.FC = () => {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<FilterCategory>('all');
 
   const [query, setQuery] = useState('');
@@ -134,21 +168,16 @@ const WhiskerMenu: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     setRecentIds(readRecentAppIds());
-  }, [open]);
+  }, [isOpen]);
 
   const recentApps = useMemo(() => {
-    if (!open) {
-      return [];
-    }
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
-    } catch {
-      return [];
-    }
-  }, [allApps, open]);
+    const mapById = new Map(allApps.map(app => [app.id, app] as const));
+    return recentIds
+      .map(appId => mapById.get(appId))
+      .filter((app): app is AppMeta => Boolean(app));
+  }, [allApps, recentIds]);
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
 
@@ -183,7 +212,6 @@ const WhiskerMenu: React.FC = () => {
     const found = categoryConfigs.find(cat => cat.id === category);
     return found ?? categoryConfigs[0];
   }, [category, categoryConfigs]);
-n
 
   const currentApps = useMemo(() => {
     let list = currentCategory?.apps ?? [];
@@ -195,15 +223,14 @@ n
   }, [currentCategory, query]);
 
   useEffect(() => {
-    const storedCategory = safeLocalStorage?.getItem('whisker-menu-category');
-    if (!storedCategory) return;
-    if (CATEGORY_DEFINITIONS.some(cat => cat.id === storedCategory)) {
+    const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
+    if (storedCategory && isFilterCategory(storedCategory)) {
       setCategory(storedCategory);
     }
   }, []);
 
   useEffect(() => {
-    safeLocalStorage?.setItem('whisker-menu-category', currentCategory.id);
+    safeLocalStorage?.setItem(CATEGORY_STORAGE_KEY, currentCategory.id);
   }, [currentCategory.id]);
 
   useEffect(() => {
@@ -212,10 +239,10 @@ n
   }, [isVisible, category, query]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!isVisible) return;
     const index = categoryConfigs.findIndex(cat => cat.id === currentCategory.id);
     setCategoryHighlight(index === -1 ? 0 : index);
-  }, [open, currentCategory.id, categoryConfigs]);
+  }, [isVisible, currentCategory.id, categoryConfigs]);
 
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
@@ -269,7 +296,7 @@ n
         toggleMenu();
         return;
       }
-      if (!open) return;
+      if (!isVisible) return;
       const target = e.target as Node | null;
       if (target && categoryListRef.current?.contains(target)) {
         return;
@@ -310,16 +337,6 @@ n
       clearTimeout(hideTimer.current);
     }
   }, []);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      setRecentApps(ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[]);
-    } catch {
-      setRecentApps([]);
-    }
-  }, [allApps, isVisible]);
 
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
