@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import ToggleSwitch from './ToggleSwitch';
 
 interface Props {
   highScore?: number;
@@ -9,7 +10,7 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, tourCompleted, setTourCompleted } = useSettings();
 
   return (
     <div>
@@ -52,6 +53,19 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               ))}
             </div>
           </label>
+          <div className="mt-4">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-medium text-white">Replay tour</span>
+              <ToggleSwitch
+                ariaLabel="Replay desktop tour"
+                checked={!tourCompleted}
+                onChange={(checked) => setTourCompleted(!checked)}
+              />
+            </div>
+            <p className="mt-1 text-xs text-ubt-grey" aria-live="polite">
+              Toggle on to restart the onboarding tour and highlight key desktop controls.
+            </p>
+          </div>
         </div>
       )}
     </div>
