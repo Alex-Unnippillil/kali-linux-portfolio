@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import apps from '../../apps.config';
+import useAppSearch from '../../hooks/useAppSearch';
 
 // Load the actual VSCode app lazily so no editor dependencies are required
 const VsCode = dynamic(() => import('../../apps/vscode'), { ssr: false });
@@ -25,16 +26,47 @@ const files = ['README.md', 'CHANGELOG.md', 'package.json'];
 
 export default function VsCodeWrapper({ openApp }) {
   const [visible, setVisible] = useState(false);
-  const [query, setQuery] = useState('');
 
-  const items = useMemo(() => {
-    const list = [
+  const paletteItems = useMemo(
+    () => [
       ...apps.map((a) => ({ type: 'app', id: a.id, title: a.title })),
       ...files.map((f) => ({ type: 'file', id: f, title: f })),
-    ];
-    if (!query) return list;
-    return list.filter((item) => fuzzyMatch(item.title, query));
-  }, [query]);
+    ],
+    [],
+  );
+
+  const highlightFuzzy = useCallback((text, rawQuery) => {
+    if (!rawQuery) return text;
+    const queryLower = rawQuery.toLowerCase();
+    let pointer = 0;
+    return Array.from(text).map((char, index) => {
+      if (pointer < queryLower.length && char.toLowerCase() === queryLower[pointer]) {
+        pointer += 1;
+        return (
+          <mark key={`mark-${index}`} className="bg-yellow-500/40 text-inherit">
+            {char}
+          </mark>
+        );
+      }
+      return (
+        <React.Fragment key={`char-${index}`}>{char}</React.Fragment>
+      );
+    });
+  }, []);
+
+  const {
+    query,
+    setQuery,
+    results,
+    highlight,
+    metadata,
+    reset,
+  } = useAppSearch(paletteItems, {
+    getLabel: (item) => item.title,
+    filter: (item, { query: raw }) => fuzzyMatch(item.title, raw),
+    highlight: (text, raw) => highlightFuzzy(text, raw),
+    debounceMs: 150,
+  });
 
   useEffect(() => {
     const handler = (e) => {
@@ -49,9 +81,15 @@ export default function VsCodeWrapper({ openApp }) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  useEffect(() => {
+    if (!visible) {
+      reset();
+    }
+  }, [reset, visible]);
+
   const selectItem = (item) => {
     setVisible(false);
-    setQuery('');
+    reset();
     if (item.type === 'app' && openApp) {
       openApp(item.id);
     } else if (item.type === 'file') {
@@ -73,20 +111,33 @@ export default function VsCodeWrapper({ openApp }) {
               onChange={(e) => setQuery(e.target.value)}
             />
             <ul className="max-h-60 overflow-y-auto">
-              {items.map((item) => (
+              {results.map(({ item }) => (
                 <li key={`${item.type}-${item.id}`}>
                   <button
                     onClick={() => selectItem(item)}
                     className="w-full text-left px-2 py-1 rounded hover:bg-gray-700"
                   >
-                    {item.title}
+                    <span className="block text-sm font-medium">{highlight(item.title)}</span>
+                    <span className="block text-xs text-gray-400 uppercase tracking-wide">
+                      {item.type}
+                    </span>
                   </button>
                 </li>
               ))}
-              {items.length === 0 && (
+              {!metadata.isSearching && metadata.hasQuery && results.length === 0 && (
                 <li className="px-2 py-1 text-sm text-gray-400">No results</li>
               )}
             </ul>
+            <p
+              className="mt-2 text-xs text-gray-400"
+              role="status"
+              aria-live="polite"
+            >
+              {metadata.hasQuery
+                ? `${metadata.matched} of ${metadata.total} items match` +
+                  (metadata.debouncedQuery ? ` "${metadata.debouncedQuery}"` : '')
+                : `${metadata.total} quick actions available`}
+            </p>
           </div>
         </div>
       )}
