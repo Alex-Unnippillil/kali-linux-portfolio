@@ -3,6 +3,7 @@
 import { ChangeEvent } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import usePanelPosition from '../../../hooks/usePanelPosition';
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({
@@ -35,6 +36,7 @@ export default function ThemeSettings() {
   const { theme, setTheme } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
+  const [panelPosition, setPanelPosition] = usePanelPosition();
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setTheme(e.target.value);
@@ -89,6 +91,35 @@ export default function ThemeSettings() {
               style={{ width: panelSize, height: panelSize }}
             ></div>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg mb-2">Panel Position</h2>
+          <fieldset className="space-y-2" role="radiogroup" aria-label="Panel position">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="panel-position"
+                value="left"
+                checked={panelPosition === 'left'}
+                onChange={() => setPanelPosition('left')}
+              />
+              <span>Left dock</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="panel-position"
+                value="bottom"
+                checked={panelPosition === 'bottom'}
+                onChange={() => setPanelPosition('bottom')}
+              />
+              <span>Bottom dock</span>
+            </label>
+          </fieldset>
+          <p className="mt-2 text-sm text-ubt-grey">
+            Choose where the dock is anchored so context menus and previews appear in the right spot.
+          </p>
         </div>
 
         <div className="mt-6">
