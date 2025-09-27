@@ -15,7 +15,19 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  showStatusClock: true,
+  showStatusCpu: true,
+  showStatusMemory: true,
 };
+
+function getSafeLocalStorage() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -114,6 +126,45 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getShowStatusClock() {
+  const storage = getSafeLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.showStatusClock;
+  const val = storage.getItem('status-clock-visible');
+  return val === null ? DEFAULT_SETTINGS.showStatusClock : val === 'true';
+}
+
+export async function setShowStatusClock(value) {
+  const storage = getSafeLocalStorage();
+  if (!storage) return;
+  storage.setItem('status-clock-visible', value ? 'true' : 'false');
+}
+
+export async function getShowStatusCpu() {
+  const storage = getSafeLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.showStatusCpu;
+  const val = storage.getItem('status-cpu-visible');
+  return val === null ? DEFAULT_SETTINGS.showStatusCpu : val === 'true';
+}
+
+export async function setShowStatusCpu(value) {
+  const storage = getSafeLocalStorage();
+  if (!storage) return;
+  storage.setItem('status-cpu-visible', value ? 'true' : 'false');
+}
+
+export async function getShowStatusMemory() {
+  const storage = getSafeLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.showStatusMemory;
+  const val = storage.getItem('status-memory-visible');
+  return val === null ? DEFAULT_SETTINGS.showStatusMemory : val === 'true';
+}
+
+export async function setShowStatusMemory(value) {
+  const storage = getSafeLocalStorage();
+  if (!storage) return;
+  storage.setItem('status-memory-visible', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +201,9 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('status-clock-visible');
+  window.localStorage.removeItem('status-cpu-visible');
+  window.localStorage.removeItem('status-memory-visible');
 }
 
 export async function exportSettings() {
@@ -165,6 +219,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    showStatusClock,
+    showStatusCpu,
+    showStatusMemory,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +234,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getShowStatusClock(),
+    getShowStatusCpu(),
+    getShowStatusMemory(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +252,9 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    showStatusClock,
+    showStatusCpu,
+    showStatusMemory,
   });
 }
 
@@ -217,6 +280,9 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    showStatusClock,
+    showStatusCpu,
+    showStatusMemory,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +296,9 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (showStatusClock !== undefined) await setShowStatusClock(showStatusClock);
+  if (showStatusCpu !== undefined) await setShowStatusCpu(showStatusCpu);
+  if (showStatusMemory !== undefined) await setShowStatusMemory(showStatusMemory);
 }
 
 export const defaults = DEFAULT_SETTINGS;

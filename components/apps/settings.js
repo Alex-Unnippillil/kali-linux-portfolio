@@ -4,7 +4,38 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        useKaliWallpaper,
+        setUseKaliWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        showStatusClock,
+        setShowStatusClock,
+        showStatusCpu,
+        setShowStatusCpu,
+        showStatusMemory,
+        setShowStatusMemory,
+        theme,
+        setTheme,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -191,6 +222,40 @@ export function Settings() {
                     />
                     Haptics
                 </label>
+            </div>
+            <div className="my-4 px-6">
+                <h3 className="text-center text-ubt-grey font-semibold mb-2">
+                    Status Bar Widgets
+                </h3>
+                <div className="flex flex-col gap-2 text-ubt-grey">
+                    <label className="flex items-center justify-center">
+                        <input
+                            type="checkbox"
+                            checked={showStatusClock}
+                            onChange={(e) => setShowStatusClock(e.target.checked)}
+                            className="mr-2"
+                        />
+                        Show Clock
+                    </label>
+                    <label className="flex items-center justify-center">
+                        <input
+                            type="checkbox"
+                            checked={showStatusCpu}
+                            onChange={(e) => setShowStatusCpu(e.target.checked)}
+                            className="mr-2"
+                        />
+                        Show CPU Usage
+                    </label>
+                    <label className="flex items-center justify-center">
+                        <input
+                            type="checkbox"
+                            checked={showStatusMemory}
+                            onChange={(e) => setShowStatusMemory(e.target.checked)}
+                            className="mr-2"
+                        />
+                        Show RAM Usage
+                    </label>
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
