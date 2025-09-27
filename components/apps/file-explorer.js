@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import useDynamicVirtualizer from '../../hooks/useDynamicVirtualizer';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -105,6 +106,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const sidebarRef = useRef(null);
+  const resultsRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -116,6 +119,119 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const sidebarItems = useMemo(() => {
+    const items = [];
+    const sections = [
+      { id: 'recent', label: 'Recent', data: recent },
+      { id: 'dirs', label: 'Directories', data: dirs },
+      { id: 'files', label: 'Files', data: files },
+    ];
+
+    sections.forEach((section) => {
+      items.push({
+        kind: 'section',
+        key: `section-${section.id}`,
+        label: section.label,
+      });
+
+      if (!section.data.length) {
+        items.push({
+          kind: 'empty',
+          key: `empty-${section.id}`,
+          label:
+            section.id === 'recent'
+              ? 'No recent directories'
+              : section.id === 'dirs'
+                ? 'No directories'
+                : 'No files',
+        });
+        return;
+      }
+
+      section.data.forEach((entry, index) => {
+        items.push({
+          kind: 'entry',
+          key: `${section.id}-${entry.name}-${index}`,
+          label: entry.name,
+          section: section.id,
+          index,
+        });
+      });
+    });
+
+    return items;
+  }, [recent, dirs, files]);
+
+  const interactiveCount = useMemo(
+    () => sidebarItems.filter((item) => item.kind === 'entry').length,
+    [sidebarItems],
+  );
+
+  const interactivePositions = useMemo(() => {
+    let pos = 0;
+    return sidebarItems.map((item) => {
+      if (item.kind === 'entry') {
+        pos += 1;
+        return pos;
+      }
+      return null;
+    });
+  }, [sidebarItems]);
+
+  const estimateSidebarSize = useCallback(
+    (index) => {
+      const entry = sidebarItems[index];
+      if (!entry) return 32;
+      if (entry.kind === 'section') return 32;
+      if (entry.kind === 'empty') return 28;
+      return 36;
+    },
+    [sidebarItems],
+  );
+
+  const { virtualizer: sidebarVirtualizer, measureElement: measureSidebarElement } =
+    useDynamicVirtualizer({
+      count: sidebarItems.length,
+      estimateSize: estimateSidebarSize,
+      overscan: 8,
+      scrollRef: sidebarRef,
+    });
+
+  const estimateResultsSize = useCallback(() => 32, []);
+
+  const { virtualizer: resultsVirtualizer, measureElement: measureResultsElement } =
+    useDynamicVirtualizer({
+      count: results.length,
+      estimateSize: estimateResultsSize,
+      overscan: 4,
+      scrollRef: resultsRef,
+    });
+
+  const handleSidebarActivate = useCallback(
+    (entry) => {
+      if (entry.kind !== 'entry') return;
+      if (entry.section === 'recent') {
+        const target = recent[entry.index];
+        if (target) openRecent(target);
+      } else if (entry.section === 'dirs') {
+        const target = dirs[entry.index];
+        if (target) openDir(target);
+      } else if (entry.section === 'files') {
+        const target = files[entry.index];
+        if (target) openFile(target);
+      }
+    },
+    [dirs, files, recent, openDir, openFile, openRecent],
+  );
+
+  useEffect(() => {
+    sidebarVirtualizer.measure();
+  }, [sidebarItems, sidebarVirtualizer]);
+
+  useEffect(() => {
+    resultsVirtualizer.measure();
+  }, [results, resultsVirtualizer]);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -166,31 +282,6 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     } catch {}
   };
 
-  const openRecent = async (entry) => {
-    try {
-      const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') return;
-      setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
-      setLocationError(null);
-    } catch {}
-  };
-
-  const openFile = async (file) => {
-    setCurrentFile(file);
-    let text = '';
-    if (opfsSupported) {
-      const unsaved = await loadBuffer(file.name);
-      if (unsaved !== null) text = unsaved;
-    }
-    if (!text) {
-      const f = await file.handle.getFile();
-      text = await f.text();
-    }
-    setContent(text);
-  };
-
   const readDir = useCallback(async (handle) => {
     const ds = [];
     const fs = [];
@@ -201,6 +292,37 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setDirs(ds);
     setFiles(fs);
   }, []);
+
+  const openRecent = useCallback(
+    async (entry) => {
+      try {
+        const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') return;
+        setDirHandle(entry.handle);
+        setPath([{ name: entry.name, handle: entry.handle }]);
+        await readDir(entry.handle);
+        setLocationError(null);
+      } catch {}
+    },
+    [readDir],
+  );
+
+  const openFile = useCallback(
+    async (file) => {
+      setCurrentFile(file);
+      let text = '';
+      if (opfsSupported) {
+        const unsaved = await loadBuffer(file.name);
+        if (unsaved !== null) text = unsaved;
+      }
+      if (!text) {
+        const f = await file.handle.getFile();
+        text = await f.text();
+      }
+      setContent(text);
+    },
+    [loadBuffer, opfsSupported],
+  );
 
   useEffect(() => {
     const requested =
@@ -247,12 +369,15 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     };
   }, [context, initialPath, pathProp, opfsSupported, root, readDir]);
 
-  const openDir = async (dir) => {
-    setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
-    setLocationError(null);
-  };
+  const openDir = useCallback(
+    async (dir) => {
+      setDirHandle(dir.handle);
+      setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
+      await readDir(dir.handle);
+      setLocationError(null);
+    },
+    [readDir],
+  );
 
   const navigateTo = async (index) => {
     const target = path[index];
@@ -372,37 +497,76 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
-          <div className="p-2 font-bold">Recent</div>
-          {recent.map((r, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
-            >
-              {r.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+        <div
+          ref={sidebarRef}
+          className="w-40 overflow-auto border-r border-gray-600 focus:outline-none"
+          role="list"
+          aria-label="Directory navigator"
+        >
+          <div style={{ height: sidebarVirtualizer.getTotalSize(), position: 'relative' }}>
+            {sidebarVirtualizer.getVirtualItems().map((virtualRow) => {
+              const entry = sidebarItems[virtualRow.index];
+              if (!entry) return null;
+              const style = {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+              };
+
+              if (entry.kind === 'section') {
+                return (
+                  <div
+                    key={virtualRow.key}
+                    ref={measureSidebarElement}
+                    style={style}
+                    className="bg-ub-cool-grey bg-opacity-60"
+                  >
+                    <div className="p-2 text-xs font-bold uppercase tracking-wide" role="heading" aria-level={2}>
+                      {entry.label}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (entry.kind === 'empty') {
+                return (
+                  <div
+                    key={virtualRow.key}
+                    ref={measureSidebarElement}
+                    style={style}
+                    className="px-2 py-1 text-xs text-gray-300"
+                    role="note"
+                  >
+                    {entry.label}
+                  </div>
+                );
+              }
+
+              const pos = interactivePositions[virtualRow.index] ?? undefined;
+              const setSize = interactiveCount || undefined;
+              return (
+                <div
+                  key={virtualRow.key}
+                  ref={measureSidebarElement}
+                  style={style}
+                  role="listitem"
+                  aria-setsize={setSize}
+                  aria-posinset={pos}
+                  className="px-1"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSidebarActivate(entry)}
+                    className="w-full rounded px-2 py-1 text-left hover:bg-black/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                  >
+                    {entry.label}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
@@ -418,12 +582,44 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
-            <div className="max-h-40 overflow-auto mt-2">
-              {results.map((r, i) => (
-                <div key={i}>
-                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+            <div
+              ref={resultsRef}
+              className="max-h-40 overflow-auto mt-2"
+              role="list"
+              aria-label="Search results"
+            >
+              {results.length === 0 ? (
+                <p className="px-2 py-1 text-xs text-gray-300" role="note">
+                  {query ? 'No matches yet.' : 'Run a search to find text within files.'}
+                </p>
+              ) : (
+                <div style={{ height: resultsVirtualizer.getTotalSize(), position: 'relative' }}>
+                  {resultsVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const result = results[virtualRow.index];
+                    if (!result) return null;
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        ref={measureResultsElement}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className="px-2 py-1 odd:bg-black/20"
+                        role="listitem"
+                        aria-setsize={results.length}
+                        aria-posinset={virtualRow.index + 1}
+                      >
+                        <span className="font-bold">{result.file}:{result.line}</span>{' '}
+                        {result.text}
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
