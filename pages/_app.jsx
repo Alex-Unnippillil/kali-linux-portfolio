@@ -15,8 +15,10 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import CommandPalette from '../components/CommandPalette';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { CommandPaletteProvider, useCommandPaletteStore } from '../hooks/useCommandPaletteStore';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -24,6 +26,42 @@ const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+const CommandPaletteHotkeys = () => {
+  const {
+    toggle,
+    close,
+    state: { isOpen },
+  } = useCommandPaletteStore();
+
+  useEffect(() => {
+    const handleKeydown = (event) => {
+      const target = event.target;
+      const isEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+
+      const isToggle = (event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey);
+      if (isToggle) {
+        if (isEditable) return;
+        event.preventDefault();
+        toggle();
+        return;
+      }
+
+      if (event.key === 'Escape' && isOpen) {
+        close();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [close, isOpen, toggle]);
+
+  return null;
+};
 
 
 function MyApp(props) {
@@ -157,25 +195,29 @@ function MyApp(props) {
         >
           Skip to app grid
         </a>
-        <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+        <CommandPaletteProvider>
+          <CommandPaletteHotkeys />
+          <SettingsProvider>
+            <NotificationCenter>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <CommandPalette />
+                <Analytics
+                  beforeSend={(e) => {
+                    if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                    const evt = e;
+                    if (evt.metadata?.email) delete evt.metadata.email;
+                    return e;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
-        </SettingsProvider>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </SettingsProvider>
+        </CommandPaletteProvider>
       </div>
     </ErrorBoundary>
 
