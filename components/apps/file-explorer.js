@@ -263,6 +263,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError(null);
   };
 
+  const goHome = () => {
+    navigateTo(0);
+  };
+
   const goBack = async () => {
     if (path.length <= 1) return;
     const newPath = path.slice(0, -1);
@@ -353,6 +357,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
+        </button>
+        <button onClick={goHome} className="px-2 py-1 bg-black bg-opacity-50 rounded" aria-label="Go to home">
+          Home
         </button>
         {path.length > 1 && (
           <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
