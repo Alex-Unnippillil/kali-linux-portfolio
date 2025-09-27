@@ -116,9 +116,9 @@ const CATEGORY_DEFINITIONS = [
  ] as const satisfies readonly CategoryDefinitionBase[];
 
 type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
-type FilterCategory = CategoryDefinition['id'];
-
-const isFilterCategory = (value: string): value is FilterCategory =>
+const isCategoryId = (
+  value: string,
+): value is CategoryDefinition['id'] =>
   CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
@@ -149,7 +149,7 @@ const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [category, setCategory] = useState<FilterCategory>('all');
+  const [category, setCategory] = useState<CategoryDefinition['id']>('all');
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -224,7 +224,7 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
-    if (storedCategory && isFilterCategory(storedCategory)) {
+    if (storedCategory && isCategoryId(storedCategory)) {
       setCategory(storedCategory);
     }
   }, []);
