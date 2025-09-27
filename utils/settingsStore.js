@@ -75,12 +75,17 @@ export async function setReducedMotion(value) {
 export async function getFontScale() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
   const stored = window.localStorage.getItem('font-scale');
-  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+  const parsed = stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+  if (!Number.isFinite(parsed)) return DEFAULT_SETTINGS.fontScale;
+  return Math.min(1.5, Math.max(1, parsed));
 }
 
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  const normalized = Number.isFinite(scale)
+    ? Math.min(1.5, Math.max(1, scale))
+    : DEFAULT_SETTINGS.fontScale;
+  window.localStorage.setItem('font-scale', String(normalized));
 }
 
 export async function getHighContrast() {

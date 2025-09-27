@@ -129,7 +129,7 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey">Font Size:</label>
                 <input
                     type="range"
-                    min="0.75"
+                    min="1"
                     max="1.5"
                     step="0.05"
                     value={fontScale}
