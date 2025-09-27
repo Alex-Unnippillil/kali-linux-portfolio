@@ -35,7 +35,7 @@ export default function WorkspaceSwitcher({
   return (
     <nav
       aria-label="Workspace switcher"
-      className="flex items-center gap-1 rounded-full bg-black/50 px-1 py-0.5"
+      className="flex items-center gap-1 rounded-full border border-white/10 bg-ub-grey/80 px-1 py-0.5 shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur"
     >
       {workspaces.map((workspace, index) => {
         const isActive = workspace.id === activeWorkspace;
@@ -48,10 +48,10 @@ export default function WorkspaceSwitcher({
             aria-pressed={isActive}
             aria-label={formatAriaLabel(workspace)}
             onClick={() => onSelect(workspace.id)}
-            className={`min-w-[28px] rounded-full px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-black ${
+            className={`min-w-[28px] rounded-full px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange/70 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent ${
               isActive
-                ? "bg-[var(--kali-blue)] text-black"
-                : "bg-transparent text-white/80 hover:bg-white/10"
+                ? "bg-[var(--kali-blue)] text-black shadow-[0_0_12px_rgba(23,147,209,0.6)]"
+                : "bg-white/5 text-white/80 hover:bg-white/10"
             }`}
           >
             <span>{index + 1}</span>

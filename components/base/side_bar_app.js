@@ -86,6 +86,20 @@ export class SideBarApp extends Component {
     };
 
     render() {
+        const isOpen = this.props.isClose[this.id] === false;
+        const isFocused = this.props.isFocus[this.id];
+        const buttonClasses = [
+            'dock-button',
+            'm-1',
+            'outline-none',
+            'relative',
+            'focus-visible:ring-2',
+            'focus-visible:ring-ubb-orange/70',
+            'focus-visible:ring-offset-2',
+            'focus-visible:ring-offset-transparent',
+            isOpen ? 'dock-button-active' : '',
+            isFocused ? 'ring-1 ring-ubb-orange/60' : '',
+        ].filter(Boolean).join(' ');
         return (
             <button
                 type="button"
@@ -100,16 +114,15 @@ export class SideBarApp extends Component {
                 onMouseLeave={() => {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                className={buttonClasses}
                 id={"sidebar-" + this.props.id}
             >
                 <Image
                     width={28}
                     height={28}
-                    className="w-7"
+                    className="w-7 drop-shadow-[0_0_12px_rgba(23,147,209,0.45)]"
                     src={this.props.icon.replace('./', '/')}
-                    alt="Ubuntu App Icon"
+                    alt={`${this.props.title} icon`}
                     sizes="28px"
                 />
                 <Image
@@ -120,36 +133,22 @@ export class SideBarApp extends Component {
                     alt=""
                     sizes="28px"
                 />
-                {
-                    (
-                        this.props.isClose[this.id] === false
-                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
-                            : null
-                    )
-                }
                 {this.state.thumbnail && (
                     <div
-                        className={
-                            (this.state.showTitle ? " visible " : " invisible ") +
-                            " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
-                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
-                        }
+                        className={`${this.state.showTitle ? 'visible' : 'invisible'} pointer-events-none absolute bottom-full mb-3 left-1/2 w-32 -translate-x-1/2 overflow-hidden rounded-lg border border-white/10 bg-ub-grey/90 shadow-xl backdrop-blur`}
                     >
                         <Image
                             width={128}
                             height={80}
                             src={this.state.thumbnail}
                             alt={`Preview of ${this.props.title}`}
-                            className="w-32 h-20 object-cover"
+                            className="h-20 w-full object-cover"
                             sizes="128px"
                         />
                     </div>
                 )}
                 <div
-                    className={
-                        (this.state.showTitle ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
-                    }
+                    className={`${this.state.showTitle ? 'visible' : 'invisible'} pointer-events-none absolute top-1.5 left-full ml-3 whitespace-nowrap rounded-lg border border-white/10 bg-ub-grey/90 px-2 py-1 text-xs text-ubt-grey shadow-lg backdrop-blur`}
                 >
                     {this.props.title}
                 </div>
