@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const SAVE_KEY = 'input-lab:text';
 
@@ -10,6 +11,7 @@ const schema = z.object({
 });
 
 export default function InputLab() {
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -70,7 +72,10 @@ export default function InputLab() {
   }, [text]);
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4 text-white">
+    <div
+      ref={safeAreaRef}
+      className="min-h-screen bg-gray-900 p-4 text-white"
+    >
       <h1 className="mb-4 text-2xl">Input Lab</h1>
       <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
         <div>

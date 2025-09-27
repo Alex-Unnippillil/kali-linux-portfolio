@@ -2,14 +2,19 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const HTTPBuilder: React.FC = () => {
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
   const command = `curl -X ${method} ${url}`.trim();
 
   return (
-    <div className="h-full bg-gray-900 p-4 text-white overflow-auto">
+    <div
+      ref={safeAreaRef}
+      className="h-full bg-gray-900 p-4 text-white overflow-auto"
+    >
       <h1 className="mb-4 text-2xl">HTTP Request Builder</h1>
       <p className="mb-4 text-sm text-yellow-300">
         Build a curl command without sending any requests. Learn more at{' '}

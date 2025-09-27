@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -25,6 +26,7 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
 const QUEUE_KEY = 'input-hub-queue';
 
 const InputHub = () => {
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -169,7 +171,10 @@ const InputHub = () => {
   };
 
   return (
-    <div className="p-4 text-black max-w-md mx-auto">
+    <div
+      ref={safeAreaRef}
+      className="p-4 text-black max-w-md mx-auto"
+    >
       <div className="mb-4">
         <span
           className={`px-2 py-1 text-sm rounded ${

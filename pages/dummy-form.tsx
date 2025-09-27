@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+import { useMobileInputSafeArea } from '@/hooks/useMobileInputSafeArea';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -11,6 +12,7 @@ const DummyForm: React.FC = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const safeAreaRef = useMobileInputSafeArea<HTMLDivElement>();
   const [recovered, setRecovered] = useState(false);
 
   useEffect(() => {
@@ -86,7 +88,10 @@ const DummyForm: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+    <div
+      ref={safeAreaRef}
+      className="flex min-h-screen items-center justify-center bg-gray-100"
+    >
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
         {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
