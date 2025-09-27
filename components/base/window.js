@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import DelayedTooltip from '../ui/DelayedTooltip';
 import styles from './window.module.css';
 
 const EDGE_THRESHOLD_MIN = 48;
@@ -759,21 +760,48 @@ export class WindowXBorder extends Component {
     }
 
 // Window's Edit Buttons
-export function WindowEditButtons(props) {
-    const { togglePin } = useDocPiP(props.pip || (() => null));
-    const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+const CONTROL_BUTTON_CLASS =
+    "mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6";
+
+const CLOSE_BUTTON_CLASS =
+    "mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6";
+
+function renderControlButton({
+    key,
+    label,
+    tooltip,
+    onClick,
+    icon,
+    iconAlt,
+    className,
+    id,
+}) {
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
-            {pipSupported && props.pip && (
+        <DelayedTooltip key={key} content={tooltip} delay={150}>
+            {({
+                ref,
+                onMouseEnter,
+                onMouseLeave,
+                onFocus,
+                onBlur,
+                'aria-describedby': ariaDescribedBy,
+            }) => (
                 <button
                     type="button"
-                    aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                    onClick={togglePin}
+                    ref={ref}
+                    id={id}
+                    aria-label={label}
+                    aria-describedby={ariaDescribedBy}
+                    className={className}
+                    onClick={onClick}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
                 >
                     <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        src={icon}
+                        alt={iconAlt}
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
@@ -781,73 +809,69 @@ export function WindowEditButtons(props) {
                     />
                 </button>
             )}
-            <button
-                type="button"
-                aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.minimize}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
+        </DelayedTooltip>
+    );
+}
+
+export function WindowEditButtons(props) {
+    const { togglePin } = useDocPiP(props.pip || (() => null));
+    const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    return (
+        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
+            {pipSupported && props.pip && (
+                renderControlButton({
+                    key: 'pin',
+                    label: 'Window pin',
+                    tooltip: 'Pin window',
+                    onClick: togglePin,
+                    icon: '/themes/Yaru/window/window-pin-symbolic.svg',
+                    iconAlt: 'Kali window pin',
+                    className: CONTROL_BUTTON_CLASS,
+                })
+            )}
+            {renderControlButton({
+                key: 'minimize',
+                label: 'Window minimize',
+                tooltip: 'Minimize window',
+                onClick: props.minimize,
+                icon: '/themes/Yaru/window/window-minimize-symbolic.svg',
+                iconAlt: 'Kali window minimize',
+                className: CONTROL_BUTTON_CLASS,
+            })}
             {props.allowMaximize && (
                 props.isMaximised
                     ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
+                        renderControlButton({
+                            key: 'restore',
+                            label: 'Window restore',
+                            tooltip: 'Restore window',
+                            onClick: props.maximize,
+                            icon: '/themes/Yaru/window/window-restore-symbolic.svg',
+                            iconAlt: 'Kali window restore',
+                            className: CONTROL_BUTTON_CLASS,
+                        })
                     ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
+                        renderControlButton({
+                            key: 'maximize',
+                            label: 'Window maximize',
+                            tooltip: 'Maximize window',
+                            onClick: props.maximize,
+                            icon: '/themes/Yaru/window/window-maximize-symbolic.svg',
+                            iconAlt: 'Kali window maximize',
+                            className: CONTROL_BUTTON_CLASS,
+                        })
                     )
             )}
-            <button
-                type="button"
-                id={`close-${props.id}`}
-                aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.close}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
+            {renderControlButton({
+                key: 'close',
+                label: 'Window close',
+                tooltip: 'Close window',
+                onClick: props.close,
+                icon: '/themes/Yaru/window/window-close-symbolic.svg',
+                iconAlt: 'Kali window close',
+                className: CLOSE_BUTTON_CLASS,
+                id: `close-${props.id}`,
+            })}
         </div>
     )
 }
