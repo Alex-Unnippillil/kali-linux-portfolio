@@ -39,6 +39,11 @@
   border-radius: 0;
 }
 
+.windowFrameFocusVisible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 4px;
+}
+
 .windowTitlebar {
   height: 28px;
   border-top-left-radius: calc(var(--radius-6) - 1px);

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import React, { Component } from 'react';
@@ -36,7 +37,7 @@ const computeSnapRegions = (viewportWidth, viewportHeight) => {
 export class Window extends Component {
     constructor(props) {
         super(props);
-        this.id = null;
+        this.id = props.id ?? null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
         this.startX =
@@ -58,10 +59,12 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            focusVisible: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._lastInteractionWasKeyboard = false;
     }
 
     componentDidMount() {
@@ -210,7 +213,27 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    handleWindowPointerDown = () => {
+        this._lastInteractionWasKeyboard = false;
+        this.focusWindow();
+    }
+
+    handleWindowFocus = () => {
+        const shouldShowFocus = this._lastInteractionWasKeyboard;
+        if (this.state.focusVisible !== shouldShowFocus) {
+            this.setState({ focusVisible: shouldShowFocus });
+        }
+        this.focusWindow();
+    }
+
+    handleWindowBlur = () => {
+        if (this.state.focusVisible) {
+            this.setState({ focusVisible: false });
+        }
+    }
+
     changeCursorToMove = () => {
+        this._lastInteractionWasKeyboard = false;
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
@@ -509,6 +532,7 @@ export class Window extends Component {
     }
 
     handleTitleBarKeyDown = (e) => {
+        this._lastInteractionWasKeyboard = true;
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
@@ -550,6 +574,7 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        this._lastInteractionWasKeyboard = true;
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
@@ -616,6 +641,10 @@ export class Window extends Component {
     }
 
     render() {
+        const isHidden = Boolean(this.props.minimized || this.state.closed);
+        const isActive = Boolean(this.props.isFocused && !isHidden);
+        const focusVisible = this.state.focusVisible;
+        const labelledBy = this.id ? `dock-tab-${this.id}` : undefined;
         return (
             <>
                 {this.state.snapPreview && (
@@ -659,14 +688,20 @@ export class Window extends Component {
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
+                            focusVisible ? styles.windowFrameFocusVisible : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
+                        aria-hidden={isHidden}
+                        aria-labelledby={labelledBy}
+                        data-active={isActive ? 'true' : 'false'}
+                        data-focus-visible={focusVisible ? 'true' : 'false'}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
-                        onPointerDown={this.focusWindow}
-                        onFocus={this.focusWindow}
+                        onPointerDown={this.handleWindowPointerDown}
+                        onFocus={this.handleWindowFocus}
+                        onBlur={this.handleWindowBlur}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
@@ -675,7 +710,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
+                            onPointerDown={this.handleWindowPointerDown}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}

@@ -457,7 +457,7 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Notable Components
 
-- **`components/base/window.js`** - draggable, focusable window with header controls; integrates with desktop z-index.
+- **`components/base/Window.tsx`** - draggable, focusable window with header controls; integrates with desktop z-index.
 - **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
 - **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper and other preferences with persistence.

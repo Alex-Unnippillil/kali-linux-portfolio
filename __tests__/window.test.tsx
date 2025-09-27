@@ -1,6 +1,8 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Window from '../components/base/window';
+import { axe } from 'jest-axe';
+import Window from '../components/base/Window';
+import Taskbar from '../components/screen/taskbar';
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -166,6 +168,130 @@ describe('Window snapping preview', () => {
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`height: ${window.innerHeight / 2}px`);
+  });
+});
+
+describe('Window accessibility', () => {
+  const baseProps = {
+    id: 'test-window',
+    title: 'Test',
+    screen: () => <div>content</div>,
+    hasMinimised: () => {},
+    closed: () => {},
+    hideSideBar: () => {},
+    openApp: () => {},
+    addFolder: () => {},
+    context: {},
+  } as const;
+
+  it('exposes focus-visible state and aria attributes', () => {
+    const focus = jest.fn();
+    const { rerender } = render(
+      <Window
+        {...baseProps}
+        focus={focus}
+        minimized={false}
+        isFocused={false}
+      />
+    );
+
+    const winEl = screen.getByRole('dialog', { name: 'Test' });
+    expect(winEl).toHaveAttribute('aria-hidden', 'false');
+    expect(winEl).toHaveAttribute('data-active', 'false');
+    expect(winEl).toHaveAttribute('data-focus-visible', 'false');
+
+    fireEvent.keyDown(winEl, { key: 'Tab' });
+    fireEvent.focus(winEl);
+
+    expect(focus).toHaveBeenCalledWith('test-window');
+    expect(winEl).toHaveAttribute('data-focus-visible', 'true');
+
+    rerender(
+      <Window
+        {...baseProps}
+        focus={focus}
+        minimized={false}
+        isFocused
+      />
+    );
+
+    expect(winEl).toHaveAttribute('data-active', 'true');
+
+    rerender(
+      <Window
+        {...baseProps}
+        focus={focus}
+        minimized
+        isFocused
+      />
+    );
+
+    expect(winEl).toHaveAttribute('aria-hidden', 'true');
+    expect(winEl).toHaveAttribute('data-active', 'false');
+
+    fireEvent.blur(winEl);
+    expect(winEl).toHaveAttribute('data-focus-visible', 'false');
+  });
+
+  it('passes axe accessibility checks', async () => {
+    const { container } = render(
+      <Window
+        {...baseProps}
+        focus={() => {}}
+        minimized={false}
+        isFocused={false}
+      />
+    );
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+});
+
+describe('Taskbar accessibility', () => {
+  const app = { id: 'test-app', title: 'Test App', icon: '/icon.png' };
+  const baseProps = {
+    apps: [app],
+    closed_windows: { 'test-app': false },
+    minimized_windows: { 'test-app': false },
+    focused_windows: { 'test-app': false },
+    openApp: jest.fn(),
+    minimize: jest.fn(),
+    workspaces: [],
+    activeWorkspace: 0,
+    onSelectWorkspace: jest.fn(),
+  };
+
+  it('syncs aria-selected with focus state', () => {
+    const { rerender } = render(<Taskbar {...baseProps} />);
+    const dockButton = screen.getByRole('tab', { name: 'Test App' });
+    expect(dockButton).toHaveAttribute('aria-selected', 'false');
+
+    rerender(
+      <Taskbar
+        {...baseProps}
+        focused_windows={{ 'test-app': true }}
+        minimized_windows={{ 'test-app': false }}
+      />
+    );
+
+    expect(screen.getByRole('tab', { name: 'Test App' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+
+    rerender(
+      <Taskbar
+        {...baseProps}
+        focused_windows={{ 'test-app': true }}
+        minimized_windows={{ 'test-app': true }}
+      />
+    );
+
+    expect(screen.getByRole('tab', { name: 'Test App' })).toHaveAttribute(
+      'aria-selected',
+      'false'
+    );
   });
 });
 
