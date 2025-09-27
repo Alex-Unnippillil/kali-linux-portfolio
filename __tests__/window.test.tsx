@@ -7,6 +7,27 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
 
+const createMatchMedia = (matches = false) => ({
+  matches,
+  media: '',
+  onchange: null,
+  addListener: jest.fn(),
+  removeListener: jest.fn(),
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  dispatchEvent: jest.fn(),
+});
+
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      ...createMatchMedia(false),
+      media: query,
+    })),
+  });
+});
+
 beforeEach(() => {
   setViewport(1440, 900);
 });
@@ -442,6 +463,173 @@ describe('Window keyboard dragging', () => {
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
+  });
+});
+
+describe('Keyboard snapping preview', () => {
+  it('previews Alt+ArrowLeft and commits on key release', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowLeft',
+        altKey: true,
+        shiftKey: false,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('left');
+    expect(ref.current!.state.snapSource).toBe('keyboard');
+    expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
+
+    act(() => {
+      ref.current!.handleKeyUp({ key: 'ArrowLeft' } as any);
+    });
+
+    expect(ref.current!.state.snapped).toBe('left');
+    expect(ref.current!.state.snapPreview).toBeNull();
+  });
+
+  it('cancels preview when Alt is released before confirming', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowRight',
+        altKey: true,
+        shiftKey: false,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('right');
+
+    act(() => {
+      ref.current!.handleKeyUp({ key: 'Alt' } as any);
+    });
+
+    expect(ref.current!.state.snapPreview).toBeNull();
+    expect(ref.current!.state.snapSource).toBeNull();
+    expect(ref.current!.state.snapped).toBeNull();
+  });
+});
+
+describe('Quadrant snapping shortcuts', () => {
+  it('snaps to the top-left quadrant with Alt+Shift+ArrowUp', () => {
+    setViewport(1920, 1080);
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const node = document.getElementById('test-window')!;
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowUp',
+        altKey: true,
+        shiftKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('top-left');
+    expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
+
+    act(() => {
+      ref.current!.handleKeyUp({ key: 'ArrowUp' } as any);
+    });
+
+    expect(ref.current!.state.snapped).toBe('top-left');
+    expect(ref.current!.state.width).toBeCloseTo(50, 2);
+    const expectedHeight = (((window.innerHeight - 28) / 2) / window.innerHeight) * 100;
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 2);
+    expect(node.style.transform).toBe('translate(0px, 0px)');
+  });
+
+  it('snaps to the bottom-right quadrant with Alt+Shift+ArrowDown', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const node = document.getElementById('test-window')!;
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        shiftKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('bottom-right');
+
+    act(() => {
+      ref.current!.handleKeyUp({ key: 'ArrowDown' } as any);
+    });
+
+    expect(ref.current!.state.snapped).toBe('bottom-right');
+    expect(ref.current!.state.width).toBeCloseTo(50, 2);
+    const availableHeight = window.innerHeight - 28;
+    const cornerHeight = availableHeight / 2;
+    const expectedHeight = (cornerHeight / window.innerHeight) * 100;
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 2);
+    const expectedTop = availableHeight - cornerHeight;
+    expect(node.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${expectedTop}px)`);
   });
 });
 
