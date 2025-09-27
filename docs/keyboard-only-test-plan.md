@@ -1,14 +1,24 @@
 # Keyboard-Only Window Management Test Plan
 
-## Resizing
+## Moving
 1. Open any window.
 2. Focus the window.
-3. Hold **Shift** and press arrow keys:
-   - **Shift + ArrowRight** increases width.
-   - **Shift + ArrowLeft** decreases width.
-   - **Shift + ArrowDown** increases height.
-   - **Shift + ArrowUp** decreases height.
-4. Verify the window resizes accordingly.
+3. Hold **Ctrl** and press arrow keys:
+   - **Ctrl + ArrowUp** nudges the window upward.
+   - **Ctrl + ArrowDown** nudges the window downward.
+   - **Ctrl + ArrowLeft** nudges the window to the left.
+   - **Ctrl + ArrowRight** nudges the window to the right.
+4. Confirm the window remains within the desktop bounds and updates its position without dragging.
+5. Open the window context menu (right click or **Shift+F10**) and activate any of the Move commands. The window should move in the corresponding direction.
+
+## Resizing
+1. With the window focused, use keyboard-only resizing:
+   - **Shift + ArrowRight** increases width slightly.
+   - **Shift + ArrowLeft** decreases width slightly.
+   - **Shift + ArrowDown** increases height slightly.
+   - **Shift + ArrowUp** decreases height slightly.
+2. For larger jumps, hold **Ctrl + Shift** with the same arrows to resize in 2% increments.
+3. Use the window context menu Resize commands to grow or shrink width/height and verify they match the shortcuts.
 
 ## Snapping
 1. With the window focused, press arrow keys with **Alt**:
