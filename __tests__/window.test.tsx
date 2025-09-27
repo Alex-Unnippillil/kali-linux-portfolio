@@ -7,6 +7,12 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
 
+const flushFrame = () => {
+  act(() => {
+    jest.advanceTimersByTime(16);
+  });
+};
+
 beforeEach(() => {
   setViewport(1440, 900);
 });
@@ -51,7 +57,155 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window interaction throttling', () => {
+  let originalRaf: typeof window.requestAnimationFrame | undefined;
+  let originalCancelRaf: typeof window.cancelAnimationFrame | undefined;
+
+  beforeEach(() => {
+    originalRaf = window.requestAnimationFrame;
+    originalCancelRaf = window.cancelAnimationFrame;
+    jest.useFakeTimers();
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => setTimeout(cb, 16)) as unknown as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((id: number) => clearTimeout(id)) as unknown as typeof window.cancelAnimationFrame;
+  });
+
+  afterEach(() => {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+    if (originalRaf) {
+      window.requestAnimationFrame = originalRaf;
+    } else {
+      delete (window as any).requestAnimationFrame;
+    }
+    if (originalCancelRaf) {
+      window.cancelAnimationFrame = originalCancelRaf;
+    } else {
+      delete (window as any).cancelAnimationFrame;
+    }
+  });
+
+  it('throttles drag handler to the latest frame', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const instance = ref.current!;
+    const applySpy = jest.spyOn(instance, 'applyEdgeResistance');
+    const overlapSpy = jest.spyOn(instance, 'checkOverlap');
+    const snapSpy = jest.spyOn(instance, 'checkSnapPreview');
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 200,
+      right: 300,
+      bottom: 300,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 200,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      instance.handleDrag({}, { node: winEl, x: 5, y: 7 } as any);
+      instance.handleDrag({}, { node: winEl, x: 15, y: 17 } as any);
+    });
+
+    expect(applySpy).not.toHaveBeenCalled();
+
+    flushFrame();
+
+    expect(applySpy).toHaveBeenCalledTimes(1);
+    expect(overlapSpy).toHaveBeenCalledTimes(1);
+    expect(snapSpy).toHaveBeenCalledTimes(1);
+    const [, dataArg] = applySpy.mock.calls[0];
+    expect(dataArg.x).toBe(15);
+    expect(dataArg.y).toBe(17);
+  });
+
+  it('queues resize updates within a frame', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const instance = ref.current!;
+    const initialHeight = instance.state.height;
+    const initialWidth = instance.state.width;
+    const resizeSpy = jest.spyOn(instance, 'resizeBoundries');
+
+    act(() => {
+      instance.handleVerticleResize();
+      instance.handleVerticleResize();
+      instance.handleHorizontalResize();
+      instance.handleHorizontalResize();
+    });
+
+    expect(resizeSpy).not.toHaveBeenCalled();
+
+    flushFrame();
+
+    expect(resizeSpy).toHaveBeenCalledTimes(1);
+    const expectedHeight = initialHeight + (2 / window.innerHeight) * 100;
+    const expectedWidth = initialWidth + (2 / window.innerWidth) * 100;
+    expect(instance.state.height).toBeCloseTo(expectedHeight, 5);
+    expect(instance.state.width).toBeCloseTo(expectedWidth, 5);
+  });
+});
+
 describe('Window snapping preview', () => {
+  let originalRaf: typeof window.requestAnimationFrame | undefined;
+  let originalCancelRaf: typeof window.cancelAnimationFrame | undefined;
+
+  beforeEach(() => {
+    originalRaf = window.requestAnimationFrame;
+    originalCancelRaf = window.cancelAnimationFrame;
+    jest.useFakeTimers();
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => setTimeout(cb, 16)) as unknown as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((id: number) => clearTimeout(id)) as unknown as typeof window.cancelAnimationFrame;
+  });
+
+  afterEach(() => {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+    if (originalRaf) {
+      window.requestAnimationFrame = originalRaf;
+    } else {
+      delete (window as any).requestAnimationFrame;
+    }
+    if (originalCancelRaf) {
+      window.cancelAnimationFrame = originalCancelRaf;
+    } else {
+      delete (window as any).cancelAnimationFrame;
+    }
+  });
+
   it('shows preview when dragged near left edge', () => {
     setViewport(1920, 1080);
     const ref = React.createRef<Window>();
@@ -86,6 +240,7 @@ describe('Window snapping preview', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    flushFrame();
 
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toBeInTheDocument();
@@ -125,6 +280,7 @@ describe('Window snapping preview', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    flushFrame();
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
@@ -162,6 +318,7 @@ describe('Window snapping preview', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    flushFrame();
 
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
@@ -170,6 +327,34 @@ describe('Window snapping preview', () => {
 });
 
 describe('Window snapping finalize and release', () => {
+  let originalRaf: typeof window.requestAnimationFrame | undefined;
+  let originalCancelRaf: typeof window.cancelAnimationFrame | undefined;
+
+  beforeEach(() => {
+    originalRaf = window.requestAnimationFrame;
+    originalCancelRaf = window.cancelAnimationFrame;
+    jest.useFakeTimers();
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => setTimeout(cb, 16)) as unknown as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((id: number) => clearTimeout(id)) as unknown as typeof window.cancelAnimationFrame;
+  });
+
+  afterEach(() => {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+    if (originalRaf) {
+      window.requestAnimationFrame = originalRaf;
+    } else {
+      delete (window as any).requestAnimationFrame;
+    }
+    if (originalCancelRaf) {
+      window.cancelAnimationFrame = originalCancelRaf;
+    } else {
+      delete (window as any).cancelAnimationFrame;
+    }
+  });
+
   it('snaps window on drag stop near left edge', () => {
     setViewport(1024, 768);
     const ref = React.createRef<Window>();
@@ -203,6 +388,7 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    flushFrame();
     act(() => {
       ref.current!.handleStop();
     });
@@ -247,6 +433,7 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    flushFrame();
     act(() => {
       ref.current!.handleStop();
     });
@@ -291,6 +478,7 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    flushFrame();
     act(() => {
       ref.current!.handleStop();
     });
@@ -334,6 +522,7 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    flushFrame();
     act(() => {
       ref.current!.handleStop();
     });
@@ -447,6 +636,11 @@ describe('Window keyboard dragging', () => {
 
 describe('Edge resistance', () => {
   it('clamps drag movement near boundaries', () => {
+    jest.useFakeTimers();
+    const originalRaf = window.requestAnimationFrame;
+    const originalCancelRaf = window.cancelAnimationFrame;
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => setTimeout(cb, 16)) as unknown as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((id: number) => clearTimeout(id)) as unknown as typeof window.cancelAnimationFrame;
     const ref = React.createRef<Window>();
     render(
       <Window
@@ -478,8 +672,20 @@ describe('Edge resistance', () => {
     act(() => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
+    flushFrame();
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    jest.useRealTimers();
+    if (originalRaf) {
+      window.requestAnimationFrame = originalRaf;
+    } else {
+      delete (window as any).requestAnimationFrame;
+    }
+    if (originalCancelRaf) {
+      window.cancelAnimationFrame = originalCancelRaf;
+    } else {
+      delete (window as any).cancelAnimationFrame;
+    }
   });
 });
 
