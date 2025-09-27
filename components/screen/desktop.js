@@ -1021,7 +1021,7 @@ export class Desktop extends Component {
         safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
-    }
+    };
 
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
 
