@@ -5,7 +5,6 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
 
 type AppMeta = {
   id: string;
@@ -25,6 +24,7 @@ type CategoryDefinitionBase = {
   id: string;
   label: string;
   icon: string;
+  badge?: string;
 } & CategorySource;
 
 const TRANSITION_DURATION = 180;
@@ -53,67 +53,119 @@ const CATEGORY_DEFINITIONS = [
   {
     id: 'information-gathering',
     label: 'Information Gathering',
-    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    icon: '/themes/kali/categories/information-gathering.svg',
+    badge: '01',
     type: 'ids',
     appIds: ['nmap-nse', 'reconng', 'kismet', 'wireshark'],
   },
   {
     id: 'vulnerability-analysis',
     label: 'Vulnerability Analysis',
-    icon: '/themes/Yaru/apps/nessus.svg',
+    icon: '/themes/kali/categories/vulnerability-analysis.svg',
+    badge: '02',
     type: 'ids',
     appIds: ['nessus', 'openvas', 'nikto'],
   },
   {
-    id: 'web-app-analysis',
-    label: 'Web App Analysis',
-    icon: '/themes/Yaru/apps/http.svg',
+    id: 'web-application-analysis',
+    label: 'Web Application Analysis',
+    icon: '/themes/kali/categories/web-application-analysis.svg',
+    badge: '03',
     type: 'ids',
     appIds: ['http', 'beef', 'metasploit'],
   },
   {
+    id: 'database-assessment',
+    label: 'Database Assessment',
+    icon: '/themes/kali/categories/database-assessment.svg',
+    badge: '04',
+    type: 'ids',
+    appIds: ['security-tools'],
+  },
+  {
     id: 'password-attacks',
     label: 'Password Attacks',
-    icon: '/themes/Yaru/apps/john.svg',
+    icon: '/themes/kali/categories/password-attacks.svg',
+    badge: '05',
     type: 'ids',
     appIds: ['john', 'hashcat', 'hydra'],
   },
   {
     id: 'wireless-attacks',
     label: 'Wireless Attacks',
-    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
+    icon: '/themes/kali/categories/wireless-attacks.svg',
+    badge: '06',
     type: 'ids',
     appIds: ['kismet', 'reaver', 'wireshark'],
   },
   {
+    id: 'reverse-engineering',
+    label: 'Reverse Engineering',
+    icon: '/themes/kali/categories/reverse-engineering.svg',
+    badge: '07',
+    type: 'ids',
+    appIds: ['ghidra', 'radare2'],
+  },
+  {
     id: 'exploitation-tools',
     label: 'Exploitation Tools',
-    icon: '/themes/Yaru/apps/metasploit.svg',
+    icon: '/themes/kali/categories/exploitation-tools.svg',
+    badge: '08',
     type: 'ids',
-    appIds: ['metasploit', 'security-tools', 'beef'],
+    appIds: ['metasploit', 'msf-post', 'security-tools'],
   },
   {
     id: 'sniffing-spoofing',
     label: 'Sniffing & Spoofing',
-    icon: '/themes/Yaru/apps/ettercap.svg',
+    icon: '/themes/kali/categories/sniffing-spoofing.svg',
+    badge: '09',
     type: 'ids',
     appIds: ['dsniff', 'ettercap', 'wireshark'],
   },
   {
     id: 'post-exploitation',
     label: 'Post Exploitation',
-    icon: '/themes/Yaru/apps/msf-post.svg',
+    icon: '/themes/kali/categories/post-exploitation.svg',
+    badge: '10',
     type: 'ids',
     appIds: ['msf-post', 'mimikatz', 'volatility'],
   },
   {
-    id: 'forensics-reporting',
-    label: 'Forensics & Reporting',
-    icon: '/themes/Yaru/apps/autopsy.svg',
+    id: 'forensics',
+    label: 'Forensics',
+    icon: '/themes/kali/categories/forensics.svg',
+    badge: '11',
     type: 'ids',
-    appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
+    appIds: ['autopsy', 'volatility', 'evidence-vault'],
   },
- ] as const satisfies readonly CategoryDefinitionBase[];
+  {
+    id: 'reporting',
+    label: 'Reporting',
+    icon: '/themes/kali/categories/reporting.svg',
+    badge: '12',
+    type: 'ids',
+    appIds: ['project-gallery', 'evidence-vault'],
+  },
+  {
+    id: 'top10',
+    label: 'Top 10 Security Tools',
+    icon: '/themes/kali/categories/top10.svg',
+    badge: 'Top 10',
+    type: 'ids',
+    appIds: [
+      'nmap-nse',
+      'metasploit',
+      'wireshark',
+      'john',
+      'hydra',
+      'hashcat',
+      'nessus',
+      'openvas',
+      'reaver',
+      'ettercap',
+    ],
+  },
+] as const satisfies readonly CategoryDefinitionBase[];
 
 type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
 const isCategoryId = (
@@ -122,11 +174,6 @@ const isCategoryId = (
   CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
-
-const KALI_CATEGORIES = BASE_KALI_CATEGORIES.map((category, index) => ({
-  ...category,
-  number: String(index + 1).padStart(2, '0'),
-}));
 
 const readRecentAppIds = (): string[] => {
   try {
@@ -428,9 +475,10 @@ const WhiskerMenu: React.FC = () => {
                   setCategory(cat.id);
                   setCategoryHighlight(index);
                 }}
-
               >
-                <span className="w-8 font-mono text-xs text-gray-300">{String(index + 1).padStart(2, '0')}</span>
+                <span className="w-12 font-mono text-[10px] uppercase tracking-wide text-gray-300">
+                  {cat.badge ?? ''}
+                </span>
                 <span className="flex items-center gap-2">
                   <Image
                     src={cat.icon}
@@ -444,17 +492,6 @@ const WhiskerMenu: React.FC = () => {
                 </span>
               </button>
             ))}
-            <div className="mt-4 border-t border-gray-700 pt-3">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Kali Linux Groups</p>
-              <ul className="space-y-1 text-sm">
-                {KALI_CATEGORIES.map((cat) => (
-                  <li key={cat.id} className="flex items-baseline text-gray-300">
-                    <span className="font-mono text-ubt-blue mr-2 w-8">{cat.number}</span>
-                    <span>{cat.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
           <div className="flex flex-col p-3">
             <input
