@@ -15,7 +15,10 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  tourCompleted: false,
 };
+
+const TOUR_COMPLETED_KEY = 'desktop-tour-completed';
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -135,6 +138,22 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTourCompleted() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.tourCompleted;
+  const stored = window.localStorage.getItem(TOUR_COMPLETED_KEY);
+  return stored === null ? DEFAULT_SETTINGS.tourCompleted : stored === 'true';
+}
+
+export async function setTourCompleted(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(TOUR_COMPLETED_KEY, value ? 'true' : 'false');
+}
+
+export async function resetTourCompleted() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(TOUR_COMPLETED_KEY);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +169,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem(TOUR_COMPLETED_KEY);
 }
 
 export async function exportSettings() {
