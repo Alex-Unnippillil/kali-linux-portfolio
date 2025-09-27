@@ -1,39 +1,77 @@
 import React from 'react';
+import {
+  DEFAULT_SHORTCUTS,
+  SHORTCUT_CATEGORIES,
+} from '../data/shortcuts';
+
+const groupedShortcuts = (() => {
+  const ordered = SHORTCUT_CATEGORIES.map((category) => ({
+    category,
+    shortcuts: DEFAULT_SHORTCUTS.filter(
+      (shortcut) => shortcut.category === category
+    ),
+  }));
+
+  const remainingCategories = Array.from(
+    new Set(DEFAULT_SHORTCUTS.map((shortcut) => shortcut.category))
+  ).filter((category) => !SHORTCUT_CATEGORIES.includes(category));
+
+  const extras = remainingCategories.map((category) => ({
+    category,
+    shortcuts: DEFAULT_SHORTCUTS.filter(
+      (shortcut) => shortcut.category === category
+    ),
+  }));
+
+  return [...ordered, ...extras];
+})();
 
 const KeyboardReference = () => (
-  <main className="min-h-screen bg-ub-cool-grey text-white p-4 space-y-4">
-    <h1 className="text-2xl font-bold">Keyboard Mapping Reference</h1>
-    <p className="mb-4">Common shortcuts for navigating and interacting with the desktop.</p>
-    <table className="w-full border-collapse">
-      <thead>
-        <tr>
-          <th className="p-2 text-left border border-ubt-grey">Key</th>
-          <th className="p-2 text-left border border-ubt-grey">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td className="p-2 border border-ubt-grey">Ctrl + C</td>
-          <td className="p-2 border border-ubt-grey">Copy selected text</td>
-        </tr>
-        <tr>
-          <td className="p-2 border border-ubt-grey">Ctrl + V</td>
-          <td className="p-2 border border-ubt-grey">Paste from clipboard</td>
-        </tr>
-        <tr>
-          <td className="p-2 border border-ubt-grey">Ctrl + X</td>
-          <td className="p-2 border border-ubt-grey">Cut selected text</td>
-        </tr>
-        <tr>
-          <td className="p-2 border border-ubt-grey">Alt + Tab</td>
-          <td className="p-2 border border-ubt-grey">Switch between apps</td>
-        </tr>
-        <tr>
-          <td className="p-2 border border-ubt-grey">Alt + F4</td>
-          <td className="p-2 border border-ubt-grey">Close current window</td>
-        </tr>
-      </tbody>
-    </table>
+  <main className="min-h-screen bg-ub-cool-grey p-6 text-white space-y-6">
+    <header className="space-y-2">
+      <h1 className="text-3xl font-bold tracking-wide">Keyboard Mapping Reference</h1>
+      <p className="text-sm text-slate-200">
+        The table below lists every desktop shortcut supported by the Kali Linux
+        portfolio shell. Use it as a printable quick reference or pair it with
+        the in-app overlay (<span className="font-mono">?</span>) for live filtering.
+      </p>
+    </header>
+    <div className="space-y-8">
+      {groupedShortcuts.map(({ category, shortcuts }) => (
+        <section key={category} className="space-y-3">
+          <h2 className="text-xl font-semibold tracking-wide text-ubt-grey-light">
+            {category}
+          </h2>
+          <table className="w-full border-collapse overflow-hidden rounded-lg shadow-md">
+            <thead className="bg-black/30">
+              <tr>
+                <th className="p-3 text-left text-sm font-semibold uppercase tracking-wider text-slate-200">
+                  Shortcut
+                </th>
+                <th className="p-3 text-left text-sm font-semibold uppercase tracking-wider text-slate-200">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {shortcuts.map((shortcut) => (
+                <tr
+                  key={`${shortcut.description}-${shortcut.keys}`}
+                  className="odd:bg-black/20"
+                >
+                  <td className="p-3 font-mono text-base text-white">
+                    {shortcut.keys}
+                  </td>
+                  <td className="p-3 text-sm text-slate-200">
+                    {shortcut.description}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+    </div>
   </main>
 );
 
