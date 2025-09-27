@@ -82,6 +82,24 @@
   --focus-outline-width: 2px;
 }
 
+html[data-theme='light'] {
+  --color-ub-grey: #f3f4f6;
+  --color-ub-warm-grey: #e0e0e0;
+  --color-ub-cool-grey: #cbd5e1;
+  --color-ub-orange: #2563eb;
+  --color-ub-lite-abrgn: #e2e8f0;
+  --color-ub-med-abrgn: #cbd5f5;
+  --color-ub-drk-abrgn: #94a3b8;
+  --color-ub-window-title: #1e293b;
+  --color-ub-dark-grey: #94a3b8;
+  --kali-bg: rgba(245, 249, 252, 0.88);
+  --kali-panel: rgba(255, 255, 255, 0.82);
+  --kali-panel-border: rgba(15, 23, 42, 0.12);
+  --kali-panel-highlight: rgba(148, 163, 184, 0.16);
+  --kali-terminal-green: #047857;
+  --kali-terminal-text: #0f172a;
+}
+
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;

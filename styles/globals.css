@@ -2,6 +2,7 @@
 
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
+  color-scheme: dark;
   /* Base colors */
   --color-bg: #0f1317; /* kali background */
   --color-text: #f5f5f5; /* text on dark backgrounds */
@@ -25,12 +26,33 @@
 }
 
 body {
-  background: var(--kali-bg);
+  background: var(--kali-bg, var(--color-bg));
   color: var(--kali-text);
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f5f7fb;
+  --color-text: #0f172a;
+  --color-primary: #2563eb;
+  --color-secondary: #e2e8f0;
+  --color-accent: var(--color-primary);
+  --color-muted: #e2e8f0;
+  --color-surface: #ffffff;
+  --color-inverse: #101b2d;
+  --color-border: #cbd5f5;
+  --color-terminal: #047857;
+  --color-dark: #e0e7ff;
+  --color-focus-ring: var(--color-primary);
+  --color-selection: color-mix(in srgb, var(--color-primary) 35%, white);
+  --color-control-accent: var(--color-primary);
+  --kali-text: #0f172a;
+  --kali-bg: rgba(245, 249, 252, 0.88);
 }
 
 /* Dark theme */
 html[data-theme='dark'] {
+  color-scheme: dark;
   --color-bg: #000000;
   --color-text: #e5e5e5;
   --color-primary: #1e88e5;
@@ -42,10 +64,15 @@ html[data-theme='dark'] {
   --color-border: #333333;
   --color-terminal: #00ff00;
   --color-dark: #0a0a0a;
+  --color-focus-ring: #1e88e5;
+  --color-selection: color-mix(in srgb, var(--color-primary) 55%, black);
+  --kali-bg: rgba(15, 19, 23, 0.92);
+  --kali-text: #e5e5e5;
 }
 
 /* Neon theme */
 html[data-theme='neon'] {
+  color-scheme: dark;
   --color-bg: #000000;
   --color-text: #ffffff;
   --color-primary: #39ff14;
@@ -57,10 +84,15 @@ html[data-theme='neon'] {
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+  --color-focus-ring: #39ff14;
+  --color-selection: color-mix(in srgb, #39ff14 45%, black);
+  --kali-bg: rgba(0, 0, 0, 0.9);
+  --kali-text: #ffffff;
 }
 
 /* Matrix theme */
 html[data-theme='matrix'] {
+  color-scheme: dark;
   --color-bg: #000000;
   --color-text: #00ff00;
   --color-primary: #00ff00;
@@ -72,6 +104,10 @@ html[data-theme='matrix'] {
   --color-border: #003300;
   --color-terminal: #00ff00;
   --color-dark: #000000;
+  --color-focus-ring: #00ff00;
+  --color-selection: color-mix(in srgb, #00ff00 45%, black);
+  --kali-bg: rgba(0, 0, 0, 0.92);
+  --kali-text: #00ff00;
 
 }
 
