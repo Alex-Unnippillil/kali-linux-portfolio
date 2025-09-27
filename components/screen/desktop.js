@@ -10,7 +10,6 @@ const BackgroundImage = dynamic(
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
-import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
@@ -24,6 +23,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import DesktopIcons from '../shell/DesktopIcons';
 
 export class Desktop extends Component {
     constructor() {
@@ -41,6 +41,7 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.desktopIconsRef = React.createRef();
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -69,6 +70,7 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
+            desktopIconPositions: {},
         }
     }
 
@@ -222,6 +224,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('align-desktop-icons', this.alignDesktopIcons);
     }
 
     componentWillUnmount() {
@@ -229,6 +232,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('align-desktop-icons', this.alignDesktopIcons);
     }
 
     checkForNewFolders = () => {
@@ -536,6 +540,7 @@ export class Desktop extends Component {
             desktop_apps
         }, () => {
             if (typeof callback === 'function') callback();
+            this.restoreDesktopIconPositions();
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -586,29 +591,58 @@ export class Desktop extends Component {
             desktop_apps
         });
         this.initFavourite = { ...favourite_apps };
+        this.restoreDesktopIconPositions();
+    }
+
+    restoreDesktopIconPositions = () => {
+        const stored = safeLocalStorage?.getItem('desktop_icon_positions');
+        if (!stored) return;
+        try {
+            const parsed = JSON.parse(stored);
+            this.setState({ desktopIconPositions: parsed || {} });
+        } catch (error) {
+            safeLocalStorage?.removeItem('desktop_icon_positions');
+        }
+    }
+
+    handleDesktopIconPositionsChange = (positions) => {
+        this.setState({ desktopIconPositions: positions });
+        try {
+            safeLocalStorage?.setItem('desktop_icon_positions', JSON.stringify(positions));
+        } catch (error) {
+            // ignore storage write failures
+        }
+    }
+
+    alignDesktopIcons = () => {
+        if (this.desktopIconsRef?.current?.alignToGrid) {
+            this.desktopIconsRef.current.alignToGrid();
+        }
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
-
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+        if (Object.keys(this.state.closed_windows).length === 0) return null;
+        const iconData = this.state.desktop_apps
+            .map((id) => apps.find((app) => app.id === id))
+            .filter(Boolean)
+            .map((app) => ({
+                id: app.id,
+                name: app.title,
+                icon: app.icon,
+                displayName: app.displayName,
+                disabled: this.state.disabled_apps[app.id],
+                prefetch: app.screen?.prefetch,
+            }));
+        if (!iconData.length) return null;
+        return (
+            <DesktopIcons
+                ref={this.desktopIconsRef}
+                icons={iconData}
+                positions={this.state.desktopIconPositions}
+                onActivate={this.openApp}
+                onPositionsChange={this.handleDesktopIconPositionsChange}
+            />
+        );
     }
 
     renderWindows = () => {
@@ -1115,6 +1149,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    alignIcons={this.alignDesktopIcons}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />

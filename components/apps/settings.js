@@ -44,6 +44,12 @@ export function Settings() {
         return contrastRatio(accent, '#000000') > contrastRatio(accent, '#ffffff') ? '#000000' : '#ffffff';
     }, [accent, contrastRatio]);
 
+    const alignDesktopIcons = useCallback(() => {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('align-desktop-icons'));
+        }
+    }, []);
+
     useEffect(() => {
         let raf = requestAnimationFrame(() => {
             let ratio = contrastRatio(accent, accentText());
@@ -147,6 +153,15 @@ export function Settings() {
                     />
                     Reduced Motion
                 </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <button
+                    type="button"
+                    onClick={alignDesktopIcons}
+                    className="px-4 py-2 rounded bg-ub-blue text-white hover:bg-ub-orange focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-orange"
+                >
+                    Align Desktop Icons
+                </button>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
