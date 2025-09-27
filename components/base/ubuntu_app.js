@@ -5,6 +5,7 @@ export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this.capturedPointers = new Set();
     }
 
     handleDragStart = () => {
@@ -30,6 +31,39 @@ export class UbuntuApp extends Component {
         }
     }
 
+    handlePointerDown = (event) => {
+        const target = event.currentTarget;
+        if (target && typeof target.setPointerCapture === 'function') {
+            try {
+                target.setPointerCapture(event.pointerId);
+                this.capturedPointers.add(event.pointerId);
+            } catch (error) {
+                // Ignore browsers that do not support pointer capture
+            }
+        }
+    }
+
+    releasePointer = (event) => {
+        if (!this.capturedPointers.has(event.pointerId)) return;
+        this.capturedPointers.delete(event.pointerId);
+        const target = event.currentTarget;
+        if (target && typeof target.releasePointerCapture === 'function') {
+            try {
+                target.releasePointerCapture(event.pointerId);
+            } catch (error) {
+                // Ignore errors thrown when releasing an uncaptured pointer
+            }
+        }
+    }
+
+    handlePointerUp = (event) => {
+        this.releasePointer(event);
+    }
+
+    handlePointerCancel = (event) => {
+        this.releasePointer(event);
+    }
+
     render() {
         return (
             <div
@@ -41,6 +75,9 @@ export class UbuntuApp extends Component {
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
+                onPointerDown={this.handlePointerDown}
+                onPointerUp={this.handlePointerUp}
+                onPointerCancel={this.handlePointerCancel}
                 className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
                     " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
