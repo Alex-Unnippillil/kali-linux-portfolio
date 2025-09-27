@@ -69,6 +69,7 @@
     "jspdf": "^3.0.2",
     "kaitai-struct": "^0.10.0",
     "leaflet": "^1.9.4",
+    "lucide-react": "^0.544.0",
     "marked": "^16.2.1",
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",

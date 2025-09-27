@@ -1,17 +1,18 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import { Volume, Volume1, Volume2, VolumeX } from "lucide-react";
 import usePersistentState from "../../hooks/usePersistentState";
 
-const ICONS = {
-  muted: "/themes/Yaru/status/audio-volume-muted-symbolic.svg",
-  low: "/themes/Yaru/status/audio-volume-low-symbolic.svg",
-  medium: "/themes/Yaru/status/audio-volume-medium-symbolic.svg",
-  high: "/themes/Yaru/status/audio-volume-high-symbolic.svg",
-} as const;
+type VolumeLevel = "muted" | "low" | "medium" | "high";
 
-type VolumeLevel = keyof typeof ICONS;
+const ICONS: Record<VolumeLevel, LucideIcon> = {
+  muted: VolumeX,
+  low: Volume,
+  medium: Volume1,
+  high: Volume2,
+};
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -40,6 +41,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     if (volume <= 0.66) return "medium";
     return "high";
   }, [volume]);
+  const VolumeIcon = ICONS[level];
 
   const setClampedVolume = useCallback(
     (value: number | ((current: number) => number)) => {
@@ -116,14 +118,11 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
         onClick={handleToggle}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Image
-          width={16}
-          height={16}
-          src={ICONS[level]}
-          alt={`${level} volume`}
+        <VolumeIcon
+          aria-hidden="true"
+          focusable="false"
           className="status-symbol h-4 w-4"
-          draggable={false}
-          sizes="16px"
+          strokeWidth={2}
         />
       </button>
       {open && (
