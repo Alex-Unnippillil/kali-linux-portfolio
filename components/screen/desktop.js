@@ -771,29 +771,22 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setWorkspaceState({ minimized_windows }, this.saveSession);
-
             const reopen = () => {
-                // if it's minimised, restore its last position
                 if (this.state.minimized_windows[objId]) {
-                    this.focus(objId);
-                    var r = document.querySelector("#" + objId);
-                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
-                    minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                    const minimized_windows = {
+                        ...this.state.minimized_windows,
+                        [objId]: false,
+                    };
+                    this.setWorkspaceState({ minimized_windows }, () => {
+                        this.focus(objId);
+                        this.saveSession();
+                    });
                 } else {
                     this.focus(objId);
                     this.saveSession();
                 }
             };
+
             if (context) {
                 this.setState({ window_context: contextState }, reopen);
             } else {

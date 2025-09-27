@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { animateSpring, WINDOW_MINIMIZE_SPRING, prefersReducedMotion } from '../../utils/motion';
 import styles from './window.module.css';
 
 const EDGE_THRESHOLD_MIN = 48;
@@ -62,6 +63,20 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dockAnimation = null;
+        this._maximizeAnimation = null;
+        this._restoreTransform = {
+            x: this.startX ?? 0,
+            y: this.startY ?? 0,
+            scale: 1,
+        };
+        this._currentTransform = { ...this._restoreTransform };
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.minimized && !this.props.minimized) {
+            this.restoreFromMinimized();
+        }
     }
 
     componentDidMount() {
@@ -81,6 +96,12 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        const node = this.getWindowElement();
+        if (node) {
+            const snapshot = this.getTransformSnapshot(node);
+            this._currentTransform = snapshot;
+            this._restoreTransform = { x: snapshot.x, y: snapshot.y, scale: 1 };
+        }
     }
 
     componentWillUnmount() {
@@ -94,6 +115,11 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelDockAnimation();
+        if (this._maximizeAnimation && typeof this._maximizeAnimation.cancel === 'function') {
+            this._maximizeAnimation.cancel();
+        }
+        this._maximizeAnimation = null;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -247,16 +273,117 @@ export class Window extends Component {
     }
 
     setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const node = this.getWindowElement();
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
         const x = this.snapToGrid(rect.x);
         const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        node.style.setProperty('--window-transform-x', `${x.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${y.toFixed(1)}px`);
+        this._restoreTransform = { x, y, scale: 1 };
+        this._currentTransform = this.getTransformSnapshot(node);
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
+    }
+
+    getWindowElement = () => {
+        if (!this.id) return null;
+        return document.getElementById(this.id);
+    }
+
+    getDockIconRect = () => {
+        const dock = document.getElementById(`sidebar-${this.id}`);
+        if (!dock) return null;
+        try {
+            return dock.getBoundingClientRect();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    getTransformSnapshot = (node) => {
+        if (!node || typeof window === 'undefined') {
+            return { x: 0, y: 0, scale: 1 };
+        }
+        const computed = window.getComputedStyle(node);
+        const transform = computed.transform || node.style.transform;
+        if (!transform || transform === 'none') {
+            return { x: 0, y: 0, scale: 1 };
+        }
+        if (transform.startsWith('matrix3d(')) {
+            const values = transform
+                .slice(9, -1)
+                .split(',')
+                .map(value => parseFloat(value.trim()));
+            return {
+                x: values[12] || 0,
+                y: values[13] || 0,
+                scale: values[0] || 1,
+            };
+        }
+        if (transform.startsWith('matrix(')) {
+            const values = transform
+                .slice(7, -1)
+                .split(',')
+                .map(value => parseFloat(value.trim()));
+            const [a, b, , , tx, ty] = values;
+            const scale = Math.sqrt((a || 1) ** 2 + (b || 0) ** 2) || 1;
+            return {
+                x: tx || 0,
+                y: ty || 0,
+                scale,
+            };
+        }
+        const match = transform.match(/translate\(([-0-9.]+)px(?:,\s*([-0-9.]+)px)?\)(?:\s*scale\(([-0-9.]+)\))?/);
+        if (match) {
+            return {
+                x: parseFloat(match[1]) || 0,
+                y: match[2] ? parseFloat(match[2]) || 0 : 0,
+                scale: match[3] ? parseFloat(match[3]) || 1 : 1,
+            };
+        }
+        return { x: 0, y: 0, scale: 1 };
+    }
+
+    setTransform = (node, transform) => {
+        if (!node) return;
+        const { x, y, scale } = transform;
+        node.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${(scale ?? 1).toFixed(3)})`;
+    }
+
+    cancelDockAnimation = () => {
+        if (this._dockAnimation && typeof this._dockAnimation.cancel === 'function') {
+            this._dockAnimation.cancel();
+        }
+        this._dockAnimation = null;
+    }
+
+    computeDockTarget = (node, startTransform) => {
+        const windowRect = node.getBoundingClientRect();
+        const dockRect = this.getDockIconRect();
+        const targetScale = 0.2;
+        const windowCenterX = windowRect.left + windowRect.width / 2;
+        const windowCenterY = windowRect.top + windowRect.height / 2;
+
+        if (dockRect) {
+            const dockCenterX = dockRect.left + dockRect.width / 2;
+            const dockCenterY = dockRect.top + dockRect.height / 2;
+            return {
+                x: startTransform.x + (dockCenterX - windowCenterX),
+                y: startTransform.y + (dockCenterY - windowCenterY),
+                scale: targetScale,
+            };
+        }
+
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : windowRect.bottom + 80;
+        const fallbackDockX = 40;
+        const fallbackDockY = viewportHeight - 40;
+        return {
+            x: startTransform.x + (fallbackDockX - windowCenterX),
+            y: startTransform.y + (fallbackDockY - windowCenterY),
+            scale: targetScale,
+        };
     }
 
     unsnapWindow = () => {
@@ -404,6 +531,7 @@ export class Window extends Component {
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.setWinowsPosition();
     }
 
     focusWindow = () => {
@@ -411,72 +539,127 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
-        let posx = -310;
-        if (this.state.maximized) {
-            posx = -510;
-        }
+        const node = this.getWindowElement();
+        if (!node) return;
+
         this.setWinowsPosition();
-        // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
 
-        const node = document.querySelector("#" + this.id);
-        const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const start = this.getTransformSnapshot(node);
+        this._currentTransform = start;
+        this._restoreTransform = { ...this._restoreTransform, scale: 1 };
+        const target = this.computeDockTarget(node, start);
 
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
+        this.cancelDockAnimation();
+
+        if (prefersReducedMotion()) {
+            this.setTransform(node, target);
+            this._currentTransform = target;
             this.props.hasMinimised(this.id);
             return;
         }
 
-        const startTransform = node.style.transform;
-        this._dockAnimation = node.animate(
-            [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
-        );
-        this._dockAnimation.onfinish = () => {
-            node.style.transform = endTransform;
-            this.props.hasMinimised(this.id);
-            this._dockAnimation.onfinish = null;
+        this._dockAnimation = animateSpring({
+            from: start,
+            to: target,
+            config: WINDOW_MINIMIZE_SPRING,
+            onUpdate: (value) => {
+                this.setTransform(node, value);
+                this._currentTransform = value;
+            },
+            onComplete: () => {
+                this.setTransform(node, target);
+                this._currentTransform = target;
+                this._dockAnimation = null;
+                this.props.hasMinimised(this.id);
+            },
+        });
+    }
+
+    restoreFromMinimized = () => {
+        const node = this.getWindowElement();
+        if (!node) return;
+
+        const target = {
+            x: this._restoreTransform?.x ?? 0,
+            y: this._restoreTransform?.y ?? 0,
+            scale: 1,
         };
+        const start = this.getTransformSnapshot(node);
+        this._currentTransform = start;
+
+        this.cancelDockAnimation();
+
+        if (prefersReducedMotion()) {
+            this.setTransform(node, target);
+            this._currentTransform = target;
+            this.checkOverlap();
+            return;
+        }
+
+        this._dockAnimation = animateSpring({
+            from: start,
+            to: target,
+            config: WINDOW_MINIMIZE_SPRING,
+            onUpdate: (value) => {
+                this.setTransform(node, value);
+                this._currentTransform = value;
+            },
+            onComplete: () => {
+                this.setTransform(node, target);
+                this._currentTransform = target;
+                this._dockAnimation = null;
+                this.checkOverlap();
+            },
+        });
     }
 
     restoreWindow = () => {
-        const node = document.querySelector("#" + this.id);
+        const node = this.getWindowElement();
+        if (!node) return;
         this.setDefaultWindowDimenstion();
         // get previous position
         let posx = node.style.getPropertyValue("--window-transform-x");
         let posy = node.style.getPropertyValue("--window-transform-y");
         const startTransform = node.style.transform;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const target = {
+            x: parseFloat(posx) || 0,
+            y: parseFloat(posy) || 0,
+            scale: 1,
+        };
 
-        if (prefersReducedMotion) {
+        if (prefersReducedMotion()) {
             node.style.transform = endTransform;
+            this._currentTransform = target;
             this.setState({ maximized: false });
             this.checkOverlap();
             return;
         }
 
-        if (this._dockAnimation) {
-            this._dockAnimation.onfinish = () => {
+        if (this._maximizeAnimation) {
+            this._maximizeAnimation.onfinish = () => {
                 node.style.transform = endTransform;
+                this._currentTransform = target;
                 this.setState({ maximized: false });
                 this.checkOverlap();
-                this._dockAnimation.onfinish = null;
+                this._maximizeAnimation.onfinish = null;
+                this._maximizeAnimation = null;
             };
-            this._dockAnimation.reverse();
+            if (typeof this._maximizeAnimation.reverse === 'function') {
+                this._maximizeAnimation.reverse();
+            }
         } else {
-            this._dockAnimation = node.animate(
+            this._maximizeAnimation = node.animate(
                 [{ transform: startTransform }, { transform: endTransform }],
                 { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
-            this._dockAnimation.onfinish = () => {
+            this._maximizeAnimation.onfinish = () => {
                 node.style.transform = endTransform;
+                this._currentTransform = target;
                 this.setState({ maximized: false });
                 this.checkOverlap();
-                this._dockAnimation.onfinish = null;
+                this._maximizeAnimation.onfinish = null;
+                this._maximizeAnimation = null;
             };
         }
     }
