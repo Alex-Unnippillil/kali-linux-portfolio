@@ -18,33 +18,37 @@ export default class Navbar extends Component {
         }
 
 		render() {
+			const { status_card } = this.state;
 			return (
-				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-					<div className="flex items-center">
+				<div className="main-navbar-vp absolute left-0 right-0 top-0 z-50 grid grid-cols-[auto_1fr_auto] items-center px-3 py-1 text-ubt-grey text-xs md:text-sm select-none">
+					<div className="flex items-center gap-2 md:gap-3">
 						<WhiskerMenu />
+						<div className="hidden sm:flex items-center gap-1 text-[0.65rem] uppercase tracking-[0.4em] text-ubt-grey/65">
+							<span className="font-semibold text-ubt-grey text-opacity-90">Kali</span>
+							<span className="font-light">Linux</span>
+						</div>
 						<PerformanceGraph />
 					</div>
-					<div
-						className={
-							'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
-						}
-					>
-						<Clock />
+					<div className="flex items-center justify-center">
+						<div className="rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.7rem] font-medium uppercase tracking-[0.35em] text-ubt-grey/80 shadow-[0_6px_18px_rgba(0,0,0,0.35)]">
+							<Clock />
+						</div>
 					</div>
-					<button
-						type="button"
-						id="status-bar"
-						aria-label="System status"
-						onClick={() => {
-							this.setState({ status_card: !this.state.status_card });
-						}}
-						className={
-							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-						}
-					>
-						<Status />
-						<QuickSettings open={this.state.status_card} />
-					</button>
+					<div className="flex items-center justify-end gap-1.5 md:gap-2 pr-1">
+						<NotificationBell />
+						<button
+							 type="button"
+							 id="status-bar"
+							 aria-label="System status"
+							 onClick={() => {
+								 this.setState({ status_card: !status_card });
+							 }}
+							 className="relative flex items-center gap-2 rounded-lg border border-transparent px-3 py-1 transition focus:border-ubb-orange focus:outline-none hover:bg-white/10"
+						>
+							<Status />
+							<QuickSettings open={status_card} />
+						</button>
+					</div>
 				</div>
 			);
 		}

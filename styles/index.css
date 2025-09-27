@@ -40,10 +40,143 @@ button:focus-visible {
 
 /* Top NavBar styling */
 
+.main-navbar-vp {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--kali-panel) 92%, transparent) 0%,
+        color-mix(in srgb, var(--kali-panel) 86%, transparent) 100%
+    );
+    border-bottom: 1px solid color-mix(in srgb, var(--kali-panel-border) 70%, transparent);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: 0 6px 20px rgba(3, 8, 15, 0.55);
+}
+
+.main-navbar-vp::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(23, 147, 209, 0.6) 50%, transparent 100%);
+    pointer-events: none;
+}
+
 .top-arrow-up {
     border-inline-start: 5px solid transparent;
     border-inline-end: 5px solid transparent;
     border-block-end: 5px solid var(--color-muted);
+}
+
+.desktop-dock {
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--kali-panel) 95%, transparent) 0%,
+        color-mix(in srgb, var(--kali-panel) 72%, transparent) 100%
+    );
+    border-right: 1px solid color-mix(in srgb, var(--kali-panel-border) 80%, transparent);
+    box-shadow: 12px 0 32px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.desktop-dock::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block: 12px;
+    width: 2px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, rgba(23, 147, 209, 0) 0%, rgba(23, 147, 209, 0.6) 45%, rgba(23, 147, 209, 0) 100%);
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.dock-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.9rem;
+    transition: background var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+
+.dock-button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid transparent;
+    transition: inherit;
+}
+
+.dock-button:hover,
+.dock-button:focus-visible {
+    background: color-mix(in srgb, var(--kali-panel-highlight) 85%, transparent);
+}
+
+.dock-button:focus-visible::before {
+    border-color: color-mix(in srgb, var(--color-focus-ring) 80%, transparent);
+}
+
+.dock-button-active {
+    background: color-mix(in srgb, var(--kali-panel-highlight) 95%, transparent);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.dock-button-active::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: var(--kali-blue);
+    box-shadow: 0 0 10px rgba(23, 147, 209, 0.75);
+}
+
+.taskbar-panel {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--kali-panel) 85%, transparent) 0%,
+        color-mix(in srgb, var(--kali-panel) 70%, transparent) 100%
+    );
+    border-top: 1px solid color-mix(in srgb, var(--kali-panel-border) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.taskbar-launcher {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 0.75rem;
+    transition: background var(--motion-fast) ease, color var(--motion-fast) ease;
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.taskbar-launcher[data-active="true"] {
+    background: color-mix(in srgb, var(--kali-panel-highlight) 92%, transparent);
+    color: var(--color-text);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.35);
+}
+
+.taskbar-launcher[data-active="true"]::after {
+    content: '';
+    position: absolute;
+    inset-inline: 25%;
+    bottom: 4px;
+    height: 3px;
+    border-radius: 9999px;
+    background: var(--kali-blue);
+    box-shadow: 0 0 6px rgba(23, 147, 209, 0.65);
 }
 
 
