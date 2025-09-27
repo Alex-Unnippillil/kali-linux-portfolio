@@ -206,6 +206,13 @@ try {
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
+    experimental: {
+      modularizeImports: {
+        'lucide-react': {
+          transform: 'lucide-react/dist/esm/icons/{{member}}',
+        },
+      },
+    },
     webpack: configureWebpack,
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
