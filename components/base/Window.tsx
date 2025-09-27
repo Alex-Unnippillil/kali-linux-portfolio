@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import React, { Component } from 'react';
@@ -7,11 +8,17 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { getResizeHandle, cursorForHandle, clampToViewport } from './resizeUtils';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_BOTTOM_INSET = 28;
+const RESIZE_EDGE_THICKNESS = 16;
+const RESIZE_CORNER_THRESHOLD = 24;
+const RESIZE_HANDLE_OUTSET = 4;
+const MIN_WIDTH_PERCENT = 25;
+const MIN_HEIGHT_PERCENT = 25;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -62,6 +69,10 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.activeResize = null;
+        this.resizePointerTarget = null;
+        this.resizeHitConfig = { edge: RESIZE_EDGE_THICKNESS, corner: RESIZE_CORNER_THRESHOLD };
+        this.currentPosition = { x: this.startX, y: this.startY };
     }
 
     componentDidMount() {
@@ -91,6 +102,19 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        window.removeEventListener('pointermove', this.handleActiveResize);
+        window.removeEventListener('pointerup', this.endResize);
+        window.removeEventListener('pointercancel', this.endResize);
+        if (this.resizePointerTarget && typeof this.resizePointerTarget.releasePointerCapture === 'function' && this.activeResize) {
+            try {
+                this.resizePointerTarget.releasePointerCapture(this.activeResize.pointerId);
+            } catch (error) {
+                // ignore release issues
+            }
+        }
+        document.body.style.cursor = '';
+        this.resizePointerTarget = null;
+        this.activeResize = null;
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -210,6 +234,10 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    getWindowElement = () => {
+        return document.getElementById(this.id);
+    }
+
     changeCursorToMove = () => {
         this.focusWindow();
         if (this.state.maximized) {
@@ -225,25 +253,208 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    handleResizePointerMove = (event) => {
+        if (this.props.resizable === false || this.activeResize) return;
+        const element = this.getWindowElement();
+        if (!element) return;
+        const rect = element.getBoundingClientRect();
+        const handle = getResizeHandle(rect, { x: event.clientX, y: event.clientY }, this.resizeHitConfig);
+        const cursor = cursorForHandle(handle);
+        event.currentTarget.style.cursor = cursor || '';
+        document.body.style.cursor = cursor || '';
+    }
+
+    handleResizePointerLeave = (event) => {
+        if (this.activeResize) return;
+        if (event?.currentTarget) {
+            event.currentTarget.style.cursor = '';
+        }
+        document.body.style.cursor = '';
+    }
+
+    handleResizePointerDown = (event) => {
+        if (this.props.resizable === false) return;
+        if (event.button && event.button !== 0) return;
+        const element = this.getWindowElement();
+        if (!element) return;
+        const rect = element.getBoundingClientRect();
+        const handle = getResizeHandle(rect, { x: event.clientX, y: event.clientY }, this.resizeHitConfig);
+        if (!handle) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.focusWindow();
+        if (event.currentTarget && typeof event.currentTarget.setPointerCapture === 'function') {
+            try {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                this.resizePointerTarget = event.currentTarget;
+            } catch (error) {
+                this.resizePointerTarget = null;
+            }
+        }
+        this.beginResize(handle, rect, event);
+    }
+
+    beginResize = (handle, rect, event) => {
+        if (this.state.maximized) {
+            this.restoreWindow();
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        const cursor = cursorForHandle(handle);
+        if (cursor) {
+            document.body.style.cursor = cursor;
+        }
+        this.activeResize = {
+            handle,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            startLeft: rect.left,
+            startTop: rect.top,
+            startWidth: rect.width,
+            startHeight: rect.height,
+        };
+        this.currentPosition = { x: rect.left, y: rect.top };
+        this.setState({ snapped: null, snapPreview: null, snapPosition: null });
+        window.addEventListener('pointermove', this.handleActiveResize);
+        window.addEventListener('pointerup', this.endResize);
+        window.addEventListener('pointercancel', this.endResize);
+    }
+
+    handleActiveResize = (event) => {
+        if (!this.activeResize) return;
+        const element = this.getWindowElement();
+        if (!element) return;
+        event.preventDefault();
+
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        if (!viewportWidth || !viewportHeight) return;
+
+        const minWidthPx = viewportWidth * (MIN_WIDTH_PERCENT / 100);
+        const minHeightPx = viewportHeight * (MIN_HEIGHT_PERCENT / 100);
+
+        const { handle, startLeft, startTop, startWidth, startHeight, startX, startY } = this.activeResize;
+
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+
+        let newLeft = startLeft;
+        let newTop = startTop;
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+
+        if (handle.includes('e')) {
+            newWidth = clampToViewport(startWidth + dx, minWidthPx, viewportWidth);
+        }
+
+        if (handle.includes('s')) {
+            newHeight = clampToViewport(startHeight + dy, minHeightPx, viewportHeight);
+        }
+
+        if (handle.includes('w')) {
+            const rawLeft = startLeft + dx;
+            const maxLeft = startLeft + startWidth - minWidthPx;
+            newLeft = clampToViewport(rawLeft, 0, maxLeft);
+            newWidth = clampToViewport(startWidth + (startLeft - newLeft), minWidthPx, viewportWidth);
+        }
+
+        if (handle.includes('n')) {
+            const rawTop = startTop + dy;
+            const maxTop = startTop + startHeight - minHeightPx;
+            newTop = clampToViewport(rawTop, 0, maxTop);
+            newHeight = clampToViewport(startHeight + (startTop - newTop), minHeightPx, viewportHeight);
+        }
+
+        element.style.transform = `translate(${newLeft}px, ${newTop}px)`;
+        this.currentPosition = { x: newLeft, y: newTop };
+
+        const widthPercent = percentOf(newWidth, viewportWidth);
+        const heightPercent = percentOf(newHeight, viewportHeight);
+
+        this.setState({ width: widthPercent, height: heightPercent }, this.resizeBoundries);
+    }
+
+    endResize = () => {
+        if (!this.activeResize) return;
+        window.removeEventListener('pointermove', this.handleActiveResize);
+        window.removeEventListener('pointerup', this.endResize);
+        window.removeEventListener('pointercancel', this.endResize);
+        if (this.resizePointerTarget && typeof this.resizePointerTarget.releasePointerCapture === 'function') {
+            try {
+                this.resizePointerTarget.releasePointerCapture(this.activeResize.pointerId);
+            } catch (error) {
+                // ignore release errors
+            }
+        }
+        document.body.style.cursor = '';
+        this.resizePointerTarget = null;
+        this.activeResize = null;
+        this.changeCursorToDefault();
+        this.setWinowsPosition();
+    }
+
+    renderResizeHandles = () => {
+        if (this.props.resizable === false) return null;
+        const handles = [
+            {
+                key: 'top',
+                style: {
+                    top: -RESIZE_HANDLE_OUTSET,
+                    left: -RESIZE_HANDLE_OUTSET,
+                    right: -RESIZE_HANDLE_OUTSET,
+                    height: RESIZE_EDGE_THICKNESS,
+                },
+            },
+            {
+                key: 'bottom',
+                style: {
+                    bottom: -RESIZE_HANDLE_OUTSET,
+                    left: -RESIZE_HANDLE_OUTSET,
+                    right: -RESIZE_HANDLE_OUTSET,
+                    height: RESIZE_EDGE_THICKNESS,
+                },
+            },
+            {
+                key: 'left',
+                style: {
+                    top: -RESIZE_HANDLE_OUTSET,
+                    bottom: -RESIZE_HANDLE_OUTSET,
+                    left: -RESIZE_HANDLE_OUTSET,
+                    width: RESIZE_EDGE_THICKNESS,
+                },
+            },
+            {
+                key: 'right',
+                style: {
+                    top: -RESIZE_HANDLE_OUTSET,
+                    bottom: -RESIZE_HANDLE_OUTSET,
+                    right: -RESIZE_HANDLE_OUTSET,
+                    width: RESIZE_EDGE_THICKNESS,
+                },
+            },
+        ];
+
+        return handles.map((handle) => (
+            <div
+                key={handle.key}
+                role="presentation"
+                className={styles.resizeHandle}
+                style={handle.style}
+                onPointerDown={this.handleResizePointerDown}
+                onPointerEnter={this.handleResizePointerMove}
+                onPointerMove={this.handleResizePointerMove}
+                onPointerLeave={this.handleResizePointerLeave}
+            />
+        ));
+    }
+
     snapToGrid = (value) => {
         if (!this.props.snapEnabled) return value;
         return Math.round(value / 8) * 8;
-    }
-
-    handleVerticleResize = () => {
-        if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
-        const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
-    }
-
-    handleHorizontalResize = () => {
-        if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
-        const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
@@ -398,6 +609,11 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
+        const node = document.getElementById(this.id);
+        if (node) {
+            const rect = node.getBoundingClientRect();
+            this.currentPosition = { x: rect.left, y: rect.top };
+        }
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
@@ -668,8 +884,7 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.renderResizeHandles()}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -717,46 +932,6 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
         </div>
     )
 }
-
-// Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
-    }
-
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
-    }
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {

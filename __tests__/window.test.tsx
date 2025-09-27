@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Window from '../components/base/window';
+import Window from '../components/base/Window';
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });

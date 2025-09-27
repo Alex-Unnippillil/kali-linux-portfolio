@@ -51,12 +51,10 @@
   height: 28px;
 }
 
-.windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
-}
-
-.windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+.resizeHandle {
+  position: absolute;
+  touch-action: none;
+  z-index: 40;
+  pointer-events: auto;
+  background: transparent;
 }
