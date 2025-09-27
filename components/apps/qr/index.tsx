@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 
 const QRScanner: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const captionTrackRef = useRef<HTMLTrackElement | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const trackRef = useRef<MediaStreamTrack | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -13,6 +14,7 @@ const QRScanner: React.FC = () => {
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [torch, setTorch] = useState(false);
   const [preview, setPreview] = useState('');
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -33,6 +35,7 @@ const QRScanner: React.FC = () => {
         const videoEl = videoRef.current;
         if (videoEl) {
           videoEl.srcObject = stream;
+          videoEl.muted = true;
           await videoEl.play();
         }
         if ('BarcodeDetector' in window) {
@@ -84,6 +87,12 @@ const QRScanner: React.FC = () => {
   }, [facing]);
 
   useEffect(() => {
+    const track = captionTrackRef.current;
+    if (!track) return;
+    track.mode = captionsEnabled ? 'showing' : 'disabled';
+  }, [captionsEnabled]);
+
+  useEffect(() => {
     const track = trackRef.current as any;
     if (!track) return;
     const capabilities = track.getCapabilities?.();
@@ -113,10 +122,32 @@ const QRScanner: React.FC = () => {
     setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
   };
 
+  const toggleCaptions = () => setCaptionsEnabled((value) => !value);
+
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center">
+      <p id="qr-video-description" className="sr-only">
+        Live camera preview used to scan QR codes. Captions provide scanning guidance.
+      </p>
       <div className="relative w-full max-w-sm">
-        <video ref={videoRef} className="w-full rounded-md border-2 border-white bg-black" />
+        <video
+          ref={videoRef}
+          className="w-full rounded-md border-2 border-white bg-black"
+          muted
+          autoPlay
+          playsInline
+          aria-describedby="qr-video-description"
+          data-testid="qr-video"
+        >
+          <track
+            ref={captionTrackRef}
+            kind="captions"
+            srcLang="en"
+            src="/captions/qr-scanner.vtt"
+            label="QR scanner instructions"
+            default
+          />
+        </video>
         <div className="absolute top-2 right-2 flex gap-2">
           <button
             type="button"
@@ -136,6 +167,14 @@ const QRScanner: React.FC = () => {
           </button>
         </div>
       </div>
+      <button
+        type="button"
+        onClick={toggleCaptions}
+        aria-pressed={captionsEnabled}
+        className="px-4 py-2 bg-purple-700 rounded"
+      >
+        {captionsEnabled ? 'Hide Captions' : 'Show Captions'}
+      </button>
       {error && <p className="text-sm text-red-500">{error}</p>}
       {result && (
         <div className="flex items-center gap-2 p-2 bg-white text-black rounded-md w-full max-w-sm">

@@ -11,6 +11,9 @@ export default function SpotifyApp() {
   const [player, setPlayer] = useState(null);
   const [index, setIndex] = useState(0);
   const audioRef = useRef(null);
+  const captionTrackRef = useRef(null);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('spotify-token') : null;
@@ -50,12 +53,29 @@ export default function SpotifyApp() {
     }
   }, [index]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.muted = isMuted;
+    }
+  }, [isMuted]);
+
+  useEffect(() => {
+    const track = captionTrackRef.current;
+    if (track) {
+      track.mode = captionsEnabled ? 'showing' : 'disabled';
+    }
+  }, [captionsEnabled]);
+
   const toggleSample = () => {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) audio.play();
     else audio.pause();
   };
+
+  const toggleMute = () => setIsMuted(muted => !muted);
+  const toggleCaptions = () => setCaptionsEnabled(enabled => !enabled);
 
   return connected && player ? (
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-black bg-opacity-30 text-white">
@@ -69,11 +89,48 @@ export default function SpotifyApp() {
   ) : (
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-black bg-opacity-30 text-white">
       <p>Sample tracks (CC‑licensed)</p>
-      <audio ref={audioRef} src={SAMPLE_TRACKS[index].url} onEnded={nextSample} />
+      <p id="spotify-audio-description" className="sr-only">
+        Sample audio player. Tracks start muted, and captions describe playback controls.
+      </p>
+      <audio
+        ref={audioRef}
+        src={SAMPLE_TRACKS[index].url}
+        onEnded={nextSample}
+        muted={isMuted}
+        aria-describedby="spotify-audio-description"
+        data-testid="spotify-audio"
+      >
+        <track
+          ref={captionTrackRef}
+          kind="captions"
+          srcLang="en"
+          src="/captions/spotify-sample.vtt"
+          label="Sample track information"
+          default
+        />
+      </audio>
       <div className="flex gap-4">
-        <button onClick={prevSample}>⏮</button>
-        <button onClick={toggleSample}>⏯</button>
-        <button onClick={nextSample}>⏭</button>
+        <button type="button" onClick={prevSample}>⏮</button>
+        <button type="button" onClick={toggleSample}>⏯</button>
+        <button type="button" onClick={nextSample}>⏭</button>
+      </div>
+      <div className="flex gap-4">
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-pressed={!isMuted}
+          className="px-3 py-1 rounded bg-ub-dracula"
+        >
+          {isMuted ? 'Unmute' : 'Mute'}
+        </button>
+        <button
+          type="button"
+          onClick={toggleCaptions}
+          aria-pressed={captionsEnabled}
+          className="px-3 py-1 rounded bg-purple-700"
+        >
+          {captionsEnabled ? 'Hide Captions' : 'Show Captions'}
+        </button>
       </div>
       <p className="text-xs">{SAMPLE_TRACKS[index].title}</p>
     </div>

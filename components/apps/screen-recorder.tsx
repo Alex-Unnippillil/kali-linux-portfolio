@@ -1,11 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-function ScreenRecorder() {
+type ScreenRecorderProps = {
+    initialVideoUrl?: string | null;
+};
+
+function ScreenRecorder({ initialVideoUrl = null }: ScreenRecorderProps = {}) {
     const [recording, setRecording] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [videoUrl, setVideoUrl] = useState<string | null>(initialVideoUrl);
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const captionTrackRef = useRef<HTMLTrackElement | null>(null);
+    const [captionsEnabled, setCaptionsEnabled] = useState(true);
+    const [muted, setMuted] = useState(true);
 
     const startRecording = async () => {
         try {
@@ -75,8 +83,25 @@ function ScreenRecorder() {
         };
     }, []);
 
+    useEffect(() => {
+        const track = captionTrackRef.current;
+        if (!track) return;
+        track.mode = captionsEnabled ? 'showing' : 'disabled';
+    }, [captionsEnabled]);
+
+    useEffect(() => {
+        if (!videoRef.current) return;
+        videoRef.current.muted = muted;
+    }, [muted]);
+
+    const toggleCaptions = () => setCaptionsEnabled((value) => !value);
+    const toggleMute = () => setMuted((value) => !value);
+
     return (
         <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white space-y-4 p-4">
+            <p id="screen-recorder-video-description" className="sr-only">
+                Playback of recorded screen captures. Audio starts muted to prevent echo. Captions summarize playback controls.
+            </p>
             {!recording && (
                 <button
                     type="button"
@@ -97,7 +122,43 @@ function ScreenRecorder() {
             )}
             {videoUrl && !recording && (
                 <>
-                    <video src={videoUrl} controls className="max-w-full" />
+                    <video
+                        ref={videoRef}
+                        src={videoUrl}
+                        controls
+                        className="max-w-full"
+                        muted={muted}
+                        playsInline
+                        aria-describedby="screen-recorder-video-description"
+                        data-testid="screen-recorder-video"
+                    >
+                        <track
+                            ref={captionTrackRef}
+                            kind="captions"
+                            srcLang="en"
+                            src="/captions/screen-recorder.vtt"
+                            label="Screen recorder instructions"
+                            default
+                        />
+                    </video>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={toggleCaptions}
+                            aria-pressed={captionsEnabled}
+                            className="px-4 py-2 rounded bg-purple-700"
+                        >
+                            {captionsEnabled ? 'Hide Captions' : 'Show Captions'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={toggleMute}
+                            aria-pressed={!muted}
+                            className="px-4 py-2 rounded bg-blue-700"
+                        >
+                            {muted ? 'Unmute' : 'Mute'}
+                        </button>
+                    </div>
                     <button
                         type="button"
                         onClick={saveRecording}
