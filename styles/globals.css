@@ -99,3 +99,9 @@ html {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
 }
+
+[data-context].context-menu-pressing {
+  transition: filter 0.12s ease, box-shadow 0.12s ease;
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 2px var(--color-focus-ring, var(--kali-blue));
+}
