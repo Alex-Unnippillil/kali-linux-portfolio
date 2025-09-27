@@ -2,6 +2,7 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -14,6 +15,7 @@ type TriggerProps = {
   onMouseLeave: (event: React.MouseEvent<HTMLElement>) => void;
   onFocus: (event: React.FocusEvent<HTMLElement>) => void;
   onBlur: (event: React.FocusEvent<HTMLElement>) => void;
+  'aria-describedby'?: string;
 };
 
 type DelayedTooltipProps = {
@@ -38,6 +40,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const timerRef = useRef<number | null>(null);
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+  const tooltipId = useId();
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -105,6 +108,8 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     setPosition({ top, left });
   }, [visible, content]);
 
+  const describedBy = visible ? tooltipId : undefined;
+
   const triggerProps: TriggerProps = {
     ref: (node) => {
       triggerRef.current = node;
@@ -121,6 +126,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     onBlur: () => {
       hide();
     },
+    'aria-describedby': describedBy,
   };
 
   return (
@@ -130,6 +136,8 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
         ? createPortal(
             <div
               ref={tooltipRef}
+              id={tooltipId}
+              role="tooltip"
               style={{
                 position: 'fixed',
                 top: position.top,
