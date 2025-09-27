@@ -306,7 +306,7 @@ export class Desktop extends Component {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
+                const event = new CustomEvent('super-arrow', { detail: { key: e.key, shiftKey: e.shiftKey } });
                 document.getElementById(id)?.dispatchEvent(event);
             }
         }
