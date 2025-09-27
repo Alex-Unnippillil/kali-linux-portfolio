@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Toast from '../../../ui/Toast';
+import { useToast } from '../../../ui/Toaster';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -21,8 +21,9 @@ export default function Overlay({
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
-  const [toast, setToast] = useState('');
+  const toast = useToast();
   const pausedByDisconnect = useRef(false);
+  const disconnectToastId = useRef<string | null>(null);
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -65,14 +66,20 @@ export default function Overlay({
   useEffect(() => {
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
-      setToast('Controller disconnected. Reconnect to resume.');
+      disconnectToastId.current = toast.error(
+        'Controller disconnected. Reconnect to resume.',
+        { duration: Number.POSITIVE_INFINITY },
+      );
       setPaused(true);
       onPause?.();
     };
     const handleConnect = () => {
       if (pausedByDisconnect.current) {
         pausedByDisconnect.current = false;
-        setToast('');
+        if (disconnectToastId.current) {
+          toast.dismiss(disconnectToastId.current);
+          disconnectToastId.current = null;
+        }
         setPaused(false);
         onResume?.();
       }
@@ -83,7 +90,17 @@ export default function Overlay({
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
       window.removeEventListener('gamepadconnected', handleConnect);
     };
-  }, [onPause, onResume]);
+  }, [onPause, onResume, toast]);
+
+  useEffect(
+    () => () => {
+      if (disconnectToastId.current) {
+        toast.dismiss(disconnectToastId.current);
+        disconnectToastId.current = null;
+      }
+    },
+    [toast],
+  );
 
   return (
     <>
@@ -96,13 +113,6 @@ export default function Overlay({
         </button>
         <span className="fps">{fps} FPS</span>
       </div>
-      {toast && (
-        <Toast
-          message={toast}
-          onClose={() => setToast('')}
-          duration={1000000}
-        />
-      )}
     </>
   );
 }
