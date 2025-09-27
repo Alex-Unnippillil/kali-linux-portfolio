@@ -318,9 +318,9 @@ export default function QuoteApp() {
   const isFav = current ? favorites.includes(keyOf(current)) : false;
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-space-4 overflow-auto">
       {dailyQuote && (
-        <div className="mb-4 p-3 bg-gray-700 rounded" id="daily-quote">
+        <div className="mb-space-4 p-space-3 bg-gray-700 rounded-panel" id="daily-quote">
           <p className="text-sm italic">&ldquo;{dailyQuote.content}&rdquo;</p>
           <p className="text-xs text-gray-300 text-right">- {dailyQuote.author}</p>
         </div>
@@ -329,7 +329,7 @@ export default function QuoteApp() {
         <div
           ref={cardRef}
           id="quote-card"
-          className="group relative p-6 rounded text-center bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 text-white"
+          className="group relative p-space-6 rounded-panel text-center bg-gradient-to-br from-kali-primary/30 to-kali-secondary/30 text-white"
         >
           {current ? (
             <div key={keyOf(current)} className="animate-quote">
@@ -343,17 +343,17 @@ export default function QuoteApp() {
                 {current.content}
               </p>
               <p className="text-sm text-white/80">— {current.author}</p>
-              <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+              <div className="absolute top-space-2 right-space-2 flex gap-space-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
                 <button
                   onClick={copyQuote}
-                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  className="p-space-1 bg-black/30 hover:bg-black/50 rounded-control"
                   aria-label="Copy quote"
                 >
                   <CopyIcon className="w-6 h-6" />
                 </button>
                 <button
                   onClick={tweetQuote}
-                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  className="p-space-1 bg-black/30 hover:bg-black/50 rounded-control"
                   aria-label="Tweet quote"
                 >
                   <TwitterIcon className="w-6 h-6" />

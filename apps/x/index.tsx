@@ -255,21 +255,21 @@ export default function XTimeline() {
     <>
       {showSetup && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-modal flex items-center justify-center"
           style={{
             backgroundColor:
               'color-mix(in srgb, var(--color-inverse) 50%, transparent)',
           }}
         >
           <div
-            className="p-4 rounded max-w-sm text-sm"
+            className="p-space-4 rounded-panel max-w-sm text-sm"
             style={{ backgroundColor: 'var(--color-surface)' }}
           >
-            <p className="mb-2">
+            <p className="mb-space-2">
               To use this app you need X API credentials: API key, API secret,
               access token and access token secret.
             </p>
-            <p className="mb-4">
+            <p className="mb-space-4">
               You can explore with a demo account{' '}
               <a
                 href="https://x.com/AUnnippillil"
@@ -284,7 +284,7 @@ export default function XTimeline() {
             <button
               type="button"
               onClick={() => setShowSetup(false)}
-              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className="px-space-3 py-space-1 rounded-control text-kali-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
               style={{ backgroundColor: accent }}
             >
               Close
@@ -302,12 +302,12 @@ export default function XTimeline() {
         onError={() => setScriptError(true)}
       />
       <div className="flex flex-col h-full">
-        <header className="flex items-center justify-between p-1.5 border-b gap-1.5">
+        <header className="flex items-center justify-between p-space-1-5 border-b gap-space-1-5">
           <button
             type="button"
             aria-label="Refresh timeline"
             onClick={() => loaded && loadTimeline()}
-            className="p-1 rounded hover:bg-[var(--color-muted)]"
+            className="p-space-1 rounded-control hover:bg-kali-muted"
           >
             <IconRefresh className="w-6 h-6" />
           </button>
@@ -318,29 +318,29 @@ export default function XTimeline() {
             type="button"
             aria-label="Open on x.com"
             onClick={() => window.open(`https://x.com/${feed}`, '_blank')}
-            className="p-1 rounded hover:bg-[var(--color-muted)]"
-          >
+            className="p-space-1 rounded-control hover:bg-kali-muted"
+        >
             <IconShare className="w-6 h-6" />
           </button>
         </header>
-        <div className="p-1.5 space-y-4 flex-1 overflow-auto">
-        <form onSubmit={handleScheduleTweet} className="space-y-2">
+        <div className="p-space-1-5 space-y-space-4 flex-1 overflow-auto">
+        <form onSubmit={handleScheduleTweet} className="space-y-space-2">
           <textarea
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
             placeholder="Tweet text"
-            className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="w-full p-space-2 rounded-panel border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
           />
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-space-2 items-center">
             <input
               type="datetime-local"
               value={tweetTime}
               onChange={(e) => setTweetTime(e.target.value)}
-              className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className="flex-1 p-space-2 rounded-panel border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
             />
             <button
               type="submit"
-              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className="px-space-3 py-space-1 rounded-control text-kali-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
               style={{ backgroundColor: accent }}
             >
               Schedule
@@ -348,14 +348,14 @@ export default function XTimeline() {
           </div>
         </form>
         {scheduled.length > 0 && (
-          <ul className="space-y-2">
+          <ul className="space-y-space-2">
             {scheduled.map((t) => (
               <li key={t.id}>
                 <div
                   tabIndex={0}
                   data-scheduled-item
                   onKeyDown={(e) => handleScheduledKey(e, t.id)}
-                  className="flex justify-between items-center p-2 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                  className="flex justify-between items-center p-space-2 rounded-panel border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
                 >
                   <span>
                     {t.text} - {new Date(t.time).toLocaleString()}
@@ -363,7 +363,7 @@ export default function XTimeline() {
                   <button
                     type="button"
                     onClick={() => removeScheduled(t.id)}
-                    className="ml-2 px-2 py-1 rounded bg-[var(--color-muted)] text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                    className="ml-space-2 px-space-2 py-space-1 rounded-control bg-kali-muted text-kali-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
                   >
                     ×
                   </button>
@@ -372,14 +372,14 @@ export default function XTimeline() {
             ))}
           </ul>
         )}
-        <div className="flex gap-2">
+        <div className="flex gap-space-2">
           <button
             type="button"
             onClick={() => setTimelineType('profile')}
-            className={`px-2 py-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+            className={`px-space-2 py-space-1 rounded-control text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent ${
               timelineType === 'profile'
-                ? 'text-[var(--color-text)]'
-                : 'bg-[var(--color-muted)]'
+                ? 'text-kali-text'
+                : 'bg-kali-muted'
             }`}
             style={
               timelineType === 'profile' ? { backgroundColor: accent } : undefined
@@ -390,10 +390,10 @@ export default function XTimeline() {
           <button
             type="button"
             onClick={() => setTimelineType('list')}
-            className={`px-2 py-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+            className={`px-space-2 py-space-1 rounded-control text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent ${
               timelineType === 'list'
-                ? 'text-[var(--color-text)]'
-                : 'bg-[var(--color-muted)]'
+                ? 'text-kali-text'
+                : 'bg-kali-muted'
             }`}
             style={
               timelineType === 'list' ? { backgroundColor: accent } : undefined
@@ -402,7 +402,7 @@ export default function XTimeline() {
             List
           </button>
         </div>
-        <form onSubmit={handleAddPreset} className="flex gap-2">
+        <form onSubmit={handleAddPreset} className="flex gap-space-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -411,18 +411,18 @@ export default function XTimeline() {
                 ? 'Add screen name'
                 : 'Add list (owner/slug or id)'
             }
-            className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="flex-1 p-space-2 rounded-panel border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
           />
           <button
             type="submit"
-            className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="px-space-3 py-space-1 rounded-control text-kali-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
             style={{ backgroundColor: accent }}
           >
             Save
           </button>
         </form>
         {presets.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-space-2">
             {presets.map((p) => (
               <button
                 key={p}
@@ -430,10 +430,10 @@ export default function XTimeline() {
                 onClick={() => {
                   setFeed(p);
                 }}
-                className={`px-2 py-1 rounded-full text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+                className={`px-space-2 py-space-1 rounded-pill text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent ${
                   feed === p
-                    ? 'text-[var(--color-text)]'
-                    : 'bg-[var(--color-muted)]'
+                    ? 'text-kali-text'
+                    : 'bg-kali-muted'
                 }`}
                 style={feed === p ? { backgroundColor: accent } : undefined}
               >
@@ -449,7 +449,7 @@ export default function XTimeline() {
               setLoaded(true);
               if (scriptLoaded) loadTimeline();
             }}
-            className="px-4 py-2 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="px-space-4 py-space-2 rounded-control text-kali-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
             style={{ backgroundColor: accent }}
           >
             Load timeline
@@ -457,22 +457,22 @@ export default function XTimeline() {
         ) : (
           <>
             {loading && !timelineLoaded && !scriptError && (
-              <ul className="tweet-feed space-y-1.5" aria-hidden="true">
+              <ul className="tweet-feed space-y-space-1-5" aria-hidden="true">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <li
                     key={i}
-                    className="flex gap-1.5 p-1.5 rounded-md border"
+                    className="flex gap-space-1-5 p-space-1-5 rounded-panel border"
                   >
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-muted)] animate-pulse" />
-                      <IconBadge className="w-3 h-3 absolute bottom-0 right-0 text-[var(--color-muted)]" />
+                      <div className="w-12 h-12 rounded-full bg-kali-muted animate-pulse" />
+                      <IconBadge className="w-3 h-3 absolute bottom-0 right-0 text-kali-muted" />
                     </div>
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-3/4" />
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-1/2" />
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-full" />
+                    <div className="flex-1 space-y-space-1-5">
+                      <div className="h-3 bg-kali-muted rounded-panel animate-pulse w-3/4" />
+                      <div className="h-3 bg-kali-muted rounded-panel animate-pulse w-1/2" />
+                      <div className="h-3 bg-kali-muted rounded-panel animate-pulse w-full" />
                     </div>
-                    <IconShare className="w-5 h-5 text-[var(--color-muted)]" />
+                    <IconShare className="w-5 h-5 text-kali-muted" />
                   </li>
                 ))}
               </ul>
@@ -496,7 +496,7 @@ export default function XTimeline() {
               </div>
             )}
             {!loading && !timelineLoaded && !scriptError && (
-              <div className="text-center text-[var(--color-muted)]">Nothing to see</div>
+              <div className="text-center text-kali-muted">Nothing to see</div>
             )}
           </>
         )}

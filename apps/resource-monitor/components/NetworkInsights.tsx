@@ -32,12 +32,12 @@ export default function NetworkInsights() {
   }, [setHistory]);
 
   return (
-    <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
-      <h2 className="font-bold mb-1">Active Fetches</h2>
-      <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
-        {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
+    <div className="p-space-2 text-xs text-white bg-kali-backdrop">
+      <h2 className="font-bold mb-space-1">Active Fetches</h2>
+      <ul className="mb-space-2 divide-y divide-gray-700 border border-gray-700 rounded-panel bg-kali-panel">
+        {active.length === 0 && <li className="p-space-1 text-gray-400">None</li>}
         {active.map((f) => (
-          <li key={f.id} className="p-1">
+          <li key={f.id} className="p-space-1">
             <div className="truncate">
               {f.method} {f.url}
             </div>
@@ -47,23 +47,23 @@ export default function NetworkInsights() {
           </li>
         ))}
       </ul>
-      <div className="flex items-center mb-1">
+      <div className="flex items-center mb-space-1">
         <h2 className="font-bold">History</h2>
         <button
           onClick={() => exportMetrics(history)}
-          className="ml-auto px-2 py-1 rounded bg-[var(--kali-panel)]"
+          className="ml-auto px-space-2 py-space-1 rounded-control bg-kali-panel"
         >
           Export
         </button>
       </div>
-      <ul className="divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
-        {history.length === 0 && <li className="p-1 text-gray-400">No requests</li>}
+      <ul className="divide-y divide-gray-700 border border-gray-700 rounded-panel bg-kali-panel">
+        {history.length === 0 && <li className="p-space-1 text-gray-400">No requests</li>}
         {history.map((f) => (
-          <li key={f.id} className="p-1">
+          <li key={f.id} className="p-space-1">
             <div className="truncate">
               {f.method} {f.url}
               {f.fromServiceWorkerCache && (
-                <span className="ml-2 text-green-400">(SW cache)</span>
+                <span className="ml-space-2 text-green-400">(SW cache)</span>
               )}
             </div>
             <div className="text-gray-400">
@@ -72,7 +72,7 @@ export default function NetworkInsights() {
           </li>
         ))}
       </ul>
-      <div className="mt-2 flex justify-center">
+      <div className="mt-space-2 flex justify-center">
         <RequestChart
           data={history.map((h) => h.duration ?? 0)}
           label="Request duration (ms)"

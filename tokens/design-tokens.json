@@ -1,0 +1,88 @@
+{
+  "colors": {
+    "ub-grey": "var(--color-ub-grey)",
+    "ub-warm-grey": "var(--color-ub-warm-grey)",
+    "ub-cool-grey": "var(--color-ub-cool-grey)",
+    "ub-orange": "var(--color-ub-orange)",
+    "ub-lite-abrgn": "var(--color-ub-lite-abrgn)",
+    "ub-med-abrgn": "var(--color-ub-med-abrgn)",
+    "ub-drk-abrgn": "var(--color-ub-drk-abrgn)",
+    "ub-window-title": "var(--color-ub-window-title)",
+    "ub-gedit-dark": "var(--color-ub-gedit-dark)",
+    "ub-gedit-light": "var(--color-ub-gedit-light)",
+    "ub-gedit-darker": "var(--color-ub-gedit-darker)",
+    "ubt-grey": "var(--color-ubt-grey)",
+    "ubt-warm-grey": "var(--color-ubt-warm-grey)",
+    "ubt-cool-grey": "var(--color-ubt-cool-grey)",
+    "ubt-blue": "var(--color-ubt-blue)",
+    "ubt-green": "var(--color-ubt-green)",
+    "ubt-gedit-orange": "var(--color-ubt-gedit-orange)",
+    "ubt-gedit-blue": "var(--color-ubt-gedit-blue)",
+    "ubt-gedit-dark": "var(--color-ubt-gedit-dark)",
+    "ub-border-orange": "var(--color-ub-border-orange)",
+    "ub-dark-grey": "var(--color-ub-dark-grey)",
+    "kali": {
+      "background": "var(--color-bg)",
+      "text": "var(--color-text)",
+      "primary": "var(--color-primary)",
+      "secondary": "var(--color-secondary)",
+      "accent": "var(--color-accent)",
+      "muted": "var(--color-muted)",
+      "surface": "var(--color-surface)",
+      "inverse": "var(--color-inverse)",
+      "border": "var(--color-border)",
+      "terminal": "var(--color-terminal)",
+      "dark": "var(--color-dark)",
+      "focus": "var(--color-focus-ring)",
+      "selection": "var(--color-selection)",
+      "control": "var(--color-control-accent)",
+      "backdrop": "var(--kali-bg)",
+      "panel": "var(--kali-panel)",
+      "panel-border": "var(--kali-panel-border)",
+      "panel-highlight": "var(--kali-panel-highlight)"
+    },
+    "game": {
+      "secondary": "var(--game-color-secondary)",
+      "success": "var(--game-color-success)",
+      "warning": "var(--game-color-warning)",
+      "danger": "var(--game-color-danger)"
+    }
+  },
+  "spacing": {
+    "space-0-5": "var(--space-0-5)",
+    "space-1": "var(--space-1)",
+    "space-1-5": "var(--space-1-5)",
+    "space-2": "var(--space-2)",
+    "space-3": "var(--space-3)",
+    "space-4": "var(--space-4)",
+    "space-5": "var(--space-5)",
+    "space-6": "var(--space-6)",
+    "hit-area": "var(--hit-area)"
+  },
+  "radii": {
+    "control": "var(--radius-sm)",
+    "surface": "var(--radius-md)",
+    "panel": "var(--radius-lg)",
+    "card": "var(--radius-6)",
+    "pill": "var(--radius-round)"
+  },
+  "shadows": {
+    "box": {
+      "panel": "var(--shadow-panel)",
+      "elevated": "var(--shadow-2)",
+      "card": "var(--shadow-card)"
+    },
+    "drop": {
+      "glow": "var(--shadow-glow)"
+    }
+  },
+  "zIndex": {
+    "underlay": "var(--z-underlay)",
+    "base": "var(--z-base)",
+    "overlay": "var(--z-overlay)",
+    "panel": "var(--z-panel)",
+    "popover": "var(--z-popover)",
+    "modal": "var(--z-modal)",
+    "toast": "var(--z-toast)"
+  }
+}
