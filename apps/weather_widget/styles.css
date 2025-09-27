@@ -1,6 +1,9 @@
 body {
-  font-family: sans-serif;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  line-height: var(--line-height-standard);
   background: var(--color-bg);
+  color: var(--color-text);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -50,7 +53,8 @@ body {
 }
 
 .temp {
-  font-size: 2rem;
+  font-size: var(--font-size-heading-lg);
+  line-height: var(--line-height-tight);
   margin-bottom: 10px;
 }
 
@@ -60,7 +64,8 @@ body {
 }
 
 .forecast {
-  font-size: 1rem;
+  font-size: var(--font-size-body-md);
+  line-height: var(--line-height-standard);
   margin-top: 10px;
   text-transform: capitalize;
 }
@@ -76,12 +81,14 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: var(--font-size-body-xs);
+  line-height: var(--line-height-standard);
 }
 
 .sunrise,
 .sunset {
-  font-size: 0.9rem;
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-standard);
   margin-top: 5px;
 }
 
