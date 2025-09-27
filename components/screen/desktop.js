@@ -780,6 +780,8 @@ export class Desktop extends Component {
                 minimized_windows[objId] = false;
                 this.setWorkspaceState({ minimized_windows }, this.saveSession);
 
+            }
+
             const reopen = () => {
                 // if it's minimised, restore its last position
                 if (this.state.minimized_windows[objId]) {
