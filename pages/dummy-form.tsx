@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+import Button from '../components/ui/Button';
+import { TextAreaField, TextField } from '../components/ui/FormField';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -11,6 +13,8 @@ const DummyForm: React.FC = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; message?: string }>({});
+  const [submitting, setSubmitting] = useState(false);
   const [recovered, setRecovered] = useState(false);
 
   useEffect(() => {
@@ -58,65 +62,108 @@ const DummyForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!name || !email || !message) {
-      setError('All fields are required');
+    const newErrors: { name?: string; email?: string; message?: string } = {};
+    if (!name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!emailRegex.test(email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    if (!message.trim()) {
+      newErrors.message = 'Message is required';
+    }
+
+    if (Object.keys(newErrors).length) {
+      setFieldErrors(newErrors);
+      setError('');
+      setSuccess(false);
       return;
     }
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email');
-      return;
-    }
+
+    setFieldErrors({});
     setError('');
     setSuccess(false);
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/dummy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, message }),
-      });
+    setSubmitting(true);
+    try {
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+        await fetch('/api/dummy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, email, message }),
+        });
+      }
+      setSuccess(true);
+      window.localStorage.removeItem(STORAGE_KEY);
+      setName('');
+      setEmail('');
+      setMessage('');
+      setRecovered(false);
+    } catch (submitError) {
+      setError('Something went wrong while submitting the form. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-    setSuccess(true);
-    window.localStorage.removeItem(STORAGE_KEY);
-    setName('');
-    setEmail('');
-    setMessage('');
-    setRecovered(false);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
-        <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
-        {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
+    <div className="flex min-h-screen items-center justify-center bg-[color:var(--kali-bg)] p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md rounded-[var(--radius-lg)] bg-[color:var(--color-surface)]/95 p-6 shadow-[var(--shadow-2)]"
+      >
+        <h1 className="mb-4 text-xl font-bold text-kali-text">Contact Us</h1>
+        {recovered && <p className="mb-4 text-sm text-[color:var(--kali-blue)]">Recovered draft</p>}
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
-        {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
-        <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
-        <input
+        {success && <p className="mb-4 text-sm text-[color:var(--game-color-success)]">Form submitted successfully!</p>}
+        <TextField
           id="name"
-          className="mb-4 w-full rounded border p-2"
-          type="text"
+          label="Name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          state={fieldErrors.name ? 'error' : 'default'}
+          message={fieldErrors.name}
+          disabled={submitting}
+          onChange={(e) => {
+            setName(e.target.value);
+            setFieldErrors((prev) => ({ ...prev, name: undefined }));
+          }}
         />
-        <label className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
-        <input
+        <TextField
           id="email"
-          className="mb-4 w-full rounded border p-2"
+          label="Email"
           type="email"
+          autoComplete="email"
+          className="mt-4"
+          description="We only use your email to reply."
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          state={fieldErrors.email ? 'error' : success ? 'success' : 'default'}
+          message={fieldErrors.email || (success ? 'Thanks! We will be in touch soon.' : undefined)}
+          disabled={submitting}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setFieldErrors((prev) => ({ ...prev, email: undefined }));
+          }}
         />
-        <label className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
-        <textarea
+        <TextAreaField
           id="message"
-          className="mb-4 w-full rounded border p-2"
+          label="Message"
+          className="mt-4"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          state={fieldErrors.message ? 'error' : 'default'}
+          message={fieldErrors.message}
+          disabled={submitting}
+          onChange={(e) => {
+            setMessage(e.target.value);
+            setFieldErrors((prev) => ({ ...prev, message: undefined }));
+          }}
         />
-        <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
-        <p className="mt-4 text-xs text-gray-500">
+        <Button type="submit" className="mt-6 w-full" loading={submitting}>
+          Submit
+        </Button>
+        <p className="mt-4 text-xs text-kali-text/70">
           This form posts to a dummy endpoint. No data is stored. By submitting, you consent to this temporary processing of your information.
         </p>
       </form>
