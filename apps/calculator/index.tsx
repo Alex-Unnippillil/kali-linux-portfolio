@@ -189,7 +189,7 @@ export default function Calculator() {
   }, [setHistory]);
 
     return (
-    <div className="calculator !bg-[var(--kali-bg)]">
+    <div className="calculator !bg-kali-backdrop">
       <ModeSwitcher />
             <input id="display" className="display h-12" />
       <button id="toggle-precise" className="toggle h-12" aria-pressed="false" aria-label="toggle precise mode">Precise Mode: Off</button>

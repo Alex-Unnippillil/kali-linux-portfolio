@@ -40,7 +40,7 @@ type AnimatedCard = Card & {
 };
 
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-white flex items-center justify-center transition-transform duration-300 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded-card border border-black bg-white flex items-center justify-center transition-transform duration-300 shadow-card">
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -48,7 +48,7 @@ const renderCard = (card: Card) => (
 );
 
 const renderFaceDown = () => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-blue-800 shadow-[0_1px_0_rgba(0,0,0,0.5)]" />
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded-card border border-black bg-blue-800 shadow-card" />
 );
 
 const Solitaire = () => {

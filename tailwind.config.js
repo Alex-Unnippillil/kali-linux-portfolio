@@ -1,4 +1,7 @@
 const plugin = require('tailwindcss/plugin');
+const tokens = require('./tokens/design-tokens.json');
+
+const { colors, spacing, radii, shadows, zIndex } = tokens;
 
 module.exports = {
   darkMode: 'class',
@@ -14,49 +17,11 @@ module.exports = {
       screens: {
         '3xl': '1920px',
       },
-      colors: {
-        'ub-grey': 'var(--color-ub-grey)',
-        'ub-warm-grey': 'var(--color-ub-warm-grey)',
-        'ub-cool-grey': 'var(--color-ub-cool-grey)',
-        'ub-orange': 'var(--color-ub-orange)',
-        'ub-lite-abrgn': 'var(--color-ub-lite-abrgn)',
-        'ub-med-abrgn': 'var(--color-ub-med-abrgn)',
-        'ub-drk-abrgn': 'var(--color-ub-drk-abrgn)',
-        'ub-window-title': 'var(--color-ub-window-title)',
-        'ub-gedit-dark': 'var(--color-ub-gedit-dark)',
-        'ub-gedit-light': 'var(--color-ub-gedit-light)',
-        'ub-gedit-darker': 'var(--color-ub-gedit-darker)',
-        'ubt-grey': 'var(--color-ubt-grey)',
-        'ubt-warm-grey': 'var(--color-ubt-warm-grey)',
-        'ubt-cool-grey': 'var(--color-ubt-cool-grey)',
-        'ubt-blue': 'var(--color-ubt-blue)',
-        'ubt-green': 'var(--color-ubt-green)',
-        'ubt-gedit-orange': 'var(--color-ubt-gedit-orange)',
-        'ubt-gedit-blue': 'var(--color-ubt-gedit-blue)',
-        'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
-        'ub-border-orange': 'var(--color-ub-border-orange)',
-        'ub-dark-grey': 'var(--color-ub-dark-grey)',
-        kali: {
-          background: 'var(--color-bg)',
-          text: 'var(--color-text)',
-          primary: 'var(--color-primary)',
-          secondary: 'var(--color-secondary)',
-          accent: 'var(--color-accent)',
-          muted: 'var(--color-muted)',
-          surface: 'var(--color-surface)',
-          inverse: 'var(--color-inverse)',
-          border: 'var(--color-border)',
-          terminal: 'var(--color-terminal)',
-          dark: 'var(--color-dark)',
-          focus: 'var(--color-focus-ring)',
-          selection: 'var(--color-selection)',
-          control: 'var(--color-control-accent)',
-          backdrop: 'var(--kali-bg)',
-        },
-      },
-      boxShadow: {
-        'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
-      },
+      colors,
+      spacing,
+      borderRadius: radii,
+      boxShadow: shadows.box,
+      dropShadow: shadows.drop,
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
       },
@@ -74,9 +39,7 @@ module.exports = {
         '3/4': '75%',
         'full': '100%',
       },
-      zIndex: {
-        '-10': '-10',
-      },
+      zIndex,
       width: {
         'app-icon': '64px',
         'app-icon-lg': '96px',
