@@ -1,71 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import {
+  scriptCatalog,
+  loadNmapScanResult,
+  nmapPhaseDescriptions,
+  nmapPortPresets,
+  nmapStoryboard,
+} from '../../../apps/simulations/nmap';
 
-// Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
-const scripts = [
-  {
-    name: 'http-title',
-    description: 'Fetches page titles from HTTP services.',
-    tags: ['discovery', 'http']
-  },
-  {
-    name: 'ssl-cert',
-    description: 'Retrieves TLS certificate information.',
-    tags: ['ssl', 'discovery']
-  },
-  {
-    name: 'smb-os-discovery',
-    description: 'Discovers remote OS information via SMB.',
-    tags: ['smb', 'discovery']
-  },
-  {
-    name: 'ftp-anon',
-    description: 'Checks for anonymous FTP access.',
-    tags: ['ftp', 'auth']
-  },
-  {
-    name: 'http-enum',
-    description: 'Enumerates directories on web servers.',
-    tags: ['http', 'vuln']
-  },
-  {
-    name: 'dns-brute',
-    description: 'Performs DNS subdomain brute force enumeration.',
-    tags: ['dns', 'brute']
-  }
-];
+const scripts = scriptCatalog;
 
-const scriptPhases = {
-  'http-title': ['portrule'],
-  'ssl-cert': ['portrule'],
-  'smb-os-discovery': ['hostrule'],
-  'ftp-anon': ['portrule'],
-  'http-enum': ['portrule'],
-  'dns-brute': ['hostrule']
-};
+const scriptPhases = Object.fromEntries(
+  scripts.map((script) => [script.name, [script.phase]])
+);
 
-const phaseInfo = {
-  prerule: {
-    description:
-      'Runs before any hosts are scanned. Often used for broadcast discovery.',
-    example: 'broadcast-dhcp-discover'
-  },
-  hostrule: {
-    description: 'Runs once for each target host.',
-    example: 'smb-os-discovery'
-  },
-  portrule: {
-    description: 'Runs once for each target port.',
-    example: 'http-title'
-  }
-};
+const phaseInfo = nmapPhaseDescriptions;
 
-const portPresets = [
-  { label: 'Default', flag: '' },
-  { label: 'Common', flag: '-F' },
-  { label: 'Full', flag: '-p-' }
-];
+const portPresets = nmapPortPresets;
 
 const cvssColor = (score) => {
   if (score >= 9) return 'bg-red-700';
@@ -89,14 +41,19 @@ const NmapNSEApp = () => {
   const phases = ['prerule', 'hostrule', 'portrule'];
 
   useEffect(() => {
-    fetch('/demo/nmap-nse.json')
-      .then((r) => r.json())
-      .then(setExamples)
-      .catch(() => setExamples({}));
-    fetch('/demo/nmap-results.json')
-      .then((r) => r.json())
-      .then(setResults)
-      .catch(() => setResults({ hosts: [] }));
+    const loadData = async () => {
+      const outputExamples = Object.fromEntries(
+        scripts.map((script) => [script.name, script.example])
+      );
+      setExamples(outputExamples);
+      try {
+        const result = await loadNmapScanResult();
+        setResults(result);
+      } catch {
+        setResults({ hosts: [] });
+      }
+    };
+    loadData();
   }, []);
 
   const toggleScript = (name) => {
@@ -434,6 +391,25 @@ const NmapNSEApp = () => {
             Select All
           </button>
         </div>
+        {nmapStoryboard.length > 0 && (
+          <div className="mt-6 bg-gray-900 p-3 rounded border border-gray-800">
+            <h2 className="text-lg mb-2">Storyboard</h2>
+            <ol className="list-decimal list-inside space-y-2 text-sm">
+              {nmapStoryboard.map((step, index) => (
+                <li key={step.title}>
+                  <div className="font-semibold">{step.title}</div>
+                  <code className="block bg-black text-green-400 px-2 py-1 rounded my-1">
+                    {step.command}
+                  </code>
+                  <p className="text-gray-300">{step.description}</p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Takeaway: {step.takeaway}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
