@@ -52,7 +52,7 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   const [points, setPoints] = useState<number[]>(() =>
     Array.from({ length: MAX_POINTS }, (_, index) => 0.32 + (index % 3) * 0.04)
   );
-  const timeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const timeoutRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastSampleRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
 
