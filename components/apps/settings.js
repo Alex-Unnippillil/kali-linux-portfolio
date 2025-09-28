@@ -205,17 +205,31 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <div
-                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    className="p-4 rounded border transition-colors duration-300 motion-reduce:transition-none"
+                    style={{
+                        backgroundColor: 'var(--kali-panel)',
+                        borderColor: 'var(--kali-panel-border)',
+                        color: 'var(--kali-terminal-text)',
+                        '--accent-chip-contrast': accentText(),
+                    }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
-                        className="px-2 py-1 rounded"
-                        style={{ backgroundColor: accent, color: accentText() }}
+                        className="px-2 py-1 rounded border"
+                        style={{
+                            backgroundColor: 'var(--color-accent)',
+                            borderColor: 'var(--kali-panel-border)',
+                            color: 'var(--accent-chip-contrast)',
+                        }}
                     >
                         Accent
                     </button>
-                    <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-green-400' : 'text-red-400'}`}>
+                    <p
+                        className="mt-2 text-sm text-center"
+                        style={{
+                            color: contrast >= 4.5 ? 'var(--kali-terminal-green)' : 'var(--kali-terminal-text)',
+                        }}
+                    >
                         {`Contrast ${contrast.toFixed(2)}:1 ${contrast >= 4.5 ? 'Pass' : 'Fail'}`}
                     </p>
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
