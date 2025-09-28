@@ -6,6 +6,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
+import { useSettings } from '../../hooks/useSettings';
 
 type AppMeta = {
   id: string;
@@ -31,7 +32,28 @@ const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
-const CATEGORY_DEFINITIONS = [
+const TOP_TOOL_IDS = [
+  'nmap-nse',
+  'wireshark',
+  'metasploit',
+  'hashcat',
+  'hydra',
+  'john',
+  'nessus',
+  'openvas',
+  'reconng',
+  'kismet',
+] as const;
+
+const TOP_TOOLS_CATEGORY = {
+  id: 'top-tools',
+  label: 'Top 10 Tools',
+  icon: '/themes/Yaru/status/emblem-system-symbolic.svg',
+  type: 'ids',
+  appIds: TOP_TOOL_IDS,
+} as const satisfies CategoryDefinitionBase;
+
+const STATIC_CATEGORY_DEFINITIONS = [
   {
     id: 'all',
     label: 'All Applications',
@@ -115,11 +137,13 @@ const CATEGORY_DEFINITIONS = [
   },
  ] as const satisfies readonly CategoryDefinitionBase[];
 
-type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
+type CategoryDefinition =
+  | (typeof STATIC_CATEGORY_DEFINITIONS)[number]
+  | typeof TOP_TOOLS_CATEGORY;
 const isCategoryId = (
   value: string,
 ): value is CategoryDefinition['id'] =>
-  CATEGORY_DEFINITIONS.some(cat => cat.id === value);
+  value === TOP_TOOLS_CATEGORY.id || STATIC_CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
@@ -159,6 +183,7 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const { showTopTools } = useSettings();
 
 
   const allApps: AppMeta[] = apps as any;
@@ -178,10 +203,20 @@ const WhiskerMenu: React.FC = () => {
       .map(appId => mapById.get(appId))
       .filter((app): app is AppMeta => Boolean(app));
   }, [allApps, recentIds]);
+  const categoryDefinitions = useMemo<readonly CategoryDefinition[]>(() => {
+    if (showTopTools) {
+      const definitions: CategoryDefinition[] = [...STATIC_CATEGORY_DEFINITIONS];
+      const insertIndex = 2; // After Favorites, before Recent
+      definitions.splice(insertIndex, 0, TOP_TOOLS_CATEGORY);
+      return definitions;
+    }
+    return STATIC_CATEGORY_DEFINITIONS;
+  }, [showTopTools]);
+
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
 
-    return CATEGORY_DEFINITIONS.map((definition) => {
+    return categoryDefinitions.map((definition) => {
       let appsForCategory: AppMeta[] = [];
       switch (definition.type) {
         case 'all':
@@ -193,11 +228,20 @@ const WhiskerMenu: React.FC = () => {
         case 'recent':
           appsForCategory = recentApps;
           break;
-        case 'ids':
+        case 'ids': {
+          const seen = new Set<string>();
           appsForCategory = definition.appIds
             .map(appId => mapById.get(appId))
-            .filter((app): app is AppMeta => Boolean(app));
+            .filter((app): app is AppMeta => Boolean(app && !app.disabled))
+            .filter(app => {
+              if (seen.has(app.id)) {
+                return false;
+              }
+              seen.add(app.id);
+              return true;
+            });
           break;
+        }
         default:
           appsForCategory = allApps;
       }
@@ -206,7 +250,7 @@ const WhiskerMenu: React.FC = () => {
         apps: appsForCategory,
       } as CategoryConfig;
     });
-  }, [allApps, favoriteApps, recentApps]);
+  }, [allApps, favoriteApps, recentApps, categoryDefinitions]);
 
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);
@@ -232,6 +276,12 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     safeLocalStorage?.setItem(CATEGORY_STORAGE_KEY, currentCategory.id);
   }, [currentCategory.id]);
+
+  useEffect(() => {
+    if (!categoryDefinitions.some(cat => cat.id === category)) {
+      setCategory('all');
+    }
+  }, [category, categoryDefinitions]);
 
   useEffect(() => {
     if (!isVisible) return;
