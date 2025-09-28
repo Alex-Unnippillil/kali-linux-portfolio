@@ -10,7 +10,7 @@ const Ubuntu = dynamic(
     }),
   {
     ssr: false,
-    loading: () => <p>Loading Ubuntu...</p>,
+    loading: () => null,
   }
 );
 const InstallButton = dynamic(
@@ -21,7 +21,7 @@ const InstallButton = dynamic(
     }),
   {
     ssr: false,
-    loading: () => <p>Loading install options...</p>,
+    loading: () => null,
   }
 );
 
