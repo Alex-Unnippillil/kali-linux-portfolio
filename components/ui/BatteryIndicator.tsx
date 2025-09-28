@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useRef, useState, type FC, type MouseEvent } from "react";
+import type { ChangeEvent, FC, MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import usePersistentState from "../../hooks/usePersistentState";
 
-const clamp = (value: number) => Math.min(1, Math.max(0, value));
+export const clampLevel = (value: number) => Math.min(1, Math.max(0, value));
 
 const isValidLevel = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
@@ -20,14 +21,91 @@ const POWER_MODE_LABEL: Record<PowerMode, string> = {
   "power-saver": "Power saver",
 };
 
-const estimateTime = (level: number, charging: boolean) => {
-  const minutes = charging ? level * 120 : level * 180;
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.max(5, Math.round(minutes % 60));
-  return charging ? `${hours}h ${mins}m until full` : `${hours}h ${mins}m remaining`;
+const getBatteryFillColor = (level: number, charging: boolean, saver: boolean) => {
+  if (charging) return "#34d399"; // emerald
+  if (saver) return "#22d3ee"; // cyan accent when saver enabled
+  if (level <= 0.15) return "#f87171"; // red-400
+  if (level <= 0.4) return "#facc15"; // amber-400
+  return "#a3e635"; // lime-400
 };
 
-type BatteryIndicatorProps = { className?: string };
+const BATTERY_BODY_WIDTH = 12;
+
+const BatteryGlyph: FC<{ level: number; charging: boolean; saver: boolean }> = ({
+  level,
+  charging,
+  saver,
+}) => {
+  const normalized = clampLevel(level);
+  const fillWidth = Math.max(0, BATTERY_BODY_WIDTH * normalized);
+  const fillColor = getBatteryFillColor(normalized, charging, saver);
+
+  return (
+    <svg
+      className="status-symbol h-4 w-4"
+      width={16}
+      height={16}
+      viewBox="0 0 20 12"
+      role="img"
+      aria-hidden="true"
+    >
+      <rect
+        x="1"
+        y="1"
+        width="16"
+        height="10"
+        rx="2"
+        ry="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        opacity="0.85"
+      />
+      <rect x="17" y="4" width="2.5" height="4" rx="1.2" fill="currentColor" opacity="0.85" />
+      <rect
+        x="2.5"
+        y="2.5"
+        width={fillWidth}
+        height="7"
+        rx="1.5"
+        fill={fillColor}
+        style={{ transition: "width 150ms ease" }}
+      />
+      {charging && (
+        <path
+          d="M10 2.8 7.2 7.6h2.1L8.7 10l3-4.8H9.8L10 2.8Z"
+          fill="#0ea5e9"
+          stroke="#0ea5e9"
+          strokeWidth="0.4"
+          opacity="0.95"
+        />
+      )}
+    </svg>
+  );
+};
+
+export const estimateBatteryTime = (level: number, charging: boolean) => {
+  const normalized = clampLevel(level);
+  const remaining = charging ? 1 - normalized : normalized;
+  const minutes = Math.max(0, Math.round((charging ? 120 : 180) * remaining));
+
+  if (minutes === 0) {
+    return charging ? "Fully charged" : "Battery depleted";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (mins > 0 || hours === 0) parts.push(`${mins}m`);
+  const suffix = charging ? "until full" : "remaining";
+  return `${parts.join(" ")} ${suffix}`;
+};
+
+interface BatteryIndicatorProps {
+  className?: string;
+}
+
 
 const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
   const [open, setOpen] = useState(false);
@@ -89,9 +167,13 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
     setOpen((prev) => !prev);
   };
 
-  const formattedLevel = useMemo(() => `${Math.round(level * 100)}%`, [level]);
+  const formattedLevel = useMemo(() => `${Math.round(clampLevel(level) * 100)}%`, [level]);
 
-  const tooltip = `${formattedLevel}${charging ? " • Charging" : " • On battery"}`;
+  const tooltipParts = [formattedLevel, charging ? "Charging" : "On battery"];
+  if (batterySaver) {
+    tooltipParts.push("Saver on");
+  }
+  const tooltip = tooltipParts.join(" • ");
 
   return (
     <div ref={rootRef} className={`relative flex items-center ${className}`.trim()}>
@@ -106,20 +188,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
         onPointerDown={(event) => event.stopPropagation()}
       >
         <span className="relative inline-flex">
-          <Image
-            width={16}
-            height={16}
-            src="/themes/Yaru/status/battery-good-symbolic.svg"
-            alt="battery status"
-            className="status-symbol h-4 w-4"
-            draggable={false}
-            sizes="16px"
-          />
-          {charging && (
-            <span className="absolute inset-0 flex items-center justify-center text-[9px] text-ubt-blue" aria-hidden="true">
-              ⚡
-            </span>
-          )}
+          <BatteryGlyph level={level} charging={charging} saver={batterySaver} />
         </span>
       </button>
       {open && (
@@ -136,7 +205,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
               <span className="text-base font-semibold">{formattedLevel}</span>
               <span className="uppercase">{charging ? "Charging" : "On battery"}</span>
             </div>
-            <p className="mt-1 text-gray-300">{estimateTime(level, charging)}</p>
+            <p className="mt-1 text-gray-300">{estimateBatteryTime(level, charging)}</p>
           </div>
           <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Adjust level</div>
           <input
@@ -148,7 +217,9 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
             value={Math.round(level * 100)}
             className="mb-3 h-1 w-full cursor-pointer accent-ubt-blue"
             aria-label="Simulated battery level"
-            onChange={(event) => setLevel(clamp(Number(event.target.value) / 100))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setLevel(clampLevel(Number(event.target.value) / 100))
+            }
           />
           <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
             <span className="text-white normal-case">Charging</span>
