@@ -11,6 +11,31 @@
   }
 }
 
+@layer components {
+  .glass-interactive {
+    @apply inline-flex items-center gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm font-medium leading-5;
+    background-color: color-mix(in srgb, var(--kali-panel) 82%, transparent);
+    border-color: color-mix(in srgb, var(--kali-panel-border) 65%, transparent);
+    backdrop-filter: blur(12px);
+    color: var(--color-text);
+    min-height: 2.5rem;
+    transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease,
+      box-shadow var(--motion-fast) ease, color var(--motion-fast) ease;
+  }
+
+  .glass-interactive:hover,
+  .glass-interactive:focus-visible {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, var(--kali-panel) 80%);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    color: var(--color-text);
+  }
+
+  .glass-interactive:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 70%, transparent);
+  }
+}
+
 @layer base {
   button {
     @apply transition-hover transition-active;

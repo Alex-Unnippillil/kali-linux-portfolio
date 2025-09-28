@@ -379,16 +379,16 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="glass-interactive"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
+          src="/themes/Kali/panel/decompiler-symbolic.svg"
+          alt="Kali menu"
+          width={18}
+          height={18}
+          className="h-4 w-4 shrink-0"
         />
-        Applications
+        <span>Kali Menu</span>
       </button>
       {isVisible && (
         <div
