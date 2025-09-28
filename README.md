@@ -40,7 +40,7 @@ Serverful deployments run the built Next.js server so all API routes are availab
 ```bash
 yarn build && yarn start
 ```
-The service worker is automatically generated during `next build` via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa).
+The service worker is automatically generated during `next build` via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa) as `public/sw.js`.
 After the server starts, exercise an API route to confirm server-side functionality:
 ```bash
 curl -X POST http://localhost:3000/api/dummy
@@ -52,7 +52,7 @@ This project supports static export. Serverless API routes will not be available
 yarn export && npx serve out
 
 ```
-Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
+This sets `NEXT_PUBLIC_STATIC_EXPORT=true`, which disables service worker registration and server-only analytics. Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
 ### Install as PWA for Sharing
 
@@ -65,7 +65,8 @@ To send text or links directly into the Sticky Notes app:
 
 ### Service Worker (SW)
 
-- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.
+- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); the only worker registered is `public/sw.js`.
+- Static exports skip registration entirely (`NEXT_PUBLIC_STATIC_EXPORT=true`).
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
