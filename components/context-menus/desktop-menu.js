@@ -21,6 +21,14 @@ function DesktopMenu(props) {
         props.openApp("settings");
     }
 
+    const openBackgroundSettings = () => {
+        props.openApp("settings", { section: "background" });
+    }
+
+    const openDisplaySettings = () => {
+        props.openApp("settings", { section: "display" });
+    }
+
     const checkFullScreen = () => {
         if (document.fullscreenElement) {
             setIsFullScreen(true)
@@ -54,10 +62,10 @@ function DesktopMenu(props) {
                 onClick={props.addNewFolder}
                 type="button"
                 role="menuitem"
-                aria-label="New Folder"
+                aria-label="Create Folder"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">New Folder</span>
+                <span className="ml-5">Create Folder</span>
             </button>
             <button
                 onClick={props.openShortcutSelector}
@@ -69,25 +77,8 @@ function DesktopMenu(props) {
                 <span className="ml-5">Create Shortcut...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
-            </div>
-            <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
-            </div>
             <button
-                onClick={openTerminal}
-                type="button"
-                role="menuitem"
-                aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Open in Terminal</span>
-            </button>
-            <Devider />
-            <button
-                onClick={openSettings}
+                onClick={openBackgroundSettings}
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
@@ -96,9 +87,16 @@ function DesktopMenu(props) {
                 <span className="ml-5">Change Background...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
+            <button
+                onClick={openDisplaySettings}
+                type="button"
+                role="menuitem"
+                aria-label="Display Settings"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Display Settings...</span>
+            </button>
+            <Devider />
             <button
                 onClick={openSettings}
                 type="button"
@@ -107,6 +105,16 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">Settings</span>
+            </button>
+            <Devider />
+            <button
+                onClick={openTerminal}
+                type="button"
+                role="menuitem"
+                aria-label="Open Terminal Here"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Open Terminal Here</span>
             </button>
             <Devider />
             <button
