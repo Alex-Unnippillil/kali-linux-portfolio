@@ -97,11 +97,19 @@ const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onS
               <button
                 type="button"
                 onClick={() => onSelect(category.id)}
-                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                  isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
+                className={`relative flex w-full items-center gap-3 overflow-hidden rounded px-2 py-1 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
+                  isActive
+                    ? 'bg-kali-menu-hover text-white'
+                    : 'bg-transparent text-white/80 hover:bg-kali-menu-hover hover:text-white'
                 }`}
                 aria-pressed={isActive}
               >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute left-0 top-0 h-full w-0.5 bg-kali-accent transition-opacity ${
+                    isActive ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
                 <CategoryIcon categoryId={category.id} label={category.label} />
                 <span className="text-sm font-medium">{category.label}</span>
               </button>
