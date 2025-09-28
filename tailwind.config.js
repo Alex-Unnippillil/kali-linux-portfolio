@@ -1,4 +1,5 @@
 const plugin = require('tailwindcss/plugin');
+const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
   darkMode: 'class',
@@ -113,6 +114,10 @@ module.exports = {
         flourish: 'flourish 0.6s ease-out',
         mine: 'mine 0.4s ease-in-out',
       },
+    },
+    fontFamily: {
+      sans: ['var(--font-ui)', ...defaultTheme.fontFamily.sans],
+      mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
     },
   },
   plugins: [
