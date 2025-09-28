@@ -86,25 +86,27 @@ export default function AppGrid({ openApp }) {
         {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
           <div
             ref={ref}
+            className="group flex h-full w-full items-center justify-center p-3"
             style={{
               ...style,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              padding: 12,
             }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onFocus={onFocus}
             onBlur={onBlur}
           >
-            <UbuntuApp
-              id={app.id}
-              icon={app.icon}
-              name={app.title}
-              displayName={<>{app.nodes}</>}
-              openApp={() => openApp && openApp(app.id)}
-            />
+            <div className="flex h-full w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur transition duration-200 group-hover:border-kali-accent/70 focus-within:border-kali-accent focus-within:ring-2 focus-within:ring-kali-focus focus-within:ring-offset-2 focus-within:ring-offset-black">
+              <UbuntuApp
+                id={app.id}
+                icon={app.icon}
+                name={app.title}
+                displayName={<>{app.nodes}</>}
+                openApp={() => openApp && openApp(app.id)}
+              />
+            </div>
           </div>
         )}
       </DelayedTooltip>
@@ -114,8 +116,9 @@ export default function AppGrid({ openApp }) {
   return (
     <div className="flex flex-col items-center h-full">
       <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+        className="mb-6 mt-4 w-2/3 md:w-1/3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white shadow-sm backdrop-blur focus:border-kali-accent focus:outline-none focus:ring-2 focus:ring-kali-focus focus:ring-offset-2 focus:ring-offset-black"
         placeholder="Search"
+        aria-label="Search apps"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
