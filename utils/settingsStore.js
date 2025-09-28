@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  monitorLayout: 'single',
 };
 
 export async function getAccent() {
@@ -135,6 +136,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getMonitorLayout() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.monitorLayout;
+  return window.localStorage.getItem('monitor-layout') || DEFAULT_SETTINGS.monitorLayout;
+}
+
+export async function setMonitorLayout(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('monitor-layout', value);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +161,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('monitor-layout');
 }
 
 export async function exportSettings() {
@@ -165,6 +177,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    monitorLayout,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +190,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getMonitorLayout(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +206,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    monitorLayout,
   });
 }
 
@@ -217,6 +232,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    monitorLayout,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +246,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (monitorLayout !== undefined) await setMonitorLayout(monitorLayout);
 }
 
 export const defaults = DEFAULT_SETTINGS;

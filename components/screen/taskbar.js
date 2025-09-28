@@ -1,10 +1,12 @@
 import React from 'react';
 import Image from 'next/image';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import MonitorSwitcher from '../panel/MonitorSwitcher';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
     const workspaces = props.workspaces || [];
+    const monitors = props.monitors || [];
 
     const handleClick = (app) => {
         const id = app.id;
@@ -19,11 +21,18 @@ export default function Taskbar(props) {
 
     return (
         <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center justify-between px-2 z-40" role="toolbar">
-            <WorkspaceSwitcher
-                workspaces={workspaces}
-                activeWorkspace={props.activeWorkspace}
-                onSelect={props.onSelectWorkspace}
-            />
+            <div className="flex items-center">
+                <WorkspaceSwitcher
+                    workspaces={workspaces}
+                    activeWorkspace={props.activeWorkspace}
+                    onSelect={props.onSelectWorkspace}
+                />
+                <MonitorSwitcher
+                    monitors={monitors}
+                    activeMonitorId={props.activeMonitorId}
+                    onSelect={props.onSelectMonitor}
+                />
+            </div>
             <div className="flex items-center overflow-x-auto">
                 {runningApps.map(app => {
                     const isMinimized = Boolean(props.minimized_windows[app.id]);

@@ -12,6 +12,7 @@ const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_BOTTOM_INSET = 28;
+const WINDOW_TOP_OFFSET = 32;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -22,14 +23,25 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
-const computeSnapRegions = (viewportWidth, viewportHeight) => {
+const computeSnapRegions = (monitorRect = null) => {
+    const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+    const viewportWidth = monitorRect?.width ?? fallbackWidth;
+    const viewportHeight = monitorRect?.height ?? fallbackHeight;
+    const offsetLeft = monitorRect?.left ?? 0;
+    const offsetTop = monitorRect?.top ?? 0;
     const halfWidth = viewportWidth / 2;
     const availableHeight = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
     const topHeight = Math.min(availableHeight, viewportHeight / 2);
     return {
-        left: { left: 0, top: 0, width: halfWidth, height: availableHeight },
-        right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
+        left: { left: offsetLeft, top: offsetTop, width: halfWidth, height: availableHeight },
+        right: {
+            left: offsetLeft + viewportWidth - halfWidth,
+            top: offsetTop,
+            width: halfWidth,
+            height: availableHeight,
+        },
+        top: { left: offsetLeft, top: offsetTop, width: viewportWidth, height: topHeight },
     };
 };
 
@@ -52,6 +64,12 @@ export class Window extends Component {
             parentSize: {
                 height: 100,
                 width: 100
+            },
+            dragBounds: {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
             },
             snapPreview: null,
             snapPosition: null,
@@ -81,6 +99,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.enforceMonitorBounds();
     }
 
     componentWillUnmount() {
@@ -93,6 +112,14 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        const monitorChanged = this.hasMonitorRectChanged(prevProps.monitorRect, this.props.monitorRect);
+        const sizeChanged = prevState.width !== this.state.width || prevState.height !== this.state.height;
+        if (monitorChanged || sizeChanged) {
+            this.resizeBoundries();
         }
     }
 
@@ -116,20 +143,89 @@ export class Window extends Component {
         }
     }
 
+    getMonitorRect = () => {
+        if (this.props.monitorRect) {
+            return this.props.monitorRect;
+        }
+        if (typeof window === 'undefined') {
+            return { left: 0, top: 0, width: 0, height: 0 };
+        }
+        return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    }
+
+    hasMonitorRectChanged = (prevRect, nextRect) => {
+        if (!prevRect && !nextRect) return false;
+        if (!prevRect || !nextRect) return true;
+        return (
+            prevRect.left !== nextRect.left ||
+            prevRect.top !== nextRect.top ||
+            prevRect.width !== nextRect.width ||
+            prevRect.height !== nextRect.height
+        );
+    }
+
+    applyTransformAbsolute = (targetLeft, targetTop, options = {}) => {
+        const node = document.getElementById(this.id);
+        if (!node || !Number.isFinite(targetLeft) || !Number.isFinite(targetTop)) return;
+        const { notify = false } = options;
+        const snappedLeft = this.snapToGrid(targetLeft);
+        const snappedTop = this.snapToGrid(targetTop - WINDOW_TOP_OFFSET);
+        node.style.transform = `translate(${snappedLeft}px, ${snappedTop}px)`;
+        node.style.setProperty('--window-transform-x', `${snappedLeft}px`);
+        node.style.setProperty('--window-transform-y', `${snappedTop}px`);
+        if (notify && this.props.onPositionChange) {
+            this.props.onPositionChange(snappedLeft, snappedTop);
+        }
+    }
+
+    enforceMonitorBounds = () => {
+        if (this.state.maximized) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const transformMatch = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+        const currentLeft = transformMatch ? parseFloat(transformMatch[1]) : rect?.left;
+        const currentTop = transformMatch ? parseFloat(transformMatch[2]) + WINDOW_TOP_OFFSET : rect?.top;
+        if (currentLeft === undefined || currentTop === undefined) return;
+        const bounds = this.state.dragBounds || { left: 0, right: this.state.parentSize.width, top: 0, bottom: this.state.parentSize.height };
+        const minLeft = Number.isFinite(bounds.left) ? bounds.left : 0;
+        const maxLeft = Number.isFinite(bounds.right) ? bounds.right : minLeft;
+        const minTop = WINDOW_TOP_OFFSET;
+        const maxTop = (Number.isFinite(bounds.bottom) ? bounds.bottom : this.state.parentSize.height) + WINDOW_TOP_OFFSET;
+        const targetLeft = clamp(currentLeft, minLeft, maxLeft);
+        const targetTop = clamp(currentTop, minTop, maxTop);
+        if (targetLeft !== currentLeft || targetTop !== currentTop) {
+            this.applyTransformAbsolute(targetLeft, targetTop, { notify: true });
+        }
+    }
+
     resizeBoundries = () => {
+        const monitorRect = this.getMonitorRect();
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const monitorWidth = monitorRect.width || fallbackWidth;
+        const monitorHeight = monitorRect.height || fallbackHeight;
+        const widthPx = (this.state.width / 100) * monitorWidth;
+        const heightPx = (this.state.height / 100) * monitorHeight;
+        const horizontalAvailable = Math.max(0, monitorWidth - widthPx);
+        const verticalAvailable = Math.max(0, monitorHeight - heightPx - SNAP_BOTTOM_INSET);
+        const bounds = {
+            left: monitorRect.left || 0,
+            right: (monitorRect.left || 0) + horizontalAvailable,
+            top: 0,
+            bottom: verticalAvailable,
+        };
         this.setState({
             parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
-            }
+                height: verticalAvailable,
+                width: horizontalAvailable
+            },
+            dragBounds: bounds
         }, () => {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
+            this.enforceMonitorBounds();
         });
     }
 
@@ -247,13 +343,13 @@ export class Window extends Component {
     }
 
     setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
+        const r = document.querySelector("#" + this.id);
         if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const rect = r.getBoundingClientRect();
         const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        const y = this.snapToGrid(rect.y - WINDOW_TOP_OFFSET);
+        r.style.setProperty('--window-transform-x', `${x}px`);
+        r.style.setProperty('--window-transform-y', `${y}px`);
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
@@ -283,17 +379,17 @@ export class Window extends Component {
     snapWindow = (position) => {
         this.setWinowsPosition();
         this.focusWindow();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const monitorRect = this.getMonitorRect();
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const viewportWidth = monitorRect.width || fallbackWidth;
+        const viewportHeight = monitorRect.height || fallbackHeight;
         if (!viewportWidth || !viewportHeight) return;
-        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const regions = computeSnapRegions(monitorRect);
         const region = regions[position];
         if (!region) return;
         const { width, height } = this.state;
-        const node = document.getElementById(this.id);
-        if (node) {
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
-        }
+        this.applyTransformAbsolute(region.left, region.top, { notify: true });
         this.setState({
             snapPreview: null,
             snapPosition: null,
@@ -333,20 +429,27 @@ export class Window extends Component {
         const node = document.getElementById(this.id);
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const monitorRect = this.getMonitorRect();
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const viewportWidth = monitorRect.width || fallbackWidth;
+        const viewportHeight = monitorRect.height || fallbackHeight;
         if (!viewportWidth || !viewportHeight) return;
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
-        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const regions = computeSnapRegions(monitorRect);
+
+        const relativeTop = rect.top - (monitorRect.top || 0);
+        const relativeLeft = rect.left - (monitorRect.left || 0);
+        const distanceRight = monitorRect.left + viewportWidth - rect.right;
 
         let candidate = null;
-        if (rect.top <= verticalThreshold && regions.top.height > 0) {
+        if (relativeTop <= verticalThreshold && regions.top.height > 0) {
             candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
+        } else if (relativeLeft <= horizontalThreshold && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
+        } else if (distanceRight <= horizontalThreshold && regions.right.width > 0) {
             candidate = { position: 'right', preview: regions.right };
         }
 
@@ -372,8 +475,11 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
-        const maxX = this.state.parentSize.width;
-        const maxY = this.state.parentSize.height;
+        const bounds = this.state.dragBounds || { left: 0, right: this.state.parentSize.width, top: 0, bottom: this.state.parentSize.height };
+        const minX = Number.isFinite(bounds.left) ? bounds.left : 0;
+        const maxX = Number.isFinite(bounds.right) ? bounds.right : this.state.parentSize.width;
+        const minY = Number.isFinite(bounds.top) ? bounds.top : 0;
+        const maxY = Number.isFinite(bounds.bottom) ? bounds.bottom : this.state.parentSize.height;
 
         const resist = (pos, min, max) => {
             if (pos < min) return min;
@@ -383,8 +489,8 @@ export class Window extends Component {
             return pos;
         }
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
+        x = resist(x, minX, maxX);
+        y = resist(y, minY, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
@@ -534,6 +640,18 @@ export class Window extends Component {
                     let y = match ? parseFloat(match[2]) : 0;
                     x += dx;
                     y += dy;
+                    const bounds = this.state.dragBounds || {
+                        left: 0,
+                        right: this.state.parentSize.width,
+                        top: 0,
+                        bottom: this.state.parentSize.height,
+                    };
+                    const minX = Number.isFinite(bounds.left) ? bounds.left : 0;
+                    const maxX = Number.isFinite(bounds.right) ? bounds.right : minX;
+                    const minY = Number.isFinite(bounds.top) ? bounds.top : 0;
+                    const maxY = Number.isFinite(bounds.bottom) ? bounds.bottom : minY;
+                    x = clamp(x, minX, maxX);
+                    y = clamp(y, minY, maxY);
                     node.style.transform = `translate(${x}px, ${y}px)`;
                     this.checkOverlap();
                     this.checkSnapPreview();
@@ -643,7 +761,7 @@ export class Window extends Component {
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    bounds={this.state.dragBounds}
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}

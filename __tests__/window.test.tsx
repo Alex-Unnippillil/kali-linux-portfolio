@@ -203,6 +203,7 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    expect(ref.current!.state.snapPosition).toBe('left');
     act(() => {
       ref.current!.handleStop();
     });
@@ -247,6 +248,7 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    expect(ref.current!.state.snapPosition).toBe('right');
     act(() => {
       ref.current!.handleStop();
     });
@@ -291,6 +293,7 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+    expect(ref.current!.state.snapPosition).toBe('top');
     act(() => {
       ref.current!.handleStop();
     });
@@ -416,8 +419,9 @@ describe('Window snapping finalize and release', () => {
   });
 });
 
-describe('Window keyboard dragging', () => {
-  it('moves window using arrow keys with grabbed state', () => {
+describe('Window monitor bounds', () => {
+  it('computes drag bounds from monitor dimensions', () => {
+    const ref = React.createRef<Window>();
     render(
       <Window
         id="test-window"
@@ -428,21 +432,182 @@ describe('Window keyboard dragging', () => {
         closed={() => {}}
         hideSideBar={() => {}}
         openApp={() => {}}
+        monitorRect={{ left: 500, top: 0, width: 400, height: 600 }}
+        ref={ref}
       />
     );
 
-    const handle = screen.getByText('Test').parentElement!;
+    act(() => {
+      (ref.current as any).resizeBoundries();
+    });
 
-    fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
-    fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    const { dragBounds } = ref.current!.state as any;
+    expect(dragBounds.left).toBe(500);
+    expect(dragBounds.right).toBeCloseTo(660, 5);
+    expect(dragBounds.bottom).toBeCloseTo(62, 5);
+  });
 
-    const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+  it('clamps window transform inside monitor', () => {
+    const ref = React.createRef<Window>();
+    const onPositionChange = jest.fn();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        monitorRect={{ left: 500, top: 0, width: 400, height: 600 }}
+        onPositionChange={onPositionChange}
+        ref={ref}
+      />
+    );
+
+    const node = document.getElementById('test-window')!;
+    let mockLeft = 500;
+    let mockTop = 32;
+    node.getBoundingClientRect = () => ({
+      left: mockLeft,
+      top: mockTop,
+      right: mockLeft + 100,
+      bottom: mockTop + 100,
+      width: 100,
+      height: 100,
+      x: mockLeft,
+      y: mockTop,
+      toJSON: () => {},
+    });
+
+    act(() => {
+      (ref.current as any).resizeBoundries();
+    });
+
+    mockLeft = 720;
+    mockTop = 500;
+
+    expect(node.style.transform).toBe('translate(500px, 0px)');
+
+    node.style.transform = 'translate(720px, 468px)';
+
+    act(() => {
+      (ref.current as any).enforceMonitorBounds();
+    });
+
+    expect(node.style.transform).toBe('translate(660px, 62px)');
+    expect(onPositionChange).toHaveBeenCalledWith(660, 62);
+  });
+});
+
+describe('Window keyboard dragging', () => {
+    it('moves window using arrow keys with grabbed state', () => {
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+          openApp={() => {}}
+        />
+      );
+
+      const handle = screen.getByText('Test').parentElement!;
+      const winEl = document.getElementById('test-window')!;
+      winEl.getBoundingClientRect = () => {
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform);
+        const x = match ? parseFloat(match[1]) : 0;
+        const yTransform = match ? parseFloat(match[2]) : 0;
+        const y = yTransform + 32;
+        return {
+          left: x,
+          top: y,
+          right: x + 100,
+          bottom: y + 100,
+          width: 100,
+          height: 100,
+          x,
+          y,
+          toJSON: () => {},
+        } as DOMRect;
+      };
+
+      fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
+      fireEvent.keyDown(handle, { key: 'ArrowRight' });
+
+      expect(winEl.style.transform).toBe('translate(10px, 0px)');
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
   });
+
+    it('prevents keyboard dragging outside monitor bounds', () => {
+      const ref = React.createRef<Window>();
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+      );
+
+      const handle = screen.getByText('Test').parentElement!;
+      const winEl = document.getElementById('test-window')!;
+      winEl.style.transform = 'translate(40px, 0px)';
+      winEl.getBoundingClientRect = () => {
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform);
+        const x = match ? parseFloat(match[1]) : 0;
+        const yTransform = match ? parseFloat(match[2]) : 0;
+        const y = yTransform + 32;
+        return {
+          left: x,
+          top: y,
+          right: x + 100,
+          bottom: y + 100,
+          width: 100,
+          height: 100,
+          x,
+          y,
+          toJSON: () => {},
+        } as DOMRect;
+      };
+
+      act(() => {
+        ref.current!.setState({
+          dragBounds: { left: 0, right: 50, top: 0, bottom: 80 },
+        });
+      });
+
+      fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
+      fireEvent.keyDown(handle, { key: 'ArrowRight' });
+      expect(winEl.style.transform).toBe('translate(50px, 0px)');
+      fireEvent.keyDown(handle, { key: 'ArrowRight' });
+      expect(winEl.style.transform).toBe('translate(50px, 0px)');
+
+      fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+      expect(winEl.style.transform).toBe('translate(40px, 0px)');
+      fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+      expect(winEl.style.transform).toBe('translate(30px, 0px)');
+      fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+      expect(winEl.style.transform).toBe('translate(20px, 0px)');
+      fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+      expect(winEl.style.transform).toBe('translate(10px, 0px)');
+      fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+      expect(winEl.style.transform).toBe('translate(0px, 0px)');
+      fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+      expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    });
 });
 
 describe('Edge resistance', () => {
