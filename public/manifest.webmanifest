@@ -4,8 +4,8 @@
   "start_url": "/",
   "offline_page": "/offline.html",
   "display": "standalone",
-  "background_color": "#0f1317",
-  "theme_color": "#0f1317",
+  "background_color": "#0d1217",
+  "theme_color": "#0d1217",
   "icons": [
     {
       "src": "/images/logos/fevicon.png",
