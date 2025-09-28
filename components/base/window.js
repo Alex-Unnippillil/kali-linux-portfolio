@@ -25,12 +25,21 @@ const percentOf = (value, total) => {
 const computeSnapRegions = (viewportWidth, viewportHeight) => {
     const halfWidth = viewportWidth / 2;
     const availableHeight = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
-    const topHeight = Math.min(availableHeight, viewportHeight / 2);
-    return {
+    const halfHeight = availableHeight / 2;
+    const bottomTop = Math.max(0, availableHeight - halfHeight);
+
+    const regions = {
         left: { left: 0, top: 0, width: halfWidth, height: availableHeight },
         right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
+        top: { left: 0, top: 0, width: viewportWidth, height: halfHeight },
+        bottom: { left: 0, top: bottomTop, width: viewportWidth, height: halfHeight },
+        'top-left': { left: 0, top: 0, width: halfWidth, height: halfHeight },
+        'top-right': { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: halfHeight },
+        'bottom-left': { left: 0, top: bottomTop, width: halfWidth, height: halfHeight },
+        'bottom-right': { left: viewportWidth - halfWidth, top: bottomTop, width: halfWidth, height: halfHeight },
     };
+
+    return regions;
 };
 
 export class Window extends Component {
@@ -76,6 +85,7 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
+        window.addEventListener('keydown', this.handleWindowKeyDown);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
@@ -89,6 +99,7 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        window.removeEventListener('keydown', this.handleWindowKeyDown);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
@@ -288,7 +299,7 @@ export class Window extends Component {
         if (!viewportWidth || !viewportHeight) return;
         const regions = computeSnapRegions(viewportWidth, viewportHeight);
         const region = regions[position];
-        if (!region) return;
+        if (!region || region.width <= 0 || region.height <= 0) return;
         const { width, height } = this.state;
         const node = document.getElementById(this.id);
         if (node) {
@@ -302,6 +313,11 @@ export class Window extends Component {
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
         }, this.resizeBoundries);
+    }
+
+    cancelSnapPreview = () => {
+        if (!this.state.snapPreview && !this.state.snapPosition) return;
+        this.setState({ snapPreview: null, snapPosition: null });
     }
 
     checkOverlap = () => {
@@ -341,12 +357,28 @@ export class Window extends Component {
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const regions = computeSnapRegions(viewportWidth, viewportHeight);
 
+        const bottomEdge = viewportHeight - SNAP_BOTTOM_INSET;
+        const nearTop = rect.top <= verticalThreshold;
+        const nearBottom = Math.abs(bottomEdge - rect.bottom) <= verticalThreshold;
+        const nearLeft = rect.left <= horizontalThreshold;
+        const nearRight = Math.abs(viewportWidth - rect.right) <= horizontalThreshold;
+
         let candidate = null;
-        if (rect.top <= verticalThreshold && regions.top.height > 0) {
+        if (nearTop && nearLeft && regions['top-left'] && regions['top-left'].height > 0) {
+            candidate = { position: 'top-left', preview: regions['top-left'] };
+        } else if (nearTop && nearRight && regions['top-right'] && regions['top-right'].height > 0) {
+            candidate = { position: 'top-right', preview: regions['top-right'] };
+        } else if (nearBottom && nearLeft && regions['bottom-left'] && regions['bottom-left'].height > 0) {
+            candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
+        } else if (nearBottom && nearRight && regions['bottom-right'] && regions['bottom-right'].height > 0) {
+            candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
+        } else if (nearTop && regions.top && regions.top.height > 0) {
             candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
+        } else if (nearBottom && regions.bottom && regions.bottom.height > 0) {
+            candidate = { position: 'bottom', preview: regions.bottom };
+        } else if (nearLeft && regions.left && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
+        } else if (nearRight && regions.right && regions.right.width > 0) {
             candidate = { position: 'right', preview: regions.right };
         }
 
@@ -551,6 +583,12 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+            if (this.state.snapPreview || this.state.snapPosition) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.cancelSnapPreview();
+                return;
+            }
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
@@ -596,22 +634,76 @@ export class Window extends Component {
         }
     }
 
+    handleWindowKeyDown = (e) => {
+        if (e.key === 'Escape' && (this.state.snapPreview || this.state.snapPosition)) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.cancelSnapPreview();
+        }
+    }
+
     handleSuperArrow = (e) => {
         const key = e.detail;
-        if (key === 'ArrowLeft') {
-            if (this.state.snapped === 'left') this.unsnapWindow();
-            else this.snapWindow('left');
-        } else if (key === 'ArrowRight') {
-            if (this.state.snapped === 'right') this.unsnapWindow();
-            else this.snapWindow('right');
-        } else if (key === 'ArrowUp') {
-            this.maximizeWindow();
-        } else if (key === 'ArrowDown') {
-            if (this.state.maximized) {
-                this.restoreWindow();
-            } else if (this.state.snapped) {
+        const toggleSnap = (position) => {
+            if (!position) return;
+            if (this.state.snapped === position) {
                 this.unsnapWindow();
+            } else {
+                this.snapWindow(position);
             }
+        };
+
+        switch (key) {
+            case 'ArrowLeft':
+            case 'Numpad4':
+                toggleSnap('left');
+                break;
+            case 'ArrowRight':
+            case 'Numpad6':
+                toggleSnap('right');
+                break;
+            case 'Numpad8':
+                toggleSnap('top');
+                break;
+            case 'Numpad2':
+                toggleSnap('bottom');
+                break;
+            case 'Numpad7':
+                toggleSnap('top-left');
+                break;
+            case 'Numpad9':
+                toggleSnap('top-right');
+                break;
+            case 'Numpad1':
+                toggleSnap('bottom-left');
+                break;
+            case 'Numpad3':
+                toggleSnap('bottom-right');
+                break;
+            case 'Numpad0':
+                if (this.state.snapped) {
+                    this.unsnapWindow();
+                }
+                break;
+            case 'ArrowUp':
+            case 'Numpad5':
+                if (this.state.maximized) {
+                    this.restoreWindow();
+                } else {
+                    this.maximizeWindow();
+                }
+                break;
+            case 'ArrowDown':
+                if (this.state.maximized) {
+                    this.restoreWindow();
+                } else if (this.state.snapped) {
+                    this.unsnapWindow();
+                } else {
+                    toggleSnap('bottom');
+                }
+                break;
+            default:
+                break;
         }
     }
 
