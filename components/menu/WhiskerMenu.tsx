@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
@@ -13,6 +12,8 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  submenu?: boolean;
+  children?: readonly unknown[];
 };
 
 type CategorySource =
@@ -466,25 +467,71 @@ const WhiskerMenu: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
-            <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
-
-              {currentApps.map((app, idx) => (
-                <div
-                  key={app.id}
-                  className={`rounded transition ring-offset-2 ${
-                    idx === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
-                  }`}
-                >
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
-              ))}
-            </div>
+            <ul
+              className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm"
+              role="menu"
+              aria-label={currentCategory?.label ?? 'Applications'}
+            >
+              {currentApps.map((app, idx) => {
+                const isActive = idx === highlight;
+                const hasSubmenu = Boolean(
+                  app.submenu ?? (Array.isArray(app.children) && app.children.length > 0)
+                );
+                const iconSrc = app.icon.startsWith('./') ? app.icon.replace('./', '/') : app.icon;
+                return (
+                  <li
+                    key={app.id}
+                    data-app-id={app.id}
+                    data-context="app"
+                    role="menuitem"
+                    aria-disabled={app.disabled ?? false}
+                    tabIndex={-1}
+                    className={`h-8 px-2 flex items-center rounded hover:bg-kali-menu-hover ${
+                      isActive ? 'bg-kali-menu-hover text-white' : 'text-gray-200'
+                    } ${app.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                    onMouseEnter={() => setHighlight(idx)}
+                    onFocus={() => setHighlight(idx)}
+                    onClick={() => {
+                      if (app.disabled) return;
+                      openSelectedApp(app.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        if (!app.disabled) {
+                          openSelectedApp(app.id);
+                        }
+                      }
+                    }}
+                  >
+                    <Image
+                      src={iconSrc}
+                      alt=""
+                      width={18}
+                      height={18}
+                      className="mr-2 h-[18px] w-[18px] flex-shrink-0"
+                      sizes="18px"
+                    />
+                    <span className="flex-1 truncate text-left">{app.title}</span>
+                    {hasSubmenu && (
+                      <svg
+                        className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-gray-400"
+                        viewBox="0 0 16 16"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fill="currentColor"
+                          d="M6.22 3.22a.75.75 0 0 1 1.06 0l3.5 3.5a.75.75 0 0 1 0 1.06l-3.5 3.5a.75.75 0 1 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06z"
+                        />
+                      </svg>
+                    )}
+                  </li>
+                );
+              })}
+              {currentApps.length === 0 && (
+                <li className="h-8 px-2 flex items-center text-gray-400">No applications found</li>
+              )}
+            </ul>
           </div>
         </div>
       )}
