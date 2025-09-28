@@ -1,7 +1,83 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import { z } from 'zod';
 import { getTheme, setTheme } from './theme';
+import { safeLocalStorage } from './safeStorage';
+
+const FAVORITES_KEY = 'launcherFavorites';
+const PINNED_KEY = 'pinnedApps';
+const EXPORT_VERSION = 2;
+
+const sanitizeAppIds = (value) => {
+  if (!Array.isArray(value)) return [];
+  const unique = [];
+  const seen = new Set();
+  value.forEach((id) => {
+    if (typeof id !== 'string') return;
+    if (seen.has(id)) return;
+    seen.add(id);
+    unique.push(id);
+  });
+  return unique;
+};
+
+const readStoredIds = (key) => {
+  if (!safeLocalStorage) return [];
+  try {
+    const raw = safeLocalStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return sanitizeAppIds(parsed);
+  } catch {
+    return [];
+  }
+};
+
+const writeStoredIds = (key, ids) => {
+  if (!safeLocalStorage) return;
+  try {
+    safeLocalStorage.setItem(key, JSON.stringify(sanitizeAppIds(ids)));
+  } catch {
+    /* ignore storage failures */
+  }
+};
+
+const settingsSchema = z.object({
+  accent: z.string().optional(),
+  wallpaper: z.string().optional(),
+  useKaliWallpaper: z.boolean().optional(),
+  density: z.enum(['regular', 'compact']).optional(),
+  reducedMotion: z.boolean().optional(),
+  fontScale: z
+    .union([z.number(), z.string().transform((val) => Number.parseFloat(val))])
+    .optional()
+    .refine((value) => value === undefined || Number.isFinite(value), {
+      message: 'fontScale must be a number',
+    }),
+  highContrast: z.boolean().optional(),
+  largeHitAreas: z.boolean().optional(),
+  pongSpin: z.boolean().optional(),
+  allowNetwork: z.boolean().optional(),
+  haptics: z.boolean().optional(),
+  theme: z.string().optional(),
+  favorites: z.array(z.string()).optional(),
+  pinned: z.array(z.string()).optional(),
+  ordering: z.array(z.string()).optional(),
+  launcher: z
+    .object({
+      favorites: z.array(z.string()).optional(),
+      ordering: z.array(z.string()).optional(),
+    })
+    .optional(),
+  dock: z
+    .object({
+      pinned: z.array(z.string()).optional(),
+      ordering: z.array(z.string()).optional(),
+    })
+    .optional(),
+  version: z.number().optional(),
+});
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -179,7 +255,10 @@ export async function exportSettings() {
     getHaptics(),
   ]);
   const theme = getTheme();
+  const favorites = readStoredIds(FAVORITES_KEY);
+  const dockOrdering = readStoredIds(PINNED_KEY);
   return JSON.stringify({
+    version: EXPORT_VERSION,
     accent,
     wallpaper,
     density,
@@ -192,44 +271,124 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    favorites,
+    pinned: dockOrdering,
+    ordering: dockOrdering,
+    launcher: {
+      favorites,
+      ordering: favorites,
+    },
+    dock: {
+      pinned: dockOrdering,
+      ordering: dockOrdering,
+    },
   });
 }
 
 export async function importSettings(json) {
   if (typeof window === 'undefined') return;
-  let settings;
+  let raw;
   try {
-    settings = typeof json === 'string' ? JSON.parse(json) : json;
+    raw = typeof json === 'string' ? JSON.parse(json) : json;
   } catch (e) {
-    console.error('Invalid settings', e);
-    return;
+    throw new Error('Invalid settings JSON');
   }
-  const {
-    accent,
-    wallpaper,
-    useKaliWallpaper,
-    density,
-    reducedMotion,
-    fontScale,
-    highContrast,
-    largeHitAreas,
-    pongSpin,
-    allowNetwork,
-    haptics,
-    theme,
-  } = settings;
-  if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
-  if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
-  if (density !== undefined) await setDensity(density);
-  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
-  if (fontScale !== undefined) await setFontScale(fontScale);
-  if (highContrast !== undefined) await setHighContrast(highContrast);
-  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
-  if (pongSpin !== undefined) await setPongSpin(pongSpin);
-  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
-  if (haptics !== undefined) await setHaptics(haptics);
-  if (theme !== undefined) setTheme(theme);
+
+  const parsed = settingsSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error('Settings file does not match expected schema');
+  }
+
+  const settings = parsed.data;
+
+  const applied = {};
+  if (settings.accent !== undefined) {
+    await setAccent(settings.accent);
+    applied.accent = settings.accent;
+  }
+  if (settings.wallpaper !== undefined) {
+    await setWallpaper(settings.wallpaper);
+    applied.wallpaper = settings.wallpaper;
+  }
+  if (settings.useKaliWallpaper !== undefined) {
+    await setUseKaliWallpaper(settings.useKaliWallpaper);
+    applied.useKaliWallpaper = settings.useKaliWallpaper;
+  }
+  if (settings.density !== undefined) {
+    await setDensity(settings.density);
+    applied.density = settings.density;
+  }
+  if (settings.reducedMotion !== undefined) {
+    await setReducedMotion(settings.reducedMotion);
+    applied.reducedMotion = settings.reducedMotion;
+  }
+  if (settings.fontScale !== undefined) {
+    await setFontScale(Number(settings.fontScale));
+    applied.fontScale = Number(settings.fontScale);
+  }
+  if (settings.highContrast !== undefined) {
+    await setHighContrast(settings.highContrast);
+    applied.highContrast = settings.highContrast;
+  }
+  if (settings.largeHitAreas !== undefined) {
+    await setLargeHitAreas(settings.largeHitAreas);
+    applied.largeHitAreas = settings.largeHitAreas;
+  }
+  if (settings.pongSpin !== undefined) {
+    await setPongSpin(settings.pongSpin);
+    applied.pongSpin = settings.pongSpin;
+  }
+  if (settings.allowNetwork !== undefined) {
+    await setAllowNetwork(settings.allowNetwork);
+    applied.allowNetwork = settings.allowNetwork;
+  }
+  if (settings.haptics !== undefined) {
+    await setHaptics(settings.haptics);
+    applied.haptics = settings.haptics;
+  }
+  if (settings.theme !== undefined) {
+    setTheme(settings.theme);
+    applied.theme = settings.theme;
+  }
+
+  const favoriteIds = sanitizeAppIds(
+    settings.launcher?.ordering ??
+      settings.launcher?.favorites ??
+      settings.favorites ??
+      []
+  );
+  const orderingIds = sanitizeAppIds(
+    settings.launcher?.ordering ?? settings.ordering ?? favoriteIds
+  );
+  const dockOrderingIds = sanitizeAppIds(
+    settings.dock?.ordering ??
+      settings.dock?.pinned ??
+      settings.ordering ??
+      settings.pinned ??
+      []
+  );
+  const dockPinnedIds = dockOrderingIds;
+
+  if (favoriteIds.length || settings.launcher?.favorites || settings.favorites) {
+    writeStoredIds(FAVORITES_KEY, favoriteIds);
+    window.dispatchEvent(
+      new CustomEvent('launcher:favorites-updated', { detail: favoriteIds })
+    );
+  }
+
+  if (dockPinnedIds.length || settings.dock?.pinned || settings.pinned || settings.dock?.ordering || settings.ordering) {
+    writeStoredIds(PINNED_KEY, dockOrderingIds);
+    window.dispatchEvent(
+      new CustomEvent('desktop:pins-updated', { detail: dockOrderingIds })
+    );
+  }
+
+  return {
+    settings: applied,
+    favorites: favoriteIds,
+    ordering: orderingIds,
+    dock: dockOrderingIds,
+  };
 }
 
 export const defaults = DEFAULT_SETTINGS;

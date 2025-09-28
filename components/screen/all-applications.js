@@ -81,7 +81,23 @@ class AllApplications extends React.Component {
             favorites,
             recents,
         });
+
+        window.addEventListener('launcher:favorites-updated', this.handleExternalFavoritesUpdate);
     }
+
+    componentWillUnmount() {
+        window.removeEventListener('launcher:favorites-updated', this.handleExternalFavoritesUpdate);
+    }
+
+    handleExternalFavoritesUpdate = (event) => {
+        const detail = event?.detail;
+        const incoming = Array.isArray(detail) ? detail : [];
+        const sourceApps = this.state.unfilteredApps.length ? this.state.unfilteredApps : this.state.apps;
+        const availableIds = new Set(sourceApps.map((app) => app.id));
+        const favorites = sanitizeIds(incoming, availableIds);
+        persistIds(FAVORITES_KEY, favorites);
+        this.setState({ favorites });
+    };
 
     handleChange = (e) => {
         const value = e.target.value;

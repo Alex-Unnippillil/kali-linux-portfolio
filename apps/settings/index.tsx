@@ -30,6 +30,12 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    largeHitAreas: _largeHitAreas,
+    setLargeHitAreas,
+    allowNetwork: _allowNetwork,
+    setAllowNetwork,
+    pongSpin: _pongSpin,
+    setPongSpin,
     haptics,
     setHaptics,
     theme,
@@ -44,6 +50,9 @@ export default function Settings() {
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const [importStatus, setImportStatus] = useState<
+    { type: "success" | "error"; message: string }
+  | null>(null);
 
   const wallpapers = [
     "wall-1",
@@ -72,20 +81,49 @@ export default function Settings() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    await importSettingsData(text);
+    setImportStatus(null);
     try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
+      const result = await importSettingsData(text);
+      const applied = result?.settings ?? {};
+      if (applied.accent !== undefined) setAccent(applied.accent);
+      if (applied.wallpaper !== undefined) setWallpaper(applied.wallpaper);
+      if (applied.useKaliWallpaper !== undefined)
+        setUseKaliWallpaper(applied.useKaliWallpaper);
+      if (applied.density !== undefined) setDensity(applied.density as any);
+      if (applied.reducedMotion !== undefined)
+        setReducedMotion(applied.reducedMotion);
+      if (applied.fontScale !== undefined) setFontScale(applied.fontScale);
+      if (applied.highContrast !== undefined)
+        setHighContrast(applied.highContrast);
+      if ((applied as any).largeHitAreas !== undefined)
+        setLargeHitAreas((applied as any).largeHitAreas);
+      if ((applied as any).allowNetwork !== undefined)
+        setAllowNetwork((applied as any).allowNetwork);
+      if ((applied as any).pongSpin !== undefined)
+        setPongSpin((applied as any).pongSpin);
+      if (applied.haptics !== undefined) setHaptics(applied.haptics);
+      if (applied.theme !== undefined) setTheme(applied.theme);
+
+      const summary: string[] = [];
+      if (result?.favorites?.length)
+        summary.push(`${result.favorites.length} favorites`);
+      if (result?.dock?.length)
+        summary.push(`${result.dock.length} dock pins`);
+
+      setImportStatus({
+        type: "success",
+        message:
+          summary.length > 0
+            ? `Settings restored (${summary.join(", ")}).`
+            : "Settings restored.",
+      });
     } catch (err) {
       console.error("Invalid settings", err);
+      setImportStatus({
+        type: "error",
+        message:
+          err instanceof Error ? err.message : "Failed to import settings.",
+      });
     }
   };
 
@@ -308,6 +346,19 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
+          {importStatus && (
+            <p
+              role="status"
+              aria-live="polite"
+              className={`text-center text-sm ${
+                importStatus.type === "success"
+                  ? "text-green-300"
+                  : "text-red-400"
+              }`}
+            >
+              {importStatus.message}
+            </p>
+          )}
         </>
       )}
         <input
