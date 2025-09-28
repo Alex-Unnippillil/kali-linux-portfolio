@@ -19,7 +19,7 @@ export default class Navbar extends Component {
 
 		render() {
 			return (
-				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-kali-panel h-8 border-b border-kali-border text-[13px] text-kali-text select-none z-50">
 					<div className="flex items-center">
 						<WhiskerMenu />
 						<PerformanceGraph />
@@ -39,7 +39,7 @@ export default class Navbar extends Component {
 							this.setState({ status_card: !this.state.status_card });
 						}}
 						className={
-							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
+							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-kali-accent py-1 '
 						}
 					>
 						<Status />
