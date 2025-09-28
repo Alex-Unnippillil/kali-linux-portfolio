@@ -1,5 +1,5 @@
 import React from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import KaliApp from '../base/kali_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
 const FAVORITES_KEY = 'launcherFavorites';
@@ -140,7 +140,7 @@ class AllApplications extends React.Component {
                 >
                     ★
                 </button>
-                <UbuntuApp
+                <KaliApp
                     name={app.title}
                     id={app.id}
                     icon={app.icon}
