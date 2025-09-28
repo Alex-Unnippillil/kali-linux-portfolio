@@ -281,6 +281,15 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_GHIDRA_WASM`
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
 
+#### Static-export limitations
+
+When `NEXT_PUBLIC_STATIC_EXPORT=true`, Next.js strips `/api/*` routes. The UI swaps to demo data instead:
+
+- **Plugin Manager** preloads the bundled catalog from `plugins/catalog/*.json` so installs and runs stay functional offline.
+- **Metasploit modules** use the generated JSON index; the "Update Modules" button surfaces a notice instead of calling the API.
+- **Contact and similar forms** fall back to copy-to-clipboard helpers if external services (reCAPTCHA, email relays) are unavailable.
+- Other security tool simulations show canned results without network calls; unexpected API failures are handled as offline placeholders.
+
 ### Vercel deployment
 - Create a Vercel project and connect this repo.
 - Required env variables (Project Settings):

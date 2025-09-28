@@ -9,6 +9,7 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
@@ -32,6 +33,7 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
@@ -61,6 +63,7 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
@@ -82,7 +85,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });
@@ -92,6 +95,7 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
