@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import data from '../components/apps/nessus/sample-report.json';
+import { kaliTheme } from '../styles/themes/kali';
 
 const severityColors: Record<string, string> = {
   Critical: '#991b1b',
@@ -134,24 +135,34 @@ const NessusReport: React.FC = () => {
   }, [counts, findings.length]);
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen">
+    <div
+      className="p-4 min-h-screen"
+      style={{
+        backgroundColor: kaliTheme.colors.background,
+        color: kaliTheme.colors.text,
+      }}
+    >
       <h1 className="text-2xl mb-4">Sample Nessus Report</h1>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         {['Critical', 'High', 'Medium', 'Low'].map((sev) => (
           <div
             key={sev}
-            className="bg-gray-800 p-2 rounded flex items-center justify-between"
+            className="p-2 rounded flex items-center justify-between border"
+            style={{
+              backgroundColor: kaliTheme.colors.surface,
+              borderColor: kaliTheme.colors.panelBorder,
+              boxShadow: kaliTheme.shadows.panel,
+            }}
           >
             <span
-              className="px-2 py-0.5 rounded-full text-xs text-white"
-              style={{ backgroundColor: severityColors[sev] }}
+              className="px-2 py-0.5 rounded-full text-xs"
+              style={{ backgroundColor: severityColors[sev], color: kaliTheme.colors.text }}
             >
               {sev}
             </span>
             <span className="font-mono">{counts[sev] || 0}</span>
           </div>
         ))}
-
       </div>
       <div className="flex items-center space-x-2 mb-4 flex-wrap">
         <label htmlFor="report-file" className="text-sm">
@@ -161,7 +172,12 @@ const NessusReport: React.FC = () => {
           id="report-file"
           type="file"
           accept=".json"
-          className="text-black p-1 rounded"
+          className="p-1 rounded border transition-colors"
+          style={{
+            backgroundColor: kaliTheme.colors.surface,
+            borderColor: kaliTheme.colors.panelBorder,
+            color: kaliTheme.colors.text,
+          }}
           onChange={handleFile}
         />
         <label htmlFor="severity-filter" className="text-sm">
@@ -169,7 +185,12 @@ const NessusReport: React.FC = () => {
         </label>
         <select
           id="severity-filter"
-          className="text-black p-1 rounded"
+          className="p-1 rounded border transition-colors"
+          style={{
+            backgroundColor: kaliTheme.colors.surface,
+            borderColor: kaliTheme.colors.panelBorder,
+            color: kaliTheme.colors.text,
+          }}
           value={severity}
           onChange={(e) => setSeverity(e.target.value)}
         >
@@ -184,7 +205,12 @@ const NessusReport: React.FC = () => {
         </label>
         <select
           id="host-filter"
-          className="text-black p-1 rounded"
+          className="p-1 rounded border transition-colors"
+          style={{
+            backgroundColor: kaliTheme.colors.surface,
+            borderColor: kaliTheme.colors.panelBorder,
+            color: kaliTheme.colors.text,
+          }}
           value={host}
           onChange={(e) => setHost(e.target.value)}
         >
@@ -199,7 +225,12 @@ const NessusReport: React.FC = () => {
         </label>
         <select
           id="family-filter"
-          className="text-black p-1 rounded"
+          className="p-1 rounded border transition-colors"
+          style={{
+            backgroundColor: kaliTheme.colors.surface,
+            borderColor: kaliTheme.colors.panelBorder,
+            color: kaliTheme.colors.text,
+          }}
           value={family}
           onChange={(e) => setFamily(e.target.value)}
         >
@@ -212,8 +243,13 @@ const NessusReport: React.FC = () => {
         <button
           type="button"
           onClick={exportCSV}
-          className="p-2 bg-blue-600 rounded"
+          className="p-2 rounded border transition-colors hover:bg-[var(--kali-hover-surface)]"
           aria-label="Export CSV"
+          style={{
+            backgroundColor: kaliTheme.colors.surface,
+            borderColor: kaliTheme.colors.panelBorder,
+            color: kaliTheme.colors.text,
+          }}
         >
           <svg
             viewBox="0 0 24 24"
@@ -230,7 +266,7 @@ const NessusReport: React.FC = () => {
           </svg>
         </button>
       </div>
-      <p className="text-xs text-gray-400 mb-2">
+      <p className="text-xs mb-2" style={{ color: kaliTheme.colors.textMuted }}>
         Only the bundled sample-report.json is supported. Files are processed locally and never uploaded.
       </p>
       <svg
@@ -241,9 +277,15 @@ const NessusReport: React.FC = () => {
       >
         {segments}
       </svg>
-      <table className="w-full mb-4 text-sm">
+      <table
+        className="w-full mb-4 text-sm border-separate"
+        style={{ borderSpacing: 0, color: kaliTheme.colors.text }}
+      >
         <thead>
-          <tr className="text-left border-b border-gray-700 h-9">
+          <tr
+            className="text-left h-9"
+            style={{ borderBottom: `1px solid ${kaliTheme.colors.panelBorder}` }}
+          >
             <th className="px-2" scope="col">ID</th>
             <th className="px-2" scope="col">Finding</th>
             <th className="px-2" scope="col">CVSS</th>
@@ -256,9 +298,12 @@ const NessusReport: React.FC = () => {
           {filtered.map((f) => (
             <tr
               key={f.id}
-              className="border-b border-gray-800 cursor-pointer hover:bg-gray-800 border-l-4"
-              style={{ borderLeftColor: severityColors[f.severity] }}
-
+              className="cursor-pointer border-b border-l-4 transition-colors hover:bg-[var(--kali-hover-surface)]"
+              style={{
+                borderLeftColor: severityColors[f.severity],
+                borderBottomColor: kaliTheme.colors.panelBorder,
+                backgroundColor: kaliTheme.colors.panel,
+              }}
               onClick={() => setSelected(f)}
             >
               <td className="px-2">{f.id}</td>
@@ -266,8 +311,8 @@ const NessusReport: React.FC = () => {
               <td className="px-2">{f.cvss}</td>
               <td className="px-2">
                 <span
-                  className="px-2 py-0.5 rounded-full text-xs text-white"
-                  style={{ backgroundColor: severityColors[f.severity] }}
+                  className="px-2 py-0.5 rounded-full text-xs"
+                  style={{ backgroundColor: severityColors[f.severity], color: kaliTheme.colors.text }}
                 >
                   {f.severity}
                 </span>
@@ -281,12 +326,21 @@ const NessusReport: React.FC = () => {
       {selected && (
         <div
           role="dialog"
-          className="fixed top-0 right-0 h-full w-80 bg-gray-800 p-4 overflow-auto shadow-lg"
+          className="fixed top-0 right-0 h-full w-80 p-4 overflow-auto border-l"
+          style={{
+            backgroundColor: kaliTheme.colors.panel,
+            borderColor: kaliTheme.colors.panelBorder,
+            boxShadow: kaliTheme.shadows.panel,
+          }}
         >
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="mb-2 text-sm bg-red-600 px-2 py-1 rounded"
+            className="mb-2 text-sm px-2 py-1 rounded"
+            style={{
+              backgroundColor: kaliTheme.colors.danger,
+              color: kaliTheme.colors.text,
+            }}
           >
             Close
           </button>
@@ -297,7 +351,7 @@ const NessusReport: React.FC = () => {
           <p className="mb-4 text-sm whitespace-pre-wrap">
             {selected.description}
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs" style={{ color: kaliTheme.colors.textMuted }}>
             Disclaimer: This sample report is for demonstration purposes only.
           </p>
         </div>

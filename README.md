@@ -124,6 +124,13 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 - Client-side only **simulations** of security tools (no real exploitation)
 - A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 
+## Styling & Theme Tokens
+
+- Base CSS variables live in [`styles/tokens.css`](./styles/tokens.css). They define the Kali palette, panel transparencies, hover/highlight fills, shadows, and accessibility variants.
+- Components import [`styles/themes/kali.ts`](./styles/themes/kali.ts) to consume those tokens. The exported `kaliTheme` object exposes both the CSS variable references (e.g. `kaliTheme.colors.panel`) and raw hex values for environments that can’t read `var()` tokens (canvas renderers, etc.).
+- To tweak the desktop chrome, update the `rawColors` map in `kaliTheme` (for code-driven consumers) and mirror the change in `tokens.css` so the CSS variables stay in sync. Focus rings, hover fills, panel shadows, and overlay scrims are all grouped there.
+- App code and new UI should use `kaliTheme` or `var(--token)` rather than hard-coded Tailwind colors. Accent changes triggered from the Settings drawer automatically update the relevant CSS variables.
+
 ### Gamepad Input & Remapping
 
 Games can listen for normalized gamepad events via `utils/gamepad.ts`. The manager polls

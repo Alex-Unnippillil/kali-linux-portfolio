@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { ModuleMetadata } from '../modules/metadata';
+import { kaliTheme } from '../styles/themes/kali';
 
 interface ModuleCardProps {
   module: ModuleMetadata;
@@ -33,9 +34,12 @@ export default function ModuleCard({
   return (
     <button
       onClick={() => onSelect(module)}
-      className={`w-full text-left border rounded p-3 flex items-start justify-between hover:bg-gray-50 focus:outline-none ${
-        selected ? 'bg-gray-100' : ''
-      }`}
+      className="w-full text-left border rounded p-3 flex items-start justify-between transition-colors hover:bg-[var(--kali-hover-surface)] focus:outline-none"
+      style={{
+        backgroundColor: selected ? kaliTheme.colors.panelHighlight : 'transparent',
+        borderColor: selected ? kaliTheme.colors.accent : kaliTheme.colors.border,
+        color: kaliTheme.colors.text,
+      }}
     >
       <div className="flex-1 pr-2 font-mono">
         <h3 className="font-bold">{highlight(module.name, query)}</h3>
