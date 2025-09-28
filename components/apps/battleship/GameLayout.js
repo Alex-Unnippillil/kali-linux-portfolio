@@ -16,7 +16,7 @@ const GameLayout = ({
   onColorblindChange,
 }) => {
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-kali-cool-grey text-white p-4 overflow-auto">
       <div className="flex items-center space-x-2 mb-2">
         <label className="text-sm">
           Difficulty:

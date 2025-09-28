@@ -759,7 +759,7 @@ const Pacman = () => {
   if (!started) {
     return (
       <div className="flex flex-col items-center">
-        <button className="px-2 py-1 bg-ub-grey rounded" onClick={startGame}>
+        <button className="px-2 py-1 bg-kali-grey rounded" onClick={startGame}>
           Start
         </button>
         {leaderboard.length > 0 && (
@@ -780,7 +780,7 @@ const Pacman = () => {
 
   return (
 
-  <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+  <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4">
       <div className="mb-2 w-full max-w-xs">
         <input
           type="text"
@@ -847,7 +847,7 @@ const Pacman = () => {
         </div>
       </div>
 
-      <div className="mt-2 px-2 py-1 bg-ub-grey rounded">
+      <div className="mt-2 px-2 py-1 bg-kali-grey rounded">
         {modeInfo.mode.toUpperCase()} {Math.ceil(modeInfo.timer / 60)}s
       </div>
 
@@ -858,19 +858,19 @@ const Pacman = () => {
       )}
       <div className="mt-2 space-x-2">
         <button
-          className="px-2 py-1 bg-ub-grey rounded"
+          className="px-2 py-1 bg-kali-grey rounded"
           onClick={reset}
         >
           Reset
         </button>
         <button
-          className="px-2 py-1 bg-ub-grey rounded"
+          className="px-2 py-1 bg-kali-grey rounded"
           onClick={() => setPaused((p) => !p)}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
-          className="px-2 py-1 bg-ub-grey rounded"
+          className="px-2 py-1 bg-kali-grey rounded"
           onClick={() => setSoundEnabled((s) => !s)}
         >
           {soundEnabled ? 'Sound On' : 'Sound Off'}

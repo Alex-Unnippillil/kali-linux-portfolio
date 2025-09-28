@@ -108,7 +108,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     >
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
+        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-light-blue"
         aria-label={`Volume ${formatPercent(volume)}`}
         aria-haspopup="true"
         aria-expanded={open}
@@ -128,7 +128,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-kali-cool-grey px-3 py-2 text-xs text-white shadow-lg"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={handleWheel}
@@ -148,7 +148,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
             aria-valuemax={100}
             aria-valuenow={Math.round(volume * 100)}
             aria-label="Volume level"
-            className="h-1 w-full cursor-pointer accent-ubt-blue"
+            className="h-1 w-full cursor-pointer accent-kali-light-blue"
             onChange={handleRangeChange}
           />
         </div>

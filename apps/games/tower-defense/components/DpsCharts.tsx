@@ -50,7 +50,7 @@ const DpsCharts = ({ towers }: DpsChartsProps) => {
       ref={canvasRef}
       width={300}
       height={120}
-      className="bg-ub-dark-grey"
+      className="bg-kali-dark-grey"
       role="img"
       aria-label="Tower DPS chart"
     />

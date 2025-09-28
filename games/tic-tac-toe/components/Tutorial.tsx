@@ -49,7 +49,7 @@ const Tutorial = () => {
   const step = steps[idx];
 
   return (
-    <div className="p-4 text-white bg-ub-cool-grey">
+    <div className="p-4 text-white bg-kali-cool-grey">
       <div className="grid grid-cols-3 gap-2 w-48 mx-auto mb-4">
         {step.board.map((cell, i) => (
           <div

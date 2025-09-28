@@ -281,7 +281,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   }, [paused, timerMode]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4 select-none">
       <div aria-live="polite" role="status" className="sr-only">
         {announcement}
       </div>
@@ -487,7 +487,7 @@ const Memory = () => {
 
   return (
     <GameLayout gameId="memory">
-      <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none">
+      <div className="h-full w-full flex flex-col items-center justify-start bg-kali-cool-grey text-white p-4 select-none">
         <div className="mb-4 flex space-x-2 items-center">
           <button
             onClick={() => setPlayerCount((c) => (c === 1 ? 2 : 1))}

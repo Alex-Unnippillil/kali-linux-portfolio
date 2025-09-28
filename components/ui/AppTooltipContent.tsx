@@ -25,7 +25,7 @@ const AppTooltipContent: React.FC<AppTooltipContentProps> = ({ meta }) => {
       {meta.path ? (
         <p className="text-[11px] text-gray-300">
           <span className="font-semibold text-gray-100">Path:</span>{' '}
-          <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] text-ubt-grey">
+          <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] text-kali-light-grey">
             {meta.path}
           </code>
         </p>

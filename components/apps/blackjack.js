@@ -335,7 +335,7 @@ const Blackjack = () => {
   }, [paused, canvasRef, showHints, showCount]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white select-none">
       <canvas ref={canvasRef} className="border border-gray-700" />
       <div className="mt-2 space-x-2">
         <span>Bankroll: {bankroll}</span>

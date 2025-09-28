@@ -502,7 +502,7 @@ const WordSearch = () => {
   }
 
   return (
-    <div className="h-full w-full flex items-start justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex items-start justify-center bg-kali-cool-grey text-white p-4 select-none">
       <div className="flex">
         <div
           className="relative mr-4"

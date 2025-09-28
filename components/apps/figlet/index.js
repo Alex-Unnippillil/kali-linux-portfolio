@@ -264,8 +264,8 @@ const FigletApp = () => {
   }, [font]);
 
   return (
-    <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
-      <div className="p-2 flex flex-wrap gap-2 bg-ub-gedit-dark items-center">
+    <div className="flex flex-col h-full w-full bg-kali-cool-grey text-white font-mono">
+      <div className="p-2 flex flex-wrap gap-2 bg-kali-gedit-dark items-center">
         <label className="flex items-center gap-1 text-sm">
           <input
             type="checkbox"

@@ -361,7 +361,7 @@ const Checkers = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4">
       <div className="w-56 mb-4">
         <input
           type="range"

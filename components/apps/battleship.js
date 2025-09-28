@@ -383,7 +383,7 @@ const Battleship = () => {
           return (
             <div
               key={idx}
-              className="border border-ub-dark-grey relative"
+              className="border border-kali-dark-grey relative"
               style={{ width: CELL, height: CELL }}
             >
               {isEnemy && phase === 'battle' && !['hit', 'miss'].includes(cell) ? (
@@ -420,7 +420,7 @@ const Battleship = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-kali-cool-grey text-white p-4 overflow-auto font-ubuntu">
         <GameLayout
           difficulty={difficulty}
           onDifficultyChange={(d) => {
@@ -449,7 +449,7 @@ const Battleship = () => {
         )}
         {phase==='placement' && (
           <div className="flex space-x-4">
-            <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
+            <div className="relative border border-kali-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
               {renderBoard(playerBoard)}
                 {ships.map((ship,i)=>(
                   <Draggable

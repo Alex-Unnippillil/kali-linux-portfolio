@@ -44,14 +44,14 @@ const WpsAttack = () => {
   return (
     <>
       <Meta />
-      <main className="bg-ub-cool-grey text-white min-h-screen p-4">
+      <main className="bg-kali-cool-grey text-white min-h-screen p-4">
         <h1 className="text-2xl mb-4">WPS Attack Walkthrough</h1>
         <ol className="space-y-4">
           {steps.map((s, idx) => (
             <li
               key={s.title}
               className={`p-4 rounded border ${
-                idx === current ? 'bg-black border-green-400' : 'bg-ub-grey border-gray-600'
+                idx === current ? 'bg-black border-green-400' : 'bg-kali-grey border-gray-600'
               }`}
             >
               <div className="font-bold">{`Step ${idx + 1}: ${s.title}`}</div>

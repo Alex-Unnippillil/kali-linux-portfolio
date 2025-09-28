@@ -218,7 +218,7 @@ const LaneRunner = () => {
   }, [canvasRef, control, tiltAllowed, tiltOffset, sensitivity, reset, curve]);
 
   return (
-    <div className="relative h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+    <div className="relative h-full w-full flex items-center justify-center bg-kali-cool-grey text-white">
       <canvas ref={canvasRef} className="bg-black w-full h-full" />
       <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
         <div>Score: {Math.floor(score)}</div>

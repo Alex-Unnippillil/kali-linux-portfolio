@@ -79,7 +79,7 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
     <span className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {name}
       {show && info && (
-        <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-ubt-cool-grey shadow">
+        <div className="absolute z-10 mt-1 w-48 rounded bg-kali-cool-grey p-2 text-xs text-kali-light-cool-grey shadow">
           <div className="font-bold">{info.name}</div>
           {info.subscriberCount && <div>{info.subscriberCount} subs</div>}
         </div>
@@ -116,7 +116,7 @@ function Sidebar({
   };
 
   return (
-    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
+    <aside className="w-64 overflow-y-auto border-l border-kali-cool-grey bg-kali-cool-grey p-2 text-sm" role="complementary">
       <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
@@ -129,7 +129,7 @@ function Sidebar({
             <div>{v.title}</div>
           </div>
         ))}
-        {!queue.length && <div className="text-ubt-grey">Empty</div>}
+        {!queue.length && <div className="text-kali-light-grey">Empty</div>}
       </div>
       <h2 className="mb-[6px] mt-[24px] text-lg font-semibold">Watch Later</h2>
       <div data-testid="watch-later-list">
@@ -149,7 +149,7 @@ function Sidebar({
             <div>{v.name || v.title}</div>
           </div>
         ))}
-        {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
+        {!watchLater.length && <div className="text-kali-light-grey">Empty</div>}
       </div>
     </aside>
   );
@@ -537,7 +537,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   ]);
 
   return (
-    <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey">
+    <div className="flex h-full flex-1 bg-kali-dark-grey font-sans text-kali-light-cool-grey">
       <div className="flex flex-1 flex-col">
         <form onSubmit={handleSearch} className="p-4">
           <input
@@ -545,7 +545,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search YouTube"
-            className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
+            className="w-full rounded bg-kali-cool-grey p-2 text-kali-light-cool-grey"
           />
         </form>
         {current && (
@@ -564,12 +564,12 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
               className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
             />
             <div
-              className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
+              className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-kali-cool-grey' : 'bg-transparent'}`}
             >
               <button
                 onClick={togglePlay}
                 aria-label={isPlaying ? 'Pause' : 'Play'}
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                className="text-kali-light-cool-grey hover:text-kali-light-green"
               >
                 {isPlaying ? (
                   <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
@@ -593,7 +593,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={markStart}
                 title="Set loop start (A)"
                 aria-label="Set loop start"
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                className="text-kali-light-cool-grey hover:text-kali-light-green"
               >
                 <span className="flex h-6 w-6 items-center justify-center">A</span>
               </button>
@@ -601,7 +601,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={markEnd}
                 title="Set loop end (B)"
                 aria-label="Set loop end"
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                className="text-kali-light-cool-grey hover:text-kali-light-green"
               >
                 <span className="flex h-6 w-6 items-center justify-center">B</span>
               </button>
@@ -609,12 +609,12 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={toggleLoop}
                 disabled={loopStart === null || loopEnd === null}
                 aria-label="Toggle loop"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+                className="text-kali-light-cool-grey hover:text-kali-light-green disabled:opacity-50"
               >
                 <svg
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className={`h-6 w-6 ${looping ? 'text-ubt-green' : ''}`}
+                  className={`h-6 w-6 ${looping ? 'text-kali-light-green' : ''}`}
                 >
                   <path
                     fillRule="evenodd"
@@ -627,7 +627,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={shareClip}
                 disabled={loopStart === null || loopEnd === null}
                 aria-label="Copy share link"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+                className="text-kali-light-cool-grey hover:text-kali-light-green disabled:opacity-50"
               >
                 <span className="flex h-6 w-6 items-center justify-center">Link</span>
               </button>
@@ -635,14 +635,14 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 onClick={saveClip}
                 disabled={loopStart === null || loopEnd === null}
                 aria-label="Save clip"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+                className="text-kali-light-cool-grey hover:text-kali-light-green disabled:opacity-50"
               >
                 <span className="flex h-6 w-6 items-center justify-center">Save</span>
               </button>
               <button
                 onClick={downloadCurrent}
                 aria-label="Download video"
-                className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
+                className="ml-auto text-kali-light-cool-grey hover:text-kali-light-green"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
                   <path

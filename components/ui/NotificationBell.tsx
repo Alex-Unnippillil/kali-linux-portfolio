@@ -154,7 +154,7 @@ const NotificationBell: React.FC = () => {
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-kali-light-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
       >
         <svg
           aria-hidden="true"
@@ -180,7 +180,7 @@ const NotificationBell: React.FC = () => {
           aria-modal="false"
           aria-labelledby={headingId}
           tabIndex={-1}
-          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
+          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-kali-grey/95 text-kali-light-grey shadow-xl backdrop-blur"
         >
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
             <h2 id={headingId} className="text-sm font-semibold text-white">
@@ -190,14 +190,14 @@ const NotificationBell: React.FC = () => {
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-kali-light-grey disabled:text-opacity-50"
             >
               Dismiss all
             </button>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
+              <p className="px-4 py-6 text-center text-sm text-kali-light-grey text-opacity-80">
                 You&apos;re all caught up.
               </p>
             ) : (
@@ -206,11 +206,11 @@ const NotificationBell: React.FC = () => {
                   <li key={notification.id} className="px-4 py-3 text-sm text-white">
                     <p className="font-medium">{notification.title}</p>
                     {notification.body && (
-                      <p className="mt-1 text-xs text-ubt-grey text-opacity-80">
+                      <p className="mt-1 text-xs text-kali-light-grey text-opacity-80">
                         {notification.body}
                       </p>
                     )}
-                    <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+                    <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-kali-light-grey text-opacity-70">
                       <span>{notification.appId}</span>
                       <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
                     </div>

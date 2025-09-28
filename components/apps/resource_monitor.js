@@ -176,13 +176,13 @@ const ResourceMonitor = () => {
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu overflow-hidden"
+      className="relative h-full w-full flex flex-col bg-kali-cool-grey text-white font-ubuntu overflow-hidden"
     >
       <div className="p-2 flex gap-2 items-center">
-        <button onClick={togglePause} className="px-2 py-1 bg-ub-dark-grey rounded">
+        <button onClick={togglePause} className="px-2 py-1 bg-kali-dark-grey rounded">
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
+        <button onClick={toggleStress} className="px-2 py-1 bg-kali-dark-grey rounded">
           {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
         <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
@@ -194,7 +194,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="CPU usage chart"
-          className="bg-ub-dark-grey"
+          className="bg-kali-dark-grey"
         />
         <canvas
           ref={memCanvas}
@@ -202,7 +202,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Memory usage chart"
-          className="bg-ub-dark-grey"
+          className="bg-kali-dark-grey"
         />
         <canvas
           ref={fpsCanvas}
@@ -210,7 +210,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="FPS chart"
-          className="bg-ub-dark-grey"
+          className="bg-kali-dark-grey"
         />
         <canvas
           ref={netCanvas}
@@ -218,7 +218,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Network speed chart"
-          className="bg-ub-dark-grey"
+          className="bg-kali-dark-grey"
         />
       </div>
       {stressWindows.current.map((_, i) => (

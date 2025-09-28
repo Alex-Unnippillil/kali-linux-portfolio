@@ -86,7 +86,7 @@ export default function QR() {
   }, [payload, size, margin, ecc, logo]);
 
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
+    <div className="p-4 space-y-4 text-white bg-kali-cool-grey h-full overflow-auto">
       <div className="flex gap-2">
         <button
           type="button"

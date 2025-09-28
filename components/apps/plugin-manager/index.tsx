@@ -128,7 +128,7 @@ export default function PluginManager() {
           <li key={p.id} className="flex items-center mb-2">
             <span className="flex-grow">{p.id}</span>
             <button
-              className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
+              className="bg-kali-accent px-2 py-1 rounded disabled:opacity-50"
               onClick={() => install(p)}
               disabled={installed[p.id] !== undefined}
             >

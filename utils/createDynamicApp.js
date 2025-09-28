@@ -14,7 +14,7 @@ export const createDynamicApp = (id, title) =>
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
         return () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+          <div className="h-full w-full flex items-center justify-center bg-kali-cool-grey text-white">
             {`Unable to load ${title}`}
           </div>
         );
@@ -23,7 +23,7 @@ export const createDynamicApp = (id, title) =>
     {
       ssr: false,
       loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        <div className="h-full w-full flex items-center justify-center bg-kali-cool-grey text-white">
           {`Loading ${title}...`}
         </div>
       ),

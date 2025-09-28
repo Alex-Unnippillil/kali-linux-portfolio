@@ -155,7 +155,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   };
 
   return (
-    <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
+    <div className="p-4 h-full overflow-auto bg-kali-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           aria-label="Search"

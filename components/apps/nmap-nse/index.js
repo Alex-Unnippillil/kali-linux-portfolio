@@ -266,7 +266,7 @@ const NmapNSEApp = () => {
                 type="button"
                 onClick={() => setPortFlag(p.flag)}
                 className={`px-2 py-1 rounded text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow ${
-                  portFlag === p.flag ? 'bg-ub-yellow' : 'bg-ub-grey'
+                  portFlag === p.flag ? 'bg-ub-yellow' : 'bg-kali-grey'
                 }`}
               >
                 {p.label}
@@ -281,7 +281,7 @@ const NmapNSEApp = () => {
           <button
             type="button"
             onClick={copyCommand}
-            className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            className="ml-2 px-2 py-1 bg-kali-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
           >
             Copy Command
           </button>
@@ -329,14 +329,14 @@ const NmapNSEApp = () => {
                     )
                   )
                 }
-                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+                className="px-2 py-1 bg-kali-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
               >
                 Step
               </button>
               <button
                 type="button"
                 onClick={() => setPhaseStep(0)}
-                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+                className="px-2 py-1 bg-kali-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
               >
                 Reset
               </button>
@@ -422,14 +422,14 @@ const NmapNSEApp = () => {
           <button
             type="button"
             onClick={copyOutput}
-            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            className="px-2 py-1 bg-kali-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
           >
             Copy Output
           </button>
           <button
             type="button"
             onClick={selectOutput}
-            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            className="px-2 py-1 bg-kali-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
           >
             Select All
           </button>

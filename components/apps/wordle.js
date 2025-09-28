@@ -400,7 +400,7 @@ const Wordle = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-kali-cool-grey text-white p-4 space-y-4 overflow-y-auto">
       <h1 className="text-xl font-bold">Wordle</h1>
 
       <div className="flex space-x-4">

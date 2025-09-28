@@ -285,7 +285,7 @@ export default function ConnectFour() {
 
   return (
     <GameLayout gameId="connect-four">
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 relative">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4 relative">
         {winner && (
           <div className="mb-2 capitalize">
             {winner === 'draw' ? 'Draw!' : `${COLOR_NAMES[winner]} wins!`}

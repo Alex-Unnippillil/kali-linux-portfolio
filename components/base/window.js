@@ -635,7 +635,7 @@ export class Window extends Component {
                 )}
                 <Draggable
                     axis="both"
-                    handle=".bg-ub-window-title"
+                    handle=".bg-kali-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
@@ -705,7 +705,7 @@ export default Window
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
     return (
         <div
-            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
+            className={`${styles.windowTitlebar} relative bg-kali-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -836,7 +836,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className="mx-1 focus:outline-none cursor-default bg-kali-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.close}
             >
                 <NextImage
@@ -867,7 +867,7 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-kali-panel-dark " : " bg-kali-cool-grey")}>
                 {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
             </div>
         )

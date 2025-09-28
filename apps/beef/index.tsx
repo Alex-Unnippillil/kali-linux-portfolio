@@ -26,7 +26,7 @@ const BeefPage: React.FC = () => {
   ]);
 
   return (
-    <div className="bg-ub-cool-grey text-white h-full w-full flex flex-col">
+    <div className="bg-kali-cool-grey text-white h-full w-full flex flex-col">
       <header className="flex items-center justify-between p-4">
         <div className="flex items-center gap-2">
           <Image

@@ -714,7 +714,7 @@ const Tetris = () => {
   );
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white relative">
+    <div className="h-full w-full flex items-center justify-center bg-kali-cool-grey text-white relative">
       <div className="flex space-x-4">
         <canvas
           ref={canvasRef}

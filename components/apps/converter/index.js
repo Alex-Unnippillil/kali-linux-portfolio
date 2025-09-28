@@ -14,7 +14,7 @@ const Converter = () => {
   const [tab, setTab] = usePersistentState('converter-tab', 'unit');
 
   return (
-    <div className="converter-container h-full w-full p-4 overflow-y-auto bg-ub-cool-grey text-white">
+    <div className="converter-container h-full w-full p-4 overflow-y-auto bg-kali-cool-grey text-white">
       <div className="flex mb-4 border-b border-gray-600">
         {tabs.map((t) => (
           <button

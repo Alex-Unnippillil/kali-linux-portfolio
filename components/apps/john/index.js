@@ -297,7 +297,7 @@ const JohnApp = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col bg-kali-cool-grey text-white">
       <p className="text-xs text-yellow-300 p-2">Demo only – no real cracking performed.</p>
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
         <label htmlFor="john-hashes" className="text-sm">

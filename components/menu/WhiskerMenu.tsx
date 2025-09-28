@@ -393,7 +393,7 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
+          className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-kali-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
@@ -449,7 +449,7 @@ const WhiskerMenu: React.FC = () => {
               <ul className="space-y-1 text-sm">
                 {KALI_CATEGORIES.map((cat) => (
                   <li key={cat.id} className="flex items-baseline text-gray-300">
-                    <span className="font-mono text-ubt-blue mr-2 w-8">{cat.number}</span>
+                    <span className="font-mono text-kali-light-blue mr-2 w-8">{cat.number}</span>
                     <span>{cat.label}</span>
                   </li>
                 ))}

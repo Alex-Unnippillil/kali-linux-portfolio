@@ -325,7 +325,7 @@ function HashcatApp() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-kali-cool-grey text-white">
       <div>
         <label className="mr-2" htmlFor="hash-input">
           Hash:

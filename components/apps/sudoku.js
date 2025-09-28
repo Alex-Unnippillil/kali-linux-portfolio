@@ -186,13 +186,13 @@ const Sudoku = () => {
 
   if (board.length === 0)
     return (
-      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+      <div className="h-full w-full flex items-center justify-center bg-kali-cool-grey text-white">
         Loading...
       </div>
     );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-y-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-kali-cool-grey text-white p-4 select-none overflow-y-auto">
       <div className="sr-only" aria-live="polite">{ariaMessage}</div>
       <div className="mb-2 flex space-x-2">
         <select

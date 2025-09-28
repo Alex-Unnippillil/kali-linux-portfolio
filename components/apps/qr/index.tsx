@@ -114,7 +114,7 @@ const QRScanner: React.FC = () => {
   };
 
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center">
+    <div className="p-4 space-y-4 text-white bg-kali-cool-grey h-full flex flex-col items-center">
       <div className="relative w-full max-w-sm">
         <video ref={videoRef} className="w-full rounded-md border-2 border-white bg-black" />
         <div className="absolute top-2 right-2 flex gap-2">

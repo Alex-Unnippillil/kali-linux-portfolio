@@ -74,7 +74,7 @@ const CredentialArtifactLocator = () => {
         {results.map((r, idx) => (
           <li
             key={idx}
-            className={r.found ? 'text-ubt-green' : 'text-red-500'}
+            className={r.found ? 'text-kali-light-green' : 'text-red-500'}
           >
             {r.label} - {r.found ? 'Found' : 'Not Found'}
           </li>

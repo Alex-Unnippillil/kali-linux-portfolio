@@ -2,27 +2,27 @@
 
 :root {
   /* Theme colors */
-  --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
-  --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
-  --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
-  --color-ub-dark-grey: #2a2e36;
+  --kali-grey: #0f1317;
+  --kali-warm-grey: #7d7f83;
+  --kali-cool-grey: #1a1f26;
+  --kali-accent: #1793d1;
+  --kali-panel-light: #22262c;
+  --kali-panel-mid: #1b1f24;
+  --kali-panel-dark: #13171b;
+  --kali-window-title: #0c0f12;
+  --kali-gedit-dark: #021B33;
+  --kali-gedit-light: #003B70;
+  --kali-gedit-darker: #010D1A;
+  --kali-light-grey: #F6F6F5;
+  --kali-light-warm-grey: #AEA79F;
+  --kali-light-cool-grey: #333333;
+  --kali-light-blue: #62A0EA;
+  --kali-light-green: #73D216;
+  --kali-light-gedit-orange: #F39A21;
+  --kali-light-gedit-blue: #50B6C6;
+  --kali-light-gedit-dark: #003B70;
+  --kali-accent-border: #1793d1;
+  --kali-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
@@ -78,7 +78,7 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--kali-light-blue);
   --focus-outline-width: 2px;
 }
 
@@ -86,13 +86,13 @@
 .high-contrast {
   --color-bg: #000000;
   --color-text: #ffffff;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
+  --kali-grey: #000000;
+  --kali-cool-grey: #000000;
+  --kali-light-grey: #ffffff;
+  --kali-light-cool-grey: #ffffff;
+  --kali-accent: #ffff00;
+  --kali-panel-light: #00ffff;
+  --kali-accent-border: #ffff00;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -129,12 +129,12 @@
   :root {
     --color-bg: #000000;
     --color-text: #ffffff;
-    --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --kali-grey: #000000;
+    --kali-cool-grey: #000000;
+    --kali-light-grey: #ffffff;
+    --kali-light-cool-grey: #ffffff;
+    --kali-accent: #ffff00;
+    --kali-panel-light: #00ffff;
+    --kali-accent-border: #ffff00;
   }
 }

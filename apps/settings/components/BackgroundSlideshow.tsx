@@ -54,7 +54,7 @@ export default function BackgroundSlideshow() {
   };
 
   return (
-    <div className="p-4 space-y-4 text-ubt-grey">
+    <div className="p-4 space-y-4 text-kali-light-grey">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {available.map((file) => (
           <label key={file} className="flex flex-col items-center cursor-pointer">
@@ -64,7 +64,7 @@ export default function BackgroundSlideshow() {
               width={96}
               height={64}
               sizes="96px"
-              className="object-cover mb-1 border border-ubt-cool-grey"
+              className="object-cover mb-1 border border-kali-light-cool-grey"
             />
             <input
               type="checkbox"
@@ -82,13 +82,13 @@ export default function BackgroundSlideshow() {
           min={5}
           value={Math.round(intervalMs / 1000)}
           onChange={(e) => setIntervalMs(Number(e.target.value) * 1000)}
-          className="w-20 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+          className="w-20 bg-kali-cool-grey text-kali-light-grey px-2 py-1 rounded border border-kali-light-cool-grey"
         />
       </div>
       <button
         onClick={() => setPlaying((p) => !p)}
         disabled={selected.length === 0}
-        className="px-4 py-2 rounded bg-ub-cool-grey border border-ubt-cool-grey hover:bg-ubt-cool-grey disabled:opacity-50"
+        className="px-4 py-2 rounded bg-kali-cool-grey border border-kali-light-cool-grey hover:bg-kali-light-cool-grey disabled:opacity-50"
       >
         {playing ? 'Pause' : 'Start'}
       </button>

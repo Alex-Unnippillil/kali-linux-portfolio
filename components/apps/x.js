@@ -106,7 +106,7 @@ export default function XApp() {
   }, [shouldLoad, feedUser, theme]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">
+    <div className="h-full w-full overflow-auto bg-kali-cool-grey flex flex-col tweet-container">
       <div className="p-2 flex flex-col gap-2 border-b border-gray-600 bg-gray-900 text-gray-100">
         <form onSubmit={handleAddFeed} className="flex gap-2">
           <input

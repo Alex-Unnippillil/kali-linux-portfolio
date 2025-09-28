@@ -476,7 +476,7 @@ const Hangman = () => {
         </select>
         <button
           onClick={() => reset(undefined, pendingDict)}
-          className="px-2 py-1 bg-ubt-blue text-black rounded"
+          className="px-2 py-1 bg-kali-light-blue text-black rounded"
         >
           Start Game
         </button>
@@ -500,14 +500,14 @@ const Hangman = () => {
         <button
           onClick={handleHint}
           disabled={hintCoins <= 0 || paused}
-          className="px-2 py-0.5 bg-ub-orange text-black rounded-full text-xs shadow" 
+          className="px-2 py-0.5 bg-kali-accent text-black rounded-full text-xs shadow" 
         >
           Hint ({hintCoins})
         </button>
         <button
           onClick={() => setHardMode((m) => !m)}
           className={`px-2 py-1 rounded text-black ${
-            hardMode ? 'bg-red-600' : 'bg-ubt-blue'
+            hardMode ? 'bg-red-600' : 'bg-kali-light-blue'
           }`}
         >
           {hardMode ? 'Hard On' : 'Hard Off'}
@@ -515,20 +515,20 @@ const Hangman = () => {
         <button
           onClick={() => setFilterCommonLetters((v) => !v)}
           className={`px-2 py-1 rounded text-black ${
-            filterCommonLetters ? 'bg-purple-600' : 'bg-ubt-blue'
+            filterCommonLetters ? 'bg-purple-600' : 'bg-kali-light-blue'
           }`}
         >
           {filterCommonLetters ? 'No Common On' : 'No Common Off'}
         </button>
         <button
           onClick={shareLink}
-          className="px-2 py-1 bg-ubt-green text-black rounded"
+          className="px-2 py-1 bg-kali-light-green text-black rounded"
         >
           Share Link
         </button>
         <button
           onClick={shareImage}
-          className="px-2 py-1 bg-ubt-blue text-black rounded"
+          className="px-2 py-1 bg-kali-light-blue text-black rounded"
         >
           Share Image
         </button>
@@ -553,7 +553,7 @@ const Hangman = () => {
                 type="button"
                 onClick={() => handleGuess(l)}
                 style={{ backgroundColor: color }}
-                className={`w-6 h-6 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange ${guessedAlready ? 'opacity-50' : ''}`}
+                className={`w-6 h-6 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent ${guessedAlready ? 'opacity-50' : ''}`}
                 aria-pressed={guessedAlready}
                 disabled={guessedAlready || wrong >= maxWrong || won || paused}
               >
@@ -566,7 +566,7 @@ const Hangman = () => {
         ref={canvasRef}
         width={400}
         height={250}
-        className={`bg-ub-cool-grey w-full h-full ${lost ? 'grayscale' : ''}`}
+        className={`bg-kali-cool-grey w-full h-full ${lost ? 'grayscale' : ''}`}
       />
       <div aria-live="polite" role="status" className="sr-only">
         {announcement}

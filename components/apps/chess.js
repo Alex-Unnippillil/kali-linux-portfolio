@@ -806,7 +806,7 @@ const ChessGame = () => {
       : "";
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
+    <div className="h-full w-full flex items-center justify-center bg-kali-cool-grey text-white p-2 select-none">
       <div className="flex gap-4">
         <div className="flex flex-col items-center">
           <canvas

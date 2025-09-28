@@ -61,7 +61,7 @@ const MimikatzApp = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col bg-kali-cool-grey text-white">
       <WarningBanner>
         Demo only. No real credentials are used.
       </WarningBanner>

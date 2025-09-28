@@ -37,13 +37,13 @@ const LootViewer: React.FC = () => {
   };
 
   return (
-    <div className="p-4 text-sm bg-ub-grey flex flex-col gap-2">
+    <div className="p-4 text-sm bg-kali-grey flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <button onClick={prev} className="px-2 py-1 bg-ub-orange rounded">Prev</button>
+        <button onClick={prev} className="px-2 py-1 bg-kali-accent rounded">Prev</button>
         <span>
           {index + 1} / {total}
         </span>
-        <button onClick={next} className="px-2 py-1 bg-ub-orange rounded">Next</button>
+        <button onClick={next} className="px-2 py-1 bg-kali-accent rounded">Next</button>
       </div>
       <div className="bg-black text-green-400 p-2 rounded">
         <p>
@@ -66,7 +66,7 @@ const LootViewer: React.FC = () => {
       <button
         onClick={toggleFavorite}
         className={`px-2 py-1 rounded ${
-          isFavorite ? 'bg-yellow-400' : 'bg-ub-grey'
+          isFavorite ? 'bg-yellow-400' : 'bg-kali-grey'
         }`}
       >
         {isFavorite ? '★ Favorited' : '☆ Favorite'}

@@ -136,7 +136,7 @@ const TicTacToe = () => {
 
   if (player === null) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4">
         <div className="mb-4">Size:
           <select
             value={size}
@@ -207,7 +207,7 @@ const TicTacToe = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4">
       <div className="mb-2" aria-live="polite">
         {status}
       </div>

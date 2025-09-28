@@ -18,7 +18,7 @@ const ReaverStepper = () => {
   return (
     <div
       id="reaver-stepper"
-      className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto"
+      className="p-4 bg-kali-cool-grey text-white h-full overflow-y-auto"
     >
       <h1 className="text-2xl mb-4">EAPOL Handshake Explorer</h1>
 
