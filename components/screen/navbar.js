@@ -8,22 +8,48 @@ import PerformanceGraph from '../ui/PerformanceGraph';
 
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
+        constructor() {
+                super();
                 this.state = {
                         status_card: false,
                         applicationsMenuOpen: false,
                         placesMenuOpen: false
                 };
+                this.menuButton = null;
         }
 
-		render() {
-			return (
-				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-					<div className="flex items-center">
-						<WhiskerMenu />
-						<PerformanceGraph />
-					</div>
+        componentDidMount() {
+                window.addEventListener('keydown', this.handleMetaFocus);
+        }
+
+        componentWillUnmount() {
+                window.removeEventListener('keydown', this.handleMetaFocus);
+        }
+
+        setMenuButton = (button) => {
+                this.menuButton = button;
+        };
+
+        handleMetaFocus = (event) => {
+                if (
+                        event.key === 'Meta' &&
+                        !event.altKey &&
+                        !event.ctrlKey &&
+                        !event.shiftKey
+                ) {
+                        if (this.menuButton && document.activeElement !== this.menuButton) {
+                                this.menuButton.focus();
+                        }
+                }
+        };
+
+                render() {
+                        return (
+                                <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                                        <div className="flex items-center">
+                                                <WhiskerMenu onButtonRef={this.setMenuButton} />
+                                                <PerformanceGraph />
+                                        </div>
 					<div
 						className={
 							'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
