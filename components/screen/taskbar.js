@@ -30,6 +30,8 @@ export default function Taskbar(props) {
                     const isFocused = Boolean(props.focused_windows[app.id]);
                     const isActive = !isMinimized;
 
+                    const accentActiveClass = isFocused && isActive ? 'bg-[color:color-mix(in_srgb,var(--kali-accent)_35%,transparent)] ' : '';
+
                     return (
                         <button
                             key={app.id}
@@ -40,7 +42,7 @@ export default function Taskbar(props) {
                             data-active={isActive ? 'true' : 'false'}
                             aria-pressed={isActive}
                             onClick={() => handleClick(app)}
-                            className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10`}
+                            className={`${accentActiveClass}relative flex items-center mx-1 px-2 py-1 rounded transition-colors hover:bg-[color:color-mix(in_srgb,var(--kali-accent)_25%,transparent)] focus-visible:bg-[color:color-mix(in_srgb,var(--kali-accent)_25%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-accent)] focus-visible:ring-offset-1`}
                         >
                             <Image
                                 width={24}
@@ -55,7 +57,13 @@ export default function Taskbar(props) {
                                 <span
                                     aria-hidden="true"
                                     data-testid="running-indicator"
-                                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded"
+                                    className="pointer-events-none absolute bottom-0 left-1/2 w-0 h-0"
+                                    style={{
+                                        borderLeft: '4px solid transparent',
+                                        borderRight: '4px solid transparent',
+                                        borderTop: '4px solid var(--kali-accent)',
+                                        transform: 'translateX(-50%) translateY(50%)',
+                                    }}
                                 />
                             )}
                         </button>
