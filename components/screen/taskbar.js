@@ -18,7 +18,7 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center justify-between px-2 z-40" role="toolbar">
+        <div className="absolute bottom-0 left-0 w-full h-9 bg-kali-panel/90 border-t border-kali-border flex items-center justify-between px-2 z-40" role="toolbar">
             <WorkspaceSwitcher
                 workspaces={workspaces}
                 activeWorkspace={props.activeWorkspace}
@@ -40,7 +40,7 @@ export default function Taskbar(props) {
                             data-active={isActive ? 'true' : 'false'}
                             aria-pressed={isActive}
                             onClick={() => handleClick(app)}
-                            className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10`}
+                            className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center mx-1 rounded px-2 py-1 hover:bg-kali-menu-hover text-kali-text`}
                         >
                             <Image
                                 width={24}
