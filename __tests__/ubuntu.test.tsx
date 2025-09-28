@@ -1,9 +1,17 @@
 import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
-import Ubuntu from '../components/ubuntu';
+import Ubuntu, { Ubuntu as UbuntuBase } from '../components/ubuntu';
 
-jest.mock('../components/screen/desktop', () => function DesktopMock() {
-  return <div data-testid="desktop" />;
+jest.mock('../components/screen/desktop', () => {
+  const React = require('react');
+  return React.forwardRef((_props, ref) => {
+    React.useImperativeHandle(ref, () => ({
+      handleLogOut: jest.fn(),
+      handleRestart: jest.fn(),
+      handleSoftReboot: jest.fn(),
+    }));
+    return <div data-testid="desktop" />;
+  });
 });
 jest.mock('../components/screen/navbar', () => function NavbarMock() {
   return <div data-testid="navbar" />;
@@ -38,7 +46,7 @@ describe('Ubuntu component', () => {
   });
 
   it('handles lockScreen when status bar is missing', () => {
-    let instance: Ubuntu | null = null;
+    let instance: UbuntuBase | null = null;
     render(<Ubuntu ref={(c) => (instance = c)} />);
     expect(instance).not.toBeNull();
     act(() => {
@@ -49,7 +57,7 @@ describe('Ubuntu component', () => {
   });
 
   it('handles shutDown when status bar is missing', () => {
-    let instance: Ubuntu | null = null;
+    let instance: UbuntuBase | null = null;
     render(<Ubuntu ref={(c) => (instance = c)} />);
     expect(instance).not.toBeNull();
     act(() => {

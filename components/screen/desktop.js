@@ -231,6 +231,54 @@ export class Desktop extends Component {
         window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
 
+    resetPowerState = ({ clearSession = false, openDefaultApp = false } = {}) => {
+        if (clearSession && typeof this.props.clearSession === 'function') {
+            try {
+                this.props.clearSession();
+            } catch (e) {
+                // ignore clear errors
+            }
+        }
+
+        this.hideAllContextMenu();
+        this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
+
+        this.setState({
+            window_positions: {},
+            hideSideBar: false,
+            allAppsView: false,
+            showWindowSwitcher: false,
+            showShortcutSelector: false,
+            showNameBar: false,
+            switcherWindows: [],
+            window_context: {},
+            context_menus: { desktop: false, default: false, app: false, taskbar: false },
+            context_app: null,
+            activeWorkspace: 0,
+        }, () => {
+            this.fetchAppsData(() => {
+                if (openDefaultApp) {
+                    this.openApp('about-alex');
+                }
+                this.saveSession();
+                this.updateTrashIcon();
+            });
+        });
+    };
+
+    handleLogOut = () => {
+        this.resetPowerState({ clearSession: true });
+    };
+
+    handleRestart = () => {
+        this.resetPowerState({ clearSession: true, openDefaultApp: true });
+    };
+
+    handleSoftReboot = () => {
+        this.resetPowerState({ clearSession: true, openDefaultApp: true });
+    };
+
     checkForNewFolders = () => {
         const stored = safeLocalStorage?.getItem('new_folders');
         if (!stored) {
@@ -1117,7 +1165,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    clearSession={this.handleSoftReboot}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
@@ -1178,7 +1226,11 @@ export class Desktop extends Component {
     }
 }
 
-export default function DesktopWithSnap(props) {
+const DesktopWithSnap = React.forwardRef((props, ref) => {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
-}
+    return <Desktop {...props} snapEnabled={snapEnabled} ref={ref} />;
+});
+
+DesktopWithSnap.displayName = 'DesktopWithSnap';
+
+export default DesktopWithSnap;
