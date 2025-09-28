@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import {
+  useSettings,
+  ACCENT_OPTIONS,
+  DENSITY_PRESETS,
+  isDensityValue,
+  type Density,
+} from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -77,7 +83,7 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
+      if (isDensityValue(parsed.density)) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
@@ -100,7 +106,7 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
+    setDensity(isDensityValue(defaults.density) ? (defaults.density as Density) : "regular");
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
@@ -251,11 +257,14 @@ export default function Settings() {
             <label className="mr-2 text-ubt-grey">Density:</label>
             <select
               value={density}
-              onChange={(e) => setDensity(e.target.value as any)}
+              onChange={(e) => setDensity(e.target.value as Density)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="regular">Regular</option>
-              <option value="compact">Compact</option>
+              {DENSITY_PRESETS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex justify-center my-4 items-center">

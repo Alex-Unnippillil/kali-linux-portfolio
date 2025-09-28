@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS, DENSITY_PRESETS, isDensityValue } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
@@ -121,8 +121,11 @@ export function Settings() {
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
                 >
-                    <option value="regular">Regular</option>
-                    <option value="compact">Compact</option>
+                    {DENSITY_PRESETS.map(({ value, label }) => (
+                        <option key={value} value={value}>
+                            {label}
+                        </option>
+                    ))}
                 </select>
             </div>
             <div className="flex justify-center my-4">
@@ -272,7 +275,7 @@ export function Settings() {
                         await resetSettings();
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
-                        setDensity(defaults.density);
+                        setDensity(isDensityValue(defaults.density) ? defaults.density : 'regular');
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
@@ -297,7 +300,7 @@ export function Settings() {
                         const parsed = JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
+                        if (isDensityValue(parsed.density)) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);

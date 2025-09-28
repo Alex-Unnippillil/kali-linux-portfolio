@@ -379,24 +379,26 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="outline-none transition duration-100 ease-in-out border-b-2 border-transparent"
+        style={{ paddingInline: 'var(--space-3)', paddingBlock: 'var(--space-1)' }}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}
-          className="inline mr-1"
+          className="inline"
+          style={{ marginRight: 'var(--space-1)' }}
         />
         Applications
       </button>
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
+          className={`absolute left-0 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
-          style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
+          style={{ transitionDuration: `${TRANSITION_DURATION}ms`, marginTop: 'var(--space-1)' }}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -406,7 +408,8 @@ const WhiskerMenu: React.FC = () => {
         >
           <div
             ref={categoryListRef}
-            className="flex max-h-80 w-64 flex-col gap-1 overflow-y-auto bg-gray-900 p-3"
+            className="flex max-h-80 w-64 flex-col overflow-y-auto bg-gray-900"
+            style={{ gap: 'var(--space-1)', padding: 'var(--space-3)' }}
             role="listbox"
             aria-label="Application categories"
             tabIndex={0}
@@ -419,9 +422,14 @@ const WhiskerMenu: React.FC = () => {
                   categoryButtonRefs.current[index] = el;
                 }}
                 type="button"
-                className={`flex items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-ubb-orange focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                className={`flex items-center rounded text-left transition focus:outline-none focus:ring-2 focus:ring-ubb-orange focus:ring-offset-2 focus:ring-offset-gray-900 ${
                   category === cat.id ? 'bg-gray-700/80' : 'hover:bg-gray-700/60'
                 }`}
+                style={{
+                  gap: 'var(--space-3)',
+                  paddingInline: 'var(--space-3)',
+                  paddingBlock: 'var(--space-2)',
+                }}
                 role="option"
                 aria-selected={category === cat.id}
                 onClick={() => {
@@ -431,7 +439,7 @@ const WhiskerMenu: React.FC = () => {
 
               >
                 <span className="w-8 font-mono text-xs text-gray-300">{String(index + 1).padStart(2, '0')}</span>
-                <span className="flex items-center gap-2">
+                <span className="flex items-center" style={{ gap: 'var(--space-2)' }}>
                   <Image
                     src={cat.icon}
                     alt=""
@@ -444,21 +452,41 @@ const WhiskerMenu: React.FC = () => {
                 </span>
               </button>
             ))}
-            <div className="mt-4 border-t border-gray-700 pt-3">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Kali Linux Groups</p>
-              <ul className="space-y-1 text-sm">
+            <div
+              className="border-t border-gray-700"
+              style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)' }}
+            >
+              <p
+                className="text-xs uppercase tracking-wide text-gray-400"
+                style={{ marginBottom: 'var(--space-2)' }}
+              >
+                Kali Linux Groups
+              </p>
+              <ul className="flex flex-col text-sm" style={{ rowGap: 'var(--space-1)' }}>
                 {KALI_CATEGORIES.map((cat) => (
                   <li key={cat.id} className="flex items-baseline text-gray-300">
-                    <span className="font-mono text-ubt-blue mr-2 w-8">{cat.number}</span>
+                    <span
+                      className="font-mono text-ubt-blue w-8"
+                      style={{ marginRight: 'var(--space-2)' }}
+                    >
+                      {cat.number}
+                    </span>
                     <span>{cat.label}</span>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-          <div className="flex flex-col p-3">
+          <div
+            className="flex flex-col"
+            style={{ gap: 'var(--space-3)', padding: 'var(--space-3)' }}
+          >
             <input
-              className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
+              className="w-64 rounded bg-black bg-opacity-20 focus:outline-none"
+              style={{
+                paddingInline: 'var(--space-2)',
+                paddingBlock: 'var(--space-1)',
+              }}
 
               placeholder="Search"
               aria-label="Search applications"
@@ -466,7 +494,10 @@ const WhiskerMenu: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
-            <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
+            <div
+              className="grid max-h-64 grid-cols-3 overflow-y-auto"
+              style={{ gap: 'var(--space-2)' }}
+            >
 
               {currentApps.map((app, idx) => (
                 <div
