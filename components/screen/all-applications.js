@@ -134,9 +134,10 @@ class AllApplications extends React.Component {
                             : `Add ${app.title} to favorites`
                     }
                     onClick={(event) => this.handleToggleFavorite(event, app.id)}
-                    className={`absolute right-2 top-2 text-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    className={`absolute text-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
                         isFavorite ? 'text-yellow-300' : 'text-white/60 hover:text-white'
                     }`}
+                    style={{ top: 'var(--space-2)', right: 'var(--space-2)' }}
                 >
                     ★
                 </button>
@@ -155,11 +156,22 @@ class AllApplications extends React.Component {
     renderSection = (title, apps) => {
         if (!apps.length) return null;
         return (
-            <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
+            <section
+                key={title}
+                aria-label={`${title} apps`}
+                className="w-full"
+                style={{ marginBottom: 'var(--space-6)' }}
+            >
+                <h2
+                    className="text-sm font-semibold uppercase tracking-wider text-white/70"
+                    style={{ marginBottom: 'var(--space-3)' }}
+                >
                     {title}
                 </h2>
-                <div className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                <div
+                    className="grid grid-cols-3 place-items-center sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
+                    style={{ gap: 'var(--space-5)', paddingBottom: 'var(--space-5)' }}
+                >
                     {apps.map((app) => this.renderAppTile(app))}
                 </div>
             </section>
@@ -185,20 +197,35 @@ class AllApplications extends React.Component {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
                 <input
-                    className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
+                    className="w-2/3 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
+                    style={{
+                        marginTop: 'calc(var(--space-4) + var(--space-5))',
+                        marginBottom: 'var(--space-6)',
+                        paddingInline: 'var(--space-4)',
+                        paddingBlock: 'var(--space-2)',
+                    }}
                     placeholder="Search"
                     value={this.state.query}
                     onChange={this.handleChange}
                     aria-label="Search applications"
                 />
-                <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
+                <div
+                    className="flex w-full max-w-5xl flex-col items-stretch"
+                    style={{
+                        paddingInline: 'var(--space-5)',
+                        paddingBottom: 'calc(var(--space-5) + var(--space-4))',
+                    }}
+                >
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
                     {groupedApps.map((group, index) =>
                         group.length ? this.renderSection(`Group ${index + 1}`, group) : null
                     )}
                     {!hasResults && (
-                        <p className="mt-6 text-center text-sm text-white/70">
+                        <p
+                            className="text-center text-sm text-white/70"
+                            style={{ marginTop: 'var(--space-5)' }}
+                        >
                             No applications match your search.
                         </p>
                     )}

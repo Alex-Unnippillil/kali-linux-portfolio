@@ -25,7 +25,17 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
-type Density = 'regular' | 'compact';
+export type Density = 'compact' | 'cozy' | 'regular' | 'comfortable';
+
+export const DENSITY_PRESETS: readonly { value: Density; label: string }[] = [
+  { value: 'comfortable', label: 'Comfortable' },
+  { value: 'regular', label: 'Regular' },
+  { value: 'cozy', label: 'Cozy' },
+  { value: 'compact', label: 'Compact' },
+] as const;
+
+export const isDensityValue = (value: unknown): value is Density =>
+  typeof value === 'string' && DENSITY_PRESETS.some((preset) => preset.value === value);
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -81,12 +91,14 @@ interface SettingsContextValue {
   setTheme: (value: string) => void;
 }
 
+const DEFAULT_DENSITY: Density = isDensityValue(defaults.density) ? (defaults.density as Density) : 'regular';
+
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
-  density: defaults.density as Density,
+  density: DEFAULT_DENSITY,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
@@ -113,7 +125,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
+  const [density, setDensity] = useState<Density>(DEFAULT_DENSITY);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
@@ -129,7 +141,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
       setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
+      const storedDensity = await loadDensity();
+      setDensity(isDensityValue(storedDensity) ? storedDensity : DEFAULT_DENSITY);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
@@ -172,6 +185,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
+      compact: {
+        '--space-1': '0.125rem',
+        '--space-2': '0.25rem',
+        '--space-3': '0.5rem',
+        '--space-4': '0.75rem',
+        '--space-5': '1rem',
+        '--space-6': '1.5rem',
+      },
+      cozy: {
+        '--space-1': '0.21875rem',
+        '--space-2': '0.4375rem',
+        '--space-3': '0.65625rem',
+        '--space-4': '0.875rem',
+        '--space-5': '1.3125rem',
+        '--space-6': '1.75rem',
+      },
       regular: {
         '--space-1': '0.25rem',
         '--space-2': '0.5rem',
@@ -180,13 +209,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-5': '1.5rem',
         '--space-6': '2rem',
       },
-      compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
+      comfortable: {
+        '--space-1': '0.375rem',
+        '--space-2': '0.75rem',
+        '--space-3': '1.125rem',
+        '--space-4': '1.5rem',
+        '--space-5': '2.25rem',
+        '--space-6': '3rem',
       },
     };
     const vars = spacing[density];
