@@ -13,6 +13,10 @@ export default function LockScreen(props) {
         window.addEventListener('keypress', props.unLockScreen);
     };
 
+    const overlayOpacity = useKaliTheme ? 0.7 : 0.82;
+    const overlayStartMix = useKaliTheme ? 28 : 38;
+    const overlayEndAlpha = useKaliTheme ? 0.88 : 0.94;
+
     return (
         <div
             id="ubuntu-lock-screen"
@@ -29,6 +33,14 @@ export default function LockScreen(props) {
                     className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
                 />
             )}
+            <div
+                className="absolute inset-0 pointer-events-none z-30 transition-opacity duration-500"
+                style={{
+                    background: 'linear-gradient(145deg, rgba(5, 32, 49, 0.95) 0%, rgba(2, 6, 12, 0.96) 100%)',
+                    backgroundImage: `linear-gradient(145deg, color-mix(in srgb, var(--kali-blue) ${overlayStartMix}%, #02060c) 0%, rgba(2, 6, 12, ${overlayEndAlpha}) 100%)`,
+                    opacity: overlayOpacity,
+                }}
+            />
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
                 <div className=" text-7xl">
                     <Clock onlyTime={true} />
