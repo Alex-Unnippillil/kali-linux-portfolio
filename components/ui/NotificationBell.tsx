@@ -22,10 +22,13 @@ const NotificationBell: React.FC = () => {
   } = useNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [liveMessage, setLiveMessage] = useState('');
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const headingId = useId();
   const panelId = `${headingId}-panel`;
+  const announcementTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousUnreadCountRef = useRef(unreadCount);
 
   const closePanel = useCallback(() => {
     setIsOpen(false);
@@ -119,6 +122,35 @@ const NotificationBell: React.FC = () => {
     }
   }, [isOpen, markAllRead, notifications]);
 
+  useEffect(() => {
+    if (previousUnreadCountRef.current === unreadCount) {
+      return;
+    }
+
+    if (announcementTimeoutRef.current) {
+      clearTimeout(announcementTimeoutRef.current);
+    }
+
+    announcementTimeoutRef.current = setTimeout(() => {
+      setLiveMessage(
+        unreadCount === 0
+          ? 'No unread notifications'
+          : `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`,
+      );
+      announcementTimeoutRef.current = null;
+    }, 400);
+
+    previousUnreadCountRef.current = unreadCount;
+  }, [unreadCount]);
+
+  useEffect(() => {
+    return () => {
+      if (announcementTimeoutRef.current) {
+        clearTimeout(announcementTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const timeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(undefined, {
@@ -146,6 +178,9 @@ const NotificationBell: React.FC = () => {
 
   return (
     <div className="relative">
+      <span aria-live="polite" aria-atomic="true" role="status" className="sr-only">
+        {liveMessage}
+      </span>
       <button
         type="button"
         ref={buttonRef}
