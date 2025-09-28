@@ -41,6 +41,8 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowSwitcherRef = React.createRef();
+        this.pendingWindowSwitchDelta = 0;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -221,14 +223,29 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        document.addEventListener('keyup', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
+        document.removeEventListener('keyup', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (!prevState.showWindowSwitcher && this.state.showWindowSwitcher) {
+            if (this.pendingWindowSwitchDelta && this.windowSwitcherRef.current) {
+                this.windowSwitcherRef.current.stepSelection(this.pendingWindowSwitchDelta);
+            }
+            this.pendingWindowSwitchDelta = 0;
+        }
+
+        if (prevState.showWindowSwitcher && !this.state.showWindowSwitcher) {
+            this.pendingWindowSwitchDelta = 0;
+        }
     }
 
     checkForNewFolders = () => {
@@ -280,34 +297,69 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
+        const stopEvent = () => {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        };
+
+        if (e.type === 'keydown') {
+            if (e.altKey && e.key === 'Tab') {
+                stopEvent();
+                const delta = e.shiftKey ? -1 : 1;
+                if (!this.state.showWindowSwitcher) {
+                    const opened = this.openWindowSwitcher();
+                    if (opened) {
+                        this.pendingWindowSwitchDelta = delta;
+                    } else {
+                        this.pendingWindowSwitchDelta = 0;
+                    }
+                } else if (this.windowSwitcherRef.current) {
+                    this.windowSwitcherRef.current.stepSelection(delta);
+                }
+                return;
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            this.openApp('clipboard-manager');
+
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+                stopEvent();
+                this.openApp('clipboard-manager');
+                return;
+            }
+
+            if (e.altKey && (e.key === '`' || e.key === '~')) {
+                stopEvent();
+                this.cycleAppWindows(e.shiftKey ? -1 : 1);
+                return;
+            }
+
+            if (e.ctrlKey && e.altKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                stopEvent();
+                const direction = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
+                this.shiftWorkspace(direction);
+                return;
+            }
+
+            if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                stopEvent();
+                const id = this.getFocusedWindowId();
+                if (id) {
+                    const event = new CustomEvent('super-arrow', { detail: e.key });
+                    document.getElementById(id)?.dispatchEvent(event);
+                }
+                return;
+            }
         }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
-            e.preventDefault();
-            this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.ctrlKey && e.altKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const direction = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
-            this.shiftWorkspace(direction);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
+
+        if (e.type === 'keyup') {
+            if ((e.key === 'Alt' || e.key === 'AltGraph') && this.state.showWindowSwitcher) {
+                stopEvent();
+                if (this.windowSwitcherRef.current) {
+                    const result = this.windowSwitcherRef.current.confirmSelection();
+                    if (!result) {
+                        this.closeWindowSwitcher();
+                    }
+                } else {
+                    this.closeWindowSwitcher();
+                }
             }
         }
     }
@@ -357,14 +409,24 @@ export class Desktop extends Component {
             .filter(Boolean);
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+            return true;
         }
+        return false;
     }
 
     closeWindowSwitcher = () => {
+        if (this.windowSwitcherRef.current) {
+            this.windowSwitcherRef.current.resetSelection();
+        }
+        this.pendingWindowSwitchDelta = 0;
         this.setState({ showWindowSwitcher: false, switcherWindows: [] });
     }
 
     selectWindow = (id) => {
+        if (this.windowSwitcherRef.current) {
+            this.windowSwitcherRef.current.resetSelection();
+        }
+        this.pendingWindowSwitchDelta = 0;
         this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
             this.openApp(id);
         });
@@ -1169,6 +1231,7 @@ export class Desktop extends Component {
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
+                        ref={this.windowSwitcherRef}
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
