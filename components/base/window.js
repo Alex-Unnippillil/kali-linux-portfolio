@@ -763,37 +763,37 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
+        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-2 flex items-center justify-center`}>
             {pipSupported && props.pip && (
                 <button
                     type="button"
                     aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    className={styles.windowControlButton}
                     onClick={togglePin}
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
                         alt="Kali window pin"
-                        className="h-4 w-4 inline"
-                        width={16}
-                        height={16}
-                        sizes="16px"
+                        className="h-5 w-5 inline"
+                        width={20}
+                        height={20}
+                        sizes="20px"
                     />
                 </button>
             )}
             <button
                 type="button"
                 aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                className={styles.windowControlButton}
                 onClick={props.minimize}
             >
                 <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
+                    src="/themes/Kali/window/window-minimize.svg"
                     alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
+                    className="h-5 w-5 inline"
+                    width={20}
+                    height={20}
+                    sizes="20px"
                 />
             </button>
             {props.allowMaximize && (
@@ -802,32 +802,32 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className={styles.windowControlButton}
                             onClick={props.maximize}
                         >
                             <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
+                                src="/themes/Kali/window/window-restore.svg"
                                 alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
+                                className="h-5 w-5 inline"
+                                width={20}
+                                height={20}
+                                sizes="20px"
                             />
                         </button>
                     ) : (
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className={styles.windowControlButton}
                             onClick={props.maximize}
                         >
                             <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
+                                src="/themes/Kali/window/window-maximize.svg"
                                 alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
+                                className="h-5 w-5 inline"
+                                width={20}
+                                height={20}
+                                sizes="20px"
                             />
                         </button>
                     )
@@ -836,16 +836,16 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className={`${styles.windowControlButton} ${styles.windowControlButtonDanger}`}
                 onClick={props.close}
             >
                 <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
+                    src="/themes/Kali/window/window-close.svg"
                     alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
+                    className="h-5 w-5 inline"
+                    width={20}
+                    height={20}
+                    sizes="20px"
                 />
             </button>
         </div>
