@@ -365,18 +365,59 @@ dialog {
 }
 
 /* Context Menu & Panels */
-.context-menu-bg,
+.context-menu,
+.context-menu-bg {
+    background-color: var(--kali-panel);
+    color: var(--color-text);
+    border: 1px solid var(--kali-panel-border);
+    box-shadow: var(--shadow-panel);
+}
+
 .windowMainScreen {
-    background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
+    background-color: color-mix(in srgb, var(--color-bg), transparent 15%);
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
+    .context-menu,
     .context-menu-bg,
     .windowMainScreen {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
         background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
     }
+}
+
+.context-menu__item {
+    background: transparent;
+    color: inherit;
+    display: block;
+    width: 100%;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--motion-fast) ease;
+}
+
+.context-menu__item:hover,
+.context-menu__item:focus-visible {
+    background-color: var(--kali-hover-surface);
+}
+
+.context-menu__item:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 0;
+}
+
+.context-menu__divider {
+    border-top: 1px solid var(--kali-panel-border);
+}
+
+.context-menu__input {
+    background-color: transparent;
+    border-color: var(--color-accent);
+    color: var(--color-text);
+}
+
+.context-menu__input::placeholder {
+    color: var(--kali-text-muted);
 }
 
 .emoji-list>li {

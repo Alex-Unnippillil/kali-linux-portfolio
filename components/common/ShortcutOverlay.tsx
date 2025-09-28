@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import { kaliTheme } from '../../styles/themes/kali';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -68,11 +69,19 @@ const ShortcutOverlay: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-auto"
       role="dialog"
       aria-modal="true"
+      style={{ backgroundColor: kaliTheme.colors.overlayScrim, color: kaliTheme.colors.text }}
     >
-      <div className="max-w-lg w-full space-y-4">
+      <div
+        className="max-w-lg w-full space-y-4 rounded-md border p-4"
+        style={{
+          backgroundColor: kaliTheme.colors.panel,
+          borderColor: kaliTheme.colors.panelBorder,
+          boxShadow: kaliTheme.shadows.panel,
+        }}
+      >
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
           <button
@@ -86,7 +95,11 @@ const ShortcutOverlay: React.FC = () => {
         <button
           type="button"
           onClick={handleExport}
-          className="px-2 py-1 bg-gray-700 rounded text-sm"
+          className="px-2 py-1 rounded text-sm transition-colors hover:bg-[var(--kali-hover-surface)]"
+          style={{
+            backgroundColor: kaliTheme.colors.surface,
+            color: kaliTheme.colors.text,
+          }}
         >
           Export JSON
         </button>
@@ -95,10 +108,16 @@ const ShortcutOverlay: React.FC = () => {
             <li
               key={i}
               data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
-              className={
+              className="flex justify-between px-2 py-1 rounded"
+              style={
                 conflicts.has(s.keys)
-                  ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
-                  : 'flex justify-between px-2 py-1'
+                  ? {
+                      backgroundColor: kaliTheme.colors.danger,
+                      color: kaliTheme.colors.text,
+                    }
+                  : {
+                      backgroundColor: 'transparent',
+                    }
               }
             >
               <span className="font-mono mr-4">{s.keys}</span>

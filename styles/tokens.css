@@ -36,6 +36,11 @@
   --kali-panel: rgba(26, 31, 38, 0.9);
   --kali-panel-border: rgba(255, 255, 255, 0.08);
   --kali-panel-highlight: rgba(255, 255, 255, 0.05);
+  --kali-hover-surface: rgba(255, 255, 255, 0.08);
+  --kali-text-muted: rgba(245, 245, 245, 0.7);
+  --kali-overlay-scrim: rgba(8, 11, 15, 0.82);
+  --shadow-panel: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --color-danger: #dc2626;
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
 
@@ -97,6 +102,11 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --kali-hover-surface: rgba(255, 255, 255, 0.35);
+  --kali-text-muted: #ffffff;
+  --kali-overlay-scrim: rgba(0, 0, 0, 0.85);
+  --shadow-panel: 0 0 0 2px #ffff00;
+  --color-danger: #ff0000;
 }
 
 /* Dyslexia-friendly fonts */

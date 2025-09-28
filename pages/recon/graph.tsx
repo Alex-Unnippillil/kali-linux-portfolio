@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { kaliTheme } from '../../styles/themes/kali';
 
 interface CytoscapeNode {
   data: { id: string; label: string };
@@ -37,6 +38,19 @@ const ForceGraph2D = dynamic(
 
 const ReconGraph: React.FC = () => {
   const [data, setData] = useState<ReconChainData | null>(null);
+  const [accentColor, setAccentColor] = useState<string>(kaliTheme.rawColors.accent);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const root = document.documentElement;
+    const updateAccent = () => {
+      const value = getComputedStyle(root).getPropertyValue('--color-primary').trim();
+      if (value) {
+        setAccentColor(value);
+      }
+    };
+    updateAccent();
+  }, []);
 
   useEffect(() => {
     fetch('/reconng-chain.json')
@@ -77,22 +91,36 @@ const ReconGraph: React.FC = () => {
   }, [data]);
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen">
+    <div
+      className="p-4 min-h-screen"
+      style={{
+        backgroundColor: kaliTheme.colors.background,
+        color: kaliTheme.colors.text,
+      }}
+    >
       <h1 className="text-2xl mb-4">Recon Graph</h1>
       <p className="mb-2 text-sm">
         Nodes: {graphData.nodes.length} | Edges: {graphData.links.length}
       </p>
-      <div className="h-96 bg-black rounded">
+      <div
+        className="h-96 rounded border"
+        style={{
+          backgroundColor: kaliTheme.colors.surface,
+          borderColor: kaliTheme.colors.panelBorder,
+          boxShadow: kaliTheme.shadows.panel,
+        }}
+      >
         <ForceGraph2D
           graphData={graphData}
           nodeId="id"
           nodeCanvasObject={(node: any, ctx) => {
-            ctx.fillStyle = 'lightblue';
+            ctx.fillStyle = accentColor;
             ctx.beginPath();
             ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI, false);
             ctx.fill();
             ctx.font = '8px sans-serif';
             const label = node.label || node.id;
+            ctx.fillStyle = kaliTheme.rawColors.text;
             ctx.fillText(label, node.x + 6, node.y + 2);
           }}
           linkDirectionalArrowLength={4}
