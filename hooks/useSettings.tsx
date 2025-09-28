@@ -10,6 +10,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getPanelAutohide as loadPanelAutohide,
+  setPanelAutohide as savePanelAutohide,
   getFontScale as loadFontScale,
   setFontScale as saveFontScale,
   getHighContrast as loadHighContrast,
@@ -60,6 +62,7 @@ interface SettingsContextValue {
   useKaliWallpaper: boolean;
   density: Density;
   reducedMotion: boolean;
+  panelAutohide: boolean;
   fontScale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
@@ -72,6 +75,7 @@ interface SettingsContextValue {
   setUseKaliWallpaper: (value: boolean) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setPanelAutohide: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
@@ -88,6 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   useKaliWallpaper: defaults.useKaliWallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  panelAutohide: defaults.panelAutohide,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
@@ -100,6 +105,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setUseKaliWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setPanelAutohide: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
@@ -115,6 +121,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [panelAutohide, setPanelAutohide] = useState<boolean>(defaults.panelAutohide);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
@@ -131,6 +138,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setUseKaliWallpaper(await loadUseKaliWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setPanelAutohide(await loadPanelAutohide());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
@@ -202,6 +210,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
+    savePanelAutohide(panelAutohide);
+  }, [panelAutohide]);
+
+  useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
     saveFontScale(fontScale);
   }, [fontScale]);
@@ -261,6 +273,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         useKaliWallpaper,
         density,
         reducedMotion,
+        panelAutohide,
         fontScale,
         highContrast,
         largeHitAreas,
@@ -273,6 +286,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setUseKaliWallpaper,
         setDensity,
         setReducedMotion,
+        setPanelAutohide,
         setFontScale,
         setHighContrast,
         setLargeHitAreas,

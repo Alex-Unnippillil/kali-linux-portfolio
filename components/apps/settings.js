@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, panelAutohide, setPanelAutohide, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -83,12 +83,14 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="settings-use-kali-wallpaper" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="settings-use-kali-wallpaper"
                         type="checkbox"
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -126,8 +128,9 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-font-scale">Font Size:</label>
                 <input
+                    id="settings-font-scale"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -135,70 +138,96 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Adjust font scale"
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="settings-reduced-motion" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="settings-reduced-motion"
                         type="checkbox"
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle reduced motion"
                     />
                     Reduced Motion
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="settings-panel-autohide" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="settings-panel-autohide"
+                        type="checkbox"
+                        checked={panelAutohide}
+                        onChange={(e) => setPanelAutohide(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Toggle panel autohide"
+                    />
+                    Panel Autohide
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label htmlFor="settings-large-hit-areas" className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        id="settings-large-hit-areas"
                         type="checkbox"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle large hit areas"
                     />
                     Large Hit Areas
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="settings-high-contrast" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="settings-high-contrast"
                         type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle high contrast"
                     />
                     High Contrast
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="settings-allow-network" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="settings-allow-network"
                         type="checkbox"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle network requests"
                     />
                     Allow Network Requests
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="settings-haptics" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="settings-haptics"
                         type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle haptics"
                     />
                     Haptics
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="settings-pong-spin" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="settings-pong-spin"
                         type="checkbox"
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle pong spin"
                     />
                     Pong Spin
                 </label>
@@ -274,6 +303,7 @@ export function Settings() {
                         setWallpaper(defaults.wallpaper);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
+                        setPanelAutohide(defaults.panelAutohide);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
@@ -288,6 +318,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
@@ -299,6 +330,7 @@ export function Settings() {
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
+                        if (parsed.panelAutohide !== undefined) setPanelAutohide(parsed.panelAutohide);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }

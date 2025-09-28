@@ -12,6 +12,7 @@ const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_BOTTOM_INSET = 28;
+const PANEL_COLLISION_THRESHOLD = 48;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -62,6 +63,9 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._edgeCollisions = { bottom: false };
+        this._fullscreen = false;
+        this._collisionRaf = null;
     }
 
     componentDidMount() {
@@ -78,6 +82,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        this.schedulePanelCollisionCheck();
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -94,6 +99,52 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._collisionRaf) {
+            cancelAnimationFrame(this._collisionRaf);
+            this._collisionRaf = null;
+        }
+        this.notifyFullscreen(false);
+        this.notifyEdgeCollision('bottom', false);
+    }
+
+    notifyFullscreen = (fullscreen) => {
+        if (typeof window === 'undefined') return;
+        if (this._fullscreen === fullscreen) return;
+        this._fullscreen = fullscreen;
+        window.dispatchEvent(new CustomEvent('desktop:window-fullscreen', {
+            detail: { id: this.id, fullscreen }
+        }));
+    }
+
+    notifyEdgeCollision = (edge, collided) => {
+        if (typeof window === 'undefined') return;
+        if (!this._edgeCollisions) this._edgeCollisions = {};
+        if (this._edgeCollisions[edge] === collided) return;
+        this._edgeCollisions[edge] = collided;
+        window.dispatchEvent(new CustomEvent('desktop:edge-collision', {
+            detail: { id: this.id, edge, collided }
+        }));
+    }
+
+    schedulePanelCollisionCheck = () => {
+        if (typeof window === 'undefined') return;
+        if (this._collisionRaf) {
+            cancelAnimationFrame(this._collisionRaf);
+        }
+        this._collisionRaf = requestAnimationFrame(() => {
+            this._collisionRaf = null;
+            this.checkPanelCollision();
+        });
+    }
+
+    checkPanelCollision = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        if (!viewportHeight) return;
+        const collided = rect.bottom >= viewportHeight - PANEL_COLLISION_THRESHOLD;
+        this.notifyEdgeCollision('bottom', collided);
     }
 
     setDefaultWindowDimenstion = () => {
@@ -235,7 +286,10 @@ export class Window extends Component {
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        this.setState({ height: heightPercent }, () => {
+            this.resizeBoundries();
+            this.schedulePanelCollisionCheck();
+        });
     }
 
     handleHorizontalResize = () => {
@@ -243,7 +297,10 @@ export class Window extends Component {
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        this.setState({ width: widthPercent }, () => {
+            this.resizeBoundries();
+            this.schedulePanelCollisionCheck();
+        });
     }
 
     setWinowsPosition = () => {
@@ -274,9 +331,15 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.schedulePanelCollisionCheck();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.schedulePanelCollisionCheck();
+            });
         }
     }
 
@@ -301,7 +364,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.schedulePanelCollisionCheck();
+        });
     }
 
     checkOverlap = () => {
@@ -394,6 +460,7 @@ export class Window extends Component {
         }
         this.checkOverlap();
         this.checkSnapPreview();
+        this.checkPanelCollision();
     }
 
     handleStop = () => {
@@ -404,6 +471,7 @@ export class Window extends Component {
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.schedulePanelCollisionCheck();
     }
 
     focusWindow = () => {
@@ -415,6 +483,8 @@ export class Window extends Component {
         if (this.state.maximized) {
             posx = -510;
         }
+        this.notifyFullscreen(false);
+        this.notifyEdgeCollision('bottom', false);
         this.setWinowsPosition();
         // get corrosponding sidebar app's position
         var r = document.querySelector("#sidebar-" + this.id);
@@ -427,6 +497,7 @@ export class Window extends Component {
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
+            this.schedulePanelCollisionCheck();
             return;
         }
 
@@ -438,6 +509,7 @@ export class Window extends Component {
         this._dockAnimation.onfinish = () => {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
+            this.schedulePanelCollisionCheck();
             this._dockAnimation.onfinish = null;
         };
     }
@@ -456,6 +528,8 @@ export class Window extends Component {
             node.style.transform = endTransform;
             this.setState({ maximized: false });
             this.checkOverlap();
+            this.notifyFullscreen(false);
+            this.schedulePanelCollisionCheck();
             return;
         }
 
@@ -464,6 +538,8 @@ export class Window extends Component {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
                 this.checkOverlap();
+                this.notifyFullscreen(false);
+                this.schedulePanelCollisionCheck();
                 this._dockAnimation.onfinish = null;
             };
             this._dockAnimation.reverse();
@@ -476,6 +552,8 @@ export class Window extends Component {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
                 this.checkOverlap();
+                this.notifyFullscreen(false);
+                this.schedulePanelCollisionCheck();
                 this._dockAnimation.onfinish = null;
             };
         }
@@ -494,11 +572,15 @@ export class Window extends Component {
             r.style.transform = `translate(-1pt,-2pt)`;
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
+            this.notifyFullscreen(true);
+            this.schedulePanelCollisionCheck();
         }
     }
 
     closeWindow = () => {
         this.setWinowsPosition();
+        this.notifyFullscreen(false);
+        this.notifyEdgeCollision('bottom', false);
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
@@ -537,6 +619,8 @@ export class Window extends Component {
                     node.style.transform = `translate(${x}px, ${y}px)`;
                     this.checkOverlap();
                     this.checkSnapPreview();
+                    this.checkPanelCollision();
+                    this.schedulePanelCollisionCheck();
                     this.setWinowsPosition();
                 }
             }

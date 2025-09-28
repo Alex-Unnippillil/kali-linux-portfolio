@@ -26,6 +26,8 @@ export default function Settings() {
     setDensity,
     reducedMotion,
     setReducedMotion,
+    panelAutohide,
+    setPanelAutohide,
     fontScale,
     setFontScale,
     highContrast,
@@ -80,6 +82,8 @@ export default function Settings() {
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
+      if (parsed.panelAutohide !== undefined)
+        setPanelAutohide(parsed.panelAutohide);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
@@ -102,6 +106,7 @@ export default function Settings() {
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
+    setPanelAutohide(defaults.panelAutohide);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
@@ -156,14 +161,16 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex justify-center my-4 items-center">
+            <input
+              id="use-kali-wallpaper"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Toggle Kali gradient wallpaper"
+            />
+            <label htmlFor="use-kali-wallpaper" className="text-ubt-grey flex items-center">
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -264,6 +271,14 @@ export default function Settings() {
               checked={reducedMotion}
               onChange={setReducedMotion}
               ariaLabel="Reduced Motion"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Panel Autohide:</span>
+            <ToggleSwitch
+              checked={panelAutohide}
+              onChange={setPanelAutohide}
+              ariaLabel="Panel Autohide"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
