@@ -1,5 +1,9 @@
-import React, { useEffect, useState } from 'react';
+"use client";
+
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 export type KaliCategory = {
   id: string;
@@ -84,33 +88,160 @@ const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryId, label }) => {
 type ApplicationsMenuProps = {
   activeCategory: string;
   onSelect: (id: string) => void;
+  open?: boolean;
+  onClose?: () => void;
+  anchorRef?: React.RefObject<HTMLElement> | null;
 };
 
-const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onSelect }) => {
-  return (
-    <nav aria-label="Kali application categories">
-      <ul className="space-y-1">
-        {KALI_CATEGORIES.map((category) => {
-          const isActive = category.id === activeCategory;
-          return (
-            <li key={category.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(category.id)}
-                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                  isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
-                }`}
-                aria-pressed={isActive}
-              >
-                <CategoryIcon categoryId={category.id} label={category.label} />
-                <span className="text-sm font-medium">{category.label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+const DEFAULT_POSITION = { top: 56, left: 12 } as const;
+
+const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({
+  activeCategory,
+  onSelect,
+  open = true,
+  onClose,
+  anchorRef,
+}) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number }>(DEFAULT_POSITION);
+  const previousFocusRef = useRef<Element | null>(null);
+
+  useFocusTrap(menuRef, open);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    previousFocusRef.current = document.activeElement;
+
+    const focusFirstItem = () => {
+      const firstButton = menuRef.current?.querySelector<HTMLButtonElement>('button');
+      firstButton?.focus();
+    };
+
+    focusFirstItem();
+
+    return () => {
+      const previous = previousFocusRef.current as HTMLElement | null;
+      previous?.focus?.();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const updatePosition = () => {
+      const anchor = anchorRef?.current;
+      if (!anchor) {
+        setPosition(DEFAULT_POSITION);
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom,
+        left: rect.left,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, anchorRef]);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      const menuNode = menuRef.current;
+      if (!menuNode) {
+        return;
+      }
+
+      const clickedInside = menuNode.contains(target);
+      const clickedAnchor = anchorRef?.current ? anchorRef.current.contains(target) : false;
+
+      if (!clickedInside && !clickedAnchor) {
+        onClose?.();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onClose, anchorRef]);
+
+  if (!mounted || !open) {
+    return null;
+  }
+
+  const content = (
+    <div className="fixed inset-0 z-[2000] pointer-events-none" role="presentation">
+      <div
+        ref={menuRef}
+        className="pointer-events-auto absolute w-80 rounded-md border border-black/20 bg-gray-800/95 p-3 text-white shadow-xl backdrop-blur"
+        style={{ top: position.top, left: position.left }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kali application categories"
+      >
+        <nav aria-label="Kali application categories">
+          <ul className="space-y-1">
+            {KALI_CATEGORIES.map((category) => {
+              const isActive = category.id === activeCategory;
+              return (
+                <li key={category.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(category.id)}
+                    className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
+                      isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <CategoryIcon categoryId={category.id} label={category.label} />
+                    <span className="text-sm font-medium">{category.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </div>
+    </div>
   );
+
+  return createPortal(content, document.body);
 };
 
 export default ApplicationsMenu;
