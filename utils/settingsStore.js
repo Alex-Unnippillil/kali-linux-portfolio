@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  showBootSequence: true,
 };
 
 export async function getAccent() {
@@ -135,6 +136,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getShowBootSequence() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.showBootSequence;
+  const val = window.localStorage.getItem('show-boot-sequence');
+  return val === null ? DEFAULT_SETTINGS.showBootSequence : val === 'true';
+}
+
+export async function setShowBootSequence(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('show-boot-sequence', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +162,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('show-boot-sequence');
 }
 
 export async function exportSettings() {
@@ -165,6 +178,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    showBootSequence,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +191,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getShowBootSequence(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -191,6 +206,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    showBootSequence,
     theme,
   });
 }
@@ -217,6 +233,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    showBootSequence,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -229,6 +246,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (showBootSequence !== undefined) await setShowBootSequence(showBootSequence);
   if (theme !== undefined) setTheme(theme);
 }
 

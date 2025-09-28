@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, showBootSequence, setShowBootSequence, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -152,6 +152,17 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        checked={showBootSequence}
+                        onChange={(e) => setShowBootSequence(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Show Boot Sequence
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
@@ -277,6 +288,7 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setShowBootSequence(defaults.showBootSequence);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -301,6 +313,7 @@ export function Settings() {
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.showBootSequence !== undefined) setShowBootSequence(parsed.showBootSequence);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);

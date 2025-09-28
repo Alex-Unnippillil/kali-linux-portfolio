@@ -1,7 +1,14 @@
-import React from 'react'
-import Image from 'next/image'
+import React from 'react';
+import Image from 'next/image';
+import { useSettings } from '../../hooks/useSettings';
 
 function BootingScreen(props) {
+    const { showBootSequence } = useSettings();
+    const shouldRender = props.isShutDown || (props.visible && showBootSequence);
+
+    if (!shouldRender) {
+        return null;
+    }
 
     return (
         <div
@@ -9,7 +16,8 @@ function BootingScreen(props) {
                 ...(props.visible || props.isShutDown ? { zIndex: "100" } : { zIndex: "-20" }),
                 contentVisibility: 'auto',
             }}
-            className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}>
+            className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}
+        >
             <Image
                 width={400}
                 height={400}
@@ -22,7 +30,7 @@ function BootingScreen(props) {
             <div className="w-10 h-10 flex justify-center items-center rounded-full outline-none cursor-pointer" onClick={props.turnOn} >
                 {(props.isShutDown
                     ? <div className="bg-white rounded-full flex justify-center items-center w-10 h-10 hover:bg-gray-300"><Image width={32} height={32} className="w-8" src="/themes/Yaru/status/power-button.svg" alt="Power Button" sizes="32px" priority/></div>
-                    : <Image width={40} height={40} className={" w-10 " + (props.visible ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>)}
+                    : <Image width={40} height={40} className={" w-10 " + (props.visible && showBootSequence ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>)}
             </div>
             <Image
                 width={200}
@@ -41,4 +49,4 @@ function BootingScreen(props) {
     )
 }
 
-export default BootingScreen
+export default BootingScreen;
