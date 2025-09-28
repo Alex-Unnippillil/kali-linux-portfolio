@@ -2,11 +2,13 @@ import React from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import UndercoverWallpaper from '../util-components/undercover-wallpaper';
 
 export default function LockScreen(props) {
 
-    const { bgImageName, useKaliWallpaper } = useSettings();
-    const useKaliTheme = useKaliWallpaper || bgImageName === 'kali-gradient';
+    const { bgImageName, useKaliWallpaper, undercoverMode } = useSettings();
+    const useUndercoverTheme = undercoverMode || bgImageName === 'undercover-windows';
+    const useKaliTheme = !useUndercoverTheme && (useKaliWallpaper || bgImageName === 'kali-gradient');
 
     if (props.isLocked) {
         window.addEventListener('click', props.unLockScreen);
@@ -18,7 +20,11 @@ export default function LockScreen(props) {
             id="ubuntu-lock-screen"
             style={{ zIndex: "100", contentVisibility: 'auto' }}
             className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
-            {useKaliTheme ? (
+            {useUndercoverTheme ? (
+                <UndercoverWallpaper
+                    className={`absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                />
+            ) : useKaliTheme ? (
                 <KaliWallpaper
                     className={`absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
                 />

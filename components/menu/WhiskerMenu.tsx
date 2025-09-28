@@ -6,6 +6,8 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
+import { useSettings } from '../../hooks/useSettings';
+import WindowsLogo from '../common/WindowsLogo';
 
 type AppMeta = {
   id: string;
@@ -158,6 +160,8 @@ const WhiskerMenu: React.FC = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
+  const { undercoverMode } = useSettings();
+  const menuLabel = undercoverMode ? 'Start' : 'Applications';
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
 
@@ -379,16 +383,22 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className={`pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1 ${
+          undercoverMode ? 'rounded-full bg-white/10 hover:bg-white/20 text-slate-100 shadow-sm border border-white/10' : ''
+        }`}
       >
-        <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
-        />
-        Applications
+        {undercoverMode ? (
+          <WindowsLogo className="inline mr-2 h-4 w-4 text-sky-200" ariaHidden />
+        ) : (
+          <Image
+            src="/themes/Yaru/status/decompiler-symbolic.svg"
+            alt="Menu"
+            width={16}
+            height={16}
+            className="inline mr-1"
+          />
+        )}
+        {menuLabel}
       </button>
       {isVisible && (
         <div

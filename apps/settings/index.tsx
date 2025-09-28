@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import UndercoverWallpaper from "../../components/util-components/undercover-wallpaper";
 
 export default function Settings() {
   const {
@@ -34,6 +35,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    undercoverMode,
+    setUndercoverMode,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +86,8 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.undercoverMode !== undefined)
+        setUndercoverMode(parsed.undercoverMode);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -104,6 +109,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setUndercoverMode(defaults.undercoverMode);
     setTheme("default");
   };
 
@@ -117,7 +123,9 @@ export default function Settings() {
       {activeTab === "appearance" && (
         <>
           <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
-            {useKaliWallpaper ? (
+            {undercoverMode ? (
+              <UndercoverWallpaper />
+            ) : useKaliWallpaper ? (
               <KaliWallpaper />
             ) : (
               <div
@@ -274,6 +282,20 @@ export default function Settings() {
               ariaLabel="High Contrast"
             />
           </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Undercover Mode:</span>
+            <ToggleSwitch
+              checked={undercoverMode}
+              onChange={setUndercoverMode}
+              ariaLabel="Undercover Mode"
+            />
+          </div>
+          {undercoverMode && (
+            <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+              A Windows-inspired skin is applied instantly. Your wallpaper and accent
+              selections are saved for when you turn this off.
+            </p>
+          )}
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Haptics:</span>
             <ToggleSwitch

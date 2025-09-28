@@ -3,12 +3,17 @@
 import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from './kali-wallpaper';
+import UndercoverWallpaper from './undercover-wallpaper';
 
 export default function BackgroundImage() {
-    const { bgImageName, useKaliWallpaper } = useSettings();
+    const { bgImageName, useKaliWallpaper, undercoverMode } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
 
     useEffect(() => {
+        if (undercoverMode || bgImageName === 'undercover-windows') {
+            setNeedsOverlay(false);
+            return;
+        }
         if (useKaliWallpaper || bgImageName === 'kali-gradient') {
             setNeedsOverlay(false);
             return;
@@ -39,11 +44,13 @@ export default function BackgroundImage() {
             const contrast = (1.05) / (lum + 0.05); // white text luminance is 1
             setNeedsOverlay(contrast < 4.5);
         };
-    }, [bgImageName, useKaliWallpaper]);
+    }, [bgImageName, useKaliWallpaper, undercoverMode]);
 
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
-            {useKaliWallpaper || bgImageName === 'kali-gradient' ? (
+            {undercoverMode || bgImageName === 'undercover-windows' ? (
+                <UndercoverWallpaper />
+            ) : useKaliWallpaper || bgImageName === 'kali-gradient' ? (
                 <KaliWallpaper />
             ) : (
                 <>

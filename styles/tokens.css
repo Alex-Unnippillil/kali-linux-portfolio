@@ -82,6 +82,46 @@
   --focus-outline-width: 2px;
 }
 
+:root.undercover {
+  --color-ub-grey: #0b1729;
+  --color-ub-warm-grey: #8ca6c9;
+  --color-ub-cool-grey: rgba(15, 23, 42, 0.92);
+  --color-ub-orange: #0f6ad6;
+  --color-ub-lite-abrgn: rgba(17, 36, 68, 0.88);
+  --color-ub-med-abrgn: rgba(12, 28, 54, 0.92);
+  --color-ub-drk-abrgn: rgba(8, 19, 38, 0.94);
+  --color-ub-window-title: rgba(10, 25, 45, 0.95);
+  --color-ubt-grey: #f4f7fb;
+  --color-ubt-warm-grey: #dbe4f4;
+  --color-ubt-cool-grey: #1e293b;
+  --color-ubt-blue: #60a5fa;
+  --color-ubt-green: #38d0a4;
+  --color-ubt-gedit-orange: #f59e0b;
+  --color-ubt-gedit-blue: #38bdf8;
+  --color-ubt-gedit-dark: #1d4ed8;
+  --color-ub-border-orange: #0b4aa2;
+  --color-ub-dark-grey: #1b2f4d;
+  --color-bg: #0a1528;
+  --color-text: #f1f5ff;
+  --kali-bg: rgba(10, 25, 50, 0.85);
+  --kali-blue: #0f6ad6;
+  --kali-blue-dark: #0b4aa2;
+  --kali-blue-glow: rgba(96, 165, 250, 0.35);
+  --kali-bg-solid: #0a1528;
+  --kali-panel: rgba(14, 30, 58, 0.88);
+  --kali-panel-border: rgba(255, 255, 255, 0.12);
+  --kali-panel-highlight: rgba(255, 255, 255, 0.06);
+  --game-color-secondary: #2563eb;
+  --game-color-success: #22c55e;
+  --game-color-warning: #f59e0b;
+  --game-color-danger: #ef4444;
+  --color-window-border: rgba(148, 197, 255, 0.25);
+  --color-window-accent: #0f6ad6;
+  --font-family-base: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --focus-outline-color: #3b82f6;
+  --shadow-2: 0 16px 40px rgba(15, 76, 129, 0.35);
+}
+
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;
