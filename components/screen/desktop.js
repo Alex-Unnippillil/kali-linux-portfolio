@@ -588,6 +588,11 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    refreshDesktop = () => {
+        this.updateAppsData();
+        this.hideAllContextMenu();
+    }
+
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
@@ -1117,6 +1122,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    refreshDesktop={this.refreshDesktop}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
