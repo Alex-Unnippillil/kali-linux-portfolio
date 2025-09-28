@@ -18,6 +18,19 @@ jest.mock('react-draggable', () => ({
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+beforeAll(() => {
+  if (!HTMLElement.prototype.animate) {
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: jest.fn(() => ({
+        onfinish: null as null | (() => void),
+        cancel: jest.fn(),
+        reverse: jest.fn(),
+      })),
+    });
+  }
+});
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
@@ -413,6 +426,116 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window title bar interactions', () => {
+  beforeEach(() => {
+    window.matchMedia = jest.fn().mockReturnValue({
+      matches: true,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+    }) as unknown as typeof window.matchMedia;
+  });
+
+  const renderWindow = () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    return { ref, titleBar: screen.getByRole('button', { name: 'Test' }) };
+  };
+
+  const dispatchDoubleClick = (element: HTMLElement, startTime: number) => {
+    fireEvent.pointerDown(element, {
+      pointerId: 1,
+      button: 0,
+      clientX: 50,
+      clientY: 50,
+      timeStamp: startTime,
+    });
+    fireEvent.pointerUp(element, {
+      pointerId: 1,
+      button: 0,
+      clientX: 50,
+      clientY: 50,
+      timeStamp: startTime + 10,
+    });
+    fireEvent.pointerDown(element, {
+      pointerId: 2,
+      button: 0,
+      clientX: 50,
+      clientY: 50,
+      timeStamp: startTime + 150,
+    });
+    fireEvent.pointerUp(element, {
+      pointerId: 2,
+      button: 0,
+      clientX: 50,
+      clientY: 50,
+      timeStamp: startTime + 160,
+    });
+  };
+
+  it('toggles maximize state on double click', () => {
+    const { ref, titleBar } = renderWindow();
+
+    expect(ref.current!.state.maximized).toBe(false);
+
+    dispatchDoubleClick(titleBar, 100);
+    expect(ref.current!.state.maximized).toBe(true);
+
+    dispatchDoubleClick(titleBar, 600);
+    expect(ref.current!.state.maximized).toBe(false);
+  });
+
+  it('ignores double click gestures when movement indicates a drag', () => {
+    const { ref, titleBar } = renderWindow();
+
+    expect(ref.current!.state.maximized).toBe(false);
+
+    const performDragLikeClick = (pointerId: number, startTime: number) => {
+      fireEvent.pointerDown(titleBar, {
+        pointerId,
+        button: 0,
+        clientX: 30,
+        clientY: 30,
+        timeStamp: startTime,
+      });
+      fireEvent.pointerMove(titleBar, {
+        pointerId,
+        buttons: 1,
+        clientX: 60,
+        clientY: 65,
+        timeStamp: startTime + 20,
+      });
+      fireEvent.pointerUp(titleBar, {
+        pointerId,
+        button: 0,
+        clientX: 60,
+        clientY: 65,
+        timeStamp: startTime + 40,
+      });
+    };
+
+    performDragLikeClick(1, 100);
+    expect(ref.current!.state.maximized).toBe(false);
+    performDragLikeClick(2, 200);
+
+    expect(ref.current!.state.maximized).toBe(false);
   });
 });
 

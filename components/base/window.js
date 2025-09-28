@@ -481,6 +481,17 @@ export class Window extends Component {
         }
     }
 
+    handleTopBarToggle = (wasMaximizedOnFirstClick) => {
+        if (this.props.allowMaximize === false) {
+            return;
+        }
+        if (wasMaximizedOnFirstClick) {
+            this.restoreWindow();
+        } else {
+            this.maximizeWindow();
+        }
+    }
+
     maximizeWindow = () => {
         if (this.props.allowMaximize === false) return;
         if (this.state.maximized) {
@@ -676,6 +687,8 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            maximized={this.state.maximized}
+                            onToggleMaximize={this.handleTopBarToggle}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -701,8 +714,150 @@ export class Window extends Component {
 
 export default Window
 
+const DOUBLE_CLICK_DELAY = 300;
+const DRAG_DISTANCE_THRESHOLD = 6;
+
+const resolveCoordinate = (values) => {
+    for (const value of values) {
+        if (typeof value === 'number' && !Number.isNaN(value)) {
+            return value;
+        }
+    }
+    return 0;
+};
+
+const getClientPosition = (event) => {
+    const native = event?.nativeEvent ?? {};
+    const x = resolveCoordinate([
+        event?.clientX,
+        native.clientX,
+        native.pageX,
+        native.screenX,
+        native.offsetX,
+    ]);
+    const y = resolveCoordinate([
+        event?.clientY,
+        native.clientY,
+        native.pageY,
+        native.screenY,
+        native.offsetY,
+    ]);
+    return { x, y };
+};
+
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, maximized, onToggleMaximize }) {
+    const pointerDownRef = React.useRef(null);
+    const lastReleaseRef = React.useRef(0);
+    const lastClickMetaRef = React.useRef(null);
+    const resetTimerRef = React.useRef(null);
+    const dragIntentRef = React.useRef(false);
+
+    const isPrimaryButton = React.useCallback((event) => {
+        return event.button === undefined || event.button === 0;
+    }, []);
+
+    const clearPending = React.useCallback(() => {
+        if (resetTimerRef.current) {
+            clearTimeout(resetTimerRef.current);
+            resetTimerRef.current = null;
+        }
+    }, []);
+
+    React.useEffect(() => {
+        return () => {
+            clearPending();
+        };
+    }, [clearPending]);
+
+    const handlePointerDown = React.useCallback((event) => {
+        if (typeof onPointerDown === 'function') {
+            onPointerDown(event);
+        }
+        if (!isPrimaryButton(event)) {
+            pointerDownRef.current = null;
+            dragIntentRef.current = false;
+            return;
+        }
+        const { x, y } = getClientPosition(event);
+        pointerDownRef.current = {
+            x,
+            y,
+            wasMaximized: maximized,
+        };
+        dragIntentRef.current = false;
+    }, [onPointerDown, maximized, isPrimaryButton]);
+
+    const handlePointerMove = React.useCallback((event) => {
+        if (!pointerDownRef.current || dragIntentRef.current) {
+            return;
+        }
+        if (typeof event.buttons === 'number' && event.buttons === 0) {
+            return;
+        }
+        dragIntentRef.current = true;
+    }, []);
+
+    const handlePointerUp = React.useCallback((event) => {
+        if (!isPrimaryButton(event)) {
+            pointerDownRef.current = null;
+            dragIntentRef.current = false;
+            return;
+        }
+
+        const down = pointerDownRef.current;
+        pointerDownRef.current = null;
+        if (!down) {
+            dragIntentRef.current = false;
+            return;
+        }
+
+        const { x, y } = getClientPosition(event);
+        const dx = Math.abs(x - down.x);
+        const dy = Math.abs(y - down.y);
+        const isDrag = dragIntentRef.current || dx > DRAG_DISTANCE_THRESHOLD || dy > DRAG_DISTANCE_THRESHOLD;
+        dragIntentRef.current = false;
+
+        if (isDrag) {
+            lastReleaseRef.current = 0;
+            lastClickMetaRef.current = null;
+            clearPending();
+            return;
+        }
+
+        const eventTime = typeof event.timeStamp === 'number' && event.timeStamp > 0
+            ? event.timeStamp
+            : Date.now();
+
+        if (lastReleaseRef.current && eventTime - lastReleaseRef.current <= DOUBLE_CLICK_DELAY) {
+            const wasMaximizedOnFirstClick = lastClickMetaRef.current?.wasMaximized ?? down.wasMaximized;
+            lastReleaseRef.current = 0;
+            lastClickMetaRef.current = null;
+            clearPending();
+            if (typeof onToggleMaximize === 'function') {
+                onToggleMaximize(wasMaximizedOnFirstClick);
+            }
+            return;
+        }
+
+        lastReleaseRef.current = eventTime;
+        lastClickMetaRef.current = { wasMaximized: down.wasMaximized };
+
+        clearPending();
+        if (typeof window !== 'undefined') {
+            resetTimerRef.current = window.setTimeout(() => {
+                lastReleaseRef.current = 0;
+                lastClickMetaRef.current = null;
+                resetTimerRef.current = null;
+            }, DOUBLE_CLICK_DELAY);
+        }
+    }, [onToggleMaximize, clearPending, isPrimaryButton]);
+
+    const handlePointerCancel = React.useCallback(() => {
+        pointerDownRef.current = null;
+        dragIntentRef.current = false;
+    }, []);
+
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -711,7 +866,11 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
-            onPointerDown={onPointerDown}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onPointerLeave={handlePointerCancel}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
