@@ -7,10 +7,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { useSettings, TerminalProfile } from '../../hooks/useSettings';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -63,6 +65,101 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+type TerminalProfileDefinition = {
+  label: string;
+  background: string;
+  borderColor: string;
+  textColor: string;
+  fontFamily: string;
+  theme: Record<string, string>;
+};
+
+const MIN_TERMINAL_OPACITY = 0.4;
+const MAX_TERMINAL_OPACITY = 1;
+
+const TERMINAL_PROFILES: Record<TerminalProfile, TerminalProfileDefinition> = {
+  default: {
+    label: 'Default',
+    background: '#0f1317',
+    borderColor: 'rgba(23, 147, 209, 0.35)',
+    textColor: '#f5f5f5',
+    fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+    theme: {
+      foreground: '#f5f5f5',
+      cursor: '#1793d1',
+      selection: 'rgba(23, 147, 209, 0.35)',
+      brightBlue: '#58a6ff',
+      brightGreen: '#34d399',
+    },
+  },
+  lowContrast: {
+    label: 'Low Contrast',
+    background: '#1a1c23',
+    borderColor: 'rgba(148, 163, 184, 0.35)',
+    textColor: '#e5e7eb',
+    fontFamily: '"IBM Plex Mono", "Fira Code", monospace',
+    theme: {
+      foreground: '#e5e7eb',
+      cursor: '#9ca3af',
+      selection: 'rgba(148, 163, 184, 0.35)',
+      brightBlack: '#4b5563',
+    },
+  },
+  solarized: {
+    label: 'Solarized',
+    background: '#002b36',
+    borderColor: 'rgba(131, 148, 150, 0.45)',
+    textColor: '#93a1a1',
+    fontFamily: '"Source Code Pro", "Fira Code", monospace',
+    theme: {
+      foreground: '#839496',
+      cursor: '#93a1a1',
+      selection: 'rgba(38, 139, 210, 0.35)',
+      brightBlue: '#268bd2',
+      brightGreen: '#859900',
+    },
+  },
+};
+
+const clampOpacity = (value: number) =>
+  Math.min(MAX_TERMINAL_OPACITY, Math.max(MIN_TERMINAL_OPACITY, value));
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const clean = hex.replace('#', '');
+  if (!(clean.length === 3 || clean.length === 6)) {
+    return hex;
+  }
+  const normalized =
+    clean.length === 3
+      ? clean
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : clean.slice(0, 6);
+  const value = parseInt(normalized, 16);
+  const r = (value >> 16) & 0xff;
+  const g = (value >> 8) & 0xff;
+  const b = value & 0xff;
+  const a = Math.min(1, Math.max(0, Number(alpha.toFixed(2))));
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+};
+
+const applyOpacity = (color: string, alpha: number) => {
+  if (color.startsWith('#')) return hexToRgba(color, alpha);
+  if (color.startsWith('rgb')) {
+    const parts = color
+      .replace(/rgba?\(([^)]+)\)/, '$1')
+      .split(',')
+      .map((part) => part.trim())
+      .slice(0, 3);
+    if (parts.length === 3) {
+      const a = Math.min(1, Math.max(0, Number(alpha.toFixed(2))));
+      return `rgba(${parts.join(', ')}, ${a})`;
+    }
+  }
+  return color;
+};
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -101,10 +198,69 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const {
+    terminalProfile,
+    setTerminalProfile,
+    terminalOpacity,
+    setTerminalOpacity,
+  } = useSettings();
+  const clampedOpacity = useMemo(
+    () => clampOpacity(terminalOpacity),
+    [terminalOpacity],
+  );
+  const activeProfileKey = useMemo<TerminalProfile>(() => {
+    const map = TERMINAL_PROFILES as Record<string, TerminalProfileDefinition>;
+    return (map[terminalProfile as string]
+      ? terminalProfile
+      : 'default') as TerminalProfile;
+  }, [terminalProfile]);
+  const selectedProfile = useMemo(
+    () => TERMINAL_PROFILES[activeProfileKey],
+    [activeProfileKey],
+  );
+  const profileEntries = useMemo(
+    () => Object.entries(TERMINAL_PROFILES) as [TerminalProfile, TerminalProfileDefinition][],
+    [],
+  );
+  const resolvedTheme = useMemo(
+    () => ({
+      ...selectedProfile.theme,
+      background: applyOpacity(selectedProfile.background, clampedOpacity),
+    }),
+    [selectedProfile, clampedOpacity],
+  );
+  const containerStyles = useMemo(
+    () => ({
+      backgroundColor: applyOpacity(selectedProfile.background, clampedOpacity),
+      borderColor: selectedProfile.borderColor,
+      color: selectedProfile.textColor,
+      fontFamily: selectedProfile.fontFamily,
+    }),
+    [selectedProfile, clampedOpacity],
+  );
+  const opacityPercentage = useMemo(
+    () => Math.round(clampedOpacity * 100),
+    [clampedOpacity],
+  );
+  const profileSettingsRef = useRef(selectedProfile);
+  const themeRef = useRef(resolvedTheme);
+  profileSettingsRef.current = selectedProfile;
+  themeRef.current = resolvedTheme;
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  useEffect(() => {
+    const map = TERMINAL_PROFILES as Record<string, TerminalProfileDefinition>;
+    if (!map[terminalProfile as string]) {
+      setTerminalProfile('default');
+    }
+  }, [terminalProfile, setTerminalProfile]);
+  useEffect(() => {
+    if (terminalOpacity !== clampedOpacity) {
+      setTerminalOpacity(clampedOpacity);
+    }
+  }, [terminalOpacity, clampedOpacity, setTerminalOpacity]);
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -303,17 +459,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
+      const profile = profileSettingsRef.current;
+      const themeOptions = themeRef.current;
       const term = new XTerm({
         cursorBlink: true,
         scrollback: 1000,
         cols: 80,
         rows: 24,
-        fontFamily: '"Fira Code", monospace',
-        theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
-        },
+        allowTransparency: true,
+        fontFamily: profile.fontFamily,
+        theme: themeOptions,
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -379,6 +534,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       termRef.current?.dispose();
     };
     }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+
+  useEffect(() => {
+    if (!termRef.current) return;
+    termRef.current.setOption('fontFamily', selectedProfile.fontFamily);
+  }, [selectedProfile]);
+
+  useEffect(() => {
+    if (!termRef.current) return;
+    termRef.current.setOption('theme', resolvedTheme);
+    const rows = termRef.current.rows ?? 0;
+    if (rows > 0) {
+      termRef.current.refresh(0, rows - 1);
+    }
+  }, [resolvedTheme]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -481,22 +650,67 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2 bg-gray-800 p-1">
-          <button onClick={handleCopy} aria-label="Copy">
-            <CopyIcon />
-          </button>
-          <button onClick={handlePaste} aria-label="Paste">
-            <PasteIcon />
-          </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
-            <SettingsIcon />
-          </button>
+        <div className="flex flex-wrap items-center gap-2 bg-gray-800 p-1 text-xs text-gray-200">
+          <div className="flex items-center gap-2">
+            <button onClick={handleCopy} aria-label="Copy" className="p-1 hover:text-white">
+              <CopyIcon />
+            </button>
+            <button onClick={handlePaste} aria-label="Paste" className="p-1 hover:text-white">
+              <PasteIcon />
+            </button>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              className="p-1 hover:text-white"
+            >
+              <SettingsIcon />
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 ml-auto">
+            <label className="flex items-center gap-2">
+              <span className="text-gray-300">Profile</span>
+              <select
+                className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={activeProfileKey}
+                onChange={(event) =>
+                  setTerminalProfile(event.target.value as TerminalProfile)
+                }
+              >
+                {profileEntries.map(([value, profile]) => (
+                  <option key={value} value={value}>
+                    {profile.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="text-gray-300 whitespace-nowrap">Opacity</span>
+              <input
+                type="range"
+                className="w-24"
+                min={Math.round(MIN_TERMINAL_OPACITY * 100)}
+                max={Math.round(MAX_TERMINAL_OPACITY * 100)}
+                step={5}
+                value={opacityPercentage}
+                onChange={(event) =>
+                  setTerminalOpacity(
+                    clampOpacity(Number(event.target.value) / 100),
+                  )
+                }
+                aria-label="Terminal background opacity"
+              />
+              <span className="w-10 text-right tabular-nums text-gray-100">
+                {opacityPercentage}%
+              </span>
+            </label>
+          </div>
         </div>
         <div className="relative">
           <TerminalContainer
             ref={containerRef}
             className="resize overflow-hidden font-mono"
             style={{
+              ...containerStyles,
               width: '80ch',
               height: '24em',
               fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
