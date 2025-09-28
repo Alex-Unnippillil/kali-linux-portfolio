@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import {
   onFetchProxy,
@@ -9,11 +10,26 @@ import {
 } from '../../../lib/fetchProxy';
 import { exportMetrics } from '../export';
 import RequestChart from './RequestChart';
+import { kaliTheme } from '../../../styles/themes/kali';
 
 const HISTORY_KEY = 'network-insights-history';
 
 const formatBytes = (bytes?: number) =>
   typeof bytes === 'number' ? `${(bytes / 1024).toFixed(1)} kB` : '—';
+
+type PanelStyleVars = CSSProperties & {
+  '--panel-bg'?: string;
+  '--panel-hover'?: string;
+  '--panel-border'?: string;
+  '--focus-ring-color'?: string;
+};
+
+const panelVars: PanelStyleVars = {
+  '--panel-bg': kaliTheme.panel,
+  '--panel-hover': kaliTheme.hover,
+  '--panel-border': kaliTheme.panelBorder,
+  '--focus-ring-color': kaliTheme.focus,
+};
 
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
@@ -32,9 +48,15 @@ export default function NetworkInsights() {
   }, [setHistory]);
 
   return (
-    <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
+    <div
+      className="p-2 text-xs text-white"
+      style={{ backgroundColor: kaliTheme.background, boxShadow: kaliTheme.shadow }}
+    >
       <h2 className="font-bold mb-1">Active Fetches</h2>
-      <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
+      <ul
+        className="mb-2 divide-y divide-[var(--panel-border)] border rounded bg-[var(--panel-bg)]"
+        style={{ ...panelVars, borderColor: 'var(--panel-border)' }}
+      >
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
         {active.map((f) => (
           <li key={f.id} className="p-1">
@@ -51,12 +73,16 @@ export default function NetworkInsights() {
         <h2 className="font-bold">History</h2>
         <button
           onClick={() => exportMetrics(history)}
-          className="ml-auto px-2 py-1 rounded bg-[var(--kali-panel)]"
+          className="ml-auto px-2 py-1 rounded bg-[var(--panel-bg)] hover:bg-[var(--panel-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-color)] transition-colors"
+          style={{ ...panelVars, boxShadow: kaliTheme.shadow }}
         >
           Export
         </button>
       </div>
-      <ul className="divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
+      <ul
+        className="divide-y divide-[var(--panel-border)] border rounded bg-[var(--panel-bg)]"
+        style={{ ...panelVars, borderColor: 'var(--panel-border)' }}
+      >
         {history.length === 0 && <li className="p-1 text-gray-400">No requests</li>}
         {history.map((f) => (
           <li key={f.id} className="p-1">
