@@ -4,25 +4,23 @@ import Image from 'next/image';
 export type KaliCategory = {
   id: string;
   label: string;
+  number: string;
 };
 
 export const KALI_CATEGORIES: KaliCategory[] = [
-  { id: 'information-gathering', label: 'Information Gathering' },
-  { id: 'vulnerability-analysis', label: 'Vulnerability Analysis' },
-  { id: 'web-application-analysis', label: 'Web Application Analysis' },
-  { id: 'database-assessment', label: 'Database Assessment' },
-  { id: 'password-attacks', label: 'Password Attacks' },
-  { id: 'wireless-attacks', label: 'Wireless Attacks' },
-  { id: 'reverse-engineering', label: 'Reverse Engineering' },
-  { id: 'exploitation-tools', label: 'Exploitation Tools' },
-  { id: 'sniffing-spoofing', label: 'Sniffing & Spoofing' },
-  { id: 'post-exploitation', label: 'Post Exploitation' },
-  { id: 'forensics', label: 'Forensics' },
-  { id: 'reporting', label: 'Reporting' },
-  { id: 'social-engineering', label: 'Social Engineering' },
-  { id: 'hardware-hacking', label: 'Hardware Hacking' },
-  { id: 'extra', label: 'Extra' },
-  { id: 'top10', label: 'Top 10 Security Tools' },
+  { id: 'top-10-tools', label: 'Top 10 Tools', number: '00' },
+  { id: 'information-gathering', label: 'Information Gathering', number: '01' },
+  { id: 'vulnerability-analysis', label: 'Vulnerability Analysis', number: '02' },
+  { id: 'web-application-analysis', label: 'Web Application Analysis', number: '03' },
+  { id: 'database-assessment', label: 'Database Assessment', number: '04' },
+  { id: 'password-attacks', label: 'Password Attacks', number: '05' },
+  { id: 'wireless-attacks', label: 'Wireless Attacks', number: '06' },
+  { id: 'reverse-engineering', label: 'Reverse Engineering', number: '07' },
+  { id: 'exploitation-tools', label: 'Exploitation Tools', number: '08' },
+  { id: 'sniffing-spoofing', label: 'Sniffing & Spoofing', number: '09' },
+  { id: 'post-exploitation', label: 'Post Exploitation', number: '10' },
+  { id: 'forensics', label: 'Forensics', number: '11' },
+  { id: 'reporting', label: 'Reporting', number: '12' },
 ];
 
 const DEFAULT_CATEGORY_ICON = '/themes/Yaru/status/preferences-system-symbolic.svg';
