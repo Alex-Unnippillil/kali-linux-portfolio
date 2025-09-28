@@ -543,6 +543,19 @@ export class Window extends Component {
         }
     }
 
+    handleTitleBarDoubleClick = (e) => {
+        if (this.state.grabbed || this.props.allowMaximize === false) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.state.maximized) {
+            this.restoreWindow();
+        } else {
+            this.maximizeWindow();
+        }
+    }
+
     releaseGrab = () => {
         if (this.state.grabbed) {
             this.handleStop();
@@ -676,6 +689,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -702,7 +716,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -712,6 +726,8 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onDoubleClick={onDoubleClick}
+            title="Double-click to maximize or restore"
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
