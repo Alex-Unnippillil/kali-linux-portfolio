@@ -2,9 +2,11 @@
   position: relative;
   border: 1px solid var(--color-window-border);
   border-radius: var(--radius-6);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--window-shadow);
   overflow: hidden;
-  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  outline: none;
+  isolation: isolate;
+  transition: box-shadow var(--motion-fast) ease;
 }
 
 .windowFrame::before {
@@ -23,12 +25,31 @@
   z-index: 2;
 }
 
+.windowFrame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--window-inactive-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) ease;
+  z-index: 1;
+}
+
 .windowFrameActive::before {
   opacity: 1;
 }
 
-.windowFrameInactive {
-  filter: brightness(0.85);
+.windowFrameActive {
+  box-shadow: var(--window-shadow), var(--focus-ring-shadow);
+}
+
+.windowFrameInactive::after {
+  opacity: 1;
+}
+
+.windowFrame:focus-visible {
+  box-shadow: var(--window-shadow), var(--focus-ring-shadow);
 }
 
 .windowFrameMaximized {

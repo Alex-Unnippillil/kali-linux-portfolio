@@ -77,9 +77,15 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
-  /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
-  --focus-outline-width: 2px;
+  /* Focus and elevation */
+  --focus-ring-color: color-mix(in srgb, var(--kali-blue) 80%, #ffffff 20%);
+  --focus-ring-width: 3px;
+  --focus-ring-shadow: 0 0 0 var(--focus-ring-width) color-mix(in srgb, var(--focus-ring-color) 85%, transparent 15%),
+    0 0 24px calc(var(--focus-ring-width) * 2) color-mix(in srgb, var(--focus-ring-color) 45%, transparent 55%);
+  --focus-outline-color: var(--focus-ring-color);
+  --focus-outline-width: var(--focus-ring-width);
+  --window-shadow: 0 18px 36px -18px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --window-inactive-overlay: rgba(15, 19, 23, 0.12);
 }
 
 /* High contrast theme */
