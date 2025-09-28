@@ -30,6 +30,55 @@ const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
+const DEFAULT_APP_SUMMARY = 'Explore this application in the Kali Linux portfolio environment.';
+
+const APP_SUMMARY_LOOKUP: Record<string, { summary: string; quickActions?: readonly string[] }> = {
+  firefox: {
+    summary: 'Launch the themed Firefox experience with tabs that highlight portfolio and research resources.',
+    quickActions: ['Open a new browsing session', 'Inspect developer tools demo'],
+  },
+  terminal: {
+    summary: 'Access the simulated Kali terminal complete with command history, prompt themes, and preset snippets.',
+    quickActions: ['Start a new shell tab', 'Review the command cheat sheet'],
+  },
+  vscode: {
+    summary: 'Jump into the embedded VS Code window to explore sample projects and code walkthroughs.',
+    quickActions: ['Resume your last workspace', 'Toggle zen mode preview'],
+  },
+  spotify: {
+    summary: 'Stream the curated cybersecurity focus playlists from the embedded Spotify experience.',
+    quickActions: ['Continue the chill mix', 'Open the productivity playlist'],
+  },
+  youtube: {
+    summary: 'Watch curated conference talks and walkthroughs directly within the desktop workspace.',
+    quickActions: ['Resume the featured talk', 'Browse the learning queue'],
+  },
+  'resource-monitor': {
+    summary: 'Inspect CPU, memory, and network activity visualisations inspired by the GNOME resource monitor.',
+    quickActions: ['Pin live graphs to the dashboard', 'Compare per-core metrics'],
+  },
+  wireshark: {
+    summary: 'Open the Wireshark simulation to step through packet captures and protocol analysis tutorials.',
+    quickActions: ['Load sample capture files', 'Review dissection walkthroughs'],
+  },
+  nessus: {
+    summary: 'Review guided Nessus scans that explain vulnerability categories and remediation workflows.',
+    quickActions: ['Browse sample reports', 'Open remediation playbook'],
+  },
+  autopsy: {
+    summary: 'Explore forensic case studies inside the Autopsy simulation with annotated evidence.',
+    quickActions: ['Inspect evidence timeline', 'Review investigator notes'],
+  },
+  'project-gallery': {
+    summary: 'Walk through interactive project cards showcasing featured builds, talks, and experiments.',
+    quickActions: ['Open spotlight project', 'Browse by technology'],
+  },
+  contact: {
+    summary: 'Reach out through the Gedit-themed contact window with client-side validation and status feedback.',
+    quickActions: ['Send a new message', 'Copy the public PGP key'],
+  },
+};
+
 const CATEGORY_DEFINITIONS = [
   {
     id: 'all',
@@ -207,6 +256,18 @@ const WhiskerMenu: React.FC = () => {
     });
   }, [allApps, favoriteApps, recentApps]);
 
+  const categoryMembership = useMemo(() => {
+    const mapping = new Map<string, string[]>();
+    CATEGORY_DEFINITIONS.forEach((definition) => {
+      if (definition.type !== 'ids') return;
+      definition.appIds.forEach((appId) => {
+        const existing = mapping.get(appId) ?? [];
+        mapping.set(appId, [...existing, definition.label]);
+      });
+    });
+    return mapping;
+  }, []);
+
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);
     return found ?? categoryConfigs[0];
@@ -220,6 +281,53 @@ const WhiskerMenu: React.FC = () => {
     }
     return list;
   }, [currentCategory, query]);
+
+  useEffect(() => {
+    setHighlight((currentHighlight) => {
+      if (currentApps.length === 0) {
+        return 0;
+      }
+      const maxIndex = currentApps.length - 1;
+      return currentHighlight > maxIndex ? maxIndex : currentHighlight;
+    });
+  }, [currentApps.length]);
+
+  const selectedApp = currentApps.length
+    ? currentApps[Math.min(highlight, Math.max(currentApps.length - 1, 0))]
+    : null;
+
+  const selectedSummary = selectedApp
+    ? APP_SUMMARY_LOOKUP[selectedApp.id]?.summary ?? DEFAULT_APP_SUMMARY
+    : 'Select an application to view details, categories, and quick actions.';
+
+  const selectedQuickActions: readonly string[] = selectedApp
+    ? APP_SUMMARY_LOOKUP[selectedApp.id]?.quickActions ?? []
+    : [];
+
+  const selectedTags = useMemo(() => {
+    if (!selectedApp) return [] as string[];
+    const tags = new Set<string>();
+    const mappedTags = categoryMembership.get(selectedApp.id) ?? [];
+    mappedTags.forEach(label => tags.add(label));
+    if (currentCategory && currentCategory.type !== 'all' && currentCategory.type !== 'ids') {
+      tags.add(currentCategory.label);
+    }
+    if (selectedApp.favourite) {
+      tags.add('Favorite');
+    }
+    if (recentIds.includes(selectedApp.id)) {
+      tags.add('Recent');
+    }
+    if (selectedApp.disabled) {
+      tags.add('Preview');
+    }
+    return Array.from(tags);
+  }, [categoryMembership, currentCategory, recentIds, selectedApp]);
+
+  const selectedStatus = selectedApp?.disabled ? 'Unavailable in demo build' : 'Ready to launch';
+  const selectedStatusBadge = selectedApp?.disabled
+    ? 'border border-rose-500/30 bg-rose-500/10 text-rose-200'
+    : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
@@ -471,121 +579,256 @@ const WhiskerMenu: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="flex flex-1 flex-col bg-[#0f1a29]">
-            <div className="border-b border-[#1d2a3c] px-5 py-4">
-              <div className="mb-4 flex items-center gap-3">
-                {favoriteApps.slice(0, 6).map((app) => (
-                  <button
-                    key={app.id}
-                    type="button"
-                    onClick={() => openSelectedApp(app.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
-                    aria-label={`Open ${app.title}`}
-                  >
-                    <Image
-                      src={app.icon}
-                      alt=""
-                      width={24}
-                      height={24}
-                      className="h-6 w-6"
-                      sizes="24px"
-                    />
-                  </button>
-                ))}
-              </div>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="20" y1="20" x2="16.65" y2="16.65" />
-                  </svg>
-                </span>
-                <input
-                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
-                  placeholder="Search applications"
-                  aria-label="Search applications"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto px-2 py-3">
-              {currentApps.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+          <div className="flex flex-1 bg-[#0f1a29]">
+            <div className="flex min-w-0 flex-[3] flex-col">
+              <div className="border-b border-[#1d2a3c] px-5 py-4">
+                <div className="mb-4 flex flex-wrap gap-3">
+                  {favoriteApps.slice(0, 6).map((app) => (
+                    <button
+                      key={app.id}
+                      type="button"
+                      onClick={() => openSelectedApp(app.id)}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                      aria-label={`Open ${app.title}`}
                     >
-                      <circle cx="12" cy="12" r="9" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                      <Image
+                        src={app.icon}
+                        alt=""
+                        width={24}
+                        height={24}
+                        className="h-6 w-6"
+                        sizes="24px"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="20" y1="20" x2="16.65" y2="16.65" />
                     </svg>
                   </span>
-                  <p>No applications match your search.</p>
+                  <input
+                    className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-10 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                    placeholder="Search applications"
+                    aria-label="Search applications"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    autoFocus
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      onClick={() => setQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-transparent bg-[#162438] p-1 text-gray-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-1 focus-visible:ring-offset-[#101c2d]"
+                      aria-label="Clear search"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <line x1="3" y1="3" x2="9" y2="9" />
+                        <line x1="9" y1="3" x2="3" y2="9" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <ul className="space-y-1">
-                  {currentApps.map((app, idx) => (
-                    <li key={app.id}>
+              </div>
+              <div className="flex-1 overflow-y-auto px-2 py-3">
+                {currentApps.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-sm text-gray-500">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="9" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-base font-medium text-gray-200">Nothing to show yet</p>
+                      <p className="text-xs uppercase tracking-[0.25em] text-[#4aa8ff]">Adjust your filters</p>
+                    </div>
+                    {query ? (
                       <button
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
-                          idx === highlight
-                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
-                            : 'text-gray-200 hover:bg-[#142132]'
-                        } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
-                        aria-label={app.title}
-                        disabled={app.disabled}
-                        onClick={() => {
-                          if (!app.disabled) {
-                            openSelectedApp(app.id);
-                          }
-                        }}
-                        onMouseEnter={() => setHighlight(idx)}
+                        onClick={() => setQuery('')}
+                        className="rounded-full border border-[#1d2a3c] px-3 py-1 text-xs font-medium text-gray-200 transition hover:border-[#274063] hover:bg-[#142133] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">
-                            <Image
-                              src={app.icon}
-                              alt=""
-                              width={28}
-                              height={28}
-                              className="h-7 w-7"
-                              sizes="28px"
-                            />
-                          </div>
-                          <div>
-                            <p className="font-medium text-[15px]">{app.title}</p>
-                            <p className="text-xs uppercase tracking-[0.25em] text-[#4aa8ff]">Application</p>
-                          </div>
-                        </div>
-                        <svg
-                          className="h-4 w-4 text-[#4aa8ff]"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
+                        Clear search
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                    ) : (
+                      <p className="text-xs text-gray-500">Launch an app to populate the recent and favorite feeds.</p>
+                    )}
+                  </div>
+                ) : (
+                  <ul className="space-y-1">
+                    {currentApps.map((app, idx) => (
+                      <li key={app.id}>
+                        <button
+                          type="button"
+                          className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                            idx === highlight
+                              ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
+                              : 'text-gray-200 hover:bg-[#142132]'
+                          } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                          aria-label={app.title}
+                          disabled={app.disabled}
+                          onClick={() => {
+                            if (!app.disabled) {
+                              openSelectedApp(app.id);
+                            }
+                          }}
+                          onMouseEnter={() => setHighlight(idx)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">
+                              <Image
+                                src={app.icon}
+                                alt=""
+                                width={28}
+                                height={28}
+                                className="h-7 w-7"
+                                sizes="28px"
+                              />
+                            </div>
+                            <div>
+                              <p className="font-medium text-[15px]">{app.title}</p>
+                              <p className="text-xs uppercase tracking-[0.25em] text-[#4aa8ff]">Application</p>
+                            </div>
+                          </div>
+                          <svg
+                            className="h-4 w-4 text-[#4aa8ff]"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
+            <aside className="flex w-[240px] flex-shrink-0 flex-col justify-between border-l border-[#1d2a3c] bg-[#101a27] px-5 py-5">
+              <div className="space-y-5">
+                {selectedApp ? (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#121f33]">
+                        <Image
+                          src={selectedApp.icon}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="h-9 w-9"
+                          sizes="40px"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-white">{selectedApp.title}</p>
+                        <span className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] uppercase tracking-[0.25em] ${selectedStatusBadge}`}>
+                          {selectedStatus}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm leading-relaxed text-gray-300">{selectedSummary}</p>
+                    {selectedTags.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[#4aa8ff]">Tags</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedTags.map(tag => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center rounded-full border border-[#1d2a3c] bg-[#0d1827] px-2.5 py-0.5 text-xs text-gray-200"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {selectedQuickActions.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[#4aa8ff]">Quick actions</p>
+                        <ul className="space-y-2 text-sm text-gray-300">
+                          {selectedQuickActions.map(action => (
+                            <li key={action} className="flex items-start gap-2">
+                              <span className="mt-1 inline-flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#4aa8ff]" aria-hidden />
+                              <span className="leading-snug">{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {!selectedApp.disabled && (
+                      <button
+                        type="button"
+                        className="w-full rounded-lg bg-gradient-to-r from-[#1b2d46] to-[#203451] px-3 py-2 text-sm font-medium text-white transition hover:from-[#28436a] hover:to-[#2f4a74] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a27]"
+                        onClick={() => openSelectedApp(selectedApp.id)}
+                      >
+                        Launch {selectedApp.title}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center text-center text-sm text-gray-400">
+                    <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 5v14" />
+                        <path d="m19 12-7 7-7-7" />
+                      </svg>
+                    </span>
+                    <p className="text-sm text-gray-300">Select an application to see more details.</p>
+                    <p className="text-xs text-gray-500">Search or use the arrow keys to explore.</p>
+                  </div>
+                )}
+              </div>
+              <div className="mt-6 rounded-lg border border-[#1d2a3c] bg-[#0c1624] p-3 text-xs text-gray-400">
+                <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[#4aa8ff]">Keyboard</p>
+                <ul className="space-y-1 text-[11px] tracking-[0.1em]">
+                  <li className="flex items-center justify-between text-gray-300">
+                    <span>Super</span>
+                    <span className="text-gray-400">Toggle menu</span>
+                  </li>
+                  <li className="flex items-center justify-between text-gray-300">
+                    <span>↑ / ↓</span>
+                    <span className="text-gray-400">Navigate</span>
+                  </li>
+                  <li className="flex items-center justify-between text-gray-300">
+                    <span>Enter</span>
+                    <span className="text-gray-400">Launch app</span>
+                  </li>
+                  <li className="flex items-center justify-between text-gray-300">
+                    <span>Esc</span>
+                    <span className="text-gray-400">Close menu</span>
+                  </li>
+                </ul>
+              </div>
+            </aside>
           </div>
         </div>
       )}
