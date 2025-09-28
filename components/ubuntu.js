@@ -7,6 +7,7 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { SettingsContext } from '../hooks/useSettings';
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -18,6 +19,8 @@ export default class Ubuntu extends Component {
 			shutDownScreen: false
 		};
 	}
+
+	static contextType = SettingsContext;
 
 	componentDidMount() {
 		this.getLocalData();
@@ -114,20 +117,25 @@ export default class Ubuntu extends Component {
 	};
 
 	render() {
+		const { snapEnabled = true } = this.context || {};
 		return (
 			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
 				<LockScreen
 					isLocked={this.state.screen_locked}
 					bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
-				/>
+					/>
 				<BootingScreen
 					visible={this.state.booting_screen}
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
 				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+				<Desktop
+				bg_image_name={this.state.bg_image_name}
+				changeBackgroundImage={this.changeBackgroundImage}
+				snapEnabled={snapEnabled}
+				/>
 			</div>
 		);
 	}
