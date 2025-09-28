@@ -24,11 +24,17 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import {
+    defaults as settingsDefaults,
+    getWorkspaceCount,
+    setWorkspaceCount as persistWorkspaceCount,
+} from '../../utils/settingsStore';
 
 export class Desktop extends Component {
     constructor() {
         super();
-        this.workspaceCount = 4;
+        const initialWorkspaceCount = this.normalizeWorkspaceCount(settingsDefaults.workspaceCount || 4);
+        this.workspaceCount = initialWorkspaceCount;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
         this.workspaceKeys = new Set([
@@ -115,6 +121,68 @@ export class Desktop extends Component {
         }
     };
 
+    normalizeWorkspaceCount = (value) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+            return settingsDefaults.workspaceCount || 4;
+        }
+        return Math.max(1, Math.round(parsed));
+    };
+
+    applyWorkspaceCount = (count) => {
+        const safeCount = this.normalizeWorkspaceCount(count);
+        const currentCount = this.state.workspaces.length;
+        if (safeCount === currentCount) return;
+
+        const nextSnapshots = Array.from({ length: safeCount }, (_, index) =>
+            this.workspaceSnapshots[index] ? this.workspaceSnapshots[index] : this.createEmptyWorkspaceState()
+        );
+        const nextStacks = Array.from({ length: safeCount }, (_, index) =>
+            this.workspaceStacks[index] ? this.workspaceStacks[index] : []
+        );
+
+        this.workspaceCount = safeCount;
+        this.workspaceSnapshots = nextSnapshots;
+        this.workspaceStacks = nextStacks;
+
+        const workspaces = Array.from({ length: safeCount }, (_, index) => ({
+            id: index,
+            label: `Workspace ${index + 1}`,
+        }));
+
+        this.setState((prevState) => {
+            const nextActive = Math.min(prevState.activeWorkspace, safeCount - 1);
+            const updates = { workspaces };
+            if (nextActive !== prevState.activeWorkspace) {
+                const snapshot = this.workspaceSnapshots[nextActive] || this.createEmptyWorkspaceState();
+                Object.assign(updates, {
+                    activeWorkspace: nextActive,
+                    focused_windows: { ...snapshot.focused_windows },
+                    closed_windows: { ...snapshot.closed_windows },
+                    overlapped_windows: { ...snapshot.overlapped_windows },
+                    minimized_windows: { ...snapshot.minimized_windows },
+                    window_positions: { ...snapshot.window_positions },
+                    hideSideBar: snapshot.hideSideBar ?? false,
+                    showWindowSwitcher: false,
+                    switcherWindows: [],
+                });
+            }
+            return updates;
+        });
+    };
+
+    loadWorkspacePreferences = async () => {
+        try {
+            const stored = await getWorkspaceCount();
+            const safeCount = this.normalizeWorkspaceCount(stored);
+            if (safeCount !== this.state.workspaces.length) {
+                this.applyWorkspaceCount(safeCount);
+            }
+        } catch (error) {
+            // ignore persistence errors and fall back to defaults
+        }
+    };
+
     getActiveStack = () => this.workspaceStacks[this.state.activeWorkspace];
 
     mergeWorkspaceMaps = (current = {}, base = {}, validKeys = null) => {
@@ -188,9 +256,11 @@ export class Desktop extends Component {
         this.switchWorkspace(next);
     };
 
-    componentDidMount() {
+    async componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        await this.loadWorkspacePreferences();
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -222,6 +292,13 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.workspaces.length !== this.state.workspaces.length) {
+            this.workspaceCount = this.state.workspaces.length;
+            void persistWorkspaceCount(this.state.workspaces.length);
+        }
     }
 
     componentWillUnmount() {
@@ -1106,6 +1183,7 @@ export class Desktop extends Component {
                     workspaces={workspaceSummaries}
                     activeWorkspace={this.state.activeWorkspace}
                     onSelectWorkspace={this.switchWorkspace}
+                    onShiftWorkspace={this.shiftWorkspace}
                 />
 
                 {/* Desktop Apps */}
