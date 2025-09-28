@@ -393,7 +393,7 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
+          className={`absolute left-0 mt-1 z-50 flex w-[520px] rounded-md border border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/95 text-[var(--kali-text)] shadow-lg backdrop-blur transition-all duration-200 ease-out ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
@@ -406,7 +406,7 @@ const WhiskerMenu: React.FC = () => {
         >
           <div
             ref={categoryListRef}
-            className="flex max-h-80 w-64 flex-col gap-1 overflow-y-auto bg-gray-900 p-3"
+            className="flex max-h-80 w-64 flex-col gap-1 overflow-y-auto bg-black/40 p-3"
             role="listbox"
             aria-label="Application categories"
             tabIndex={0}
@@ -419,8 +419,8 @@ const WhiskerMenu: React.FC = () => {
                   categoryButtonRefs.current[index] = el;
                 }}
                 type="button"
-                className={`flex items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-ubb-orange focus:ring-offset-2 focus:ring-offset-gray-900 ${
-                  category === cat.id ? 'bg-gray-700/80' : 'hover:bg-gray-700/60'
+                className={`flex items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-[var(--kali-focus-ring)] focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                  category === cat.id ? 'bg-white/10' : 'hover:bg-white/5'
                 }`}
                 role="option"
                 aria-selected={category === cat.id}
@@ -444,12 +444,14 @@ const WhiskerMenu: React.FC = () => {
                 </span>
               </button>
             ))}
-            <div className="mt-4 border-t border-gray-700 pt-3">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Kali Linux Groups</p>
-              <ul className="space-y-1 text-sm">
+            <div className="mt-4 border-t border-[var(--kali-panel-border)] pt-3">
+              <p className="mb-2 text-xs uppercase tracking-wide text-gray-300/80">Kali Linux Groups</p>
+              <ul className="space-y-1 text-sm text-gray-200">
                 {KALI_CATEGORIES.map((cat) => (
-                  <li key={cat.id} className="flex items-baseline text-gray-300">
-                    <span className="font-mono text-ubt-blue mr-2 w-8">{cat.number}</span>
+                  <li key={cat.id} className="flex items-baseline">
+                    <span className="mr-2 w-8 font-mono" style={{ color: 'var(--kali-blue)' }}>
+                      {cat.number}
+                    </span>
                     <span>{cat.label}</span>
                   </li>
                 ))}
@@ -472,7 +474,7 @@ const WhiskerMenu: React.FC = () => {
                 <div
                   key={app.id}
                   className={`rounded transition ring-offset-2 ${
-                    idx === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
+                    idx === highlight ? 'ring-2 ring-[var(--kali-focus-ring)] ring-offset-gray-900' : 'ring-0'
                   }`}
                 >
                   <UbuntuApp

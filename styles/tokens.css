@@ -36,6 +36,10 @@
   --kali-panel: rgba(26, 31, 38, 0.9);
   --kali-panel-border: rgba(255, 255, 255, 0.08);
   --kali-panel-highlight: rgba(255, 255, 255, 0.05);
+  --kali-border: rgba(255, 255, 255, 0.08);
+  --kali-focus-ring: var(--kali-blue);
+  --kali-selection: rgba(23, 147, 209, 0.35);
+  --kali-control-accent: var(--kali-blue);
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
 
@@ -97,6 +101,14 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --kali-blue: #ffff00;
+  --kali-blue-dark: #b29b00;
+  --kali-blue-glow: rgba(255, 255, 0, 0.35);
+  --kali-panel-border: rgba(255, 255, 0, 0.6);
+  --kali-border: rgba(255, 255, 0, 0.6);
+  --kali-focus-ring: #ffff00;
+  --kali-selection: rgba(255, 255, 0, 0.35);
+  --kali-control-accent: #ffff00;
 }
 
 /* Dyslexia-friendly fonts */
@@ -136,5 +148,13 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --kali-blue: #ffff00;
+    --kali-blue-dark: #b29b00;
+    --kali-blue-glow: rgba(255, 255, 0, 0.35);
+    --kali-panel-border: rgba(255, 255, 0, 0.6);
+    --kali-border: rgba(255, 255, 0, 0.6);
+    --kali-focus-ring: #ffff00;
+    --kali-selection: rgba(255, 255, 0, 0.35);
+    --kali-control-accent: #ffff00;
   }
 }
