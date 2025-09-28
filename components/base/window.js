@@ -59,6 +59,7 @@ export class Window extends Component {
             lastSize: null,
             grabbed: false,
         }
+        this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
@@ -76,7 +77,7 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
-        const root = document.getElementById(this.id);
+        const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
@@ -89,7 +90,7 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
-        const root = document.getElementById(this.id);
+        const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
@@ -134,7 +135,7 @@ export class Window extends Component {
     }
 
     computeContentUsage = () => {
-        const root = document.getElementById(this.id);
+        const root = this.getWindowNode();
         if (!root) return 100;
         const container = root.querySelector('.windowMainScreen');
         if (!container) return 100;
@@ -159,7 +160,7 @@ export class Window extends Component {
     }
 
     optimizeWindow = () => {
-        const root = document.getElementById(this.id);
+        const root = this.getWindowNode();
         if (!root) return;
         const container = root.querySelector('.windowMainScreen');
         if (!container) return;
@@ -189,6 +190,16 @@ export class Window extends Component {
             return this.props.overlayRoot;
         }
         return document.getElementById('__next');
+    }
+
+    getWindowNode = () => {
+        if (this.windowRef.current) {
+            return this.windowRef.current;
+        }
+        if (this.id) {
+            return document.getElementById(this.id);
+        }
+        return null;
     }
 
     activateOverlay = () => {
@@ -247,13 +258,13 @@ export class Window extends Component {
     }
 
     setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const node = this.getWindowNode();
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
         const x = this.snapToGrid(rect.x);
         const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        node.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
+        node.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
@@ -261,12 +272,12 @@ export class Window extends Component {
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
-        if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
+        const node = this.getWindowNode();
+        if (node) {
+            const x = node.style.getPropertyValue('--window-transform-x');
+            const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
+                node.style.transform = `translate(${x},${y})`;
             }
         }
         if (this.state.lastSize) {
@@ -290,7 +301,7 @@ export class Window extends Component {
         const region = regions[position];
         if (!region) return;
         const { width, height } = this.state;
-        const node = document.getElementById(this.id);
+        const node = this.getWindowNode();
         if (node) {
             node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
@@ -305,8 +316,9 @@ export class Window extends Component {
     }
 
     checkOverlap = () => {
-        var r = document.querySelector("#" + this.id);
-        var rect = r.getBoundingClientRect();
+        const node = this.getWindowNode();
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
         if (rect.x.toFixed(1) < 50) { // if this window overlapps with SideBar
             this.props.hideSideBar(this.id, true);
         }
@@ -316,21 +328,21 @@ export class Window extends Component {
     }
 
     setInertBackground = () => {
-        const root = document.getElementById(this.id);
+        const root = this.getWindowNode();
         if (root) {
             root.setAttribute('inert', '');
         }
     }
 
     removeInertBackground = () => {
-        const root = document.getElementById(this.id);
+        const root = this.getWindowNode();
         if (root) {
             root.removeAttribute('inert');
         }
     }
 
     checkSnapPreview = () => {
-        const node = document.getElementById(this.id);
+        const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -418,9 +430,11 @@ export class Window extends Component {
         this.setWinowsPosition();
         // get corrosponding sidebar app's position
         var r = document.querySelector("#sidebar-" + this.id);
+        if (!r) return;
         var sidebBarApp = r.getBoundingClientRect();
 
-        const node = document.querySelector("#" + this.id);
+        const node = this.getWindowNode();
+        if (!node) return;
         const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -443,7 +457,8 @@ export class Window extends Component {
     }
 
     restoreWindow = () => {
-        const node = document.querySelector("#" + this.id);
+        const node = this.getWindowNode();
+        if (!node) return;
         this.setDefaultWindowDimenstion();
         // get previous position
         let posx = node.style.getPropertyValue("--window-transform-x");
@@ -488,10 +503,12 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
-            var r = document.querySelector("#" + this.id);
+            const node = this.getWindowNode();
             this.setWinowsPosition();
             // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
+            if (node) {
+                node.style.transform = `translate(-1pt,-2pt)`;
+            }
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
         }
@@ -527,7 +544,7 @@ export class Window extends Component {
             if (dx !== 0 || dy !== 0) {
                 e.preventDefault();
                 e.stopPropagation();
-                const node = document.getElementById(this.id);
+                const node = this.getWindowNode();
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
                     let x = match ? parseFloat(match[1]) : 0;
@@ -634,6 +651,7 @@ export class Window extends Component {
                     />
                 )}
                 <Draggable
+                    nodeRef={this.windowRef}
                     axis="both"
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
@@ -646,6 +664,7 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
+                        ref={this.windowRef}
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={[
                             this.state.cursorType,
