@@ -20,8 +20,34 @@ export default class Navbar extends Component {
 		render() {
 			return (
 				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-					<div className="flex items-center">
-						<WhiskerMenu />
+                                        <div className="flex items-center">
+                                                <button
+                                                        type="button"
+                                                        className="px-3 h-8 flex items-center hover:bg-kali-menu-hover focus-ring"
+                                                        aria-haspopup="menu"
+                                                        aria-expanded={this.state.applicationsMenuOpen}
+                                                        onClick={() =>
+                                                                this.setState((prevState) => ({
+                                                                        applicationsMenuOpen: !prevState.applicationsMenuOpen
+                                                                }))
+                                                        }
+                                                >
+                                                        Applications
+                                                </button>
+                                                <button
+                                                        type="button"
+                                                        className="px-3 h-8 flex items-center hover:bg-kali-menu-hover focus-ring"
+                                                        aria-haspopup="menu"
+                                                        aria-expanded={this.state.placesMenuOpen}
+                                                        onClick={() =>
+                                                                this.setState((prevState) => ({
+                                                                        placesMenuOpen: !prevState.placesMenuOpen
+                                                                }))
+                                                        }
+                                                >
+                                                        Places
+                                                </button>
+                                                <WhiskerMenu />
 						<PerformanceGraph />
 					</div>
 					<div
