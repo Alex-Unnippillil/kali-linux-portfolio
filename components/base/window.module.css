@@ -52,11 +52,65 @@
 }
 
 .windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+  position: relative;
+  height: calc(100% - 4px);
+  width: calc(100% + 20px);
+  touch-action: none;
+}
+
+.windowYBorder::before,
+.windowYBorder::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 999px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--color-window-accent) 0 2px,
+    transparent 2px 6px
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.windowYBorder::before {
+  left: 10px;
+}
+
+.windowYBorder::after {
+  right: 10px;
 }
 
 .windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+  position: relative;
+  height: calc(100% + 20px);
+  width: calc(100% - 4px);
+  touch-action: none;
+}
+
+.windowXBorder::before,
+.windowXBorder::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--color-window-accent) 0 2px,
+    transparent 2px 6px
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.windowXBorder::before {
+  top: 10px;
+}
+
+.windowXBorder::after {
+  bottom: 10px;
 }
