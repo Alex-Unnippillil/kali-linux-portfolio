@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  useId,
+} from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
@@ -145,7 +152,17 @@ const readRecentAppIds = (): string[] => {
 };
 
 
-const WhiskerMenu: React.FC = () => {
+type WhiskerMenuProps = {
+  announcementId?: string;
+  onActiveItemChange?: (message: string) => void;
+  onOpenChange?: (open: boolean) => void;
+};
+
+const WhiskerMenu: React.FC<WhiskerMenuProps> = ({
+  announcementId,
+  onActiveItemChange,
+  onOpenChange,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,6 +176,12 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const reactId = useId();
+  const sanitizedId = useMemo(() => reactId.replace(/[:]/g, ''), [reactId]);
+  const menuId = useMemo(() => `whisker-menu-${sanitizedId}`, [sanitizedId]);
+  const computedAnnouncementId = announcementId ?? `${menuId}-announcement`;
 
 
   const allApps: AppMeta[] = apps as any;
@@ -272,14 +295,39 @@ const WhiskerMenu: React.FC = () => {
     };
   }, [isOpen, isVisible]);
 
-  const showMenu = useCallback(() => {
-    setIsVisible(true);
-    requestAnimationFrame(() => setIsOpen(true));
+  const scheduleMenuOpen = useCallback(() => {
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => setIsOpen(true));
+    } else {
+      setTimeout(() => setIsOpen(true), 0);
+    }
   }, []);
 
-  const hideMenu = useCallback(() => {
-    setIsOpen(false);
+  const focusToggleButton = useCallback(() => {
+    const node = buttonRef.current;
+    if (!node) return;
+    const focus = () => node.focus();
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(focus);
+    } else {
+      setTimeout(focus, 0);
+    }
   }, []);
+
+  const showMenu = useCallback(() => {
+    setIsVisible(true);
+    scheduleMenuOpen();
+  }, [scheduleMenuOpen]);
+
+  const hideMenu = useCallback(
+    (shouldRestoreFocus = false) => {
+      setIsOpen(false);
+      if (shouldRestoreFocus) {
+        focusToggleButton();
+      }
+    },
+    [focusToggleButton],
+  );
 
   const toggleMenu = useCallback(() => {
     if (isOpen || isVisible) {
@@ -290,35 +338,87 @@ const WhiskerMenu: React.FC = () => {
   }, [hideMenu, isOpen, isVisible, showMenu]);
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
+    onOpenChange?.(isVisible);
+  }, [isVisible, onOpenChange]);
+
+  const focusCategoryButton = useCallback((index: number) => {
+    const btn = categoryButtonRefs.current[index];
+    if (btn) {
+      btn.focus();
+    }
+  }, []);
+
+  const handleCategoryNavigation = useCallback(
+    (direction: 1 | -1) => {
+      if (!categoryConfigs.length) return;
+      setCategoryHighlight(current => {
+        const nextIndex = (current + direction + categoryConfigs.length) % categoryConfigs.length;
+        const nextCategory = categoryConfigs[nextIndex];
+        if (nextCategory) {
+          setCategory(nextCategory.id);
+          focusCategoryButton(nextIndex);
+        }
+        return nextIndex;
+      });
+    },
+    [categoryConfigs, focusCategoryButton],
+  );
+
+  const handleGlobalKey = useCallback(
+    (e: KeyboardEvent) => {
       if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         toggleMenu();
         return;
       }
       if (!isVisible) return;
-      const target = e.target as Node | null;
-      if (target && categoryListRef.current?.contains(target)) {
+      const target = e.target as EventTarget | null;
+      const targetNode = target instanceof Node ? target : null;
+      const isInCategoryList = Boolean(targetNode && categoryListRef.current?.contains(targetNode));
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (query) {
+          setQuery('');
+        } else {
+          hideMenu(true);
+        }
         return;
       }
 
-      if (e.key === 'Escape') {
-        hideMenu();
-      } else if (e.key === 'ArrowDown') {
+      if (isInCategoryList) {
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        if (!currentApps.length) return;
         e.preventDefault();
         setHighlight(h => Math.min(h + 1, currentApps.length - 1));
       } else if (e.key === 'ArrowUp') {
+        if (!currentApps.length) return;
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        const app = currentApps[highlight];
+        handleCategoryNavigation(1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleCategoryNavigation(-1);
+      } else if (e.key === 'Enter') {
+        if (!currentApps.length) return;
+        e.preventDefault();
+        const clampedIndex = Math.min(highlight, Math.max(currentApps.length - 1, 0));
+        const app = currentApps[clampedIndex];
         if (app) openSelectedApp(app.id);
       }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+    },
+    [currentApps, handleCategoryNavigation, highlight, hideMenu, isVisible, openSelectedApp, query, toggleMenu],
+  );
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => window.removeEventListener('keydown', handleGlobalKey);
+  }, [handleGlobalKey]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -338,25 +438,6 @@ const WhiskerMenu: React.FC = () => {
     }
   }, []);
 
-  const focusCategoryButton = (index: number) => {
-    const btn = categoryButtonRefs.current[index];
-    if (btn) {
-      btn.focus();
-    }
-  };
-
-  const handleCategoryNavigation = (direction: 1 | -1) => {
-    setCategoryHighlight((current) => {
-      const nextIndex = (current + direction + categoryConfigs.length) % categoryConfigs.length;
-      const nextCategory = categoryConfigs[nextIndex];
-      if (nextCategory) {
-        setCategory(nextCategory.id);
-        focusCategoryButton(nextIndex);
-      }
-      return nextIndex;
-    });
-  };
-
   const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
@@ -364,6 +445,12 @@ const WhiskerMenu: React.FC = () => {
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       handleCategoryNavigation(-1);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      handleCategoryNavigation(-1);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      searchInputRef.current?.focus();
     } else if (event.key === 'Enter') {
       event.preventDefault();
       const selected = categoryConfigs[categoryHighlight];
@@ -373,6 +460,30 @@ const WhiskerMenu: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (!isVisible) return;
+    if (!currentApps.length) {
+      onActiveItemChange?.(`${currentCategory.label} has no applications`);
+      return;
+    }
+    const clampedIndex = Math.min(highlight, Math.max(currentApps.length - 1, 0));
+    const app = currentApps[clampedIndex];
+    if (app) {
+      onActiveItemChange?.(`${app.title}, ${currentCategory.label}`);
+    }
+  }, [currentApps, currentCategory.label, highlight, isVisible, onActiveItemChange]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      onActiveItemChange?.('');
+    }
+  }, [isVisible, onActiveItemChange]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    setHighlight(h => Math.min(h, Math.max(currentApps.length - 1, 0)));
+  }, [currentApps.length, isVisible]);
+
   return (
     <div className="relative inline-flex">
       <button
@@ -380,6 +491,11 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={toggleMenu}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        aria-haspopup="menu"
+        aria-expanded={isVisible}
+        aria-controls={menuId}
+        aria-describedby={computedAnnouncementId}
+        data-active={isVisible}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -403,6 +519,7 @@ const WhiskerMenu: React.FC = () => {
               hideMenu();
             }
           }}
+          id={menuId}
         >
           <div
             ref={categoryListRef}
@@ -458,6 +575,7 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="flex flex-col p-3">
             <input
+              ref={searchInputRef}
               className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
 
               placeholder="Search"

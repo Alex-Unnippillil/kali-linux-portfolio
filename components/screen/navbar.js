@@ -8,25 +8,48 @@ import PerformanceGraph from '../ui/PerformanceGraph';
 
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
+        constructor() {
+                super();
                 this.state = {
                         status_card: false,
                         applicationsMenuOpen: false,
-                        placesMenuOpen: false
+                        placesMenuOpen: false,
+                        whiskerAnnouncement: ''
                 };
+                this.announcementRegionId = 'whisker-active-item-announcement';
         }
 
-		render() {
-			return (
-				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-					<div className="flex items-center">
-						<WhiskerMenu />
-						<PerformanceGraph />
-					</div>
-					<div
-						className={
-							'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+                handleWhiskerMenuOpen = (open) => {
+                        this.setState({ applicationsMenuOpen: open });
+                };
+
+                handleWhiskerAnnouncement = (message) => {
+                        this.setState({ whiskerAnnouncement: message });
+                };
+
+                render() {
+                        const { whiskerAnnouncement } = this.state;
+                        return (
+                                <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                                        <div className="flex items-center" data-whisker-open={this.state.applicationsMenuOpen}>
+                                                <WhiskerMenu
+                                                        onOpenChange={this.handleWhiskerMenuOpen}
+                                                        onActiveItemChange={this.handleWhiskerAnnouncement}
+                                                        announcementId={this.announcementRegionId}
+                                                />
+                                                <div
+                                                        id={this.announcementRegionId}
+                                                        role="status"
+                                                        aria-live="polite"
+                                                        className="sr-only"
+                                                >
+                                                        {whiskerAnnouncement}
+                                                </div>
+                                                <PerformanceGraph />
+                                        </div>
+                                        <div
+                                                className={
+                                                        'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
 						}
 					>
 						<Clock />
