@@ -25,7 +25,7 @@ export const KALI_CATEGORIES: KaliCategory[] = [
   { id: 'top10', label: 'Top 10 Security Tools' },
 ];
 
-const DEFAULT_CATEGORY_ICON = '/themes/Yaru/status/preferences-system-symbolic.svg';
+const DEFAULT_CATEGORY_ICON = '/themes/Kali/panel/emblem-system-symbolic.svg';
 
 const CATEGORY_ICON_LOOKUP: Record<string, string> = {
   'information-gathering': '/themes/kali/categories/information-gathering.svg',
