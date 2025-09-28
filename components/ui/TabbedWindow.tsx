@@ -20,6 +20,7 @@ interface TabbedWindowProps {
   initialTabs: TabDefinition[];
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
+  onNewWindow?: () => void;
   className?: string;
 }
 
@@ -36,12 +37,14 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   initialTabs,
   onNewTab,
   onTabsChange,
+  onNewWindow,
   className = '',
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const closedTabsRef = useRef<{ tab: TabDefinition; index: number }[]>([]);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -77,7 +80,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         const idx = prev.findIndex((t) => t.id === id);
         const removed = prev[idx];
         const next = prev.filter((t) => t.id !== id);
-        if (removed && removed.onClose) removed.onClose();
+        if (removed) {
+          if (removed.onClose) removed.onClose();
+          if (removed.closable !== false) {
+            closedTabsRef.current.push({ tab: removed, index: idx });
+          }
+        }
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
           setActiveId(fallback.id);
@@ -98,6 +106,20 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     updateTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
+
+  const reopenLastClosedTab = useCallback(() => {
+    const stack = closedTabsRef.current;
+    if (stack.length === 0) return;
+    const { tab, index } = stack.pop()!;
+    updateTabs((prev) => {
+      if (prev.some((t) => t.id === tab.id)) return prev;
+      const next = [...prev];
+      const insertIndex = Math.min(index, next.length);
+      next.splice(insertIndex, 0, tab);
+      return next;
+    });
+    setActiveId(tab.id);
+  }, [updateTabs]);
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
@@ -122,12 +144,23 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.ctrlKey && e.key.toLowerCase() === 'w') {
+    const key = e.key.toLowerCase();
+    if (e.ctrlKey && e.shiftKey && key === 't') {
+      e.preventDefault();
+      reopenLastClosedTab();
+      return;
+    }
+    if (e.ctrlKey && e.shiftKey && key === 'n') {
+      e.preventDefault();
+      onNewWindow?.();
+      return;
+    }
+    if (e.ctrlKey && key === 'w') {
       e.preventDefault();
       closeTab(activeId);
       return;
     }
-    if (e.ctrlKey && e.key.toLowerCase() === 't') {
+    if (e.ctrlKey && key === 't') {
       e.preventDefault();
       addTab();
       return;

@@ -8,6 +8,10 @@ export interface Shortcut {
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'New terminal tab', keys: 'Ctrl+T' },
+  { description: 'Reopen last terminal tab', keys: 'Ctrl+Shift+T' },
+  { description: 'Close terminal tab', keys: 'Ctrl+W' },
+  { description: 'Open new terminal window', keys: 'Ctrl+Shift+N' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
