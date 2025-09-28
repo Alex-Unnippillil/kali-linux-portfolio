@@ -33,6 +33,8 @@ const computeSnapRegions = (viewportWidth, viewportHeight) => {
     };
 };
 
+const DEFAULT_WINDOW_ICON = '/themes/Yaru/system/view-app-grid-symbolic.svg';
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -672,10 +674,12 @@ export class Window extends Component {
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
+                            icon={this.props.context?.icon ?? this.props.icon}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            isActive={this.props.isFocused}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -702,10 +706,12 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, icon, onKeyDown, onBlur, grabbed, onPointerDown, isActive }) {
+    const iconSrc = icon || DEFAULT_WINDOW_ICON;
+
     return (
         <div
-            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
+            className={`${styles.windowTitlebar} relative bg-ub-window-title px-2 w-full select-none flex items-center justify-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -713,7 +719,22 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             onBlur={onBlur}
             onPointerDown={onPointerDown}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className={styles.windowTitlebarContent}>
+                <NextImage
+                    src={iconSrc}
+                    alt=""
+                    width={16}
+                    height={16}
+                    className={styles.windowTitlebarIcon}
+                    aria-hidden={true}
+                />
+                <span
+                    className={[styles.windowTitleText, isActive ? styles.windowTitleTextActive : null].filter(Boolean).join(' ')}
+                    title={typeof title === 'string' ? title : undefined}
+                >
+                    {title}
+                </span>
+            </div>
         </div>
     )
 }

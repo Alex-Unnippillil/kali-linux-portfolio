@@ -622,6 +622,7 @@ export class Desktop extends Component {
                     id: app.id,
                     screen: app.screen,
                     addFolder: this.addToDesktop,
+                    icon: app.icon,
                     closed: this.closeApp,
                     openApp: this.openApp,
                     focus: this.focus,
