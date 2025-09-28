@@ -398,12 +398,41 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
+        const droppedOnTrash = this.checkTrashDrop();
+        if (droppedOnTrash) {
+            this.setState({ snapPreview: null, snapPosition: null });
+            return;
+        }
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+    }
+
+    checkTrashDrop = () => {
+        const node = document.getElementById(this.id);
+        const trashNode = document.getElementById('app-trash');
+        if (!node || !trashNode) return false;
+        const windowRect = node.getBoundingClientRect();
+        const trashRect = trashNode.getBoundingClientRect();
+        const intersects = !(
+            windowRect.right < trashRect.left ||
+            windowRect.left > trashRect.right ||
+            windowRect.bottom < trashRect.top ||
+            windowRect.top > trashRect.bottom
+        );
+        if (intersects) {
+            window.dispatchEvent(new CustomEvent('desktop-drop-to-trash', {
+                detail: {
+                    id: this.id,
+                    type: 'window',
+                },
+            }));
+            return true;
+        }
+        return false;
     }
 
     focusWindow = () => {
