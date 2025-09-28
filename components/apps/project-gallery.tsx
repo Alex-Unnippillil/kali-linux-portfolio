@@ -134,15 +134,13 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     );
   }, [filtered.length, stack, year, type, tags, search]);
 
-  const openInChrome = (url: string) => {
+  const openInFirefox = (url: string) => {
     try {
-      const id = Date.now();
-      const tab = { id, url, history: [url], historyIndex: 0, scroll: 0 };
-      localStorage.setItem('chrome-tabs', JSON.stringify({ tabs: [tab], active: id }));
+      sessionStorage.setItem('firefox:start-url', url);
     } catch {
       /* ignore */
     }
-    openApp && openApp('chrome');
+    openApp && openApp('firefox');
   };
 
   const toggleSelect = (project: Project) => {
@@ -325,24 +323,24 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                 >
                   Repo
                 </a>
-                {project.demo && (
-                  <>
-                    <a
-                      href={project.demo}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:underline"
-                    >
-                      Live Demo
-                    </a>
-                    <button
-                      onClick={() => openInChrome(project.demo)}
-                      className="text-blue-400 hover:underline"
-                    >
-                      Open in Chrome
-                    </button>
-                  </>
-                )}
+                  {project.demo && (
+                    <>
+                      <a
+                        href={project.demo}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:underline"
+                      >
+                        Live Demo
+                      </a>
+                      <button
+                        onClick={() => openInFirefox(project.demo)}
+                        className="text-blue-400 hover:underline"
+                      >
+                        Open in Firefox
+                      </button>
+                    </>
+                  )}
               </div>
             </div>
           </div>

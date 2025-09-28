@@ -27,13 +27,9 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
       'Arrow keys — Navigate history',
     ],
   },
-  chrome: {
-    description: 'Sandboxed Chromium experience with curated demo sites and reader mode.',
-    keyboard: [
-      'Ctrl+L — Focus address bar',
-      'Ctrl+Tab — Switch tabs',
-      'Ctrl+W — Close active tab',
-    ],
+  firefox: {
+    description: 'Lightweight Firefox-inspired web view that loads a single sandboxed iframe.',
+    keyboard: ['Ctrl+L — Focus address bar', 'Enter — Navigate to URL'],
   },
   vscode: {
     description: 'VS Code remote workspace embedded via StackBlitz iframe for quick code editing.',

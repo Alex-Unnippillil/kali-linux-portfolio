@@ -215,9 +215,9 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Accept:** Inline validation, clear error text, loading state, success toast; Recaptcha errors surfaced.
     - **Where:** Gedit app; env vars already specified in README.
 
-51. **Chrome app permissions UI**
+51. **Firefox app permissions UI**
     - **Accept:** Explicit message about sandboxed iframes and limited capabilities; tighten CSP and image domains for embeds.
-    - **Where:** Chrome app; `next.config.js` CSP list.
+    - **Where:** Firefox app; `next.config.js` CSP list.
 
 52. **Project Gallery lazy loading**
     - **Accept:** Cards lazy-load images with aspect boxes to avoid CLS; blur placeholders.
