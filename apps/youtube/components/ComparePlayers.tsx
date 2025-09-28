@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { getCspNonce } from '../../../utils/csp';
 
 function parseVideoId(input: string): string {
   try {
@@ -33,6 +34,8 @@ const ComparePlayers = () => {
     }
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
+    const nonce = getCspNonce();
+    if (nonce) tag.nonce = nonce;
     window.onYouTubeIframeAPIReady = () => setReady(true);
     document.body.appendChild(tag);
   }, []);

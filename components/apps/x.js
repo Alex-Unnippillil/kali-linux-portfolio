@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { getCspNonce } from '../../utils/csp';
 
 const sanitizeHandle = (handle) =>
   handle.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
@@ -65,7 +66,11 @@ export default function XApp() {
   useEffect(() => {
     if (!shouldLoad) return;
     const src = 'https://platform.twitter.com/widgets.js';
+    const nonce = getCspNonce();
     let script = document.querySelector(`script[src="${src}"]`);
+    if (script && nonce && !script.nonce) {
+      script.nonce = nonce;
+    }
     let timeout;
     const handleError = () => {
       clearTimeout(timeout);
@@ -93,6 +98,7 @@ export default function XApp() {
         script = document.createElement('script');
         script.src = src;
         script.async = true;
+        if (nonce) script.nonce = nonce;
         document.body.appendChild(script);
       }
       timeout = window.setTimeout(handleError, 10000);

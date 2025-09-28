@@ -6,7 +6,12 @@ class MyDocument extends Document {
    */
   static async getInitialProps(ctx) {
     const initial = await Document.getInitialProps(ctx);
-    const nonce = ctx?.res?.getHeader?.('x-csp-nonce');
+    const rawNonce = ctx?.res?.getHeader?.('x-csp-nonce');
+    const nonce = Array.isArray(rawNonce)
+      ? rawNonce[0]
+      : rawNonce != null
+        ? String(rawNonce)
+        : undefined;
     return { ...initial, nonce };
   }
 

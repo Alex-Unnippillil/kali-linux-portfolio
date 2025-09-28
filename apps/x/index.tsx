@@ -14,6 +14,7 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import { getCspNonce } from '../../utils/csp';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -65,6 +66,7 @@ const IconBadge = (props: SVGProps<SVGSVGElement>) => (
 );
 
 export default function XTimeline() {
+  const nonce = getCspNonce();
   const { accent } = useSettings();
   const [profilePresets, setProfilePresets] = usePersistentState<string[]>(
     'x-profile-presets',
@@ -300,6 +302,7 @@ export default function XTimeline() {
           if (loaded) loadTimeline();
         }}
         onError={() => setScriptError(true)}
+        nonce={nonce}
       />
       <div className="flex flex-col h-full">
         <header className="flex items-center justify-between p-1.5 border-b gap-1.5">

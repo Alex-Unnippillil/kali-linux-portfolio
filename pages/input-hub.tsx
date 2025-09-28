@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import { getCspNonce } from '../utils/csp';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -78,6 +79,8 @@ const InputHub = () => {
       const script = document.createElement('script');
       script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
       script.async = true;
+      const nonce = getCspNonce();
+      if (nonce) script.nonce = nonce;
       document.head.appendChild(script);
     }
   }, []);
