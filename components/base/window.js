@@ -12,6 +12,8 @@ const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_BOTTOM_INSET = 28;
+const DOCK_ANIMATION_DURATION = 160;
+const DOCK_ANIMATION_SCALE = 0.2;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -58,10 +60,12 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            animationState: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._isUnmounted = false;
     }
 
     componentDidMount() {
@@ -84,6 +88,7 @@ export class Window extends Component {
     }
 
     componentWillUnmount() {
+        this._isUnmounted = true;
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
@@ -93,6 +98,10 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._dockAnimation) {
+            this._dockAnimation.cancel();
+            this._dockAnimation = null;
         }
     }
 
@@ -259,6 +268,192 @@ export class Window extends Component {
         }
     }
 
+    prefersReducedMotion = () => {
+        if (typeof window === 'undefined') return true;
+        if (typeof document !== 'undefined' && document.documentElement.classList.contains('reduced-motion')) {
+            return true;
+        }
+        if (typeof window.matchMedia === 'function') {
+            try {
+                return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    getDockTargetRect = () => {
+        if (typeof document === 'undefined') return null;
+        const taskbar = document.querySelector(`[data-context="taskbar"][data-app-id="${this.id}"]`);
+        if (taskbar && taskbar instanceof HTMLElement) {
+            return taskbar.getBoundingClientRect();
+        }
+        const sidebar = document.getElementById(`sidebar-${this.id}`);
+        if (sidebar) {
+            return sidebar.getBoundingClientRect();
+        }
+        return null;
+    }
+
+    computeDockTransform = (nodeRect, scale = DOCK_ANIMATION_SCALE) => {
+        const targetRect = this.getDockTargetRect();
+        if (!targetRect) return null;
+        const finalX = targetRect.left + targetRect.width / 2 - (nodeRect.width * scale) / 2;
+        const finalY = targetRect.top + targetRect.height / 2 - (nodeRect.height * scale) / 2;
+        return `translate(${finalX}px, ${finalY}px) scale(${scale})`;
+    }
+
+    getStoredTransform = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return null;
+        const x = node.style.getPropertyValue('--window-transform-x') || '0px';
+        const y = node.style.getPropertyValue('--window-transform-y') || '0px';
+        return `translate(${x},${y}) scale(1)`;
+    }
+
+    ensureStartTransform = (transform, nodeRect) => {
+        if (transform && transform !== 'none') {
+            return transform;
+        }
+        const x = typeof nodeRect.left === 'number' ? nodeRect.left : 0;
+        const y = typeof nodeRect.top === 'number' ? nodeRect.top : 0;
+        return `translate(${x}px, ${y}px)`;
+    }
+
+    playMinimizeAnimation = () => {
+        if (this._isUnmounted) return Promise.resolve();
+        if (typeof window === 'undefined') return Promise.resolve();
+        const node = document.getElementById(this.id);
+        if (!node) return Promise.resolve();
+        this.setWinowsPosition();
+        const nodeRect = node.getBoundingClientRect();
+        const finalTransform = this.computeDockTransform(nodeRect);
+        if (!finalTransform) {
+            return Promise.resolve();
+        }
+        const computed = typeof window.getComputedStyle === 'function' ? window.getComputedStyle(node) : null;
+        const startTransform = this.ensureStartTransform(node.style.transform || (computed ? computed.transform : ''), nodeRect);
+        const reduceMotion = this.prefersReducedMotion();
+
+        return new Promise((resolve) => {
+            this.setState({ animationState: 'minimizing' }, () => {
+                if (reduceMotion) {
+                    node.style.transform = finalTransform;
+                    if (this._isUnmounted) {
+                        resolve();
+                        return;
+                    }
+                    this.setState({ animationState: null }, resolve);
+                    return;
+                }
+
+                if (this._dockAnimation) {
+                    this._dockAnimation.cancel();
+                    this._dockAnimation = null;
+                }
+
+                let settled = false;
+                const finish = () => {
+                    if (settled) return;
+                    settled = true;
+                    node.style.transform = finalTransform;
+                    if (this._dockAnimation) {
+                        this._dockAnimation.onfinish = null;
+                        this._dockAnimation.oncancel = null;
+                        this._dockAnimation = null;
+                    }
+                    if (this._isUnmounted) {
+                        resolve();
+                        return;
+                    }
+                    this.setState({ animationState: null }, resolve);
+                };
+
+                this._dockAnimation = node.animate(
+                    [
+                        { transform: startTransform },
+                        { transform: finalTransform }
+                    ],
+                    { duration: DOCK_ANIMATION_DURATION, easing: 'ease-in-out', fill: 'forwards' }
+                );
+                this._dockAnimation.onfinish = finish;
+                this._dockAnimation.oncancel = finish;
+            });
+        });
+    }
+
+    playRestoreAnimation = () => {
+        if (this._isUnmounted) return Promise.resolve();
+        if (typeof window === 'undefined') return Promise.resolve();
+        const node = document.getElementById(this.id);
+        if (!node) return Promise.resolve();
+        const finalTransform = this.getStoredTransform();
+        if (!finalTransform) {
+            return Promise.resolve();
+        }
+        const nodeRect = node.getBoundingClientRect();
+        const computed = typeof window.getComputedStyle === 'function' ? window.getComputedStyle(node) : null;
+        const startTransform = this.ensureStartTransform(node.style.transform || (computed ? computed.transform : ''), nodeRect);
+        const reduceMotion = this.prefersReducedMotion();
+
+        return new Promise((resolve) => {
+            this.setState({ animationState: 'restoring' }, () => {
+                if (reduceMotion) {
+                    node.style.transform = finalTransform;
+                    if (this._isUnmounted) {
+                        resolve();
+                        return;
+                    }
+                    this.setState({ animationState: null }, () => {
+                        this.checkOverlap();
+                        resolve();
+                    });
+                    return;
+                }
+
+                if (this._dockAnimation) {
+                    this._dockAnimation.cancel();
+                    this._dockAnimation = null;
+                }
+
+                let settled = false;
+                const finish = () => {
+                    if (settled) return;
+                    settled = true;
+                    node.style.transform = finalTransform;
+                    if (this._dockAnimation) {
+                        this._dockAnimation.onfinish = null;
+                        this._dockAnimation.oncancel = null;
+                        this._dockAnimation = null;
+                    }
+                    if (this._isUnmounted) {
+                        resolve();
+                        return;
+                    }
+                    this.setState({ animationState: null }, () => {
+                        this.checkOverlap();
+                        resolve();
+                    });
+                };
+
+                this._dockAnimation = node.animate(
+                    [
+                        { transform: startTransform },
+                        { transform: finalTransform }
+                    ],
+                    { duration: DOCK_ANIMATION_DURATION, easing: 'ease-in-out', fill: 'forwards' }
+                );
+                this._dockAnimation.onfinish = finish;
+                this._dockAnimation.oncancel = finish;
+            });
+        });
+    }
+
+    shouldHideWindow = () => {
+        return this.props.minimized && this.state.animationState !== 'restoring';
+    }
+
     unsnapWindow = () => {
         if (!this.state.snapped) return;
         var r = document.querySelector("#" + this.id);
@@ -411,35 +606,10 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
-        let posx = -310;
-        if (this.state.maximized) {
-            posx = -510;
+        if (typeof this.props.hasMinimised === 'function') {
+            return this.props.hasMinimised(this.id);
         }
-        this.setWinowsPosition();
-        // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
-
-        const node = document.querySelector("#" + this.id);
-        const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
-            this.props.hasMinimised(this.id);
-            return;
-        }
-
-        const startTransform = node.style.transform;
-        this._dockAnimation = node.animate(
-            [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
-        );
-        this._dockAnimation.onfinish = () => {
-            node.style.transform = endTransform;
-            this.props.hasMinimised(this.id);
-            this._dockAnimation.onfinish = null;
-        };
+        return undefined;
     }
 
     restoreWindow = () => {
@@ -450,7 +620,7 @@ export class Window extends Component {
         let posy = node.style.getPropertyValue("--window-transform-y");
         const startTransform = node.style.transform;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const prefersReducedMotion = this.prefersReducedMotion();
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
@@ -651,7 +821,7 @@ export class Window extends Component {
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
                             this.state.maximized ? 'duration-300' : '',
-                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+                            this.shouldHideWindow() ? 'opacity-0 invisible pointer-events-none' : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             this.props.isFocused ? 'z-30' : 'z-20',
