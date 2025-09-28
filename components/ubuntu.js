@@ -9,19 +9,27 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+                this.restartTimer = null;
+        }
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+        }
+
+        componentWillUnmount() {
+                if (this.restartTimer) {
+                        clearTimeout(this.restartTimer);
+                        this.restartTimer = null;
+                }
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -90,11 +98,11 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('bg-image', img_name);
 	};
 
-	shutDown = () => {
-		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
+        shutDown = () => {
+                ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
 
-		ReactGA.event({
-			category: `Screen Change`,
+                ReactGA.event({
+                        category: `Screen Change`,
 			action: `Switched off the Ubuntu`
 		});
 
@@ -108,27 +116,54 @@ export default class Ubuntu extends Component {
 	turnOn = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		this.setState({ shutDownScreen: false, booting_screen: true });
-		this.setTimeOutBootScreen();
+                this.setState({ shutDownScreen: false, booting_screen: true });
+                this.setTimeOutBootScreen();
                 safeLocalStorage?.setItem('shut-down', false);
-	};
+        };
 
-	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
+        restart = () => {
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Restarted the Ubuntu UI`
+                });
+
+                this.setState({ shutDownScreen: true }, () => {
+                        this.restartTimer = setTimeout(() => {
+                                this.setState({ shutDownScreen: false, booting_screen: true });
+                                this.setTimeOutBootScreen();
+                                this.restartTimer = null;
+                        }, 800);
+                });
+        };
+
+        resetUI = () => {
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Reset UI`
+                });
+
+                safeLocalStorage?.clear?.();
+                if (typeof window !== 'undefined') {
+                        window.location.reload();
+                }
+        };
+
+        render() {
+                return (
+                        <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                                <LockScreen
 					isLocked={this.state.screen_locked}
 					bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
 				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar lockScreen={this.lockScreen} restart={this.restart} resetUI={this.resetUI} />
+                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                        </div>
+                );
+        }
 }
