@@ -7,10 +7,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { toDisplayPath } from '../../utils/path-utils';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -63,8 +65,16 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export interface TerminalLaunchContext {
+  path?: string;
+  initialPath?: string;
+}
+
 export interface TerminalProps {
-  openApp?: (id: string) => void;
+  openApp?: (id: string, params?: any) => void;
+  context?: TerminalLaunchContext | null;
+  path?: string;
+  initialPath?: string;
 }
 
 export interface TerminalHandle {
@@ -76,7 +86,8 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
+  ({ openApp, context, path: pathProp, initialPath }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -97,6 +108,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       aliasesRef.current[n] = v;
     },
     runWorker: async () => {},
+    cwd: '~',
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
@@ -105,6 +117,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const contextPath = useMemo(() => {
+    if (context && typeof context === 'object') {
+      return context.path ?? context.initialPath ?? undefined;
+    }
+    return undefined;
+  }, [context]);
+  const launchPath = useMemo(
+    () => toDisplayPath(pathProp ?? initialPath ?? contextPath),
+    [contextPath, initialPath, pathProp],
+  );
+  const [cwd, setCwd] = useState(launchPath);
+  const cwdRef = useRef(launchPath);
+  contextRef.current.cwd = cwdRef.current;
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -143,12 +168,24 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     [opfsSupported, updateOverflow, writeFile],
   );
 
+  useEffect(() => {
+    if (launchPath !== cwdRef.current) {
+      cwdRef.current = launchPath;
+      setCwd(launchPath);
+    }
+  }, [launchPath]);
+
+  useEffect(() => {
+    contextRef.current.cwd = cwdRef.current;
+  }, [cwd]);
+
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
+    const pathDisplay = cwdRef.current;
     termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+      `\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m${pathDisplay}\x1b[0m\x1b[1;34m]\x1b[0m`,
     );
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);

@@ -40,6 +40,10 @@ import TerminalTabs from '../apps/terminal/tabs';
 describe('Terminal component', () => {
   const openApp = jest.fn();
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders container and exposes runCommand', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
@@ -59,6 +63,15 @@ describe('Terminal component', () => {
       ref.current.runCommand('open calculator');
     });
     expect(openApp).toHaveBeenCalledWith('calculator');
+  });
+
+  it('shows contextual path in the prompt', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} context={{ path: '~/Projects' }} />);
+    await act(async () => {});
+    const { Terminal: TerminalMock } = require('@xterm/xterm');
+    const instance = TerminalMock.mock.results[TerminalMock.mock.results.length - 1].value;
+    expect(instance.writeln).toHaveBeenCalledWith(expect.stringContaining('~/Projects'));
   });
 
   it('supports tab management shortcuts', async () => {

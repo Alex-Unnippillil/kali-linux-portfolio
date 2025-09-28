@@ -4,6 +4,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import {
+  appendPathSegment,
+  formatDisplayPath,
+  parseDisplayPath,
+  sliceDisplayPath,
+} from '../../utils/path-utils';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -91,12 +97,23 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
+export default function FileExplorer({
+  context,
+  initialPath,
+  path: pathProp,
+  openApp,
+} = {}) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
   const [dirs, setDirs] = useState([]);
   const [path, setPath] = useState([]);
+  const contextPath =
+    context && typeof context === 'object'
+      ? context.path ?? context.initialPath
+      : undefined;
+  const requestedPath = contextPath ?? initialPath ?? pathProp;
+  const [pathInfo, setPathInfo] = useState(() => parseDisplayPath(requestedPath));
   const [recent, setRecent] = useState([]);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
@@ -116,6 +133,23 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const currentDir = formatDisplayPath(pathInfo);
+  const openTerminalHere = useCallback(() => {
+    if (typeof openApp !== 'function') return;
+    openApp('terminal', { path: currentDir });
+  }, [currentDir, openApp]);
+  const openTerminalForDir = useCallback(
+    (name) => {
+      if (typeof openApp !== 'function') return;
+      const target = appendPathSegment(pathInfo, name);
+      openApp('terminal', { path: formatDisplayPath(target) });
+    },
+    [openApp, pathInfo],
+  );
+
+  useEffect(() => {
+    setPathInfo(parseDisplayPath(requestedPath));
+  }, [requestedPath]);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -163,6 +197,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: handle.name || '/', handle }]);
       await readDir(handle);
       setLocationError(null);
+      setPathInfo(parseDisplayPath('~'));
     } catch {}
   };
 
@@ -174,6 +209,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: entry.name, handle: entry.handle }]);
       await readDir(entry.handle);
       setLocationError(null);
+      setPathInfo(parseDisplayPath('~'));
     } catch {}
   };
 
@@ -219,6 +255,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           setPath([{ name: root.name || '/', handle: root }]);
           await readDir(root);
           if (active) setLocationError(null);
+          if (active) setPathInfo(parseDisplayPath('~'));
           return;
         }
         let current = root;
@@ -235,7 +272,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         setDirHandle(current);
         setPath(crumbs);
         await readDir(current);
-        if (active) setLocationError(null);
+        if (active) {
+          setLocationError(null);
+          setPathInfo(parseDisplayPath(sanitized));
+        }
       } catch {
         if (active) setLocationError(`Unable to open ${requested}`);
       }
@@ -252,6 +292,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
     await readDir(dir.handle);
     setLocationError(null);
+    setPathInfo((info) => appendPathSegment(info, dir.name));
   };
 
   const navigateTo = async (index) => {
@@ -261,6 +302,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setPath(path.slice(0, index + 1));
     await readDir(target.handle);
     setLocationError(null);
+    setPathInfo((info) => sliceDisplayPath(info, index));
   };
 
   const goBack = async () => {
@@ -272,6 +314,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setDirHandle(prev.handle);
       await readDir(prev.handle);
       setLocationError(null);
+      setPathInfo((info) =>
+        sliceDisplayPath(info, Math.max(info.segments.length - 1, 0)),
+      );
     }
   };
 
@@ -316,6 +361,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     return (
       <div className="p-4 flex flex-col h-full">
         <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        {typeof openApp === 'function' && (
+          <button
+            onClick={openTerminalHere}
+            className="px-2 py-1 bg-black bg-opacity-50 rounded self-start mb-2"
+          >
+            Open Terminal Here
+          </button>
+        )}
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -359,6 +412,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Back
           </button>
         )}
+        {typeof openApp === 'function' && (
+          <button onClick={openTerminalHere} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Open Terminal Here
+          </button>
+        )}
         <Breadcrumbs path={path} onNavigate={navigateTo} />
         {locationError && (
           <div className="text-xs text-red-300" role="status">
@@ -387,10 +445,26 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center justify-between"
               onClick={() => openDir(d)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openTerminalForDir(d.name);
+              }}
             >
-              {d.name}
+              <span>{d.name}</span>
+              {typeof openApp === 'function' && (
+                <button
+                  type="button"
+                  className="ml-2 px-2 py-0.5 text-xs bg-black bg-opacity-40 rounded hover:bg-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openTerminalForDir(d.name);
+                  }}
+                >
+                  Terminal
+                </button>
+              )}
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
