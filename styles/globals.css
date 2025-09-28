@@ -22,11 +22,68 @@
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
+
+  /* Kali wallpaper layers */
+  --kali-wallpaper-base-gradient: radial-gradient(
+    circle at 20% 20%,
+    rgba(16, 80, 122, 0.9) 0%,
+    rgba(3, 20, 33, 0.94) 45%,
+    rgba(0, 7, 14, 0.98) 100%
+  );
+  --kali-wallpaper-accent-glow: radial-gradient(
+    circle at center,
+    rgba(23, 147, 209, 0.4) 0%,
+    rgba(3, 20, 33, 0) 60%
+  );
+  --kali-wallpaper-shade: linear-gradient(
+    to bottom,
+    rgba(3, 8, 15, 0.35) 0%,
+    rgba(3, 8, 15, 0.75) 100%
+  );
+  --kali-wallpaper-grid: linear-gradient(
+      120deg,
+      rgba(23, 147, 209, 0.15) 25%,
+      transparent 25%
+    ),
+    linear-gradient(240deg, rgba(23, 147, 209, 0.08) 25%, transparent 25%);
+  --kali-wallpaper-grid-size: 60px 60px;
+  --kali-wallpaper-grid-opacity: 0.18;
+  --kali-wallpaper-grid-blend: soft-light;
+  --kali-wallpaper-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' fill='none'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.65'/%3E%3C/svg%3E");
+  --kali-wallpaper-noise-size: 220px 220px;
+  --kali-wallpaper-noise-opacity: 0.12;
+  --kali-wallpaper-noise-blend: soft-light;
+}
+
+html,
+body {
+  min-height: 100%;
+  background-color: var(--color-bg);
+  background-image: var(--kali-wallpaper-shade), var(--kali-wallpaper-accent-glow),
+    var(--kali-wallpaper-base-gradient);
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: cover, cover, cover;
+  background-blend-mode: multiply, screen, normal;
+  color: var(--kali-text);
 }
 
 body {
-  background: var(--kali-bg);
-  color: var(--kali-text);
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--kali-wallpaper-grid), var(--kali-wallpaper-noise);
+  background-size: var(--kali-wallpaper-grid-size), var(--kali-wallpaper-noise-size);
+  background-repeat: repeat, repeat;
+  background-blend-mode: var(--kali-wallpaper-grid-blend), var(--kali-wallpaper-noise-blend);
+  opacity: var(--kali-wallpaper-grid-opacity);
+  z-index: 0;
 }
 
 /* Dark theme */
@@ -44,6 +101,20 @@ html[data-theme='dark'] {
   --color-dark: #0a0a0a;
 }
 
+html[data-theme='dark'] {
+  --kali-wallpaper-base-gradient: radial-gradient(
+    circle at 20% 20%,
+    rgba(30, 136, 229, 0.9) 0%,
+    rgba(10, 29, 44, 0.94) 45%,
+    rgba(0, 5, 10, 0.98) 100%
+  );
+  --kali-wallpaper-accent-glow: radial-gradient(
+    circle at center,
+    rgba(30, 136, 229, 0.45) 0%,
+    rgba(3, 20, 33, 0) 60%
+  );
+}
+
 /* Neon theme */
 html[data-theme='neon'] {
   --color-bg: #000000;
@@ -57,6 +128,20 @@ html[data-theme='neon'] {
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+}
+
+html[data-theme='neon'] {
+  --kali-wallpaper-base-gradient: radial-gradient(
+    circle at 20% 20%,
+    rgba(57, 255, 20, 0.8) 0%,
+    rgba(0, 32, 12, 0.9) 45%,
+    rgba(0, 5, 10, 0.95) 100%
+  );
+  --kali-wallpaper-accent-glow: radial-gradient(
+    circle at center,
+    rgba(255, 0, 255, 0.4) 0%,
+    rgba(3, 20, 33, 0) 60%
+  );
 }
 
 /* Matrix theme */
@@ -73,6 +158,30 @@ html[data-theme='matrix'] {
   --color-terminal: #00ff00;
   --color-dark: #000000;
 
+}
+
+html[data-theme='matrix'] {
+  --kali-wallpaper-base-gradient: radial-gradient(
+    circle at 20% 20%,
+    rgba(0, 255, 0, 0.75) 0%,
+    rgba(0, 32, 0, 0.9) 45%,
+    rgba(0, 10, 0, 0.95) 100%
+  );
+  --kali-wallpaper-accent-glow: radial-gradient(
+    circle at center,
+    rgba(0, 255, 0, 0.35) 0%,
+    rgba(0, 17, 0, 0) 60%
+  );
+}
+
+.high-contrast {
+  --kali-wallpaper-base-gradient: linear-gradient(#000000, #000000);
+  --kali-wallpaper-accent-glow: none;
+  --kali-wallpaper-shade: linear-gradient(#000000, #000000);
+  --kali-wallpaper-grid: none;
+  --kali-wallpaper-grid-opacity: 0;
+  --kali-wallpaper-noise: none;
+  --kali-wallpaper-noise-opacity: 0;
 }
 
 ::selection {
