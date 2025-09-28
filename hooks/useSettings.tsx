@@ -22,10 +22,14 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getUndercoverMode as loadUndercoverMode,
+  setUndercoverMode as saveUndercoverMode,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+const UNDERCOVER_ACCENT = '#0f6ad6';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -67,6 +71,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  undercoverMode: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +84,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setUndercoverMode: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +101,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  undercoverMode: defaults.undercoverMode,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +114,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setUndercoverMode: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,7 +130,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [undercoverMode, setUndercoverMode] = useState<boolean>(defaults.undercoverMode);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const undercoverHydrated = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -138,6 +148,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setUndercoverMode(await loadUndercoverMode());
     })();
   }, []);
 
@@ -146,21 +157,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const activeAccent = undercoverMode ? UNDERCOVER_ACCENT : accent;
+    const border = shadeColor(activeAccent, -0.2);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
+      '--color-ub-orange': activeAccent,
       '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
+      '--color-primary': activeAccent,
+      '--color-accent': activeAccent,
+      '--color-focus-ring': activeAccent,
+      '--color-selection': activeAccent,
+      '--color-control-accent': activeAccent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
     saveAccent(accent);
-  }, [accent]);
+  }, [accent, undercoverMode]);
 
   useEffect(() => {
     saveWallpaper(wallpaper);
@@ -250,7 +262,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
-  const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    root.classList.toggle('undercover', undercoverMode);
+    if (undercoverMode) {
+      root.dataset.skin = 'undercover';
+    } else {
+      delete root.dataset.skin;
+    }
+    if (!undercoverHydrated.current) {
+      undercoverHydrated.current = true;
+      if (undercoverMode === defaults.undercoverMode) {
+        return;
+      }
+    }
+    saveUndercoverMode(undercoverMode);
+  }, [undercoverMode]);
+
+  const bgImageName = undercoverMode
+    ? 'undercover-windows'
+    : useKaliWallpaper
+      ? 'kali-gradient'
+      : wallpaper;
 
   return (
     <SettingsContext.Provider
@@ -268,6 +302,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        undercoverMode,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +315,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setUndercoverMode,
       }}
     >
       {children}

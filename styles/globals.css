@@ -24,9 +24,49 @@
   accent-color: var(--color-control-accent);
 }
 
+:root.undercover {
+  --color-primary: #0f6ad6;
+  --color-secondary: rgba(15, 31, 58, 0.85);
+  --color-accent: #0f6ad6;
+  --color-muted: rgba(15, 25, 45, 0.72);
+  --color-surface: rgba(16, 32, 64, 0.86);
+  --color-inverse: #050810;
+  --color-border: rgba(148, 197, 255, 0.22);
+  --color-terminal: #7dd3fc;
+  --color-dark: rgba(7, 18, 36, 0.94);
+  --color-focus-ring: #3b82f6;
+  --color-selection: rgba(59, 130, 246, 0.32);
+  --color-control-accent: #0f6ad6;
+  accent-color: var(--color-control-accent);
+}
+
 body {
   background: var(--kali-bg);
   color: var(--kali-text);
+}
+
+:root.undercover body {
+  background: rgba(10, 22, 44, 0.82);
+  color: #f8fafc;
+}
+
+:root.undercover .main-navbar-vp {
+  backdrop-filter: blur(18px);
+  background-color: rgba(11, 25, 47, 0.75);
+  border-bottom: 1px solid rgba(148, 197, 255, 0.15);
+}
+
+:root.undercover .main-navbar-vp button {
+  color: #e2e8f0;
+}
+
+:root.undercover .main-navbar-vp button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-bottom-color: transparent;
+}
+
+:root.undercover .windowMainScreen {
+  background-color: rgba(12, 28, 54, 0.85);
 }
 
 /* Dark theme */

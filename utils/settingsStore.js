@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  undercoverMode: false,
 };
 
 export async function getAccent() {
@@ -114,6 +115,17 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getUndercoverMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.undercoverMode;
+  const stored = window.localStorage.getItem('undercover-mode');
+  return stored === null ? DEFAULT_SETTINGS.undercoverMode : stored === 'true';
+}
+
+export async function setUndercoverMode(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('undercover-mode', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +162,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('undercover-mode');
 }
 
 export async function exportSettings() {
@@ -191,6 +204,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    undercoverMode,
     theme,
   });
 }
@@ -216,6 +230,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    undercoverMode,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -229,6 +244,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (undercoverMode !== undefined) await setUndercoverMode(undercoverMode);
   if (theme !== undefined) setTheme(theme);
 }
 
