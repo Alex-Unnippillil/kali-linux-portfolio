@@ -84,32 +84,45 @@ const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryId, label }) => {
 type ApplicationsMenuProps = {
   activeCategory: string;
   onSelect: (id: string) => void;
+  children?: React.ReactNode;
 };
 
-const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onSelect }) => {
+const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onSelect, children }) => {
   return (
-    <nav aria-label="Kali application categories">
-      <ul className="space-y-1">
-        {KALI_CATEGORIES.map((category) => {
-          const isActive = category.id === activeCategory;
-          return (
-            <li key={category.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(category.id)}
-                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                  isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
-                }`}
-                aria-pressed={isActive}
-              >
-                <CategoryIcon categoryId={category.id} label={category.label} />
-                <span className="text-sm font-medium">{category.label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <section className="absolute left-0 top-8 h-[520px] w-[880px] overflow-hidden rounded-2xl border border-white/10 bg-kali-menu text-white shadow-kali-panel backdrop-blur-xl">
+      <div className="flex h-full">
+        <nav
+          aria-label="Kali application categories"
+          className="w-[220px] border-r border-white/10 bg-white/5 p-5"
+        >
+          <ul className="space-y-1">
+            {KALI_CATEGORIES.map((category) => {
+              const isActive = category.id === activeCategory;
+              return (
+                <li key={category.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(category.id)}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
+                      isActive
+                        ? 'bg-white/10 text-white shadow-inner shadow-black/20'
+                        : 'bg-transparent text-slate-200 hover:bg-white/5'
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <CategoryIcon categoryId={category.id} label={category.label} />
+                    <span>{category.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <div className="flex-1 overflow-hidden">
+          <div className="flex h-full flex-col gap-4 overflow-y-auto p-6">{children}</div>
+        </div>
+      </div>
+    </section>
   );
 };
 
