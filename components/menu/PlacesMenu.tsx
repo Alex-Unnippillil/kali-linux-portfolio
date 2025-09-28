@@ -45,8 +45,8 @@ const resolveKaliIcon = (id: string): string | undefined => {
 
 const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
   return (
-    <nav aria-label={heading} className="w-56 select-none text-sm text-white">
-      <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
+    <nav aria-label={heading} className="w-56 select-none text-sm" style={{ color: 'var(--kali-text)' }}>
+      <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide opacity-80">
         {heading}
       </header>
       <ul className="space-y-1">
@@ -63,7 +63,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
               <button
                 type="button"
                 onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
+                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--kali-focus-ring)]"
               >
                 <img
                   src={src}

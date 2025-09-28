@@ -53,6 +53,46 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+const hexToRgb = (hex: string): [number, number, number] => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 3 && normalized.length !== 6) {
+    return [0, 0, 0];
+  }
+  const value = normalized.length === 3
+    ? normalized.split('').map(char => char + char).join('')
+    : normalized;
+  const int = parseInt(value, 16);
+  const r = (int >> 16) & 0xff;
+  const g = (int >> 8) & 0xff;
+  const b = int & 0xff;
+  return [r, g, b];
+};
+
+const rgbChannelToHex = (channel: number) => {
+  const clamped = Math.max(0, Math.min(255, Math.round(channel)));
+  return clamped.toString(16).padStart(2, '0');
+};
+
+const rgbToHex = (r: number, g: number, b: number): string => {
+  return `#${rgbChannelToHex(r)}${rgbChannelToHex(g)}${rgbChannelToHex(b)}`;
+};
+
+const mixColors = (colorA: string, colorB: string, weight: number): string => {
+  const clampWeight = Math.max(0, Math.min(1, weight));
+  const [r1, g1, b1] = hexToRgb(colorA);
+  const [r2, g2, b2] = hexToRgb(colorB);
+  const r = r1 * clampWeight + r2 * (1 - clampWeight);
+  const g = g1 * clampWeight + g2 * (1 - clampWeight);
+  const b = b1 * clampWeight + b2 * (1 - clampWeight);
+  return rgbToHex(r, g, b);
+};
+
+const hexToRgba = (hex: string, alpha: number): string => {
+  const [r, g, b] = hexToRgb(hex);
+  const clampedAlpha = Math.max(0, Math.min(1, alpha));
+  return `rgba(${r}, ${g}, ${b}, ${clampedAlpha})`;
+};
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
@@ -146,19 +186,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const darkerAccent = shadeColor(accent, -0.35);
+    const focusRing = shadeColor(accent, 0.1);
+    const glow = hexToRgba(accent, 0.35);
+    const baseSurface = '#0f1317';
+    const panelTint = mixColors(accent, baseSurface, 0.18);
+    const panel = hexToRgba(panelTint, 0.92);
+    const panelBorder = hexToRgba(darkerAccent, 0.6);
+    const panelHighlight = hexToRgba(shadeColor(accent, 0.45), 0.24);
+    const selection = hexToRgba(accent, 0.35);
+
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
+      '--kali-blue': accent,
+      '--kali-blue-dark': darkerAccent,
+      '--kali-blue-glow': glow,
+      '--kali-panel': panel,
+      '--kali-panel-border': panelBorder,
+      '--kali-panel-highlight': panelHighlight,
+      '--kali-border': panelBorder,
+      '--kali-focus-ring': focusRing,
+      '--kali-selection': selection,
+      '--kali-control-accent': accent,
       '--color-primary': accent,
       '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
+      '--color-focus-ring': focusRing,
+      '--color-selection': selection,
       '--color-control-accent': accent,
+      '--color-window-border': panelBorder,
+      '--color-window-accent': accent,
     };
+
+    const rootStyle = document.documentElement.style;
     Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
+      rootStyle.setProperty(key, value);
     });
+    rootStyle.setProperty('accent-color', accent);
     saveAccent(accent);
   }, [accent]);
 
