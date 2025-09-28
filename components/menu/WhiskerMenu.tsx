@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
@@ -393,7 +392,7 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
+          className={`absolute left-0 mt-1 z-50 flex w-[640px] overflow-hidden rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
@@ -404,86 +403,188 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div
-            ref={categoryListRef}
-            className="flex max-h-80 w-64 flex-col gap-1 overflow-y-auto bg-gray-900 p-3"
-            role="listbox"
-            aria-label="Application categories"
-            tabIndex={0}
-            onKeyDown={handleCategoryKeyDown}
-          >
-            {categoryConfigs.map((cat, index) => (
-              <button
-                key={cat.id}
-                ref={(el) => {
-                  categoryButtonRefs.current[index] = el;
-                }}
-                type="button"
-                className={`flex items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-ubb-orange focus:ring-offset-2 focus:ring-offset-gray-900 ${
-                  category === cat.id ? 'bg-gray-700/80' : 'hover:bg-gray-700/60'
-                }`}
-                role="option"
-                aria-selected={category === cat.id}
-                onClick={() => {
-                  setCategory(cat.id);
-                  setCategoryHighlight(index);
-                }}
-
-              >
-                <span className="w-8 font-mono text-xs text-gray-300">{String(index + 1).padStart(2, '0')}</span>
-                <span className="flex items-center gap-2">
-                  <Image
-                    src={cat.icon}
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="h-5 w-5"
-                    sizes="20px"
-                  />
-                  <span className="text-sm">{cat.label}</span>
-                </span>
-              </button>
-            ))}
-            <div className="mt-4 border-t border-gray-700 pt-3">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Kali Linux Groups</p>
-              <ul className="space-y-1 text-sm">
-                {KALI_CATEGORIES.map((cat) => (
-                  <li key={cat.id} className="flex items-baseline text-gray-300">
-                    <span className="font-mono text-ubt-blue mr-2 w-8">{cat.number}</span>
+          <div className="flex max-h-[420px] w-[260px] flex-col bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622]">
+            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
+              <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
+              Categories
+            </div>
+            <div
+              ref={categoryListRef}
+              className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3"
+              role="listbox"
+              aria-label="Application categories"
+              tabIndex={0}
+              onKeyDown={handleCategoryKeyDown}
+            >
+              {categoryConfigs.map((cat, index) => (
+                <button
+                  key={cat.id}
+                  ref={(el) => {
+                    categoryButtonRefs.current[index] = el;
+                  }}
+                  type="button"
+                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                    category === cat.id
+                      ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
+                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
+                  }`}
+                  role="option"
+                  aria-selected={category === cat.id}
+                  onClick={() => {
+                    setCategory(cat.id);
+                    setCategoryHighlight(index);
+                  }}
+                >
+                  <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="flex items-center gap-2">
+                    <Image
+                      src={cat.icon}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="h-5 w-5 opacity-80 group-hover:opacity-100"
+                      sizes="20px"
+                    />
                     <span>{cat.label}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-300">
+              <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[#4aa8ff]">Kali Groups</p>
+              <ul className="space-y-1 text-xs">
+                {KALI_CATEGORIES.map((cat) => (
+                  <li key={cat.id} className="flex items-baseline gap-3 text-gray-400">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-[#53b9ff]">{cat.number}</span>
+                    <span className="truncate">{cat.label}</span>
                   </li>
                 ))}
               </ul>
             </div>
-          </div>
-          <div className="flex flex-col p-3">
-            <input
-              className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
-
-              placeholder="Search"
-              aria-label="Search applications"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
-            <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
-
-              {currentApps.map((app, idx) => (
-                <div
-                  key={app.id}
-                  className={`rounded transition ring-offset-2 ${
-                    idx === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
-                  }`}
-                >
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
+            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">kali</p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
                 </div>
-              ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-1 flex-col bg-[#0f1a29]">
+            <div className="border-b border-[#1d2a3c] px-5 py-4">
+              <div className="mb-4 flex items-center gap-3">
+                {favoriteApps.slice(0, 6).map((app) => (
+                  <button
+                    key={app.id}
+                    type="button"
+                    onClick={() => openSelectedApp(app.id)}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                    aria-label={`Open ${app.title}`}
+                  >
+                    <Image
+                      src={app.icon}
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="h-6 w-6"
+                      sizes="24px"
+                    />
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="20" y1="20" x2="16.65" y2="16.65" />
+                  </svg>
+                </span>
+                <input
+                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  placeholder="Search applications"
+                  aria-label="Search applications"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-2 py-3">
+              {currentApps.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                  </span>
+                  <p>No applications match your search.</p>
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {currentApps.map((app, idx) => (
+                    <li key={app.id}>
+                      <button
+                        type="button"
+                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                          idx === highlight
+                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
+                            : 'text-gray-200 hover:bg-[#142132]'
+                        } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                        aria-label={app.title}
+                        disabled={app.disabled}
+                        onClick={() => {
+                          if (!app.disabled) {
+                            openSelectedApp(app.id);
+                          }
+                        }}
+                        onMouseEnter={() => setHighlight(idx)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">
+                            <Image
+                              src={app.icon}
+                              alt=""
+                              width={28}
+                              height={28}
+                              className="h-7 w-7"
+                              sizes="28px"
+                            />
+                          </div>
+                          <div>
+                            <p className="font-medium text-[15px]">{app.title}</p>
+                            <p className="text-xs uppercase tracking-[0.25em] text-[#4aa8ff]">Application</p>
+                          </div>
+                        </div>
+                        <svg
+                          className="h-4 w-4 text-[#4aa8ff]"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>
