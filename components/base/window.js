@@ -37,18 +37,26 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
-        const isPortrait =
-            typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        const hasWindow = typeof window !== 'undefined';
+        const isPortrait = hasWindow && window.innerHeight > window.innerWidth;
         this.startX =
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = props.initialY ?? 10;
+        const initialWidth =
+            props.initialWidth ??
+            props.defaultWidth ??
+            (isPortrait ? 90 : 60);
+        const initialHeight =
+            props.initialHeight ??
+            props.defaultHeight ??
+            85;
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: initialWidth,
+            height: initialHeight,
             closed: false,
-            maximized: false,
+            maximized: props.initialMaximized ?? false,
             parentSize: {
                 height: 100,
                 width: 100
@@ -81,6 +89,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.emitWindowMetrics();
     }
 
     componentWillUnmount() {
@@ -96,7 +105,26 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevState.width !== this.state.width ||
+            prevState.height !== this.state.height ||
+            prevState.maximized !== this.state.maximized ||
+            prevState.snapped !== this.state.snapped
+        ) {
+            this.emitWindowMetrics();
+        }
+    }
+
     setDefaultWindowDimenstion = () => {
+        if (this.props.initialHeight !== undefined && this.props.initialWidth !== undefined) {
+            this.setState(
+                { height: this.props.initialHeight, width: this.props.initialWidth },
+                this.resizeBoundries
+            );
+            return;
+        }
+
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
@@ -114,6 +142,16 @@ export class Window extends Component {
         } else {
             this.setState({ height: 85, width: 60 }, this.resizeBoundries);
         }
+    }
+
+    emitWindowMetrics = () => {
+        if (!this.props.onSizeChange) return;
+        this.props.onSizeChange({
+            width: this.state.width,
+            height: this.state.height,
+            maximized: this.state.maximized,
+            snapped: this.state.snapped,
+        });
     }
 
     resizeBoundries = () => {
