@@ -42,8 +42,20 @@ export default function AppGrid({ openApp }) {
   }, [query]);
 
   useEffect(() => {
+    if (!filtered.length) {
+      setFocusedIndex(0);
+      return;
+    }
     if (focusedIndex >= filtered.length) {
       setFocusedIndex(0);
+      return;
+    }
+    const activeId = filtered[focusedIndex]?.id;
+    if (activeId) {
+      const el = document.getElementById('app-' + activeId);
+      if (el && document.activeElement !== el) {
+        el.focus();
+      }
     }
   }, [filtered, focusedIndex]);
 
@@ -56,7 +68,8 @@ export default function AppGrid({ openApp }) {
 
   const handleKeyDown = useCallback(
     (e) => {
-      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+      if (!filtered.length) return;
       e.preventDefault();
       const colCount = columnCountRef.current;
       let idx = focusedIndex;
@@ -64,14 +77,12 @@ export default function AppGrid({ openApp }) {
       if (e.key === 'ArrowLeft') idx = Math.max(idx - 1, 0);
       if (e.key === 'ArrowDown') idx = Math.min(idx + colCount, filtered.length - 1);
       if (e.key === 'ArrowUp') idx = Math.max(idx - colCount, 0);
+      if (e.key === 'Home') idx = 0;
+      if (e.key === 'End') idx = filtered.length - 1;
       setFocusedIndex(idx);
       const row = Math.floor(idx / colCount);
       const col = idx % colCount;
       gridRef.current?.scrollToCell({ rowIndex: row, columnIndex: col, rowAlign: 'smart', columnAlign: 'smart' });
-      setTimeout(() => {
-        const el = document.getElementById('app-' + filtered[idx].id);
-        el?.focus();
-      }, 0);
     },
     [filtered, focusedIndex]
   );
@@ -81,6 +92,7 @@ export default function AppGrid({ openApp }) {
     if (index >= data.items.length) return null;
     const app = data.items[index];
     const meta = data.metadata[app.id] ?? buildAppMetadata(app);
+    const isActive = index === data.focusedIndex;
     return (
       <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
         {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
@@ -93,6 +105,7 @@ export default function AppGrid({ openApp }) {
               alignItems: 'center',
               padding: 12,
             }}
+            role="gridcell"
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onFocus={onFocus}
@@ -104,12 +117,20 @@ export default function AppGrid({ openApp }) {
               name={app.title}
               displayName={<>{app.nodes}</>}
               openApp={() => openApp && openApp(app.id)}
+              tabIndex={isActive ? 0 : -1}
+              isActive={isActive}
+              ariaSelected={isActive}
+              onFocus={() => data.setFocusedIndex(index)}
+              onMouseDown={() => data.setFocusedIndex(index)}
             />
           </div>
         )}
       </DelayedTooltip>
     );
   };
+
+  const activeIndex = filtered.length ? Math.min(focusedIndex, filtered.length - 1) : -1;
+  const activeDescendant = activeIndex >= 0 ? `app-${filtered[activeIndex].id}` : undefined;
 
   return (
     <div className="flex flex-col items-center h-full">
@@ -119,7 +140,13 @@ export default function AppGrid({ openApp }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div
+        className="w-full flex-1 h-[70vh] outline-none"
+        role="grid"
+        aria-label="App grid"
+        aria-activedescendant={activeDescendant}
+        onKeyDown={handleKeyDown}
+      >
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);
@@ -139,7 +166,13 @@ export default function AppGrid({ openApp }) {
                 {(props) => (
                   <Cell
                     {...props}
-                    data={{ items: filtered, columnCount, metadata: registryMetadata }}
+                    data={{
+                      items: filtered,
+                      columnCount,
+                      metadata: registryMetadata,
+                      focusedIndex,
+                      setFocusedIndex,
+                    }}
                   />
                 )}
               </Grid>
