@@ -6,6 +6,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 type AppMeta = {
   id: string;
@@ -159,6 +160,7 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -279,6 +281,9 @@ const WhiskerMenu: React.FC = () => {
 
   const hideMenu = useCallback(() => {
     setIsOpen(false);
+    if (buttonRef.current) {
+      buttonRef.current.focus();
+    }
   }, []);
 
   const toggleMenu = useCallback(() => {
@@ -338,6 +343,14 @@ const WhiskerMenu: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (isOpen && isVisible) {
+      searchInputRef.current?.focus();
+    }
+  }, [isOpen, isVisible]);
+
+  useFocusTrap(menuRef, isVisible);
+
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
     if (btn) {
@@ -393,6 +406,10 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
+          data-testid="whisker-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Applications launcher"
           className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
@@ -458,6 +475,7 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="flex flex-col p-3">
             <input
+              ref={searchInputRef}
               className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
 
               placeholder="Search"
