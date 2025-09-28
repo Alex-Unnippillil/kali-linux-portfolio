@@ -162,8 +162,11 @@ export class Desktop extends Component {
         });
     };
 
-    switchWorkspace = (workspaceId) => {
-        if (workspaceId === this.state.activeWorkspace) return;
+    switchWorkspace = (workspaceId, callback) => {
+        if (workspaceId === this.state.activeWorkspace) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
         this.setState({
@@ -178,6 +181,9 @@ export class Desktop extends Component {
             switcherWindows: [],
         }, () => {
             this.giveFocusToLastApp();
+            if (typeof callback === 'function') {
+                callback();
+            }
         });
     };
 
@@ -186,6 +192,43 @@ export class Desktop extends Component {
         const count = workspaces.length;
         const next = (activeWorkspace + direction + count) % count;
         this.switchWorkspace(next);
+    };
+
+    findNextWorkspaceId = () => {
+        const { activeWorkspace, workspaces } = this.state;
+        if (!Array.isArray(workspaces) || workspaces.length === 0) {
+            return activeWorkspace;
+        }
+        const idleWorkspace = workspaces.find((workspace) => {
+            if (workspace.id === activeWorkspace) return false;
+            const snapshot = this.workspaceSnapshots[workspace.id] || this.createEmptyWorkspaceState();
+            const hasOpenWindows = Object.values(snapshot.closed_windows || {}).some(value => value === false);
+            return !hasOpenWindows;
+        });
+        if (idleWorkspace) {
+            return idleWorkspace.id;
+        }
+        const currentIndex = workspaces.findIndex(workspace => workspace.id === activeWorkspace);
+        if (currentIndex === -1) {
+            return workspaces[0].id;
+        }
+        return workspaces[(currentIndex + 1) % workspaces.length].id;
+    };
+
+    openAppInWorkspace = (appId, workspaceId) => {
+        const targetWorkspace = typeof workspaceId === 'number' ? workspaceId : this.findNextWorkspaceId();
+        const exists = this.state.workspaces.some(workspace => workspace.id === targetWorkspace);
+        if (!exists) {
+            this.openApp(appId);
+            return;
+        }
+        if (targetWorkspace === this.state.activeWorkspace) {
+            this.openApp(appId);
+            return;
+        }
+        this.switchWorkspace(targetWorkspace, () => {
+            this.openApp(appId);
+        });
     };
 
     componentDidMount() {
@@ -1093,7 +1136,11 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     focused_windows={this.state.focused_windows}
                     isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                    openAppByAppId={this.openApp}
+                    pinApp={this.pinApp}
+                    unpinApp={this.unpinApp}
+                    openInNewWorkspace={this.openAppInWorkspace}
+                />
 
                 {/* Taskbar */}
                 <Taskbar
