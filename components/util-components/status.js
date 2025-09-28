@@ -41,18 +41,28 @@ export default function Status() {
     <div className="flex justify-center items-center">
       <span
         className="mx-1.5 relative"
-        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
+        title={
+          online
+            ? allowNetwork
+              ? 'Kali network: Online'
+              : 'Kali network: Online (requests blocked)'
+            : 'Kali network: Offline'
+        }
       >
         <Image
           width={16}
           height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
-          alt={online ? "online" : "offline"}
+          src={
+            online
+              ? '/themes/Kali/panel/network-wireless-signal-good-symbolic.svg'
+              : '/themes/Kali/panel/network-wireless-signal-none-symbolic.svg'
+          }
+          alt={online ? 'Kali network online' : 'Kali network offline'}
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />
         {!allowNetwork && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-kali-accent rounded-full" />
         )}
       </span>
       <VolumeControl className="mx-1.5" />
@@ -60,8 +70,8 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
-          alt="ubuntu battry"
+          src="/themes/Kali/panel/battery-good-symbolic.svg"
+          alt="Kali battery"
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />
