@@ -1,5 +1,11 @@
 @import './globals.css';
 
+:root {
+    --qs-brightness: 1;
+    --qs-night-tint-opacity: 0;
+    --qs-night-tint-color: 255, 153, 0;
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
@@ -9,6 +15,20 @@ body{
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    position: relative;
+    filter: brightness(var(--qs-brightness));
+    transition: filter 150ms ease;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: rgba(var(--qs-night-tint-color), var(--qs-night-tint-opacity));
+    mix-blend-mode: soft-light;
+    transition: background 150ms ease;
+    z-index: 2147483646;
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
