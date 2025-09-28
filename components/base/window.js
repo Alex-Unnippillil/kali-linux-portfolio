@@ -551,7 +551,12 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            if (this.props.transient || this.props.modal) {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.closeWindow();
+            }
+            return;
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
@@ -662,6 +667,7 @@ export class Window extends Component {
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
+                        aria-modal={this.props.transient || this.props.modal ? 'true' : 'false'}
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}

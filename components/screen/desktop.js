@@ -638,6 +638,8 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    transient: app.transient,
+                    modal: app.modal,
                 }
 
                 windowsJsx.push(

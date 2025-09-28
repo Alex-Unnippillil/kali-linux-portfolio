@@ -416,6 +416,103 @@ describe('Window snapping finalize and release', () => {
   });
 });
 
+describe('Window Escape key handling', () => {
+  it('ignores Escape for non-transient windows', () => {
+    const ref = React.createRef<Window>();
+    const closed = jest.fn();
+    const hideSideBar = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={closed}
+        hideSideBar={hideSideBar}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const event = {
+      key: 'Escape',
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    } as any;
+
+    act(() => {
+      ref.current!.handleKeyDown(event);
+    });
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
+    expect(ref.current!.state.closed).toBe(false);
+    expect(closed).not.toHaveBeenCalled();
+    expect(hideSideBar).not.toHaveBeenCalledWith('test-window', false);
+  });
+
+  it('closes transient windows on Escape and restores focus', () => {
+    jest.useFakeTimers();
+    const ref = React.createRef<Window>();
+    const closed = jest.fn();
+    const hideSideBar = jest.fn();
+
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+
+    try {
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={closed}
+          hideSideBar={hideSideBar}
+          openApp={() => {}}
+          ref={ref}
+          transient
+        />
+      );
+
+      act(() => {
+        ref.current!.activateOverlay();
+      });
+
+      const event = {
+        key: 'Escape',
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any;
+
+      act(() => {
+        ref.current!.handleKeyDown(event);
+      });
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(event.stopPropagation).toHaveBeenCalled();
+      expect(ref.current!.state.closed).toBe(true);
+      expect(hideSideBar).toHaveBeenCalledWith('test-window', false);
+      expect(opener).toHaveFocus();
+
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(closed).toHaveBeenCalledWith('test-window');
+    } finally {
+      jest.useRealTimers();
+      if (document.body.contains(opener)) {
+        document.body.removeChild(opener);
+      }
+    }
+  });
+});
+
 describe('Window keyboard dragging', () => {
   it('moves window using arrow keys with grabbed state', () => {
     render(
