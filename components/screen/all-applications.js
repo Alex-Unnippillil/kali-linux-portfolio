@@ -1,6 +1,7 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { MENU_CONFIG_EVENT, setFavoritesList } from '../../utils/menuConfig';
 
 const FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
@@ -72,7 +73,7 @@ class AllApplications extends React.Component {
         const favorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
         const recents = sanitizeIds(readStoredIds(RECENTS_KEY), availableIds, 10);
 
-        persistIds(FAVORITES_KEY, favorites);
+        setFavoritesList(favorites, false);
         persistIds(RECENTS_KEY, recents);
 
         this.setState({
@@ -81,6 +82,8 @@ class AllApplications extends React.Component {
             favorites,
             recents,
         });
+
+        window.addEventListener(MENU_CONFIG_EVENT, this.handleMenuConfigUpdate);
     }
 
     handleChange = (e) => {
@@ -116,9 +119,22 @@ class AllApplications extends React.Component {
             const favorites = isFavorite
                 ? state.favorites.filter((favId) => favId !== id)
                 : [...state.favorites, id];
-            persistIds(FAVORITES_KEY, favorites);
+            setFavoritesList(favorites);
             return { favorites };
         });
+    };
+
+    componentWillUnmount() {
+        window.removeEventListener(MENU_CONFIG_EVENT, this.handleMenuConfigUpdate);
+    }
+
+    handleMenuConfigUpdate = (event) => {
+        const detail = event?.detail;
+        if (!detail || !Array.isArray(detail.favorites)) return;
+        const sourceApps = this.state.unfilteredApps.length ? this.state.unfilteredApps : this.state.apps;
+        const availableIds = new Set(sourceApps.map((app) => app.id));
+        const favorites = detail.favorites.filter((id) => availableIds.has(id));
+        this.setState({ favorites });
     };
 
     renderAppTile = (app) => {

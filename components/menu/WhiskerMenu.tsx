@@ -6,6 +6,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
+import { MENU_CONFIG_EVENT } from '../../utils/menuConfig';
 
 type AppMeta = {
   id: string;
@@ -159,12 +160,21 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [menuVersion, setMenuVersion] = useState(0);
 
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps, menuVersion]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
+  }, []);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setMenuVersion((version) => version + 1);
+    };
+    window.addEventListener(MENU_CONFIG_EVENT, handleUpdate);
+    return () => window.removeEventListener(MENU_CONFIG_EVENT, handleUpdate);
   }, []);
 
   useEffect(() => {

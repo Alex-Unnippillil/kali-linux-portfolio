@@ -4,7 +4,25 @@ import SideBarApp from '../base/side_bar_app';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
-    props.apps.forEach((app, index) => {
+    let orderedApps = props.apps;
+    if (Array.isArray(props.pinnedOrder) && props.pinnedOrder.length) {
+        const map = new Map(props.apps.map((app) => [app.id, app]));
+        const seen = new Set();
+        orderedApps = [];
+        props.pinnedOrder.forEach((id) => {
+            const app = map.get(id);
+            if (app) {
+                orderedApps.push(app);
+                seen.add(id);
+            }
+        });
+        props.apps.forEach((app) => {
+            if (!seen.has(app.id)) {
+                orderedApps.push(app);
+            }
+        });
+    }
+    orderedApps.forEach((app) => {
         if (props.favourite_apps[app.id] === false) return;
         sideBarAppsJsx.push(
             <SideBarApp key={app.id} id={app.id} title={app.title} icon={app.icon} isClose={props.closed_windows} isFocus={props.focused_windows} openApp={props.openAppByAppId} isMinimized={props.isMinimized} openFromMinimised={props.openFromMinimised} />

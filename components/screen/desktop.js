@@ -24,6 +24,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { MENU_CONFIG_EVENT, readMenuConfig, setPinnedApps } from '../../utils/menuConfig';
 
 export class Desktop extends Component {
     constructor() {
@@ -48,6 +49,7 @@ export class Desktop extends Component {
             overlapped_windows: {},
             disabled_apps: {},
             favourite_apps: {},
+            pinnedOrder: [],
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
@@ -222,6 +224,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener(MENU_CONFIG_EVENT, this.handleMenuConfigUpdate);
     }
 
     componentWillUnmount() {
@@ -229,6 +232,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener(MENU_CONFIG_EVENT, this.handleMenuConfigUpdate);
     }
 
     checkForNewFolders = () => {
@@ -482,14 +486,27 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
-        } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
+        let snapshot = readMenuConfig();
+        let { pins, ordering } = snapshot;
+        if (!pins.length) {
+            const defaultPins = apps
+                .filter(app => app.favourite)
+                .map(app => app.id)
+                .filter(id => typeof id === 'string');
+            if (defaultPins.length) {
+                setPinnedApps(defaultPins, false);
+                snapshot = readMenuConfig();
+                pins = snapshot.pins;
+                ordering = snapshot.ordering;
+            }
         }
+        const pinnedSet = new Set(pins);
+        apps.forEach(app => {
+            if (typeof app.id === 'string') {
+                app.favourite = pinnedSet.has(app.id);
+            }
+        });
+
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -538,7 +555,39 @@ export class Desktop extends Component {
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
+        const nextOrder = ordering && ordering.length ? ordering : pins;
+        this.setState({ pinnedOrder: nextOrder });
     }
+
+    handleMenuConfigUpdate = (event) => {
+        const detail = event?.detail;
+        if (!detail) return;
+        const pins = Array.isArray(detail.pins) ? detail.pins : [];
+        const ordering = Array.isArray(detail.ordering) ? detail.ordering : [];
+        const pinnedSet = new Set(pins);
+        const favourite_apps = { ...this.state.favourite_apps };
+        Object.keys(favourite_apps).forEach((id) => {
+            favourite_apps[id] = pinnedSet.has(id);
+        });
+        pins.forEach((id) => {
+            if (!(id in favourite_apps)) {
+                favourite_apps[id] = true;
+            }
+        });
+        apps.forEach(app => {
+            if (typeof app.id === 'string') {
+                app.favourite = pinnedSet.has(app.id);
+            }
+        });
+        this.initFavourite = { ...this.initFavourite };
+        Object.keys(this.initFavourite).forEach((id) => {
+            this.initFavourite[id] = pinnedSet.has(id);
+        });
+        const nextOrder = ordering.length ? ordering : pins;
+        this.setState({ favourite_apps, pinnedOrder: nextOrder }, () => {
+            this.saveSession();
+        });
+    };
 
     updateAppsData = () => {
         let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {}, overlapped_windows = {};
@@ -665,7 +714,9 @@ export class Desktop extends Component {
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
             y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
         }));
-        const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
+        const dock = (Array.isArray(this.state.pinnedOrder) && this.state.pinnedOrder.length
+            ? this.state.pinnedOrder.filter(id => this.state.favourite_apps[id])
+            : Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]));
         this.props.setSession({ ...this.props.session, windows, dock });
     }
 
@@ -907,31 +958,28 @@ export class Desktop extends Component {
     }
 
     pinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
-        this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        let favourite_apps = { ...this.state.favourite_apps };
+        favourite_apps[id] = true;
+        this.initFavourite[id] = true;
+        const currentOrder = Array.isArray(this.state.pinnedOrder) && this.state.pinnedOrder.length
+            ? [...this.state.pinnedOrder]
+            : Object.keys(favourite_apps).filter(appId => favourite_apps[appId]);
+        if (!currentOrder.includes(id)) currentOrder.push(id);
+        setPinnedApps(currentOrder);
+        this.setState({ favourite_apps, pinnedOrder: currentOrder }, () => { this.saveSession(); });
+        this.hideAllContextMenu();
     }
 
     unpinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
-        this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        let favourite_apps = { ...this.state.favourite_apps };
+        if (this.state.closed_windows[id]) favourite_apps[id] = false;
+        this.initFavourite[id] = false;
+        const currentOrder = Array.isArray(this.state.pinnedOrder) && this.state.pinnedOrder.length
+            ? this.state.pinnedOrder.filter(appId => appId !== id)
+            : Object.keys(favourite_apps).filter(appId => favourite_apps[appId] && appId !== id);
+        setPinnedApps(currentOrder);
+        this.setState({ favourite_apps, pinnedOrder: currentOrder }, () => { this.saveSession(); });
+        this.hideAllContextMenu();
     }
 
     focus = (objId) => {
@@ -1085,6 +1133,7 @@ export class Desktop extends Component {
 
                 {/* Ubuntu Side Menu Bar */}
                 <SideBar apps={apps}
+                    pinnedOrder={this.state.pinnedOrder}
                     hide={this.state.hideSideBar}
                     hideSideBar={this.hideSideBar}
                     favourite_apps={this.state.favourite_apps}
