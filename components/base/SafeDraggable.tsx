@@ -5,7 +5,7 @@ import type { CSSProperties, ReactElement } from 'react';
 import Draggable from 'react-draggable';
 import type { DraggableProps } from 'react-draggable';
 
-export type SafeDraggableProps = DraggableProps & {
+export type SafeDraggableProps = Partial<DraggableProps> & {
   children: ReactElement;
 };
 
