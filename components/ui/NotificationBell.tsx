@@ -19,6 +19,8 @@ const NotificationBell: React.FC = () => {
     unreadCount,
     clearNotifications,
     markAllRead,
+    doNotDisturb,
+    toggleDoNotDisturb,
   } = useNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -167,7 +169,9 @@ const NotificationBell: React.FC = () => {
           <path d="M7 12a3 3 0 006 0H7z" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
+          <span
+            className={`absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full px-1 text-center text-[0.65rem] font-semibold leading-5 text-white ${doNotDisturb ? 'bg-ubt-grey text-opacity-70' : 'bg-ubb-orange'}`}
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -183,9 +187,26 @@ const NotificationBell: React.FC = () => {
           className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
         >
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-            <h2 id={headingId} className="text-sm font-semibold text-white">
-              Notifications
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 id={headingId} className="text-sm font-semibold text-white">
+                Notifications
+              </h2>
+              <div className="flex items-center gap-2 text-xs font-medium text-ubt-grey text-opacity-80">
+                <span aria-hidden="true">DND</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={doNotDisturb}
+                  onClick={toggleDoNotDisturb}
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition ${doNotDisturb ? 'bg-ubt-grey/80' : 'bg-white/30 hover:bg-white/40'}`}
+                >
+                  <span className="sr-only">Toggle do not disturb</span>
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${doNotDisturb ? 'translate-x-5' : 'translate-x-1'}`}
+                  />
+                </button>
+              </div>
+            </div>
             <button
               type="button"
               onClick={handleDismissAll}
