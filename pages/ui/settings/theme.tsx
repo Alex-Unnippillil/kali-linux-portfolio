@@ -1,22 +1,30 @@
 "use client";
 
-import { ChangeEvent } from 'react';
+import { ChangeEvent, useEffect, useMemo } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import {
+  THEME_UNLOCKS,
+  getUnlockedThemes,
+  isThemeUnlocked,
+} from '../../../utils/theme';
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({
   checked,
   onChange,
+  label,
 }: {
   checked: boolean;
   onChange: (val: boolean) => void;
+  label: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       onClick={() => onChange(!checked)}
       className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
@@ -35,9 +43,29 @@ export default function ThemeSettings() {
   const { theme, setTheme } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
+  const [highScore] = usePersistentState<number>(
+    'game-highscore',
+    0,
+    (value): value is number => typeof value === 'number',
+  );
+
+  const unlockedThemes = useMemo(
+    () => new Set(getUnlockedThemes(highScore)),
+    [highScore],
+  );
+
+  useEffect(() => {
+    if (!isThemeUnlocked(theme, highScore)) {
+      setTheme('default');
+    }
+  }, [theme, highScore, setTheme]);
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setTheme(e.target.value);
+    const next = e.target.value;
+    if (!isThemeUnlocked(next, highScore)) {
+      return;
+    }
+    setTheme(next);
   };
 
   return (
@@ -59,11 +87,20 @@ export default function ThemeSettings() {
           onChange={handleChange}
           className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
         >
-          <option value="default">Default</option>
-          <option value="dark">Dark</option>
-          <option value="neon">Neon</option>
-          <option value="matrix">Matrix</option>
+          {Object.entries(THEME_UNLOCKS).map(([value, requiredScore]) => {
+            const unlocked = unlockedThemes.has(value);
+            return (
+              <option key={value} value={value} disabled={!unlocked}>
+                {value.charAt(0).toUpperCase() + value.slice(1)}
+                {!unlocked ? ` (unlock at ${requiredScore})` : ''}
+              </option>
+            );
+          })}
         </select>
+        <p className="mt-2 text-xs text-ubt-grey/80">
+          High score: {highScore}. Themes unlock automatically as you reach the
+          required score in any arcade game.
+        </p>
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Panel Icons</h2>
@@ -71,6 +108,7 @@ export default function ThemeSettings() {
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>
             <Toggle
               checked={panelSize === 32}
+              label="Toggle large panel icons"
               onChange={(val) => setPanelSize(val ? 32 : 16)}
             />
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>
@@ -97,6 +135,7 @@ export default function ThemeSettings() {
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>
             <Toggle
               checked={gridSize === 96}
+              label="Toggle large grid icons"
               onChange={(val) => setGridSize(val ? 96 : 64)}
             />
             <span className="w-6 h-6 bg-ubt-grey rounded"></span>
