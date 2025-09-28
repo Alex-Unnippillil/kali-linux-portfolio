@@ -3,18 +3,25 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
+const KALI_WALLPAPER_KEY = 'kali-gradient';
+const KALI_WALLPAPER_DESCRIPTION_ID = 'kali-gradient-wallpaper-description';
+
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8', KALI_WALLPAPER_KEY];
 
-    const changeBackgroundImage = (e) => {
-        const name = e.currentTarget.dataset.path;
+    const changeBackgroundImage = useCallback((name) => {
         setWallpaper(name);
-    };
+        if (name === KALI_WALLPAPER_KEY) {
+            setUseKaliWallpaper(true);
+        } else {
+            setUseKaliWallpaper(false);
+        }
+    }, [setWallpaper, setUseKaliWallpaper]);
 
     let hexToRgb = (hex) => {
         hex = hex.replace('#', '');
@@ -98,6 +105,9 @@ export function Settings() {
                     Your previous wallpaper selection is preserved for when you turn this off.
                 </p>
             )}
+            <p id={KALI_WALLPAPER_DESCRIPTION_ID} className="sr-only">
+                Kali gradient wallpaper with animated glow and grid pattern.
+            </p>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
@@ -223,26 +233,34 @@ export function Settings() {
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
-                    wallpapers.map((name, index) => (
-                        <div
-                            key={name}
-                            role="button"
-                            aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
-                            tabIndex="0"
-                            onClick={changeBackgroundImage}
-                            onFocus={changeBackgroundImage}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    changeBackgroundImage(e);
-                                }
-                            }}
-                            data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
-                        ></div>
-                    ))
+                    wallpapers.map((name) => {
+                        const isGradient = name === KALI_WALLPAPER_KEY;
+                        const isSelected = isGradient ? useKaliWallpaper : (!useKaliWallpaper && name === wallpaper);
+                        return (
+                            <div
+                                key={name}
+                                role="button"
+                                aria-label={isGradient ? 'Select Kali gradient wallpaper' : `Select ${name.replace('wall-', 'wallpaper ')}`}
+                                aria-describedby={isGradient ? KALI_WALLPAPER_DESCRIPTION_ID : undefined}
+                                aria-pressed={isSelected}
+                                tabIndex={0}
+                                onClick={() => changeBackgroundImage(name)}
+                                onFocus={() => changeBackgroundImage(name)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        changeBackgroundImage(name);
+                                    }
+                                }}
+                                className={`${isSelected ? ' border-yellow-700 ' : ' border-transparent '} relative md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80 overflow-hidden`}
+                                style={isGradient ? undefined : { backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
+                            >
+                                {isGradient && (
+                                    <KaliWallpaper className="absolute inset-0" showDragon={false} />
+                                )}
+                            </div>
+                        );
+                    })
                 }
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
