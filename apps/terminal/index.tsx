@@ -9,6 +9,8 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import useNotifications, { type PushNotificationInput } from '../../hooks/useNotifications';
+import usePersistentState from '../../hooks/usePersistentState';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -87,6 +89,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const visualBellTimeoutRef = useRef<number>();
+  const notificationTimestampsRef = useRef<Record<string, number>>({});
   const historyRef = useRef<string[]>([]);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
@@ -101,6 +106,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [soundEnabled] = usePersistentState<boolean>(
+    'qs-sound',
+    true,
+    (v): v is boolean => typeof v === 'boolean',
+  );
+  const [reducedMotionEnabled] = usePersistentState<boolean>(
+    'qs-reduce-motion',
+    false,
+    (v): v is boolean => typeof v === 'boolean',
+  );
+  const [visualBellEnabled, setVisualBellEnabled] = usePersistentState<boolean>(
+    'terminal-visual-bell',
+    true,
+    (v): v is boolean => typeof v === 'boolean',
+  );
+  const [visualBellActive, setVisualBellActive] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -130,6 +151,88 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
   }, []);
+
+  const { pushNotification } = useNotifications();
+  const LONG_COMMAND_THRESHOLD = 2000;
+  const NOTIFICATION_COOLDOWN_MS = 4000;
+
+  const rateLimitedPushNotification = useCallback(
+    (key: string, input: Omit<PushNotificationInput, 'appId'>) => {
+      const now = Date.now();
+      const lastTimestamp = notificationTimestampsRef.current[key];
+      if (lastTimestamp && now - lastTimestamp < NOTIFICATION_COOLDOWN_MS) {
+        return;
+      }
+      notificationTimestampsRef.current[key] = now;
+      pushNotification({
+        appId: 'terminal',
+        ...input,
+        timestamp: input.timestamp ?? now,
+      });
+    },
+    [NOTIFICATION_COOLDOWN_MS, pushNotification],
+  );
+
+  const playBellSound = useCallback(() => {
+    if (!soundEnabled || typeof window === 'undefined') return;
+    const AudioCtor =
+      (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtor) return;
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioCtor();
+      }
+      const ctx = audioContextRef.current;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.004, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.25);
+      oscillator.onended = () => {
+        oscillator.disconnect();
+        gain.disconnect();
+      };
+    } catch {
+      // Ignore audio errors (autoplay policies, etc.)
+    }
+  }, [soundEnabled]);
+
+  const triggerVisualBell = useCallback(() => {
+    if (!visualBellEnabled) return;
+    setVisualBellActive(true);
+    if (visualBellTimeoutRef.current) window.clearTimeout(visualBellTimeoutRef.current);
+    const duration = reducedMotionEnabled ? 120 : 220;
+    visualBellTimeoutRef.current = window.setTimeout(() => {
+      setVisualBellActive(false);
+    }, duration);
+  }, [reducedMotionEnabled, visualBellEnabled]);
+
+  const signalAttention = useCallback(
+    (reason: 'bell' | 'long-command', body?: string) => {
+      playBellSound();
+      triggerVisualBell();
+      const title =
+        reason === 'bell' ? 'Terminal bell' : 'Terminal command completed';
+      const defaultBody =
+        reason === 'bell'
+          ? 'A terminal process requested your attention.'
+          : 'A long-running command has finished executing.';
+      rateLimitedPushNotification(reason, {
+        title,
+        body: body ?? defaultBody,
+      });
+    },
+    [playBellSound, rateLimitedPushNotification, triggerVisualBell],
+  );
 
   const writeLine = useCallback(
     (text: string) => {
@@ -171,6 +274,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         writeLine('Worker not available');
         return;
       }
+      const startedAt = Date.now();
+      let longRunning = false;
+      let longRunTimer: number | undefined;
+      if (typeof window !== 'undefined') {
+        longRunTimer = window.setTimeout(() => {
+          longRunning = true;
+        }, LONG_COMMAND_THRESHOLD);
+      }
       await new Promise<void>((resolve) => {
         worker.onmessage = ({ data }: MessageEvent<any>) => {
           if (data.type === 'data') {
@@ -178,6 +289,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               if (line) writeLine(line);
             }
           } else if (data.type === 'end') {
+            if (longRunTimer) window.clearTimeout(longRunTimer);
+            const duration = Date.now() - startedAt;
+            if (longRunning || duration >= LONG_COMMAND_THRESHOLD) {
+              const trimmed = command.length > 80 ? `${command.slice(0, 77)}…` : command;
+              signalAttention('long-command', `Finished running "${trimmed}".`);
+            }
             resolve();
           }
         };
@@ -188,7 +305,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         });
       });
     },
-    [writeLine],
+    [LONG_COMMAND_THRESHOLD, signalAttention, writeLine],
   );
 
   contextRef.current.runWorker = runWorker;
@@ -235,58 +352,58 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => workerRef.current?.terminate();
   }, []);
 
-    const runCommand = useCallback(
-      async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
-        const expanded =
-          aliasesRef.current[name]
-            ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
-        const [cmdName, ...cmdRest] = expanded.split(/\s+/);
-        const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
-        if (handler) await handler(cmdRest.join(' '), contextRef.current);
-        else if (cmdName) await runWorker(expanded);
-      },
-      [runWorker],
-    );
+  const runCommand = useCallback(
+    async (cmd: string) => {
+      const [name, ...rest] = cmd.trim().split(/\s+/);
+      const expanded =
+        aliasesRef.current[name]
+          ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
+          : cmd;
+      const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+      const handler = registryRef.current[cmdName];
+      historyRef.current.push(cmd);
+      if (handler) await handler(cmdRest.join(' '), contextRef.current);
+      else if (cmdName) await runWorker(expanded);
+    },
+    [runWorker],
+  );
 
-    const autocomplete = useCallback(() => {
-      const current = commandRef.current;
-      const registry = registryRef.current;
-      const matches = Object.keys(registry).filter((c) => c.startsWith(current));
-      if (matches.length === 1) {
-        const completion = matches[0].slice(current.length);
-        termRef.current?.write(completion);
-        commandRef.current = matches[0];
-      } else if (matches.length > 1) {
-        writeLine(matches.join('  '));
-        prompt();
-        termRef.current?.write(commandRef.current);
-      }
-    }, [prompt, writeLine]);
+  const autocomplete = useCallback(() => {
+    const current = commandRef.current;
+    const registry = registryRef.current;
+    const matches = Object.keys(registry).filter((c) => c.startsWith(current));
+    if (matches.length === 1) {
+      const completion = matches[0].slice(current.length);
+      termRef.current?.write(completion);
+      commandRef.current = matches[0];
+    } else if (matches.length > 1) {
+      writeLine(matches.join('  '));
+      prompt();
+      termRef.current?.write(commandRef.current);
+    }
+  }, [prompt, writeLine]);
 
-    const handleInput = useCallback(
-      (data: string) => {
-        for (const ch of data) {
-          if (ch === '\r') {
-            termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
-            commandRef.current = '';
-            prompt();
-          } else if (ch === '\u007F') {
-            if (commandRef.current.length > 0) {
-              termRef.current?.write('\b \b');
-              commandRef.current = commandRef.current.slice(0, -1);
-            }
-          } else {
-            commandRef.current += ch;
-            termRef.current?.write(ch);
+  const handleInput = useCallback(
+    (data: string) => {
+      for (const ch of data) {
+        if (ch === '\r') {
+          termRef.current?.writeln('');
+          runCommand(commandRef.current.trim());
+          commandRef.current = '';
+          prompt();
+        } else if (ch === '\u007F') {
+          if (commandRef.current.length > 0) {
+            termRef.current?.write('\b \b');
+            commandRef.current = commandRef.current.slice(0, -1);
           }
+        } else {
+          commandRef.current += ch;
+          termRef.current?.write(ch);
         }
-      },
-      [runCommand, prompt],
-    );
+      }
+    },
+    [runCommand, prompt],
+  );
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
@@ -295,6 +412,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     let disposed = false;
+    let disposeBell: { dispose: () => void } | undefined;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
         import('@xterm/xterm'),
@@ -344,6 +462,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Type "help" to see available commands.');
       prompt();
       term.onData((d: string) => handleInput(d));
+      disposeBell = term.onBell?.(() => {
+        signalAttention('bell');
+      });
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
@@ -376,9 +497,26 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     })();
     return () => {
       disposed = true;
+      disposeBell?.dispose();
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+  }, [
+    autocomplete,
+    getDir,
+    handleInput,
+    opfsSupported,
+    prompt,
+    readFile,
+    signalAttention,
+    updateOverflow,
+    writeLine,
+  ]);
+
+  useEffect(() => () => {
+    if (visualBellTimeoutRef.current) {
+      window.clearTimeout(visualBellTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -457,6 +595,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <span className="text-green-400">script.sh</span>{' '}
               <span className="text-gray-300">README.md</span>
             </pre>
+            <label className="flex items-center justify-between gap-4 text-sm">
+              <span>Visual bell</span>
+              <input
+                type="checkbox"
+                checked={visualBellEnabled}
+                onChange={() => setVisualBellEnabled(!visualBellEnabled)}
+              />
+            </label>
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
@@ -503,6 +649,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               lineHeight: 1.4,
             }}
           />
+          {visualBellEnabled && visualBellActive && (
+            <div
+              className="pointer-events-none absolute inset-0 rounded ring-2 ring-sky-400/80 bg-sky-500/10"
+              aria-hidden="true"
+            />
+          )}
           {overflow.top && (
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
           )}
