@@ -1,6 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+type TrashItemType = 'window' | 'shortcut';
+
+interface TrashPayload {
+  kind?: 'shortcut' | 'folder';
+  custom?: boolean;
+  folder?: { id: string; name: string };
+}
 
 interface TrashItem {
   id: string;
@@ -8,6 +16,8 @@ interface TrashItem {
   icon?: string;
   image?: string;
   closedAt: number;
+  type?: TrashItemType;
+  payload?: TrashPayload;
 }
 
 const formatAge = (closedAt: number): string => {
@@ -24,8 +34,38 @@ const formatAge = (closedAt: number): string => {
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [highlightKey, setHighlightKey] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
+  const getItemKey = useCallback(
+    (item: TrashItem) => `${item.id}:${item.closedAt}:${item.type || 'window'}`,
+    [],
+  );
+
+  const syncHighlight = useCallback(
+    (data: TrashItem[]) => {
+      try {
+        const stored = localStorage.getItem('window-trash-highlight');
+        if (!stored) {
+          setHighlightKey(null);
+          return;
+        }
+        const parsed = JSON.parse(stored);
+        if (parsed?.key && data.some(item => getItemKey(item) === parsed.key)) {
+          setHighlightKey(parsed.key);
+        } else {
+          localStorage.removeItem('window-trash-highlight');
+          setHighlightKey(null);
+        }
+      } catch {
+        localStorage.removeItem('window-trash-highlight');
+        setHighlightKey(null);
+      }
+    },
+    [getItemKey],
+  );
+
+  const loadItems = useCallback(() => {
     const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
     const ms = purgeDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
@@ -38,22 +78,116 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     data = data.filter((item) => now - item.closedAt <= ms);
     localStorage.setItem('window-trash', JSON.stringify(data));
     setItems(data);
-  }, []);
+    syncHighlight(data);
+  }, [syncHighlight]);
+
+  useEffect(() => {
+    loadItems();
+    const handler = () => loadItems();
+    window.addEventListener('trash-change', handler);
+    return () => window.removeEventListener('trash-change', handler);
+  }, [loadItems]);
+
+  useEffect(() => {
+    if (!highlightKey) return undefined;
+    const timeout = window.setTimeout(() => {
+      try {
+        const stored = localStorage.getItem('window-trash-highlight');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.key === highlightKey) {
+            localStorage.removeItem('window-trash-highlight');
+          }
+        }
+      } catch {
+        localStorage.removeItem('window-trash-highlight');
+      }
+      setHighlightKey(null);
+    }, 4000);
+    return () => window.clearTimeout(timeout);
+  }, [highlightKey]);
+
+  useEffect(() => {
+    if (selected !== null && selected >= items.length) {
+      setSelected(items.length ? items.length - 1 : null);
+    }
+  }, [items, selected]);
 
   const persist = (next: TrashItem[]) => {
     setItems(next);
     localStorage.setItem('window-trash', JSON.stringify(next));
+    try {
+      const stored = localStorage.getItem('window-trash-highlight');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (!parsed?.key || !next.some(item => getItemKey(item) === parsed.key)) {
+          localStorage.removeItem('window-trash-highlight');
+          setHighlightKey(null);
+        }
+      }
+    } catch {
+      localStorage.removeItem('window-trash-highlight');
+      setHighlightKey(null);
+    }
+    window.dispatchEvent(new Event('trash-change'));
   };
+
+  const notifyRestore = useCallback(
+    (item: TrashItem) => {
+      if (item.type === 'shortcut') {
+        window.dispatchEvent(new CustomEvent('desktop-restore-item', { detail: item }));
+      } else {
+        openApp(item.id);
+      }
+    },
+    [openApp],
+  );
+
+  const handleDragStart = useCallback(
+    (item: TrashItem) => (event: React.DragEvent<HTMLDivElement>) => {
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('application/x-trash-item', getItemKey(item));
+        event.dataTransfer.setData('text/plain', item.title);
+      }
+    },
+    [getItemKey],
+  );
+
+  const handleDragEnd = useCallback(
+    (idx: number) => (event: React.DragEvent<HTMLDivElement>) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const { clientX, clientY } = event;
+      const inside =
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom;
+      if (inside) return;
+      const item = items[idx];
+      if (!item) return;
+      notifyRestore(item);
+      const next = items.filter((_, i) => i !== idx);
+      persist(next);
+      if (selected === idx) {
+        setSelected(null);
+      } else if (selected !== null && selected > idx) {
+        setSelected(selected - 1);
+      }
+    },
+    [items, notifyRestore, persist, selected],
+  );
 
   const restore = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
-    openApp(item.id);
+    notifyRestore(item);
     const next = items.filter((_, i) => i !== selected);
     persist(next);
     setSelected(null);
-  }, [items, selected, openApp]);
+  }, [items, selected, notifyRestore]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
@@ -66,8 +200,8 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
 
   const restoreAll = () => {
     if (items.length === 0) return;
-    if (!window.confirm('Restore all windows?')) return;
-    items.forEach((item) => openApp(item.id));
+    if (!window.confirm('Restore all items?')) return;
+    items.forEach((item) => notifyRestore(item));
     persist([]);
     setSelected(null);
   };
@@ -133,14 +267,19 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap content-start p-2 overflow-auto">
+      <div ref={containerRef} className="flex flex-wrap content-start p-2 overflow-auto">
         {items.length === 0 && <div className="w-full text-center mt-10">Trash is empty</div>}
         {items.map((item, idx) => (
           <div
-            key={item.closedAt}
+            key={getItemKey(item)}
             tabIndex={0}
             onClick={() => setSelected(idx)}
-            className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+            draggable
+            onDragStart={handleDragStart(item)}
+            onDragEnd={handleDragEnd(idx)}
+            className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''} ${
+              highlightKey === getItemKey(item) ? 'ring-2 ring-ub-orange ring-offset-2 ring-offset-black' : ''
+            }`}
           >
             {item.image ? (
               <img src={item.image} alt={item.title} className="h-20 w-full object-cover" />
