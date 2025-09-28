@@ -392,7 +392,7 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute left-0 mt-1 z-50 flex w-[640px] overflow-hidden rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out ${
+          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
@@ -403,14 +403,14 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex max-h-[420px] w-[260px] flex-col bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622]">
+          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
             <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
               <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
               Categories
             </div>
             <div
               ref={categoryListRef}
-              className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3"
+              className="flex max-h-[32vh] flex-1 flex-col gap-1 overflow-y-auto px-3 py-3 sm:max-h-full sm:px-2"
               role="listbox"
               aria-label="Application categories"
               tabIndex={0}
@@ -471,9 +471,9 @@ const WhiskerMenu: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="flex flex-1 flex-col bg-[#0f1a29]">
-            <div className="border-b border-[#1d2a3c] px-5 py-4">
-              <div className="mb-4 flex items-center gap-3">
+          <div className="flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
+            <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
+              <div className="mb-4 flex flex-wrap items-center gap-3">
                 {favoriteApps.slice(0, 6).map((app) => (
                   <button
                     key={app.id}
@@ -510,7 +510,7 @@ const WhiskerMenu: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-2 py-3">
+            <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-2">
               {currentApps.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
