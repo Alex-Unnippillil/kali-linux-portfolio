@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  terminalBell: true,
 };
 
 export async function getAccent() {
@@ -135,6 +136,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTerminalBell() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.terminalBell;
+  const value = window.localStorage.getItem('terminal-bell');
+  return value === null ? DEFAULT_SETTINGS.terminalBell : value === 'true';
+}
+
+export async function setTerminalBell(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('terminal-bell', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +162,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('terminal-bell');
 }
 
 export async function exportSettings() {
@@ -165,6 +178,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    terminalBell,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +191,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTerminalBell(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +207,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    terminalBell,
   });
 }
 
@@ -217,6 +233,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    terminalBell,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -229,6 +246,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (terminalBell !== undefined) await setTerminalBell(terminalBell);
   if (theme !== undefined) setTheme(theme);
 }
 
