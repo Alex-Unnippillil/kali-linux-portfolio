@@ -25,6 +25,13 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const GRID_ICON_WIDTH = 96;
+const GRID_ICON_HEIGHT = 96;
+const GRID_GAP_X = 24;
+const GRID_GAP_Y = 24;
+const GRID_PADDING_X = 32;
+const GRID_PADDING_Y = 32;
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -69,7 +76,16 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
+            desktopLayout: this.getDefaultDesktopLayout(),
+            selectedDesktopApp: null,
+            renamingDesktopApp: null,
+            renameDraft: '',
+            renameHistory: [],
         }
+        this.desktopGridRef = React.createRef();
+        this.draggingDesktopApp = null;
+        this.pendingLayout = null;
+        this.appsById = new Map();
     }
 
     createEmptyWorkspaceState = () => ({
@@ -89,6 +105,429 @@ export class Desktop extends Component {
         window_positions: { ...state.window_positions },
         hideSideBar: state.hideSideBar,
     });
+
+    getDefaultDesktopLayout = () => ({
+        icons: [],
+        sortMode: 'custom',
+    });
+
+    loadPersistedDesktopLayout = () => {
+        if (!safeLocalStorage) return this.getDefaultDesktopLayout();
+        try {
+            const stored = safeLocalStorage.getItem('desktop-layout');
+            if (!stored) return this.getDefaultDesktopLayout();
+            const parsed = JSON.parse(stored);
+            if (!parsed || !Array.isArray(parsed.icons)) return this.getDefaultDesktopLayout();
+            const icons = parsed.icons
+                .filter((icon) => icon && icon.id)
+                .map((icon, index) => ({
+                    id: icon.id,
+                    order: typeof icon.order === 'number' ? icon.order : index,
+                    customName: typeof icon.customName === 'string' ? icon.customName : '',
+                    addedAt: typeof icon.addedAt === 'number' ? icon.addedAt : Date.now() + index,
+                }));
+            const layout = {
+                icons: this.applySortToIcons(parsed.sortMode || 'custom', icons),
+                sortMode: parsed.sortMode || 'custom',
+            };
+            return layout;
+        } catch (e) {
+            return this.getDefaultDesktopLayout();
+        }
+    };
+
+    persistDesktopLayout = () => {
+        if (!safeLocalStorage) return;
+        const layout = this.state.desktopLayout || this.getDefaultDesktopLayout();
+        const payload = {
+            icons: (layout.icons || []).map((icon) => ({
+                id: icon.id,
+                order: icon.order,
+                customName: icon.customName || '',
+                addedAt: icon.addedAt,
+            })),
+            sortMode: layout.sortMode || 'custom',
+        };
+        safeLocalStorage.setItem('desktop-layout', JSON.stringify(payload));
+    };
+
+    refreshAppsIndex = () => {
+        this.appsById = new Map();
+        apps.forEach((app) => {
+            this.appsById.set(app.id, app);
+        });
+    };
+
+    getAppById = (id) => this.appsById.get(id) || apps.find((app) => app.id === id);
+
+    resolveIconType = (id) => {
+        const app = this.getAppById(id);
+        if (!app) return 'Application';
+        if (typeof app.type === 'string' && app.type.trim()) return app.type;
+        if (typeof app.category === 'string' && app.category.trim()) return app.category;
+        if (app.id?.startsWith('new-folder') || app.icon?.includes('folder')) return 'Folder';
+        if (games.some((game) => game.id === app.id)) return 'Game';
+        if (app.id === 'trash') return 'System';
+        return 'Application';
+    };
+
+    getIconDisplayName = (icon) => {
+        if (!icon) return '';
+        if (icon.customName && icon.customName.trim()) return icon.customName.trim();
+        const app = this.getAppById(icon.id);
+        return app?.title || icon.id;
+    };
+
+    sortIcons = (mode, icons) => {
+        const list = icons.map((icon) => ({ ...icon }));
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        switch (mode) {
+            case 'name':
+                list.sort((a, b) => collator.compare(this.getIconDisplayName(a), this.getIconDisplayName(b)));
+                break;
+            case 'type':
+                list.sort((a, b) => {
+                    const typeCompare = collator.compare(this.resolveIconType(a.id), this.resolveIconType(b.id));
+                    if (typeCompare !== 0) return typeCompare;
+                    return collator.compare(this.getIconDisplayName(a), this.getIconDisplayName(b));
+                });
+                break;
+            case 'date':
+                list.sort((a, b) => {
+                    const diff = (a.addedAt ?? 0) - (b.addedAt ?? 0);
+                    if (diff !== 0) return diff;
+                    return collator.compare(this.getIconDisplayName(a), this.getIconDisplayName(b));
+                });
+                break;
+            default:
+                list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        }
+        return list;
+    };
+
+    applySortToIcons = (mode, icons) => {
+        const normalized = icons.map((icon, index) => ({
+            id: icon.id,
+            order: typeof icon.order === 'number' ? icon.order : index,
+            customName: typeof icon.customName === 'string' ? icon.customName : '',
+            addedAt: typeof icon.addedAt === 'number' ? icon.addedAt : Date.now() + index,
+        }));
+        let ordered = normalized.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        if (mode && mode !== 'custom') {
+            ordered = this.sortIcons(mode, ordered);
+        }
+        return ordered.map((icon, index) => ({ ...icon, order: index }));
+    };
+
+    isLayoutChanged = (prevLayout, nextLayout) => {
+        if (!prevLayout) return true;
+        const prevMode = prevLayout.sortMode || 'custom';
+        const nextMode = nextLayout.sortMode || 'custom';
+        if (prevMode !== nextMode) return true;
+        const prevIcons = Array.isArray(prevLayout.icons) ? prevLayout.icons : [];
+        const nextIcons = Array.isArray(nextLayout.icons) ? nextLayout.icons : [];
+        if (prevIcons.length !== nextIcons.length) return true;
+        for (let index = 0; index < nextIcons.length; index += 1) {
+            const prevIcon = prevIcons[index];
+            const nextIcon = nextIcons[index];
+            if (!prevIcon || !nextIcon) return true;
+            if (prevIcon.id !== nextIcon.id) return true;
+            if ((prevIcon.order ?? 0) !== (nextIcon.order ?? 0)) return true;
+            if ((prevIcon.customName || '') !== (nextIcon.customName || '')) return true;
+            if ((prevIcon.addedAt ?? 0) !== (nextIcon.addedAt ?? 0)) return true;
+        }
+        return false;
+    };
+
+    reconcileDesktopLayout = (ids, baseLayout, options = {}) => {
+        const now = Date.now();
+        const baseIcons = Array.isArray(baseLayout?.icons) ? baseLayout.icons : [];
+        const baseMap = new Map(baseIcons.map((icon) => [icon.id, icon]));
+        let maxOrder = baseIcons.reduce((max, icon) => Math.max(max, typeof icon.order === 'number' ? icon.order : -1), -1);
+
+        const icons = ids.map((id, index) => {
+            const existing = baseMap.get(id);
+            if (existing) {
+                const icon = { ...existing };
+                if (typeof icon.order !== 'number') {
+                    maxOrder += 1;
+                    icon.order = maxOrder;
+                }
+                if (typeof icon.addedAt !== 'number') {
+                    icon.addedAt = now + index;
+                }
+                if (typeof icon.customName !== 'string') {
+                    icon.customName = '';
+                }
+                return icon;
+            }
+            maxOrder += 1;
+            return {
+                id,
+                order: maxOrder,
+                customName: '',
+                addedAt: now + index,
+            };
+        });
+
+        icons.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        icons.forEach((icon, index) => {
+            icon.order = index;
+        });
+
+        const sortMode = options.sortMode ?? (baseLayout?.sortMode || 'custom');
+        if (sortMode && sortMode !== 'custom' || options.forceSort) {
+            const sorted = this.sortIcons(sortMode, icons);
+            sorted.forEach((icon, index) => {
+                icon.order = index;
+            });
+            return { layout: { icons: sorted, sortMode } };
+        }
+
+        return { layout: { icons, sortMode } };
+    };
+
+    syncDesktopLayout = (ids, options = {}) => {
+        const targetIds = Array.isArray(ids) ? ids : this.state.desktop_apps;
+        const usePending = options.usePending && this.pendingLayout;
+        const baseLayout = usePending ? this.pendingLayout : this.state.desktopLayout;
+        const sortMode = options.sortMode ?? (usePending ? this.pendingLayout.sortMode : baseLayout?.sortMode) ?? 'custom';
+        const { layout } = this.reconcileDesktopLayout(targetIds, baseLayout, {
+            sortMode,
+            forceSort: options.forceSort,
+        });
+        if (this.isLayoutChanged(this.state.desktopLayout, layout)) {
+            this.setState({ desktopLayout: layout }, this.persistDesktopLayout);
+        } else if (usePending) {
+            // ensure state syncs with persisted layout when first loaded
+            this.setState({ desktopLayout: layout });
+        }
+        if (usePending) {
+            this.pendingLayout = null;
+        }
+    };
+
+    getOrderedDesktopIcons = () => {
+        const layoutIcons = Array.isArray(this.state.desktopLayout?.icons) ? this.state.desktopLayout.icons : [];
+        const allowed = new Set(this.state.desktop_apps);
+        return layoutIcons
+            .filter((icon) => allowed.has(icon.id))
+            .map((icon) => ({
+                ...icon,
+                app: this.getAppById(icon.id),
+            }))
+            .filter((item) => item.app)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    };
+
+    getGridRowCapacity = () => {
+        const grid = this.desktopGridRef.current;
+        if (grid) {
+            const height = grid.clientHeight || 0;
+            const rows = Math.max(1, Math.floor((height - GRID_PADDING_Y * 2 + GRID_GAP_Y) / (GRID_ICON_HEIGHT + GRID_GAP_Y)));
+            return rows;
+        }
+        if (typeof window !== 'undefined') {
+            const height = window.innerHeight - GRID_PADDING_Y * 2;
+            const rows = Math.max(1, Math.floor((height + GRID_GAP_Y) / (GRID_ICON_HEIGHT + GRID_GAP_Y)));
+            return rows;
+        }
+        return 1;
+    };
+
+    handleGridDragOver = (e) => {
+        if (!this.draggingDesktopApp) return;
+        e.preventDefault();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'move';
+        }
+    };
+
+    handleGridDrop = (e) => {
+        if (!this.draggingDesktopApp) return;
+        e.preventDefault();
+        const grid = this.desktopGridRef.current;
+        const rect = grid ? grid.getBoundingClientRect() : { left: 0, top: 0 };
+        const clientX = typeof e.clientX === 'number' ? e.clientX : e.pageX || 0;
+        const clientY = typeof e.clientY === 'number' ? e.clientY : e.pageY || 0;
+        const relativeX = clientX - rect.left - GRID_PADDING_X;
+        const relativeY = clientY - rect.top - GRID_PADDING_Y;
+        const rows = this.getGridRowCapacity();
+        const columnWidth = GRID_ICON_WIDTH + GRID_GAP_X;
+        const rowHeight = GRID_ICON_HEIGHT + GRID_GAP_Y;
+        const column = Math.max(0, Math.round(relativeX / columnWidth));
+        const row = Math.max(0, Math.round(relativeY / rowHeight));
+        const length = this.state.desktopLayout?.icons?.length || 0;
+        const rawIndex = column * rows + row;
+        const targetIndex = Math.max(0, Math.min(rawIndex, length));
+        const id = this.draggingDesktopApp;
+        this.draggingDesktopApp = null;
+        this.moveIconToIndex(id, targetIndex);
+    };
+
+    moveIconToIndex = (id, targetIndex) => {
+        this.setState((prevState) => {
+            const layout = prevState.desktopLayout ? { ...prevState.desktopLayout } : this.getDefaultDesktopLayout();
+            const icons = Array.isArray(layout.icons) ? layout.icons.map((icon) => ({ ...icon })) : [];
+            const currentIndex = icons.findIndex((icon) => icon.id === id);
+            if (currentIndex === -1) return null;
+            const [moved] = icons.splice(currentIndex, 1);
+            const clampedIndex = Math.max(0, Math.min(targetIndex, icons.length));
+            icons.splice(clampedIndex, 0, moved);
+            icons.forEach((icon, index) => {
+                icon.order = index;
+            });
+            layout.icons = icons;
+            layout.sortMode = 'custom';
+            return { desktopLayout: layout, selectedDesktopApp: id };
+        }, this.persistDesktopLayout);
+    };
+
+    handleIconDragStart = (id) => {
+        this.draggingDesktopApp = id;
+        this.setState({ selectedDesktopApp: id });
+    };
+
+    handleIconDragEnd = () => {
+        this.draggingDesktopApp = null;
+    };
+
+    handleIconSelect = (id) => {
+        if (this.state.renamingDesktopApp && this.state.renamingDesktopApp !== id) {
+            this.submitRename();
+        }
+        this.setState({ selectedDesktopApp: id });
+    };
+
+    handleDesktopAreaClick = (e) => {
+        const appNode = e.target.closest('[data-app-id]');
+        if (appNode) return;
+        if (this.state.renamingDesktopApp) {
+            this.submitRename();
+        } else {
+            this.setState({ selectedDesktopApp: null });
+        }
+    };
+
+    startRename = (id) => {
+        const icons = Array.isArray(this.state.desktopLayout?.icons) ? this.state.desktopLayout.icons : [];
+        const icon = icons.find((item) => item.id === id);
+        const app = this.getAppById(id);
+        if (!icon || !app) return;
+        const displayName = icon.customName || app.title || id;
+        this.setState({
+            renamingDesktopApp: id,
+            renameDraft: displayName,
+            selectedDesktopApp: id,
+        });
+    };
+
+    handleRenameChange = (value) => {
+        this.setState({ renameDraft: value });
+    };
+
+    submitRename = () => {
+        const id = this.state.renamingDesktopApp;
+        if (!id) return;
+        const value = this.state.renameDraft;
+        let updated = false;
+        this.setState((prevState) => {
+            const layout = prevState.desktopLayout ? { ...prevState.desktopLayout } : this.getDefaultDesktopLayout();
+            const icons = Array.isArray(layout.icons) ? layout.icons.map((icon) => ({ ...icon })) : [];
+            const index = icons.findIndex((icon) => icon.id === id);
+            if (index === -1) {
+                return {
+                    renamingDesktopApp: null,
+                    renameDraft: '',
+                };
+            }
+            const app = this.getAppById(id);
+            const previousName = icons[index].customName || '';
+            const trimmed = value.trim();
+            const baseName = app?.title || id;
+            const normalized = trimmed && trimmed !== baseName ? trimmed : '';
+            if (previousName === normalized) {
+                return {
+                    renamingDesktopApp: null,
+                    renameDraft: '',
+                    selectedDesktopApp: id,
+                };
+            }
+            icons[index].customName = normalized;
+            let updatedIcons = icons;
+            if (layout.sortMode && layout.sortMode !== 'custom') {
+                updatedIcons = this.sortIcons(layout.sortMode, icons);
+            }
+            updatedIcons.forEach((icon, order) => {
+                icon.order = order;
+            });
+            layout.icons = updatedIcons;
+            const history = [...prevState.renameHistory, { id, previousName }];
+            updated = true;
+            return {
+                desktopLayout: layout,
+                renamingDesktopApp: null,
+                renameDraft: '',
+                renameHistory: history.slice(-50),
+                selectedDesktopApp: id,
+            };
+        }, () => {
+            if (updated) this.persistDesktopLayout();
+        });
+    };
+
+    cancelRename = () => {
+        const id = this.state.renamingDesktopApp;
+        if (!id) {
+            this.setState({ renamingDesktopApp: null, renameDraft: '' });
+            return;
+        }
+        this.setState({
+            renamingDesktopApp: null,
+            renameDraft: '',
+            selectedDesktopApp: id,
+        });
+    };
+
+    undoLastRename = () => {
+        if (!this.state.renameHistory.length) return false;
+        let reverted = false;
+        this.setState((prevState) => {
+            if (!prevState.renameHistory.length) return null;
+            const history = [...prevState.renameHistory];
+            const last = history.pop();
+            if (!last) return { renameHistory: history };
+            const layout = prevState.desktopLayout ? { ...prevState.desktopLayout } : this.getDefaultDesktopLayout();
+            const icons = Array.isArray(layout.icons) ? layout.icons.map((icon) => ({ ...icon })) : [];
+            const index = icons.findIndex((icon) => icon.id === last.id);
+            if (index === -1) {
+                return { renameHistory: history };
+            }
+            icons[index].customName = last.previousName || '';
+            let updatedIcons = icons;
+            if (layout.sortMode && layout.sortMode !== 'custom') {
+                updatedIcons = this.sortIcons(layout.sortMode, icons);
+            }
+            updatedIcons.forEach((icon, order) => {
+                icon.order = order;
+            });
+            layout.icons = updatedIcons;
+            reverted = true;
+            return {
+                desktopLayout: layout,
+                renameHistory: history,
+                selectedDesktopApp: last.id,
+            };
+        }, () => {
+            if (reverted) this.persistDesktopLayout();
+        });
+        return reverted;
+    };
+
+    handleSortChange = (mode) => {
+        if (!mode) return;
+        this.syncDesktopLayout(this.state.desktop_apps, { sortMode: mode, forceSort: true });
+    };
 
     commitWorkspacePartial = (partial, index) => {
         const targetIndex = typeof index === 'number' ? index : this.state.activeWorkspace;
@@ -189,6 +628,8 @@ export class Desktop extends Component {
     };
 
     componentDidMount() {
+        this.refreshAppsIndex();
+        this.pendingLayout = this.loadPersistedDesktopLayout();
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -225,6 +666,7 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this.persistDesktopLayout();
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
@@ -280,6 +722,13 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') {
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+            if (this.undoLastRename()) {
+                e.preventDefault();
+                return;
+            }
+        }
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
@@ -519,6 +968,7 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        this.refreshAppsIndex();
         const workspaceState = {
             focused_windows,
             closed_windows,
@@ -535,6 +985,7 @@ export class Desktop extends Component {
             favourite_apps,
             desktop_apps
         }, () => {
+            this.syncDesktopLayout(desktop_apps, { usePending: true });
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
@@ -570,6 +1021,7 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        this.refreshAppsIndex();
         const workspaceState = {
             focused_windows,
             closed_windows,
@@ -584,31 +1036,64 @@ export class Desktop extends Component {
             disabled_apps,
             favourite_apps,
             desktop_apps
-        });
+        }, () => this.syncDesktopLayout(desktop_apps));
         this.initFavourite = { ...favourite_apps };
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
-
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+        if (Object.keys(this.state.closed_windows).length === 0) return null;
+        const icons = this.getOrderedDesktopIcons();
+        if (!icons.length) return null;
+        return (
+            <div
+                id="desktop-grid"
+                ref={this.desktopGridRef}
+                data-context="desktop-area"
+                className="absolute inset-0"
+                onDragOver={this.handleGridDragOver}
+                onDrop={this.handleGridDrop}
+                onMouseDown={this.handleDesktopAreaClick}
+            >
+                <div
+                    data-context="desktop-area"
+                    className="w-full h-full"
+                    style={{
+                        display: 'grid',
+                        gridAutoFlow: 'column',
+                        gridAutoColumns: `${GRID_ICON_WIDTH}px`,
+                        gridAutoRows: `${GRID_ICON_HEIGHT}px`,
+                        columnGap: `${GRID_GAP_X}px`,
+                        rowGap: `${GRID_GAP_Y}px`,
+                        alignContent: 'start',
+                        justifyContent: 'start',
+                        padding: `${GRID_PADDING_Y}px ${GRID_PADDING_X}px`,
+                    }}
+                >
+                    {icons.map(({ id, app, customName }) => (
+                        <UbuntuApp
+                            key={id}
+                            name={app.title}
+                            id={id}
+                            icon={app.icon}
+                            openApp={this.openApp}
+                            disabled={this.state.disabled_apps[id]}
+                            prefetch={app.screen?.prefetch}
+                            displayName={customName ? customName : undefined}
+                            selected={this.state.selectedDesktopApp === id}
+                            renaming={this.state.renamingDesktopApp === id}
+                            renameValue={this.state.renamingDesktopApp === id ? this.state.renameDraft : ''}
+                            onRenameChange={this.handleRenameChange}
+                            onRenameSubmit={this.submitRename}
+                            onRenameCancel={this.cancelRename}
+                            onSelect={() => this.handleIconSelect(id)}
+                            onDragStart={this.handleIconDragStart}
+                            onDragEnd={this.handleIconDragEnd}
+                            onRequestRename={this.startRename}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     renderWindows = () => {
@@ -1117,6 +1602,10 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    sortMode={this.state.desktopLayout?.sortMode || 'custom'}
+                    onChangeSort={this.handleSortChange}
+                    canUndoRename={this.state.renameHistory.length > 0}
+                    onUndoRename={this.undoLastRename}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
