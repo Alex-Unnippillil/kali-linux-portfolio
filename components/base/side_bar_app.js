@@ -123,7 +123,15 @@ export class SideBarApp extends Component {
                 {
                     (
                         this.props.isClose[this.id] === false
-                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
+                            ? (
+                                <div
+                                    className={
+                                        "w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 rounded-md" +
+                                        (this.props.isFocus[this.id] ? " motion-safe:animate-pulse" : "")
+                                    }
+                                    style={{ backgroundColor: 'var(--kali-accent)' }}
+                                ></div>
+                            )
                             : null
                     )
                 }
