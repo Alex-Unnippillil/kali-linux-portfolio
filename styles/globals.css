@@ -20,6 +20,7 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --color-menu-hover: color-mix(in srgb, var(--color-primary) 24%, var(--color-bg) 76%);
   --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
 }
