@@ -10,7 +10,7 @@ const BackgroundImage = dynamic(
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
-import UbuntuApp from '../base/ubuntu_app';
+import KaliApp from '../base/kali_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
@@ -604,7 +604,7 @@ export class Desktop extends Component {
                 }
 
                 appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
+                    <KaliApp key={app.id} {...props} />
                 );
             }
         });
@@ -1083,7 +1083,7 @@ export class Desktop extends Component {
                 {/* Background Image */}
                 <BackgroundImage />
 
-                {/* Ubuntu Side Menu Bar */}
+                {/* Kali Side Menu Bar */}
                 <SideBar apps={apps}
                     hide={this.state.hideSideBar}
                     hideSideBar={this.hideSideBar}

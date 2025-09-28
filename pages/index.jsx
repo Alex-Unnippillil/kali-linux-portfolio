@@ -2,15 +2,15 @@ import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
 
-const Ubuntu = dynamic(
+const Kali = dynamic(
   () =>
-    import('../components/ubuntu').catch((err) => {
-      console.error('Failed to load Ubuntu component', err);
+    import('../components/kali').catch((err) => {
+      console.error('Failed to load Kali component', err);
       throw err;
     }),
   {
     ssr: false,
-    loading: () => <p>Loading Ubuntu...</p>,
+    loading: () => <p>Loading Kali...</p>,
   }
 );
 const InstallButton = dynamic(
@@ -34,7 +34,7 @@ const App = () => (
       Skip to content
     </a>
     <Meta />
-    <Ubuntu />
+    <Kali />
     <BetaBadge />
     <InstallButton />
   </>

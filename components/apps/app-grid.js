@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import KaliApp from '../base/kali_app';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
@@ -98,7 +98,7 @@ export default function AppGrid({ openApp }) {
             onFocus={onFocus}
             onBlur={onBlur}
           >
-            <UbuntuApp
+            <KaliApp
               id={app.id}
               icon={app.icon}
               name={app.title}

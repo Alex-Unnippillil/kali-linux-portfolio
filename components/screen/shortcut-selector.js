@@ -1,5 +1,5 @@
 import React from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import KaliApp from '../base/kali_app';
 
 class ShortcutSelector extends React.Component {
     constructor() {
@@ -41,7 +41,7 @@ class ShortcutSelector extends React.Component {
     renderApps = () => {
         const apps = this.state.apps || [];
         return apps.map((app) => (
-            <UbuntuApp
+            <KaliApp
                 key={app.id}
                 name={app.title}
                 id={app.id}

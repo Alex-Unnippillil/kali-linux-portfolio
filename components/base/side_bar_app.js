@@ -109,7 +109,7 @@ export class SideBarApp extends Component {
                     height={28}
                     className="w-7"
                     src={this.props.icon.replace('./', '/')}
-                    alt="Ubuntu App Icon"
+                    alt="Kali App Icon"
                     sizes="28px"
                 />
                 <Image
