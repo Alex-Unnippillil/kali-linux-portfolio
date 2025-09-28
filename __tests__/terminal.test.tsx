@@ -40,6 +40,10 @@ import TerminalTabs from '../apps/terminal/tabs';
 describe('Terminal component', () => {
   const openApp = jest.fn();
 
+  beforeEach(() => {
+    openApp.mockClear();
+  });
+
   it('renders container and exposes runCommand', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
@@ -67,13 +71,25 @@ describe('Terminal component', () => {
     const root = container.firstChild as HTMLElement;
     root.focus();
     fireEvent.keyDown(root, { ctrlKey: true, key: 't' });
-    expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(2);
+    let headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
+    expect(headers.length).toBe(2);
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'Tab' });
-    const headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
+    headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
     expect((headers[0] as HTMLElement).className).toContain('bg-gray-700');
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
-    expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
+    headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
+    expect(headers.length).toBe(1);
+
+    fireEvent.keyDown(root, { ctrlKey: true, shiftKey: true, key: 'T' });
+    headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
+    expect(headers.length).toBe(2);
+    expect(
+      Array.from(headers).some((el) => el.textContent?.includes('Session 2'))
+    ).toBe(true);
+
+    fireEvent.keyDown(root, { ctrlKey: true, shiftKey: true, key: 'N' });
+    expect(openApp).toHaveBeenCalledWith('terminal');
   });
 });
