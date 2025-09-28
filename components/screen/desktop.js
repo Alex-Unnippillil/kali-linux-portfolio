@@ -302,12 +302,19 @@ export class Desktop extends Component {
             const direction = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
             this.shiftWorkspace(direction);
         }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
+        else if (e.metaKey) {
+            const superKeys = new Set([
+                'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                'Numpad0', 'Numpad1', 'Numpad2', 'Numpad3', 'Numpad4',
+                'Numpad5', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9'
+            ]);
+            if (superKeys.has(e.key)) {
+                e.preventDefault();
+                const id = this.getFocusedWindowId();
+                if (id) {
+                    const event = new CustomEvent('super-arrow', { detail: e.key });
+                    document.getElementById(id)?.dispatchEvent(event);
+                }
             }
         }
     }
