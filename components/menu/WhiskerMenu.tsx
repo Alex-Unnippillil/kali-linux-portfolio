@@ -6,6 +6,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
+import { rankApps } from './fuzzyScorer';
 
 type AppMeta = {
   id: string;
@@ -163,6 +164,7 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const favoriteIds = useMemo(() => favoriteApps.map(app => app.id), [favoriteApps]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
   }, []);
@@ -214,13 +216,25 @@ const WhiskerMenu: React.FC = () => {
   }, [category, categoryConfigs]);
 
   const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+    const list = currentCategory?.apps ?? [];
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      return list;
     }
-    return list;
-  }, [currentCategory, query]);
+    return rankApps(list, trimmedQuery, {
+      recentIds,
+      favoriteIds,
+    });
+  }, [currentCategory, favoriteIds, query, recentIds]);
+
+  useEffect(() => {
+    setHighlight((current) => {
+      if (currentApps.length === 0) {
+        return 0;
+      }
+      return Math.min(current, currentApps.length - 1);
+    });
+  }, [currentApps]);
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
@@ -236,7 +250,7 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     if (!isVisible) return;
     setHighlight(0);
-  }, [isVisible, category, query]);
+  }, [isVisible, category, query, recentIds, favoriteIds]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -319,6 +333,16 @@ const WhiskerMenu: React.FC = () => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const targetApp = currentApps[highlight];
+    if (!targetApp) return;
+    const element = document.getElementById(`app-${targetApp.id}`);
+    if (element instanceof HTMLElement) {
+      element.focus();
+    }
+  }, [currentApps, highlight, isVisible]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
