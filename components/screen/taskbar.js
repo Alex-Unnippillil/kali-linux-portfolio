@@ -15,6 +15,7 @@ export default function Taskbar(props) {
     };
 
     return (
+
         <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center justify-start px-2 z-40 gap-2" role="toolbar">
             <div className="flex items-center overflow-x-auto">
                 {runningApps.map(app => {
