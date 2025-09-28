@@ -7,7 +7,21 @@ let renderApps = (props) => {
     props.apps.forEach((app, index) => {
         if (props.favourite_apps[app.id] === false) return;
         sideBarAppsJsx.push(
-            <SideBarApp key={app.id} id={app.id} title={app.title} icon={app.icon} isClose={props.closed_windows} isFocus={props.focused_windows} openApp={props.openAppByAppId} isMinimized={props.isMinimized} openFromMinimised={props.openFromMinimised} />
+            <SideBarApp
+                key={app.id}
+                id={app.id}
+                title={app.title}
+                icon={app.icon}
+                isClose={props.closed_windows}
+                isFocus={props.focused_windows}
+                openApp={props.openAppByAppId}
+                isMinimized={props.isMinimized}
+                openFromMinimised={props.openFromMinimised}
+                isFavourite={props.favourite_apps[app.id]}
+                pinApp={props.pinApp}
+                unpinApp={props.unpinApp}
+                openInNewWorkspace={props.openInNewWorkspace}
+            />
         );
     });
     return sideBarAppsJsx;
