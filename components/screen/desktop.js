@@ -24,6 +24,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { arrangeDesktopGrid, syncDesktopGrid } from '../../utils/desktopGrid';
 
 export class Desktop extends Component {
     constructor() {
@@ -60,6 +61,7 @@ export class Desktop extends Component {
                 taskbar: false,
             },
             context_app: null,
+            context_target: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
@@ -382,28 +384,28 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
-                this.showContextMenu(e, "desktop");
+                this.showContextMenu(e, "desktop", "desktop-area");
                 break;
             case "app":
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened App Context Menu`
                 });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app", "app"));
                 break;
             case "taskbar":
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened Taskbar Context Menu`
                 });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar", "taskbar"));
                 break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened Default Context Menu`
                 });
-                this.showContextMenu(e, "default");
+                this.showContextMenu(e, "default", context);
         }
     }
 
@@ -419,23 +421,23 @@ export class Desktop extends Component {
         switch (context) {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
+                this.showContextMenu(fakeEvent, "desktop", "desktop-area");
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app", "app"));
                 break;
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar", "taskbar"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
-                this.showContextMenu(fakeEvent, "default");
+                this.showContextMenu(fakeEvent, "default", context);
         }
     }
 
-    showContextMenu = (e, menuName /* context menu name */) => {
+    showContextMenu = (e, menuName /* context menu name */, targetContext = null) => {
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
 
@@ -450,7 +452,10 @@ export class Desktop extends Component {
         contextMenu.style.left = posx;
         contextMenu.style.top = posy;
 
-        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+        this.setState({
+            context_menus: { ...this.state.context_menus, [menuName]: true },
+            context_target: targetContext,
+        });
     }
 
     hideAllContextMenu = () => {
@@ -458,7 +463,7 @@ export class Desktop extends Component {
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
-        this.setState({ context_menus: menus, context_app: null });
+        this.setState({ context_menus: menus, context_app: null, context_target: null });
     }
 
     getMenuPosition = (e) => {
@@ -519,6 +524,7 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        const desktopAppsOrdered = syncDesktopGrid(desktop_apps);
         const workspaceState = {
             focused_windows,
             closed_windows,
@@ -533,7 +539,7 @@ export class Desktop extends Component {
             ...workspaceState,
             disabled_apps,
             favourite_apps,
-            desktop_apps
+            desktop_apps: desktopAppsOrdered
         }, () => {
             if (typeof callback === 'function') callback();
         });
@@ -570,6 +576,7 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        const desktopAppsOrdered = syncDesktopGrid(desktop_apps);
         const workspaceState = {
             focused_windows,
             closed_windows,
@@ -583,32 +590,40 @@ export class Desktop extends Component {
             ...workspaceState,
             disabled_apps,
             favourite_apps,
-            desktop_apps
+            desktop_apps: desktopAppsOrdered
         });
         this.initFavourite = { ...favourite_apps };
     }
 
+    getDesktopAppTitle = (id) => {
+        const app = apps.find((item) => item.id === id);
+        return app ? app.title : id;
+    }
+
+    arrangeDesktopIcons = () => {
+        this.setWorkspaceState((prevState) => ({
+            desktop_apps: arrangeDesktopGrid(prevState.desktop_apps, this.getDesktopAppTitle)
+        }));
+    }
+
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+        if (!this.state.desktop_apps.length) return null;
+        return this.state.desktop_apps.map((appId) => {
+            const app = apps.find((item) => item.id === appId);
+            if (!app) return null;
 
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
+            const props = {
+                name: app.title,
+                id: app.id,
+                icon: app.icon,
+                openApp: this.openApp,
+                disabled: this.state.disabled_apps[app.id],
+                prefetch: app.screen?.prefetch,
             }
-        });
-        return appsJsx;
+
+            return <UbuntuApp key={app.id} {...props} />
+        }).filter(Boolean);
     }
 
     renderWindows = () => {
@@ -1114,10 +1129,12 @@ export class Desktop extends Component {
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
+                    isDesktopTarget={this.state.context_target === 'desktop-area'}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    arrangeIcons={this.arrangeDesktopIcons}
+                    openBackgroundSettings={() => this.openApp('settings')}
+                    onClose={this.hideAllContextMenu}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu

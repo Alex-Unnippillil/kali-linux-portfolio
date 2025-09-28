@@ -1,46 +1,32 @@
-import React, { useState, useEffect } from 'react'
-import logger from '../../utils/logger'
+import React, { useEffect, useRef } from 'react'
+import useFocusTrap from '../../hooks/useFocusTrap'
+import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
 function DesktopMenu(props) {
 
-    const [isFullScreen, setIsFullScreen] = useState(false)
+    const menuRef = useRef(null)
+    const visible = props.active && props.isDesktopTarget
+
+    useFocusTrap(menuRef, visible)
+    useRovingTabIndex(menuRef, visible, 'vertical')
 
     useEffect(() => {
-        document.addEventListener('fullscreenchange', checkFullScreen);
-        return () => {
-            document.removeEventListener('fullscreenchange', checkFullScreen);
-        };
-    }, [])
+        if (!visible) return
+        const firstItem = menuRef.current?.querySelector('[role="menuitem"]')
+        firstItem?.focus()
+    }, [visible])
 
-
-    const openTerminal = () => {
-        props.openApp("terminal");
-    }
-
-    const openSettings = () => {
-        props.openApp("settings");
-    }
-
-    const checkFullScreen = () => {
-        if (document.fullscreenElement) {
-            setIsFullScreen(true)
-        } else {
-            setIsFullScreen(false)
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            props.onClose && props.onClose()
         }
     }
 
-    const goFullScreen = () => {
-        // make website full screen
-        try {
-            if (document.fullscreenElement) {
-                document.exitFullscreen()
-            } else {
-                document.documentElement.requestFullscreen()
-            }
+    const runAction = (fn) => () => {
+        if (typeof fn === 'function') {
+            fn()
         }
-        catch (e) {
-            logger.error(e)
-        }
+        props.onClose && props.onClose()
     }
 
     return (
@@ -48,10 +34,13 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            aria-hidden={!visible}
+            ref={menuRef}
+            onKeyDown={handleKeyDown}
+            className={(visible ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
-                onClick={props.addNewFolder}
+                onClick={runAction(props.addNewFolder)}
                 type="button"
                 role="menuitem"
                 aria-label="New Folder"
@@ -60,7 +49,7 @@ function DesktopMenu(props) {
                 <span className="ml-5">New Folder</span>
             </button>
             <button
-                onClick={props.openShortcutSelector}
+                onClick={runAction(props.openShortcutSelector)}
                 type="button"
                 role="menuitem"
                 aria-label="Create Shortcut"
@@ -68,77 +57,26 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
-            <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
-            </div>
-            <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
-            </div>
             <button
-                onClick={openTerminal}
+                onClick={runAction(props.arrangeIcons)}
                 type="button"
                 role="menuitem"
-                aria-label="Open in Terminal"
+                aria-label="Arrange Desktop Icons"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Open in Terminal</span>
+                <span className="ml-5">Arrange Icons</span>
             </button>
-            <Devider />
             <button
-                onClick={openSettings}
+                onClick={runAction(props.openBackgroundSettings)}
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
                 <span className="ml-5">Change Background...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Settings</span>
-            </button>
-            <Devider />
-            <button
-                onClick={goFullScreen}
-                type="button"
-                role="menuitem"
-                aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
-            </button>
-            <Devider />
-            <button
-                onClick={props.clearSession}
-                type="button"
-                role="menuitem"
-                aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Clear Session</span>
             </button>
         </div>
     )
 }
-
-function Devider() {
-    return (
-        <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
-        </div>
-    );
-}
-
 
 export default DesktopMenu
