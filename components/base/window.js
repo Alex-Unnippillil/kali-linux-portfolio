@@ -58,6 +58,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            shaded: false,
+            unshadedHeight: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -80,6 +82,11 @@ export class Window extends Component {
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
+        }
+        if (typeof window !== 'undefined') {
+            window.requestAnimationFrame(() => {
+                this.restoreShadePreference();
+            });
         }
     }
 
@@ -231,7 +238,7 @@ export class Window extends Component {
     }
 
     handleVerticleResize = () => {
-        if (this.props.resizable === false) return;
+        if (this.props.resizable === false || this.state.shaded) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
@@ -410,6 +417,104 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
+    getShadeStorageKey = () => {
+        if (!this.id) return null;
+        return `window:${this.id}:shaded`;
+    }
+
+    persistShadeState = (shaded) => {
+        if (typeof window === 'undefined') return;
+        const key = this.getShadeStorageKey();
+        if (!key) return;
+        try {
+            if (shaded) {
+                window.sessionStorage?.setItem(key, 'true');
+            } else {
+                window.sessionStorage?.removeItem(key);
+            }
+        } catch (error) {
+            // Swallow storage errors (e.g. private mode restrictions)
+        }
+    }
+
+    getTitlebarHeightPercent = () => {
+        if (typeof window === 'undefined' || !this.id) return null;
+        const node = document.getElementById(this.id);
+        if (!node) return null;
+        const titlebar = node.querySelector(`.${styles.windowTitlebar}`);
+        if (!titlebar) return null;
+        const rect = titlebar.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || 0;
+        if (!viewportHeight || !rect.height) return null;
+        return clamp((rect.height / viewportHeight) * 100, 1, 25);
+    }
+
+    computeShadedHeight = (previousHeight) => {
+        if (typeof window === 'undefined') return previousHeight;
+        const percent = this.getTitlebarHeightPercent();
+        if (percent !== null && percent !== undefined) {
+            return percent;
+        }
+        const fallbackPx = 40;
+        const viewportHeight = window.innerHeight || 1;
+        return clamp((fallbackPx / viewportHeight) * 100, 1, previousHeight);
+    }
+
+    restoreShadePreference = () => {
+        if (typeof window === 'undefined' || this.state.shaded) return;
+        const key = this.getShadeStorageKey();
+        if (!key) return;
+        let stored = null;
+        try {
+            stored = window.sessionStorage?.getItem(key);
+        } catch (error) {
+            stored = null;
+        }
+        if (stored === 'true') {
+            const collapsedHeight = this.computeShadedHeight(this.state.height);
+            this.setState({
+                shaded: true,
+                unshadedHeight: this.state.height,
+                height: collapsedHeight,
+            }, () => {
+                this.resizeBoundries();
+            });
+        }
+    }
+
+    toggleShade = () => {
+        this.focusWindow();
+        if (this.state.shaded) {
+            const restoredHeight = this.state.unshadedHeight ?? this.state.height;
+            this.setState({
+                shaded: false,
+                height: restoredHeight,
+                unshadedHeight: null,
+            }, () => {
+                this.persistShadeState(false);
+                this.resizeBoundries();
+            });
+            return;
+        }
+        const collapsedHeight = this.computeShadedHeight(this.state.height);
+        this.setState({
+            shaded: true,
+            unshadedHeight: this.state.unshadedHeight ?? this.state.height,
+            height: collapsedHeight,
+        }, () => {
+            this.persistShadeState(true);
+            this.resizeBoundries();
+        });
+    }
+
+    handleTitleBarDoubleClick = (event) => {
+        if (event.altKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.toggleShade();
+        }
+    }
+
     minimizeWindow = () => {
         let posx = -310;
         if (this.state.maximized) {
@@ -492,7 +597,9 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2, shaded: false, unshadedHeight: null }, () => {
+                this.persistShadeState(false);
+            });
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -663,6 +770,7 @@ export class Window extends Component {
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
+                        aria-expanded={!this.state.shaded}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
@@ -676,6 +784,8 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
+                            ariaExpanded={!this.state.shaded}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -686,12 +796,17 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
                         />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp}
-                                context={this.props.context} />)}
+                        <div
+                            className={this.state.shaded ? 'hidden' : 'flex flex-col flex-grow min-h-0'}
+                            aria-hidden={this.state.shaded}
+                        >
+                            {(this.id === "settings"
+                                ? <Settings />
+                                : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                                    addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                                    openApp={this.props.openApp}
+                                    context={this.props.context} />)}
+                        </div>
                     </div>
                 </Draggable >
             </>
@@ -702,16 +817,18 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, ariaExpanded }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-expanded={ariaExpanded}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
