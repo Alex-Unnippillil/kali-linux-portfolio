@@ -8,13 +8,26 @@ export default function Taskbar(props) {
 
     const handleClick = (app) => {
         const id = app.id;
-        if (props.minimized_windows[id]) {
+        const isMinimized = Boolean(props.minimized_windows[id]);
+        const isFocused = Boolean(props.focused_windows[id]);
+        const isOpen = props.closed_windows[id] === false;
+
+        if (isMinimized) {
             props.openApp(id);
-        } else if (props.focused_windows[id]) {
-            props.minimize(id);
-        } else {
-            props.openApp(id);
+            return;
         }
+
+        if (isFocused) {
+            props.minimize(id);
+            return;
+        }
+
+        if (isOpen && typeof props.focusWindow === 'function') {
+            props.focusWindow(id);
+            return;
+        }
+
+        props.openApp(id);
     };
 
     return (
@@ -55,7 +68,7 @@ export default function Taskbar(props) {
                                 <span
                                     aria-hidden="true"
                                     data-testid="running-indicator"
-                                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded"
+                                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-6 rounded-full bg-[var(--kali-blue)] shadow-[0_0_6px_rgba(23,147,209,0.6)]"
                                 />
                             )}
                         </button>

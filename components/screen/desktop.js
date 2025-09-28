@@ -1102,6 +1102,7 @@ export class Desktop extends Component {
                     minimized_windows={this.state.minimized_windows}
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
+                    focusWindow={this.focus}
                     minimize={this.hasMinimised}
                     workspaces={workspaceSummaries}
                     activeWorkspace={this.state.activeWorkspace}
