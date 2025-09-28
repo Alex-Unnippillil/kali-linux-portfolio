@@ -5,6 +5,7 @@
   /* Base colors */
   --color-bg: #0f1317; /* kali background */
   --color-text: #f5f5f5; /* text on dark backgrounds */
+  --screen-brightness: 1;
   /* Brand accents */
   --color-primary: #1793d1; /* kali blue accent */
   --color-secondary: #1a1f26; /* complementary dark */
