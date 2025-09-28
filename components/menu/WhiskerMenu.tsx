@@ -35,85 +35,85 @@ const CATEGORY_DEFINITIONS = [
   {
     id: 'all',
     label: 'All Applications',
-    icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
+    icon: '/themes/kali/categories/applications-all.svg',
     type: 'all',
   },
   {
     id: 'favorites',
     label: 'Favorites',
-    icon: '/themes/Yaru/status/projects.svg',
+    icon: '/themes/kali/categories/applications-favorites.svg',
     type: 'favorites',
   },
   {
     id: 'recent',
     label: 'Recent',
-    icon: '/themes/Yaru/status/process-working-symbolic.svg',
+    icon: '/themes/kali/categories/applications-recent.svg',
     type: 'recent',
   },
   {
     id: 'information-gathering',
     label: 'Information Gathering',
-    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    icon: '/themes/kali/categories/information-gathering.svg',
     type: 'ids',
     appIds: ['nmap-nse', 'reconng', 'kismet', 'wireshark'],
   },
   {
     id: 'vulnerability-analysis',
     label: 'Vulnerability Analysis',
-    icon: '/themes/Yaru/apps/nessus.svg',
+    icon: '/themes/kali/categories/vulnerability-analysis.svg',
     type: 'ids',
     appIds: ['nessus', 'openvas', 'nikto'],
   },
   {
     id: 'web-app-analysis',
     label: 'Web App Analysis',
-    icon: '/themes/Yaru/apps/http.svg',
+    icon: '/themes/kali/categories/web-application-analysis.svg',
     type: 'ids',
     appIds: ['http', 'beef', 'metasploit'],
   },
   {
     id: 'password-attacks',
     label: 'Password Attacks',
-    icon: '/themes/Yaru/apps/john.svg',
+    icon: '/themes/kali/categories/password-attacks.svg',
     type: 'ids',
     appIds: ['john', 'hashcat', 'hydra'],
   },
   {
     id: 'wireless-attacks',
     label: 'Wireless Attacks',
-    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
+    icon: '/themes/kali/categories/wireless-attacks.svg',
     type: 'ids',
     appIds: ['kismet', 'reaver', 'wireshark'],
   },
   {
     id: 'exploitation-tools',
     label: 'Exploitation Tools',
-    icon: '/themes/Yaru/apps/metasploit.svg',
+    icon: '/themes/kali/categories/exploitation-tools.svg',
     type: 'ids',
     appIds: ['metasploit', 'security-tools', 'beef'],
   },
   {
     id: 'sniffing-spoofing',
     label: 'Sniffing & Spoofing',
-    icon: '/themes/Yaru/apps/ettercap.svg',
+    icon: '/themes/kali/categories/sniffing-spoofing.svg',
     type: 'ids',
     appIds: ['dsniff', 'ettercap', 'wireshark'],
   },
   {
     id: 'post-exploitation',
     label: 'Post Exploitation',
-    icon: '/themes/Yaru/apps/msf-post.svg',
+    icon: '/themes/kali/categories/post-exploitation.svg',
     type: 'ids',
     appIds: ['msf-post', 'mimikatz', 'volatility'],
   },
   {
     id: 'forensics-reporting',
     label: 'Forensics & Reporting',
-    icon: '/themes/Yaru/apps/autopsy.svg',
+    icon: '/themes/kali/categories/reporting.svg',
     type: 'ids',
     appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
   },
- ] as const satisfies readonly CategoryDefinitionBase[];
+] as const satisfies readonly CategoryDefinitionBase[];
 
 type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
 const isCategoryId = (
@@ -382,7 +382,7 @@ const WhiskerMenu: React.FC = () => {
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          src="/themes/kali/panel/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}
