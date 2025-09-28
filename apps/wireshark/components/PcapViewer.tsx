@@ -301,7 +301,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   });
 
   return (
-    <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
+    <div className="p-4 text-white bg-kali-cool-grey h-full w-full flex flex-col space-y-2">
       <div className="flex items-center space-x-2">
         <input
           type="file"

@@ -110,7 +110,7 @@ export default function Settings() {
   const [showKeymap, setShowKeymap] = useState(false);
 
   return (
-    <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
+    <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-cool-grey">
       <div className="flex justify-center border-b border-gray-900">
         <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
       </div>
@@ -128,11 +128,11 @@ export default function Settings() {
             )}
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Theme:</label>
+            <label className="mr-2 text-kali-light-grey">Theme:</label>
             <select
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
-              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+              className="bg-kali-cool-grey text-kali-light-grey px-2 py-1 rounded border border-kali-light-cool-grey"
             >
               <option value="default">Default</option>
               <option value="dark">Dark</option>
@@ -141,7 +141,7 @@ export default function Settings() {
             </select>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
+            <label className="mr-2 text-kali-light-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
               {ACCENT_OPTIONS.map((c) => (
                 <button
@@ -157,7 +157,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
+            <label className="mr-2 text-kali-light-grey flex items-center">
               <input
                 type="checkbox"
                 checked={useKaliWallpaper}
@@ -168,12 +168,12 @@ export default function Settings() {
             </label>
           </div>
           {useKaliWallpaper && (
-            <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+            <p className="text-center text-xs text-kali-light-grey/70 px-6 -mt-2 mb-4">
               Your previous wallpaper selection is preserved for when you turn this off.
             </p>
           )}
           <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
+            <label htmlFor="wallpaper-slider" className="mr-2 text-kali-light-grey">Wallpaper:</label>
             <input
               id="wallpaper-slider"
               type="range"
@@ -224,7 +224,7 @@ export default function Settings() {
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={handleReset}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-kali-accent text-white"
             >
               Reset Desktop
             </button>
@@ -234,7 +234,7 @@ export default function Settings() {
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
+            <label htmlFor="font-scale" className="mr-2 text-kali-light-grey">Icon Size:</label>
             <input
               id="font-scale"
               type="range"
@@ -248,18 +248,18 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Density:</label>
+            <label className="mr-2 text-kali-light-grey">Density:</label>
             <select
               value={density}
               onChange={(e) => setDensity(e.target.value as any)}
-              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+              className="bg-kali-cool-grey text-kali-light-grey px-2 py-1 rounded border border-kali-light-cool-grey"
             >
               <option value="regular">Regular</option>
               <option value="compact">Compact</option>
             </select>
           </div>
           <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
+            <span className="mr-2 text-kali-light-grey">Reduced Motion:</span>
             <ToggleSwitch
               checked={reducedMotion}
               onChange={setReducedMotion}
@@ -267,7 +267,7 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">High Contrast:</span>
+            <span className="mr-2 text-kali-light-grey">High Contrast:</span>
             <ToggleSwitch
               checked={highContrast}
               onChange={setHighContrast}
@@ -275,7 +275,7 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Haptics:</span>
+            <span className="mr-2 text-kali-light-grey">Haptics:</span>
             <ToggleSwitch
               checked={haptics}
               onChange={setHaptics}
@@ -285,7 +285,7 @@ export default function Settings() {
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-kali-accent text-white"
             >
               Edit Shortcuts
             </button>
@@ -297,13 +297,13 @@ export default function Settings() {
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-kali-accent text-white"
             >
               Export Settings
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-kali-accent text-white"
             >
               Import Settings
             </button>

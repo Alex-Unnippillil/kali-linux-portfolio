@@ -49,11 +49,11 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Keyword search"
-          className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+          className="flex-grow bg-kali-grey text-white px-2 py-1 rounded"
         />
         <button
           onClick={exportHits}
-          className="bg-ub-orange px-2 py-1 rounded text-sm text-black"
+          className="bg-kali-accent px-2 py-1 rounded text-sm text-black"
         >
           Export Hits
         </button>
@@ -64,7 +64,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             type="button"
             key={`${a.name}-${idx}`}
             onClick={() => onSelect(a)}
-            className="p-2 bg-ub-grey rounded text-sm text-left flex flex-col"
+            className="p-2 bg-kali-grey rounded text-sm text-left flex flex-col"
           >
             <div className="flex items-center font-bold">
               <span className="mr-1" aria-hidden="true">

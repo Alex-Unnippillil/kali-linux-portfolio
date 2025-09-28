@@ -71,7 +71,7 @@ export default function Beef() {
   const current = steps[step];
 
   return (
-    <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col">
+    <div className="p-4 text-white bg-kali-cool-grey h-full w-full flex flex-col">
       <h2 className="text-xl mb-4">{current.title}</h2>
       <p className="mb-4 text-sm">{current.body}</p>
       {current.render && <div className="mb-4">{current.render}</div>}

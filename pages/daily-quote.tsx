@@ -56,7 +56,7 @@ export default function DailyQuote() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4">
       <div
         ref={cardRef}
         className="group relative p-6 rounded text-center bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 text-white"

@@ -333,7 +333,7 @@ const Blackjack = () => {
 
   if (practice) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4 select-none">
         {practiceCard && (
           <div className="text-4xl mb-4">{`${practiceCard.value}${practiceCard.suit}`}</div>
         )}
@@ -365,7 +365,7 @@ const Blackjack = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex items-center space-x-4">
         <div>Bankroll: {availableBankroll}</div>
         <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>

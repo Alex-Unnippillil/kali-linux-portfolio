@@ -668,7 +668,7 @@ const Chrome: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col w-full h-full bg-ub-cool-grey text-white">
+    <div className="flex flex-col w-full h-full bg-kali-cool-grey text-white">
       <div className="flex items-center bg-gray-800 text-sm p-1 space-x-1">
         <button onClick={goBack} aria-label="Back" className="px-2">◀</button>
         <button onClick={goForward} aria-label="Forward" className="px-2">▶</button>

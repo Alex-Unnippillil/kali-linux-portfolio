@@ -46,7 +46,7 @@ const resolveKaliIcon = (id: string): string | undefined => {
 const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
   return (
     <nav aria-label={heading} className="w-56 select-none text-sm text-white">
-      <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
+      <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-kali-light-grey">
         {heading}
       </header>
       <ul className="space-y-1">

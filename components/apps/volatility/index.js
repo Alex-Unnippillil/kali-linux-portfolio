@@ -170,7 +170,7 @@ const VolatilityApp = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col bg-kali-cool-grey text-white">
       <div className="p-4 space-y-2">
         <button
           onClick={analyze}

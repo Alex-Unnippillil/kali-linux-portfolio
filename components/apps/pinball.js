@@ -423,10 +423,10 @@ const Pinball = () => {
   };
 
   return (
-    <div className="relative h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white">
+    <div className="relative h-full w-full flex flex-col items-center justify-start bg-kali-cool-grey text-white">
       <div className="p-1 space-x-2">
         <select
-          className="px-2 bg-ub-grey text-black"
+          className="px-2 bg-kali-grey text-black"
           value={table}
           onChange={(e) => setTable(e.target.value)}
         >
@@ -436,14 +436,14 @@ const Pinball = () => {
             </option>
           ))}
         </select>
-        <button className="px-2 bg-ub-orange text-black" onClick={() => setEditing(!editing)}>
+        <button className="px-2 bg-kali-accent text-black" onClick={() => setEditing(!editing)}>
           {editing ? 'Play' : 'Edit'}
         </button>
-        <button className="px-2 bg-ub-orange text-black" onClick={saveShare}>
+        <button className="px-2 bg-kali-accent text-black" onClick={saveShare}>
           Save/Share
         </button>
         <button
-          className="px-2 bg-ub-orange text-black"
+          className="px-2 bg-kali-accent text-black"
           onClick={() => setLightsEnabled(!lightsEnabled)}
           aria-pressed={lightsEnabled}
         >

@@ -180,7 +180,7 @@ const PopularModules: React.FC = () => {
   };
 
   return (
-    <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
+    <div className="p-4 space-y-4 bg-kali-cool-grey text-white min-h-screen">
       <p className="text-sm">
         All modules are simulated; no network activity occurs. This interface is
         non-operational.
@@ -231,7 +231,7 @@ const PopularModules: React.FC = () => {
           <button
             key={m.id}
             onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="p-3 text-left bg-kali-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
             <h3 className="font-semibold">{m.name}</h3>
             <p className="text-sm text-gray-300">{m.description}</p>

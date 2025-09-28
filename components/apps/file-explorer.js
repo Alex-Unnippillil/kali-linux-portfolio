@@ -327,7 +327,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         {currentFile && (
           <>
             <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+              className="flex-1 mt-2 p-2 bg-kali-cool-grey outline-none"
               value={content}
               onChange={onChange}
             />
@@ -349,8 +349,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
+    <div className="w-full h-full flex flex-col bg-kali-cool-grey text-white text-sm">
+      <div className="flex items-center space-x-2 p-2 bg-kali-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
         </button>
@@ -406,7 +406,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea className="flex-1 p-2 bg-kali-cool-grey outline-none" value={content} onChange={onChange} />
           )}
           <div className="p-2 border-t border-gray-600">
             <input

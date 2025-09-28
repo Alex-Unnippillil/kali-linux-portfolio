@@ -86,7 +86,7 @@ export default function SecurityTools() {
     <button
       key={t.id}
       onClick={() => setActive(t.id)}
-      className={`px-2 py-1 text-xs ${active === t.id ? 'bg-ub-yellow text-black' : 'bg-ub-cool-grey text-white'} mr-1 mb-2`}
+      className={`px-2 py-1 text-xs ${active === t.id ? 'bg-ub-yellow text-black' : 'bg-kali-cool-grey text-white'} mr-1 mb-2`}
     >
       {t.label}
     </button>

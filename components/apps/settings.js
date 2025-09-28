@@ -57,7 +57,7 @@ export function Settings() {
     }, [accent, accentText, contrastRatio]);
 
     return (
-        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
+        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
                 {useKaliWallpaper ? (
                     <KaliWallpaper />
@@ -70,11 +70,11 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-kali-light-grey">Theme:</label>
                 <select
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-kali-cool-grey text-kali-light-grey px-2 py-1 rounded border border-kali-light-cool-grey"
                 >
                     <option value="default">Default</option>
                     <option value="dark">Dark</option>
@@ -83,7 +83,7 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-light-grey flex items-center">
                     <input
                         type="checkbox"
                         checked={useKaliWallpaper}
@@ -94,12 +94,12 @@ export function Settings() {
                 </label>
             </div>
             {useKaliWallpaper && (
-                <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                <p className="text-center text-xs text-kali-light-grey/70 px-6 -mt-2 mb-4">
                     Your previous wallpaper selection is preserved for when you turn this off.
                 </p>
             )}
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
+                <label className="mr-2 text-kali-light-grey">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
                     {ACCENT_OPTIONS.map((c) => (
                         <button
@@ -115,18 +115,18 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-kali-light-grey">Density:</label>
                 <select
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-kali-cool-grey text-kali-light-grey px-2 py-1 rounded border border-kali-light-cool-grey"
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-kali-light-grey">Font Size:</label>
                 <input
                     type="range"
                     min="0.75"
@@ -138,7 +138,7 @@ export function Settings() {
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-light-grey flex items-center">
                     <input
                         type="checkbox"
                         checked={reducedMotion}
@@ -149,7 +149,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-light-grey flex items-center">
                     <input
                         type="checkbox"
                         checked={largeHitAreas}
@@ -160,7 +160,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-light-grey flex items-center">
                     <input
                         type="checkbox"
                         checked={highContrast}
@@ -171,7 +171,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-light-grey flex items-center">
                     <input
                         type="checkbox"
                         checked={allowNetwork}
@@ -182,7 +182,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-light-grey flex items-center">
                     <input
                         type="checkbox"
                         checked={haptics}
@@ -193,7 +193,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-light-grey flex items-center">
                     <input
                         type="checkbox"
                         checked={pongSpin}
@@ -257,13 +257,13 @@ export function Settings() {
                         a.click();
                         URL.revokeObjectURL(url);
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-kali-accent text-white"
                 >
                     Export Settings
                 </button>
                 <button
                     onClick={() => fileInput.current && fileInput.current.click()}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-kali-accent text-white"
                 >
                     Import Settings
                 </button>
@@ -279,7 +279,7 @@ export function Settings() {
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-kali-accent text-white"
                 >
                     Reset Desktop
                 </button>

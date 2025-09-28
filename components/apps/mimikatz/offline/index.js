@@ -41,7 +41,7 @@ const MimikatzOffline = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col p-4 bg-kali-cool-grey text-white">
       <h1 className="text-xl mb-4">Mimikatz Offline</h1>
       <input
         type="file"

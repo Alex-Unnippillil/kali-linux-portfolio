@@ -318,7 +318,7 @@ export default function QuoteApp() {
   const isFav = current ? favorites.includes(keyOf(current)) : false;
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-kali-cool-grey text-white p-4 overflow-auto">
       {dailyQuote && (
         <div className="mb-4 p-3 bg-gray-700 rounded" id="daily-quote">
           <p className="text-sm italic">&ldquo;{dailyQuote.content}&rdquo;</p>

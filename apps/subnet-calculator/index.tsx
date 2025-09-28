@@ -59,7 +59,7 @@ const SubnetCalculator = () => {
   }, [ipAddress, cidrInput]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <div className="h-full w-full overflow-auto bg-kali-cool-grey text-white">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold">Subnet Calculator</h1>

@@ -601,7 +601,7 @@ const Frogger = () => {
   return (
     <div
       id="frogger-container"
-      className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4"
+      className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4"
     >
       <canvas
         ref={canvasRef}

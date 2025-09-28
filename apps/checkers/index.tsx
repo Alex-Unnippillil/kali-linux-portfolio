@@ -204,7 +204,7 @@ export default function CheckersPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full bg-ub-cool-grey text-white p-4">
+    <div className="flex flex-col items-center justify-center h-full w-full bg-kali-cool-grey text-white p-4">
       {winner && <div className="mb-2 text-xl">{winner === 'Draw' ? 'Draw!' : `${winner} wins!`}</div>}
       <div className="mb-4 flex gap-4 items-center">
         <label>

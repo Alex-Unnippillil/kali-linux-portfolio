@@ -41,7 +41,7 @@ const BlackjackTrainer = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4 select-none">
       {card && <div className="text-4xl mb-4">{`${card.value}${card.suit}`}</div>}
       <input
         type="number"

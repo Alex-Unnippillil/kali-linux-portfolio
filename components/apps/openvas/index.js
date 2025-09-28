@@ -339,7 +339,7 @@ const OpenVASApp = () => {
   };
 
   return (
-    <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
+    <div className="h-full w-full p-4 bg-kali-cool-grey text-white overflow-auto">
       <TaskOverview />
       <PolicySettings policy={templates[profile]} />
       {hostReports.length > 0 && (

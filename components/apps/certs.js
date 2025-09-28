@@ -250,7 +250,7 @@ const Certs = () => {
             key={cat}
             type="button"
             className={`m-1 px-2 py-1 rounded text-sm ${
-              category === cat ? 'bg-ubt-blue text-white' : 'bg-gray-700'
+              category === cat ? 'bg-kali-light-blue text-white' : 'bg-gray-700'
             }`}
             onClick={() => setCategory(cat)}
           >
@@ -280,7 +280,7 @@ const Certs = () => {
                 href={badge.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-ubt-blue underline"
+                className="text-kali-light-blue underline"
               >
                 Verify
               </a>

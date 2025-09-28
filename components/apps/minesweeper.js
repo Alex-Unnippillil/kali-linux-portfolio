@@ -1010,7 +1010,7 @@ const Minesweeper = () => {
 
   return (
     <GameLayout gameId="minesweeper">
-      <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+      <div className="relative h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex items-center space-x-2">
         <span>Seed:</span>
         <span className="font-mono">{seed.toString(36)}</span>

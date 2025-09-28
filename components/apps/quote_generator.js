@@ -261,7 +261,7 @@ const QuoteGenerator = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white p-4 overflow-auto">
       <div className="w-full max-w-md flex flex-col items-center">
         <div id="quote-card" className="p-4 text-center">
           {current ? (

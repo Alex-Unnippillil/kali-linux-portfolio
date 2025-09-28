@@ -157,7 +157,7 @@ export default function Converter() {
   const units = Object.keys(rates[active as Domain] || {});
 
   return (
-    <div className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto">
+    <div className="p-4 bg-kali-cool-grey text-white h-full overflow-y-auto">
       <h2 className="text-xl mb-4">Converter</h2>
       <div className="mb-4 inline-flex rounded-md overflow-hidden border border-gray-600">
         {categories.map((c) => (

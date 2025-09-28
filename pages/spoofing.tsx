@@ -12,7 +12,7 @@ const ToolTile = ({ title, link, children }: TileProps) => (
     href={link}
     target="_blank"
     rel="noopener noreferrer"
-    className="block p-4 bg-ub-grey text-white rounded shadow hover:bg-black focus:outline-none focus:ring"
+    className="block p-4 bg-kali-grey text-white rounded shadow hover:bg-black focus:outline-none focus:ring"
   >
     <h2 className="text-xl mb-2">{title}</h2>
     {children}
@@ -61,7 +61,7 @@ const DnsDiagram = () => (
 const SpoofingOverview = () => (
   <>
     <Meta />
-    <main className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen">
+    <main className="p-4 grid gap-4 md:grid-cols-2 bg-kali-cool-grey min-h-screen">
       <ToolTile title="arpspoof" link="https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html">
         <ArpDiagram />
       </ToolTile>

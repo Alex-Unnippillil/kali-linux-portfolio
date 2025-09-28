@@ -77,7 +77,7 @@ const SekurlsaLogonpasswords = () => {
       </div>
       <main className="grid gap-4 p-4 md:grid-cols-2">
         {sessions.map((s) => (
-          <div key={s.authId} className="p-4 bg-ub-dark text-white rounded border border-ub-dark-grey">
+          <div key={s.authId} className="p-4 bg-ub-dark text-white rounded border border-kali-dark-grey">
             <h2 className="text-lg mb-2">Authentication Id: {s.authId}</h2>
             <p><strong>Session:</strong> {s.session}</p>
             <p><strong>User:</strong> {s.user}</p>

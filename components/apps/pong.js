@@ -663,7 +663,7 @@ const PongInner = () => {
   }, [offerSDP]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white">
       <canvas
         ref={canvasRef}
         className="bg-black w-full h-full touch-none"

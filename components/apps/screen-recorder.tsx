@@ -76,7 +76,7 @@ function ScreenRecorder() {
     }, []);
 
     return (
-        <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white space-y-4 p-4">
+        <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white space-y-4 p-4">
             {!recording && (
                 <button
                     type="button"

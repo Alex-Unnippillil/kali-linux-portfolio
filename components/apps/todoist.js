@@ -19,8 +19,8 @@ const WIP_LIMITS = {
 
 const PRIORITY_COLORS = {
   high: 'bg-red-500',
-  medium: 'bg-ubt-gedit-orange',
-  low: 'bg-ubt-green',
+  medium: 'bg-kali-light-gedit-orange',
+  low: 'bg-kali-light-green',
 };
 
 export default function Todoist() {

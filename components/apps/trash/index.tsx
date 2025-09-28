@@ -99,35 +99,35 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   }, [handleKey]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
-      <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
+    <div className="w-full h-full flex flex-col bg-kali-cool-grey text-white select-none">
+      <div className="flex items-center justify-between w-full bg-kali-warm-grey bg-opacity-40 text-sm">
         <span className="font-bold ml-2">Trash</span>
         <div className="flex">
           <button
             onClick={restore}
             disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-kali-accent disabled:opacity-50"
           >
             Restore
           </button>
           <button
             onClick={restoreAll}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-kali-accent disabled:opacity-50"
           >
             Restore All
           </button>
           <button
             onClick={remove}
             disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-kali-accent disabled:opacity-50"
           >
             Delete
           </button>
           <button
             onClick={empty}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-kali-accent disabled:opacity-50"
           >
             Empty
           </button>
@@ -140,7 +140,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             key={item.closedAt}
             tabIndex={0}
             onClick={() => setSelected(idx)}
-            className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+            className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-kali-panel-dark' : ''}`}
           >
             {item.image ? (
               <img src={item.image} alt={item.title} className="h-20 w-full object-cover" />

@@ -102,7 +102,7 @@ const ModuleWorkspace: React.FC = () => {
   }, [selected, optionValues]);
 
   return (
-    <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
+    <div className="p-4 space-y-4 bg-kali-cool-grey text-white min-h-screen">
       <section className="space-y-2">
         <h1 className="text-xl font-semibold">Workspaces</h1>
         <div className="flex gap-2">
@@ -114,7 +114,7 @@ const ModuleWorkspace: React.FC = () => {
           />
           <button
             onClick={addWorkspace}
-            className="px-2 py-1 bg-ub-orange rounded text-black"
+            className="px-2 py-1 bg-kali-accent rounded text-black"
           >
             Create
           </button>
@@ -161,7 +161,7 @@ const ModuleWorkspace: React.FC = () => {
               <button
                 key={m.id}
                 onClick={() => selectModule(m)}
-                className="p-3 text-left bg-ub-grey rounded border border-gray-700"
+                className="p-3 text-left bg-kali-grey rounded border border-gray-700"
               >
                 <h3 className="font-semibold">{m.name}</h3>
                 <p className="text-sm text-gray-300">{m.description}</p>

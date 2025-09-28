@@ -57,7 +57,7 @@ function KeywordTester() {
           type="file"
           accept=".txt"
           onChange={handleUpload}
-          className="bg-ub-grey text-white p-2 rounded"
+          className="bg-kali-grey text-white p-2 rounded"
         />
       </div>
       {keywords.length > 0 && (
@@ -69,7 +69,7 @@ function KeywordTester() {
           return (
             <div
               key={`${artifact.name}-${idx}`}
-              className="p-2 bg-ub-grey rounded text-sm"
+              className="p-2 bg-kali-grey rounded text-sm"
             >
               <div
                 className="font-bold"

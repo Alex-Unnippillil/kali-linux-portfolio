@@ -397,7 +397,7 @@ const Snake = () => {
 
   return (
     <GameLayout gameId="snake" score={score} highScore={highScore}>
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-kali-cool-grey text-white select-none">
         <div className="relative">
           <canvas
             ref={canvasRef}

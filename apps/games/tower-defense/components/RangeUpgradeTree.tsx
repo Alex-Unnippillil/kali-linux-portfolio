@@ -37,7 +37,7 @@ const RangeUpgradeTree = ({ tower }: RangeUpgradeTreeProps) => {
       ref={canvasRef}
       width={80}
       height={80}
-      className="bg-ub-dark-grey"
+      className="bg-kali-dark-grey"
       role="img"
       aria-label="Range upgrade tree"
     />

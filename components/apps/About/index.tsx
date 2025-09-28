@@ -63,7 +63,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           onFocus={this.changeScreen}
           className={
             (this.state.active_screen === section.id
-              ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
+              ? ' bg-kali-gedit-light bg-opacity-100 hover:bg-opacity-95'
               : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
             ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
           }
@@ -110,7 +110,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     const nonce = getCspNonce();
 
     return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+      <main className="w-full h-full flex bg-kali-cool-grey text-white select-none relative">
         <Head>
           <title>About</title>
           <script
@@ -129,7 +129,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
         </div>
         <div
           onClick={this.showNavBar}
-          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
+          className="md:hidden flex flex-col items-center justify-center absolute bg-kali-cool-grey rounded w-6 h-6 top-1 left-1"
         >
           <div className=" w-3.5 border-t border-white" />
           <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
@@ -137,7 +137,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <div
             className={
               (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
+              ' md:hidden text-xs absolute bg-kali-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
             }
             role="tablist"
             aria-orientation="vertical"
@@ -146,7 +146,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             {this.renderNavLinks()}
           </div>
         </div>
-        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-kali-grey overflow-y-auto windowMainScreen">
           {this.state.screen}
         </div>
       </main>
@@ -184,7 +184,7 @@ function About() {
           My name is <span className="font-bold">Alex Unnippillil</span>,{' '}
         </div>
         <div className="font-normal ml-1">
-          I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span>
+          I&apos;m a <span className="text-kali-light-blue font-bold"> Cybersecurity Specialist!</span>
         </div>
       </div>
       <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
@@ -299,7 +299,7 @@ function Timeline() {
         <a
           href="/assets/timeline.pdf"
           download
-          className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+          className="px-2 py-1 rounded bg-kali-gedit-light text-sm"
         >
           Download Timeline PDF
         </a>
@@ -370,10 +370,10 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
       </div>
       {selected && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={() => setSelected(null)}>
-          <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-kali-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
-            <button className="mt-2 px-2 py-1 bg-ubt-blue rounded" onClick={() => setSelected(null)}>
+            <button className="mt-2 px-2 py-1 bg-kali-light-blue rounded" onClick={() => setSelected(null)}>
               Close
             </button>
           </div>
@@ -398,7 +398,7 @@ function Skills({ skills }: { skills: any }) {
         <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
           <div>
             I&apos;ve learned a variety of programming languages and frameworks while{' '}
-            <strong className="text-ubt-gedit-blue">specializing in network security</strong>
+            <strong className="text-kali-light-gedit-blue">specializing in network security</strong>
           </div>
         </li>
         <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
@@ -518,14 +518,14 @@ function Resume() {
           href="/assets/Alex-Unnippillil-Resume.pdf"
           download
           onClick={handleDownload}
-          className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+          className="px-2 py-1 rounded bg-kali-gedit-light text-sm"
         >
           Download
         </a>
-        <a href="/assets/alex-unnippillil.vcf" download className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
+        <a href="/assets/alex-unnippillil.vcf" download className="px-2 py-1 rounded bg-kali-gedit-light text-sm">
           vCard
         </a>
-        <button onClick={shareContact} className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
+        <button onClick={shareContact} className="px-2 py-1 rounded bg-kali-gedit-light text-sm">
           Share contact
         </button>
       </div>
@@ -536,7 +536,7 @@ function Resume() {
             href="/assets/Alex-Unnippillil-Resume.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline text-ubt-blue"
+            className="underline text-kali-light-blue"
             onClick={handleDownload}
           >
             Download the resume

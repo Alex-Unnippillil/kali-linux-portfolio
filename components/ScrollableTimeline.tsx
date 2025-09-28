@@ -87,7 +87,7 @@ const ScrollableTimeline: React.FC = () => {
               setView('year');
               setSelectedYear(null);
             }}
-            className="text-sm text-ubt-blue underline"
+            className="text-sm text-kali-light-blue underline"
           >
             Back to years
           </button>
@@ -125,7 +125,7 @@ const ScrollableTimeline: React.FC = () => {
                       }}
                       className="text-left w-full focus:outline-none"
                     >
-                      <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
+                      <div className="text-kali-light-blue font-bold text-lg mb-2">{year}</div>
                       <img
                         src={first.image}
                         alt={first.title}
@@ -146,7 +146,7 @@ const ScrollableTimeline: React.FC = () => {
                   tabIndex={-1}
                   className="snap-center flex-shrink-0 w-64 p-4 bg-gray-800 rounded-lg focus:outline-none"
                 >
-                  <div className="text-ubt-blue font-bold text-lg mb-2">
+                  <div className="text-kali-light-blue font-bold text-lg mb-2">
                     {selectedYear}-{m.month}
                   </div>
                   <a

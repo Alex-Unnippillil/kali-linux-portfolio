@@ -125,7 +125,7 @@ const QRTool: React.FC = () => {
   };
 
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
+    <div className="p-4 space-y-4 text-white bg-kali-cool-grey h-full overflow-auto">
       <div className="space-y-2">
         <label htmlFor="qr-input" className="block">
           <span className="text-sm">Text</span>

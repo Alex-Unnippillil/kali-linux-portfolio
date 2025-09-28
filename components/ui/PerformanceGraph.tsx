@@ -128,7 +128,7 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   return (
     <div
       className={
-        'hidden items-center pr-2 text-ubt-grey/70 sm:flex md:pr-3 lg:pr-4' + (className ? ` ${className}` : '')
+        'hidden items-center pr-2 text-kali-light-grey/70 sm:flex md:pr-3 lg:pr-4' + (className ? ` ${className}` : '')
       }
       aria-hidden="true"
       data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}

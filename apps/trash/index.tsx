@@ -137,8 +137,8 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   }, [restoreAllFromHistory]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
-      <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
+    <div className="w-full h-full flex flex-col bg-kali-cool-grey text-white select-none">
+      <div className="flex items-center justify-between w-full bg-kali-warm-grey bg-opacity-40 text-sm">
         <span className="font-bold ml-2">Trash</span>
         <div className="flex items-center">
           <div className="flex mr-2">
@@ -167,14 +167,14 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           <button
             onClick={restoreAll}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-kali-accent disabled:opacity-50"
           >
             Restore All
           </button>
           <button
             onClick={empty}
             disabled={items.length === 0 || emptyCountdown !== null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-kali-accent disabled:opacity-50"
           >
             {emptyCountdown !== null ? `Emptying in ${emptyCountdown}` : 'Empty'}
           </button>
@@ -196,7 +196,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
                 key={item.closedAt}
                 tabIndex={0}
                 onClick={() => setSelected(idx)}
-                className={`flex items-center h-9 px-1 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+                className={`flex items-center h-9 px-1 cursor-pointer ${selected === idx ? 'bg-kali-panel-dark' : ''}`}
               >
                 <img
                   src={item.icon || DEFAULT_ICON}

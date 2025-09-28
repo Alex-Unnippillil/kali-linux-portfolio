@@ -58,7 +58,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
+      <div className="bg-kali-grey p-4 rounded w-3/4 md:w-1/3">
         <input
           ref={inputRef}
           value={query}
@@ -71,7 +71,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           {filtered.map((w, i) => (
             <li
               key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
+              className={`px-2 py-1 rounded ${i === selected ? 'bg-kali-accent text-black' : ''}`}
             >
               {w.title}
             </li>

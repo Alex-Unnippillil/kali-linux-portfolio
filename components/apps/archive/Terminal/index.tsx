@@ -532,7 +532,7 @@ const TerminalPaneInner = (
     return (
       <div className="flex-1 w-full h-full relative" onClick={onFocus}>
         <div
-          className="h-full w-full bg-ub-cool-grey"
+          className="h-full w-full bg-kali-cool-grey"
           ref={containerRef}
           data-testid="xterm-container"
           aria-label="Terminal"

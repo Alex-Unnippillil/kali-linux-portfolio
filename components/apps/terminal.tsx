@@ -5,7 +5,7 @@ import HelpPanel from '../HelpPanel';
 const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
   ssr: false,
   loading: () => (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex items-center justify-center bg-kali-cool-grey text-white">
       Loading Terminal...
     </div>
   ),

@@ -275,13 +275,13 @@ const MetasploitApp = ({
   }, [output]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
+    <div className="w-full h-full flex flex-col bg-kali-cool-grey text-white">
       <div className="bg-yellow-400 text-black text-xs p-2 text-center">
         For authorized security testing and educational use only.
       </div>
       <div className="flex p-2">
         <input
-          className="flex-grow bg-ub-grey text-white p-1 rounded"
+          className="flex-grow bg-kali-grey text-white p-1 rounded"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={(e) => {
@@ -292,7 +292,7 @@ const MetasploitApp = ({
         />
         <button
           onClick={runCommand}
-          className="ml-2 px-2 py-1 bg-ub-orange rounded"
+          className="ml-2 px-2 py-1 bg-kali-accent rounded"
         >
           Run
         </button>
@@ -334,14 +334,14 @@ const MetasploitApp = ({
         <div className="flex-1 px-2">
           <div className="flex mb-2">
             <input
-              className="flex-grow bg-ub-grey text-white p-1 rounded"
+              className="flex-grow bg-kali-grey text-white p-1 rounded"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search modules"
               spellCheck={false}
             />
             <select
-              className="ml-2 bg-ub-grey text-white p-1 rounded"
+              className="ml-2 bg-kali-grey text-white p-1 rounded"
               value={searchField}
               onChange={(e) => setSearchField(e.target.value)}
             >
@@ -368,7 +368,7 @@ const MetasploitApp = ({
           <div className="mt-4">
           <div className="mb-2">
             <select
-              className="bg-ub-grey text-white p-1 rounded"
+              className="bg-kali-grey text-white p-1 rounded"
               value={selectedTag}
               onChange={(e) => setSelectedTag(e.target.value)}
             >
@@ -382,7 +382,7 @@ const MetasploitApp = ({
           </div>
           <div className="mb-2">
             <select
-              className="bg-ub-grey text-white p-1 rounded"
+              className="bg-kali-grey text-white p-1 rounded"
               value={selectedPlatform}
               onChange={(e) => setSelectedPlatform(e.target.value)}
             >
@@ -396,7 +396,7 @@ const MetasploitApp = ({
           </div>
           <div className="mb-2">
             <input
-              className="bg-ub-grey text-white p-1 rounded w-full"
+              className="bg-kali-grey text-white p-1 rounded w-full"
               value={cveFilter}
               onChange={(e) => setCveFilter(e.target.value)}
               placeholder="Filter by CVE"
@@ -431,7 +431,7 @@ const MetasploitApp = ({
                       key={m.name}
                       type="button"
                       onClick={() => showModule(m)}
-                      className="p-2 text-left bg-ub-grey rounded flex"
+                      className="p-2 text-left bg-kali-grey rounded flex"
                     >
                       <svg
                         className="w-6 h-6 mr-2"
@@ -461,7 +461,7 @@ const MetasploitApp = ({
           <div className="mt-4">
             <button
               onClick={startReplay}
-              className="px-2 py-1 bg-ub-orange rounded text-black"
+              className="px-2 py-1 bg-kali-accent rounded text-black"
             >
               Replay Mock Exploit
             </button>
@@ -478,13 +478,13 @@ const MetasploitApp = ({
                   ))}
                 </ul>
                 <div
-                  className="w-full bg-ub-grey h-2 mt-2"
+                  className="w-full bg-kali-grey h-2 mt-2"
                   role="progressbar"
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={Math.round(progress)}
                 >
-                  <div className="h-full bg-ub-orange" style={{ width: `${progress}%` }} />
+                  <div className="h-full bg-kali-accent" style={{ width: `${progress}%` }} />
                 </div>
               </>
             )}
@@ -522,7 +522,7 @@ const MetasploitApp = ({
             )}
           </div>
         </div>
-        <aside className="w-1/3 bg-ub-grey p-2 overflow-auto text-xs">
+        <aside className="w-1/3 bg-kali-grey p-2 overflow-auto text-xs">
           {selectedModule ? (
             <>
               <h3 className="font-bold mb-1">{selectedModule.name}</h3>

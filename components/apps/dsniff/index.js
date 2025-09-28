@@ -111,7 +111,7 @@ const LogRow = ({ log, prefersReduced }) => {
   }, [prefersReduced]);
 
   return (
-    <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
+    <tr ref={rowRef} className="odd:bg-black even:bg-kali-grey">
       <td className="pr-2 text-gray-400 whitespace-nowrap">{log.timestamp}</td>
       <td className="pr-2 text-green-400">
 
@@ -160,7 +160,7 @@ const Credential = ({ cred }) => {
           <span>:</span>
           <span className="ml-1">{hidden ? '***' : cred.password}</span>
           <button
-            className="ml-1 text-ubt-blue text-xs"
+            className="ml-1 text-kali-light-blue text-xs"
             onClick={() => setShow(!show)}
           >
             {hidden ? 'Show' : 'Hide'}
@@ -172,7 +172,7 @@ const Credential = ({ cred }) => {
 };
 
 const SessionTile = ({ session, onView }) => (
-  <div className="flex bg-ub-grey rounded overflow-hidden">
+  <div className="flex bg-kali-grey rounded overflow-hidden">
     <div
       className={`w-1 ${protocolColors[session.protocol] || 'bg-gray-500'}`}
     />
@@ -349,12 +349,12 @@ const Dsniff = () => {
   });
 
   return (
-    <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
+    <div className="h-full w-full bg-kali-cool-grey text-white p-2 overflow-auto">
       <div className="mb-2 flex items-center justify-between">
         <h1 className="text-lg">dsniff</h1>
         <button
           onClick={exportSummary}
-          className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="px-2 py-1 bg-kali-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
         >
           Export summary
         </button>
@@ -375,7 +375,7 @@ const Dsniff = () => {
           </thead>
           <tbody>
             {suiteTools.map((t) => (
-              <tr key={t.tool} className="odd:bg-black even:bg-ub-grey">
+              <tr key={t.tool} className="odd:bg-black even:bg-kali-grey">
                 <td className="pr-2 text-green-400">{t.tool}</td>
                 <td className="pr-2 text-white">{t.description}</td>
                 <td className="pr-2 text-red-400">{t.risk}</td>
@@ -384,7 +384,7 @@ const Dsniff = () => {
                     href={t.reference}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline text-ubt-blue"
+                    className="underline text-kali-light-blue"
                   >
                     man
                   </a>
@@ -435,7 +435,7 @@ const Dsniff = () => {
             <span className="font-bold text-sm">Sample command</span>
             <button
               onClick={copySampleCommand}
-              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              className="px-2 py-1 bg-kali-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
             >
               Copy sample command
             </button>
@@ -473,10 +473,10 @@ const Dsniff = () => {
                 }}
                 className={`cursor-pointer ${
                   selectedPacket === i
-                    ? 'bg-ubt-blue'
+                    ? 'bg-kali-light-blue'
                     : i % 2 === 0
                     ? 'bg-black'
-                    : 'bg-ub-grey'
+                    : 'bg-kali-grey'
                 }`}
               >
                 <td className="pr-2 text-white">{pkt.src}</td>
@@ -490,7 +490,7 @@ const Dsniff = () => {
         <button
           onClick={copySelectedPacket}
           disabled={selectedPacket === null}
-          className="mb-2 px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+          className="mb-2 px-2 py-1 bg-kali-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
         >
           Copy selected row
         </button>
@@ -518,7 +518,7 @@ const Dsniff = () => {
           </thead>
           <tbody>
             {domainSummary.map((d) => (
-              <tr key={d.domain} className="odd:bg-black even:bg-ub-grey">
+              <tr key={d.domain} className="odd:bg-black even:bg-kali-grey">
                 <td className="pr-2 text-white">{d.domain}</td>
                 <td className="pr-2 text-green-400">{d.urls.join(', ')}</td>
                 <td className="pr-2 text-white">
@@ -549,7 +549,7 @@ const Dsniff = () => {
       <div className="mb-2 flex space-x-2 items-center">
         <button
           className={`px-2 ${
-            activeTab === 'urlsnarf' ? 'bg-black text-green-500' : 'bg-ub-grey'
+            activeTab === 'urlsnarf' ? 'bg-black text-green-500' : 'bg-kali-grey'
           }`}
           onClick={() => setActiveTab('urlsnarf')}
         >
@@ -557,7 +557,7 @@ const Dsniff = () => {
         </button>
         <button
           className={`px-2 ${
-            activeTab === 'arpspoof' ? 'bg-black text-green-500' : 'bg-ub-grey'
+            activeTab === 'arpspoof' ? 'bg-black text-green-500' : 'bg-kali-grey'
           }`}
           onClick={() => setActiveTab('arpspoof')}
         >
@@ -569,7 +569,7 @@ const Dsniff = () => {
           <button
             key={proto}
             className={`px-2 ${
-              protocolFilter.includes(proto) ? 'bg-black' : 'bg-ub-grey'
+              protocolFilter.includes(proto) ? 'bg-black' : 'bg-kali-grey'
             } ${riskColors[risk]}`}
             onClick={() =>
               setProtocolFilter((prev) =>
@@ -618,7 +618,7 @@ const Dsniff = () => {
           {filters.map((f, i) => (
             <span
               key={i}
-              className="bg-ub-grey text-white px-2 py-1 mr-1 mb-1"
+              className="bg-kali-grey text-white px-2 py-1 mr-1 mb-1"
             >
               {`${f.field}:${f.value}`}
               <button
