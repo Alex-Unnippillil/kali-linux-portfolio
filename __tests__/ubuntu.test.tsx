@@ -57,4 +57,36 @@ describe('Ubuntu component', () => {
     });
     expect(instance!.state.shutDownScreen).toBe(true);
   });
+
+  it('restarts the UI and shows the boot sequence', () => {
+    let instance: Ubuntu | null = null;
+    render(<Ubuntu ref={(c) => (instance = c)} />);
+    expect(instance).not.toBeNull();
+    act(() => {
+      instance!.restart();
+    });
+    expect(instance!.state.shutDownScreen).toBe(true);
+    act(() => {
+      jest.advanceTimersByTime(800);
+    });
+    expect(instance!.state.booting_screen).toBe(true);
+  });
+
+  it('resets UI state and reloads the page', () => {
+    let instance: Ubuntu | null = null;
+    render(<Ubuntu ref={(c) => (instance = c)} />);
+    expect(instance).not.toBeNull();
+    window.localStorage.setItem('screen-locked', 'true');
+    act(() => {
+      try {
+        instance!.resetUI();
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes('navigation')) {
+          throw error;
+        }
+      }
+    });
+
+    expect(window.localStorage.getItem('screen-locked')).toBeNull();
+  });
 });
