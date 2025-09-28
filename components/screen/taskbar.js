@@ -24,7 +24,8 @@ export default function Taskbar(props) {
                 activeWorkspace={props.activeWorkspace}
                 onSelect={props.onSelectWorkspace}
             />
-            <div className="flex items-center overflow-x-auto">
+            <div className="flex items-center gap-2">
+                <div className="flex items-center overflow-x-auto">
                 {runningApps.map(app => {
                     const isMinimized = Boolean(props.minimized_windows[app.id]);
                     const isFocused = Boolean(props.focused_windows[app.id]);
@@ -61,6 +62,16 @@ export default function Taskbar(props) {
                         </button>
                     );
                 })}
+                </div>
+                <button
+                    type="button"
+                    aria-label="Show desktop"
+                    title="Show desktop"
+                    onClick={() => props.minimizeAll && props.minimizeAll()}
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm border border-ub-border-orange text-ub-border-orange transition focus:outline-none focus:ring-2 focus:ring-ub-border-orange focus:ring-offset-2 focus:ring-offset-black hover:bg-ub-cool-grey hover:bg-opacity-40"
+                >
+                    <span aria-hidden="true" className="block h-3 w-3 border border-ub-border-orange"></span>
+                </button>
             </div>
         </div>
     );
