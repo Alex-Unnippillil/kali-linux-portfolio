@@ -5,7 +5,7 @@ import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export default function LockScreen(props) {
 
-    const { bgImageName, useKaliWallpaper } = useSettings();
+    const { bgImageName, bgImageFile, useKaliWallpaper } = useSettings();
     const useKaliTheme = useKaliWallpaper || bgImageName === 'kali-gradient';
 
     if (props.isLocked) {
@@ -23,11 +23,13 @@ export default function LockScreen(props) {
                     className={`absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
                 />
             ) : (
-                <img
-                    src={`/wallpapers/${bgImageName}.webp`}
-                    alt=""
-                    className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
-                />
+                bgImageFile && (
+                    <img
+                        src={`/wallpapers/${bgImageFile}`}
+                        alt=""
+                        className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                    />
+                )
             )}
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
                 <div className=" text-7xl">

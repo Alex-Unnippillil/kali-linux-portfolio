@@ -1,13 +1,20 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
 
 export default function BackgroundSlideshow() {
-  const { setWallpaper } = useSettings();
-  const [available, setAvailable] = useState<string[]>([]);
+  const { setWallpaper, wallpapers: wallpaperAssets } = useSettings();
+  const available = useMemo(
+    () => wallpaperAssets.map((asset) => asset.file),
+    [wallpaperAssets],
+  );
+  const fileToId = useMemo(
+    () => new Map(wallpaperAssets.map((asset) => [asset.file, asset.id])),
+    [wallpaperAssets],
+  );
   const [selected, setSelected] = usePersistentState<string[]>(
     'bg-slideshow-selected',
     [],
@@ -21,11 +28,8 @@ export default function BackgroundSlideshow() {
   const indexRef = useRef(0);
 
   useEffect(() => {
-    fetch('/api/wallpapers')
-      .then((res) => res.json())
-      .then((files: string[]) => setAvailable(files))
-      .catch(() => setAvailable([]));
-  }, []);
+    setSelected((prev) => prev.filter((file) => available.includes(file)));
+  }, [available, setSelected]);
 
   useEffect(() => {
     if (!playing || selected.length === 0) {
@@ -34,7 +38,7 @@ export default function BackgroundSlideshow() {
     }
     const run = () => {
       const file = selected[indexRef.current % selected.length];
-      const base = file.replace(/\.[^.]+$/, '');
+      const base = fileToId.get(file) ?? file.replace(/\.[^.]+$/, '');
       setWallpaper(base);
       indexRef.current = (indexRef.current + 1) % selected.length;
     };
@@ -43,7 +47,7 @@ export default function BackgroundSlideshow() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [playing, intervalMs, selected, setWallpaper]);
+  }, [playing, intervalMs, selected, setWallpaper, fileToId]);
 
   const toggle = (file: string) => {
     setSelected((prev) =>
@@ -59,8 +63,8 @@ export default function BackgroundSlideshow() {
         {available.map((file) => (
           <label key={file} className="flex flex-col items-center cursor-pointer">
             <Image
-              src={`/images/wallpapers/${file}`}
-              alt={file}
+              src={`/wallpapers/${file}`}
+              alt={`Wallpaper ${file}`}
               width={96}
               height={64}
               sizes="96px"
