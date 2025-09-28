@@ -1,6 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+  useCallback,
+} from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
@@ -113,7 +121,7 @@ const CATEGORY_DEFINITIONS = [
     type: 'ids',
     appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
   },
- ] as const satisfies readonly CategoryDefinitionBase[];
+] as const satisfies readonly CategoryDefinitionBase[];
 
 type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
 const isCategoryId = (
@@ -144,10 +152,20 @@ const readRecentAppIds = (): string[] => {
   }
 };
 
+export type WhiskerMenuHandle = {
+  focusSearch: () => void;
+  focusTrigger: () => void;
+};
 
-const WhiskerMenu: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+type WhiskerMenuProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+const WhiskerMenu = forwardRef<WhiskerMenuHandle, WhiskerMenuProps>(
+  ({ isOpen, onOpenChange }, ref) => {
+  const [isTransitionOpen, setIsTransitionOpen] = useState(isOpen);
+  const [isVisible, setIsVisible] = useState(isOpen);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
 
@@ -159,7 +177,16 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
+  useImperativeHandle(ref, () => ({
+    focusSearch: () => {
+      searchInputRef.current?.focus();
+    },
+    focusTrigger: () => {
+      buttonRef.current?.focus();
+    },
+  }));
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -234,6 +261,34 @@ const WhiskerMenu: React.FC = () => {
   }, [currentCategory.id]);
 
   useEffect(() => {
+    if (isOpen) {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+      setIsVisible(true);
+      requestAnimationFrame(() => setIsTransitionOpen(true));
+    } else {
+      setIsTransitionOpen(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isTransitionOpen && isVisible) {
+      hideTimer.current = setTimeout(() => {
+        setIsVisible(false);
+        hideTimer.current = null;
+      }, TRANSITION_DURATION);
+    }
+    return () => {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+    };
+  }, [isTransitionOpen, isVisible]);
+
+  useEffect(() => {
     if (!isVisible) return;
     setHighlight(0);
   }, [isVisible, category, query]);
@@ -244,58 +299,16 @@ const WhiskerMenu: React.FC = () => {
     setCategoryHighlight(index === -1 ? 0 : index);
   }, [isVisible, currentCategory.id, categoryConfigs]);
 
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setIsOpen(false);
-  };
-
-  useEffect(() => {
-    if (!isOpen && isVisible) {
-      hideTimer.current = setTimeout(() => {
-        setIsVisible(false);
-      }, TRANSITION_DURATION);
-      return () => {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-      };
-    }
-    if (isOpen) {
-      if (hideTimer.current) {
-        clearTimeout(hideTimer.current);
-        hideTimer.current = null;
-      }
-    }
-    return () => {
-      if (hideTimer.current) {
-        clearTimeout(hideTimer.current);
-        hideTimer.current = null;
-      }
-    };
-  }, [isOpen, isVisible]);
-
-  const showMenu = useCallback(() => {
-    setIsVisible(true);
-    requestAnimationFrame(() => setIsOpen(true));
-  }, []);
-
-  const hideMenu = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
-  const toggleMenu = useCallback(() => {
-    if (isOpen || isVisible) {
-      hideMenu();
-    } else {
-      showMenu();
-    }
-  }, [hideMenu, isOpen, isVisible, showMenu]);
+  const openSelectedApp = useCallback(
+    (id: string) => {
+      window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+      onOpenChange(false);
+    },
+    [onOpenChange],
+  );
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        toggleMenu();
-        return;
-      }
       if (!isVisible) return;
       const target = e.target as Node | null;
       if (target && categoryListRef.current?.contains(target)) {
@@ -303,7 +316,7 @@ const WhiskerMenu: React.FC = () => {
       }
 
       if (e.key === 'Escape') {
-        hideMenu();
+        onOpenChange(false);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setHighlight(h => Math.min(h + 1, currentApps.length - 1));
@@ -318,24 +331,26 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [currentApps, highlight, isVisible, onOpenChange, openSelectedApp]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!isVisible) return;
       const target = e.target as Node;
       if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
-        hideMenu();
+        onOpenChange(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [hideMenu, isVisible]);
+  }, [isVisible, onOpenChange]);
 
-  useEffect(() => () => {
-    if (hideTimer.current) {
-      clearTimeout(hideTimer.current);
-    }
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+      }
+    };
   }, []);
 
   const focusCategoryButton = (index: number) => {
@@ -378,8 +393,10 @@ const WhiskerMenu: React.FC = () => {
       <button
         ref={buttonRef}
         type="button"
-        onClick={toggleMenu}
+        onClick={() => onOpenChange(!isOpen)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -394,13 +411,13 @@ const WhiskerMenu: React.FC = () => {
         <div
           ref={menuRef}
           className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
-            isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
+            isTransitionOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              hideMenu();
+              onOpenChange(false);
             }
           }}
         >
@@ -458,6 +475,7 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="flex flex-col p-3">
             <input
+              ref={searchInputRef}
               className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
 
               placeholder="Search"
@@ -490,6 +508,8 @@ const WhiskerMenu: React.FC = () => {
       )}
     </div>
   );
-};
+});
+
+WhiskerMenu.displayName = 'WhiskerMenu';
 
 export default WhiskerMenu;
