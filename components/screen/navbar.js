@@ -19,33 +19,33 @@ export default class Navbar extends Component {
 
 		render() {
 			return (
-				<div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-					<div className="flex items-center">
-						<WhiskerMenu />
-						<PerformanceGraph />
-					</div>
-					<div
-						className={
-							'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
-						}
-					>
-						<Clock />
-					</div>
-					<button
+                                <div className="main-navbar-vp absolute top-0 right-0 z-50 flex w-screen flex-nowrap items-center justify-between bg-kali-glass px-2 text-kali-accent-text-muted text-[11px] shadow-md glass-panel backdrop-blur-md select-none">
+                                        <div className="flex items-center gap-2">
+                                                <WhiskerMenu />
+                                                <PerformanceGraph />
+                                        </div>
+                                        <div
+                                                className={
+                                                        'px-2 py-0.5 text-[11px] font-medium text-kali-accent-text-strong transition duration-100 ease-in-out'
+                                                }
+                                        >
+                                                <Clock />
+                                        </div>
+                                        <button
 						type="button"
 						id="status-bar"
 						aria-label="System status"
 						onClick={() => {
 							this.setState({ status_card: !this.state.status_card });
 						}}
-						className={
-							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-						}
-					>
-						<Status />
-						<QuickSettings open={this.state.status_card} />
-					</button>
-				</div>
+                                                className={
+                                                        'relative px-2 py-0.5 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-kali-accent-text-strong'
+                                                }
+                                        >
+                                                <Status />
+                                                <QuickSettings open={this.state.status_card} />
+                                        </button>
+                                </div>
 			);
 		}
 

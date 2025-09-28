@@ -38,36 +38,40 @@ export default function Status() {
   }, []);
 
   return (
-    <div className="flex justify-center items-center">
+    <div className="flex items-center gap-2 text-kali-accent-text-strong">
       <span
-        className="mx-1.5 relative"
+        className="relative flex items-center"
         title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
       >
         <Image
           width={16}
           height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
+          src={
+            online
+              ? "/themes/Kali/panel/network-wireless-signal-good-symbolic.svg"
+              : "/themes/Kali/panel/network-wireless-signal-none-symbolic.svg"
+          }
           alt={online ? "online" : "offline"}
-          className="inline status-symbol w-4 h-4"
+          className="status-symbol h-4 w-4"
           sizes="16px"
         />
         {!allowNetwork && (
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         )}
       </span>
-      <VolumeControl className="mx-1.5" />
-      <span className="mx-1.5">
+      <VolumeControl className="text-kali-accent-text-strong" />
+      <span className="flex items-center">
         <Image
           width={16}
           height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
-          alt="ubuntu battry"
-          className="inline status-symbol w-4 h-4"
+          src="/themes/Kali/panel/battery-good-symbolic.svg"
+          alt="battery status"
+          className="status-symbol h-4 w-4"
           sizes="16px"
         />
       </span>
-      <span className="mx-1">
-        <SmallArrow angle="down" className=" status-symbol" />
+      <span className="flex items-center">
+        <SmallArrow angle="down" className="status-symbol text-kali-accent-text-muted" />
       </span>
     </div>
   );
