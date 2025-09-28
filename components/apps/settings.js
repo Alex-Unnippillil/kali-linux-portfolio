@@ -1,18 +1,30 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import wallpaperManifest from '../../public/wallpapers/manifest.json';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, randomDailyWallpaper, setRandomDailyWallpaper, lastRandomWallpaper } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
-
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const wallpapers = useMemo(() => Array.isArray(wallpaperManifest?.items) ? wallpaperManifest.items : [], []);
+    const wallpaperLookup = useMemo(() => {
+        return wallpapers.reduce((acc, entry) => {
+            acc[entry.id] = entry;
+            return acc;
+        }, {});
+    }, [wallpapers]);
+    const selectedWallpaper = wallpaperLookup[wallpaper];
+    const selectedWallpaperFile = selectedWallpaper?.file || `${wallpaper}.webp`;
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
+        if (!name) return;
+        if (e.type !== 'focus') {
+            setRandomDailyWallpaper(false);
+        }
         setWallpaper(name);
     };
 
@@ -64,7 +76,7 @@ export function Settings() {
                 ) : (
                     <div
                         className="absolute inset-0 bg-cover bg-center"
-                        style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                        style={{ backgroundImage: `url(/wallpapers/${selectedWallpaperFile})` }}
                         aria-hidden="true"
                     />
                 )}
@@ -96,6 +108,22 @@ export function Settings() {
             {useKaliWallpaper && (
                 <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
                     Your previous wallpaper selection is preserved for when you turn this off.
+                </p>
+            )}
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={randomDailyWallpaper}
+                        onChange={(e) => setRandomDailyWallpaper(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Random daily wallpaper
+                </label>
+            </div>
+            {randomDailyWallpaper && lastRandomWallpaper && (
+                <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                    Latest pick: {wallpaperLookup[lastRandomWallpaper]?.name || lastRandomWallpaper}
                 </p>
             )}
             <div className="flex justify-center my-4">
@@ -223,12 +251,12 @@ export function Settings() {
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
-                    wallpapers.map((name, index) => (
+                    wallpapers.map((entry, index) => (
                         <div
-                            key={name}
+                            key={entry.id}
                             role="button"
-                            aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
+                            aria-label={`Select ${entry.name || entry.id}`}
+                            aria-pressed={entry.id === wallpaper}
                             tabIndex="0"
                             onClick={changeBackgroundImage}
                             onFocus={changeBackgroundImage}
@@ -238,9 +266,9 @@ export function Settings() {
                                     changeBackgroundImage(e);
                                 }
                             }}
-                            data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
+                            data-path={entry.id}
+                            className={((entry.id === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
+                            style={{ backgroundImage: `url(/wallpapers/${entry.file || `${entry.id}.webp`})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
                     ))
                 }
@@ -272,11 +300,13 @@ export function Settings() {
                         await resetSettings();
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
+                        setUseKaliWallpaper(defaults.useKaliWallpaper);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setRandomDailyWallpaper(defaults.randomDailyWallpaper);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
