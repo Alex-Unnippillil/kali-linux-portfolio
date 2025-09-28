@@ -5,10 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 
 const ICONS = {
-  muted: "/themes/Yaru/status/audio-volume-muted-symbolic.svg",
-  low: "/themes/Yaru/status/audio-volume-low-symbolic.svg",
-  medium: "/themes/Yaru/status/audio-volume-medium-symbolic.svg",
-  high: "/themes/Yaru/status/audio-volume-high-symbolic.svg",
+  muted: "/themes/Kali/panel/audio-volume-medium-symbolic.svg",
+  low: "/themes/Kali/panel/audio-volume-medium-symbolic.svg",
+  medium: "/themes/Kali/panel/audio-volume-medium-symbolic.svg",
+  high: "/themes/Kali/panel/audio-volume-medium-symbolic.svg",
 } as const;
 
 type VolumeLevel = keyof typeof ICONS;
@@ -108,7 +108,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     >
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
+        className="flex h-5 w-5 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-accent-text-strong"
         aria-label={`Volume ${formatPercent(volume)}`}
         aria-haspopup="true"
         aria-expanded={open}
@@ -121,21 +121,21 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
           height={16}
           src={ICONS[level]}
           alt={`${level} volume`}
-          className="status-symbol h-4 w-4"
+          className={`status-symbol h-4 w-4${level === "muted" ? " opacity-50" : ""}`}
           draggable={false}
           sizes="16px"
         />
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-white/10 bg-kali-glass px-3 py-2 text-xs text-kali-accent-text-strong shadow-lg backdrop-blur-md"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={handleWheel}
         >
-          <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
+          <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-kali-accent-text-muted">
             <span>Volume</span>
-            <span className="font-semibold text-white">{formatPercent(volume)}</span>
+            <span className="font-semibold text-kali-accent-text-strong">{formatPercent(volume)}</span>
           </div>
           <input
             ref={sliderRef}
@@ -148,7 +148,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
             aria-valuemax={100}
             aria-valuenow={Math.round(volume * 100)}
             aria-label="Volume level"
-            className="h-1 w-full cursor-pointer accent-ubt-blue"
+            className="h-1 w-full cursor-pointer accent-kali-accent-text-strong"
             onChange={handleRangeChange}
           />
         </div>

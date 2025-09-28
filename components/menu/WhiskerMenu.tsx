@@ -374,19 +374,19 @@ const WhiskerMenu: React.FC = () => {
   };
 
   return (
-    <div className="relative inline-flex">
+    <div className="relative inline-flex items-center">
       <button
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="flex items-center gap-2 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-kali-accent-text-strong outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-kali-accent-text-strong"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          src="/themes/Kali/panel/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}
-          className="inline mr-1"
+          className="h-4 w-4"
         />
         Applications
       </button>
