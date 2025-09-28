@@ -9,6 +9,12 @@
   .transition-active {
     @apply transition ease-out duration-100;
   }
+  .glass {
+    @apply border border-white/10 shadow-kali-panel;
+    background-color: color-mix(in srgb, var(--color-bg), transparent 55%);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
 }
 
 @layer base {
