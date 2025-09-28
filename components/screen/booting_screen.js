@@ -1,7 +1,77 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 
+const bootMessages = [
+    'Initializing Kali portfolio environment…',
+    'Loading desktop widgets and terminal aliases…',
+    'Mounting simulated security toolkits…',
+    'Restoring user preferences and workspace layout…',
+    'Starting background analytics guards…',
+    'Boot sequence complete. Tap the power icon to enter.',
+]
+
+const reducedMotionSummary = 'Boot sequence ready. Tap the power icon to enter.'
+
 function BootingScreen(props) {
+    const [visibleMessages, setVisibleMessages] = useState([])
+    const [isReducedMotion, setIsReducedMotion] = useState(false)
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+        const handleChange = (event) => setIsReducedMotion(event.matches)
+
+        setIsReducedMotion(mediaQuery.matches)
+
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', handleChange)
+        } else if (mediaQuery.addListener) {
+            mediaQuery.addListener(handleChange)
+        }
+
+        return () => {
+            if (mediaQuery.removeEventListener) {
+                mediaQuery.removeEventListener('change', handleChange)
+            } else if (mediaQuery.removeListener) {
+                mediaQuery.removeListener(handleChange)
+            }
+        }
+    }, [])
+
+    useEffect(() => {
+        if (!props.visible || props.isShutDown) {
+            setVisibleMessages([])
+            return
+        }
+
+        if (isReducedMotion) {
+            setVisibleMessages([reducedMotionSummary])
+            return
+        }
+
+        let index = 1
+        setVisibleMessages([bootMessages[0]])
+
+        const interval = window.setInterval(() => {
+            setVisibleMessages((current) => {
+                if (index >= bootMessages.length) {
+                    window.clearInterval(interval)
+                    return current
+                }
+
+                const nextMessages = [...current, bootMessages[index]]
+                index += 1
+                return nextMessages
+            })
+        }, 600)
+
+        return () => {
+            window.clearInterval(interval)
+        }
+    }, [props.visible, props.isShutDown, isReducedMotion])
 
     return (
         <div
@@ -32,6 +102,17 @@ function BootingScreen(props) {
                 alt="Kali Linux Name"
                 sizes="(max-width: 768px) 50vw, 20vw"
             />
+            <div
+                className="px-6 py-4 text-center md:text-left"
+                style={{ color: 'var(--kali-terminal-green)' }}
+                aria-live="polite"
+            >
+                {visibleMessages.map((message, index) => (
+                    <p key={`${message}-${index}`} className="font-mono text-sm md:text-base">
+                        {message}
+                    </p>
+                ))}
+            </div>
             <div className="text-white mb-4">
                 <a className="underline" href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">linkedin</a>
                 <span className="font-bold mx-1">|</span>
