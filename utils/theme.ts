@@ -1,8 +1,15 @@
 export const THEME_KEY = 'app:theme';
 
+const FALLBACK_THEME = 'kali';
+
+const normalizeTheme = (theme?: string | null): string => {
+  if (!theme) return FALLBACK_THEME;
+  return theme === 'default' ? FALLBACK_THEME : theme;
+};
+
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
-  default: 0,
+  [FALLBACK_THEME]: 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
@@ -11,37 +18,51 @@ export const THEME_UNLOCKS: Record<string, number> = {
 const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
 
 export const isDarkTheme = (theme: string): boolean =>
-  DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
+  DARK_THEMES.includes(
+    normalizeTheme(theme) as (typeof DARK_THEMES)[number]
+  );
 
 export const getTheme = (): string => {
-  if (typeof window === 'undefined') return 'default';
+  if (typeof window === 'undefined') return FALLBACK_THEME;
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored) return stored;
+    if (stored === 'default') {
+      window.localStorage.setItem(THEME_KEY, FALLBACK_THEME);
+      return FALLBACK_THEME;
+    }
+    if (stored) return normalizeTheme(stored);
     const prefersDark = window.matchMedia?.(
       '(prefers-color-scheme: dark)'
     ).matches;
-    return prefersDark ? 'dark' : 'default';
+    return prefersDark ? 'dark' : FALLBACK_THEME;
   } catch {
-    return 'default';
+    return FALLBACK_THEME;
   }
 };
 
 export const setTheme = (theme: string): void => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(THEME_KEY, theme);
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.toggle('dark', isDarkTheme(theme));
+    const normalized = normalizeTheme(theme);
+    window.localStorage.setItem(THEME_KEY, normalized);
+    document.documentElement.dataset.theme = normalized;
+    document.documentElement.classList.toggle(
+      'dark',
+      isDarkTheme(normalized)
+    );
   } catch {
     /* ignore storage errors */
   }
 };
 
-export const getUnlockedThemes = (highScore: number): string[] =>
-  Object.entries(THEME_UNLOCKS)
+export const getUnlockedThemes = (highScore: number): string[] => {
+  const themes = Object.entries(THEME_UNLOCKS)
     .filter(([, score]) => highScore >= score)
-    .map(([theme]) => theme);
+    .map(([theme]) => normalizeTheme(theme));
+  return Array.from(new Set(themes));
+};
 
-export const isThemeUnlocked = (theme: string, highScore: number): boolean =>
-  highScore >= (THEME_UNLOCKS[theme] ?? Infinity);
+export const isThemeUnlocked = (theme: string, highScore: number): boolean => {
+  const normalized = normalizeTheme(theme);
+  return highScore >= (THEME_UNLOCKS[normalized] ?? Infinity);
+};
