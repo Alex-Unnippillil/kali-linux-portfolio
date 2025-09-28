@@ -749,10 +749,16 @@ export class Desktop extends Component {
     }
 
     openApp = (objId, params) => {
-        const context = params && typeof params === 'object'
+        const paramsObject = params && typeof params === 'object' ? { ...params } : undefined;
+        const spawnNew = paramsObject?.spawnNew;
+        if (paramsObject) {
+            delete paramsObject.spawnNew;
+        }
+        const hasContext = paramsObject && Object.keys(paramsObject).length > 0;
+        const context = hasContext
             ? {
-                ...params,
-                ...(params.path && !params.initialPath ? { initialPath: params.path } : {}),
+                ...paramsObject,
+                ...(paramsObject.path && !paramsObject.initialPath ? { initialPath: paramsObject.path } : {}),
             }
             : undefined;
         const contextState = context
@@ -770,7 +776,7 @@ export class Desktop extends Component {
         if (this.state.disabled_apps[objId]) return;
 
         // if app is already open, focus it instead of spawning a new window
-        if (this.state.closed_windows[objId] === false) {
+        if (!spawnNew && this.state.closed_windows[objId] === false) {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
