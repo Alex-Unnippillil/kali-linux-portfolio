@@ -724,15 +724,25 @@ export class WindowYBorder extends Component {
         // Use the browser's Image constructor rather than the imported Next.js
         // Image component to avoid runtime errors when running in tests.
 
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
+        if (typeof window !== 'undefined' && typeof window.Image === 'function') {
+            this.trpImg = new window.Image(0, 0);
+            this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            this.trpImg.style.opacity = 0;
+        } else {
+            this.trpImg = null;
+        }
     }
     render() {
             return (
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    draggable
+                    aria-hidden="true"
+                    onDragStart={(e) => {
+                        if (this.trpImg && e.dataTransfer) {
+                            e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        }
+                    }}
                     onDrag={this.props.resize}
                 ></div>
             )
@@ -743,15 +753,25 @@ export class WindowXBorder extends Component {
     componentDidMount() {
         // Use the global Image constructor instead of Next.js Image component
 
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
+        if (typeof window !== 'undefined' && typeof window.Image === 'function') {
+            this.trpImg = new window.Image(0, 0);
+            this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            this.trpImg.style.opacity = 0;
+        } else {
+            this.trpImg = null;
+        }
     }
     render() {
             return (
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    draggable
+                    aria-hidden="true"
+                    onDragStart={(e) => {
+                        if (this.trpImg && e.dataTransfer) {
+                            e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        }
+                    }}
                     onDrag={this.props.resize}
                 ></div>
             )
