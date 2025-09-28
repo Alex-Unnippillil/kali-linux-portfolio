@@ -154,7 +154,7 @@ const NotificationBell: React.FC = () => {
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition hover:bg-white hover:bg-opacity-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
       >
         <svg
           aria-hidden="true"
@@ -167,7 +167,7 @@ const NotificationBell: React.FC = () => {
           <path d="M7 12a3 3 0 006 0H7z" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-[var(--color-accent)] px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
