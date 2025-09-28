@@ -13,11 +13,11 @@ class MyDocument extends Document {
   render() {
     const { nonce } = this.props;
     return (
-      <Html lang="en" data-csp-nonce={nonce}>
+      <Html lang="en" data-csp-nonce={nonce} data-accent="#1793d1">
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
-          <meta name="theme-color" content="#0f1317" />
+          <meta name="theme-color" content="#1793d1" />
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
