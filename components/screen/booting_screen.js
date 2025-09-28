@@ -1,41 +1,90 @@
 import React from 'react'
 import Image from 'next/image'
 
+const bootMessages = [
+    'Securing environment',
+    'Loading offensive simulations',
+    'Calibrating desktop widgets',
+]
+
 function BootingScreen(props) {
+    const isVisible = props.visible || props.isShutDown
 
     return (
         <div
+            role="status"
+            aria-live="polite"
+            aria-busy={props.visible}
             style={{
-                ...(props.visible || props.isShutDown ? { zIndex: "100" } : { zIndex: "-20" }),
+                ...(isVisible ? { zIndex: '100' } : { zIndex: '-20' }),
                 contentVisibility: 'auto',
             }}
-            className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}>
-            <Image
-                width={400}
-                height={400}
-                className="md:w-1/4 w-1/2"
-                src="/themes/Yaru/status/cof_orange_hex.svg"
-                alt="Ubuntu Logo"
-                sizes="(max-width: 768px) 50vw, 25vw"
-                priority
-            />
-            <div className="w-10 h-10 flex justify-center items-center rounded-full outline-none cursor-pointer" onClick={props.turnOn} >
-                {(props.isShutDown
-                    ? <div className="bg-white rounded-full flex justify-center items-center w-10 h-10 hover:bg-gray-300"><Image width={32} height={32} className="w-8" src="/themes/Yaru/status/power-button.svg" alt="Power Button" sizes="32px" priority/></div>
-                    : <Image width={40} height={40} className={" w-10 " + (props.visible ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>)}
-            </div>
-            <Image
-                width={200}
-                height={100}
-                className="md:w-1/5 w-1/2"
-                src="/themes/Yaru/status/ubuntu_white_hex.svg"
-                alt="Kali Linux Name"
-                sizes="(max-width: 768px) 50vw, 20vw"
-            />
-            <div className="text-white mb-4">
-                <a className="underline" href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">linkedin</a>
-                <span className="font-bold mx-1">|</span>
-                <a href="https://github.com/Alex-Unnippillil" rel="noopener noreferrer" target="_blank" className="underline">github</a>
+            className={`${isVisible ? 'visible opacity-100' : 'invisible opacity-0'} absolute inset-0 select-none overflow-hidden transition-opacity duration-700`}
+        >
+            <div className="relative flex h-full w-full flex-col items-center justify-center gap-12 bg-[#030712] text-slate-100">
+                <div className="pointer-events-none absolute inset-0">
+                    <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-[#030712] to-black" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_58%)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(15,118,110,0.18),_transparent_60%)]" />
+                </div>
+
+                <div className="relative flex flex-col items-center gap-6 px-6 text-center">
+                    <span className="text-xs uppercase tracking-[0.5em] text-slate-400">Initializing workspace</span>
+                    <div className="relative">
+                        <div className="absolute -inset-6 rounded-full bg-sky-500/20 blur-3xl" aria-hidden />
+                        <Image
+                            width={360}
+                            height={360}
+                            className="w-48 md:w-64"
+                            src="/themes/Yaru/status/icons8-kali-linux.svg"
+                            alt="Kali Linux dragon emblem"
+                            sizes="(max-width: 768px) 12rem, 16rem"
+                            priority
+                        />
+                    </div>
+                    <span className="text-4xl font-semibold tracking-[0.35em] text-sky-200 md:text-5xl">KALI</span>
+                </div>
+
+                <div className="relative flex flex-col items-center gap-6 px-6">
+                    <button
+                        type="button"
+                        onClick={props.turnOn}
+                        disabled={!props.isShutDown}
+                        className={`group relative flex h-20 w-20 items-center justify-center rounded-full border border-slate-700/40 transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 ${props.isShutDown ? 'cursor-pointer hover:scale-105 hover:border-sky-400/60' : 'cursor-default opacity-80'}`}
+                        aria-label={props.isShutDown ? 'Start Kali desktop' : 'Booting Kali desktop'}
+                    >
+                        {props.isShutDown ? (
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-900 transition group-hover:bg-white">
+                                <Image width={32} height={32} src="/themes/Yaru/status/power-button.svg" alt="Power button" sizes="32px" priority />
+                            </div>
+                        ) : (
+                            <div className="relative flex h-14 w-14 items-center justify-center">
+                                <div className="absolute inset-0 rounded-full border border-slate-700/40" />
+                                <div className="absolute inset-0 rounded-full border-4 border-sky-400/80 border-t-transparent border-l-transparent animate-[spin_2.6s_linear_infinite]" />
+                                <div className="absolute inset-[30%] rounded-full bg-slate-900" />
+                            </div>
+                        )}
+                    </button>
+
+                    <ul className="flex flex-col gap-2 text-sm text-slate-300">
+                        {bootMessages.map((message) => (
+                            <li key={message} className="flex items-center gap-3">
+                                <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite]" aria-hidden />
+                                <span>{message}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="relative mb-6 flex gap-4 text-xs uppercase tracking-[0.4em] text-slate-500">
+                    <a className="transition hover:text-slate-200" href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">
+                        LinkedIn
+                    </a>
+                    <span className="text-slate-600">•</span>
+                    <a className="transition hover:text-slate-200" href="https://github.com/Alex-Unnippillil" rel="noopener noreferrer" target="_blank">
+                        GitHub
+                    </a>
+                </div>
             </div>
         </div>
     )
