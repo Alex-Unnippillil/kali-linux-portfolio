@@ -11,6 +11,12 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { useSettings } from '../../hooks/useSettings';
+import { useNotifications } from '../../hooks/useNotifications';
+
+const LONG_RUNNING_THRESHOLD_MS = 3000;
+const BELL_FLASH_DURATION_MS = 200;
+const BELL_NOTIFICATION_COOLDOWN_MS = 5000;
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -101,6 +107,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { terminalBell, setTerminalBell } = useSettings();
+  const [visualBellSetting, setVisualBellSetting] = useState(terminalBell);
+  const [bellFlashActive, setBellFlashActive] = useState(false);
+  const bellFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBellNotificationRef = useRef(0);
+  const terminalBellRef = useRef(terminalBell);
+  const { pushNotification } = useNotifications();
+  const pushNotificationRef = useRef(pushNotification);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -123,6 +137,47 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  useEffect(() => {
+    terminalBellRef.current = terminalBell;
+  }, [terminalBell]);
+
+  useEffect(() => {
+    pushNotificationRef.current = pushNotification;
+  }, [pushNotification]);
+
+  useEffect(() => () => {
+    if (bellFlashTimeoutRef.current) {
+      clearTimeout(bellFlashTimeoutRef.current);
+      bellFlashTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      setVisualBellSetting(terminalBell);
+    }
+  }, [settingsOpen, terminalBell]);
+
+  const formatDuration = (ms: number) => {
+    if (ms < 1000) {
+      return `${Math.round(ms)}ms`;
+    }
+    const seconds = ms / 1000;
+    if (seconds < 60) {
+      return seconds >= 10 ? `${Math.round(seconds)}s` : `${seconds.toFixed(1)}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.round(seconds % 60);
+    if (minutes < 60) {
+      if (remainingSeconds === 0) return `${minutes}m`;
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) return `${hours}h`;
+    return `${hours}h ${remainingMinutes}m`;
+  };
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -171,6 +226,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         writeLine('Worker not available');
         return;
       }
+      const startedAt =
+        typeof performance !== 'undefined' && typeof performance.now === 'function'
+          ? performance.now()
+          : Date.now();
       await new Promise<void>((resolve) => {
         worker.onmessage = ({ data }: MessageEvent<any>) => {
           if (data.type === 'data') {
@@ -187,6 +246,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           files: filesRef.current,
         });
       });
+      const endedAt =
+        typeof performance !== 'undefined' && typeof performance.now === 'function'
+          ? performance.now()
+          : Date.now();
+      const durationMs = endedAt - startedAt;
+      if (durationMs >= LONG_RUNNING_THRESHOLD_MS) {
+        const commandLabel = command.length > 64 ? `${command.slice(0, 61)}...` : command;
+        pushNotificationRef.current?.({
+          appId: 'terminal',
+          title: 'Command completed',
+          body: `${commandLabel} finished in ${formatDuration(durationMs)}.`,
+          timestamp: Date.now(),
+        });
+      }
     },
     [writeLine],
   );
@@ -295,6 +368,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     let disposed = false;
+    let bellDisposable: { dispose?: () => void } | undefined;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
         import('@xterm/xterm'),
@@ -344,6 +418,27 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Type "help" to see available commands.');
       prompt();
       term.onData((d: string) => handleInput(d));
+      bellDisposable = term.onBell?.(() => {
+        if (!terminalBellRef.current) return;
+        setBellFlashActive(true);
+        if (bellFlashTimeoutRef.current) {
+          clearTimeout(bellFlashTimeoutRef.current);
+        }
+        bellFlashTimeoutRef.current = window.setTimeout(() => {
+          setBellFlashActive(false);
+          bellFlashTimeoutRef.current = null;
+        }, BELL_FLASH_DURATION_MS);
+        const now = Date.now();
+        if (now - lastBellNotificationRef.current >= BELL_NOTIFICATION_COOLDOWN_MS) {
+          pushNotificationRef.current?.({
+            appId: 'terminal',
+            title: 'Terminal bell',
+            body: 'A running process requested your attention.',
+            timestamp: now,
+          });
+          lastBellNotificationRef.current = now;
+        }
+      });
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
@@ -376,6 +471,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     })();
     return () => {
       disposed = true;
+      bellDisposable?.dispose?.();
       termRef.current?.dispose();
     };
     }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
@@ -457,10 +553,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <span className="text-green-400">script.sh</span>{' '}
               <span className="text-gray-300">README.md</span>
             </pre>
+            <label className="flex items-center gap-2 text-sm text-white">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={visualBellSetting}
+                onChange={(e) => setVisualBellSetting(e.target.checked)}
+              />
+              Visual bell & notifications
+            </label>
+            <p className="text-xs text-gray-300 max-w-xs">
+              When enabled, the terminal flashes and posts a notification when BEL is triggered.
+            </p>
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
                 onClick={() => {
+                  setVisualBellSetting(terminalBell);
                   setSettingsOpen(false);
                   termRef.current?.focus();
                 }}
@@ -470,6 +579,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <button
                 className="px-2 py-1 bg-blue-600 rounded"
                 onClick={() => {
+                  setTerminalBell(visualBellSetting);
                   setSettingsOpen(false);
                   termRef.current?.focus();
                 }}
@@ -488,7 +598,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button
+            onClick={() => {
+              setVisualBellSetting(terminalBell);
+              setSettingsOpen(true);
+            }}
+            aria-label="Settings"
+          >
             <SettingsIcon />
           </button>
         </div>
@@ -503,6 +619,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               lineHeight: 1.4,
             }}
           />
+          {bellFlashActive && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-10 rounded bg-white/20 backdrop-blur-sm"
+              style={{ boxShadow: '0 0 0 2px rgba(255,255,255,0.3)' }}
+            />
+          )}
           {overflow.top && (
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
           )}
