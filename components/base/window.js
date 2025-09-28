@@ -259,6 +259,20 @@ export class Window extends Component {
         }
     }
 
+    getCurrentTransform = (node) => {
+        if (!node) return 'translate(0px, 0px)';
+        const inlineTransform = node.style.transform;
+        if (inlineTransform && inlineTransform !== 'none') {
+            return inlineTransform;
+        }
+        const computed = window.getComputedStyle ? window.getComputedStyle(node).transform : null;
+        if (computed && computed !== 'none') {
+            return computed;
+        }
+        const rect = node.getBoundingClientRect();
+        return `translate(${rect.left}px, ${rect.top}px)`;
+    }
+
     unsnapWindow = () => {
         if (!this.state.snapped) return;
         var r = document.querySelector("#" + this.id);
@@ -411,29 +425,38 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
-        let posx = -310;
-        if (this.state.maximized) {
-            posx = -510;
-        }
         this.setWinowsPosition();
-        // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
+        const node = document.getElementById(this.id);
+        if (!node) return;
 
-        const node = document.querySelector("#" + this.id);
-        const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
+        const taskbarButton = document.querySelector(`[data-taskbar-app-id="${this.id}"]`);
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const windowRect = node.getBoundingClientRect();
 
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
+        const startTransform = this.getCurrentTransform(node);
+        let endTransform = startTransform;
+        if (taskbarButton) {
+            const buttonRect = taskbarButton.getBoundingClientRect();
+            const targetX = buttonRect.left + buttonRect.width / 2 - windowRect.width / 2;
+            const targetY = buttonRect.top + buttonRect.height / 2 - windowRect.height / 2;
+            endTransform = `translate(${targetX}px, ${targetY}px)`;
+        }
+
+        if (!taskbarButton || prefersReducedMotion) {
+            if (endTransform) {
+                node.style.transform = endTransform;
+            }
+            this._dockAnimation = null;
             this.props.hasMinimised(this.id);
             return;
         }
 
-        const startTransform = node.style.transform;
+        if (this._dockAnimation && typeof this._dockAnimation.cancel === 'function') {
+            this._dockAnimation.cancel();
+        }
         this._dockAnimation = node.animate(
             [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+            { duration: 160, easing: 'ease-in-out', fill: 'forwards' }
         );
         this._dockAnimation.onfinish = () => {
             node.style.transform = endTransform;
@@ -444,18 +467,23 @@ export class Window extends Component {
 
     restoreWindow = () => {
         const node = document.querySelector("#" + this.id);
+        if (!node) return;
         this.setDefaultWindowDimenstion();
         // get previous position
         let posx = node.style.getPropertyValue("--window-transform-x");
         let posy = node.style.getPropertyValue("--window-transform-y");
-        const startTransform = node.style.transform;
-        const endTransform = `translate(${posx},${posy})`;
+        const startTransform = this.getCurrentTransform(node);
+        const fallbackRect = node.getBoundingClientRect();
+        const safeX = posx || `${fallbackRect.left}px`;
+        const safeY = posy || `${fallbackRect.top}px`;
+        const endTransform = `translate(${safeX},${safeY})`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             this.setState({ maximized: false });
             this.checkOverlap();
+            this._dockAnimation = null;
             return;
         }
 
@@ -466,11 +494,24 @@ export class Window extends Component {
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
-            this._dockAnimation.reverse();
+            if (typeof this._dockAnimation.reverse === 'function') {
+                this._dockAnimation.reverse();
+            } else {
+                this._dockAnimation = node.animate(
+                    [{ transform: startTransform }, { transform: endTransform }],
+                    { duration: 160, easing: 'ease-in-out', fill: 'forwards' }
+                );
+                this._dockAnimation.onfinish = () => {
+                    node.style.transform = endTransform;
+                    this.setState({ maximized: false });
+                    this.checkOverlap();
+                    this._dockAnimation.onfinish = null;
+                };
+            }
         } else {
             this._dockAnimation = node.animate(
                 [{ transform: startTransform }, { transform: endTransform }],
-                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+                { duration: 160, easing: 'ease-in-out', fill: 'forwards' }
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
