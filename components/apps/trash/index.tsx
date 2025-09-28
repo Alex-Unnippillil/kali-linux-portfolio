@@ -8,6 +8,12 @@ interface TrashItem {
   icon?: string;
   image?: string;
   closedAt: number;
+  source?: 'window' | 'desktop-icon' | string;
+  workspace?: number;
+  position?: { x: number; y: number };
+  desktopIndex?: number;
+  appIndex?: number;
+  payload?: unknown;
 }
 
 const formatAge = (closedAt: number): string => {
@@ -21,7 +27,7 @@ const formatAge = (closedAt: number): string => {
   return 'Just now';
 };
 
-export default function Trash({ openApp }: { openApp: (id: string) => void }) {
+export default function Trash({ openApp: _openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -43,17 +49,20 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const persist = (next: TrashItem[]) => {
     setItems(next);
     localStorage.setItem('window-trash', JSON.stringify(next));
+    window.dispatchEvent(new Event('trash-change'));
   };
 
   const restore = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
-    openApp(item.id);
+    window.dispatchEvent(
+      new CustomEvent('restore-trash-item', { detail: item }),
+    );
     const next = items.filter((_, i) => i !== selected);
     persist(next);
     setSelected(null);
-  }, [items, selected, openApp]);
+  }, [items, selected]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
@@ -67,7 +76,9 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const restoreAll = () => {
     if (items.length === 0) return;
     if (!window.confirm('Restore all windows?')) return;
-    items.forEach((item) => openApp(item.id));
+    items.forEach((item) =>
+      window.dispatchEvent(new CustomEvent('restore-trash-item', { detail: item })),
+    );
     persist([]);
     setSelected(null);
   };

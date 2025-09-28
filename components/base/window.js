@@ -396,13 +396,28 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
-    handleStop = () => {
+    handleStop = (e, data) => {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
+        }
+        if (this.props.onDropToTrash && data && data.node) {
+            const nodeRect = data.node.getBoundingClientRect();
+            const trash = document.getElementById('app-trash');
+            if (trash) {
+                const trashRect = trash.getBoundingClientRect();
+                const intersects =
+                    nodeRect.left < trashRect.right &&
+                    nodeRect.right > trashRect.left &&
+                    nodeRect.top < trashRect.bottom &&
+                    nodeRect.bottom > trashRect.top;
+                if (intersects) {
+                    this.props.onDropToTrash(this.id);
+                }
+            }
         }
     }
 

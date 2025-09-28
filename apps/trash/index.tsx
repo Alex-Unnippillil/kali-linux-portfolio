@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import useTrashState from './state';
+import useTrashState, { TrashItem } from './state';
 import HistoryList from './components/HistoryList';
 
 const DEFAULT_ICON = '/themes/Yaru/system/folder.png';
 const EMPTY_ICON = '/themes/Yaru/status/user-trash-symbolic.svg';
 const FULL_ICON = '/themes/Yaru/status/user-trash-full-symbolic.svg';
 
-export default function Trash({ openApp }: { openApp: (id: string) => void }) {
+export default function Trash({ openApp: _openApp }: { openApp: (id: string) => void }) {
   const {
     items,
     setItems,
@@ -42,16 +42,19 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   }, []);
 
   const notifyChange = () => window.dispatchEvent(new Event('trash-change'));
+  const dispatchRestore = (item: TrashItem) => {
+    window.dispatchEvent(new CustomEvent('restore-trash-item', { detail: item }));
+  };
 
   const restore = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
-    openApp(item.id);
+    dispatchRestore(item);
     setItems(items => items.filter((_, i) => i !== selected));
     setSelected(null);
     notifyChange();
-  }, [items, selected, openApp, setItems]);
+  }, [items, selected, setItems, dispatchRestore]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
@@ -81,7 +84,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const restoreAll = () => {
     if (items.length === 0) return;
     if (!window.confirm('Restore all windows?')) return;
-    items.forEach(item => openApp(item.id));
+    items.forEach(item => dispatchRestore(item));
     setItems([]);
     setSelected(null);
     notifyChange();
