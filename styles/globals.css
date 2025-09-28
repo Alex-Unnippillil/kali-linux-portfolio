@@ -29,6 +29,10 @@ body {
   color: var(--kali-text);
 }
 
+.bg-kali-menu {
+  background: linear-gradient(135deg, rgba(26, 31, 38, 0.96) 0%, rgba(26, 31, 38, 0.88) 58%, rgba(23, 147, 209, 0.25) 100%);
+}
+
 /* Dark theme */
 html[data-theme='dark'] {
   --color-bg: #000000;
