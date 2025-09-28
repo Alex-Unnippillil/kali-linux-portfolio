@@ -15,14 +15,14 @@ function BootingScreen(props) {
                 height={400}
                 className="md:w-1/4 w-1/2"
                 src="/themes/Yaru/status/cof_orange_hex.svg"
-                alt="Ubuntu Logo"
+                alt="Kali Logo"
                 sizes="(max-width: 768px) 50vw, 25vw"
                 priority
             />
             <div className="w-10 h-10 flex justify-center items-center rounded-full outline-none cursor-pointer" onClick={props.turnOn} >
                 {(props.isShutDown
                     ? <div className="bg-white rounded-full flex justify-center items-center w-10 h-10 hover:bg-gray-300"><Image width={32} height={32} className="w-8" src="/themes/Yaru/status/power-button.svg" alt="Power Button" sizes="32px" priority/></div>
-                    : <Image width={40} height={40} className={" w-10 " + (props.visible ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>)}
+                    : <Image width={40} height={40} className={" w-10 " + (props.visible ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Kali Process Symbol" sizes="40px" priority/>)}
             </div>
             <Image
                 width={200}

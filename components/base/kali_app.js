@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
 
-export class UbuntuApp extends Component {
+export class KaliApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
@@ -65,4 +65,4 @@ export class UbuntuApp extends Component {
     }
 }
 
-export default UbuntuApp
+export default KaliApp

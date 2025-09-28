@@ -39,7 +39,7 @@
       { "src": "https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white", "alt": "Unity", "description": "Game Engine" },
       { "src": "https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white", "alt": "Xcode", "description": "Apple IDE" },
       { "src": "https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white", "alt": "Android Studio", "description": "Android IDE" },
-      { "src": "https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white", "alt": "Ubuntu", "description": "Ubuntu Linux" },
+      { "src": "https://img.shields.io/badge/Kali%20Linux%20Themed-557C94?logo=kalilinux&logoColor=fff", "alt": "Kali Linux Themed", "description": "Kali Linux (Themed)" },
       { "src": "https://img.shields.io/badge/Debian-D70A53?logo=debian&logoColor=white", "alt": "Debian", "description": "Debian Linux" },
       { "src": "https://img.shields.io/badge/Visual%20Studio-5C2D91?logo=visual-studio&logoColor=white", "alt": "Visual Studio", "description": "Microsoft IDE" },
       { "src": "https://img.shields.io/badge/VS%20Code-007ACC?logo=visual-studio-code&logoColor=white", "alt": "VS Code", "description": "Code Editor" },
