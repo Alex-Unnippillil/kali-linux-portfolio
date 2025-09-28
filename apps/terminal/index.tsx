@@ -12,6 +12,98 @@ import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
+type TerminalProfileKey = 'default' | 'low-contrast' | 'solarized';
+
+interface TerminalProfileDefinition {
+  label: string;
+  description: string;
+  theme: {
+    background: string;
+    foreground: string;
+    cursor: string;
+    selectionBackground: string;
+  };
+  tokens: { name: string; value: string }[];
+  swatch: string[];
+}
+
+interface ProfileSettings {
+  opacity: number;
+}
+
+const TERMINAL_STORAGE_KEY = 'terminal.profile.settings';
+
+const TERMINAL_PROFILES: Record<TerminalProfileKey, TerminalProfileDefinition> = {
+  default: {
+    label: 'Default',
+    description: 'Kali-inspired contrast with bright cursor highlights.',
+    theme: {
+      background: '#0f1317',
+      foreground: '#f5f5f5',
+      cursor: '#1793d1',
+      selectionBackground: '#1793d166',
+    },
+    tokens: [
+      { name: '--terminal-bg-color', value: '#0f1317' },
+      { name: '--terminal-foreground', value: '#f5f5f5' },
+      { name: '--terminal-cursor', value: '#1793d1' },
+    ],
+    swatch: ['#0f1317', '#f5f5f5', '#1793d1'],
+  },
+  'low-contrast': {
+    label: 'Low Contrast',
+    description: 'Softer palette for reduced visual fatigue.',
+    theme: {
+      background: '#1a1f26',
+      foreground: '#c1cad6',
+      cursor: '#7aa2c8',
+      selectionBackground: '#7aa2c833',
+    },
+    tokens: [
+      { name: '--terminal-bg-color', value: '#1a1f26' },
+      { name: '--terminal-foreground', value: '#c1cad6' },
+      { name: '--terminal-cursor', value: '#7aa2c8' },
+    ],
+    swatch: ['#1a1f26', '#c1cad6', '#7aa2c8'],
+  },
+  solarized: {
+    label: 'Solarized',
+    description: 'Classic Solarized Dark with muted tones.',
+    theme: {
+      background: '#002b36',
+      foreground: '#839496',
+      cursor: '#93a1a1',
+      selectionBackground: '#586e7544',
+    },
+    tokens: [
+      { name: '--terminal-bg-color', value: '#002b36' },
+      { name: '--terminal-foreground', value: '#839496' },
+      { name: '--terminal-cursor', value: '#93a1a1' },
+    ],
+    swatch: ['#002b36', '#839496', '#93a1a1'],
+  },
+};
+
+const isTerminalProfileKey = (value: string): value is TerminalProfileKey =>
+  Object.prototype.hasOwnProperty.call(TERMINAL_PROFILES, value);
+
+const DEFAULT_PROFILE_SETTINGS: Record<TerminalProfileKey, ProfileSettings> = {
+  default: { opacity: 0.85 },
+  'low-contrast': { opacity: 0.85 },
+  solarized: { opacity: 0.85 },
+};
+
+const clampOpacity = (value: number) => Math.min(1, Math.max(0.3, value));
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const normalized = hex.replace('#', '');
+  const bigint = parseInt(normalized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
@@ -101,28 +193,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<TerminalProfileKey>('default');
+  const [profileSettings, setProfileSettings] = useState<Record<TerminalProfileKey, ProfileSettings>>(
+    () => ({ ...DEFAULT_PROFILE_SETTINGS }),
+  );
+  const [settingsHydrated, setSettingsHydrated] = useState(false);
+  const [termReady, setTermReady] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -130,6 +210,86 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
   }, []);
+
+  const applyProfile = useCallback(
+    (
+      profileKey: TerminalProfileKey,
+      overrideSettings?: Record<TerminalProfileKey, ProfileSettings>,
+    ) => {
+      const profile = TERMINAL_PROFILES[profileKey];
+      if (!profile) return;
+      const settings = overrideSettings ?? profileSettings;
+      const fallback = DEFAULT_PROFILE_SETTINGS[profileKey];
+      const opacity = clampOpacity(settings[profileKey]?.opacity ?? fallback.opacity);
+
+      if (containerRef.current) {
+        const rgba = hexToRgba(profile.theme.background, opacity);
+        containerRef.current.style.setProperty('--terminal-bg', rgba);
+        containerRef.current.style.setProperty('--terminal-foreground', profile.theme.foreground);
+        containerRef.current.style.setProperty('--terminal-cursor', profile.theme.cursor);
+      }
+
+      if (termReady && termRef.current) {
+        termRef.current.setOption('theme', {
+          ...termRef.current.options?.theme,
+          background: profile.theme.background,
+          foreground: profile.theme.foreground,
+          cursor: profile.theme.cursor,
+          selectionBackground: profile.theme.selectionBackground,
+        });
+        termRef.current.refresh?.(0, termRef.current.rows - 1);
+      }
+    },
+    [profileSettings, termReady],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(TERMINAL_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          selectedProfile?: string;
+          profileSettings?: Record<string, { opacity?: number }>;
+        };
+        if (parsed.profileSettings) {
+          const sanitized: Partial<Record<TerminalProfileKey, ProfileSettings>> = {};
+          for (const [key, value] of Object.entries(parsed.profileSettings)) {
+            if (isTerminalProfileKey(key) && value) {
+              const opacity = typeof value.opacity === 'number' ? clampOpacity(value.opacity) : undefined;
+              if (typeof opacity === 'number') {
+                sanitized[key] = { opacity };
+              }
+            }
+          }
+          if (Object.keys(sanitized).length > 0) {
+            setProfileSettings((prev) => ({ ...prev, ...sanitized }));
+          }
+        }
+        if (parsed.selectedProfile && isTerminalProfileKey(parsed.selectedProfile)) {
+          setSelectedProfile(parsed.selectedProfile);
+        }
+      }
+    } catch {}
+    setSettingsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!settingsHydrated || typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        TERMINAL_STORAGE_KEY,
+        JSON.stringify({
+          selectedProfile,
+          profileSettings,
+        }),
+      );
+    } catch {}
+  }, [profileSettings, selectedProfile, settingsHydrated]);
+
+  useEffect(() => {
+    applyProfile(selectedProfile);
+  }, [applyProfile, selectedProfile]);
 
   const writeLine = useCallback(
     (text: string) => {
@@ -373,6 +533,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       });
       updateOverflow();
       term.onScroll?.(updateOverflow);
+      setTermReady(true);
     })();
     return () => {
       disposed = true;
@@ -410,6 +571,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
+  const activeOpacity = clampOpacity(
+    profileSettings[selectedProfile]?.opacity ??
+      DEFAULT_PROFILE_SETTINGS[selectedProfile].opacity,
+  );
+
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
@@ -446,35 +612,101 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
-              ))}
+          <div className="w-[min(90vw,32rem)] rounded-lg bg-gray-900 p-5 shadow-lg space-y-5">
+            <header>
+              <h2 className="text-lg font-semibold text-white">Terminal profiles</h2>
+              <p className="mt-1 text-sm text-gray-400">
+                Switch between saved themes and tune the glass background opacity.
+              </p>
+            </header>
+            <div className="space-y-3">
+              {(Object.entries(TERMINAL_PROFILES) as [TerminalProfileKey, TerminalProfileDefinition][]).map(
+                ([key, profile]) => {
+                  const isActive = key === selectedProfile;
+                  const profileOpacity = clampOpacity(
+                    profileSettings[key]?.opacity ?? DEFAULT_PROFILE_SETTINGS[key].opacity,
+                  );
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedProfile(key)}
+                      className={`w-full rounded-md border px-3 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-900 ${
+                        isActive
+                          ? 'border-blue-500/80 bg-blue-500/10'
+                          : 'border-white/10 bg-black/30 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">{profile.label}</p>
+                          <p className="mt-1 text-xs text-gray-400">{profile.description}</p>
+                        </div>
+                        <span
+                          className={`text-xs font-medium uppercase tracking-wide ${
+                            isActive ? 'text-blue-300' : 'text-gray-500'
+                          }`}
+                        >
+                          {isActive ? 'Active' : `${Math.round(profileOpacity * 100)}%`}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2">
+                        {profile.swatch.map((color) => (
+                          <span
+                            key={color}
+                            className="h-4 w-8 rounded-sm border border-white/10"
+                            style={{ background: color }}
+                          />
+                        ))}
+                      </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
+                        {profile.tokens.map((token) => (
+                          <React.Fragment key={token.name}>
+                            <dt className="font-mono text-gray-500">{token.name}</dt>
+                            <dd className="font-mono text-right text-gray-200">{token.value}</dd>
+                          </React.Fragment>
+                        ))}
+                      </dl>
+                    </button>
+                  );
+                },
+              )}
             </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
-            <div className="flex justify-end gap-2">
+            <div>
+              <label
+                htmlFor="terminal-opacity"
+                className="flex items-center justify-between text-sm font-medium text-gray-200"
+              >
+                <span>Background opacity</span>
+                <span className="text-xs text-gray-400">{Math.round(activeOpacity * 100)}%</span>
+              </label>
+              <input
+                id="terminal-opacity"
+                type="range"
+                min="0.3"
+                max="1"
+                step="0.05"
+                value={activeOpacity}
+                onChange={(event) => {
+                  const value = clampOpacity(Number(event.target.value));
+                  setProfileSettings((prev) => ({
+                    ...prev,
+                    [selectedProfile]: { opacity: value },
+                  }));
+                }}
+                className="mt-2 w-full accent-blue-400"
+              />
+            </div>
+            <div className="flex justify-end">
               <button
-                className="px-2 py-1 bg-gray-700 rounded"
+                type="button"
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow"
                 onClick={() => {
                   setSettingsOpen(false);
                   termRef.current?.focus();
                 }}
               >
-                Cancel
-              </button>
-              <button
-                className="px-2 py-1 bg-blue-600 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Apply
+                Done
               </button>
             </div>
           </div>

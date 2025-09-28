@@ -11,7 +11,8 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
       data-testid="xterm-container"
       className={`text-white ${className}`}
       style={{
-        background: 'var(--kali-bg)',
+        background: 'var(--terminal-bg, var(--kali-bg))',
+        color: 'var(--terminal-foreground, #f5f5f5)',
         backdropFilter: 'blur(4px)',
         border: '1px solid var(--color-border)',
         fontFamily: 'monospace',
