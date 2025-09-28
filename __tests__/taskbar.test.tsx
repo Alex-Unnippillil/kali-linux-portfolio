@@ -24,6 +24,7 @@ describe('Taskbar', () => {
     fireEvent.click(button);
     expect(minimize).toHaveBeenCalledWith('app1');
     expect(button).toHaveAttribute('data-context', 'taskbar');
+    expect(button).toHaveAttribute('data-taskbar-app-id', 'app1');
     expect(button).toHaveAttribute('aria-pressed', 'true');
     expect(button).toHaveAttribute('data-active', 'true');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeTruthy();
