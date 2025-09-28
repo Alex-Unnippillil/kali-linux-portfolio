@@ -154,7 +154,7 @@ const NotificationBell: React.FC = () => {
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-kali-text transition-colors duration-[var(--motion-fast)] focus:border-kali-focus focus:outline-none focus:ring-0 hover:bg-[color:color-mix(in_srgb,var(--color-text)_12%,transparent)]"
       >
         <svg
           aria-hidden="true"
@@ -167,7 +167,7 @@ const NotificationBell: React.FC = () => {
           <path d="M7 12a3 3 0 006 0H7z" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full px-1 text-center text-[0.65rem] font-semibold leading-5 bg-kali-primary text-[color:var(--color-bg)]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -180,37 +180,42 @@ const NotificationBell: React.FC = () => {
           aria-modal="false"
           aria-labelledby={headingId}
           tabIndex={-1}
-          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
+          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md shadow-xl backdrop-blur surface-popover"
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-            <h2 id={headingId} className="text-sm font-semibold text-white">
+          <div className="flex items-center justify-between border-b px-4 py-2"
+            style={{ borderColor: 'color-mix(in srgb, var(--color-text) 24%, transparent)' }}
+          >
+            <h2 id={headingId} className="text-sm font-semibold text-kali-text">
               Notifications
             </h2>
             <button
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className="text-xs font-medium text-kali-primary transition-colors duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:text-kali-text/50"
             >
               Dismiss all
             </button>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
+              <p className="px-4 py-6 text-center text-sm text-kali-text/80">
                 You&apos;re all caught up.
               </p>
             ) : (
-              <ul role="list" className="divide-y divide-white/10">
+              <ul
+                role="list"
+                className="divide-y surface-divider"
+              >
                 {formattedNotifications.map(notification => (
-                  <li key={notification.id} className="px-4 py-3 text-sm text-white">
+                  <li key={notification.id} className="px-4 py-3 text-sm text-kali-text">
                     <p className="font-medium">{notification.title}</p>
                     {notification.body && (
-                      <p className="mt-1 text-xs text-ubt-grey text-opacity-80">
+                      <p className="mt-1 text-xs text-kali-text/80">
                         {notification.body}
                       </p>
                     )}
-                    <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+                    <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-kali-text/70">
                       <span>{notification.appId}</span>
                       <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
                     </div>

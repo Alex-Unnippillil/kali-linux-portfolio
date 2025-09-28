@@ -14,23 +14,38 @@ function usePrefersReducedMotion() {
     }
 
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const root = document.documentElement;
 
     const updatePreference = () => {
-      setPrefersReducedMotion(mediaQuery.matches);
+      const classPreference = root.classList.contains('reduced-motion');
+      setPrefersReducedMotion(classPreference || mediaQuery.matches);
     };
 
     updatePreference();
 
     if (typeof mediaQuery.addEventListener === 'function') {
       mediaQuery.addEventListener('change', updatePreference);
-      return () => {
-        mediaQuery.removeEventListener('change', updatePreference);
-      };
+    } else {
+      mediaQuery.addListener(updatePreference);
     }
 
-    mediaQuery.addListener(updatePreference);
+    let observer: MutationObserver | undefined;
+    if (typeof MutationObserver !== 'undefined') {
+      observer = new MutationObserver(mutations => {
+        if (mutations.some(mutation => mutation.attributeName === 'class')) {
+          updatePreference();
+        }
+      });
+      observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    }
+
     return () => {
-      mediaQuery.removeListener(updatePreference);
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', updatePreference);
+      } else {
+        mediaQuery.removeListener(updatePreference);
+      }
+      observer?.disconnect();
     };
   }, []);
 
@@ -128,7 +143,7 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   return (
     <div
       className={
-        'hidden items-center pr-2 text-ubt-grey/70 sm:flex md:pr-3 lg:pr-4' + (className ? ` ${className}` : '')
+        'hidden items-center pr-2 text-kali-text/70 sm:flex md:pr-3 lg:pr-4' + (className ? ` ${className}` : '')
       }
       aria-hidden="true"
       data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}
@@ -143,8 +158,8 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
       >
         <defs>
           <linearGradient id="kaliSpark" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#61a3ff" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#1f4aa8" stopOpacity="0.25" />
+            <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0.25" />
           </linearGradient>
         </defs>
         <path

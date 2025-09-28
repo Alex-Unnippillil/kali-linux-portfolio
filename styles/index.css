@@ -11,6 +11,25 @@ body{
     color: var(--color-text);
 }
 
+.surface-popover {
+    background-color: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 32%, transparent);
+    color: var(--color-text);
+}
+
+.surface-divider > :not([hidden]) ~ :not([hidden]) {
+    border-color: color-mix(in srgb, var(--color-text) 22%, transparent);
+}
+
+.high-contrast .surface-popover {
+    background-color: var(--color-bg);
+    border-color: var(--color-text);
+}
+
+.high-contrast .surface-divider > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--color-text);
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
