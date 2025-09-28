@@ -315,17 +315,7 @@ export class Window extends Component {
         }, this.resizeBoundries);
     }
 
-    checkOverlap = () => {
-        const node = this.getWindowNode();
-        if (!node) return;
-        const rect = node.getBoundingClientRect();
-        if (rect.x.toFixed(1) < 50) { // if this window overlapps with SideBar
-            this.props.hideSideBar(this.id, true);
-        }
-        else {
-            this.props.hideSideBar(this.id, false);
-        }
-    }
+    checkOverlap = () => {}
 
     setInertBackground = () => {
         const root = this.getWindowNode();
@@ -510,7 +500,6 @@ export class Window extends Component {
                 node.style.transform = `translate(-1pt,-2pt)`;
             }
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
-            this.props.hideSideBar(this.id, true);
         }
     }
 
@@ -518,7 +507,6 @@ export class Window extends Component {
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
-            this.props.hideSideBar(this.id, false);
             setTimeout(() => {
                 this.props.closed(this.id)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)

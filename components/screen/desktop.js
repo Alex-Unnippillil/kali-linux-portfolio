@@ -7,7 +7,6 @@ const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
     { ssr: false }
 );
-import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -34,10 +33,8 @@ export class Desktop extends Component {
         this.workspaceKeys = new Set([
             'focused_windows',
             'closed_windows',
-            'overlapped_windows',
             'minimized_windows',
             'window_positions',
-            'hideSideBar',
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -45,10 +42,8 @@ export class Desktop extends Component {
             focused_windows: {},
             closed_windows: {},
             allAppsView: false,
-            overlapped_windows: {},
             disabled_apps: {},
             favourite_apps: {},
-            hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
@@ -75,19 +70,15 @@ export class Desktop extends Component {
     createEmptyWorkspaceState = () => ({
         focused_windows: {},
         closed_windows: {},
-        overlapped_windows: {},
         minimized_windows: {},
         window_positions: {},
-        hideSideBar: false,
     });
 
     cloneWorkspaceState = (state) => ({
         focused_windows: { ...state.focused_windows },
         closed_windows: { ...state.closed_windows },
-        overlapped_windows: { ...state.overlapped_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
-        hideSideBar: state.hideSideBar,
     });
 
     commitWorkspacePartial = (partial, index) => {
@@ -142,10 +133,8 @@ export class Desktop extends Component {
             return {
                 focused_windows: this.mergeWorkspaceMaps(existing.focused_windows, baseState.focused_windows, validKeys),
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
-                overlapped_windows: this.mergeWorkspaceMaps(existing.overlapped_windows, baseState.overlapped_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
-                hideSideBar: existing.hideSideBar ?? baseState.hideSideBar ?? false,
             };
         });
     };
@@ -170,10 +159,8 @@ export class Desktop extends Component {
             activeWorkspace: workspaceId,
             focused_windows: { ...snapshot.focused_windows },
             closed_windows: { ...snapshot.closed_windows },
-            overlapped_windows: { ...snapshot.overlapped_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
-            hideSideBar: snapshot.hideSideBar ?? false,
             showWindowSwitcher: false,
             switcherWindows: [],
         }, () => {
@@ -490,7 +477,7 @@ export class Desktop extends Component {
             pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
-        let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
+        let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -509,10 +496,6 @@ export class Desktop extends Component {
                 ...favourite_apps,
                 [app.id]: app.favourite,
             };
-            overlapped_windows = {
-                ...overlapped_windows,
-                [app.id]: false,
-            };
             minimized_windows = {
                 ...minimized_windows,
                 [app.id]: false,
@@ -522,10 +505,8 @@ export class Desktop extends Component {
         const workspaceState = {
             focused_windows,
             closed_windows,
-            overlapped_windows,
             minimized_windows,
             window_positions: this.state.window_positions,
-            hideSideBar: this.state.hideSideBar,
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -541,7 +522,7 @@ export class Desktop extends Component {
     }
 
     updateAppsData = () => {
-        let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {}, overlapped_windows = {};
+        let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -560,10 +541,6 @@ export class Desktop extends Component {
                 ...closed_windows,
                 [app.id]: ((this.state.closed_windows[app.id] !== undefined || this.state.closed_windows[app.id] !== null) ? this.state.closed_windows[app.id] : true)
             };
-            overlapped_windows = {
-                ...overlapped_windows,
-                [app.id]: ((this.state.overlapped_windows[app.id] !== undefined || this.state.overlapped_windows[app.id] !== null) ? this.state.overlapped_windows[app.id] : false)
-            };
             favourite_apps = {
                 ...favourite_apps,
                 [app.id]: app.favourite
@@ -573,10 +550,8 @@ export class Desktop extends Component {
         const workspaceState = {
             focused_windows,
             closed_windows,
-            overlapped_windows,
             minimized_windows,
             window_positions: this.state.window_positions,
-            hideSideBar: this.state.hideSideBar,
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
@@ -626,7 +601,6 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     focus: this.focus,
                     isFocused: this.state.focused_windows[app.id],
-                    hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
@@ -669,35 +643,6 @@ export class Desktop extends Component {
         this.props.setSession({ ...this.props.session, windows, dock });
     }
 
-    hideSideBar = (objId, hide) => {
-        if (hide === this.state.hideSideBar) return;
-
-        if (objId === null) {
-            if (hide === false) {
-                this.setState({ hideSideBar: false });
-            }
-            else {
-                for (const key in this.state.overlapped_windows) {
-                    if (this.state.overlapped_windows[key]) {
-                        this.setState({ hideSideBar: true });
-                        return;
-                    }  // if any window is overlapped then hide the SideBar
-                }
-            }
-            return;
-        }
-
-        if (hide === false) {
-            for (const key in this.state.overlapped_windows) {
-                if (this.state.overlapped_windows[key] && key !== objId) return; // if any window is overlapped then don't show the SideBar
-            }
-        }
-
-        let overlapped_windows = this.state.overlapped_windows;
-        overlapped_windows[objId] = hide;
-        this.setWorkspaceState({ hideSideBar: hide, overlapped_windows });
-    }
-
     hasMinimised = (objId) => {
         let minimized_windows = this.state.minimized_windows;
         var focused_windows = this.state.focused_windows;
@@ -706,8 +651,6 @@ export class Desktop extends Component {
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
         this.setWorkspaceState({ minimized_windows, focused_windows });
-
-        this.hideSideBar(null, false);
 
         this.giveFocusToLastApp();
     }
@@ -889,8 +832,6 @@ export class Desktop extends Component {
         }
 
         this.giveFocusToLastApp();
-
-        this.hideSideBar(null, false);
 
         // close window
         let closed_windows = this.state.closed_windows;
@@ -1082,18 +1023,6 @@ export class Desktop extends Component {
 
                 {/* Background Image */}
                 <BackgroundImage />
-
-                {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
-                    hide={this.state.hideSideBar}
-                    hideSideBar={this.hideSideBar}
-                    favourite_apps={this.state.favourite_apps}
-                    showAllApps={this.showAllApps}
-                    allAppsView={this.state.allAppsView}
-                    closed_windows={this.state.closed_windows}
-                    focused_windows={this.state.focused_windows}
-                    isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
 
                 {/* Taskbar */}
                 <Taskbar

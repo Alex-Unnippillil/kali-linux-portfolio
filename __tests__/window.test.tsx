@@ -22,7 +22,6 @@ describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
-    const hideSideBar = jest.fn();
 
     render(
       <Window
@@ -32,15 +31,12 @@ describe('Window lifecycle', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={closed}
-        hideSideBar={hideSideBar}
         openApp={() => {}}
       />
     );
 
     const closeButton = screen.getByRole('button', { name: /window close/i });
     fireEvent.click(closeButton);
-
-    expect(hideSideBar).toHaveBeenCalledWith('test-window', false);
 
     act(() => {
       jest.advanceTimersByTime(300);
@@ -63,7 +59,6 @@ describe('Window snapping preview', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -102,7 +97,6 @@ describe('Window snapping preview', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -140,7 +134,6 @@ describe('Window snapping preview', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -181,7 +174,6 @@ describe('Window snapping finalize and release', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -225,7 +217,6 @@ describe('Window snapping finalize and release', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -269,7 +260,6 @@ describe('Window snapping finalize and release', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -312,7 +302,6 @@ describe('Window snapping finalize and release', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -376,7 +365,6 @@ describe('Window snapping finalize and release', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -426,7 +414,6 @@ describe('Window keyboard dragging', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
       />
     );
@@ -456,7 +443,6 @@ describe('Edge resistance', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -502,7 +488,6 @@ describe('Window overlay inert behaviour', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
       />,
@@ -543,7 +528,6 @@ describe('Window overlay inert behaviour', () => {
         focus={() => {}}
         hasMinimised={() => {}}
         closed={() => {}}
-        hideSideBar={() => {}}
         openApp={() => {}}
         ref={ref}
         overlayRoot="custom-root"
