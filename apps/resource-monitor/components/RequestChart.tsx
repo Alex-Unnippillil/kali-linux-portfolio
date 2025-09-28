@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
+import { kaliTheme, kaliThemeVars } from '../../../styles/themes/kali';
 
 interface RequestChartProps {
   data: number[];
@@ -21,8 +23,11 @@ export default function RequestChart({ data, label }: RequestChartProps) {
 
     ctx.clearRect(0, 0, width, height);
 
+    const rootStyles = getComputedStyle(document.documentElement);
+    const panelColor = rootStyles.getPropertyValue(kaliThemeVars.panel).trim();
+
     // draw panel background
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--kali-panel');
+    ctx.fillStyle = panelColor || '#0f1317';
     ctx.fillRect(0, 0, width, height);
 
     // gridlines
@@ -56,8 +61,14 @@ export default function RequestChart({ data, label }: RequestChartProps) {
     ctx.fillText(label, 4, 12);
   }, [data, label]);
 
+  const surfaceVars: CSSProperties & { '--panel-bg'?: string } = {
+    '--panel-bg': kaliTheme.panel,
+    background: 'var(--panel-bg)',
+    boxShadow: kaliTheme.shadow,
+  };
+
   return (
-    <div className="w-full max-w-[300px] h-[150px]" style={{ background: 'var(--kali-panel)' }}>
+    <div className="w-full max-w-[300px] h-[150px]" style={surfaceVars}>
       <canvas ref={canvasRef} width={300} height={150} className="w-full h-full" />
     </div>
   );

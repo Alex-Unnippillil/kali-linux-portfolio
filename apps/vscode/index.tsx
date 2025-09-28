@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
@@ -10,7 +11,11 @@ export default function VsCode() {
   return (
     <div
       className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
-      style={{ backgroundColor: kaliTheme.background, color: kaliTheme.text }}
+      style={{
+        backgroundColor: kaliTheme.background,
+        color: kaliTheme.text,
+        boxShadow: kaliTheme.shadow,
+      }}
     >
       <aside
         className="flex flex-col items-center gap-2 p-1"
@@ -38,13 +43,25 @@ export default function VsCode() {
           className="flex items-center justify-end gap-2 px-2 py-1 border-b border-black/20"
           style={{ backgroundColor: kaliTheme.background }}
         >
-          <button aria-label="Minimize">
+          <button
+            aria-label="Minimize"
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-color)]"
+            style={{ '--focus-ring-color': kaliTheme.focus } as CSSProperties}
+          >
             <MinimizeIcon />
           </button>
-          <button aria-label="Maximize">
+          <button
+            aria-label="Maximize"
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-color)]"
+            style={{ '--focus-ring-color': kaliTheme.focus } as CSSProperties}
+          >
             <MaximizeIcon />
           </button>
-          <button aria-label="Close">
+          <button
+            aria-label="Close"
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-color)]"
+            style={{ '--focus-ring-color': kaliTheme.focus } as CSSProperties}
+          >
             <CloseIcon />
           </button>
         </div>
@@ -55,7 +72,14 @@ export default function VsCode() {
             className="w-full h-full"
             onLoad={() => {}}
           />
-          <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
+          <div
+            className="absolute top-4 left-4 flex items-center gap-4 rounded"
+            style={{
+              backgroundColor: kaliTheme.hover,
+              boxShadow: kaliTheme.shadow,
+              padding: '1rem',
+            }}
+          >
             <Image
               src="/themes/Yaru/system/view-app-grid-symbolic.svg"
               alt="Open Folder"
