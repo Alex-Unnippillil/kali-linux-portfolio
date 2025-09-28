@@ -173,51 +173,59 @@ const NotificationBell: React.FC = () => {
         )}
       </button>
       {isOpen && (
-        <div
-          ref={panelRef}
-          id={panelId}
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby={headingId}
-          tabIndex={-1}
-          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
-        >
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-            <h2 id={headingId} className="text-sm font-semibold text-white">
-              Notifications
-            </h2>
-            <button
-              type="button"
-              onClick={handleDismissAll}
-              disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
-            >
-              Dismiss all
-            </button>
-          </div>
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
-                You&apos;re all caught up.
-              </p>
-            ) : (
-              <ul role="list" className="divide-y divide-white/10">
-                {formattedNotifications.map(notification => (
-                  <li key={notification.id} className="px-4 py-3 text-sm text-white">
-                    <p className="font-medium">{notification.title}</p>
-                    {notification.body && (
-                      <p className="mt-1 text-xs text-ubt-grey text-opacity-80">
-                        {notification.body}
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
-                      <span>{notification.appId}</span>
-                      <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+        <div className="absolute right-0 z-50 mt-2 w-72">
+          <div
+            ref={panelRef}
+            id={panelId}
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby={headingId}
+            tabIndex={-1}
+            className="glass relative max-h-96 overflow-hidden rounded-md text-white/90"
+          >
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,var(--kali-accent)_0%,transparent_60%)] opacity-70"
+            />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+                <h2 id={headingId} className="text-sm font-semibold text-white">
+                  Notifications
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleDismissAll}
+                  disabled={notifications.length === 0}
+                  className="text-xs font-medium text-[color:var(--kali-accent)] transition disabled:cursor-not-allowed disabled:text-white/40"
+                >
+                  Dismiss all
+                </button>
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-sm text-white/70">
+                    You&apos;re all caught up.
+                  </p>
+                ) : (
+                  <ul role="list" className="divide-y divide-white/10">
+                    {formattedNotifications.map(notification => (
+                      <li key={notification.id} className="px-4 py-3 text-sm text-white/90">
+                        <p className="font-medium text-white">{notification.title}</p>
+                        {notification.body && (
+                          <p className="mt-1 text-xs text-white/70">
+                            {notification.body}
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-white/60">
+                          <span>{notification.appId}</span>
+                          <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

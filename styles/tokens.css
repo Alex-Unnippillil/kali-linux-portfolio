@@ -93,6 +93,7 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --kali-accent: #ffff00;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -136,5 +137,6 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --kali-accent: #ffff00;
   }
 }
