@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  snapEnabled: true,
+  snapGridSize: 8,
 };
 
 export async function getAccent() {
@@ -135,6 +137,44 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getSnapEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.snapEnabled;
+  const stored = window.localStorage.getItem('snap-enabled');
+  if (stored === null) return DEFAULT_SETTINGS.snapEnabled;
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return stored === 'true';
+  }
+}
+
+export async function setSnapEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('snap-enabled', JSON.stringify(Boolean(value)));
+}
+
+export async function getSnapGridSize() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.snapGridSize;
+  const stored = window.localStorage.getItem('snap-grid-size');
+  if (stored === null) return DEFAULT_SETTINGS.snapGridSize;
+  try {
+    const parsed = JSON.parse(stored);
+    return Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.snapGridSize;
+  } catch {
+    const numeric = Number(stored);
+    return Number.isFinite(numeric) ? numeric : DEFAULT_SETTINGS.snapGridSize;
+  }
+}
+
+export async function setSnapGridSize(value) {
+  if (typeof window === 'undefined') return;
+  const numeric = Number(value);
+  const clamped = Number.isFinite(numeric)
+    ? Math.min(64, Math.max(4, Math.round(numeric)))
+    : DEFAULT_SETTINGS.snapGridSize;
+  window.localStorage.setItem('snap-grid-size', JSON.stringify(clamped));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +190,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('snap-enabled');
+  window.localStorage.removeItem('snap-grid-size');
 }
 
 export async function exportSettings() {
@@ -165,6 +207,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    snapEnabled,
+    snapGridSize,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +221,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getSnapEnabled(),
+    getSnapGridSize(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +238,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    snapEnabled,
+    snapGridSize,
   });
 }
 
@@ -217,6 +265,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    snapEnabled,
+    snapGridSize,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +280,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (snapEnabled !== undefined) await setSnapEnabled(snapEnabled);
+  if (snapGridSize !== undefined) await setSnapGridSize(snapGridSize);
 }
 
 export const defaults = DEFAULT_SETTINGS;

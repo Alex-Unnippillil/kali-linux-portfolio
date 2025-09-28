@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { useSnapSetting } from '../../hooks/usePersistentState';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const [snapEnabled, setSnapEnabled, snapGridSize, setSnapGridSize] = useSnapSetting();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -159,6 +161,32 @@ export function Settings() {
                     Large Hit Areas
                 </label>
             </div>
+            <div className="flex flex-col items-center my-4 space-y-2">
+                <label className="text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={snapEnabled}
+                        onChange={(e) => setSnapEnabled(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Snap windows to grid
+                </label>
+                <div className="flex items-center space-x-2 text-ubt-grey">
+                    <label htmlFor="snap-grid-size">Grid size:</label>
+                    <input
+                        id="snap-grid-size"
+                        type="range"
+                        min="4"
+                        max="64"
+                        step="4"
+                        value={snapGridSize}
+                        onChange={(e) => setSnapGridSize(Number(e.target.value))}
+                        className="ubuntu-slider"
+                        disabled={!snapEnabled}
+                    />
+                    <span className="w-12 text-right tabular-nums">{snapGridSize}px</span>
+                </div>
+            </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
@@ -277,6 +305,8 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setSnapEnabled(defaults.snapEnabled ?? true);
+                        setSnapGridSize(defaults.snapGridSize ?? 8);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -301,6 +331,8 @@ export function Settings() {
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.snapEnabled !== undefined) setSnapEnabled(parsed.snapEnabled);
+                        if (parsed.snapGridSize !== undefined) setSnapGridSize(parsed.snapGridSize);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);
