@@ -109,7 +109,7 @@ export class SideBarApp extends Component {
                     height={28}
                     className="w-7"
                     src={this.props.icon.replace('./', '/')}
-                    alt="Ubuntu App Icon"
+                    alt={`Kali ${this.props.title} icon`}
                     sizes="28px"
                 />
                 <Image
@@ -118,6 +118,7 @@ export class SideBarApp extends Component {
                     className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
                     src={this.props.icon.replace('./', '/')}
                     alt=""
+                    aria-hidden="true"
                     sizes="28px"
                 />
                 {
@@ -132,7 +133,7 @@ export class SideBarApp extends Component {
                         className={
                             (this.state.showTitle ? " visible " : " invisible ") +
                             " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
-                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
+                            " rounded border border-[var(--color-accent)] shadow-lg overflow-hidden bg-[var(--kali-panel)] backdrop-blur"
                         }
                     >
                         <Image
@@ -148,7 +149,7 @@ export class SideBarApp extends Component {
                 <div
                     className={
                         (this.state.showTitle ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
+                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-[var(--kali-panel)] border border-[var(--kali-panel-border)] backdrop-blur rounded-md"
                     }
                 >
                     {this.props.title}
