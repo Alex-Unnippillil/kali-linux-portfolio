@@ -42,6 +42,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const recentlyClosed = useRef<{ tab: TabDefinition; index: number }[]>([]);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -75,12 +76,23 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     (id: string) => {
       updateTabs((prev) => {
         const idx = prev.findIndex((t) => t.id === id);
+        if (idx === -1) return prev;
         const removed = prev[idx];
         const next = prev.filter((t) => t.id !== id);
-        if (removed && removed.onClose) removed.onClose();
+        if (removed) {
+          if (removed.onClose) removed.onClose();
+          if (removed.closable !== false) {
+            recentlyClosed.current = [
+              { tab: removed, index: idx },
+              ...recentlyClosed.current,
+            ].slice(0, 20);
+          }
+        }
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
-          setActiveId(fallback.id);
+          if (fallback) {
+            setActiveId(fallback.id);
+          }
         } else if (next.length === 0 && onNewTab) {
           const tab = onNewTab();
           next.push(tab);
@@ -91,6 +103,27 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     },
     [activeId, onNewTab, updateTabs],
   );
+
+  const restoreLastClosedTab = useCallback(() => {
+    const stack = recentlyClosed.current;
+    if (stack.length === 0) return;
+    const [last, ...rest] = stack;
+    let restored: TabDefinition | null = null;
+    updateTabs((prev) => {
+      if (!last || prev.some((t) => t.id === last.tab.id)) {
+        return prev;
+      }
+      recentlyClosed.current = rest;
+      const next = [...prev];
+      const insertionIndex = Math.min(Math.max(last.index, 0), next.length);
+      next.splice(insertionIndex, 0, last.tab);
+      restored = last.tab;
+      return next;
+    });
+    if (restored) {
+      setActiveId(restored.id);
+    }
+  }, [updateTabs]);
 
   const addTab = useCallback(() => {
     if (!onNewTab) return;
@@ -122,6 +155,18 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      restoreLastClosedTab();
+      return;
+    }
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('terminal-new-window'));
+      }
+      return;
+    }
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
       e.preventDefault();
       closeTab(activeId);
