@@ -5,16 +5,16 @@ import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from './kali-wallpaper';
 
 export default function BackgroundImage() {
-    const { bgImageName, useKaliWallpaper } = useSettings();
+    const { bgImageName, bgImageFile, useKaliWallpaper } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
 
     useEffect(() => {
-        if (useKaliWallpaper || bgImageName === 'kali-gradient') {
+        if (useKaliWallpaper || bgImageName === 'kali-gradient' || !bgImageFile) {
             setNeedsOverlay(false);
             return;
         }
         const img = new Image();
-        img.src = `/wallpapers/${bgImageName}.webp`;
+        img.src = `/wallpapers/${bgImageFile}`;
         img.onload = () => {
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
@@ -39,23 +39,25 @@ export default function BackgroundImage() {
             const contrast = (1.05) / (lum + 0.05); // white text luminance is 1
             setNeedsOverlay(contrast < 4.5);
         };
-    }, [bgImageName, useKaliWallpaper]);
+    }, [bgImageFile, bgImageName, useKaliWallpaper]);
 
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
             {useKaliWallpaper || bgImageName === 'kali-gradient' ? (
                 <KaliWallpaper />
             ) : (
-                <>
-                    <img
-                        src={`/wallpapers/${bgImageName}.webp`}
-                        alt=""
-                        className="w-full h-full object-cover"
-                    />
-                    {needsOverlay && (
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
-                    )}
-                </>
+                bgImageFile && (
+                    <>
+                        <img
+                            src={`/wallpapers/${bgImageFile}`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                        />
+                        {needsOverlay && (
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
+                        )}
+                    </>
+                )
             )}
         </div>
     )

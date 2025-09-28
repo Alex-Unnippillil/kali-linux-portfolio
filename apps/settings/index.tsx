@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -34,6 +34,10 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    wallpapers: wallpaperAssets,
+    randomDailyWallpaperId,
+    randomDailyWallpaperFile,
+    bgImageFile,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,19 +49,37 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
+  const wallpaperMap = useMemo(
+    () => new Map(wallpaperAssets.map((asset) => [asset.id, asset.file])),
+    [wallpaperAssets],
+  );
 
-  const changeBackground = (name: string) => setWallpaper(name);
-  const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
+  const wallpaperOptions = useMemo(() => {
+    const ids = wallpaperAssets.map((asset) => asset.id);
+    const combined = [...ids, "random-daily"];
+    return combined.filter((value, index) => combined.indexOf(value) === index);
+  }, [wallpaperAssets]);
+
+  const changeBackground = (name: string | undefined) => {
+    if (!name) return;
+    setWallpaper(name);
+  };
+
+  const wallpaperIndex = useMemo(() => {
+    const index = wallpaperOptions.indexOf(wallpaper);
+    return index >= 0 ? index : 0;
+  }, [wallpaper, wallpaperOptions]);
+
+  const formatWallpaperLabel = (id: string) => {
+    if (id === "random-daily") return "Random daily";
+    if (id.startsWith("wall-")) return id.replace("wall-", "wallpaper ");
+    return id.replace(/[-_]/g, " ");
+  };
+
+  const sliderMax = Math.max(wallpaperOptions.length - 1, 0);
+  const randomDailyLabel = randomDailyWallpaperId
+    ? formatWallpaperLabel(randomDailyWallpaperId)
+    : null;
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -117,16 +139,20 @@ export default function Settings() {
       {activeTab === "appearance" && (
         <>
           <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
-            {useKaliWallpaper ? (
-              <KaliWallpaper />
-            ) : (
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
-                aria-hidden="true"
-              />
-            )}
-          </div>
+          {useKaliWallpaper ? (
+            <KaliWallpaper />
+          ) : (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={
+                bgImageFile
+                  ? { backgroundImage: `url(/wallpapers/${bgImageFile})` }
+                  : undefined
+              }
+              aria-hidden="true"
+            />
+          )}
+        </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
@@ -178,48 +204,76 @@ export default function Settings() {
               id="wallpaper-slider"
               type="range"
               min="0"
-              max={wallpapers.length - 1}
+              max={sliderMax}
               step="1"
               value={wallpaperIndex}
               onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
+                changeBackground(
+                  wallpaperOptions[parseInt(e.target.value, 10)]
+                )
               }
               className="ubuntu-slider"
               aria-label="Wallpaper"
             />
           </div>
+          {wallpaper === "random-daily" && randomDailyLabel && (
+            <p className="text-center text-xs text-ubt-grey/70 -mt-2 mb-4">
+              Today&apos;s wallpaper: {randomDailyLabel}
+            </p>
+          )}
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
-              <div
-                key={name}
-                role="button"
-                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                aria-pressed={name === wallpaper}
-                tabIndex={0}
-                onClick={() => changeBackground(name)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    changeBackground(name);
+            {wallpaperOptions.map((name) => {
+              const isRandom = name === "random-daily";
+              const file = isRandom
+                ? randomDailyWallpaperFile
+                : wallpaperMap.get(name);
+              const label = formatWallpaperLabel(name);
+              const isActive = name === wallpaper;
+              const style = {
+                backgroundImage: file ? `url(/wallpapers/${file})` : undefined,
+                backgroundSize: "cover",
+                backgroundRepeat: "no-repeat" as const,
+                backgroundPosition: "center center",
+              };
+
+              return (
+                <div
+                  key={name}
+                  role="button"
+                  aria-label={`Select ${label}`}
+                  aria-pressed={isActive}
+                  tabIndex={0}
+                  onClick={() => changeBackground(name)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      changeBackground(name);
+                    }
+                  }}
+                  className={
+                    (isActive ? " border-yellow-700 " : " border-transparent ") +
+                    " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80 flex flex-col justify-end"
                   }
-                }}
-                className={
-                  (name === wallpaper
-                    ? " border-yellow-700 "
-                    : " border-transparent ") +
-                  " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
-                }
-                style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
-                }}
-              ></div>
-            ))}
+                  style={style}
+                  title={label}
+                >
+                  <span className="sr-only">{label}</span>
+                  {isRandom && (
+                    <div className="mt-2 text-xs font-medium text-white bg-black/60 px-2 py-1 rounded self-center">
+                      Random daily
+                      {randomDailyLabel && (
+                        <span className="block text-[10px] font-normal text-white/80">
+                          Today: {randomDailyLabel}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button

@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -53,10 +61,30 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+const getTodayKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+};
+
+const hashString = (value: string): number => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+};
+
+type WallpaperAsset = {
+  id: string;
+  file: string;
+};
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
   bgImageName: string;
+  bgImageFile: string | null;
   useKaliWallpaper: boolean;
   density: Density;
   reducedMotion: boolean;
@@ -79,12 +107,18 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  wallpapers: WallpaperAsset[];
+  wallpaperOverride: string | null;
+  setWallpaperOverride: (value: string | null) => void;
+  randomDailyWallpaperId: string | null;
+  randomDailyWallpaperFile: string | null;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
+  bgImageFile: null,
   useKaliWallpaper: defaults.useKaliWallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
@@ -107,6 +141,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  wallpapers: [],
+  wallpaperOverride: null,
+  setWallpaperOverride: () => {},
+  randomDailyWallpaperId: null,
+  randomDailyWallpaperFile: null,
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -123,6 +162,70 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const [wallpapers, setWallpapers] = useState<WallpaperAsset[]>([]);
+  const [wallpaperOverride, setWallpaperOverride] = useState<string | null>(null);
+  const [todayKey, setTodayKey] = useState<string>(() => getTodayKey());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+
+    const normalize = (items: unknown): WallpaperAsset[] => {
+      if (!Array.isArray(items)) return [];
+      const normalized: WallpaperAsset[] = [];
+      items.forEach((item) => {
+        if (item && typeof item === 'object' && 'id' in item && 'file' in item) {
+          const id = String((item as { id: unknown }).id);
+          const file = String((item as { file: unknown }).file);
+          normalized.push({ id, file });
+        } else if (typeof item === 'string') {
+          const id = item.replace(/\.[^.]+$/, '');
+          normalized.push({ id, file: item });
+        }
+      });
+      const uniqueMap = new Map<string, WallpaperAsset>();
+      normalized.forEach((entry) => {
+        if (!uniqueMap.has(entry.id)) {
+          uniqueMap.set(entry.id, entry);
+        }
+      });
+      return Array.from(uniqueMap.values()).sort((a, b) =>
+        a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' }),
+      );
+    };
+
+    const loadWallpapers = async () => {
+      try {
+        const response = await fetch('/api/wallpapers');
+        if (!response.ok) throw new Error('Failed to load wallpapers');
+        const data = await response.json();
+        if (!cancelled) {
+          setWallpapers(normalize(data));
+        }
+      } catch {
+        if (!cancelled) setWallpapers([]);
+      }
+    };
+
+    loadWallpapers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateKey = () => {
+      const key = getTodayKey();
+      setTodayKey((prev) => (prev === key ? prev : key));
+    };
+    updateKey();
+    const timer = window.setInterval(updateKey, 60_000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -140,6 +243,54 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setTheme(loadTheme());
     })();
   }, []);
+
+  const wallpaperMap = useMemo(() => {
+    const map = new Map<string, WallpaperAsset>();
+    wallpapers.forEach((entry) => {
+      map.set(entry.id, entry);
+    });
+    return map;
+  }, [wallpapers]);
+
+  useEffect(() => {
+    if (wallpaper === 'random-daily') return;
+    if (wallpapers.length === 0) return;
+    if (wallpaperMap.has(wallpaper)) return;
+    const fallback = wallpaperMap.get(defaults.wallpaper) ?? wallpapers[0] ?? null;
+    if (fallback) setWallpaper(fallback.id);
+  }, [wallpaper, wallpapers, wallpaperMap]);
+
+  const randomDailyWallpaperId = useMemo(() => {
+    if (wallpapers.length === 0) return defaults.wallpaper ?? null;
+    const hashInput = `${todayKey}:${wallpapers.map((w) => w.id).join('|')}`;
+    const index = hashString(hashInput) % wallpapers.length;
+    return wallpapers[index]?.id ?? wallpapers[0]?.id ?? null;
+  }, [todayKey, wallpapers]);
+
+  const resolveWallpaperId = useMemo(() => {
+    if (wallpaperOverride) return wallpaperOverride;
+    if (useKaliWallpaper) return 'kali-gradient';
+    if (wallpaper === 'random-daily') return randomDailyWallpaperId ?? defaults.wallpaper;
+    return wallpaper;
+  }, [wallpaper, wallpaperOverride, useKaliWallpaper, randomDailyWallpaperId]);
+
+  const resolveFile = useMemo(() => {
+    if (!resolveWallpaperId || resolveWallpaperId === 'kali-gradient') return null;
+    const asset = wallpaperMap.get(resolveWallpaperId);
+    if (asset) return asset.file;
+    return `${resolveWallpaperId}.webp`;
+  }, [resolveWallpaperId, wallpaperMap]);
+
+  const randomDailyWallpaperFile = useMemo(() => {
+    if (!randomDailyWallpaperId) return null;
+    const asset = wallpaperMap.get(randomDailyWallpaperId);
+    if (asset) return asset.file;
+    return `${randomDailyWallpaperId}.webp`;
+  }, [randomDailyWallpaperId, wallpaperMap]);
+
+  const updateWallpaperOverride = (value: string | null) => {
+    setWallpaperOverride(value);
+  };
 
   useEffect(() => {
     saveTheme(theme);
@@ -250,7 +401,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
-  const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+  const bgImageName = resolveWallpaperId ?? defaults.wallpaper;
 
   return (
     <SettingsContext.Provider
@@ -258,6 +409,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         accent,
         wallpaper,
         bgImageName,
+        bgImageFile: resolveFile,
         useKaliWallpaper,
         density,
         reducedMotion,
@@ -280,6 +432,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        wallpapers,
+        wallpaperOverride,
+        setWallpaperOverride: updateWallpaperOverride,
+        randomDailyWallpaperId,
+        randomDailyWallpaperFile,
       }}
     >
       {children}

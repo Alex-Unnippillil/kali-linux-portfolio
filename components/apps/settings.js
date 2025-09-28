@@ -1,18 +1,35 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, wallpapers: wallpaperAssets, randomDailyWallpaperId, randomDailyWallpaperFile, bgImageFile } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const wallpaperMap = useMemo(() => new Map(wallpaperAssets.map((asset) => [asset.id, asset.file])), [wallpaperAssets]);
+    const wallpaperOptions = useMemo(() => {
+        const ids = wallpaperAssets.map((asset) => asset.id);
+        const combined = [...ids, 'random-daily'];
+        return combined.filter((value, index) => combined.indexOf(value) === index);
+    }, [wallpaperAssets]);
+
+    const formatWallpaperLabel = useCallback((id) => {
+        if (id === 'random-daily') return 'Random daily';
+        if (id.startsWith('wall-')) return id.replace('wall-', 'wallpaper ');
+        return id.replace(/[-_]/g, ' ');
+    }, []);
+
+    const randomDailyLabel = useMemo(
+        () => (randomDailyWallpaperId ? formatWallpaperLabel(randomDailyWallpaperId) : null),
+        [randomDailyWallpaperId, formatWallpaperLabel]
+    );
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
+        if (!name) return;
         setWallpaper(name);
     };
 
@@ -64,7 +81,7 @@ export function Settings() {
                 ) : (
                     <div
                         className="absolute inset-0 bg-cover bg-center"
-                        style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                        style={bgImageFile ? { backgroundImage: `url(/wallpapers/${bgImageFile})` } : undefined}
                         aria-hidden="true"
                     />
                 )}
@@ -223,26 +240,52 @@ export function Settings() {
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
-                    wallpapers.map((name, index) => (
-                        <div
-                            key={name}
-                            role="button"
-                            aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
-                            tabIndex="0"
-                            onClick={changeBackgroundImage}
-                            onFocus={changeBackgroundImage}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    changeBackgroundImage(e);
-                                }
-                            }}
-                            data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
-                        ></div>
-                    ))
+                    wallpaperOptions.map((name) => {
+                        const isRandom = name === 'random-daily';
+                        const file = isRandom ? randomDailyWallpaperFile : wallpaperMap.get(name);
+                        const label = formatWallpaperLabel(name);
+                        const isActive = name === wallpaper;
+                        const style = {
+                            backgroundImage: file ? `url(/wallpapers/${file})` : undefined,
+                            backgroundSize: 'cover',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center center',
+                        };
+
+                        return (
+                            <div
+                                key={name}
+                                role="button"
+                                aria-label={`Select ${label}`}
+                                aria-pressed={isActive}
+                                tabIndex="0"
+                                onClick={changeBackgroundImage}
+                                onFocus={changeBackgroundImage}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        changeBackgroundImage(e);
+                                    }
+                                }}
+                                data-path={name}
+                                className={((isActive) ? ' border-yellow-700 ' : ' border-transparent ') + ' md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80 flex flex-col justify-end'}
+                                style={style}
+                                title={label}
+                            >
+                                <span className="sr-only">{label}</span>
+                                {isRandom && (
+                                    <div className="mt-2 text-xs font-medium text-white bg-black/60 px-2 py-1 rounded self-center">
+                                        Random daily
+                                        {randomDailyLabel && (
+                                            <span className="block text-[10px] font-normal text-white/80">
+                                                Today: {randomDailyLabel}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
                 }
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
