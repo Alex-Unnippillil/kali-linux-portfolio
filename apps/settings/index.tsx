@@ -34,8 +34,14 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    exportMenuConfig: exportMenuConfigFromSettings,
+    importMenuConfig: importMenuConfigFromSettings,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuFileInputRef = useRef<HTMLInputElement>(null);
+  const [menuImportFeedback, setMenuImportFeedback] = useState<
+    { type: 'success' | 'error'; message: string } | null
+  >(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -86,6 +92,40 @@ export default function Settings() {
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
+    }
+  };
+
+  const handleMenuExport = async () => {
+    const data = await exportMenuConfigFromSettings();
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "menu-configuration.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleMenuImport = async (file: File) => {
+    setMenuImportFeedback(null);
+    try {
+      const text = await file.text();
+      const result = await importMenuConfigFromSettings(text);
+      const ignoredCount =
+        result.ignoredFavorites.length +
+        result.ignoredPins.length +
+        result.ignoredOrdering.length;
+      let message = `Imported ${result.favorites.length} favorites and ${result.pins.length} pins.`;
+      if (ignoredCount > 0) {
+        message += ` Ignored ${ignoredCount} unknown app${ignoredCount === 1 ? "" : "s"}.`;
+      }
+      setMenuImportFeedback({ type: "success", message });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to import menu configuration.";
+      setMenuImportFeedback({ type: "error", message });
     }
   };
 
@@ -308,6 +348,39 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
+          <div className="mt-6 border-t border-gray-900 pt-4 px-4">
+            <h3 className="text-center text-ubt-grey text-sm font-semibold uppercase tracking-wide">
+              Menu configuration
+            </h3>
+            <p className="mt-2 text-center text-xs text-ubt-grey/80">
+              Download or restore your menu favorites, dock pins, and ordering.
+            </p>
+            <div className="flex justify-center my-4 space-x-4">
+              <button
+                onClick={handleMenuExport}
+                className="px-4 py-2 rounded bg-ub-orange text-white"
+              >
+                Export Menu
+              </button>
+              <button
+                onClick={() => menuFileInputRef.current?.click()}
+                className="px-4 py-2 rounded bg-ub-orange text-white"
+              >
+                Import Menu
+              </button>
+            </div>
+            {menuImportFeedback && (
+              <p
+                className={`text-center text-sm ${
+                  menuImportFeedback.type === "error"
+                    ? "text-red-400"
+                    : "text-green-400"
+                }`}
+              >
+                {menuImportFeedback.message}
+              </p>
+            )}
+          </div>
         </>
       )}
         <input
@@ -318,6 +391,18 @@ export default function Settings() {
           onChange={(e) => {
             const file = e.target.files && e.target.files[0];
             if (file) handleImport(file);
+            e.target.value = "";
+          }}
+          className="hidden"
+        />
+        <input
+          type="file"
+          accept="application/json"
+          ref={menuFileInputRef}
+          aria-label="Import menu configuration"
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleMenuImport(file);
             e.target.value = "";
           }}
           className="hidden"

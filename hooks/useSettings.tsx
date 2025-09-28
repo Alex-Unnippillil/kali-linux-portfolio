@@ -25,6 +25,12 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  exportMenuConfig as exportMenuConfigData,
+  importMenuConfig as importMenuConfigData,
+  MenuConfigImportResult,
+  MenuConfigInput,
+} from '../utils/menuConfig';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -79,6 +85,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  exportMenuConfig: () => Promise<string>;
+  importMenuConfig: (input: string | MenuConfigInput) => Promise<MenuConfigImportResult>;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -107,6 +115,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  exportMenuConfig: async () => JSON.stringify({}),
+  importMenuConfig: async () => ({ favorites: [], pins: [], ordering: [], ignoredFavorites: [], ignoredPins: [], ignoredOrdering: [] }),
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -252,6 +262,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
+  const exportMenuConfig = async () => exportMenuConfigData();
+
+  const importMenuConfig = async (input: string | MenuConfigInput) => importMenuConfigData(input);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -280,6 +294,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        exportMenuConfig,
+        importMenuConfig,
       }}
     >
       {children}
