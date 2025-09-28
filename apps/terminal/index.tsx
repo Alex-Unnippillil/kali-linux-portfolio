@@ -65,6 +65,7 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
+  initialPath?: string;
 }
 
 export interface TerminalHandle {
@@ -72,11 +73,28 @@ export interface TerminalHandle {
   getContent: () => string;
 }
 
+const normalizePath = (path?: string) => {
+  if (!path) return '~';
+  const trimmed = path.trim();
+  if (!trimmed || trimmed === '~') return '~';
+  if (trimmed === '~/') return '~';
+  if (trimmed.startsWith('~/')) {
+    const rest = trimmed.slice(2).replace(/^\/+/g, '').replace(/\/+$/g, '');
+    return rest ? `~/${rest}` : '~';
+  }
+  if (trimmed.startsWith('/')) {
+    const rest = trimmed.replace(/^\/+/g, '').replace(/\/+$/g, '');
+    if (!rest) return '/';
+    return `/${rest}`;
+  }
+  return trimmed;
+};
+
 const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, initialPath }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -87,6 +105,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
+  const cwdRef = useRef<string>(normalizePath(initialPath));
   const historyRef = useRef<string[]>([]);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
@@ -97,6 +116,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       aliasesRef.current[n] = v;
     },
     runWorker: async () => {},
+    cwd: cwdRef.current,
+    setCwd: (value: string) => {
+      const next = normalizePath(value);
+      cwdRef.current = next;
+      contextRef.current.cwd = next;
+    },
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
@@ -144,11 +169,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.writeLine = writeLine;
+  contextRef.current.cwd = cwdRef.current;
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
+    const cwd = cwdRef.current || '~';
+    contextRef.current.cwd = cwd;
     termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+      `\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m${cwd}\x1b[0m\x1b[1;34m]\x1b[0m`,
     );
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
@@ -192,6 +220,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.runWorker = runWorker;
+
+  useEffect(() => {
+    contextRef.current.setCwd(initialPath ?? '~');
+  }, [initialPath]);
 
   useEffect(() => {
     registryRef.current = {
