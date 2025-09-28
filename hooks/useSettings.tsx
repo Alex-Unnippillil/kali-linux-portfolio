@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -22,6 +30,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getFavoriteAppIds as loadFavoriteAppIds,
+  setFavoriteAppIds as saveFavoriteAppIds,
+  getPinnedAppIds as loadPinnedAppIds,
+  setPinnedAppIds as savePinnedAppIds,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -67,6 +79,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  favoriteIds: string[];
+  pinnedIds: string[];
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +93,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setFavoriteIds: (value: string[] | ((prev: string[]) => string[])) => void;
+  setPinnedIds: (value: string[] | ((prev: string[]) => string[])) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +111,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  favoriteIds: defaults.favoriteIds,
+  pinnedIds: defaults.pinnedIds,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,7 +125,30 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setFavoriteIds: () => {},
+  setPinnedIds: () => {},
 });
+
+const normalizeIds = (ids: string[]) => {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  ids.forEach((value) => {
+    if (typeof value !== 'string') return;
+    const trimmed = value.trim();
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    result.push(trimmed);
+  });
+  return result;
+};
+
+const arraysEqual = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
@@ -122,6 +163,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [favoriteIds, setFavoriteIdsState] = useState<string[]>(defaults.favoriteIds);
+  const [pinnedIds, setPinnedIdsState] = useState<string[]>(defaults.pinnedIds);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -138,6 +181,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setFavoriteIdsState(normalizeIds(await loadFavoriteAppIds()));
+      setPinnedIdsState(normalizeIds(await loadPinnedAppIds()));
     })();
   }, []);
 
@@ -250,6 +295,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  const setFavoriteIds = useCallback(
+    (value: string[] | ((prev: string[]) => string[])) => {
+      setFavoriteIdsState((prev) => {
+        const next = typeof value === 'function' ? value(prev) : value;
+        const normalized = normalizeIds(next);
+        if (arraysEqual(prev, normalized)) {
+          return prev;
+        }
+        saveFavoriteAppIds(normalized);
+        return normalized;
+      });
+    },
+    [],
+  );
+
+  const setPinnedIds = useCallback(
+    (value: string[] | ((prev: string[]) => string[])) => {
+      setPinnedIdsState((prev) => {
+        const next = typeof value === 'function' ? value(prev) : value;
+        const normalized = normalizeIds(next);
+        if (arraysEqual(prev, normalized)) {
+          return prev;
+        }
+        savePinnedAppIds(normalized);
+        return normalized;
+      });
+    },
+    [],
+  );
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +343,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        favoriteIds,
+        pinnedIds,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +357,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setFavoriteIds,
+        setPinnedIds,
       }}
     >
       {children}

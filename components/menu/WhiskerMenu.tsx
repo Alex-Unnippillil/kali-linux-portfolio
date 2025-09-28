@@ -5,6 +5,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useSettings } from '../../hooks/useSettings';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
 
 type AppMeta = {
@@ -162,7 +163,15 @@ const WhiskerMenu: React.FC = () => {
 
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const mapById = useMemo(() => new Map(allApps.map(app => [app.id, app] as const)), [allApps]);
+  const { favoriteIds } = useSettings();
+  const favoriteApps = useMemo(
+    () =>
+      favoriteIds
+        .map(appId => mapById.get(appId))
+        .filter((app): app is AppMeta => Boolean(app)),
+    [favoriteIds, mapById],
+  );
   useEffect(() => {
     setRecentIds(readRecentAppIds());
   }, []);
@@ -172,15 +181,14 @@ const WhiskerMenu: React.FC = () => {
     setRecentIds(readRecentAppIds());
   }, [isOpen]);
 
-  const recentApps = useMemo(() => {
-    const mapById = new Map(allApps.map(app => [app.id, app] as const));
-    return recentIds
-      .map(appId => mapById.get(appId))
-      .filter((app): app is AppMeta => Boolean(app));
-  }, [allApps, recentIds]);
+  const recentApps = useMemo(
+    () =>
+      recentIds
+        .map(appId => mapById.get(appId))
+        .filter((app): app is AppMeta => Boolean(app)),
+    [mapById, recentIds],
+  );
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
-    const mapById = new Map(allApps.map(app => [app.id, app] as const));
-
     return CATEGORY_DEFINITIONS.map((definition) => {
       let appsForCategory: AppMeta[] = [];
       switch (definition.type) {
@@ -206,7 +214,7 @@ const WhiskerMenu: React.FC = () => {
         apps: appsForCategory,
       } as CategoryConfig;
     });
-  }, [allApps, favoriteApps, recentApps]);
+  }, [allApps, favoriteApps, recentApps, mapById]);
 
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);

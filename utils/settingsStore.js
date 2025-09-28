@@ -2,6 +2,10 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import { safeLocalStorage } from './safeStorage';
+
+const FAVORITES_KEY = 'launcherFavorites';
+const PINNED_KEY = 'pinnedApps';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -15,6 +19,38 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  favoriteIds: [],
+  pinnedIds: [],
+};
+
+const readIds = (key, fallback) => {
+  if (!safeLocalStorage) return [...fallback];
+  try {
+    const stored = safeLocalStorage.getItem(key);
+    if (!stored) return [...fallback];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [...fallback];
+    const seen = new Set();
+    return parsed.reduce((acc, value) => {
+      if (typeof value !== 'string') return acc;
+      if (seen.has(value)) return acc;
+      seen.add(value);
+      acc.push(value);
+      return acc;
+    }, []);
+  } catch (e) {
+    console.warn('Failed to read settings ids', e);
+    return [...fallback];
+  }
+};
+
+const writeIds = (key, ids) => {
+  if (!safeLocalStorage) return;
+  try {
+    safeLocalStorage.setItem(key, JSON.stringify(ids));
+  } catch (e) {
+    console.warn('Failed to persist settings ids', e);
+  }
 };
 
 export async function getAccent() {
@@ -135,6 +171,24 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getFavoriteAppIds() {
+  if (typeof window === 'undefined') return [...DEFAULT_SETTINGS.favoriteIds];
+  return readIds(FAVORITES_KEY, DEFAULT_SETTINGS.favoriteIds);
+}
+
+export async function setFavoriteAppIds(ids) {
+  writeIds(FAVORITES_KEY, Array.isArray(ids) ? ids : []);
+}
+
+export async function getPinnedAppIds() {
+  if (typeof window === 'undefined') return [...DEFAULT_SETTINGS.pinnedIds];
+  return readIds(PINNED_KEY, DEFAULT_SETTINGS.pinnedIds);
+}
+
+export async function setPinnedAppIds(ids) {
+  writeIds(PINNED_KEY, Array.isArray(ids) ? ids : []);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +204,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem(FAVORITES_KEY);
+  window.localStorage.removeItem(PINNED_KEY);
 }
 
 export async function exportSettings() {
@@ -165,6 +221,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    favoriteIds,
+    pinnedIds,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +235,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getFavoriteAppIds(),
+    getPinnedAppIds(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +252,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    favoriteIds,
+    pinnedIds,
   });
 }
 
@@ -217,6 +279,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    favoriteIds,
+    pinnedIds,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +294,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (favoriteIds !== undefined) await setFavoriteAppIds(favoriteIds);
+  if (pinnedIds !== undefined) await setPinnedAppIds(pinnedIds);
 }
 
 export const defaults = DEFAULT_SETTINGS;
