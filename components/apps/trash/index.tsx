@@ -35,14 +35,24 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     } catch {
       data = [];
     }
-    data = data.filter((item) => now - item.closedAt <= ms);
-    localStorage.setItem('window-trash', JSON.stringify(data));
-    setItems(data);
+    const filtered = data.filter((item) => now - item.closedAt <= ms);
+    localStorage.setItem('window-trash', JSON.stringify(filtered));
+    if (filtered.length !== data.length && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('trash-change'));
+    }
+    setItems(filtered);
   }, []);
+
+  const notifyChange = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('trash-change'));
+    }
+  };
 
   const persist = (next: TrashItem[]) => {
     setItems(next);
     localStorage.setItem('window-trash', JSON.stringify(next));
+    notifyChange();
   };
 
   const restore = useCallback(() => {
