@@ -2,7 +2,8 @@ import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
-const FAVORITES_KEY = 'launcherFavorites';
+const FAVORITES_KEY = 'kali-favorites';
+const LEGACY_FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
 const GROUP_SIZE = 9;
 
@@ -19,20 +20,24 @@ const readStoredIds = (key) => {
     return [];
 };
 
-const persistIds = (key, ids) => {
-    if (!safeLocalStorage) return;
+const persistIds = (key, ids, availableIds, limit) => {
+    const sanitized = sanitizeIds(ids, availableIds, limit);
+    if (!safeLocalStorage) return sanitized;
     try {
-        safeLocalStorage.setItem(key, JSON.stringify(ids));
+        safeLocalStorage.setItem(key, JSON.stringify(sanitized));
     } catch (e) {
         // ignore quota errors
     }
+    return sanitized;
 };
 
 const sanitizeIds = (ids, availableIds, limit) => {
     const unique = [];
     const seen = new Set();
     ids.forEach((id) => {
-        if (!availableIds.has(id) || seen.has(id)) return;
+        if (typeof id !== 'string') return;
+        if (availableIds && !availableIds.has(id)) return;
+        if (seen.has(id)) return;
         seen.add(id);
         unique.push(id);
     });
@@ -53,6 +58,7 @@ const chunkApps = (apps, size) => {
 class AllApplications extends React.Component {
     constructor() {
         super();
+        this.availableIds = new Set();
         this.state = {
             query: '',
             apps: [],
@@ -69,11 +75,24 @@ class AllApplications extends React.Component {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         const availableIds = new Set(combined.map((app) => app.id));
-        const favorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
-        const recents = sanitizeIds(readStoredIds(RECENTS_KEY), availableIds, 10);
+        this.availableIds = availableIds;
+        const defaultFavorites = combined.filter((app) => app.favourite).map((app) => app.id);
 
-        persistIds(FAVORITES_KEY, favorites);
-        persistIds(RECENTS_KEY, recents);
+        let favorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
+        if (!favorites.length) {
+            const legacyFavorites = sanitizeIds(readStoredIds(LEGACY_FAVORITES_KEY), availableIds);
+            if (legacyFavorites.length) {
+                favorites = persistIds(FAVORITES_KEY, legacyFavorites, availableIds);
+                try { safeLocalStorage?.removeItem(LEGACY_FAVORITES_KEY); } catch (e) { /* ignore removal issues */ }
+            }
+        }
+        if (!favorites.length) {
+            favorites = persistIds(FAVORITES_KEY, defaultFavorites, availableIds);
+        } else {
+            favorites = persistIds(FAVORITES_KEY, favorites, availableIds);
+        }
+
+        const recents = persistIds(RECENTS_KEY, readStoredIds(RECENTS_KEY), availableIds, 10);
 
         this.setState({
             apps: combined,
@@ -98,9 +117,9 @@ class AllApplications extends React.Component {
     openApp = (id) => {
         this.setState((state) => {
             const filtered = state.recents.filter((recentId) => recentId !== id);
-            const next = [id, ...filtered].slice(0, 10);
-            persistIds(RECENTS_KEY, next);
-            return { recents: next };
+            const next = [id, ...filtered];
+            const normalized = persistIds(RECENTS_KEY, next, this.availableIds, 10);
+            return { recents: normalized };
         }, () => {
             if (typeof this.props.openApp === 'function') {
                 this.props.openApp(id);
@@ -116,8 +135,8 @@ class AllApplications extends React.Component {
             const favorites = isFavorite
                 ? state.favorites.filter((favId) => favId !== id)
                 : [...state.favorites, id];
-            persistIds(FAVORITES_KEY, favorites);
-            return { favorites };
+            const normalized = persistIds(FAVORITES_KEY, favorites, this.availableIds);
+            return { favorites: normalized };
         });
     };
 
