@@ -567,3 +567,62 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Escape key handling', () => {
+  it('ignores Escape for persistent windows', () => {
+    jest.useFakeTimers();
+    const closed = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={closed}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Test' });
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(closed).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('closes transient windows when Escape is pressed', () => {
+    jest.useFakeTimers();
+    const closed = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={closed}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        closeOnEscape
+      />
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Test' });
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(closed).toHaveBeenCalledWith('test-window');
+    jest.useRealTimers();
+  });
+});
