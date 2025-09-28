@@ -43,6 +43,31 @@ function DesktopMenu(props) {
         }
     }
 
+    const arrangeOptions = [
+        { mode: 'name', label: 'Arrange by Name' },
+        { mode: 'type', label: 'Arrange by Type' },
+        { mode: 'date', label: 'Arrange by Date Added' },
+    ];
+
+    const renderArrangeButton = (option) => {
+        const isActive = props.currentArrange === option.mode;
+        return (
+            <button
+                key={option.mode}
+                onClick={() => props.arrangeDesktopApps && props.arrangeDesktopApps(option.mode)}
+                type="button"
+                role="menuitem"
+                aria-label={option.label}
+                className={`w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 ${isActive ? 'font-semibold' : ''}`}
+            >
+                <span className="ml-5 flex justify-between pr-4">
+                    <span>{option.label}</span>
+                    {isActive && <span aria-hidden="true">✓</span>}
+                </span>
+            </button>
+        );
+    };
+
     return (
         <div
             id="desktop-menu"
@@ -72,6 +97,8 @@ function DesktopMenu(props) {
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>
             </div>
+            <Devider />
+            {arrangeOptions.map(renderArrangeButton)}
             <Devider />
             <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Show Desktop in Files</span>
