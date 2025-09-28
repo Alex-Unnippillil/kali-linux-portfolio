@@ -657,7 +657,7 @@ export class Window extends Component {
                             this.props.isFocused ? 'z-30' : 'z-20',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
-                            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
+                            this.props.isFocused ? styles.windowFrameFocused : styles.windowFrameDimmed,
                             this.state.maximized ? styles.windowFrameMaximized : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
