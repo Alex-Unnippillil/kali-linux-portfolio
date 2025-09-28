@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, snapEnabled, setSnapEnabled } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -171,6 +171,22 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-start">
+                    <input
+                        type="checkbox"
+                        checked={snapEnabled}
+                        onChange={(e) => setSnapEnabled(e.target.checked)}
+                        className="mr-2 mt-1"
+                    />
+                    <span>
+                        Window Snap Grid
+                        <span className="block text-xs text-ubt-grey/70">
+                            Keep windows aligned to an 8px grid when enabled. Turn this off for free-form dragging.
+                        </span>
+                    </span>
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
@@ -277,6 +293,7 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setSnapEnabled(defaults.snapEnabled);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -301,6 +318,7 @@ export function Settings() {
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.snapEnabled !== undefined) setSnapEnabled(parsed.snapEnabled);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);

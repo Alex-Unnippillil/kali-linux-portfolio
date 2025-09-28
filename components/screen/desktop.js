@@ -1179,6 +1179,8 @@ export class Desktop extends Component {
 }
 
 export default function DesktopWithSnap(props) {
-    const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { snapEnabled: snapEnabledProp, ...rest } = props;
+    const [snapEnabledState] = useSnapSetting();
+    const snapEnabled = snapEnabledProp ?? snapEnabledState;
+    return <Desktop {...rest} snapEnabled={snapEnabled} />;
 }

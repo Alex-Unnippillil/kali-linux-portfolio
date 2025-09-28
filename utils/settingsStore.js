@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  snapEnabled: true,
 };
 
 export async function getAccent() {
@@ -135,6 +136,23 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getSnapEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.snapEnabled;
+  const stored = window.localStorage.getItem('snap-enabled');
+  if (stored === null) return DEFAULT_SETTINGS.snapEnabled;
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    console.error('Invalid snap setting', e);
+    return DEFAULT_SETTINGS.snapEnabled;
+  }
+}
+
+export async function setSnapEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('snap-enabled', JSON.stringify(!!value));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +168,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('snap-enabled');
 }
 
 export async function exportSettings() {
@@ -165,6 +184,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    snapEnabled,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +197,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getSnapEnabled(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -191,6 +212,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    snapEnabled,
     theme,
   });
 }
@@ -216,6 +238,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    snapEnabled,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -229,6 +252,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (snapEnabled !== undefined) await setSnapEnabled(snapEnabled);
   if (theme !== undefined) setTheme(theme);
 }
 
