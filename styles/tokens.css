@@ -33,9 +33,11 @@
   --kali-blue-dark: #0f6fa1;
   --kali-blue-glow: rgba(23, 147, 209, 0.35);
   --kali-bg-solid: #0f1317;
-  --kali-panel: rgba(26, 31, 38, 0.9);
-  --kali-panel-border: rgba(255, 255, 255, 0.08);
-  --kali-panel-highlight: rgba(255, 255, 255, 0.05);
+  --kali-panel: rgba(11, 16, 24, 0.78);
+  --kali-panel-border: rgba(88, 181, 232, 0.35);
+  --kali-panel-highlight: rgba(255, 255, 255, 0.12);
+  --kali-panel-divider: rgba(255, 255, 255, 0.08);
+  --kali-panel-height: 3rem;
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
 

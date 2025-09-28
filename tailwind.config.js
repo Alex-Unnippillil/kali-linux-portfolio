@@ -53,6 +53,10 @@ module.exports = {
           control: 'var(--color-control-accent)',
           backdrop: 'var(--kali-bg)',
         },
+        'kali-panel': 'var(--kali-panel)',
+        'kali-panel-border': 'var(--kali-panel-border)',
+        'kali-panel-highlight': 'var(--kali-panel-highlight)',
+        'kali-panel-divider': 'var(--kali-panel-divider)',
       },
       boxShadow: {
         'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
