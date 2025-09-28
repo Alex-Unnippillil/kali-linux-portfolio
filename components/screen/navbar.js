@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { PureComponent } from 'react';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
@@ -7,7 +7,17 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 
-export default class Navbar extends Component {
+const areWorkspacesEqual = (next, prev) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+                if (next[index] !== prev[index]) {
+                        return false;
+                }
+        }
+        return true;
+};
+
+export default class Navbar extends PureComponent {
         constructor() {
                 super();
                 this.state = {
@@ -35,9 +45,21 @@ export default class Navbar extends Component {
         handleWorkspaceStateUpdate = (event) => {
                 const detail = event?.detail || {};
                 const { workspaces, activeWorkspace } = detail;
-                this.setState({
-                        workspaces: Array.isArray(workspaces) ? workspaces : [],
-                        activeWorkspace: typeof activeWorkspace === 'number' ? activeWorkspace : 0
+                const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
+                const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
+
+                this.setState((previousState) => {
+                        const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
+                        const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
+
+                        if (!workspacesChanged && !activeChanged) {
+                                return null;
+                        }
+
+                        return {
+                                workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
+                                activeWorkspace: nextActiveWorkspace
+                        };
                 });
         };
 
@@ -49,11 +71,15 @@ export default class Navbar extends Component {
                 }
         };
 
+        handleStatusToggle = () => {
+                this.setState((state) => ({ status_card: !state.status_card }));
+        };
+
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
-                                <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-                                        <div className="flex items-center gap-2">
+                                <div className="main-navbar-vp absolute top-0 right-0 z-50 flex w-screen items-center justify-between bg-slate-950/80 px-3 py-2 text-ubt-grey shadow-lg backdrop-blur-md">
+                                        <div className="flex items-center gap-2 text-xs md:text-sm">
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
@@ -64,27 +90,25 @@ export default class Navbar extends Component {
                                                 )}
                                                 <PerformanceGraph />
                                         </div>
-					<div
-						className={
-							'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
-						}
-					>
-						<Clock />
-					</div>
-					<button
-						type="button"
-						id="status-bar"
-						aria-label="System status"
-						onClick={() => {
-							this.setState({ status_card: !this.state.status_card });
-						}}
-						className={
-							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-						}
-					>
-						<Status />
-						<QuickSettings open={this.state.status_card} />
-					</button>
+                                        <div
+                                                className={
+                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
+                                                }
+                                        >
+                                                <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                        </div>
+                                        <button
+                                                type="button"
+                                                id="status-bar"
+                                                aria-label="System status"
+                                                onClick={this.handleStatusToggle}
+                                                className={
+                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                }
+                                        >
+                                                <Status />
+                                                <QuickSettings open={this.state.status_card} />
+                                        </button>
 				</div>
 			);
 		}

@@ -2,6 +2,7 @@
 
 import type { FC, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import usePersistentState from "../../hooks/usePersistentState";
 
 type NetworkType = "wired" | "wifi";
@@ -252,6 +253,7 @@ interface NetworkIndicatorProps {
 }
 
 const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online }) => {
+
   const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
     "status-wifi-enabled",
     true,

@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, FC, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import usePersistentState from "../../hooks/usePersistentState";
 
 export const clampLevel = (value: number) => Math.min(1, Math.max(0, value));
@@ -104,6 +105,7 @@ export const estimateBatteryTime = (level: number, charging: boolean) => {
 interface BatteryIndicatorProps {
   className?: string;
 }
+
 
 const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
   const [open, setOpen] = useState(false);
