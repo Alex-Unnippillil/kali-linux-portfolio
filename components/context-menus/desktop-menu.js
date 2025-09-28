@@ -3,6 +3,12 @@ import logger from '../../utils/logger'
 
 function DesktopMenu(props) {
 
+    const sortOptions = [
+        { id: 'name', label: 'Name' },
+        { id: 'type', label: 'Type' },
+        { id: 'date', label: 'Date' },
+    ];
+
     const [isFullScreen, setIsFullScreen] = useState(false)
 
     useEffect(() => {
@@ -67,6 +73,36 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">Create Shortcut...</span>
+            </button>
+            <Devider />
+            <div className="text-[0.65rem] uppercase tracking-wide text-gray-300 px-5 pb-1">Sort by</div>
+            {sortOptions.map((option) => {
+                const active = props.sortMode === option.id;
+                return (
+                    <button
+                        key={option.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={active}
+                        onClick={() => props.onChangeSort?.(option.id)}
+                        className={`w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 ${active ? 'font-medium' : ''}`}
+                    >
+                        <span className="ml-5 flex items-center gap-2">
+                            <span className="w-2 text-center">{active ? '•' : ''}</span>
+                            <span>{option.label}</span>
+                        </span>
+                    </button>
+                );
+            })}
+            <button
+                type="button"
+                role="menuitem"
+                aria-label="Undo Rename"
+                disabled={!props.canUndoRename}
+                onClick={() => props.canUndoRename && props.onUndoRename?.()}
+                className={`w-full text-left py-0.5 mb-1.5 ${props.canUndoRename ? 'hover:bg-ub-warm-grey hover:bg-opacity-20' : 'text-gray-400 cursor-default'}`}
+            >
+                <span className="ml-5">Undo Rename</span>
             </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
