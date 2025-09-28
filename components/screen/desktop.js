@@ -222,6 +222,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('terminal-new-window', this.handleTerminalNewWindow);
     }
 
     componentWillUnmount() {
@@ -229,6 +230,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('terminal-new-window', this.handleTerminalNewWindow);
     }
 
     checkForNewFolders = () => {
@@ -746,6 +748,10 @@ export class Desktop extends Component {
             const { id, ...context } = detail;
             this.openApp(id, context);
         }
+    }
+
+    handleTerminalNewWindow = () => {
+        this.openApp('terminal');
     }
 
     openApp = (objId, params) => {
