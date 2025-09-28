@@ -23,6 +23,7 @@ export default function Taskbar(props) {
                 workspaces={workspaces}
                 activeWorkspace={props.activeWorkspace}
                 onSelect={props.onSelectWorkspace}
+                onShift={(direction) => props.onShiftWorkspace && props.onShiftWorkspace(direction)}
             />
             <div className="flex items-center overflow-x-auto">
                 {runningApps.map(app => {

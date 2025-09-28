@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  workspaceCount: 4,
 };
 
 export async function getAccent() {
@@ -135,6 +136,20 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getWorkspaceCount() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.workspaceCount;
+  const stored = window.localStorage.getItem('workspace-count');
+  if (!stored) return DEFAULT_SETTINGS.workspaceCount;
+  const parsed = Number.parseInt(stored, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SETTINGS.workspaceCount;
+}
+
+export async function setWorkspaceCount(count) {
+  if (typeof window === 'undefined') return;
+  const next = Number.isFinite(count) && count > 0 ? Math.round(count) : DEFAULT_SETTINGS.workspaceCount;
+  window.localStorage.setItem('workspace-count', String(next));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +165,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('workspace-count');
 }
 
 export async function exportSettings() {
@@ -192,6 +208,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    workspaceCount,
   });
 }
 
@@ -217,6 +234,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    workspaceCount,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +248,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (workspaceCount !== undefined) await setWorkspaceCount(workspaceCount);
 }
 
 export const defaults = DEFAULT_SETTINGS;
