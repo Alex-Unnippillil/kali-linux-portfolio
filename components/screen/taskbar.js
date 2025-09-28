@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import DelayedTooltip from '../ui/DelayedTooltip';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
@@ -31,34 +32,40 @@ export default function Taskbar(props) {
                     const isActive = !isMinimized;
 
                     return (
-                        <button
-                            key={app.id}
-                            type="button"
-                            aria-label={app.title}
-                            data-context="taskbar"
-                            data-app-id={app.id}
-                            data-active={isActive ? 'true' : 'false'}
-                            aria-pressed={isActive}
-                            onClick={() => handleClick(app)}
-                            className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10`}
-                        >
-                            <Image
-                                width={24}
-                                height={24}
-                                className="w-5 h-5"
-                                src={app.icon.replace('./', '/')}
-                                alt=""
-                                sizes="24px"
-                            />
-                            <span className="ml-1 text-sm text-white whitespace-nowrap">{app.title}</span>
-                            {isActive && (
-                                <span
-                                    aria-hidden="true"
-                                    data-testid="running-indicator"
-                                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded"
-                                />
+                        <DelayedTooltip key={app.id} content={app.title}>
+                            {({ ref: triggerRef, ...triggerProps }) => (
+                                <button
+                                    {...triggerProps}
+                                    ref={triggerRef}
+                                    type="button"
+                                    aria-label={app.title}
+                                    title={app.title}
+                                    data-context="taskbar"
+                                    data-app-id={app.id}
+                                    data-active={isActive ? 'true' : 'false'}
+                                    aria-pressed={isActive}
+                                    onClick={() => handleClick(app)}
+                                    className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10`}
+                                >
+                                    <Image
+                                        width={24}
+                                        height={24}
+                                        className="w-5 h-5"
+                                        src={app.icon.replace('./', '/')}
+                                        alt=""
+                                        sizes="24px"
+                                    />
+                                    <span className="ml-1 text-sm text-white whitespace-nowrap">{app.title}</span>
+                                    {isActive && (
+                                        <span
+                                            aria-hidden="true"
+                                            data-testid="running-indicator"
+                                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded"
+                                        />
+                                    )}
+                                </button>
                             )}
-                        </button>
+                        </DelayedTooltip>
                     );
                 })}
             </div>
