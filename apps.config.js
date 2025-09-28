@@ -636,6 +636,9 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayTerminal,
+    resizable: true,
+    defaultWidth: 68,
+    defaultHeight: 72,
   },
   {
     // VSCode app uses a Stack iframe, so no editor dependencies are required
