@@ -6,14 +6,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
-
-type AppMeta = {
-  id: string;
-  title: string;
-  icon: string;
-  disabled?: boolean;
-  favourite?: boolean;
-};
+import type { AppMeta } from '../../types/app';
 
 type CategorySource =
   | { type: 'all' }
@@ -161,7 +154,7 @@ const WhiskerMenu: React.FC = () => {
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
 
-  const allApps: AppMeta[] = apps as any;
+  const allApps: AppMeta[] = apps as AppMeta[];
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
