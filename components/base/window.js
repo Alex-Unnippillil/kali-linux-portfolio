@@ -635,7 +635,7 @@ export class Window extends Component {
                 )}
                 <Draggable
                     axis="both"
-                    handle=".bg-ub-window-title"
+                    handle='[data-window-handle="true"]'
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
@@ -676,6 +676,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            isFocused={this.props.isFocused}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -702,10 +703,17 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, isFocused }) {
+    const titleBarClassName = [
+        styles.windowTitlebar,
+        isFocused ? styles.windowTitlebarActive : styles.windowTitlebarInactive,
+        'relative px-3 text-white w-full select-none flex items-center'
+    ].join(' ');
+
     return (
         <div
-            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
+            data-window-handle="true"
+            className={titleBarClassName}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}

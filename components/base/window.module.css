@@ -1,10 +1,19 @@
 .windowFrame {
   position: relative;
-  border: 1px solid var(--color-window-border);
+  border: 1px solid var(--kali-border, var(--color-window-border));
   border-radius: var(--radius-6);
   box-shadow: var(--shadow-2);
   overflow: hidden;
-  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kali-panel) 75%, transparent) 0%,
+    color-mix(in srgb, var(--kali-bg-solid) 90%, transparent) 100%
+  );
+  transition:
+    filter var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    background var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
 }
 
 .windowFrame::before {
@@ -27,7 +36,20 @@
   opacity: 1;
 }
 
+.windowFrameActive {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kali-panel) 80%, transparent) 0%,
+    color-mix(in srgb, var(--kali-bg-solid) 85%, transparent) 100%
+  );
+}
+
 .windowFrameInactive {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kali-bg-solid) 92%, transparent) 0%,
+    color-mix(in srgb, var(--color-bg) 95%, transparent) 100%
+  );
   filter: brightness(0.85);
 }
 
@@ -45,6 +67,23 @@
   border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
   z-index: 1;
+  border-bottom: 1px solid var(--kali-border, var(--color-window-border));
+}
+
+.windowTitlebarActive {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kali-blue) 35%, var(--kali-panel)) 0%,
+    color-mix(in srgb, var(--kali-blue-dark) 55%, var(--kali-bg-solid)) 100%
+  );
+}
+
+.windowTitlebarInactive {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kali-bg-solid) 88%, transparent) 0%,
+    color-mix(in srgb, var(--color-bg) 98%, transparent) 100%
+  );
 }
 
 .windowControls {

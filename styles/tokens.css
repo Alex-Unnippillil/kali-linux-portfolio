@@ -36,6 +36,7 @@
   --kali-panel: rgba(26, 31, 38, 0.9);
   --kali-panel-border: rgba(255, 255, 255, 0.08);
   --kali-panel-highlight: rgba(255, 255, 255, 0.05);
+  --kali-border: var(--kali-panel-border);
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
 
