@@ -130,6 +130,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .windowMainScreen {
     container-type: inline-size;
+    scrollbar-color: var(--color-border) transparent;
 }
 
 .windowMainScreen::-webkit-scrollbar-track {
