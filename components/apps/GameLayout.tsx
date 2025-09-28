@@ -271,6 +271,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           type="button"
           aria-label="Help"
           aria-expanded={showHelp}
+          aria-haspopup="dialog"
+          title="Open help overlay"
           onClick={toggle}
           className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
         >
