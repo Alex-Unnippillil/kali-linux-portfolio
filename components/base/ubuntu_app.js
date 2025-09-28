@@ -31,34 +31,66 @@ export class UbuntuApp extends Component {
     }
 
     render() {
+        const {
+            id,
+            name,
+            icon,
+            displayName,
+            disabled,
+            tabIndex,
+            isActive = false,
+            ariaSelected = false,
+            onFocus,
+            onMouseDown,
+        } = this.props
+
+        const computedTabIndex = disabled ? -1 : typeof tabIndex === 'number' ? tabIndex : 0
+        const activationKeys = ['Enter', ' ', 'Spacebar']
+
         return (
             <div
-                role="button"
-                aria-label={this.props.name}
-                aria-disabled={this.props.disabled}
+                role="option"
+                aria-label={name}
+                aria-disabled={disabled}
+                aria-selected={ariaSelected}
                 data-context="app"
-                data-app-id={this.props.id}
+                data-app-id={id}
+                data-active={isActive ? 'true' : 'false'}
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
-                className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
-                    " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
-                id={"app-" + this.props.id}
+                className={`p-1 m-px z-10 rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition hover:bg-white hover:bg-opacity-20 outline-none border border-transparent bg-white bg-opacity-0 transition-hover transition-active ${
+                    this.state.launching ? 'app-icon-launch' : ''
+                } ${this.state.dragging ? 'opacity-70' : ''} ${
+                    isActive
+                        ? 'ring-2 ring-yellow-300 ring-offset-2 ring-offset-black bg-opacity-10'
+                        : 'focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:bg-white focus-visible:bg-opacity-10'
+                }`}
+                id={`app-${id}`}
                 onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                onKeyDown={(e) => {
+                    if (activationKeys.includes(e.key)) {
+                        e.preventDefault()
+                        this.openApp()
+                    }
+                }}
+                tabIndex={computedTabIndex}
                 onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onFocus={(event) => {
+                    this.handlePrefetch()
+                    if (typeof onFocus === 'function') onFocus(event)
+                }}
+                onMouseDown={onMouseDown}
             >
                 <Image
                     width={40}
                     height={40}
                     className="mb-1 w-10"
-                    src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
+                    src={icon.replace('./', '/')}
+                    alt={`Kali ${name}`}
                     sizes="40px"
                 />
-                {this.props.displayName || this.props.name}
+                {displayName || name}
 
             </div>
         )
