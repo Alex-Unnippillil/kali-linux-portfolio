@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
+import type { FC, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 
 type NetworkType = "wired" | "wifi";
-
 type SignalStrength = "excellent" | "good" | "fair" | "weak";
 
 interface Network {
@@ -65,19 +64,186 @@ const SIGNAL_LABEL: Record<SignalStrength, string> = {
   weak: "Weak",
 };
 
-const hasSecureLabel = (network: Network) =>
+const SIGNAL_STRENGTH_LEVEL: Record<SignalStrength, number> = {
+  weak: 1,
+  fair: 2,
+  good: 3,
+  excellent: 4,
+};
+
+export const hasSecureLabel = (network: Network) =>
   network.type === "wifi" && network.secure ? "Secured" : network.type === "wifi" ? "Open" : "Active";
 
 const classNames = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const iconForState = (online: boolean, wifiEnabled: boolean) =>
-  online && wifiEnabled
-    ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg"
-    : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg";
-
 const isValidNetworkId = (value: unknown): value is string =>
   typeof value === "string" && NETWORKS.some((network) => network.id === value);
+
+interface ConnectionSummary {
+  state: "offline" | "disabled" | "connected" | "blocked";
+  label: string;
+  description: string;
+  meta?: string;
+  tooltip: string;
+  notice?: string;
+}
+
+export const getConnectionSummary = ({
+  allowNetwork,
+  online,
+  wifiEnabled,
+  network,
+}: {
+  allowNetwork: boolean;
+  online: boolean;
+  wifiEnabled: boolean;
+  network: Network;
+}): ConnectionSummary => {
+  if (!online) {
+    return {
+      state: "offline",
+      label: "Offline",
+      description: wifiEnabled ? "Waiting for connection" : "Wi-Fi radio turned off",
+      tooltip: "Offline",
+    };
+  }
+
+  if (network.type === "wifi" && !wifiEnabled) {
+    return {
+      state: "disabled",
+      label: "Wi-Fi disabled",
+      description: "Wi-Fi radio turned off",
+      tooltip: "Wi-Fi disabled",
+    };
+  }
+
+  const secureLabel = hasSecureLabel(network);
+  const networkMeta =
+    network.type === "wifi"
+      ? [secureLabel, network.details].filter(Boolean).join(" • ")
+      : network.details;
+
+  if (!allowNetwork) {
+    return {
+      state: "blocked",
+      label: "Requests blocked",
+      description: network.name,
+      meta: networkMeta,
+      tooltip: `Connected to ${network.name} • Requests blocked`,
+      notice: "Remote requests are blocked by privacy controls.",
+    };
+  }
+
+  if (network.type === "wired") {
+    return {
+      state: "connected",
+      label: "Wired connection",
+      description: network.name,
+      meta: network.details,
+      tooltip: `${network.name} connected`,
+    };
+  }
+
+  return {
+    state: "connected",
+    label: "Connected",
+    description: network.name,
+    meta: networkMeta,
+    tooltip: `Connected to ${network.name} (${secureLabel})`,
+  };
+};
+
+const WifiGlyph: FC<{ strength?: SignalStrength; muted?: boolean; slash?: boolean }> = ({
+  strength,
+  muted = false,
+  slash = false,
+}) => {
+  const level = strength ? SIGNAL_STRENGTH_LEVEL[strength] : 0;
+  const activeOpacity = muted ? 0.55 : 0.9;
+  const inactiveOpacity = muted ? 0.25 : 0.3;
+
+  return (
+    <svg className="status-symbol h-4 w-4" viewBox="0 0 16 16" aria-hidden="true" role="img">
+      <path
+        d="M2.2 6.3C5.1 3.7 10.9 3.7 13.8 6.3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+        fill="none"
+        opacity={level >= 4 ? activeOpacity : inactiveOpacity}
+      />
+      <path
+        d="M3.8 8.1C6.1 6.4 9.9 6.4 12.2 8.1"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+        fill="none"
+        opacity={level >= 3 ? activeOpacity : inactiveOpacity}
+      />
+      <path
+        d="M5.5 9.9C7 8.8 9 8.8 10.5 9.9"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+        fill="none"
+        opacity={level >= 2 ? activeOpacity : inactiveOpacity}
+      />
+      <circle
+        cx="8"
+        cy="12.1"
+        r="1.1"
+        fill="currentColor"
+        opacity={level >= 1 ? activeOpacity : inactiveOpacity}
+      />
+      {slash && (
+        <line
+          x1="3"
+          y1="13"
+          x2="13"
+          y2="3"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          opacity="0.75"
+        />
+      )}
+    </svg>
+  );
+};
+
+const WiredGlyph: FC = () => (
+  <svg className="status-symbol h-4 w-4" viewBox="0 0 16 16" aria-hidden="true" role="img">
+    <rect
+      x="2"
+      y="3.5"
+      width="12"
+      height="6.2"
+      rx="1.8"
+      ry="1.8"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      opacity="0.85"
+    />
+    <rect x="5.2" y="10.5" width="5.6" height="2.2" rx="0.8" fill="currentColor" opacity="0.85" />
+    <rect x="7" y="12.3" width="2" height="2.5" rx="0.7" fill="currentColor" opacity="0.85" />
+  </svg>
+);
+
+const OfflineGlyph: FC = () => (
+  <svg className="status-symbol h-4 w-4" viewBox="0 0 16 16" aria-hidden="true" role="img">
+    <circle cx="8" cy="8" r="5.2" stroke="currentColor" strokeWidth="1.5" opacity="0.35" fill="none" />
+    <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.85" />
+  </svg>
+);
+
+const StatusGlyph: FC<{ summary: ConnectionSummary; network: Network }> = ({ summary, network }) => {
+  if (summary.state === "offline") return <OfflineGlyph />;
+  if (summary.state === "disabled") return <WifiGlyph strength={network.strength} muted slash />;
+  if (network.type === "wired") return <WiredGlyph />;
+  return <WifiGlyph strength={network.strength} muted={summary.state === "blocked"} />;
+};
 
 interface NetworkIndicatorProps {
   className?: string;
@@ -85,11 +251,7 @@ interface NetworkIndicatorProps {
   online: boolean;
 }
 
-const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
-  className = "",
-  allowNetwork,
-  online,
-}) => {
+const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online }) => {
   const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
     "status-wifi-enabled",
     true,
@@ -138,7 +300,12 @@ const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
     }
   }, [wifiEnabled, connectedNetwork.type, setConnectedId]);
 
-  const handleToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const summary = useMemo(
+    () => getConnectionSummary({ allowNetwork, online, wifiEnabled, network: connectedNetwork }),
+    [allowNetwork, online, wifiEnabled, connectedNetwork],
+  );
+
+  const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setOpen((prev) => !prev);
   };
@@ -154,34 +321,20 @@ const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
     setConnectedId(network.id);
   };
 
-  const tooltip = online
-    ? wifiEnabled
-      ? `Connected to ${connectedNetwork.name}`
-      : "Wi-Fi disabled"
-    : "Offline";
-
   return (
     <div ref={rootRef} className={classNames("relative flex items-center", className)}>
       <button
         type="button"
         className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
-        aria-label={tooltip}
+        aria-label={summary.tooltip}
         aria-haspopup="true"
         aria-expanded={open}
-        title={tooltip}
+        title={summary.tooltip}
         onClick={handleToggle}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <span className="relative inline-flex">
-          <Image
-            width={16}
-            height={16}
-            src={iconForState(online, wifiEnabled && connectedNetwork.type !== "wired")}
-            alt={online ? "network online" : "network offline"}
-            className="status-symbol h-4 w-4"
-            draggable={false}
-            sizes="16px"
-          />
+          <StatusGlyph summary={summary} network={connectedNetwork} />
           {!allowNetwork && (
             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
           )}
@@ -199,18 +352,16 @@ const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
           <div className="mb-3 rounded bg-black bg-opacity-20 p-3">
             <div className="flex items-center justify-between text-[11px] text-gray-200">
               <span className="uppercase">Status</span>
-              <span className="font-semibold text-white">
-                {online ? (wifiEnabled ? "Connected" : "Disabled") : "Offline"}
-              </span>
+              <span className="font-semibold text-white">{summary.label}</span>
             </div>
-            <p className="mt-1 text-[11px] text-gray-300">
-              {wifiEnabled && online
-                ? `${connectedNetwork.name} • ${hasSecureLabel(connectedNetwork)}`
-                : wifiEnabled
-                ? "Waiting for connection"
-                : "Wi-Fi radio turned off"}
-            </p>
+            <p className="mt-1 text-[11px] text-gray-300">{summary.description}</p>
+            {summary.meta && <p className="mt-1 text-[11px] text-gray-400">{summary.meta}</p>}
           </div>
+          {summary.notice && (
+            <div className="mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-[11px] text-red-200">
+              {summary.notice}
+            </div>
+          )}
           <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
             <span className="text-white normal-case">Wi-Fi</span>
             <input
@@ -236,6 +387,7 @@ const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
                     )}
                     onClick={() => !disabled && handleConnect(network)}
                     disabled={disabled}
+                    aria-pressed={connected}
                   >
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-white">{network.name}</span>
@@ -247,7 +399,9 @@ const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
                       {connected
                         ? network.details
                         : network.type === "wifi"
-                        ? `${hasSecureLabel(network)}${network.strength ? ` • ${SIGNAL_LABEL[network.strength]}` : ""}`
+                        ? `${hasSecureLabel(network)}${
+                            network.strength ? ` • ${SIGNAL_LABEL[network.strength]}` : ""
+                          }`
                         : network.details}
                     </div>
                   </button>
