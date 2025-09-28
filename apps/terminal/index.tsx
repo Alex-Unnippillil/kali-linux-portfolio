@@ -81,6 +81,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
+  const rectangularSelectionRef = useRef('');
+  const altSelectionRef = useRef<{
+    active: boolean;
+    anchor: {
+      column: number;
+      bufferRow: number;
+      viewportRow: number;
+    } | null;
+    last: {
+      column: number;
+      bufferRow: number;
+      viewportRow: number;
+    } | null;
+    overlay: HTMLDivElement | null;
+    cellSize: { width: number; height: number } | null;
+  }>({
+    active: false,
+    anchor: null,
+    last: null,
+    overlay: null,
+    cellSize: null,
+  });
   const commandRef = useRef('');
   const contentRef = useRef('');
   const registryRef = useRef(commandRegistry);
@@ -101,6 +123,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [clipboardAvailable, setClipboardAvailable] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -152,17 +175,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     );
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      handleInput(text);
-    } catch {}
-  };
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -288,6 +300,39 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       [runCommand, prompt],
     );
 
+  useEffect(() => {
+    setClipboardAvailable(
+      typeof navigator !== 'undefined' &&
+        !!navigator.clipboard &&
+        typeof navigator.clipboard.writeText === 'function' &&
+        typeof navigator.clipboard.readText === 'function',
+    );
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    if (!clipboardAvailable) return;
+    const term = termRef.current;
+    const selected = term?.getSelection?.();
+    const text =
+      rectangularSelectionRef.current ||
+      (selected && selected.length > 0 ? selected : contentRef.current);
+    const result = navigator.clipboard?.writeText(text);
+    if (result && typeof (result as Promise<unknown>).catch === 'function') {
+      (result as Promise<unknown>).catch(() => {});
+    }
+    rectangularSelectionRef.current = '';
+  }, [clipboardAvailable]);
+
+  const handlePaste = useCallback(async () => {
+    if (!clipboardAvailable) return;
+    try {
+      const text = await navigator.clipboard?.readText();
+      if (text) {
+        handleInput(text);
+      }
+    } catch {}
+  }, [clipboardAvailable, handleInput]);
+
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
@@ -295,6 +340,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     let disposed = false;
+    let cleanup: (() => void) | undefined;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
         import('@xterm/xterm'),
@@ -373,8 +419,181 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       });
       updateOverflow();
       term.onScroll?.(updateOverflow);
+
+      const container = containerRef.current;
+      const termElement: HTMLElement | null = term.element;
+      const ensureOverlay = () => {
+        if (!altSelectionRef.current.overlay && container) {
+          const overlay = document.createElement('div');
+          overlay.style.position = 'absolute';
+          overlay.style.pointerEvents = 'none';
+          overlay.style.background = 'rgba(23, 147, 209, 0.25)';
+          overlay.style.border = '1px solid #1793d1';
+          overlay.style.zIndex = '5';
+          container.appendChild(overlay);
+          altSelectionRef.current.overlay = overlay;
+        }
+      };
+
+      const clearOverlay = () => {
+        const overlay = altSelectionRef.current.overlay;
+        if (overlay?.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+        altSelectionRef.current.overlay = null;
+      };
+
+      const updateOverlay = (
+        start: { column: number; viewportRow: number },
+        current: { column: number; viewportRow: number },
+        cellSize: { width: number; height: number },
+      ) => {
+        if (!altSelectionRef.current.overlay) return;
+        const leftColumn = Math.min(start.column, current.column);
+        const rightColumn = Math.max(start.column, current.column) + 1;
+        const topRow = Math.min(start.viewportRow, current.viewportRow);
+        const bottomRow = Math.max(start.viewportRow, current.viewportRow) + 1;
+        altSelectionRef.current.overlay.style.left = `${leftColumn * cellSize.width}px`;
+        altSelectionRef.current.overlay.style.top = `${topRow * cellSize.height}px`;
+        altSelectionRef.current.overlay.style.width = `${
+          (rightColumn - leftColumn) * cellSize.width
+        }px`;
+        altSelectionRef.current.overlay.style.height = `${
+          (bottomRow - topRow) * cellSize.height
+        }px`;
+        altSelectionRef.current.overlay.style.display = 'block';
+      };
+
+      const getBufferCoords = (event: MouseEvent) => {
+        if (!termElement) return null;
+        const rect = termElement.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        const cellWidth = rect.width / term.cols;
+        const cellHeight = rect.height / term.rows;
+        const offsetX = event.clientX - rect.left;
+        const offsetY = event.clientY - rect.top;
+        if (offsetX < 0 || offsetY < 0 || offsetX > rect.width || offsetY > rect.height)
+          return null;
+        const column = Math.min(
+          term.cols - 1,
+          Math.max(0, Math.floor(offsetX / cellWidth)),
+        );
+        const viewportRow = Math.min(
+          term.rows - 1,
+          Math.max(0, Math.floor(offsetY / cellHeight)),
+        );
+        const buffer = term.buffer?.active;
+        const bufferRow = buffer ? buffer.viewportY + viewportRow : viewportRow;
+        return {
+          column,
+          viewportRow,
+          bufferRow,
+          cellSize: { width: cellWidth, height: cellHeight },
+        };
+      };
+
+      const finalizeAltSelection = () => {
+        const { anchor, last } = altSelectionRef.current;
+        const termBuffer = term.buffer?.active;
+        if (!anchor || !termBuffer) {
+          rectangularSelectionRef.current = '';
+        } else {
+          const end = last ?? anchor;
+          const startRow = Math.min(anchor.bufferRow, end.bufferRow);
+          const endRow = Math.max(anchor.bufferRow, end.bufferRow);
+          const startCol = Math.min(anchor.column, end.column);
+          const endCol = Math.max(anchor.column, end.column);
+          const lines: string[] = [];
+          for (let row = startRow; row <= endRow; row++) {
+            const line = termBuffer.getLine?.(row);
+            if (!line) continue;
+            lines.push(line.translateToString(false, startCol, endCol + 1));
+          }
+          rectangularSelectionRef.current = lines.join('\n');
+        }
+        altSelectionRef.current.active = false;
+        altSelectionRef.current.anchor = null;
+        altSelectionRef.current.last = null;
+        altSelectionRef.current.cellSize = null;
+        if (altSelectionRef.current.overlay) {
+          altSelectionRef.current.overlay.style.display = 'none';
+        }
+      };
+
+      const handleMouseDown = (event: MouseEvent) => {
+        if (event.detail === 3) {
+          event.preventDefault();
+          rectangularSelectionRef.current = '';
+          const coords = getBufferCoords(event);
+          const bufferRow = coords?.bufferRow;
+          if (typeof bufferRow === 'number') {
+            term.selectLines(bufferRow, bufferRow);
+          }
+          return;
+        }
+        if (event.altKey && event.button === 0) {
+          const coords = getBufferCoords(event);
+          if (!coords) return;
+          event.preventDefault();
+          ensureOverlay();
+          altSelectionRef.current.active = true;
+          altSelectionRef.current.anchor = {
+            column: coords.column,
+            bufferRow: coords.bufferRow,
+            viewportRow: coords.viewportRow,
+          };
+          altSelectionRef.current.last = {
+            column: coords.column,
+            bufferRow: coords.bufferRow,
+            viewportRow: coords.viewportRow,
+          };
+          altSelectionRef.current.cellSize = coords.cellSize;
+          rectangularSelectionRef.current = '';
+          term.clearSelection?.();
+          updateOverlay(
+            { column: coords.column, viewportRow: coords.viewportRow },
+            { column: coords.column, viewportRow: coords.viewportRow },
+            coords.cellSize,
+          );
+        }
+      };
+
+      const handleMouseMove = (event: MouseEvent) => {
+        if (!altSelectionRef.current.active) return;
+        const coords = getBufferCoords(event);
+        if (!coords || !altSelectionRef.current.cellSize) return;
+        event.preventDefault();
+        altSelectionRef.current.last = {
+          column: coords.column,
+          bufferRow: coords.bufferRow,
+          viewportRow: coords.viewportRow,
+        };
+        updateOverlay(
+          altSelectionRef.current.anchor!,
+          altSelectionRef.current.last!,
+          altSelectionRef.current.cellSize,
+        );
+      };
+
+      const handleMouseUp = (event: MouseEvent) => {
+        if (!altSelectionRef.current.active) return;
+        event.preventDefault();
+        finalizeAltSelection();
+      };
+
+      termElement?.addEventListener('mousedown', handleMouseDown);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+
+      cleanup = () => {
+        termElement?.removeEventListener('mousedown', handleMouseDown);
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        clearOverlay();
+      };
     })();
     return () => {
+      cleanup?.();
       disposed = true;
       termRef.current?.dispose();
     };
@@ -396,7 +615,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
+      if (!e.ctrlKey || !e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'p') {
         e.preventDefault();
         setPaletteOpen((v) => {
           const next = !v;
@@ -404,11 +625,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           else termRef.current?.focus();
           return next;
         });
+      } else if (key === 'c') {
+        if (!clipboardAvailable) return;
+        e.preventDefault();
+        handleCopy();
+      } else if (key === 'v') {
+        if (!clipboardAvailable) return;
+        e.preventDefault();
+        handlePaste();
       }
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
-  }, [paletteOpen]);
+  }, [clipboardAvailable, handleCopy, handlePaste]);
 
   return (
     <div className="relative h-full w-full">
@@ -482,10 +711,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 bg-gray-800 p-1">
-          <button onClick={handleCopy} aria-label="Copy">
+          <button
+            onClick={handleCopy}
+            aria-label="Copy"
+            disabled={!clipboardAvailable}
+            className={!clipboardAvailable ? 'opacity-50 cursor-not-allowed' : ''}
+          >
             <CopyIcon />
           </button>
-          <button onClick={handlePaste} aria-label="Paste">
+          <button
+            onClick={handlePaste}
+            aria-label="Paste"
+            disabled={!clipboardAvailable}
+            className={!clipboardAvailable ? 'opacity-50 cursor-not-allowed' : ''}
+          >
             <PasteIcon />
           </button>
           <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
