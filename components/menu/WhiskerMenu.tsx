@@ -30,6 +30,11 @@ type CategoryDefinitionBase = {
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+const CATEGORY_PAGE_STORAGE_KEY = 'whisker-menu-category-page';
+
+const GRID_COLUMNS = 3;
+const GRID_ROWS_PER_PAGE = 4;
+const ITEMS_PER_PAGE = GRID_COLUMNS * GRID_ROWS_PER_PAGE;
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -145,6 +150,27 @@ const readRecentAppIds = (): string[] => {
 };
 
 
+const readStoredPages = (): Record<string, number> => {
+  try {
+    const stored = safeLocalStorage?.getItem(CATEGORY_PAGE_STORAGE_KEY);
+    if (!stored) {
+      return {};
+    }
+    const parsed = JSON.parse(stored);
+    if (typeof parsed !== 'object' || parsed === null) {
+      return {};
+    }
+    return Object.entries(parsed).reduce<Record<string, number>>((acc, [key, value]) => {
+      if (typeof value === 'number' && value >= 0) {
+        acc[key] = Math.floor(value);
+      }
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
+};
+
 const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -155,10 +181,14 @@ const WhiskerMenu: React.FC = () => {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
+  const [pageByCategory, setPageByCategory] = useState<Record<string, number>>(() => readStoredPages());
+  const [currentPage, setCurrentPage] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const highlightCacheRef = useRef<Record<string, Record<number, number>>>({});
 
 
   const allApps: AppMeta[] = apps as any;
@@ -222,6 +252,19 @@ const WhiskerMenu: React.FC = () => {
     return list;
   }, [currentCategory, query]);
 
+  const totalPages = useMemo(() => {
+    if (currentApps.length === 0) {
+      return 1;
+    }
+    return Math.max(1, Math.ceil(currentApps.length / ITEMS_PER_PAGE));
+  }, [currentApps.length]);
+
+  const pageStartIndex = currentPage * ITEMS_PER_PAGE;
+  const pagedApps = useMemo(
+    () => currentApps.slice(pageStartIndex, pageStartIndex + ITEMS_PER_PAGE),
+    [currentApps, pageStartIndex],
+  );
+
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
     if (storedCategory && isCategoryId(storedCategory)) {
@@ -235,8 +278,87 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     if (!isVisible) return;
-    setHighlight(0);
-  }, [isVisible, category, query]);
+    if (query) {
+      setCurrentPage(0);
+      setHighlight(0);
+    }
+  }, [isVisible, query]);
+
+  useEffect(() => {
+    if (query) {
+      setCurrentPage(0);
+      return;
+    }
+    const storedPage = pageByCategory[category] ?? 0;
+    setCurrentPage(storedPage);
+  }, [category, pageByCategory, query]);
+
+  useEffect(() => {
+    safeLocalStorage?.setItem(CATEGORY_PAGE_STORAGE_KEY, JSON.stringify(pageByCategory));
+  }, [pageByCategory]);
+
+  useEffect(() => {
+    if (query) return;
+    setPageByCategory((prev) => {
+      const prevPage = prev[category] ?? 0;
+      if (prevPage === currentPage) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [category]: currentPage,
+      };
+    });
+  }, [category, currentPage, query]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => {
+      const maxPage = Math.max(0, totalPages - 1);
+      if (prev > maxPage) {
+        return maxPage;
+      }
+      return prev;
+    });
+  }, [totalPages]);
+
+  useEffect(() => {
+    if (!pagedApps.length) {
+      setHighlight(0);
+      return;
+    }
+    const startIndex = pageStartIndex;
+    const endIndex = Math.min(startIndex + pagedApps.length - 1, currentApps.length - 1);
+    setHighlight((prev) => {
+      if (prev >= startIndex && prev <= endIndex) {
+        return prev;
+      }
+      const cachedHighlight = highlightCacheRef.current[currentCategory.id]?.[currentPage];
+      const target = cachedHighlight ?? startIndex;
+      return Math.min(Math.max(target, startIndex), endIndex);
+    });
+  }, [currentApps.length, currentCategory.id, currentPage, pagedApps.length, pageStartIndex]);
+
+  useEffect(() => {
+    if (!pagedApps.length) return;
+    const pageIndex = Math.floor(highlight / ITEMS_PER_PAGE);
+    highlightCacheRef.current[currentCategory.id] = {
+      ...highlightCacheRef.current[currentCategory.id],
+      [pageIndex]: highlight,
+    };
+  }, [highlight, currentCategory.id, pagedApps.length]);
+
+  useEffect(() => {
+    const expectedPage = Math.floor(highlight / ITEMS_PER_PAGE);
+    if (!Number.isFinite(expectedPage)) return;
+    if (expectedPage !== currentPage) {
+      setCurrentPage(expectedPage);
+    }
+  }, [highlight, currentPage]);
+
+  useEffect(() => {
+    if (!gridRef.current) return;
+    gridRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage, currentCategory.id]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -306,10 +428,19 @@ const WhiskerMenu: React.FC = () => {
         hideMenu();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        setHighlight(h => {
+          if (!currentApps.length) return 0;
+          return Math.min(h + 1, currentApps.length - 1);
+        });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
+      } else if (e.key === 'PageDown') {
+        e.preventDefault();
+        setCurrentPage(page => Math.min(page + 1, totalPages - 1));
+      } else if (e.key === 'PageUp') {
+        e.preventDefault();
+        setCurrentPage(page => Math.max(page - 1, 0));
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const app = currentApps[highlight];
@@ -318,7 +449,7 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu, totalPages]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -466,13 +597,14 @@ const WhiskerMenu: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
-            <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
-
-              {currentApps.map((app, idx) => (
+            <div ref={gridRef} className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
+              {pagedApps.map((app, idx) => {
+                const globalIndex = pageStartIndex + idx;
+                return (
                 <div
                   key={app.id}
                   className={`rounded transition ring-offset-2 ${
-                    idx === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
+                    globalIndex === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
                   }`}
                 >
                   <UbuntuApp
@@ -483,7 +615,8 @@ const WhiskerMenu: React.FC = () => {
                     disabled={app.disabled}
                   />
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         </div>
