@@ -29,7 +29,7 @@ type CategoryDefinitionBase = {
 
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
-const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+const LAST_CATEGORY_STORAGE_KEY = 'kali-last-cat';
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -146,10 +146,15 @@ const readRecentAppIds = (): string[] => {
 
 
 const WhiskerMenu: React.FC = () => {
+  const allApps: AppMeta[] = apps as any;
+  const defaultCategory: CategoryDefinition['id'] = allApps.some(app => app.favourite)
+    ? 'favorites'
+    : 'all';
+
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [category, setCategory] = useState<CategoryDefinition['id']>('all');
+  const [category, setCategory] = useState<CategoryDefinition['id']>(defaultCategory);
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -160,8 +165,6 @@ const WhiskerMenu: React.FC = () => {
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-
-  const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
@@ -223,14 +226,14 @@ const WhiskerMenu: React.FC = () => {
   }, [currentCategory, query]);
 
   useEffect(() => {
-    const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
+    const storedCategory = safeLocalStorage?.getItem(LAST_CATEGORY_STORAGE_KEY);
     if (storedCategory && isCategoryId(storedCategory)) {
       setCategory(storedCategory);
     }
   }, []);
 
   useEffect(() => {
-    safeLocalStorage?.setItem(CATEGORY_STORAGE_KEY, currentCategory.id);
+    safeLocalStorage?.setItem(LAST_CATEGORY_STORAGE_KEY, currentCategory.id);
   }, [currentCategory.id]);
 
   useEffect(() => {
