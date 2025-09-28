@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import copyToClipboard from '../../../utils/clipboard';
+import { getCspNonce } from '../../../utils/csp';
 
 function extractVideoId(input: string): string {
   try {
@@ -29,6 +30,8 @@ export default function ClipMaker() {
     }
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
+    const nonce = getCspNonce();
+    if (nonce) tag.nonce = nonce;
     document.body.appendChild(tag);
     window.onYouTubeIframeAPIReady = () => setReady(true);
     return () => {

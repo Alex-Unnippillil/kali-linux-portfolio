@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getCspNonce } from '../../utils/csp';
 
 const SAMPLE_TRACKS = [
   { title: 'Song 1', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
@@ -19,6 +20,8 @@ export default function SpotifyApp() {
     const script = document.createElement('script');
     script.src = 'https://sdk.scdn.co/spotify-player.js';
     script.async = true;
+    const nonce = getCspNonce();
+    if (nonce) script.nonce = nonce;
     document.body.appendChild(script);
 
     window.onSpotifyWebPlaybackSDKReady = () => {

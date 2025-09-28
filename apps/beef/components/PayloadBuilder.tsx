@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { getCspNonce } from '../../../utils/csp';
 
 interface Payload {
   name: string;
@@ -20,7 +21,24 @@ export default function PayloadBuilder() {
   const [selected, setSelected] = useState<Payload>(payloads[0]);
   const [copied, setCopied] = useState(false);
 
-  const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Payload</title></head><body><script>${selected.code}</script></body></html>`;
+  const payloadNonce = useMemo(() => {
+    const existing = getCspNonce();
+    if (existing) return existing;
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      return btoa(
+        String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))),
+      );
+    }
+    return undefined;
+  }, []);
+
+  const page = useMemo(() => {
+    const policy = `default-src 'none'; script-src ${
+      payloadNonce ? `'nonce-${payloadNonce}'` : "'unsafe-inline'"
+    }; connect-src 'none'`;
+    const nonceAttr = payloadNonce ? ` nonce="${payloadNonce}"` : '';
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="${policy}"><title>Payload</title></head><body><script${nonceAttr}>${selected.code}</script></body></html>`;
+  }, [selected, payloadNonce]);
 
   const copyPage = async () => {
     try {

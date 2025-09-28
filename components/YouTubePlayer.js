@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
+import { getCspNonce } from '../utils/csp';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
@@ -66,6 +67,8 @@ export default function YouTubePlayer({ videoId }) {
         const tag = document.createElement('script');
         tag.src = 'https://www.youtube-nocookie.com/iframe_api';
         tag.async = true;
+        const nonce = getCspNonce();
+        if (nonce) tag.nonce = nonce;
         window.onYouTubeIframeAPIReady = createPlayer;
         document.body.appendChild(tag);
       } else {

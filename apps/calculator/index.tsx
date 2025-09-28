@@ -5,6 +5,7 @@ import ModeSwitcher from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
 import FormulaEditor from './components/FormulaEditor';
 import Tape from './components/Tape';
+import { getCspNonce } from '../../utils/csp';
 
 export default function Calculator() {
   const HISTORY_LIMIT = 10;
@@ -41,6 +42,8 @@ export default function Calculator() {
           script.src =
             'https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js';
           script.onload = resolve as any;
+          const nonce = getCspNonce();
+          if (nonce) script.nonce = nonce;
           document.body.appendChild(script);
         });
       }

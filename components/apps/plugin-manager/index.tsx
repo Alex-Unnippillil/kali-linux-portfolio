@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { getCspNonce } from '../../../utils/csp';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -86,7 +87,16 @@ export default function PluginManager() {
         finalize();
       }, 10);
     } else {
-      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none';"></head><body><script>${manifest.code}<\/script></body></html>`;
+      const baseNonce =
+        getCspNonce() ||
+        (typeof crypto !== 'undefined' && crypto.getRandomValues
+          ? btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))))
+          : undefined);
+      const policy = `default-src 'none'; script-src ${
+        baseNonce ? `'nonce-${baseNonce}'` : "'unsafe-inline'"
+      }; connect-src 'none'`;
+      const nonceAttr = baseNonce ? ` nonce="${baseNonce}"` : '';
+      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"></head><body><script${nonceAttr}>${manifest.code}<\/script></body></html>`;
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const iframe = document.createElement('iframe');

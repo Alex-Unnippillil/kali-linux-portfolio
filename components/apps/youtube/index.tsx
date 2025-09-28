@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getCspNonce } from '../../../utils/csp';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -337,6 +338,8 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     } else {
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
+      const nonce = getCspNonce();
+      if (nonce) tag.nonce = nonce;
       window.onYouTubeIframeAPIReady = initPlayer;
       document.body.appendChild(tag);
     }
