@@ -7,10 +7,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useContext,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { TerminalCommandContext } from './context';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -88,6 +90,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const pendingQuickRunRef = useRef<{ command: string; requestId?: number } | null>(null);
+  const lastQuickRunIdRef = useRef<number | undefined>(undefined);
+  const lastQuickRunCommandRef = useRef<string | undefined>(undefined);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -266,27 +271,62 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       }
     }, [prompt, writeLine]);
 
-    const handleInput = useCallback(
-      (data: string) => {
-        for (const ch of data) {
-          if (ch === '\r') {
-            termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
-            commandRef.current = '';
-            prompt();
-          } else if (ch === '\u007F') {
-            if (commandRef.current.length > 0) {
-              termRef.current?.write('\b \b');
-              commandRef.current = commandRef.current.slice(0, -1);
-            }
-          } else {
-            commandRef.current += ch;
-            termRef.current?.write(ch);
+  const handleInput = useCallback(
+    (data: string) => {
+      for (const ch of data) {
+        if (ch === '\r') {
+          termRef.current?.writeln('');
+          runCommand(commandRef.current.trim());
+          commandRef.current = '';
+          prompt();
+        } else if (ch === '\u007F') {
+          if (commandRef.current.length > 0) {
+            termRef.current?.write('\b \b');
+            commandRef.current = commandRef.current.slice(0, -1);
           }
+        } else {
+          commandRef.current += ch;
+          termRef.current?.write(ch);
         }
-      },
-      [runCommand, prompt],
-    );
+      }
+    },
+    [runCommand, prompt],
+  );
+
+  const quickRunContext = useContext(TerminalCommandContext);
+
+  const runQuickCommand = useCallback(
+    (command: string, requestId?: number) => {
+      if (!command) return;
+      if (requestId !== undefined) {
+        lastQuickRunIdRef.current = requestId;
+      } else {
+        lastQuickRunIdRef.current = undefined;
+      }
+      lastQuickRunCommandRef.current = command;
+      handleInput(`${command}\r`);
+      termRef.current?.focus();
+    },
+    [handleInput],
+  );
+
+  useEffect(() => {
+    const command = quickRunContext?.command?.trim();
+    if (!command) return;
+    const requestId = quickRunContext?.requestId;
+    if (requestId !== undefined) {
+      if (lastQuickRunIdRef.current === requestId) {
+        return;
+      }
+    } else if (lastQuickRunCommandRef.current === command) {
+      return;
+    }
+    if (termRef.current) {
+      runQuickCommand(command, requestId);
+    } else {
+      pendingQuickRunRef.current = { command, requestId };
+    }
+  }, [quickRunContext, runQuickCommand]);
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
@@ -343,6 +383,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
       prompt();
+      const pending = pendingQuickRunRef.current;
+      if (pending) {
+        pendingQuickRunRef.current = null;
+        runQuickCommand(pending.command, pending.requestId);
+      }
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
@@ -378,7 +423,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      autocomplete,
+      getDir,
+      handleInput,
+      opfsSupported,
+      prompt,
+      readFile,
+      runQuickCommand,
+      updateOverflow,
+      writeLine,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
