@@ -5,10 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 
 const ICONS = {
-  muted: "/themes/Yaru/status/audio-volume-muted-symbolic.svg",
-  low: "/themes/Yaru/status/audio-volume-low-symbolic.svg",
-  medium: "/themes/Yaru/status/audio-volume-medium-symbolic.svg",
-  high: "/themes/Yaru/status/audio-volume-high-symbolic.svg",
+  muted: "/themes/Kali/panel/audio-volume-muted-symbolic.svg",
+  low: "/themes/Kali/panel/audio-volume-low-symbolic.svg",
+  medium: "/themes/Kali/panel/audio-volume-medium-symbolic.svg",
+  high: "/themes/Kali/panel/audio-volume-high-symbolic.svg",
 } as const;
 
 type VolumeLevel = keyof typeof ICONS;
@@ -108,7 +108,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     >
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
+        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline-[var(--kali-focus-ring)] focus-visible:outline-offset-2"
         aria-label={`Volume ${formatPercent(volume)}`}
         aria-haspopup="true"
         aria-expanded={open}
@@ -128,7 +128,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-xs text-white shadow-kali-panel backdrop-blur"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={handleWheel}
@@ -148,7 +148,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
             aria-valuemax={100}
             aria-valuenow={Math.round(volume * 100)}
             aria-label="Volume level"
-            className="h-1 w-full cursor-pointer accent-ubt-blue"
+            className="h-1 w-full cursor-pointer accent-[var(--kali-accent)]"
             onChange={handleRangeChange}
           />
         </div>
