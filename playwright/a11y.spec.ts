@@ -20,7 +20,7 @@ const urls = [
   '/apps/vscode',
   '/apps/spotify',
   '/apps/x',
-  '/apps/chrome',
+  '/apps/firefox',
   '/apps/trash',
   '/apps/gedit',
   '/apps/todoist',
