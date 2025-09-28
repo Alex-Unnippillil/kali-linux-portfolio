@@ -4,6 +4,7 @@ import PluginManager from '../components/apps/plugin-manager';
 describe('PluginManager', () => {
   beforeEach(() => {
     localStorage.clear();
+    process.env.NEXT_PUBLIC_STATIC_EXPORT = 'false';
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:mock');
     (global as any).URL.revokeObjectURL = jest.fn();
 
@@ -23,11 +24,13 @@ describe('PluginManager', () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve([{ id: 'demo', file: 'demo.json' }]),
         });
       }
       if (url === '/api/plugins/demo.json') {
         return Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve({
               id: 'demo',
@@ -38,6 +41,10 @@ describe('PluginManager', () => {
       }
       return Promise.reject(new Error('unknown url'));
     });
+  });
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_STATIC_EXPORT;
   });
 
   test('installs plugin from catalog', async () => {

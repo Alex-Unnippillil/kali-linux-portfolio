@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
 
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+
 interface Module {
   id: string;
   name: string;
@@ -68,6 +70,10 @@ const PopularModules: React.FC = () => {
   };
 
   useEffect(() => {
+    if (isStaticExport) {
+      setUpdateAvailable(false);
+      return;
+    }
     fetch(`/api/modules/update?version=${version}`)
       .then((res) => res.json())
       .then((data) => setUpdateAvailable(data.needsUpdate))
@@ -75,6 +81,11 @@ const PopularModules: React.FC = () => {
   }, [version]);
 
   const handleUpdate = async () => {
+    if (isStaticExport) {
+      setUpdateAvailable(false);
+      setUpdateMessage('Static export bundles demo modules; updates require the live API.');
+      return;
+    }
     try {
       const res = await fetch(`/api/modules/update?version=${version}`);
       const data = await res.json();
@@ -196,15 +207,21 @@ const PopularModules: React.FC = () => {
         {updateAvailable && (
           <span className="text-xs text-yellow-300">Update available</span>
         )}
+        {isStaticExport && (
+          <span className="text-xs text-gray-300">
+            Static export uses bundled data.
+          </span>
+        )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
-      <input
-        type="text"
-        placeholder="Search modules"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-2 text-black rounded"
-      />
+        <input
+          type="text"
+          placeholder="Search modules"
+          value={search}
+          aria-label="Search modules"
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full p-2 text-black rounded"
+        />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
@@ -281,17 +298,19 @@ const PopularModules: React.FC = () => {
               Copy
             </button>
           </div>
-          <div className="space-y-1">
-            <label className="block text-sm">
-              Filter logs
+            <div className="space-y-1">
+              <label className="block text-sm" htmlFor="module-log-filter">
+                Filter logs
+              </label>
               <input
+                id="module-log-filter"
                 placeholder="Filter logs"
                 type="text"
                 value={logFilter}
+                aria-label="Filter logs"
                 onChange={(e) => setLogFilter(e.target.value)}
-                className="w-full p-1 mt-1 text-black rounded"
+                className="w-full p-1 text-black rounded"
               />
-            </label>
             <button
               type="button"
               onClick={copyLogs}
