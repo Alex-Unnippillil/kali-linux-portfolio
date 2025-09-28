@@ -87,10 +87,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
     }, []);
 
     useEffect(() => {
-        inertRootRef.current = getOverlayRoot();
+        const overlayEl = getOverlayRoot();
+        inertRootRef.current = overlayEl;
+
         if (isOpen) {
-            triggerRef.current = document.activeElement as HTMLElement;
-            inertRootRef.current?.setAttribute('inert', '');
+            if (!triggerRef.current) {
+                triggerRef.current = document.activeElement as HTMLElement;
+            }
+            overlayEl?.setAttribute('inert', '');
             const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
             if (elements && elements.length > 0) {
                 elements[0].focus();
@@ -98,12 +102,18 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
                 modalRef.current?.focus();
             }
         } else {
-            inertRootRef.current?.removeAttribute('inert');
-            triggerRef.current?.focus();
-            triggerRef.current = null;
+            overlayEl?.removeAttribute('inert');
         }
+
         return () => {
-            inertRootRef.current?.removeAttribute('inert');
+            overlayEl?.removeAttribute('inert');
+            if (triggerRef.current && typeof triggerRef.current.focus === 'function') {
+                const target = triggerRef.current;
+                triggerRef.current = null;
+                if (document.contains(target)) {
+                    target.focus();
+                }
+            }
         };
     }, [isOpen, getOverlayRoot]);
 

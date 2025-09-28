@@ -625,6 +625,7 @@ const apps = [
     screen: displayCalculator,
     resizable: false,
     allowMaximize: false,
+    closeOnEscape: true,
     defaultWidth: 28,
     defaultHeight: 50,
   },

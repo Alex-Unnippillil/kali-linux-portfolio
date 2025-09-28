@@ -549,9 +549,50 @@ export class Window extends Component {
         }
     }
 
+    isTransientWindow = () => {
+        if (typeof this.props.closeOnEscape === 'boolean') {
+            return this.props.closeOnEscape;
+        }
+
+        const disableMaximize = this.props.allowMaximize === false;
+        const disableResize = this.props.resizable === false;
+
+        if (!(disableMaximize && disableResize)) {
+            return false;
+        }
+
+        const width = typeof this.props.defaultWidth === 'number' ? this.props.defaultWidth : this.state.width;
+        const height = typeof this.props.defaultHeight === 'number' ? this.props.defaultHeight : this.state.height;
+
+        const compactWidth = typeof width === 'number' && width <= 40;
+        const compactHeight = typeof height === 'number' && height <= 50;
+
+        return compactWidth || compactHeight;
+    }
+
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            const isTransient = this.isTransientWindow();
+
+            if (this.state.grabbed) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.releaseGrab();
+                this.focusWindow();
+                if (!isTransient) {
+                    return;
+                }
+            }
+
+            if (isTransient) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.closeWindow();
+            } else {
+                e.preventDefault();
+                e.stopPropagation();
+                this.focusWindow();
+            }
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
