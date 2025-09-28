@@ -22,7 +22,8 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { addRecentApp } from '../../utils/recentStorage';
+import { addRecentApp, readRecentAppIds } from '../../utils/recentStorage';
+import logger from '../../utils/logger';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -41,6 +42,8 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.arrangeStorageKey = 'desktop-arrange-mode';
+        this.arrangeModes = new Set(['name', 'favorites', 'recent']);
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -69,6 +72,7 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
+            desktopArrange: 'name',
         }
     }
 
@@ -218,6 +222,7 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        this.loadDesktopArrangePreference();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
@@ -371,9 +376,12 @@ export class Desktop extends Component {
     }
 
     checkContextMenu = (e) => {
+        const target = e.target.closest('[data-context]');
+        if (!target) {
+            return;
+        }
         e.preventDefault();
         this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
         switch (context) {
@@ -409,9 +417,10 @@ export class Desktop extends Component {
 
     handleContextKey = (e) => {
         if (!(e.shiftKey && e.key === 'F10')) return;
+        const target = e.target.closest('[data-context]');
+        if (!target) return;
         e.preventDefault();
         this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
@@ -438,6 +447,8 @@ export class Desktop extends Component {
     showContextMenu = (e, menuName /* context menu name */) => {
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
+
+        if (!contextMenu) return;
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -590,25 +601,18 @@ export class Desktop extends Component {
 
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
-
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
+        const desktopList = this.getSortedDesktopApps();
+        return desktopList.map((app) => {
+            const props = {
+                name: app.title,
+                id: app.id,
+                icon: app.icon,
+                openApp: this.openApp,
+                disabled: this.state.disabled_apps[app.id],
+                prefetch: app.screen?.prefetch,
+            };
+            return <UbuntuApp key={app.id} {...props} />;
         });
-        return appsJsx;
     }
 
     renderWindows = () => {
@@ -1025,6 +1029,78 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     };
 
+    arrangeDesktopIcons = (mode) => {
+        if (!this.arrangeModes.has(mode)) return;
+        if (safeLocalStorage) {
+            try {
+                safeLocalStorage.setItem(this.arrangeStorageKey, mode);
+            } catch (error) {
+                logger.warn('Unable to persist desktop arrangement', error);
+            }
+        }
+        this.setState({ desktopArrange: mode });
+    };
+
+    loadDesktopArrangePreference = () => {
+        if (!safeLocalStorage) return;
+        try {
+            const stored = safeLocalStorage.getItem(this.arrangeStorageKey);
+            if (stored && this.arrangeModes.has(stored)) {
+                this.setState({ desktopArrange: stored });
+            }
+        } catch (error) {
+            logger.warn('Unable to read desktop arrangement', error);
+        }
+    };
+
+    getSortedDesktopApps = () => {
+        const arrangement = this.arrangeModes.has(this.state.desktopArrange)
+            ? this.state.desktopArrange
+            : 'name';
+        const desktopSet = new Set(this.state.desktop_apps);
+        const desktopAppsList = apps.filter((app) => desktopSet.has(app.id));
+        const list = [...desktopAppsList];
+        switch (arrangement) {
+            case 'favorites':
+                list.sort((a, b) => {
+                    const favA = this.state.favourite_apps[a.id] ? 0 : 1;
+                    const favB = this.state.favourite_apps[b.id] ? 0 : 1;
+                    if (favA !== favB) return favA - favB;
+                    return a.title.localeCompare(b.title);
+                });
+                break;
+            case 'recent': {
+                const recent = readRecentAppIds();
+                list.sort((a, b) => {
+                    const idxA = recent.indexOf(a.id);
+                    const idxB = recent.indexOf(b.id);
+                    if (idxA === -1 && idxB === -1) {
+                        return a.title.localeCompare(b.title);
+                    }
+                    if (idxA === -1) return 1;
+                    if (idxB === -1) return -1;
+                    if (idxA === idxB) {
+                        return a.title.localeCompare(b.title);
+                    }
+                    return idxA - idxB;
+                });
+                break;
+            }
+            case 'name':
+            default:
+                list.sort((a, b) => a.title.localeCompare(b.title));
+        }
+        return list;
+    };
+
+    openTerminalHere = () => {
+        this.openApp('terminal');
+    };
+
+    openBackgroundSettings = () => {
+        this.openApp('settings', { focusWallpaperPicker: true });
+    };
+
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
 
     renderNameBar = () => {
@@ -1114,10 +1190,14 @@ export class Desktop extends Component {
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    onClose={this.hideAllContextMenu}
+                    onOpenTerminal={this.openTerminalHere}
+                    onCreateFolder={this.addNewFolder}
+                    onCreateShortcut={this.openShortcutSelector}
+                    onArrange={this.arrangeDesktopIcons}
+                    arrangement={this.state.desktopArrange}
+                    onChangeBackground={this.openBackgroundSettings}
+                    onClearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu

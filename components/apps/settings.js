@@ -3,11 +3,13 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
-export function Settings() {
+export function Settings(props = {}) {
+    const { focusWallpaperPicker } = props;
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const wallpaperGridRef = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -55,6 +57,12 @@ export function Settings() {
         });
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
+
+    useEffect(() => {
+        if (focusWallpaperPicker && wallpaperGridRef.current) {
+            wallpaperGridRef.current.focus({ preventScroll: true });
+        }
+    }, [focusWallpaperPicker]);
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
@@ -221,7 +229,12 @@ export function Settings() {
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
             </div>
-            <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
+            <div
+                ref={wallpaperGridRef}
+                tabIndex={-1}
+                aria-label="Desktop wallpaper selection"
+                className="flex flex-wrap justify-center items-center border-t border-gray-900"
+            >
                 {
                     wallpapers.map((name, index) => (
                         <div
