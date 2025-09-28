@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 const BackgroundImage = dynamic(
@@ -24,6 +24,9 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSettings } from '../../hooks/useSettings';
+import { useVirtualMonitors } from '../../hooks/useVirtualMonitors';
+import { getMonitorById } from '../../utils/monitorLayouts';
 
 export class Desktop extends Component {
     constructor() {
@@ -71,6 +74,16 @@ export class Desktop extends Component {
             })),
         }
     }
+
+    getActiveMonitorRect = () => {
+        if (this.props.monitorRect) {
+            return this.props.monitorRect;
+        }
+        if (typeof window === 'undefined') {
+            return { left: 0, top: 0, width: 0, height: 0 };
+        }
+        return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    };
 
     createEmptyWorkspaceState = () => ({
         focused_windows: {},
@@ -613,6 +626,7 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
+        const monitorRect = this.getActiveMonitorRect();
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
@@ -638,6 +652,7 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    monitorRect,
                 }
 
                 windowsJsx.push(
@@ -1106,6 +1121,9 @@ export class Desktop extends Component {
                     workspaces={workspaceSummaries}
                     activeWorkspace={this.state.activeWorkspace}
                     onSelectWorkspace={this.switchWorkspace}
+                    monitors={this.props.monitors}
+                    activeMonitorId={this.props.activeMonitorId}
+                    onSelectMonitor={this.props.onSelectMonitor}
                 />
 
                 {/* Desktop Apps */}
@@ -1180,5 +1198,30 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { monitorLayout } = useSettings();
+    const monitors = useVirtualMonitors(monitorLayout);
+    const [activeMonitorId, setActiveMonitorId] = useState(() => (monitors[0] ? monitors[0].id : null));
+
+    useEffect(() => {
+        if (!monitors.length) {
+            setActiveMonitorId(null);
+            return;
+        }
+        if (!activeMonitorId || !monitors.some((monitor) => monitor.id === activeMonitorId)) {
+            setActiveMonitorId(monitors[0].id);
+        }
+    }, [monitors, activeMonitorId]);
+
+    const activeMonitor = getMonitorById(monitors, activeMonitorId);
+
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            monitors={monitors}
+            activeMonitorId={activeMonitor ? activeMonitor.id : null}
+            monitorRect={activeMonitor}
+            onSelectMonitor={setActiveMonitorId}
+        />
+    );
 }

@@ -22,9 +22,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getMonitorLayout as loadMonitorLayout,
+  setMonitorLayout as saveMonitorLayout,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { DEFAULT_MONITOR_LAYOUT, MONITOR_LAYOUT_OPTIONS } from '../utils/monitorLayouts';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -67,6 +70,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  monitorLayout: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +83,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setMonitorLayout: (value: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +100,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  monitorLayout: defaults.monitorLayout || DEFAULT_MONITOR_LAYOUT,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +113,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setMonitorLayout: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,6 +129,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [monitorLayout, setMonitorLayout] = useState<string>(defaults.monitorLayout || DEFAULT_MONITOR_LAYOUT);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -138,6 +146,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setMonitorLayout(await loadMonitorLayout());
     })();
   }, []);
 
@@ -250,6 +259,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveMonitorLayout(monitorLayout);
+  }, [monitorLayout]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +281,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        monitorLayout,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +294,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setMonitorLayout,
       }}
     >
       {children}
@@ -288,4 +303,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 }
 
 export const useSettings = () => useContext(SettingsContext);
+
+export const MONITOR_LAYOUT_CHOICES = MONITOR_LAYOUT_OPTIONS;
 
