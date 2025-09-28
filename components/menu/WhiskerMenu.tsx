@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import Image from 'next/image';
+import Image, { type StaticImageData } from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -26,6 +26,17 @@ type CategoryDefinitionBase = {
   label: string;
   icon: string;
 } & CategorySource;
+
+const DEFAULT_MENU_ICON = '/themes/Yaru/status/decompiler-symbolic.svg';
+
+let kaliDragonIcon: string | StaticImageData = DEFAULT_MENU_ICON;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+  const loadedIcon = require('../../public/themes/Kali/logo.svg');
+  kaliDragonIcon = loadedIcon?.default ?? loadedIcon;
+} catch {
+  kaliDragonIcon = DEFAULT_MENU_ICON;
+}
 
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
@@ -382,10 +393,10 @@ const WhiskerMenu: React.FC = () => {
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          src={kaliDragonIcon}
           alt="Menu"
-          width={16}
-          height={16}
+          width={20}
+          height={20}
           className="inline mr-1"
         />
         Applications
