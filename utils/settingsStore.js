@@ -1,7 +1,27 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import apps from '../apps.config';
 import { getTheme, setTheme } from './theme';
+
+const extractIds = (list) => {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const result = [];
+  list.forEach((value) => {
+    if (typeof value !== 'string') return;
+    if (seen.has(value)) return;
+    seen.add(value);
+    result.push(value);
+  });
+  return result;
+};
+
+const DEFAULT_PINNED = extractIds(
+  (Array.isArray(apps) ? apps : [])
+    .filter((app) => app && typeof app === 'object' && app.favourite)
+    .map((app) => app.id),
+);
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -15,7 +35,12 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  launcherFavorites: DEFAULT_PINNED,
+  panelPins: DEFAULT_PINNED,
 };
+
+const FAVORITES_KEY = 'launcherFavorites';
+const PINNED_KEY = 'pinnedApps';
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -135,6 +160,50 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getLauncherFavorites() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.launcherFavorites;
+  try {
+    const stored = window.localStorage.getItem(FAVORITES_KEY);
+    if (!stored) return DEFAULT_SETTINGS.launcherFavorites;
+    return extractIds(JSON.parse(stored));
+  } catch (e) {
+    console.warn('Failed to read launcher favorites', e);
+    return DEFAULT_SETTINGS.launcherFavorites;
+  }
+}
+
+export async function setLauncherFavorites(ids) {
+  if (typeof window === 'undefined') return;
+  const sanitized = extractIds(ids);
+  try {
+    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(sanitized));
+  } catch (e) {
+    console.warn('Failed to persist launcher favorites', e);
+  }
+}
+
+export async function getPanelPins() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.panelPins;
+  try {
+    const stored = window.localStorage.getItem(PINNED_KEY);
+    if (!stored) return DEFAULT_SETTINGS.panelPins;
+    return extractIds(JSON.parse(stored));
+  } catch (e) {
+    console.warn('Failed to read pinned apps', e);
+    return DEFAULT_SETTINGS.panelPins;
+  }
+}
+
+export async function setPanelPins(ids) {
+  if (typeof window === 'undefined') return;
+  const sanitized = extractIds(ids);
+  try {
+    window.localStorage.setItem(PINNED_KEY, JSON.stringify(sanitized));
+  } catch (e) {
+    console.warn('Failed to persist pinned apps', e);
+  }
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -165,6 +234,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    launcherFavorites,
+    panelPins,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +248,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getLauncherFavorites(),
+    getPanelPins(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +265,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    launcherFavorites,
+    panelPins,
   });
 }
 
@@ -217,6 +292,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    launcherFavorites,
+    panelPins,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +307,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (launcherFavorites !== undefined) await setLauncherFavorites(launcherFavorites);
+  if (panelPins !== undefined) await setPanelPins(panelPins);
 }
 
 export const defaults = DEFAULT_SETTINGS;

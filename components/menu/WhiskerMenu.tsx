@@ -6,6 +6,8 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
+import ContextMenu from '../common/ContextMenu';
+import { useSettings } from '../../hooks/useSettings';
 
 type AppMeta = {
   id: string;
@@ -13,6 +15,126 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+};
+
+type MenuAppTileProps = {
+  app: AppMeta;
+  isHighlighted: boolean;
+  onOpen: () => void;
+  isFavorite: boolean;
+  isPinned: boolean;
+  onToggleFavorite: () => void;
+  onTogglePinned: () => void;
+  enableDrag: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart?: () => void;
+  onDragEnter?: () => void;
+  onDragLeave?: () => void;
+  onDrop?: () => void;
+  onDragEnd?: () => void;
+};
+
+const MenuAppTile: React.FC<MenuAppTileProps> = ({
+  app,
+  isHighlighted,
+  onOpen,
+  isFavorite,
+  isPinned,
+  onToggleFavorite,
+  onTogglePinned,
+  enableDrag,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragEnter,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+}) => {
+  const tileRef = useRef<HTMLDivElement>(null);
+
+  const menuItems = useMemo(
+    () => [
+      {
+        label: (
+          <span className="ml-5">
+            {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+          </span>
+        ),
+        onSelect: onToggleFavorite,
+      },
+      {
+        label: (
+          <span className="ml-5">{isPinned ? 'Unpin from Panel' : 'Pin to Panel'}</span>
+        ),
+        onSelect: onTogglePinned,
+      },
+      {
+        label: <span className="ml-5">Open New Window</span>,
+        onSelect: onOpen,
+      },
+    ],
+    [isFavorite, isPinned, onOpen, onToggleFavorite, onTogglePinned],
+  );
+
+  return (
+    <div
+      ref={tileRef}
+      data-app-id={app.id}
+      className={`group relative rounded transition ring-offset-2 ${
+        isDropTarget
+          ? 'ring-2 ring-ubb-orange/60 ring-offset-gray-900'
+          : isHighlighted
+            ? 'ring-2 ring-ubb-orange ring-offset-gray-900'
+            : 'ring-0'
+      }`}
+      aria-grabbed={enableDrag ? isDragging : undefined}
+      onDragStartCapture={(event) => {
+        if (!enableDrag) return;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', app.id);
+        onDragStart?.();
+      }}
+      onDragEnter={(event) => {
+        if (!enableDrag) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onDragEnter?.();
+      }}
+      onDragOver={(event) => {
+        if (!enableDrag) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = 'move';
+      }}
+      onDragLeave={(event) => {
+        if (!enableDrag) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onDragLeave?.();
+      }}
+      onDrop={(event) => {
+        if (!enableDrag) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onDrop?.();
+      }}
+      onDragEnd={() => {
+        if (!enableDrag) return;
+        onDragEnd?.();
+      }}
+    >
+      <UbuntuApp
+        id={app.id}
+        icon={app.icon}
+        name={app.title}
+        openApp={onOpen}
+        disabled={app.disabled}
+      />
+      <ContextMenu targetRef={tileRef} items={menuItems} />
+    </div>
+  );
 };
 
 type CategorySource =
@@ -146,6 +268,7 @@ const readRecentAppIds = (): string[] => {
 
 
 const WhiskerMenu: React.FC = () => {
+  const { launcherFavorites, setLauncherFavorites, panelPins, setPanelPins } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -155,14 +278,32 @@ const WhiskerMenu: React.FC = () => {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
+  const [draggingFavorite, setDraggingFavorite] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
 
-  const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const pinnedSet = useMemo(() => new Set(panelPins), [panelPins]);
+  const allApps: AppMeta[] = useMemo(
+    () =>
+      (apps as AppMeta[]).map((app) => ({
+        ...app,
+        favourite: pinnedSet.has(app.id),
+      })),
+    [pinnedSet],
+  );
+  const appMap = useMemo(() => new Map(allApps.map(app => [app.id, app] as const)), [allApps]);
+  const favoriteApps = useMemo(
+    () =>
+      launcherFavorites
+        .map(appId => appMap.get(appId))
+        .filter((app): app is AppMeta => Boolean(app)),
+    [launcherFavorites, appMap],
+  );
+  const favoriteSet = useMemo(() => new Set(launcherFavorites), [launcherFavorites]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
   }, []);
@@ -173,14 +314,11 @@ const WhiskerMenu: React.FC = () => {
   }, [isOpen]);
 
   const recentApps = useMemo(() => {
-    const mapById = new Map(allApps.map(app => [app.id, app] as const));
     return recentIds
-      .map(appId => mapById.get(appId))
+      .map(appId => appMap.get(appId))
       .filter((app): app is AppMeta => Boolean(app));
-  }, [allApps, recentIds]);
+  }, [appMap, recentIds]);
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
-    const mapById = new Map(allApps.map(app => [app.id, app] as const));
-
     return CATEGORY_DEFINITIONS.map((definition) => {
       let appsForCategory: AppMeta[] = [];
       switch (definition.type) {
@@ -195,7 +333,7 @@ const WhiskerMenu: React.FC = () => {
           break;
         case 'ids':
           appsForCategory = definition.appIds
-            .map(appId => mapById.get(appId))
+            .map(appId => appMap.get(appId))
             .filter((app): app is AppMeta => Boolean(app));
           break;
         default:
@@ -206,7 +344,7 @@ const WhiskerMenu: React.FC = () => {
         apps: appsForCategory,
       } as CategoryConfig;
     });
-  }, [allApps, favoriteApps, recentApps]);
+  }, [allApps, favoriteApps, recentApps, appMap]);
 
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);
@@ -221,6 +359,66 @@ const WhiskerMenu: React.FC = () => {
     }
     return list;
   }, [currentCategory, query]);
+
+  useEffect(() => {
+    if (highlight >= currentApps.length) {
+      setHighlight(currentApps.length > 0 ? currentApps.length - 1 : 0);
+    }
+  }, [currentApps.length, highlight]);
+
+  const toggleFavorite = useCallback(
+    (appId: string) => {
+      setLauncherFavorites(prev => {
+        if (prev.includes(appId)) {
+          return prev.filter(id => id !== appId);
+        }
+        return [...prev, appId];
+      });
+    },
+    [setLauncherFavorites],
+  );
+
+  const togglePinned = useCallback(
+    (appId: string) => {
+      setPanelPins(prev => {
+        if (prev.includes(appId)) {
+          return prev.filter(id => id !== appId);
+        }
+        return [...prev, appId];
+      });
+    },
+    [setPanelPins],
+  );
+
+  const handleFavoriteDrop = useCallback(
+    (targetId: string | null) => {
+      if (!draggingFavorite) return;
+      setLauncherFavorites(prev => {
+        if (!draggingFavorite) return prev;
+        if (targetId && draggingFavorite === targetId) {
+          return prev;
+        }
+        const fromIndex = prev.indexOf(draggingFavorite);
+        if (fromIndex === -1) {
+          return prev;
+        }
+        const next = [...prev];
+        next.splice(fromIndex, 1);
+        if (targetId === null) {
+          next.push(draggingFavorite);
+          return next;
+        }
+        const toIndex = next.indexOf(targetId);
+        if (toIndex === -1) {
+          next.push(draggingFavorite);
+          return next;
+        }
+        next.splice(toIndex, 0, draggingFavorite);
+        return next;
+      });
+    },
+    [draggingFavorite, setLauncherFavorites],
+  );
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
@@ -373,6 +571,16 @@ const WhiskerMenu: React.FC = () => {
     }
   };
 
+  const isFavoritesView = currentCategory?.id === 'favorites';
+  const canReorderFavorites = isFavoritesView && !query;
+
+  useEffect(() => {
+    if (!canReorderFavorites) {
+      setDraggingFavorite(null);
+      setDragOverId(null);
+    }
+  }, [canReorderFavorites]);
+
   return (
     <div className="relative inline-flex">
       <button
@@ -466,23 +674,60 @@ const WhiskerMenu: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
-            <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
+            <div
+              className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto"
+              onDragOver={(event) => {
+                if (!canReorderFavorites || !draggingFavorite) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+              }}
+              onDrop={(event) => {
+                if (!canReorderFavorites || !draggingFavorite) return;
+                event.preventDefault();
+                handleFavoriteDrop(null);
+                setDraggingFavorite(null);
+                setDragOverId(null);
+              }}
+            >
 
               {currentApps.map((app, idx) => (
-                <div
+                <MenuAppTile
                   key={app.id}
-                  className={`rounded transition ring-offset-2 ${
-                    idx === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
-                  }`}
-                >
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
+                  app={app}
+                  isHighlighted={idx === highlight}
+                  onOpen={() => openSelectedApp(app.id)}
+                  isFavorite={favoriteSet.has(app.id)}
+                  isPinned={pinnedSet.has(app.id)}
+                  onToggleFavorite={() => toggleFavorite(app.id)}
+                  onTogglePinned={() => togglePinned(app.id)}
+                  enableDrag={canReorderFavorites}
+                  isDragging={draggingFavorite === app.id}
+                  isDropTarget={dragOverId === app.id && draggingFavorite !== app.id}
+                  onDragStart={() => {
+                    if (!favoriteSet.has(app.id)) return;
+                    setDraggingFavorite(app.id);
+                    setDragOverId(null);
+                  }}
+                  onDragEnter={() => {
+                    if (!draggingFavorite || draggingFavorite === app.id) return;
+                    setDragOverId(app.id);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverId === app.id) {
+                      setDragOverId(null);
+                    }
+                  }}
+                  onDrop={() => {
+                    if (!draggingFavorite) return;
+                    handleFavoriteDrop(app.id);
+                    setDraggingFavorite(null);
+                    setDragOverId(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggingFavorite(null);
+                    setDragOverId(null);
+                  }}
+                />
               ))}
             </div>
           </div>
