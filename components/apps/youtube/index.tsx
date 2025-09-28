@@ -1,673 +1,645 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import useWatchLater, {
-  Video as WatchLaterVideo,
-} from '../../../apps/youtube/state/watchLater';
+import React, { useCallback, useId, useMemo, useState } from 'react';
 
-type Video = WatchLaterVideo;
+interface Playlist {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  channelTitle: string;
+  channelId: string;
+  itemCount: number;
+  updatedAt: string;
+}
 
 interface Props {
-  initialResults?: Video[];
+  initialResults?: Playlist[];
 }
 
-const VIDEO_CACHE_NAME = 'youtube-video-cache';
-const CACHED_LIST_KEY = 'youtube:cached-videos';
-const MAX_CACHE_BYTES = 100 * 1024 * 1024;
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
-async function trimVideoCache() {
-  if (!('storage' in navigator) || !navigator.storage?.estimate) return;
-  let { usage = 0 } = await navigator.storage.estimate();
-  if (usage <= MAX_CACHE_BYTES) return;
-  const cache = await caches.open(VIDEO_CACHE_NAME);
-  let list: { url: string; ts: number }[] = JSON.parse(
-    localStorage.getItem(CACHED_LIST_KEY) || '[]',
-  );
-  list.sort((a, b) => a.ts - b.ts);
-  while (usage > MAX_CACHE_BYTES && list.length) {
-    const { url } = list.shift()!;
-    await cache.delete(url);
-    localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));
-    usage = (await navigator.storage.estimate()).usage || 0;
+const SORT_OPTIONS = [
+  {
+    id: 'title-asc' as const,
+    label: 'Title A → Z',
+    compare: (a: Playlist, b: Playlist) =>
+      a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+  },
+  {
+    id: 'title-desc' as const,
+    label: 'Title Z → A',
+    compare: (a: Playlist, b: Playlist) =>
+      b.title.localeCompare(a.title, undefined, { sensitivity: 'base' }),
+  },
+  {
+    id: 'updated-desc' as const,
+    label: 'Recently Updated',
+    compare: (a: Playlist, b: Playlist) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  },
+  {
+    id: 'size-desc' as const,
+    label: 'Largest First',
+    compare: (a: Playlist, b: Playlist) => b.itemCount - a.itemCount,
+  },
+];
+
+type SortId = (typeof SORT_OPTIONS)[number]['id'];
+type LayoutId = 'grid' | 'channel-groups';
+
+type FetchResult = {
+  items: Playlist[];
+  nextPageToken: string | null;
+};
+
+type YouTubeSearchResponse = {
+  items?: Array<{
+    id?: { playlistId?: string };
+  }>;
+  nextPageToken?: string;
+  error?: { message?: string };
+};
+
+type YouTubePlaylistResponse = {
+  items?: Array<{
+    id: string;
+    snippet?: {
+      title?: string;
+      description?: string;
+      publishedAt?: string;
+      channelTitle?: string;
+      channelId?: string;
+      thumbnails?: {
+        maxres?: { url?: string };
+        medium?: { url?: string };
+        default?: { url?: string };
+      };
+    };
+    contentDetails?: {
+      itemCount?: number;
+    };
+  }>;
+  error?: { message?: string };
+};
+
+type PipedItem = {
+  type?: string;
+  playlistId?: string;
+  id?: string;
+  url?: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  thumbnail?: string;
+  thumbnails?: Array<{ url?: string }>;
+  thumbnailUrl?: string;
+  uploaderName?: string;
+  channelName?: string;
+  uploaderUrl?: string;
+  channelUrl?: string;
+  videos?: number;
+  videoCount?: number;
+  uploaded?: string;
+  updated?: string;
+};
+
+async function fetchPlaylistsFromYouTube(
+  query: string,
+  pageToken?: string,
+): Promise<FetchResult> {
+  const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+  searchUrl.searchParams.set('key', YOUTUBE_API_KEY ?? '');
+  searchUrl.searchParams.set('part', 'snippet');
+  searchUrl.searchParams.set('type', 'playlist');
+  searchUrl.searchParams.set('maxResults', '25');
+  searchUrl.searchParams.set('q', query);
+  if (pageToken) searchUrl.searchParams.set('pageToken', pageToken);
+
+  const res = await fetch(searchUrl.toString());
+  const data = (await res.json()) as YouTubeSearchResponse;
+  if (!res.ok) {
+    throw new Error(data.error?.message || 'YouTube search failed');
   }
+
+  const ids = (data.items ?? [])
+    .map((item) => item.id?.playlistId)
+    .filter((id): id is string => Boolean(id));
+
+  if (!ids.length) {
+    return { items: [], nextPageToken: data.nextPageToken ?? null };
+  }
+
+  const detailsUrl = new URL('https://www.googleapis.com/youtube/v3/playlists');
+  detailsUrl.searchParams.set('key', YOUTUBE_API_KEY ?? '');
+  detailsUrl.searchParams.set('part', 'snippet,contentDetails');
+  detailsUrl.searchParams.set('id', ids.join(','));
+
+  const detailsRes = await fetch(detailsUrl.toString());
+  const details = (await detailsRes.json()) as YouTubePlaylistResponse;
+  if (!detailsRes.ok) {
+    throw new Error(details.error?.message || 'Failed to load playlist details');
+  }
+
+  const items: Playlist[] = (details.items ?? []).map((item) => ({
+    id: item.id,
+    title: item.snippet?.title ?? 'Untitled playlist',
+    description: item.snippet?.description ?? '',
+    thumbnail:
+      item.snippet?.thumbnails?.maxres?.url ||
+      item.snippet?.thumbnails?.medium?.url ||
+      item.snippet?.thumbnails?.default?.url ||
+      '',
+    channelTitle: item.snippet?.channelTitle ?? 'Unknown channel',
+    channelId: item.snippet?.channelId ?? '',
+    itemCount: item.contentDetails?.itemCount ?? 0,
+    updatedAt: item.snippet?.publishedAt ?? new Date().toISOString(),
+  }));
+
+  return {
+    items,
+    nextPageToken: data.nextPageToken ?? null,
+  };
 }
 
-function ChannelHovercard({ id, name }: { id: string; name: string }) {
-  const [show, setShow] = useState(false);
-  const [info, setInfo] = useState<any>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+async function fetchPlaylistsFromPiped(query: string): Promise<FetchResult> {
+  const url = `https://piped.video/api/v1/search?q=${encodeURIComponent(query)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) {
+    const message = typeof data?.error === 'string' ? data.error : 'Piped search failed';
+    throw new Error(message);
+  }
 
-  const fetchInfo = useCallback(async () => {
-    if (info) return;
-    try {
-      if (YOUTUBE_API_KEY) {
-        const res = await fetch(
-          `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${id}&key=${YOUTUBE_API_KEY}`,
-        );
-        const data = await res.json();
-        const item = data.items?.[0];
-        if (item) {
-          setInfo({
-            name: item.snippet?.title,
-            subscriberCount: item.statistics?.subscriberCount,
-          });
-        }
-      } else {
-        const res = await fetch(`https://piped.video/api/v1/channel/${id}`);
-        const data = await res.json();
-        setInfo(data);
-      }
-    } catch {
-      // ignore errors
-    }
-  }, [id, info]);
+  const rawItems: PipedItem[] = Array.isArray(data?.items)
+    ? data.items
+    : Array.isArray(data)
+    ? data
+    : [];
 
-  const handleEnter = () => {
-    timer.current = setTimeout(() => {
-      setShow(true);
-      void fetchInfo();
-    }, 300);
-  };
+  const items: Playlist[] = rawItems
+    .filter((item) =>
+      item?.type ? item.type === 'playlist' : Boolean(item?.playlistId || item?.url),
+    )
+    .map((item) => ({
+      id:
+        item?.playlistId ||
+        item?.id ||
+        item?.url?.split('list=')[1] ||
+        `piped-${item?.url ?? Math.random()}`,
+      title: item?.title || item?.name || 'Untitled playlist',
+      description: item?.description || '',
+      thumbnail:
+        item?.thumbnail ||
+        item?.thumbnails?.[0]?.url ||
+        item?.thumbnailUrl ||
+        '',
+      channelTitle: item?.uploaderName || item?.channelName || 'Unknown channel',
+      channelId:
+        item?.uploaderUrl?.split('/')?.pop() ||
+        item?.channelUrl?.split('/')?.pop() ||
+        '',
+      itemCount: item?.videos || item?.videoCount || 0,
+      updatedAt: item?.uploaded || item?.updated || new Date().toISOString(),
+    }));
 
-  const handleLeave = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setShow(false);
-  };
+  return { items, nextPageToken: null };
+}
 
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
+}
+
+function PlaylistCard({ playlist }: { playlist: Playlist }) {
   return (
-    <span className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      {name}
-      {show && info && (
-        <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-ubt-cool-grey shadow">
-          <div className="font-bold">{info.name}</div>
-          {info.subscriberCount && <div>{info.subscriberCount} subs</div>}
+    <article className="group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/30 shadow-lg transition hover:-translate-y-1 hover:border-ubt-green/70 hover:shadow-2xl">
+      <div className="relative">
+        {playlist.thumbnail ? (
+          <img
+            src={playlist.thumbnail}
+            alt={`Thumbnail for ${playlist.title}`}
+            className="h-40 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-40 w-full items-center justify-center bg-ub-cool-grey text-sm text-ubt-grey">
+            No preview
+          </div>
+        )}
+        <span className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs text-white">
+          {playlist.itemCount} videos
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <div>
+          <h3 className="text-lg font-semibold text-white">{playlist.title}</h3>
+          <p className="mt-1 text-sm text-ubt-grey">
+            by <span className="text-ubt-green">{playlist.channelTitle}</span>
+          </p>
         </div>
-      )}
-    </span>
-  );
-}
-
-function Sidebar({
-  queue,
-  watchLater,
-  onPlay,
-  onReorder,
-}: {
-  queue: Video[];
-  watchLater: Video[];
-  onPlay: (v: Video) => void;
-  onReorder: (from: number, to: number) => void;
-}) {
-  const handleKey = (index: number, e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'ArrowUp' && index > 0) {
-      e.preventDefault();
-      onReorder(index, index - 1);
-    } else if (e.key === 'ArrowDown' && index < watchLater.length - 1) {
-      e.preventDefault();
-      onReorder(index, index + 1);
-    }
-  };
-
-  const handleDrop = (index: number, e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const from = Number(e.dataTransfer.getData('text/plain'));
-    if (!Number.isNaN(from)) onReorder(from, index);
-  };
-
-  return (
-    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
-      <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
-      <div data-testid="queue-list">
-        {queue.map((v) => (
-          <div
-            key={v.id}
-            className="mb-[6px] cursor-pointer"
-            onClick={() => onPlay(v)}
+        {playlist.description && (
+          <p className="line-clamp-3 text-sm text-ubt-cool-grey/80">
+            {playlist.description}
+          </p>
+        )}
+        <div className="mt-auto flex items-center justify-between text-xs text-ubt-grey">
+          <span>Updated {formatDate(playlist.updatedAt)}</span>
+          <a
+            href={`https://www.youtube.com/playlist?list=${playlist.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full bg-ubt-green/10 px-3 py-1 font-semibold text-ubt-green transition hover:bg-ubt-green/20"
           >
-            <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.title}</div>
-          </div>
-        ))}
-        {!queue.length && <div className="text-ubt-grey">Empty</div>}
+            Open playlist
+          </a>
+        </div>
       </div>
-      <h2 className="mb-[6px] mt-[24px] text-lg font-semibold">Watch Later</h2>
-      <div data-testid="watch-later-list">
-        {watchLater.map((v, i) => (
-          <div
-            key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
-            className="mb-[6px] cursor-pointer"
-            onClick={() => onPlay(v)}
-            draggable
-            onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(i, e)}
-            tabIndex={0}
-            onKeyDown={(e) => handleKey(i, e)}
-          >
-            <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.name || v.title}</div>
-          </div>
-        ))}
-        {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
-      </div>
-    </aside>
-  );
-}
-
-function VirtualGrid({
-  items,
-  onPlay,
-  onQueue,
-  onWatchLater,
-}: {
-  items: Video[];
-  onPlay: (v: Video) => void;
-  onQueue: (v: Video) => void;
-  onWatchLater: (v: Video) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [range, setRange] = useState<[number, number]>([0, 0]);
-  const [cols, setCols] = useState(3);
-  // Align virtual grid items to a 6px rhythm
-  const ITEM_HEIGHT = 216;
-
-  const truncateTitle = (title: string) => {
-    const MAX_CHARS = 80;
-    if (title.length <= MAX_CHARS) return title;
-    const half = Math.floor((MAX_CHARS - 1) / 2);
-    return `${title.slice(0, half)}…${title.slice(title.length - half)}`;
-  };
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => {
-      const width = el.clientWidth;
-      const newCols = Math.max(1, Math.floor(width / 216));
-      const height = el.clientHeight;
-      const scrollTop = el.scrollTop;
-      const startRow = Math.floor(scrollTop / ITEM_HEIGHT);
-      const visibleRows = Math.ceil(height / ITEM_HEIGHT) + 2;
-      setCols(newCols);
-      setRange([startRow * newCols, (startRow + visibleRows) * newCols]);
-    };
-    update();
-    el.addEventListener('scroll', update);
-    window.addEventListener('resize', update);
-    return () => {
-      el.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
-    };
-  }, [items.length]);
-
-  const totalRows = Math.ceil(items.length / cols);
-
-  return (
-    <div ref={containerRef} className="flex-1 overflow-auto">
-      <div style={{ height: totalRows * ITEM_HEIGHT, position: 'relative' }}>
-        {items.slice(range[0], range[1]).map((v, i) => {
-          const index = range[0] + i;
-          const row = Math.floor(index / cols);
-          const col = index % cols;
-          const left = (100 / cols) * col;
-          return (
-            <div
-              key={v.id}
-              style={{
-                position: 'absolute',
-                top: row * ITEM_HEIGHT,
-                left: `${left}%`,
-                width: `${100 / cols}%`,
-                height: ITEM_HEIGHT,
-                padding: '6px',
-              }}
-            >
-              <div className="cursor-pointer" onClick={() => onPlay(v)}>
-                <div className="relative">
-                  <img
-                    src={v.thumbnail}
-                    alt={v.title}
-                    className="h-[162px] w-full rounded object-cover"
-                  />
-                  <div className="absolute bottom-[6px] right-[6px] flex gap-[6px] text-[12px]">
-                    <span className="bg-black/70 px-1 text-white">CC</span>
-                    <span className="bg-black/70 px-1 text-white">HD</span>
-                  </div>
-                </div>
-                <div className="mt-[6px] text-sm line-clamp-2">
-                  {truncateTitle(v.title)}
-                </div>
-              </div>
-              <div className="mt-[6px] flex justify-between text-xs">
-                <ChannelHovercard id={v.channelId} name={v.channelName} />
-                <div className="space-x-[6px]">
-                  <button onClick={() => onQueue(v)}>Queue</button>
-                  <button onClick={() => onWatchLater(v)}>Later</button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    </article>
   );
 }
 
 export default function YouTubeApp({ initialResults = [] }: Props) {
+  const searchInputId = useId();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Video[]>(initialResults);
-  const [current, setCurrent] = useState<Video | null>(null);
-  const [queue, setQueue] = useState<Video[]>([]);
-  const [watchLater, setWatchLater] = useWatchLater();
-  const searchRef = useRef<HTMLInputElement>(null);
-  const playerRef = useRef<any>(null);
-  const playerDivRef = useRef<HTMLDivElement>(null);
-  const [playerReady, setPlayerReady] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [loopStart, setLoopStart] = useState<number | null>(null);
-  const [loopEnd, setLoopEnd] = useState<number | null>(null);
-  const [looping, setLooping] = useState(false);
-  const [, setPlaybackRate] = useState(1);
-  const [solidHeader, setSolidHeader] = useState(false);
+  const [playlists, setPlaylists] = useState<Playlist[]>(initialResults);
+  const [sortId, setSortId] = useState<SortId>('updated-desc');
+  const [layout, setLayout] = useState<LayoutId>('grid');
+  const [selectedChannel, setSelectedChannel] = useState<string>('all');
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastQuery, setLastQuery] = useState<string>('');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  useEffect(() => {
-    const onScroll = () => setSolidHeader(window.scrollY > 0);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const downloadCurrent = useCallback(async () => {
-    if (!current) return;
-    try {
-      const infoRes = await fetch(
-        `https://piped.video/api/v1/streams/${current.id}`,
-      );
-      const info = await infoRes.json();
-      const streamUrl =
-        info?.videoStreams?.find((s: any) => s.container === 'mp4')?.url ||
-        info?.videoStreams?.[0]?.url;
-      if (!streamUrl) return;
-      const response = await fetch(streamUrl);
-      const cache = await caches.open(VIDEO_CACHE_NAME);
-      await cache.put(streamUrl, response.clone());
-      const blob = await response.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${current.title || current.id}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      const list: { url: string; ts: number }[] = JSON.parse(
-        localStorage.getItem(CACHED_LIST_KEY) || '[]',
-      );
-      list.push({ url: streamUrl, ts: Date.now() });
-      localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));
-      await trimVideoCache();
-    } catch {
-      // ignore errors
-    }
-  }, [current]);
-
-
-  useEffect(() => {
-    if (!current) return;
-
-    const initPlayer = () => {
-      if (playerRef.current) {
-        playerRef.current.loadVideoById(current.id);
+  const channels = useMemo(() => {
+    const map = new Map<string, { id: string; title: string; count: number }>();
+    playlists.forEach((playlist) => {
+      const id = playlist.channelId || playlist.channelTitle;
+      const current = map.get(id);
+      if (current) {
+        map.set(id, {
+          ...current,
+          count: current.count + 1,
+        });
       } else {
-        playerRef.current = new window.YT.Player(playerDivRef.current!, {
-          videoId: current.id,
-          events: {
-            onReady: (e: any) => {
-              setPlayerReady(true);
-              setPlaybackRate(e.target.getPlaybackRate());
-            },
-            onStateChange: (e: any) => {
-              setIsPlaying(e.data === window.YT.PlayerState.PLAYING);
-            },
-          },
+        map.set(id, {
+          id,
+          title: playlist.channelTitle,
+          count: 1,
         });
       }
-    };
-
-    if (window.YT && window.YT.Player) {
-      initPlayer();
-    } else {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      window.onYouTubeIframeAPIReady = initPlayer;
-      document.body.appendChild(tag);
-    }
-  }, [current]);
-
-  useEffect(() => {
-    void trimVideoCache();
-  }, []);
-
-  useEffect(() => {
-    if (!playerReady || loopStart === null) return;
-    playerRef.current?.seekTo(loopStart, true);
-  }, [playerReady, loopStart, current]);
-
-  useEffect(() => {
-    if (loopStart === null || loopEnd === null) return;
-    const id = window.setInterval(() => {
-      const cur = playerRef.current?.getCurrentTime() ?? 0;
-      if (cur >= loopEnd) {
-        if (looping && loopStart !== null) {
-          playerRef.current?.seekTo(loopStart, true);
-        } else {
-          playerRef.current?.pauseVideo();
-        }
-      }
-    }, 500);
-    return () => clearInterval(id);
-  }, [looping, loopStart, loopEnd]);
-
-  const togglePlay = useCallback(() => {
-    if (!playerRef.current) return;
-    const state = playerRef.current.getPlayerState();
-    if (state === window.YT.PlayerState.PLAYING) {
-      playerRef.current.pauseVideo();
-    } else {
-      playerRef.current.playVideo();
-    }
-  }, []);
-
-
-  const markStart = useCallback(
-    () => setLoopStart(playerRef.current?.getCurrentTime() ?? null),
-    [],
-  );
-  const markEnd = useCallback(
-    () => setLoopEnd(playerRef.current?.getCurrentTime() ?? null),
-    [],
-  );
-  const toggleLoop = useCallback(() => {
-    if (loopStart !== null && loopEnd !== null) setLooping((l) => !l);
-  }, [loopStart, loopEnd]);
-
-  const search = useCallback(async () => {
-    if (!query) return;
-    try {
-      let vids: Video[] = [];
-      if (YOUTUBE_API_KEY) {
-        const res = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&part=snippet&type=video&q=${encodeURIComponent(query)}`,
-        );
-        const data = await res.json();
-        vids = (data.items || []).map((i: any) => ({
-          id: i.id?.videoId,
-          title: i.snippet?.title || 'Untitled',
-          thumbnail:
-            i.snippet?.thumbnails?.medium?.url ||
-            i.snippet?.thumbnails?.default?.url ||
-            '',
-          channelName: i.snippet?.channelTitle || 'Unknown',
-          channelId: i.snippet?.channelId || '',
-        }));
-      } else {
-        const res = await fetch(
-          `https://piped.video/api/v1/search?q=${encodeURIComponent(query)}`,
-        );
-        const data = await res.json();
-        vids = (data.items || data)
-          .filter((i: any) => i.type === 'stream' || i.id)
-          .map((i: any) => ({
-            id: i.id || i.url?.split('=')[1],
-            title: i.title || 'Untitled',
-            thumbnail: i.thumbnail || i.thumbnails?.[0]?.url || '',
-            channelName: i.uploaderName || i.channelName || 'Unknown',
-            channelId:
-              i.uploaderUrl?.split('/').pop() ||
-              i.channelUrl?.split('/').pop() ||
-              '',
-          }));
-      }
-      setResults(vids);
-    } catch {
-      // ignore errors
-    }
-  }, [query]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    void search();
-  };
-
-  const addQueue = useCallback((v: Video) => setQueue((q) => [...q, v]), []);
-  const addWatchLater = useCallback(
-    (v: Video) =>
-      setWatchLater((w) =>
-        w.some(
-          (x) => x.id === v.id && x.start === v.start && x.end === v.end,
-        )
-          ? w
-          : [...w, v],
-      ),
-    [setWatchLater],
-  );
-  const shareClip = useCallback(async () => {
-    if (!current || loopStart === null || loopEnd === null) return;
-    const url = `https://youtu.be/${current.id}?start=${Math.floor(
-      loopStart,
-    )}&end=${Math.floor(loopEnd)}`;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      window.prompt('Clip URL', url);
-    }
-  }, [current, loopStart, loopEnd]);
-  const saveClip = useCallback(() => {
-    if (!current || loopStart === null || loopEnd === null) return;
-    const name = window.prompt('Clip name?')?.trim();
-    if (!name) return;
-    addWatchLater({
-      ...current,
-      name,
-      start: Math.floor(loopStart),
-      end: Math.floor(loopEnd),
     });
-  }, [current, loopStart, loopEnd, addWatchLater]);
-  const moveWatchLater = useCallback(
-    (from: number, to: number) => {
-      setWatchLater((list) => {
-        const next = [...list];
-        const [item] = next.splice(from, 1);
-        next.splice(to, 0, item);
-        return next;
-      });
+    return Array.from(map.values()).sort((a, b) =>
+      a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+    );
+  }, [playlists]);
+
+  const filterAndSort = useCallback(
+    (items: Playlist[]): Playlist[] => {
+      let filtered = selectedChannel === 'all'
+        ? items
+        : items.filter((item) =>
+            (item.channelId || item.channelTitle) === selectedChannel,
+          );
+
+      const option = SORT_OPTIONS.find((opt) => opt.id === sortId) ?? SORT_OPTIONS[0];
+      filtered = [...filtered].sort(option.compare);
+      return filtered;
     },
-    [setWatchLater],
+    [selectedChannel, sortId],
   );
-  const playVideo = useCallback((v: Video) => {
-    setCurrent(v);
-    setLoopStart(v.start ?? null);
-    setLoopEnd(v.end ?? null);
-    setLooping(false);
-  }, []);
-  const playNext = useCallback(() => {
-    setQueue((q) => {
-      if (q.length) {
-        const [next, ...rest] = q;
-        playVideo(next);
-        return rest;
-      }
-      return q;
-    });
-  }, [playVideo]);
 
-  useEffect(() => {
-    const handleKeys = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
-      if (e.key === '/' && document.activeElement !== searchRef.current) {
-        e.preventDefault();
-        searchRef.current?.focus();
-      } else if (e.key === ' ' && current) {
-        e.preventDefault();
-        togglePlay();
-      } else if (e.key.toLowerCase() === 'a') {
-        markStart();
-      } else if (e.key.toLowerCase() === 'b') {
-        markEnd();
-      } else if (e.key.toLowerCase() === 's') {
-        toggleLoop();
-      } else if (e.key.toLowerCase() === 'q' && current) {
-        addQueue(current);
-      } else if (e.key.toLowerCase() === 'l' && current) {
-        addWatchLater(current);
-      } else if (e.key.toLowerCase() === 'n') {
-        playNext();
+  const organizedPlaylists = useMemo(() => filterAndSort(playlists), [filterAndSort, playlists]);
+
+  const groupedByChannel = useMemo(() => {
+    if (layout !== 'channel-groups') return [];
+    const groups = new Map<string, { title: string; items: Playlist[] }>();
+    organizedPlaylists.forEach((playlist) => {
+      const id = playlist.channelId || playlist.channelTitle;
+      const group = groups.get(id);
+      if (group) {
+        group.items.push(playlist);
+      } else {
+        groups.set(id, {
+          title: playlist.channelTitle,
+          items: [playlist],
+        });
       }
-    };
-    window.addEventListener('keydown', handleKeys);
-    return () => window.removeEventListener('keydown', handleKeys);
-  }, [
-    current,
-    addQueue,
-    addWatchLater,
-    playNext,
-    togglePlay,
-    markStart,
-    markEnd,
-    toggleLoop,
-  ]);
+    });
+    return Array.from(groups.values());
+  }, [layout, organizedPlaylists]);
+
+  const handleSearch = useCallback(
+    async (append = false, token?: string) => {
+      const rawQuery = append ? lastQuery : query;
+      const effectiveQuery = rawQuery.trim();
+      if (!effectiveQuery) {
+        if (!append) {
+          setError('Enter a topic, creator, or vibe to explore playlists.');
+        }
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = YOUTUBE_API_KEY
+          ? await fetchPlaylistsFromYouTube(effectiveQuery, token)
+          : await fetchPlaylistsFromPiped(effectiveQuery);
+
+        setPlaylists((prev) => {
+          const merged = append ? [...prev, ...result.items] : result.items;
+          const deduped = new Map<string, Playlist>();
+          merged.forEach((item) => {
+            if (!deduped.has(item.id)) {
+              deduped.set(item.id, item);
+            }
+          });
+          return Array.from(deduped.values());
+        });
+        setNextPageToken(result.nextPageToken ?? null);
+        setLastQuery(effectiveQuery);
+        if (!append) {
+          setSelectedChannel('all');
+        }
+      } catch (err) {
+        console.error(err);
+        setError(
+          err instanceof Error
+            ? err.message || 'Unable to load playlists right now. Please try again.'
+            : 'Unable to load playlists right now. Please try again.',
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [query, lastQuery],
+  );
+
+  const handleSubmit = useCallback(
+    (event: React.FormEvent) => {
+      event.preventDefault();
+      void handleSearch(false);
+    },
+    [handleSearch],
+  );
+
+  const handleLoadMore = useCallback(() => {
+    if (!nextPageToken) return;
+    void handleSearch(true, nextPageToken);
+  }, [handleSearch, nextPageToken]);
 
   return (
-    <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey">
-      <div className="flex flex-1 flex-col">
-        <form onSubmit={handleSearch} className="p-4">
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search YouTube"
-            className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
-          />
-        </form>
-        {current && (
-          <div className="relative mx-4 mb-4 bg-black">
-            {!playerReady && (
-              <iframe
-                title="YouTube video player"
-                src={`https://www.youtube-nocookie.com/embed/${current.id}`}
-                className="aspect-video w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            )}
-            <div
-              ref={playerDivRef}
-              className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
+    <div className="flex h-full flex-col bg-gradient-to-br from-[#10151c] via-[#0f1f2d] to-[#111827] text-white">
+      <header className="border-b border-white/10 bg-black/20 px-6 py-5 shadow-sm">
+        <h1 className="text-2xl font-semibold text-white">YouTube Playlists Explorer</h1>
+        <p className="mt-2 max-w-3xl text-sm text-ubt-grey">
+          Discover playlists from across YouTube, organise them by channel, size, or freshness, and jump right into the collections that inspire you.
+        </p>
+        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="sr-only" htmlFor={searchInputId}>
+            Search for playlists
+          </label>
+          <div className="flex-1">
+            <input
+              id={searchInputId}
+              aria-label="Search for playlists"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                if (error) setError(null);
+              }}
+              placeholder="Search for playlists by topic, creator, or mood…"
+              className="w-full rounded-md border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-ubt-grey focus:border-ubt-green focus:outline-none focus:ring-2 focus:ring-ubt-green/40"
             />
-            <div
-              className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
-            >
-              <button
-                onClick={togglePlay}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
-                className="text-ubt-cool-grey hover:text-ubt-green"
+          </div>
+          <button
+            type="submit"
+            className="rounded-md bg-ubt-green px-5 py-3 text-sm font-semibold text-black transition hover:bg-ubt-green/90 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading && !nextPageToken ? 'Searching…' : 'Search'}
+          </button>
+        </form>
+        {error && <p className="mt-3 text-sm text-red-400" role="alert">{error}</p>}
+        {!YOUTUBE_API_KEY && (
+          <p className="mt-3 text-xs text-ubt-grey">
+            Tip: Add a <code className="rounded bg-black/50 px-1">NEXT_PUBLIC_YOUTUBE_API_KEY</code> environment variable for richer metadata and pagination.
+          </p>
+        )}
+        <div className="mt-4 flex flex-wrap gap-2 sm:hidden">
+          <button
+            type="button"
+            className="rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-ubt-grey transition hover:border-ubt-green hover:text-white"
+            onClick={() => setShowMobileFilters((value) => !value)}
+            aria-expanded={showMobileFilters}
+          >
+            {showMobileFilters ? 'Hide filters' : 'Show filters'}
+          </button>
+        </div>
+        {showMobileFilters && (
+          <div className="mt-4 grid gap-4 rounded-lg border border-white/10 bg-black/30 p-4 text-xs text-ubt-grey sm:hidden">
+            <label className="flex flex-col gap-2">
+              <span className="font-semibold uppercase tracking-wide">Sort</span>
+              <select
+                value={sortId}
+                onChange={(event) => setSortId(event.target.value as SortId)}
+                className="rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
               >
-                {isPlaying ? (
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-                    <path
-                      fillRule="evenodd"
-                      d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-                    <path
-                      fillRule="evenodd"
-                      d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </button>
-              <button
-                onClick={markStart}
-                title="Set loop start (A)"
-                aria-label="Set loop start"
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="font-semibold uppercase tracking-wide">Layout</span>
+              <select
+                value={layout}
+                onChange={(event) => setLayout(event.target.value as LayoutId)}
+                className="rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
               >
-                <span className="flex h-6 w-6 items-center justify-center">A</span>
-              </button>
-              <button
-                onClick={markEnd}
-                title="Set loop end (B)"
-                aria-label="Set loop end"
-                className="text-ubt-cool-grey hover:text-ubt-green"
+                <option value="grid">Grid view</option>
+                <option value="channel-groups">Group by channel</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="font-semibold uppercase tracking-wide">Channel</span>
+              <select
+                value={selectedChannel}
+                onChange={(event) => setSelectedChannel(event.target.value)}
+                className="rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
               >
-                <span className="flex h-6 w-6 items-center justify-center">B</span>
-              </button>
-              <button
-                onClick={toggleLoop}
-                disabled={loopStart === null || loopEnd === null}
-                aria-label="Toggle loop"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className={`h-6 w-6 ${looping ? 'text-ubt-green' : ''}`}
+                <option value="all">All channels</option>
+                {channels.map((channel) => (
+                  <option key={channel.id} value={channel.id}>
+                    {channel.title} ({channel.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="hidden w-72 shrink-0 flex-col border-r border-white/10 bg-black/20 px-5 py-6 text-sm sm:flex">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-ubt-grey">Sort by</h2>
+            <div className="mt-3 space-y-2">
+              {SORT_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setSortId(option.id)}
+                  className={`w-full rounded-md px-3 py-2 text-left transition ${
+                    sortId === option.id
+                      ? 'bg-ubt-green/20 text-ubt-green'
+                      : 'bg-white/5 text-ubt-cool-grey hover:bg-white/10'
+                  }`}
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-ubt-grey">Layout</h2>
+            <div className="mt-3 space-y-2">
+              <button
+                onClick={() => setLayout('grid')}
+                className={`w-full rounded-md px-3 py-2 text-left transition ${
+                  layout === 'grid'
+                    ? 'bg-ubt-green/20 text-ubt-green'
+                    : 'bg-white/5 text-ubt-cool-grey hover:bg-white/10'
+                }`}
+              >
+                Grid view
               </button>
               <button
-                onClick={shareClip}
-                disabled={loopStart === null || loopEnd === null}
-                aria-label="Copy share link"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+                onClick={() => setLayout('channel-groups')}
+                className={`w-full rounded-md px-3 py-2 text-left transition ${
+                  layout === 'channel-groups'
+                    ? 'bg-ubt-green/20 text-ubt-green'
+                    : 'bg-white/5 text-ubt-cool-grey hover:bg-white/10'
+                }`}
               >
-                <span className="flex h-6 w-6 items-center justify-center">Link</span>
-              </button>
-              <button
-                onClick={saveClip}
-                disabled={loopStart === null || loopEnd === null}
-                aria-label="Save clip"
-                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
-              >
-                <span className="flex h-6 w-6 items-center justify-center">Save</span>
-              </button>
-              <button
-                onClick={downloadCurrent}
-                aria-label="Download video"
-                className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-                  <path
-                    fillRule="evenodd"
-                    d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                Group by channel
               </button>
             </div>
           </div>
-        )}
-        <VirtualGrid
-          items={results}
-          onPlay={playVideo}
-          onQueue={addQueue}
-          onWatchLater={addWatchLater}
-        />
+
+          <div className="mt-8">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-ubt-grey">Filter by channel</h2>
+            <div className="mt-3 space-y-2">
+              <button
+                onClick={() => setSelectedChannel('all')}
+                className={`w-full rounded-md px-3 py-2 text-left transition ${
+                  selectedChannel === 'all'
+                    ? 'bg-ubt-green/20 text-ubt-green'
+                    : 'bg-white/5 text-ubt-cool-grey hover:bg-white/10'
+                }`}
+              >
+                All channels
+              </button>
+              {channels.map((channel) => (
+                <button
+                  key={channel.id}
+                  onClick={() => setSelectedChannel(channel.id)}
+                  className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left transition ${
+                    selectedChannel === channel.id
+                      ? 'bg-ubt-green/20 text-ubt-green'
+                      : 'bg-white/5 text-ubt-cool-grey hover:bg-white/10'
+                  }`}
+                >
+                  <span className="truncate">{channel.title}</span>
+                  <span className="ml-2 rounded-full bg-black/30 px-2 text-xs">{channel.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <main className="flex-1 overflow-auto px-6 py-6">
+          <section className="mb-6 flex flex-wrap items-center gap-3 text-xs text-ubt-grey">
+            <span className="rounded-full bg-black/40 px-3 py-1">
+              {organizedPlaylists.length} playlists
+            </span>
+            {selectedChannel !== 'all' && (
+              <button
+                onClick={() => setSelectedChannel('all')}
+                className="rounded-full bg-white/10 px-3 py-1 font-medium text-white transition hover:bg-white/20"
+              >
+                Clear channel filter
+              </button>
+            )}
+            {lastQuery && (
+              <span className="rounded-full bg-white/5 px-3 py-1">Query: {lastQuery}</span>
+            )}
+            {loading && (
+              <span className="flex items-center gap-2 rounded-full bg-ubt-green/10 px-3 py-1 text-ubt-green">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-ubt-green" aria-hidden />
+                Loading playlists…
+              </span>
+            )}
+          </section>
+
+          {layout === 'grid' ? (
+            organizedPlaylists.length ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {organizedPlaylists.map((playlist) => (
+                  <PlaylistCard key={playlist.id} playlist={playlist} />
+                ))}
+              </div>
+            ) : (
+              <p className="mt-20 text-center text-sm text-ubt-grey">
+                {loading ? 'Fetching playlists…' : 'Search to explore playlists. Results will appear here.'}
+              </p>
+            )
+          ) : groupedByChannel.length ? (
+            <div className="space-y-8">
+              {groupedByChannel.map((group) => (
+                <div key={group.title}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-white">{group.title}</h2>
+                    <span className="rounded-full bg-black/30 px-3 py-1 text-xs text-ubt-grey">
+                      {group.items.length} playlist{group.items.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {group.items.map((playlist) => (
+                      <PlaylistCard key={playlist.id} playlist={playlist} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-20 text-center text-sm text-ubt-grey">
+              {loading ? 'Fetching playlists…' : 'No playlists for this channel yet.'}
+            </p>
+          )}
+
+          {nextPageToken && (
+            <div className="mt-10 flex justify-center">
+              <button
+                onClick={handleLoadMore}
+                className="rounded-full border border-ubt-green/60 bg-black/30 px-6 py-2 text-sm font-medium text-ubt-green transition hover:bg-black/50 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading}
+              >
+                {loading ? 'Loading…' : 'Load more playlists'}
+              </button>
+            </div>
+          )}
+        </main>
       </div>
-      <Sidebar
-        queue={queue}
-        watchLater={watchLater}
-        onPlay={playVideo}
-        onReorder={moveWatchLater}
-      />
     </div>
   );
 }
