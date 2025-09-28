@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FC, type MouseEvent } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 
 type NetworkType = "wired" | "wifi";
@@ -85,7 +85,7 @@ interface NetworkIndicatorProps {
   online: boolean;
 }
 
-const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
+const NetworkIndicator: FC<NetworkIndicatorProps> = ({
   className = "",
   allowNetwork,
   online,
@@ -138,7 +138,7 @@ const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({
     }
   }, [wifiEnabled, connectedNetwork.type, setConnectedId]);
 
-  const handleToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setOpen((prev) => !prev);
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FC, type MouseEvent } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
@@ -27,7 +27,9 @@ const estimateTime = (level: number, charging: boolean) => {
   return charging ? `${hours}h ${mins}m until full` : `${hours}h ${mins}m remaining`;
 };
 
-const BatteryIndicator: React.FC<{ className?: string }> = ({ className = "" }) => {
+type BatteryIndicatorProps = { className?: string };
+
+const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
   const [open, setOpen] = useState(false);
   const [level, setLevel] = usePersistentState<number>(
     "status-battery-level",
@@ -82,7 +84,7 @@ const BatteryIndicator: React.FC<{ className?: string }> = ({ className = "" }) 
     }
   }, [open]);
 
-  const handleToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setOpen((prev) => !prev);
   };
