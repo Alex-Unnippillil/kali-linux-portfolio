@@ -25,6 +25,22 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const AVAILABLE_APP_IDS = new Set([...apps, ...games].map((app) => app.id));
+
+const sanitizeAppIds = (ids) => {
+    if (!Array.isArray(ids)) return [];
+    const unique = [];
+    const seen = new Set();
+    ids.forEach((id) => {
+        if (typeof id !== 'string') return;
+        if (!AVAILABLE_APP_IDS.has(id)) return;
+        if (seen.has(id)) return;
+        seen.add(id);
+        unique.push(id);
+    });
+    return unique;
+};
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -194,15 +210,25 @@ export class Desktop extends Component {
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
-            const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
-                });
-                this.setState({ favourite_apps });
+            if (session.launcher?.favorites) {
+                const favoritesFromSession = sanitizeAppIds(session.launcher.favorites);
+                try {
+                    safeLocalStorage?.setItem('launcherFavorites', JSON.stringify(favoritesFromSession));
+                } catch (e) {
+                    if (typeof window !== 'undefined') {
+                        try {
+                            window.localStorage.setItem('launcherFavorites', JSON.stringify(favoritesFromSession));
+                        } catch { }
+                    }
+                }
+                window.dispatchEvent(new CustomEvent('launcher:favorites-updated', { detail: favoritesFromSession }));
             }
 
+            if (session.dock && session.dock.length) {
+                this.applyPinnedState(session.dock, { silent: true });
+            }
+
+            const positions = {};
             if (session.windows && session.windows.length) {
                 session.windows.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
@@ -222,6 +248,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('desktop:pins-updated', this.handlePinnedAppsUpdate);
     }
 
     componentWillUnmount() {
@@ -229,7 +256,47 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('desktop:pins-updated', this.handlePinnedAppsUpdate);
     }
+
+    applyPinnedState = (ids, options = {}) => {
+        const { silent = false } = options;
+        const pinnedIds = sanitizeAppIds(ids);
+        try {
+            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedIds));
+        } catch (e) {
+            if (typeof window !== 'undefined') {
+                try {
+                    window.localStorage.setItem('pinnedApps', JSON.stringify(pinnedIds));
+                } catch { }
+            }
+        }
+
+        const pinnedSet = new Set(pinnedIds);
+        const favourite_apps = { ...this.state.favourite_apps };
+        apps.forEach((app) => {
+            const pinned = pinnedSet.has(app.id);
+            app.favourite = pinned;
+            this.initFavourite[app.id] = pinned;
+            if (pinned) {
+                favourite_apps[app.id] = true;
+            } else if (this.state.closed_windows[app.id]) {
+                favourite_apps[app.id] = false;
+            }
+        });
+
+        this.setState({ favourite_apps }, () => {
+            if (!silent) {
+                this.saveSession();
+            }
+        });
+    };
+
+    handlePinnedAppsUpdate = (event) => {
+        const detail = event?.detail;
+        const incoming = Array.isArray(detail) ? detail : [];
+        this.applyPinnedState(incoming);
+    };
 
     checkForNewFolders = () => {
         const stored = safeLocalStorage?.getItem('new_folders');
@@ -665,8 +732,32 @@ export class Desktop extends Component {
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
             y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
         }));
-        const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+
+        let dockFromStorage = [];
+        try {
+            dockFromStorage = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]');
+        } catch (e) {
+            dockFromStorage = [];
+        }
+        const dock = sanitizeAppIds(dockFromStorage);
+
+        let favoritesFromStorage = [];
+        try {
+            favoritesFromStorage = JSON.parse(safeLocalStorage?.getItem('launcherFavorites') || '[]');
+        } catch (e) {
+            favoritesFromStorage = [];
+        }
+        const favorites = sanitizeAppIds(favoritesFromStorage);
+
+        this.props.setSession({
+            ...this.props.session,
+            windows,
+            dock,
+            launcher: {
+                favorites,
+                ordering: favorites,
+            },
+        });
     }
 
     hideSideBar = (objId, hide) => {

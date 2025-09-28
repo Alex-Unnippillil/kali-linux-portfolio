@@ -291,10 +291,10 @@ export function Settings() {
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
-                    const text = await file.text();
-                    await importSettingsData(text);
                     try {
-                        const parsed = JSON.parse(text);
+                        const text = await file.text();
+                        const result = await importSettingsData(text);
+                        const parsed = result?.settings ?? JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.density !== undefined) setDensity(parsed.density);
