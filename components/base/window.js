@@ -225,9 +225,18 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    getSnapGridSize = () => {
+        const value = Number(this.props.snapGridSize);
+        if (!Number.isFinite(value) || value <= 0) {
+            return 8;
+        }
+        return value;
+    }
+
     snapToGrid = (value) => {
         if (!this.props.snapEnabled) return value;
-        return Math.round(value / 8) * 8;
+        const gridSize = this.getSnapGridSize();
+        return Math.round(value / gridSize) * gridSize;
     }
 
     handleVerticleResize = () => {
@@ -636,7 +645,7 @@ export class Window extends Component {
                 <Draggable
                     axis="both"
                     handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
+                    grid={this.props.snapEnabled ? [this.getSnapGridSize(), this.getSnapGridSize()] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}

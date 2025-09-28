@@ -72,6 +72,14 @@ export class Desktop extends Component {
         }
     }
 
+    getSnapGridSize = () => {
+        const value = Number(this.props.snapGridSize);
+        if (!Number.isFinite(value) || value <= 0) {
+            return 8;
+        }
+        return value;
+    }
+
     createEmptyWorkspaceState = () => ({
         focused_windows: {},
         closed_windows: {},
@@ -613,6 +621,7 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
+        const snapGridSize = this.getSnapGridSize();
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
@@ -637,6 +646,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    snapGridSize,
                     context: this.state.window_context[app.id],
                 }
 
@@ -649,8 +659,9 @@ export class Desktop extends Component {
     }
 
     updateWindowPosition = (id, x, y) => {
+        const gridSize = this.getSnapGridSize();
         const snap = this.props.snapEnabled
-            ? (v) => Math.round(v / 8) * 8
+            ? (v) => Math.round(v / gridSize) * gridSize
             : (v) => v;
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
@@ -1179,6 +1190,6 @@ export class Desktop extends Component {
 }
 
 export default function DesktopWithSnap(props) {
-    const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const [snapEnabled, , snapGridSize] = useSnapSetting();
+    return <Desktop {...props} snapEnabled={snapEnabled} snapGridSize={snapGridSize} />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Persist state in localStorage.
@@ -54,9 +54,39 @@ export default function usePersistentState<T>(
   return [state, setState, reset, clear] as const;
 }
 
-export const useSnapSetting = () =>
-  usePersistentState<boolean>(
+const SNAP_GRID_DEFAULT = 8;
+const SNAP_GRID_MIN = 4;
+const SNAP_GRID_MAX = 64;
+
+const clampGridSize = (value: number) => {
+  if (!Number.isFinite(value)) return SNAP_GRID_DEFAULT;
+  return Math.min(SNAP_GRID_MAX, Math.max(SNAP_GRID_MIN, Math.round(value)));
+};
+
+const isValidGridSize = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= SNAP_GRID_MIN && value <= SNAP_GRID_MAX;
+
+export const useSnapSetting = () => {
+  const [enabled, setEnabled] = usePersistentState<boolean>(
     'snap-enabled',
     true,
     (v): v is boolean => typeof v === 'boolean',
   );
+  const [gridSizeRaw, setGridSize] = usePersistentState<number>(
+    'snap-grid-size',
+    SNAP_GRID_DEFAULT,
+    isValidGridSize,
+  );
+
+  const setClampedGridSize = useCallback(
+    (value: number | string) => {
+      const numeric = typeof value === 'number' ? value : Number(value);
+      setGridSize(clampGridSize(numeric));
+    },
+    [setGridSize],
+  );
+
+  const gridSize = clampGridSize(gridSizeRaw);
+
+  return [enabled, setEnabled, gridSize, setClampedGridSize] as const;
+};
