@@ -1081,7 +1081,7 @@ export class Desktop extends Component {
                 </div>
 
                 {/* Background Image */}
-                <BackgroundImage />
+                <BackgroundImage bg_image_name={this.props.bg_image_name} />
 
                 {/* Ubuntu Side Menu Bar */}
                 <SideBar apps={apps}
