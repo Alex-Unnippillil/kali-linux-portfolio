@@ -17,6 +17,11 @@
    - **Alt + ArrowUp** snaps it to the top half.
    - **Alt + ArrowDown** restores the window to its previous size and position.
 
+## Maximize / Restore
+1. With the window focused, press **Super + ArrowUp** (Windows/Command key + ArrowUp) to maximize it.
+2. Press **Super + ArrowDown** to restore the window from a maximized state or exit a snap.
+3. Mouse equivalent: double-click the window title bar to toggle maximize and restore.
+
 ## Focus
 1. After resizing or snapping, press **Tab** to move focus inside the window.
 2. Continue pressing **Tab** to confirm focus can leave the window and is not trapped.
