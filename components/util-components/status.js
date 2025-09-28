@@ -4,7 +4,7 @@ import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
 
-export default function Status() {
+export default function Status({ className = '', visuallyHidden = false } = {}) {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
 
@@ -37,8 +37,16 @@ export default function Status() {
     };
   }, []);
 
+  if (visuallyHidden) {
+    return (
+      <span className={`sr-only ${className}`.trim()}>
+        System status indicators
+      </span>
+    );
+  }
+
   return (
-    <div className="flex justify-center items-center">
+    <div className={`flex justify-center items-center ${className}`.trim()}>
       <span
         className="mx-1.5 relative"
         title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
