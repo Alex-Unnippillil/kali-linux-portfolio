@@ -18,7 +18,7 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center justify-between px-2 z-40" role="toolbar">
+        <div className="kali-glass absolute bottom-0 left-0 w-full h-10 flex items-center justify-between px-2 z-40" role="toolbar">
             <WorkspaceSwitcher
                 workspaces={workspaces}
                 activeWorkspace={props.activeWorkspace}

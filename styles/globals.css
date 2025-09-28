@@ -89,6 +89,14 @@ html {
   scrollbar-color: var(--kali-border, var(--color-border)) transparent;
 }
 
+/* Shared Kali glassmorphism panel */
+.kali-glass {
+  background: var(--kali-panel);
+  border: 1px solid var(--kali-panel-border);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
