@@ -27,6 +27,15 @@
 body {
   background: var(--kali-bg);
   color: var(--kali-text);
+  font-family: var(
+    --font-family-base,
+    'Source Sans 3',
+    'Source Sans Pro',
+    'Segoe UI',
+    'Helvetica Neue',
+    Arial,
+    sans-serif
+  );
 }
 
 /* Dark theme */
