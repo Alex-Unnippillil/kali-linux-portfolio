@@ -8,7 +8,7 @@ import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
-export default class Ubuntu extends Component {
+export default class Kali extends Component {
 	constructor() {
 		super();
 		this.state = {
@@ -93,10 +93,10 @@ export default class Ubuntu extends Component {
 	shutDown = () => {
 		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
 
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Switched off the Ubuntu`
-		});
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Switched off the Kali desktop`
+                });
 
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree

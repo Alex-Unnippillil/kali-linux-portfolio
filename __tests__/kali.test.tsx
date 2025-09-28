@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
-import Ubuntu from '../components/ubuntu';
+import Kali from '../components/kali';
 
 jest.mock('../components/screen/desktop', () => function DesktopMock() {
   return <div data-testid="desktop" />;
@@ -13,7 +13,7 @@ jest.mock('../components/screen/lock_screen', () => function LockScreenMock() {
 });
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
-describe('Ubuntu component', () => {
+describe('Kali component', () => {
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -24,7 +24,7 @@ describe('Ubuntu component', () => {
   });
 
   it('renders boot screen then desktop', () => {
-    render(<Ubuntu />);
+    render(<Kali />);
     const bootLogo = screen.getByAltText('Ubuntu Logo');
     const bootScreen = bootLogo.parentElement as HTMLElement;
     expect(bootScreen).toHaveClass('visible');
@@ -38,8 +38,8 @@ describe('Ubuntu component', () => {
   });
 
   it('handles lockScreen when status bar is missing', () => {
-    let instance: Ubuntu | null = null;
-    render(<Ubuntu ref={(c) => (instance = c)} />);
+    let instance: Kali | null = null;
+    render(<Kali ref={(c) => (instance = c)} />);
     expect(instance).not.toBeNull();
     act(() => {
       instance!.lockScreen();
@@ -49,8 +49,8 @@ describe('Ubuntu component', () => {
   });
 
   it('handles shutDown when status bar is missing', () => {
-    let instance: Ubuntu | null = null;
-    render(<Ubuntu ref={(c) => (instance = c)} />);
+    let instance: Kali | null = null;
+    render(<Kali ref={(c) => (instance = c)} />);
     expect(instance).not.toBeNull();
     act(() => {
       instance!.shutDown();
