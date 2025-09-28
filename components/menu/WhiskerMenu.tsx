@@ -30,6 +30,7 @@ type CategoryDefinitionBase = {
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+const HAS_BACKEND_SUPPORT = process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true';
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -222,6 +223,24 @@ const WhiskerMenu: React.FC = () => {
     return list;
   }, [currentCategory, query]);
 
+  const trimmedQuery = query.trim();
+  const showQuickRunFallback =
+    HAS_BACKEND_SUPPORT && Boolean(trimmedQuery) && currentApps.length === 0;
+
+  const handleQuickRun = useCallback(() => {
+    const command = trimmedQuery;
+    if (!command) return;
+    if (typeof window !== 'undefined') {
+      const requestId = Date.now();
+      window.dispatchEvent(
+        new CustomEvent('terminal-run-command', {
+          detail: { command, requestId },
+        }),
+      );
+    }
+    setIsOpen(false);
+  }, [trimmedQuery]);
+
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
     if (storedCategory && isCategoryId(storedCategory)) {
@@ -306,19 +325,47 @@ const WhiskerMenu: React.FC = () => {
         hideMenu();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        const maxIndex = currentApps.length
+          ? currentApps.length - 1
+          : showQuickRunFallback
+            ? 0
+            : 0;
+        setHighlight(h => {
+          if (currentApps.length === 0 && !showQuickRunFallback) {
+            return 0;
+          }
+          return Math.min(h + 1, maxIndex);
+        });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlight(h => Math.max(h - 1, 0));
+        const minIndex = 0;
+        setHighlight(h => {
+          if (currentApps.length === 0 && !showQuickRunFallback) {
+            return 0;
+          }
+          return Math.max(h - 1, minIndex);
+        });
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const app = currentApps[highlight];
-        if (app) openSelectedApp(app.id);
+        if (app) {
+          openSelectedApp(app.id);
+        } else if (showQuickRunFallback && highlight === 0) {
+          handleQuickRun();
+        }
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [
+    currentApps,
+    handleQuickRun,
+    highlight,
+    hideMenu,
+    isVisible,
+    showQuickRunFallback,
+    toggleMenu,
+  ]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -467,12 +514,13 @@ const WhiskerMenu: React.FC = () => {
               autoFocus
             />
             <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
-
               {currentApps.map((app, idx) => (
                 <div
                   key={app.id}
                   className={`rounded transition ring-offset-2 ${
-                    idx === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
+                    idx === highlight
+                      ? 'ring-2 ring-ubb-orange ring-offset-gray-900'
+                      : 'ring-0'
                   }`}
                 >
                   <UbuntuApp
@@ -484,6 +532,22 @@ const WhiskerMenu: React.FC = () => {
                   />
                 </div>
               ))}
+              {showQuickRunFallback && (
+                <button
+                  type="button"
+                  onClick={handleQuickRun}
+                  className={`col-span-3 flex items-center justify-between gap-3 rounded border border-dashed border-gray-600 bg-black/40 px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-ubb-orange focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                    highlight === 0 ? 'ring-2 ring-ubb-orange ring-offset-2 ring-offset-gray-900' : 'ring-0'
+                  }`}
+                >
+                  <span className="text-sm text-gray-200">
+                    Run: <span className="font-mono text-gray-100">{trimmedQuery}</span>
+                  </span>
+                  <span className="text-xs uppercase tracking-wide text-gray-400">
+                    Enter
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>
