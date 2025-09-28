@@ -153,17 +153,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      handleInput(text);
-    } catch {}
-  };
-
   const runWorker = useCallback(
     async (command: string) => {
       const worker = workerRef.current;
@@ -288,6 +277,54 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       [runCommand, prompt],
     );
 
+    const copySelection = useCallback(async () => {
+      const term = termRef.current;
+      const selection = term?.hasSelection?.()
+        ? term.getSelection?.()
+        : contentRef.current;
+      if (!selection) return;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(selection);
+          return;
+        }
+      } catch {}
+
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = selection;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch {}
+    }, []);
+
+    const pasteFromClipboard = useCallback(async () => {
+      try {
+        if (navigator.clipboard?.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text) handleInput(text);
+          return;
+        }
+      } catch {}
+
+      const fallback = window.prompt('Paste text');
+      if (fallback) handleInput(fallback);
+    }, [handleInput]);
+
+    const handleCopy = () => {
+      void copySelection();
+    };
+
+    const handlePaste = () => {
+      void pasteFromClipboard();
+    };
+
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
@@ -371,14 +408,93 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           }
         }
       });
+      const isMac =
+        typeof navigator !== 'undefined' &&
+        /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const keyHandler = (event: KeyboardEvent) => {
+        if (event.type !== 'keydown') return true;
+        const primary = isMac ? event.metaKey : event.ctrlKey;
+        if (!primary || !event.shiftKey || !event.key) return true;
+        const key = event.key.toLowerCase();
+        if (key === 'c') {
+          event.preventDefault();
+          void copySelection();
+          return false;
+        }
+        if (key === 'v') {
+          event.preventDefault();
+          void pasteFromClipboard();
+          return false;
+        }
+        return true;
+      };
+      term.attachCustomKeyEventHandler?.(keyHandler);
+
+      const container = containerRef.current;
+      const termElement = term.element as HTMLElement | undefined;
+      const resolveRowIndex = (target: EventTarget | null) => {
+        if (!container) return -1;
+        const row = (target as HTMLElement | null)?.closest(
+          '.xterm-rows > div',
+        );
+        if (!row) return -1;
+        const rows = Array.from(
+          container.querySelectorAll<HTMLElement>('.xterm-rows > div'),
+        );
+        return rows.indexOf(row as HTMLElement);
+      };
+
+      const handlePointerState = (event: MouseEvent) => {
+        if (!termElement) return;
+        if (event.altKey) termElement.classList.add('column-select');
+        else termElement.classList.remove('column-select');
+      };
+
+      const handleMouseDown = (event: MouseEvent) => {
+        handlePointerState(event);
+        if (event.button !== 0 || event.detail !== 3) return;
+        const index = resolveRowIndex(event.target);
+        if (index === -1) return;
+        const buffer = term.buffer?.active;
+        if (!buffer) return;
+        const line = buffer.baseY + index;
+        term.selectLines?.(line, line);
+      };
+
+      const handleMouseMove = (event: MouseEvent) => {
+        handlePointerState(event);
+      };
+
+      const handleMouseUp = () => {
+        if (termElement) termElement.classList.remove('column-select');
+      };
+
+      container?.addEventListener('mousedown', handleMouseDown);
+      container?.addEventListener('mousemove', handleMouseMove);
+      container?.addEventListener('mouseup', handleMouseUp);
       updateOverflow();
       term.onScroll?.(updateOverflow);
     })();
     return () => {
       disposed = true;
       termRef.current?.dispose();
+      const container = containerRef.current;
+      container?.removeEventListener('mousedown', handleMouseDown);
+      container?.removeEventListener('mousemove', handleMouseMove);
+      container?.removeEventListener('mouseup', handleMouseUp);
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      copySelection,
+      pasteFromClipboard,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
