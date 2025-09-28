@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
@@ -145,7 +145,13 @@ const readRecentAppIds = (): string[] => {
 };
 
 
-const WhiskerMenu: React.FC = () => {
+type WhiskerMenuProps = {
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  className?: string;
+};
+
+const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: openProp, onOpenChange, className }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,6 +165,8 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const buttonId = useId();
+  const menuId = `${buttonId}-panel`;
 
 
   const allApps: AppMeta[] = apps as any;
@@ -244,11 +252,6 @@ const WhiskerMenu: React.FC = () => {
     setCategoryHighlight(index === -1 ? 0 : index);
   }, [isVisible, currentCategory.id, categoryConfigs]);
 
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setIsOpen(false);
-  };
-
   useEffect(() => {
     if (!isOpen && isVisible) {
       hideTimer.current = setTimeout(() => {
@@ -272,14 +275,26 @@ const WhiskerMenu: React.FC = () => {
     };
   }, [isOpen, isVisible]);
 
-  const showMenu = useCallback(() => {
-    setIsVisible(true);
-    requestAnimationFrame(() => setIsOpen(true));
-  }, []);
+  const showMenu = useCallback(
+    (origin: 'internal' | 'external' = 'internal') => {
+      setIsVisible(true);
+      requestAnimationFrame(() => setIsOpen(true));
+      if (origin === 'internal') {
+        onOpenChange?.(true);
+      }
+    },
+    [onOpenChange],
+  );
 
-  const hideMenu = useCallback(() => {
-    setIsOpen(false);
-  }, []);
+  const hideMenu = useCallback(
+    (origin: 'internal' | 'external' = 'internal') => {
+      setIsOpen(false);
+      if (origin === 'internal') {
+        onOpenChange?.(false);
+      }
+    },
+    [onOpenChange],
+  );
 
   const toggleMenu = useCallback(() => {
     if (isOpen || isVisible) {
@@ -288,6 +303,22 @@ const WhiskerMenu: React.FC = () => {
       showMenu();
     }
   }, [hideMenu, isOpen, isVisible, showMenu]);
+
+  useEffect(() => {
+    if (typeof openProp !== 'boolean') {
+      return;
+    }
+    if (openProp) {
+      showMenu('external');
+    } else {
+      hideMenu('external');
+    }
+  }, [hideMenu, openProp, showMenu]);
+
+  const openSelectedApp = (id: string) => {
+    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+    hideMenu();
+  };
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -374,12 +405,16 @@ const WhiskerMenu: React.FC = () => {
   };
 
   return (
-    <div className="relative inline-flex">
+    <div className={`relative inline-flex ${className ?? ''}`}>
       <button
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        aria-controls={menuId}
+        id={buttonId}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -393,6 +428,9 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
+          id={menuId}
+          role="menu"
+          aria-labelledby={buttonId}
           className={`absolute left-0 mt-1 z-50 flex w-[520px] bg-ub-grey text-white shadow-lg rounded-md overflow-hidden transition-all duration-200 ease-out ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
