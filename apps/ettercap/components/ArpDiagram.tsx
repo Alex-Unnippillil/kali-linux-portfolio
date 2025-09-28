@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import Draggable, { DraggableEvent, DraggableData } from 'react-draggable';
+import type { DraggableEvent, DraggableData } from 'react-draggable';
+import SafeDraggable from '../../../components/base/SafeDraggable';
 
 interface NodeData {
   x: number;
@@ -36,7 +37,7 @@ export default function ArpDiagram() {
         <path d={getLine('attacker', 'gateway')} stroke="#f87171" strokeWidth={2} />
       </svg>
       {Object.entries(nodes).map(([key, node]) => (
-        <Draggable
+        <SafeDraggable
           key={key}
           grid={[6, 6]}
           bounds="parent"
@@ -46,7 +47,7 @@ export default function ArpDiagram() {
           <div className="absolute w-10 h-10 rounded-full bg-gray-700 border border-white flex items-center justify-center text-[10px]">
             {node.label}
           </div>
-        </Draggable>
+        </SafeDraggable>
       ))}
     </div>
   );

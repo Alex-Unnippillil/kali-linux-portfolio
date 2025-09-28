@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import Draggable from 'react-draggable';
+import SafeDraggable from './SafeDraggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
@@ -633,7 +633,7 @@ export class Window extends Component {
                         }}
                     />
                 )}
-                <Draggable
+                <SafeDraggable
                     axis="both"
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
@@ -693,7 +693,7 @@ export class Window extends Component {
                                 openApp={this.props.openApp}
                                 context={this.props.context} />)}
                     </div>
-                </Draggable >
+                </SafeDraggable>
             </>
         )
     }
