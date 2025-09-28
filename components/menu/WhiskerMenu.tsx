@@ -7,6 +7,10 @@ import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
 
+const KALI_CATEGORY_NUMBER_MAP = new Map(
+  BASE_KALI_CATEGORIES.map(category => [category.id, category.number] as const),
+);
+
 type AppMeta = {
   id: string;
   title: string;
@@ -25,6 +29,7 @@ type CategoryDefinitionBase = {
   id: string;
   label: string;
   icon: string;
+  menuNumber?: string;
 } & CategorySource;
 
 const TRANSITION_DURATION = 180;
@@ -32,12 +37,6 @@ const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
 const CATEGORY_DEFINITIONS = [
-  {
-    id: 'all',
-    label: 'All Applications',
-    icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
-    type: 'all',
-  },
   {
     id: 'favorites',
     label: 'Favorites',
@@ -51,69 +50,116 @@ const CATEGORY_DEFINITIONS = [
     type: 'recent',
   },
   {
+    id: 'all',
+    label: 'All Applications',
+    icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
+    type: 'all',
+  },
+  {
+    id: 'top-10-tools',
+    label: 'Top 10 Tools',
+    icon: '/themes/kali/categories/top10.svg',
+    type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('top-10-tools') ?? '00',
+    appIds: ['nmap-nse', 'wireshark', 'metasploit', 'john', 'hashcat', 'hydra', 'reconng', 'kismet', 'nessus', 'openvas'],
+  },
+  {
     id: 'information-gathering',
     label: 'Information Gathering',
-    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    icon: '/themes/kali/categories/information-gathering.svg',
     type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('information-gathering') ?? '01',
     appIds: ['nmap-nse', 'reconng', 'kismet', 'wireshark'],
   },
   {
     id: 'vulnerability-analysis',
     label: 'Vulnerability Analysis',
-    icon: '/themes/Yaru/apps/nessus.svg',
+    icon: '/themes/kali/categories/vulnerability-analysis.svg',
     type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('vulnerability-analysis') ?? '02',
     appIds: ['nessus', 'openvas', 'nikto'],
   },
   {
-    id: 'web-app-analysis',
-    label: 'Web App Analysis',
-    icon: '/themes/Yaru/apps/http.svg',
+    id: 'web-application-analysis',
+    label: 'Web Application Analysis',
+    icon: '/themes/kali/categories/web-application-analysis.svg',
     type: 'ids',
-    appIds: ['http', 'beef', 'metasploit'],
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('web-application-analysis') ?? '03',
+    appIds: ['http', 'beef', 'security-tools'],
+  },
+  {
+    id: 'database-assessment',
+    label: 'Database Assessment',
+    icon: '/themes/kali/categories/database-assessment.svg',
+    type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('database-assessment') ?? '04',
+    appIds: ['hydra', 'openvas', 'nessus'],
   },
   {
     id: 'password-attacks',
     label: 'Password Attacks',
-    icon: '/themes/Yaru/apps/john.svg',
+    icon: '/themes/kali/categories/password-attacks.svg',
     type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('password-attacks') ?? '05',
     appIds: ['john', 'hashcat', 'hydra'],
   },
   {
     id: 'wireless-attacks',
     label: 'Wireless Attacks',
-    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
+    icon: '/themes/kali/categories/wireless-attacks.svg',
     type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('wireless-attacks') ?? '06',
     appIds: ['kismet', 'reaver', 'wireshark'],
+  },
+  {
+    id: 'reverse-engineering',
+    label: 'Reverse Engineering',
+    icon: '/themes/kali/categories/reverse-engineering.svg',
+    type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('reverse-engineering') ?? '07',
+    appIds: ['ghidra', 'radare2', 'volatility'],
   },
   {
     id: 'exploitation-tools',
     label: 'Exploitation Tools',
-    icon: '/themes/Yaru/apps/metasploit.svg',
+    icon: '/themes/kali/categories/exploitation-tools.svg',
     type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('exploitation-tools') ?? '08',
     appIds: ['metasploit', 'security-tools', 'beef'],
   },
   {
     id: 'sniffing-spoofing',
     label: 'Sniffing & Spoofing',
-    icon: '/themes/Yaru/apps/ettercap.svg',
+    icon: '/themes/kali/categories/sniffing-spoofing.svg',
     type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('sniffing-spoofing') ?? '09',
     appIds: ['dsniff', 'ettercap', 'wireshark'],
   },
   {
     id: 'post-exploitation',
     label: 'Post Exploitation',
-    icon: '/themes/Yaru/apps/msf-post.svg',
+    icon: '/themes/kali/categories/post-exploitation.svg',
     type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('post-exploitation') ?? '10',
     appIds: ['msf-post', 'mimikatz', 'volatility'],
   },
   {
-    id: 'forensics-reporting',
-    label: 'Forensics & Reporting',
-    icon: '/themes/Yaru/apps/autopsy.svg',
+    id: 'forensics',
+    label: 'Forensics',
+    icon: '/themes/kali/categories/forensics.svg',
     type: 'ids',
-    appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('forensics') ?? '11',
+    appIds: ['autopsy', 'volatility', 'evidence-vault'],
   },
- ] as const satisfies readonly CategoryDefinitionBase[];
+  {
+    id: 'reporting',
+    label: 'Reporting',
+    icon: '/themes/kali/categories/reporting.svg',
+    type: 'ids',
+    menuNumber: KALI_CATEGORY_NUMBER_MAP.get('reporting') ?? '12',
+    appIds: ['project-gallery', 'evidence-vault', 'contact'],
+  },
+] as const satisfies readonly CategoryDefinitionBase[];
 
 type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
 const isCategoryId = (
@@ -123,10 +169,7 @@ const isCategoryId = (
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
-const KALI_CATEGORIES = BASE_KALI_CATEGORIES.map((category, index) => ({
-  ...category,
-  number: String(index + 1).padStart(2, '0'),
-}));
+const KALI_CATEGORIES = BASE_KALI_CATEGORIES;
 
 const readRecentAppIds = (): string[] => {
   try {
@@ -430,7 +473,7 @@ const WhiskerMenu: React.FC = () => {
                 }}
 
               >
-                <span className="w-8 font-mono text-xs text-gray-300">{String(index + 1).padStart(2, '0')}</span>
+                <span className="w-8 font-mono text-xs text-gray-300">{cat.menuNumber ?? '--'}</span>
                 <span className="flex items-center gap-2">
                   <Image
                     src={cat.icon}
