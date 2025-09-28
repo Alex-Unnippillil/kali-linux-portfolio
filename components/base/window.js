@@ -7,11 +7,13 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { dispatchNavbarAutohide } from '../../utils/desktopEvents';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_BOTTOM_INSET = 28;
+const NAVBAR_OVERLAP_THRESHOLD = 40;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -36,7 +38,7 @@ const computeSnapRegions = (viewportWidth, viewportHeight) => {
 export class Window extends Component {
     constructor(props) {
         super(props);
-        this.id = null;
+        this.id = props.id ?? null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
         this.startX =
@@ -62,6 +64,14 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._navbarHidden = false;
+    }
+
+    emitNavbarAutohide = (hidden) => {
+        if (!this.id) return;
+        if (this._navbarHidden === hidden) return;
+        this._navbarHidden = hidden;
+        dispatchNavbarAutohide(this.id, hidden);
     }
 
     componentDidMount() {
@@ -81,9 +91,11 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.checkOverlap();
     }
 
     componentWillUnmount() {
+        this.emitNavbarAutohide(false);
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
@@ -93,6 +105,19 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (this.props.minimized !== prevProps.minimized) {
+            if (this.props.minimized) {
+                this.emitNavbarAutohide(false);
+            } else {
+                this.checkOverlap();
+            }
+        }
+        if (this.state.maximized !== prevState.maximized && !this.state.maximized) {
+            this.checkOverlap();
         }
     }
 
@@ -269,14 +294,18 @@ export class Window extends Component {
                 r.style.transform = `translate(${x},${y})`;
             }
         }
+        const afterUpdate = () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        };
         if (this.state.lastSize) {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, afterUpdate);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, afterUpdate);
         }
     }
 
@@ -301,18 +330,31 @@ export class Window extends Component {
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
     }
 
     checkOverlap = () => {
-        var r = document.querySelector("#" + this.id);
-        var rect = r.getBoundingClientRect();
-        if (rect.x.toFixed(1) < 50) { // if this window overlapps with SideBar
+        if (!this.id) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        if (this.props.minimized || this.state.closed) {
+            this.props.hideSideBar(this.id, false);
+            this.emitNavbarAutohide(false);
+            return;
+        }
+        const rect = node.getBoundingClientRect();
+        if (rect.left <= 50) {
             this.props.hideSideBar(this.id, true);
         }
         else {
             this.props.hideSideBar(this.id, false);
         }
+        const navbarOverlap = rect.top <= NAVBAR_OVERLAP_THRESHOLD;
+        const shouldHideNavbar = navbarOverlap || this.state.maximized || this.state.snapped === 'top';
+        this.emitNavbarAutohide(shouldHideNavbar);
     }
 
     setInertBackground = () => {
@@ -427,6 +469,7 @@ export class Window extends Component {
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
+            this.emitNavbarAutohide(false);
             return;
         }
 
@@ -438,6 +481,7 @@ export class Window extends Component {
         this._dockAnimation.onfinish = () => {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
+            this.emitNavbarAutohide(false);
             this._dockAnimation.onfinish = null;
         };
     }
@@ -494,11 +538,13 @@ export class Window extends Component {
             r.style.transform = `translate(-1pt,-2pt)`;
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
+            this.emitNavbarAutohide(true);
         }
     }
 
     closeWindow = () => {
         this.setWinowsPosition();
+        this.emitNavbarAutohide(false);
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);

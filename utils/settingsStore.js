@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  autohideNavbar: true,
 };
 
 export async function getAccent() {
@@ -135,6 +136,18 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getAutohideNavbar() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.autohideNavbar;
+  const stored = window.localStorage.getItem('autohide-navbar');
+  if (stored === null) return DEFAULT_SETTINGS.autohideNavbar;
+  return stored === 'true';
+}
+
+export async function setAutohideNavbar(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('autohide-navbar', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +163,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('autohide-navbar');
 }
 
 export async function exportSettings() {
@@ -165,6 +179,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    autohideNavbar,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +192,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getAutohideNavbar(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -191,6 +207,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    autohideNavbar,
     theme,
   });
 }
@@ -216,6 +233,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    autohideNavbar,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -229,6 +247,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (autohideNavbar !== undefined) await setAutohideNavbar(autohideNavbar);
   if (theme !== undefined) setTheme(theme);
 }
 

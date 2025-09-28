@@ -22,6 +22,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getAutohideNavbar as loadAutohideNavbar,
+  setAutohideNavbar as saveAutohideNavbar,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -67,6 +69,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  autohideNavbar: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +82,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setAutohideNavbar: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +99,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  autohideNavbar: defaults.autohideNavbar,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +112,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setAutohideNavbar: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,6 +128,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [autohideNavbar, setAutohideNavbar] = useState<boolean>(defaults.autohideNavbar);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -138,6 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setAutohideNavbar(await loadAutohideNavbar());
     })();
   }, []);
 
@@ -250,6 +258,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveAutohideNavbar(autohideNavbar);
+  }, [autohideNavbar]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +280,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        autohideNavbar,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +293,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setAutohideNavbar,
       }}
     >
       {children}

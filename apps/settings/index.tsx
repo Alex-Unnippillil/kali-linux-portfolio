@@ -34,6 +34,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    autohideNavbar,
+    setAutohideNavbar,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +85,8 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.autohideNavbar !== undefined)
+        setAutohideNavbar(parsed.autohideNavbar);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -105,6 +109,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setAutohideNavbar(defaults.autohideNavbar);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -264,6 +269,14 @@ export default function Settings() {
               checked={reducedMotion}
               onChange={setReducedMotion}
               ariaLabel="Reduced Motion"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Autohide Top Bar:</span>
+            <ToggleSwitch
+              checked={autohideNavbar}
+              onChange={setAutohideNavbar}
+              ariaLabel="Autohide Top Bar"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
