@@ -222,6 +222,8 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('set-active-workspace', this.handleSetActiveWorkspaceEvent);
+        this.notifyWorkspaceChange();
     }
 
     componentWillUnmount() {
@@ -229,6 +231,11 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('set-active-workspace', this.handleSetActiveWorkspaceEvent);
+    }
+
+    componentDidUpdate() {
+        this.notifyWorkspaceChange();
     }
 
     checkForNewFolders = () => {
@@ -748,6 +755,26 @@ export class Desktop extends Component {
         }
     }
 
+    handleSetActiveWorkspaceEvent = (event) => {
+        const detail = event?.detail;
+        if (typeof detail === 'number') {
+            this.switchWorkspace(detail);
+            return;
+        }
+        if (detail && typeof detail === 'object' && typeof detail.id === 'number') {
+            this.switchWorkspace(detail.id);
+        }
+    }
+
+    notifyWorkspaceChange = () => {
+        if (typeof window === 'undefined') return;
+        const detail = {
+            activeWorkspace: this.state.activeWorkspace,
+            workspaces: this.getWorkspaceSummaries(),
+        };
+        window.dispatchEvent(new CustomEvent('workspace-summary', { detail }));
+    }
+
     openApp = (objId, params) => {
         const context = params && typeof params === 'object'
             ? {
@@ -1068,7 +1095,12 @@ export class Desktop extends Component {
     render() {
         const workspaceSummaries = this.getWorkspaceSummaries();
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                style={{ paddingTop: 'calc(var(--panel-height, 3rem) + var(--space-1))' }}
+            >
 
                 {/* Window Area */}
                 <div
