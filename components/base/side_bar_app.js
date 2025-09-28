@@ -100,8 +100,10 @@ export class SideBarApp extends Component {
                 onMouseLeave={() => {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                className={[
+                    this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? 'bg-white bg-opacity-10' : null,
+                    'w-auto p-1.5 outline-none relative hover:bg-white hover:bg-opacity-10 rounded-lg my-1.5 transition-hover transition-active',
+                ].filter(Boolean).join(' ')}
                 id={"sidebar-" + this.props.id}
             >
                 <Image
