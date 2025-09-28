@@ -21,6 +21,14 @@ function AppMenu(props) {
         }
     }
 
+    const handleRename = () => {
+        props.onRename && props.onRename();
+    };
+
+    const handleUndoRename = () => {
+        props.onUndoRename && props.onUndoRename();
+    };
+
     return (
         <div
             id="app-menu"
@@ -38,6 +46,25 @@ function AppMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleRename}
+                role="menuitem"
+                aria-label="Rename"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Rename</span>
+            </button>
+            <button
+                type="button"
+                disabled={!props.canUndoRename}
+                onClick={handleUndoRename}
+                role="menuitem"
+                aria-label="Undo Rename"
+                className={`w-full text-left cursor-default py-0.5 mb-1.5 ${props.canUndoRename ? 'hover:bg-gray-700' : 'text-gray-500 cursor-not-allowed'}`}
+            >
+                <span className="ml-5">Undo Rename</span>
             </button>
         </div>
     )

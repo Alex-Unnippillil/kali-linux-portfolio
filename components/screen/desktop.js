@@ -25,6 +25,12 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const ICON_POSITIONS_KEY = 'desktop_icon_positions';
+const ICON_META_KEY = 'desktop_icon_meta';
+const ICON_ARRANGE_KEY = 'desktop_icon_arrange';
+
+const gameIds = new Set(games.map(game => game.id));
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -41,6 +47,18 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.desktopGridRef = React.createRef();
+        this.desktopGridConfig = {
+            columnWidth: 112,
+            rowHeight: 112,
+            columnGap: 16,
+            rowGap: 24,
+            paddingX: 32,
+            paddingTop: 64,
+            paddingBottom: 32,
+        };
+        this.handleResize = this.updateDesktopGridColumns.bind(this);
+        this.preferencesLoaded = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -69,6 +87,13 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
+            desktop_layout: {},
+            desktopGridColumns: 1,
+            desktopArrange: 'custom',
+            renamingAppId: null,
+            renameValue: '',
+            renameHistory: [],
+            desktopMeta: {},
         }
     }
 
@@ -113,6 +138,339 @@ export class Desktop extends Component {
             this.commitWorkspacePartial(updater);
             this.setState(updater, callback);
         }
+    };
+
+    loadDesktopPreferences = () => {
+        let storedLayout = {};
+        let storedMeta = {};
+        let storedArrange = 'custom';
+
+        try {
+            storedLayout = JSON.parse(safeLocalStorage?.getItem(ICON_POSITIONS_KEY) || '{}');
+        } catch (e) {
+            storedLayout = {};
+        }
+
+        try {
+            storedMeta = JSON.parse(safeLocalStorage?.getItem(ICON_META_KEY) || '{}');
+        } catch (e) {
+            storedMeta = {};
+        }
+
+        const arrangeValue = safeLocalStorage?.getItem(ICON_ARRANGE_KEY);
+        if (arrangeValue) {
+            storedArrange = arrangeValue;
+        }
+
+        this.setState({
+            desktop_layout: storedLayout,
+            desktopMeta: storedMeta,
+            desktopArrange: storedArrange,
+        }, () => {
+            this.preferencesLoaded = true;
+            this.initializeDesktopMeta(this.state.desktop_apps, () => {
+                this.refreshDesktopLayout({ persist: true, mode: storedArrange });
+                this.updateDesktopGridColumns();
+            });
+        });
+    };
+
+    persistDesktopPositions = (layout) => {
+        try {
+            safeLocalStorage?.setItem(ICON_POSITIONS_KEY, JSON.stringify(layout));
+        } catch (e) {
+            // ignore storage failures
+        }
+    };
+
+    persistDesktopMeta = (meta) => {
+        try {
+            safeLocalStorage?.setItem(ICON_META_KEY, JSON.stringify(meta));
+        } catch (e) {
+            // ignore storage failures
+        }
+    };
+
+    persistDesktopArrange = (mode) => {
+        try {
+            safeLocalStorage?.setItem(ICON_ARRANGE_KEY, mode);
+        } catch (e) {
+            // ignore storage failures
+        }
+    };
+
+    afterDesktopAppsUpdated = () => {
+        const ids = this.getDesktopAppIds();
+        this.initializeDesktopMeta(ids, () => {
+            this.refreshDesktopLayout({ persist: this.preferencesLoaded });
+        });
+    };
+
+    computeMetaUpdate = (ids, existingMeta = {}) => {
+        const meta = { ...existingMeta };
+        const now = Date.now();
+        let changed = false;
+        ids.forEach((id, index) => {
+            if (!meta[id]) {
+                meta[id] = { addedAt: now + index };
+                changed = true;
+            } else if (meta[id].addedAt === undefined) {
+                meta[id] = { ...meta[id], addedAt: now + index };
+                changed = true;
+            }
+        });
+        Object.keys(meta).forEach((id) => {
+            if (!ids.includes(id)) {
+                delete meta[id];
+                changed = true;
+            }
+        });
+        return { meta, changed };
+    };
+
+    initializeDesktopMeta = (ids, callback) => {
+        const { meta, changed } = this.computeMetaUpdate(ids, this.state.desktopMeta);
+        if (changed) {
+            this.setState({ desktopMeta: meta }, () => {
+                this.persistDesktopMeta(meta);
+                if (typeof callback === 'function') callback();
+            });
+        } else if (typeof callback === 'function') {
+            callback();
+        }
+    };
+
+    updateDesktopGridColumns = () => {
+        if (typeof window === 'undefined') return;
+        const container = this.desktopGridRef.current;
+        const width = container ? container.clientWidth : window.innerWidth;
+        if (!width) return;
+        const { columnWidth, columnGap, paddingX } = this.desktopGridConfig;
+        const available = Math.max(1, width - paddingX * 2);
+        const computedColumns = Math.max(1, Math.floor((available + columnGap) / (columnWidth + columnGap)));
+        if (computedColumns !== this.state.desktopGridColumns) {
+            this.setState({ desktopGridColumns: computedColumns }, () => {
+                this.refreshDesktopLayout({ persist: false });
+            });
+        } else {
+            this.refreshDesktopLayout({ persist: false });
+        }
+    };
+
+    getDesktopAppIds = () => {
+        return Array.isArray(this.state.desktop_apps) ? this.state.desktop_apps : [];
+    };
+
+    getAppById = (id) => apps.find(app => app.id === id);
+
+    getDesktopAppObjects = () => {
+        return this.getDesktopAppIds()
+            .map(this.getAppById)
+            .filter(Boolean);
+    };
+
+    getAppType = (app) => {
+        if (!app) return 'Application';
+        if (app.type) return app.type;
+        return gameIds.has(app.id) ? 'Game' : 'Application';
+    };
+
+    sortAppsForMode = (appsList, mode) => {
+        const list = [...appsList];
+        const meta = this.state.desktopMeta || {};
+        if (mode === 'name') {
+            list.sort((a, b) => {
+                const nameA = (meta[a.id]?.name || a.title || '').toLowerCase();
+                const nameB = (meta[b.id]?.name || b.title || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+        } else if (mode === 'type') {
+            list.sort((a, b) => {
+                const typeA = this.getAppType(a).toLowerCase();
+                const typeB = this.getAppType(b).toLowerCase();
+                if (typeA === typeB) {
+                    const nameA = (meta[a.id]?.name || a.title || '').toLowerCase();
+                    const nameB = (meta[b.id]?.name || b.title || '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                }
+                return typeA.localeCompare(typeB);
+            });
+        } else if (mode === 'date') {
+            list.sort((a, b) => {
+                const dateA = meta[a.id]?.addedAt || 0;
+                const dateB = meta[b.id]?.addedAt || 0;
+                if (dateA === dateB) {
+                    return (meta[a.id]?.name || a.title || '').localeCompare(meta[b.id]?.name || b.title || '');
+                }
+                return dateA - dateB;
+            });
+        }
+        return list;
+    };
+
+    assignSequentialPositions = (appsList, columns) => {
+        const layout = {};
+        let row = 1;
+        let column = 1;
+        appsList.forEach((app) => {
+            layout[app.id] = { row, column };
+            column += 1;
+            if (column > columns) {
+                column = 1;
+                row += 1;
+            }
+        });
+        return layout;
+    };
+
+    normalizeLayout = (appsList, columns) => {
+        const existing = this.state.desktop_layout || {};
+        const layout = {};
+        const occupied = new Set();
+        const queue = [];
+
+        const keyFor = (row, column) => `${row}-${column}`;
+
+        appsList.forEach((app) => {
+            const saved = existing[app.id];
+            if (saved && saved.row >= 1 && saved.column >= 1 && saved.column <= columns) {
+                const key = keyFor(saved.row, saved.column);
+                if (!occupied.has(key)) {
+                    layout[app.id] = { row: saved.row, column: saved.column };
+                    occupied.add(key);
+                    return;
+                }
+            }
+            queue.push(app);
+        });
+
+        let row = 1;
+        let column = 1;
+        queue.forEach((app) => {
+            let key = keyFor(row, column);
+            while (occupied.has(key)) {
+                column += 1;
+                if (column > columns) {
+                    column = 1;
+                    row += 1;
+                }
+                key = keyFor(row, column);
+            }
+            layout[app.id] = { row, column };
+            occupied.add(key);
+            column += 1;
+            if (column > columns) {
+                column = 1;
+                row += 1;
+            }
+        });
+
+        return layout;
+    };
+
+    refreshDesktopLayout = ({ mode = this.state.desktopArrange, persist = true } = {}) => {
+        const appsList = this.getDesktopAppObjects();
+        if (!appsList.length) return;
+        const columns = this.state.desktopGridColumns || 1;
+        let layout;
+
+        if (mode === 'custom') {
+            layout = this.normalizeLayout(appsList, columns);
+        } else {
+            const sorted = this.sortAppsForMode(appsList, mode);
+            layout = this.assignSequentialPositions(sorted, columns);
+        }
+
+        this.setState({ desktop_layout: layout, desktopArrange: mode }, () => {
+            if (persist) {
+                this.persistDesktopPositions(layout);
+                this.persistDesktopArrange(mode);
+            }
+        });
+    };
+
+    getAppDisplayName = (app) => {
+        if (!app) return '';
+        const meta = this.state.desktopMeta || {};
+        return meta[app.id]?.name || app.title || '';
+    };
+
+    getAppDisplayNameById = (id) => {
+        const app = this.getAppById(id);
+        return this.getAppDisplayName(app);
+    };
+
+    startRename = (id) => {
+        if (!id) return;
+        const currentName = this.getAppDisplayNameById(id);
+        this.setState({ renamingAppId: id, renameValue: currentName }, () => {
+            this.hideAllContextMenu();
+        });
+    };
+
+    handleRenameChange = (value) => {
+        this.setState({ renameValue: value });
+    };
+
+    submitRename = () => {
+        const id = this.state.renamingAppId;
+        if (!id) return;
+        const nextValue = (this.state.renameValue || '').trim();
+        const app = this.getAppById(id);
+        const currentDisplay = this.getAppDisplayName(app);
+        if (!nextValue) {
+            this.setState({ renamingAppId: null, renameValue: '' });
+            return;
+        }
+        if (nextValue === currentDisplay) {
+            this.setState({ renamingAppId: null, renameValue: '' });
+            return;
+        }
+        const meta = { ...this.state.desktopMeta };
+        const previousName = meta[id]?.name ?? null;
+        const existing = meta[id] || {};
+        meta[id] = { ...existing, name: nextValue };
+        const renameHistory = [...this.state.renameHistory, { id, previousName }];
+        this.setState({
+            desktopMeta: meta,
+            renamingAppId: null,
+            renameValue: '',
+            renameHistory,
+        }, () => {
+            this.persistDesktopMeta(meta);
+        });
+    };
+
+    cancelRename = () => {
+        this.setState({ renamingAppId: null, renameValue: '' });
+    };
+
+    undoRename = () => {
+        if (!this.state.renameHistory.length) return;
+        const history = [...this.state.renameHistory];
+        const last = history.pop();
+        if (!last) return;
+        this.hideAllContextMenu();
+        const meta = { ...this.state.desktopMeta };
+        const existing = meta[last.id] || {};
+        if (last.previousName) {
+            meta[last.id] = { ...existing, name: last.previousName };
+        } else {
+            const { name, ...rest } = existing;
+            if (Object.keys(rest).length) {
+                meta[last.id] = rest;
+            } else {
+                delete meta[last.id];
+            }
+        }
+        this.setState({ desktopMeta: meta, renameHistory: history }, () => {
+            this.persistDesktopMeta(meta);
+        });
+    };
+
+    arrangeDesktopApps = (mode) => {
+        this.hideAllContextMenu();
+        this.refreshDesktopLayout({ mode, persist: true });
     };
 
     getActiveStack = () => this.workspaceStacks[this.state.activeWorkspace];
@@ -213,6 +571,7 @@ export class Desktop extends Component {
             } else {
                 this.openApp('about-alex');
             }
+            this.loadDesktopPreferences();
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -222,6 +581,9 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', this.handleResize);
+        }
     }
 
     componentWillUnmount() {
@@ -229,6 +591,9 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('resize', this.handleResize);
+        }
     }
 
     checkForNewFolders = () => {
@@ -535,6 +900,7 @@ export class Desktop extends Component {
             favourite_apps,
             desktop_apps
         }, () => {
+            this.afterDesktopAppsUpdated();
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
@@ -584,31 +950,67 @@ export class Desktop extends Component {
             disabled_apps,
             favourite_apps,
             desktop_apps
+        }, () => {
+            this.afterDesktopAppsUpdated();
         });
         this.initFavourite = { ...favourite_apps };
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+        const desktopApps = this.getDesktopAppObjects();
+        if (!desktopApps.length) return null;
+        const layout = this.state.desktop_layout || {};
+        const columns = this.state.desktopGridColumns || 1;
+        const { columnWidth, rowHeight, columnGap, rowGap, paddingX, paddingTop, paddingBottom } = this.desktopGridConfig;
 
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
+        const gridStyle = {
+            gridTemplateColumns: `repeat(${columns}, ${columnWidth}px)`,
+            gridAutoRows: `${rowHeight}px`,
+            columnGap: `${columnGap}px`,
+            rowGap: `${rowGap}px`,
+            padding: `${paddingTop}px ${paddingX}px ${paddingBottom}px`,
+        };
 
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+        return (
+            <div
+                ref={this.desktopGridRef}
+                id="desktop-grid"
+                data-context="desktop-area"
+                className="absolute inset-0 pointer-events-none"
+            >
+                <div className="grid h-full w-full content-start justify-start pointer-events-auto" style={gridStyle}>
+                    {desktopApps.map((app) => {
+                        const position = layout[app.id] || { row: 1, column: 1 };
+                        const isRenaming = this.state.renamingAppId === app.id;
+                        const displayName = this.getAppDisplayName(app);
+                        const renameValue = isRenaming ? this.state.renameValue : displayName;
+                        const disabled = this.state.disabled_apps[app.id];
+                        return (
+                            <div
+                                key={app.id}
+                                style={{ gridColumnStart: position.column, gridRowStart: position.row }}
+                                className="flex items-start justify-center"
+                            >
+                                <UbuntuApp
+                                    name={app.title}
+                                    id={app.id}
+                                    icon={app.icon}
+                                    openApp={this.openApp}
+                                    disabled={disabled}
+                                    prefetch={app.screen?.prefetch}
+                                    displayName={displayName}
+                                    isRenaming={isRenaming}
+                                    renameValue={renameValue}
+                                    onRenameChange={this.handleRenameChange}
+                                    onRenameSubmit={this.submitRename}
+                                    onRenameCancel={this.cancelRename}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
     }
 
     renderWindows = () => {
@@ -1040,8 +1442,8 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="New folder name" />
                 </div>
                 <div className="flex">
                     <button
@@ -1117,6 +1519,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    arrangeDesktopApps={this.arrangeDesktopApps}
+                    currentArrange={this.state.desktopArrange}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -1125,6 +1529,9 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    onRename={() => this.startRename(this.state.context_app)}
+                    onUndoRename={this.undoRename}
+                    canUndoRename={this.state.renameHistory.length > 0}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
