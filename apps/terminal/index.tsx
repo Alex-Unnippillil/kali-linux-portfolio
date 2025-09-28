@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import { useSettings } from '../../hooks/useSettings';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -88,6 +89,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const { zshHints } = useSettings();
+  const zshHintsRef = useRef(zshHints);
+  const newSessionRef = useRef(true);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -145,12 +149,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.writeLine = writeLine;
 
+  useEffect(() => {
+    zshHintsRef.current = zshHints;
+  }, [zshHints]);
+
   const prompt = useCallback(() => {
     if (!termRef.current) return;
-    termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
-    );
-    termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
+    if (zshHintsRef.current) {
+      termRef.current.writeln(
+        '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+      );
+      termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
+    } else {
+      termRef.current.write('\x1b[1;32mkali@portfolio\x1b[0m$ ');
+    }
   }, []);
 
   const handleCopy = () => {
@@ -261,6 +273,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         commandRef.current = matches[0];
       } else if (matches.length > 1) {
         writeLine(matches.join('  '));
+        if (zshHintsRef.current) {
+          writeLine(
+            '\x1b[38;5;244m↳ Tip: press Tab again to cycle suggestions or keep typing to refine.\x1b[0m',
+          );
+        }
         prompt();
         termRef.current?.write(commandRef.current);
       }
@@ -338,10 +355,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           contentRef.current = existing.endsWith('\n')
             ? existing
             : `${existing}\n`;
+          newSessionRef.current = false;
         }
       }
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
+      if (zshHintsRef.current && newSessionRef.current) {
+        aliasesRef.current.ll = 'ls';
+        aliasesRef.current.readme = 'cat README.md';
+        writeLine(
+          '\x1b[38;5;244m✨ Zsh hints enabled — demo aliases added: ll → ls, readme → cat README.md.\x1b[0m',
+        );
+        writeLine(
+          '\x1b[38;5;244m↳ Try typing "ma" then press Tab to preview command completion.\x1b[0m',
+        );
+        newSessionRef.current = false;
+      }
       prompt();
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {

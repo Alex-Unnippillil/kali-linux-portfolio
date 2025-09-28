@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, zshHints, setZshHints, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -192,6 +192,20 @@ export function Settings() {
                     Haptics
                 </label>
             </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={zshHints}
+                        onChange={(e) => setZshHints(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Zsh Hints
+                </label>
+            </div>
+            <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                Toggle the multi-line Kali prompt, completion tips, and sample aliases in the terminal.
+            </p>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input

@@ -32,6 +32,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    zshHints,
+    setZshHints,
     theme,
     setTheme,
   } = useSettings();
@@ -282,6 +284,17 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Zsh Hints:</span>
+            <ToggleSwitch
+              checked={zshHints}
+              onChange={setZshHints}
+              ariaLabel="Zsh terminal hints"
+            />
+          </div>
+          <p className="text-xs text-ubt-grey/70 text-center -mt-2 mb-4 px-6">
+            Show the multi-line Kali prompt, completion tips, and demo aliases inside the terminal.
+          </p>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
