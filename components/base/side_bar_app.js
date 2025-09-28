@@ -45,6 +45,53 @@ export class SideBarApp extends Component {
         }
     };
 
+    handleKeyDown = (event) => {
+        const { key, currentTarget } = event;
+
+        if (key === 'Enter' || key === ' ') {
+            event.preventDefault();
+            this.openApp();
+            return;
+        }
+
+        const nav = currentTarget.closest('[data-sidebar-nav="true"]');
+        if (!nav) return;
+
+        const items = Array.from(nav.querySelectorAll('[data-sidebar-item="true"]'));
+        if (items.length === 0) return;
+
+        const index = items.indexOf(currentTarget);
+        if (index === -1) return;
+
+        const moveFocus = (nextIndex) => {
+            const clampedIndex = (nextIndex + items.length) % items.length;
+            const next = items[clampedIndex];
+            if (next) {
+                event.preventDefault();
+                next.focus();
+            }
+        };
+
+        switch (key) {
+            case 'ArrowDown':
+            case 'ArrowRight':
+                moveFocus(index + 1);
+                break;
+            case 'ArrowUp':
+            case 'ArrowLeft':
+                moveFocus(index - 1);
+                break;
+            case 'Home':
+                moveFocus(0);
+                break;
+            case 'End':
+                moveFocus(items.length - 1);
+                break;
+            default:
+                break;
+        }
+    };
+
     scaleImage = () => {
         setTimeout(() => {
             this.setState({ scaleImage: false });
@@ -86,13 +133,18 @@ export class SideBarApp extends Component {
     };
 
     render() {
+        const isOpen = this.props.isClose && this.props.isClose[this.id] === false;
+        const isMinimized = Boolean(this.props.isMinimized && this.props.isMinimized[this.id]);
+        const isRunning = Boolean(isOpen && !isMinimized);
         return (
             <button
                 type="button"
                 aria-label={this.props.title}
+                aria-pressed={isRunning}
                 data-context="app"
                 data-app-id={this.props.id}
                 onClick={this.openApp}
+                onKeyDown={this.handleKeyDown}
                 onMouseEnter={() => {
                     this.captureThumbnail();
                     this.setState({ showTitle: true });
@@ -101,8 +153,9 @@ export class SideBarApp extends Component {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                    " w-auto p-2 relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
+                data-sidebar-item="true"
             >
                 <Image
                     width={28}
