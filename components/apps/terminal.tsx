@@ -1,6 +1,17 @@
 import dynamic from 'next/dynamic';
 import HelpPanel from '../HelpPanel';
 
+interface TerminalWrapperContext {
+  path?: string;
+  initialPath?: string;
+  [key: string]: unknown;
+}
+
+interface TerminalWrapperProps {
+  openApp?: (id: string) => void;
+  context?: TerminalWrapperContext;
+}
+
 // Lazily load the heavy terminal app with session tabs on the client only.
 const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
   ssr: false,
@@ -16,11 +27,12 @@ const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
  * overflows. The actual indicator/scroll handling lives inside the terminal
  * app, this wrapper just provides the necessary container styles.
  */
-export default function Terminal() {
+export default function Terminal({ openApp, context }: TerminalWrapperProps) {
+  const initialPath = context?.initialPath ?? context?.path;
   return (
     <div className="h-full w-full overflow-y-auto">
       <HelpPanel appId="terminal" />
-      <TerminalApp />
+      <TerminalApp openApp={openApp} initialPath={initialPath} />
     </div>
   );
 }

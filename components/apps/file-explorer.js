@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import HelpPanel from '../HelpPanel';
+import ContextMenu from '../common/ContextMenu';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -91,6 +93,43 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+function ExplorerItem({ item, label, onActivate, onOpenTerminal, type }) {
+  const ref = useRef(null);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onActivate(item);
+    }
+  };
+
+  return (
+    <>
+      <button
+        ref={ref}
+        type="button"
+        onClick={() => onActivate(item)}
+        onKeyDown={handleKeyDown}
+        className="w-full text-left px-2 py-1 hover:bg-black hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-ub-orange focus:ring-opacity-50"
+        aria-haspopup="menu"
+        aria-label={`${type === 'directory' ? 'Directory' : 'File'} ${label}`}
+      >
+        {label}
+      </button>
+      <ContextMenu
+        targetRef={ref}
+        items={[
+          { label: 'Open', onSelect: () => onActivate(item) },
+          {
+            label: 'Open in Terminal',
+            onSelect: () => onOpenTerminal?.(item),
+          },
+        ]}
+      />
+    </>
+  );
+}
+
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -117,6 +156,47 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
 
+  const currentSegments = useMemo(() => {
+    const last = path[path.length - 1];
+    return Array.isArray(last?.segments) ? last.segments : [];
+  }, [path]);
+
+  const formatPathFromSegments = useCallback((segments = []) => {
+    if (!segments.length) return '~';
+    if (segments.length >= 2 && segments[0] === 'home' && segments[1] === 'kali') {
+      if (segments.length === 2) return '~';
+      return `~/${segments.slice(2).join('/')}`;
+    }
+    return `/${segments.join('/')}`;
+  }, []);
+
+  const openTerminalAt = useCallback(
+    (segments = []) => {
+      if (typeof window === 'undefined') return;
+      const target = formatPathFromSegments(Array.isArray(segments) ? segments : []);
+      window.dispatchEvent(
+        new CustomEvent('open-app', {
+          detail: {
+            id: 'terminal',
+            path: target,
+          },
+        })
+      );
+    },
+    [formatPathFromSegments]
+  );
+
+  const handleOpenDirTerminal = useCallback(
+    (dir) => {
+      openTerminalAt([...(currentSegments || []), dir.name]);
+    },
+    [currentSegments, openTerminalAt]
+  );
+
+  const handleOpenFileTerminal = useCallback(() => {
+    openTerminalAt([...(currentSegments || [])]);
+  }, [currentSegments, openTerminalAt]);
+
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
@@ -128,7 +208,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     (async () => {
       setUnsavedDir(await getDir('unsaved'));
       setDirHandle(root);
-      setPath([{ name: root.name || '/', handle: root }]);
+      setPath([{ name: root.name || '/', handle: root, segments: [] }]);
       await readDir(root);
     })();
   }, [opfsSupported, root, getDir]);
@@ -160,7 +240,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setDirHandle(handle);
       addRecentDir(handle);
       setRecent(await getRecentDirs());
-      setPath([{ name: handle.name || '/', handle }]);
+      setPath([{ name: handle.name || '/', handle, segments: [] }]);
       await readDir(handle);
       setLocationError(null);
     } catch {}
@@ -171,7 +251,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
       if (perm !== 'granted') return;
       setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
+      setPath([{ name: entry.name, handle: entry.handle, segments: [] }]);
       await readDir(entry.handle);
       setLocationError(null);
     } catch {}
@@ -216,20 +296,22 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         if (!sanitized) {
           if (!active) return;
           setDirHandle(root);
-          setPath([{ name: root.name || '/', handle: root }]);
+          setPath([{ name: root.name || '/', handle: root, segments: [] }]);
           await readDir(root);
           if (active) setLocationError(null);
           return;
         }
         let current = root;
-        const crumbs = [{ name: root.name || '/', handle: root }];
+        const crumbs = [{ name: root.name || '/', handle: root, segments: [] }];
+        const accumulated = [];
         const segments = sanitized
           .split('/')
           .map((segment) => segment.trim())
           .filter(Boolean);
         for (const segment of segments) {
           current = await current.getDirectoryHandle(segment, { create: true });
-          crumbs.push({ name: segment, handle: current });
+          accumulated.push(segment);
+          crumbs.push({ name: segment, handle: current, segments: [...accumulated] });
         }
         if (!active) return;
         setDirHandle(current);
@@ -249,7 +331,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
+    setPath((p) => {
+      const parent = p[p.length - 1];
+      const parentSegments = parent?.segments || [];
+      return [
+        ...p,
+        { name: dir.name, handle: dir.handle, segments: [...parentSegments, dir.name] },
+      ];
+    });
     await readDir(dir.handle);
     setLocationError(null);
   };
@@ -315,6 +404,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
+        <HelpPanel appId="file-explorer" />
         <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
         {!currentFile && (
           <button
@@ -350,6 +440,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+      <HelpPanel appId="file-explorer" />
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -375,33 +466,36 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         <div className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
           {recent.map((r, i) => (
-            <div
+            <button
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              type="button"
               onClick={() => openRecent(r)}
+              className="w-full text-left px-2 py-1 hover:bg-black hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-ub-orange focus:ring-opacity-50"
             >
               {r.name}
-            </div>
+            </button>
           ))}
           <div className="p-2 font-bold">Directories</div>
           {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
+            <ExplorerItem
+              key={`${d.name}-${i}`}
+              item={d}
+              label={d.name}
+              type="directory"
+              onActivate={openDir}
+              onOpenTerminal={handleOpenDirTerminal}
+            />
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
+            <ExplorerItem
+              key={`${f.name}-${i}`}
+              item={f}
+              label={f.name}
+              type="file"
+              onActivate={openFile}
+              onOpenTerminal={handleOpenFileTerminal}
+            />
           ))}
         </div>
         <div className="flex-1 flex flex-col">
