@@ -49,6 +49,7 @@ export class Window extends Component {
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
+            shaded: false,
             parentSize: {
                 height: 100,
                 width: 100
@@ -58,6 +59,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            shadeSnapshot: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -181,6 +183,102 @@ export class Window extends Component {
         shrink();
     }
 
+    computeShadeHeight = () => {
+        if (typeof window === 'undefined') {
+            return this.state.height;
+        }
+        const viewportHeight = window.innerHeight || 1;
+        const root = document.getElementById(this.id);
+        let titlebarHeight = 28;
+        if (root) {
+            const titleBar = root.querySelector(`.${styles.windowTitlebar}`);
+            if (titleBar) {
+                const rect = titleBar.getBoundingClientRect();
+                if (rect && rect.height) {
+                    titlebarHeight = rect.height;
+                }
+            }
+            if (window.getComputedStyle) {
+                const computed = window.getComputedStyle(root);
+                const borderTop = parseFloat(computed.borderTopWidth || '0');
+                const borderBottom = parseFloat(computed.borderBottomWidth || '0');
+                if (!Number.isNaN(borderTop) && !Number.isNaN(borderBottom)) {
+                    titlebarHeight += borderTop + borderBottom;
+                }
+            }
+        }
+        const collapsed = clamp((titlebarHeight / viewportHeight) * 100, 0, 100);
+        return collapsed > 0 ? collapsed : this.state.height;
+    }
+
+    toggleShade = () => {
+        this.focusWindow();
+        if (this.state.shaded) {
+            this.unshadeWindow();
+        } else {
+            this.shadeWindow();
+        }
+    }
+
+    shadeWindow = () => {
+        if (this.state.shaded) return;
+        const snapshot = {
+            height: this.state.height,
+            width: this.state.width,
+            maximized: this.state.maximized,
+            snapped: this.state.snapped,
+            lastSize: this.state.lastSize ? { ...this.state.lastSize } : null,
+        };
+        const shadeHeight = this.computeShadeHeight();
+        this.setState({
+            shaded: true,
+            shadeSnapshot: snapshot,
+            height: shadeHeight,
+            maximized: false,
+            snapped: null,
+            snapPreview: null,
+            snapPosition: null,
+        }, () => {
+            this.resizeBoundries();
+            this.props.hideSideBar(this.id, false);
+            this.checkOverlap();
+        });
+    }
+
+    unshadeWindow = (callback) => {
+        if (!this.state.shaded) {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            return;
+        }
+        const snapshot = this.state.shadeSnapshot;
+        const nextState = {
+            shaded: false,
+            shadeSnapshot: null,
+            snapPreview: null,
+            snapPosition: null,
+        };
+        if (snapshot) {
+            nextState.height = snapshot.height;
+            nextState.width = snapshot.width;
+            nextState.maximized = snapshot.maximized;
+            nextState.snapped = snapshot.snapped;
+            nextState.lastSize = snapshot.lastSize;
+        }
+        this.setState(nextState, () => {
+            this.resizeBoundries();
+            if (snapshot?.maximized) {
+                this.props.hideSideBar(this.id, true);
+            } else {
+                this.checkOverlap();
+            }
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+    }
+
     getOverlayRoot = () => {
         if (this.props.overlayRoot) {
             if (typeof this.props.overlayRoot === 'string') {
@@ -281,6 +379,10 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
+        if (this.state.shaded) {
+            this.unshadeWindow(() => this.snapWindow(position));
+            return;
+        }
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -443,6 +545,10 @@ export class Window extends Component {
     }
 
     restoreWindow = () => {
+        if (this.state.shaded) {
+            this.unshadeWindow();
+            return;
+        }
         const node = document.querySelector("#" + this.id);
         this.setDefaultWindowDimenstion();
         // get previous position
@@ -483,6 +589,10 @@ export class Window extends Component {
 
     maximizeWindow = () => {
         if (this.props.allowMaximize === false) return;
+        if (this.state.shaded) {
+            this.unshadeWindow(() => this.maximizeWindow());
+            return;
+        }
         if (this.state.maximized) {
             this.restoreWindow();
         }
@@ -506,6 +616,14 @@ export class Window extends Component {
                 this.props.closed(this.id)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
         });
+    }
+
+    handleTitleBarDoubleClick = (e) => {
+        if (e.altKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleShade();
+        }
     }
 
     handleTitleBarKeyDown = (e) => {
@@ -659,6 +777,7 @@ export class Window extends Component {
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
+                            this.state.shaded ? styles.windowFrameShaded : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
@@ -676,6 +795,8 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
+                            shaded={this.state.shaded}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -702,16 +823,18 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, shaded }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-expanded={!shaded}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>

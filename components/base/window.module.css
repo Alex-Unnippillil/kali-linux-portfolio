@@ -39,6 +39,15 @@
   border-radius: 0;
 }
 
+.windowFrameShaded {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.windowFrameShaded .windowMainScreen {
+  display: none;
+}
+
 .windowTitlebar {
   height: 28px;
   border-top-left-radius: calc(var(--radius-6) - 1px);
