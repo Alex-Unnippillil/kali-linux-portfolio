@@ -25,11 +25,23 @@ const percentOf = (value, total) => {
 const computeSnapRegions = (viewportWidth, viewportHeight) => {
     const halfWidth = viewportWidth / 2;
     const availableHeight = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
-    const topHeight = Math.min(availableHeight, viewportHeight / 2);
+    const halfHeight = Math.min(availableHeight, viewportHeight / 2);
+    const bottomTop = Math.max(0, availableHeight - halfHeight);
+
+    const makeRegion = (left, top, width, height) => ({
+        target: { left, top, width, height },
+        preview: { left, top, width, height },
+    });
+
     return {
-        left: { left: 0, top: 0, width: halfWidth, height: availableHeight },
-        right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
+        left: makeRegion(0, 0, halfWidth, availableHeight),
+        right: makeRegion(viewportWidth - halfWidth, 0, halfWidth, availableHeight),
+        top: makeRegion(0, 0, viewportWidth, halfHeight),
+        bottom: makeRegion(0, bottomTop, viewportWidth, halfHeight),
+        topLeft: makeRegion(0, 0, halfWidth, halfHeight),
+        topRight: makeRegion(viewportWidth - halfWidth, 0, halfWidth, halfHeight),
+        bottomLeft: makeRegion(0, bottomTop, halfWidth, halfHeight),
+        bottomRight: makeRegion(viewportWidth - halfWidth, bottomTop, halfWidth, halfHeight),
     };
 };
 
@@ -290,17 +302,19 @@ export class Window extends Component {
         const region = regions[position];
         if (!region) return;
         const { width, height } = this.state;
+        const target = region.target;
         const node = document.getElementById(this.id);
         if (node) {
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            node.style.transform = `translate(${target.left}px, ${target.top}px)`;
         }
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
             lastSize: { width, height },
-            width: percentOf(region.width, viewportWidth),
-            height: percentOf(region.height, viewportHeight)
+            maximized: false,
+            width: percentOf(target.width, viewportWidth),
+            height: percentOf(target.height, viewportHeight)
         }, this.resizeBoundries);
     }
 
@@ -340,14 +354,45 @@ export class Window extends Component {
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const bottomLimit = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
+
+        const nearLeft = rect.left <= horizontalThreshold;
+        const nearRight = viewportWidth - rect.right <= horizontalThreshold;
+        const nearTop = rect.top <= verticalThreshold;
+        const nearBottom = Math.abs(bottomLimit - rect.bottom) <= verticalThreshold;
+
+        const pickRegion = (position) => {
+            const region = regions[position];
+            if (region && region.preview.width > 0 && region.preview.height > 0) {
+                return { position, preview: region.preview };
+            }
+            return null;
+        };
 
         let candidate = null;
-        if (rect.top <= verticalThreshold && regions.top.height > 0) {
-            candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
-            candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
-            candidate = { position: 'right', preview: regions.right };
+        if (nearTop && nearLeft) {
+            candidate = pickRegion('topLeft') || pickRegion('top');
+        }
+        if (!candidate && nearTop && nearRight) {
+            candidate = pickRegion('topRight') || pickRegion('top');
+        }
+        if (!candidate && nearBottom && nearLeft) {
+            candidate = pickRegion('bottomLeft') || pickRegion('bottom');
+        }
+        if (!candidate && nearBottom && nearRight) {
+            candidate = pickRegion('bottomRight') || pickRegion('bottom');
+        }
+        if (!candidate && nearTop) {
+            candidate = pickRegion('top');
+        }
+        if (!candidate && nearBottom) {
+            candidate = pickRegion('bottom');
+        }
+        if (!candidate && nearLeft) {
+            candidate = pickRegion('left');
+        }
+        if (!candidate && nearRight) {
+            candidate = pickRegion('right');
         }
 
         if (candidate) {
@@ -551,28 +596,52 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+            if (this.state.snapPreview || this.state.snapPosition) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setState({ snapPreview: null, snapPosition: null });
+                return;
+            }
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
+            const diagonalMap = {
+                Numpad7: 'topLeft',
+                Numpad9: 'topRight',
+                Numpad1: 'bottomLeft',
+                Numpad3: 'bottomRight',
+                Home: 'topLeft',
+                PageUp: 'topRight',
+                End: 'bottomLeft',
+                PageDown: 'bottomRight',
+                '7': 'topLeft',
+                '9': 'topRight',
+                '1': 'bottomLeft',
+                '3': 'bottomRight',
+            };
+            const directionMap = {
+                ArrowLeft: 'left',
+                ArrowRight: 'right',
+                ArrowUp: 'top',
+                ArrowDown: 'bottom',
+            };
+
+            const target =
+                diagonalMap[e.code] ||
+                diagonalMap[e.key] ||
+                directionMap[e.key];
+
+            if (target) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
+                if (this.state.snapped === target) {
+                    this.unsnapWindow();
+                } else {
+                    this.snapWindow(target);
+                }
+                this.focusWindow();
             }
-            this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
@@ -597,22 +666,54 @@ export class Window extends Component {
     }
 
     handleSuperArrow = (e) => {
-        const key = e.detail;
-        if (key === 'ArrowLeft') {
-            if (this.state.snapped === 'left') this.unsnapWindow();
-            else this.snapWindow('left');
-        } else if (key === 'ArrowRight') {
-            if (this.state.snapped === 'right') this.unsnapWindow();
-            else this.snapWindow('right');
-        } else if (key === 'ArrowUp') {
+        const detail = e.detail;
+        const key = typeof detail === 'string' ? detail : detail?.key;
+        const code = typeof detail === 'object' ? detail?.code : undefined;
+
+        const diagonalMap = {
+            Numpad7: 'topLeft',
+            Numpad9: 'topRight',
+            Numpad1: 'bottomLeft',
+            Numpad3: 'bottomRight',
+            Home: 'topLeft',
+            PageUp: 'topRight',
+            End: 'bottomLeft',
+            PageDown: 'bottomRight',
+            '7': 'topLeft',
+            '9': 'topRight',
+            '1': 'bottomLeft',
+            '3': 'bottomRight',
+        };
+
+        if (key === 'ArrowUp') {
             this.maximizeWindow();
-        } else if (key === 'ArrowDown') {
-            if (this.state.maximized) {
-                this.restoreWindow();
-            } else if (this.state.snapped) {
-                this.unsnapWindow();
-            }
+            return;
         }
+
+        const directionMap = {
+            ArrowLeft: 'left',
+            ArrowRight: 'right',
+            ArrowDown: 'bottom',
+        };
+
+        const target =
+            diagonalMap[code] ||
+            diagonalMap[key] ||
+            directionMap[key];
+
+        if (!target) return;
+
+        if (target === 'bottom' && this.state.maximized) {
+            this.restoreWindow();
+            return;
+        }
+
+        if (this.state.snapped === target) {
+            this.unsnapWindow();
+        } else {
+            this.snapWindow(target);
+        }
+        this.focusWindow();
     }
 
     render() {
