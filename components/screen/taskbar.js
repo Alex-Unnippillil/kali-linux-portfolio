@@ -36,6 +36,7 @@ export default function Taskbar(props) {
                             type="button"
                             aria-label={app.title}
                             data-context="taskbar"
+                            data-taskbar-app-id={app.id}
                             data-app-id={app.id}
                             data-active={isActive ? 'true' : 'false'}
                             aria-pressed={isActive}
