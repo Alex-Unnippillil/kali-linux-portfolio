@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+const MONTHS = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+]
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 const startOfDay = (date) => {
@@ -85,31 +98,27 @@ const usePrefersReducedMotion = () => {
     return prefersReducedMotion
 }
 
-const formatDisplayTime = ({ currentTime, onlyDay, onlyTime, hour12 }) => {
+const formatDisplayTime = ({ currentTime, onlyDay, onlyTime, timeFormatter }) => {
     if (!currentTime) return ''
-    let day = DAYS[currentTime.getDay()]
-    let hour = currentTime.getHours()
-    let minute = currentTime.getMinutes()
-    let month = MONTHS[currentTime.getMonth()]
-    let date = currentTime.getDate().toLocaleString()
-    let meridiem = hour < 12 ? 'AM' : 'PM'
-
-    if (minute.toLocaleString().length === 1) {
-        minute = '0' + minute
-    }
-
-    if (hour12 && hour > 12) hour -= 12
+    const day = DAYS[currentTime.getDay()]
+    const month = MONTHS[currentTime.getMonth()]
+    const date = currentTime.getDate()
+    const timeString = timeFormatter.format(currentTime)
 
     if (onlyTime) {
-        return `${hour}:${minute} ${meridiem}`
+        return timeString
     }
+
+    const dayString = `${day} ${month} ${date}`
+
     if (onlyDay) {
-        return `${day} ${month} ${date}`
+        return dayString
     }
-    return `${day} ${month} ${date} ${hour}:${minute} ${meridiem}`
+
+    return `${dayString} ${timeString}`
 }
 
-const Clock = ({ onlyDay = false, onlyTime = false }) => {
+const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12 = true }) => {
     const [currentTime, setCurrentTime] = useState(null)
     const [isOpen, setIsOpen] = useState(false)
     const [viewDate, setViewDate] = useState(() => new Date())
@@ -188,10 +197,39 @@ const Clock = ({ onlyDay = false, onlyTime = false }) => {
         previouslyOpenRef.current = isOpen
     }, [isOpen, prefersReducedMotion])
 
-    const weeks = useMemo(() => buildCalendar(viewDate), [viewDate])
+    const headingFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(undefined, {
+                month: 'long',
+                year: 'numeric'
+            }),
+        []
+    )
+
+    const headingLabel = useMemo(() => headingFormatter.format(viewDate), [headingFormatter, viewDate])
+
+    const weeks = useMemo(() => (isOpen ? buildCalendar(viewDate) : []), [isOpen, viewDate])
+
+    const timeFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12
+            }),
+        [hour12]
+    )
 
     const handleToggle = useCallback(() => {
         setIsOpen((open) => !open)
+    }, [])
+
+    const handleClose = useCallback(() => {
+        setIsOpen(false)
+    }, [])
+
+    const handleMonthChange = useCallback((offset) => {
+        setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
     }, [])
 
     const handleToday = useCallback(() => {
@@ -254,33 +292,49 @@ const Clock = ({ onlyDay = false, onlyTime = false }) => {
         setIsOpen(false)
     }, [])
 
-    const displayTime = useMemo(() => formatDisplayTime({
-        currentTime,
-        onlyDay,
-        onlyTime,
-        hour12: true
-    }), [currentTime, onlyDay, onlyTime])
+    const displayTime = useMemo(
+        () =>
+            formatDisplayTime({
+                currentTime,
+                onlyDay,
+                onlyTime,
+                timeFormatter
+            }),
+        [currentTime, onlyDay, onlyTime, timeFormatter]
+    )
 
     if (!currentTime) {
         return <span suppressHydrationWarning></span>
     }
 
-    if (onlyDay || onlyTime) {
+    const shouldRenderButton = showCalendar || (!onlyDay && !onlyTime)
+
+    if (!shouldRenderButton) {
         return <span suppressHydrationWarning>{displayTime}</span>
     }
 
     return (
-        <div className="relative inline-block text-left" suppressHydrationWarning>
+        <div className="relative inline-flex items-center" suppressHydrationWarning>
             <button
                 type="button"
                 ref={buttonRef}
                 onClick={handleToggle}
-                className="flex items-center gap-1 rounded px-2 py-1 text-left text-sm hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+                className="group flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-left text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:border-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 aria-controls={popoverId}
             >
-                <span>{displayTime}</span>
+                <span className="truncate text-xs md:text-sm tracking-tight" aria-live="polite">
+                    {displayTime}
+                </span>
+                {showCalendar ? (
+                    <span
+                        aria-hidden
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500/80 text-[0.6rem] font-semibold text-slate-950 shadow ring-1 ring-white/40 transition-transform duration-200 group-hover:scale-105"
+                    >
+                        ☰
+                    </span>
+                ) : null}
             </button>
             {isOpen ? (
                 <div
@@ -289,25 +343,25 @@ const Clock = ({ onlyDay = false, onlyTime = false }) => {
                     role="dialog"
                     aria-modal="false"
                     aria-label="Calendar"
-                    className="absolute right-0 z-50 mt-2 min-w-[18rem] rounded border border-white/20 bg-black/90 p-3 text-sm text-white shadow-lg backdrop-blur"
+                    className="absolute right-0 z-50 mt-3 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-slate-950/85 p-4 text-sm text-white shadow-2xl ring-1 ring-white/20 backdrop-blur-xl"
                 >
-                    <div className="mb-2 flex items-center justify-between">
-                        <div className="font-semibold" aria-live="polite" id={headingId}>
-                            {MONTHS[viewDate.getMonth()]} {viewDate.getFullYear()}
+                    <div className="mb-3 flex items-center justify-between rounded-2xl bg-white/5 px-3 py-2 shadow-inner">
+                        <div className="text-sm font-semibold tracking-tight" aria-live="polite" id={headingId}>
+                            {headingLabel}
                         </div>
                         <div className="flex items-center gap-1">
                             <button
                                 type="button"
-                                onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
-                                className="rounded px-2 py-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+                                onClick={() => handleMonthChange(-1)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg transition-colors hover:border-white/30 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                                 aria-label="Previous month"
                             >
                                 ‹
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
-                                className="rounded px-2 py-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+                                onClick={() => handleMonthChange(1)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg transition-colors hover:border-white/30 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                                 aria-label="Next month"
                             >
                                 ›
@@ -321,11 +375,11 @@ const Clock = ({ onlyDay = false, onlyTime = false }) => {
                     >
                         <thead>
                             <tr role="row">
-                                <th scope="col" className="w-12 pb-1 text-xs font-medium uppercase text-white/60" aria-label="Week">
+                                <th scope="col" className="w-12 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/40" aria-label="Week">
                                     Wk
                                 </th>
                                 {DAYS.map((day) => (
-                                    <th key={day} scope="col" className="pb-1 text-xs font-medium uppercase text-white/60">
+                                    <th key={day} scope="col" className="pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/60">
                                         {day}
                                     </th>
                                 ))}
@@ -334,11 +388,7 @@ const Clock = ({ onlyDay = false, onlyTime = false }) => {
                         <tbody>
                             {weeks.map((week) => (
                                 <tr key={`week-${week.days[0].date.toISOString()}`} role="row">
-                                    <th
-                                        scope="row"
-                                        className="py-1 text-xs font-medium text-white/60"
-                                        aria-label={`Week ${week.weekNumber}`}
-                                    >
+                                    <th scope="row" className="py-1 text-[0.65rem] font-semibold text-white/40" aria-label={`Week ${week.weekNumber}`}>
                                         {week.weekNumber}
                                     </th>
                                     {week.days.map(({ date, inCurrentMonth }) => {
@@ -355,7 +405,15 @@ const Clock = ({ onlyDay = false, onlyTime = false }) => {
                                                     type="button"
                                                     onClick={handleDayClick}
                                                     onKeyDown={(event) => handleDayKeyDown(event, date)}
-                                                    className={`flex h-8 w-8 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-white ${inCurrentMonth ? '' : 'text-white/40'} ${isFocused ? 'bg-white/20' : ''} ${isToday ? 'border border-white' : ''}`}
+                                                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                                                        inCurrentMonth ? 'text-white' : 'text-white/35'
+                                                    } ${
+                                                        isToday
+                                                            ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-slate-950 shadow-lg ring-1 ring-white/70'
+                                                            : isFocused
+                                                                ? 'bg-white/20 text-white'
+                                                                : 'hover:bg-white/10'
+                                                    }`}
                                                     tabIndex={isFocused ? 0 : -1}
                                                     ref={isFocused ? activeCellRef : null}
                                                 >
@@ -368,18 +426,18 @@ const Clock = ({ onlyDay = false, onlyTime = false }) => {
                             ))}
                         </tbody>
                     </table>
-                    <div className="mt-3 flex items-center justify-between">
+                    <div className="mt-4 flex items-center justify-between">
                         <button
                             type="button"
                             onClick={handleToday}
-                            className="rounded px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+                            className="rounded-full bg-cyan-500/80 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                         >
                             Today
                         </button>
                         <button
                             type="button"
-                            onClick={() => setIsOpen(false)}
-                            className="rounded px-3 py-1 text-xs text-white/70 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+                            onClick={handleClose}
+                            className="rounded-full border border-white/20 px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.2em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                         >
                             Close
                         </button>
