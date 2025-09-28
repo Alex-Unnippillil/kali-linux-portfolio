@@ -60,3 +60,36 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.snapPreview {
+  border: 2px dashed var(--kali-accent, var(--color-accent));
+  border-radius: var(--radius-6);
+  background-color: color-mix(in srgb, var(--kali-accent, var(--color-accent)) 18%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--kali-accent, var(--color-accent)) 40%, transparent),
+    0 0 32px 0 color-mix(in srgb, var(--kali-accent, var(--color-accent)) 35%, transparent);
+  backdrop-filter: brightness(1.2) saturate(1.05);
+  -webkit-backdrop-filter: brightness(1.2) saturate(1.05);
+  transition: opacity var(--motion-medium) ease;
+}
+
+.snapPreviewGlow {
+  animation: snapPreviewGlow 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes snapPreviewGlow {
+  from {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--kali-accent, var(--color-accent)) 40%, transparent),
+      0 0 24px 0 color-mix(in srgb, var(--kali-accent, var(--color-accent)) 28%, transparent);
+  }
+
+  to {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--kali-accent, var(--color-accent)) 55%, transparent),
+      0 0 40px 8px color-mix(in srgb, var(--kali-accent, var(--color-accent)) 45%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snapPreviewGlow {
+    animation: none;
+  }
+}
