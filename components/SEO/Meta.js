@@ -20,7 +20,7 @@ export default function Meta() {
             <meta name="language" content="English" />
             <meta name="category" content="16" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <meta name="theme-color" content="#0f1317" />
+            <meta name="theme-color" content="#1793d1" data-default-accent />
 
             {/* Search Engine */}
             <meta name="image" content="images/logos/fevicon.png" />
@@ -60,6 +60,12 @@ export default function Meta() {
                         name: "Alex Unnippillil",
                         url: "https://unnippillil.com/",
                     }),
+                }}
+            />
+            <script
+                nonce={nonce}
+                dangerouslySetInnerHTML={{
+                    __html: `(() => { try { const doc = document.documentElement; if (!doc) return; const apply = (color) => { if (!color) return; const metas = document.querySelectorAll('meta[name="theme-color"]'); metas.forEach((meta) => meta.setAttribute('content', color)); }; apply(doc.dataset.accent || '#1793d1'); const observer = new MutationObserver((mutations) => { for (const mutation of mutations) { if (mutation.attributeName === 'data-accent') { apply(doc.dataset.accent); break; } } }); observer.observe(doc, { attributes: true, attributeFilter: ['data-accent'] }); doc.addEventListener('kali:accent-change', () => apply(doc.dataset.accent)); } catch (error) { /* no-op */ } })();`,
                 }}
             />
         </Head>

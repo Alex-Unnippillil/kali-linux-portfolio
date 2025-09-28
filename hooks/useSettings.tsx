@@ -147,6 +147,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
+    const root = document.documentElement;
     const vars: Record<string, string> = {
       '--color-ub-orange': accent,
       '--color-ub-border-orange': border,
@@ -157,7 +158,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-control-accent': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
+      root.style.setProperty(key, value);
+    });
+    root.dataset.accent = accent;
+    try {
+      root.dispatchEvent(new CustomEvent('kali:accent-change', { detail: accent }));
+    } catch (error) {
+      // CustomEvent may fail in legacy browsers; ignore to avoid breaking accent updates.
+    }
+    const themeMetas = document.querySelectorAll('meta[name="theme-color"]');
+    themeMetas.forEach((meta) => {
+      meta.setAttribute('content', accent);
     });
     saveAccent(accent);
   }, [accent]);
