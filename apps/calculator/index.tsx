@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
@@ -22,8 +22,58 @@ export default function Calculator() {
       ),
   );
 
-  const btnCls =
-    'btn min-h-12 w-12 transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-white';
+  const baseBtnCls =
+    'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]';
+  const keypadBtnCls =
+    `${baseBtnCls} h-14 rounded-xl border border-white/5 bg-[#2a2d35] text-lg text-slate-100 shadow-sm hover:-translate-y-0.5 hover:bg-[#343842]`;
+  const pillUtilityBtnCls =
+    `${baseBtnCls} h-10 rounded-full border border-white/10 bg-white/5 px-4 text-sm uppercase tracking-wide text-slate-200 shadow-none hover:bg-white/10`;
+
+  const keypadRows: Array<
+    Array<{
+      label: ReactNode;
+      value?: string;
+      action?: string;
+      keyBinding?: string;
+      ariaLabel: string;
+      extraClassName?: string;
+    }>
+  > = [
+    [
+      { label: '(', value: '(', keyBinding: '(', ariaLabel: 'left parenthesis' },
+      { label: ')', value: ')', keyBinding: ')', ariaLabel: 'right parenthesis' },
+      {
+        label: <span className="text-xs font-medium uppercase tracking-[0.3em]">mod</span>,
+        value: 'mod(',
+        ariaLabel: 'modulus',
+      },
+      { label: 'π', value: 'pi', keyBinding: 'p', ariaLabel: 'pi constant' },
+    ],
+    [
+      { label: '7', value: '7', keyBinding: '7', ariaLabel: 'seven' },
+      { label: '8', value: '8', keyBinding: '8', ariaLabel: 'eight' },
+      { label: '9', value: '9', keyBinding: '9', ariaLabel: 'nine' },
+      { label: '÷', value: '/', keyBinding: '/', ariaLabel: 'divide' },
+    ],
+    [
+      { label: '4', value: '4', keyBinding: '4', ariaLabel: 'four' },
+      { label: '5', value: '5', keyBinding: '5', ariaLabel: 'five' },
+      { label: '6', value: '6', keyBinding: '6', ariaLabel: 'six' },
+      { label: '×', value: '*', keyBinding: '*', ariaLabel: 'multiply' },
+    ],
+    [
+      { label: '1', value: '1', keyBinding: '1', ariaLabel: 'one' },
+      { label: '2', value: '2', keyBinding: '2', ariaLabel: 'two' },
+      { label: '3', value: '3', keyBinding: '3', ariaLabel: 'three' },
+      { label: '−', value: '-', keyBinding: '-', ariaLabel: 'subtract' },
+    ],
+    [
+      { label: '0', value: '0', keyBinding: '0', ariaLabel: 'zero' },
+      { label: '.', value: '.', keyBinding: '.', ariaLabel: 'decimal point' },
+      { label: '%', value: '%', keyBinding: '%', ariaLabel: 'percent' },
+      { label: '+', value: '+', keyBinding: '+', ariaLabel: 'add' },
+    ],
+  ];
 
   useEffect(() => {
     let evaluate: any;
@@ -188,153 +238,270 @@ export default function Calculator() {
     load();
   }, [setHistory]);
 
-    return (
-    <div className="calculator !bg-[var(--kali-bg)]">
-      <ModeSwitcher />
-            <input id="display" className="display h-12" />
-      <button id="toggle-precise" className="toggle h-12" aria-pressed="false" aria-label="toggle precise mode">Precise Mode: Off</button>
-      <button id="toggle-scientific" className="toggle h-12" aria-pressed="false" aria-label="toggle scientific mode">Scientific</button>
-      <button id="toggle-programmer" className="toggle h-12" aria-pressed="false" aria-label="toggle programmer mode">Programmer</button>
-      <button id="toggle-history" className="toggle h-12" aria-pressed="false" aria-label="toggle history">History</button>
-      <button id="toggle-formulas" className="toggle h-12" aria-pressed="false" aria-label="toggle formulas">Formulas</button>
-      <div className="memory-grid grid grid-cols-3" aria-label="memory functions">
-        <button className={btnCls} data-action="mplus" aria-label="add to memory">M+</button>
-        <button className={btnCls} data-action="mminus" aria-label="subtract from memory">M&minus;</button>
-        <button className={btnCls} data-action="mr" aria-label="recall memory">MR</button>
-      </div>
-      <MemorySlots />
-      <div className="button-grid grid grid-cols-4 font-mono" aria-label="calculator keypad">
-        <button className={btnCls} data-value="7" data-key="7" aria-label="seven">7</button>
-        <button className={btnCls} data-value="8" data-key="8" aria-label="eight">8</button>
-        <button className={btnCls} data-value="9" data-key="9" aria-label="nine">9</button>
-        <button className={btnCls} data-value="/" data-key="/" aria-label="divide">
-          <svg
-            viewBox="0 0 24 24"
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none" />
-          </svg>
-        </button>
-        <button className={btnCls} data-value="4" data-key="4" aria-label="four">4</button>
-        <button className={btnCls} data-value="5" data-key="5" aria-label="five">5</button>
-        <button className={btnCls} data-value="6" data-key="6" aria-label="six">6</button>
-        <button className={btnCls} data-value="*" data-key="*" aria-label="multiply">
-          <svg
-            viewBox="0 0 24 24"
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <line x1="6" y1="6" x2="18" y2="18" />
-            <line x1="18" y1="6" x2="6" y2="18" />
-          </svg>
-        </button>
-        <button className={btnCls} data-value="1" data-key="1" aria-label="one">1</button>
-        <button className={btnCls} data-value="2" data-key="2" aria-label="two">2</button>
-        <button className={btnCls} data-value="3" data-key="3" aria-label="three">3</button>
-        <button className={btnCls} data-value="-" data-key="-" aria-label="subtract">
-          <svg
-            viewBox="0 0 24 24"
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-        <button className={btnCls} data-value="0" data-key="0" aria-label="zero">0</button>
-        <button className={btnCls} data-value="." data-key="." aria-label="decimal point">.</button>
-        <button className={btnCls} data-action="equals" data-key="= Enter" aria-label="equals">=</button>
-        <button className={btnCls} data-value="+" data-key="+" aria-label="add">
-          <svg
-            viewBox="0 0 24 24"
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-      <button className={`${btnCls} span-two w-full`} data-action="clear" data-key="Escape c" aria-label="clear">
-        <svg
-          viewBox="0 0 24 24"
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+  return (
+    <div className="calculator mx-auto flex w-full max-w-lg flex-col gap-6 rounded-3xl bg-[#1f212a] p-6 text-slate-100 shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
+      <header className="flex items-center justify-between text-sm text-slate-300">
+        <button
+          type="button"
+          onClick={() => {
+            const display = document.getElementById('display') as HTMLInputElement | null;
+            if (display) display.value = display.value.slice(0, -1);
+          }}
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
         >
-          <path d="M3 6h18" />
-          <path d="M8 6V4h8v2" />
-          <path d="M19 6l-1 14H6L5 6" />
-          <path d="M10 11v6" />
-          <path d="M14 11v6" />
-        </svg>
-      </button>
-      <button className={`${btnCls} span-two w-full`} data-action="backspace" data-key="Backspace" aria-label="backspace">
-        <svg
-          viewBox="0 0 24 24"
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 6h18" />
+            <path d="M8 6V4h8v2" />
+            <path d="M19 6l-1 14H6L5 6" />
+            <path d="M10 11v6" />
+            <path d="M14 11v6" />
+          </svg>
+          Undo
+        </button>
+        <div className="flex items-center gap-3">
+          <ModeSwitcher />
+          <div className="flex items-center gap-1 text-slate-500">
+            <button
+              id="toggle-history"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+              aria-pressed="false"
+              aria-label="toggle history"
+            >
+              <span className="sr-only">Toggle history</span>
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              >
+                <path d="M8 6h13" />
+                <path d="M8 12h13" />
+                <path d="M8 18h13" />
+                <path d="M3 6h.01" />
+                <path d="M3 12h.01" />
+                <path d="M3 18h.01" />
+              </svg>
+            </button>
+            <button
+              id="toggle-formulas"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+              aria-pressed="false"
+              aria-label="toggle formulas"
+            >
+              <span className="sr-only">Toggle formulas</span>
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              >
+                <path d="M4 4h16" />
+                <path d="M4 10h10" />
+                <path d="M4 16h7" />
+                <path d="M4 22h4" />
+                <path d="M14 10l6 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="space-y-3 rounded-2xl border border-white/5 bg-[#15171d] p-4 shadow-inner">
+        <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
+          <span>Expression</span>
+          <span>Result</span>
+        </div>
+        <input
+          id="display"
+          className="display w-full bg-transparent text-right text-3xl font-semibold tracking-wide text-white placeholder:text-slate-600 focus:outline-none"
+          placeholder="0"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-2 text-xs font-medium uppercase tracking-wide text-slate-300">
+        <button
+          id="toggle-precise"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+          aria-pressed="false"
+          aria-label="toggle precise mode"
         >
-          <path d="M12 19h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-8L7 12l5 7z" />
-          <path d="M14 9l3 3-3 3" />
-          <path d="M11 9l-3 3 3 3" />
-        </svg>
-      </button>
+          Precise
+        </button>
+        <button
+          id="toggle-scientific"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+          aria-pressed="false"
+          aria-label="toggle scientific mode"
+        >
+          Scientific
+        </button>
+        <button
+          id="toggle-programmer"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+          aria-pressed="false"
+          aria-label="toggle programmer mode"
+        >
+          Programmer
+        </button>
       </div>
-        <div id="scientific" className="scientific hidden grid grid-cols-3 gap-1.5" aria-label="scientific functions">
-        <button className={btnCls} data-value="sin(" aria-label="sine">sin</button>
-        <button className={btnCls} data-value="cos(" aria-label="cosine">cos</button>
-        <button className={btnCls} data-value="tan(" aria-label="tangent">tan</button>
-        <button className={btnCls} data-value="sqrt(" aria-label="square root">√</button>
-        <button className={btnCls} data-value="(" data-key="(" aria-label="left parenthesis">(</button>
-        <button className={btnCls} data-value=")" data-key=")" aria-label="right parenthesis">)</button>
+
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="flex w-full items-center justify-end gap-2">
+          <button
+            className={pillUtilityBtnCls}
+            data-action="clear"
+            data-key="Escape c"
+            aria-label="clear"
+          >
+            Clear
+          </button>
+          <button
+            className={pillUtilityBtnCls}
+            data-action="backspace"
+            data-key="Backspace"
+            aria-label="backspace"
+          >
+            Back
+          </button>
+        </div>
+        <div className="grid flex-1 grid-cols-4 gap-3" aria-label="calculator keypad">
+          {keypadRows.map((row, rowIndex) =>
+            row.map((btn, columnIndex) => (
+              <button
+                key={`${rowIndex}-${columnIndex}`}
+                className={`${keypadBtnCls} ${btn.extraClassName ?? ''}`.trim()}
+                {...(btn.value ? { 'data-value': btn.value } : {})}
+                {...(btn.action ? { 'data-action': btn.action } : {})}
+                {...(btn.keyBinding ? { 'data-key': btn.keyBinding } : {})}
+                aria-label={btn.ariaLabel}
+              >
+                {btn.label}
+              </button>
+            )),
+          )}
+        </div>
+        <button
+          className={`${baseBtnCls} h-full min-h-[7.5rem] rounded-2xl bg-[#f97316] text-3xl font-bold text-slate-950 shadow-lg shadow-[#f97316]/40 transition hover:brightness-110`}
+          data-action="equals"
+          data-key="= Enter"
+          aria-label="equals"
+        >
+          =
+        </button>
       </div>
-        <div id="programmer" className="programmer hidden grid gap-1.5" aria-label="programmer functions">
-        <select id="base-select" defaultValue="10" className="h-12">
-          <option value="2">Bin</option>
-          <option value="8">Oct</option>
-          <option value="10">Dec</option>
+
+      <div id="scientific" className="scientific hidden grid grid-cols-3 gap-2 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm uppercase tracking-wide text-slate-200" aria-label="scientific functions">
+        <button className={keypadBtnCls} data-value="sin(" aria-label="sine">
+          sin
+        </button>
+        <button className={keypadBtnCls} data-value="cos(" aria-label="cosine">
+          cos
+        </button>
+        <button className={keypadBtnCls} data-value="tan(" aria-label="tangent">
+          tan
+        </button>
+        <button className={keypadBtnCls} data-value="sqrt(" aria-label="square root">
+          √
+        </button>
+        <button className={keypadBtnCls} data-value="(" data-key="(" aria-label="left parenthesis">
+          (
+        </button>
+        <button className={keypadBtnCls} data-value=")" data-key=")" aria-label="right parenthesis">
+          )
+        </button>
+      </div>
+
+      <div id="programmer" className="programmer hidden grid gap-2 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm uppercase tracking-wide text-slate-200" aria-label="programmer functions">
+        <label className="text-xs font-semibold text-slate-400" htmlFor="base-select">
+          Number base
+        </label>
+        <select
+          id="base-select"
+          defaultValue="10"
+          className="h-11 rounded-xl border border-white/10 bg-[#12151b] px-3 text-sm font-medium text-slate-100 focus:border-[#f97316] focus:outline-none focus:ring-2 focus:ring-[#f97316]"
+        >
+          <option value="2">Binary</option>
+          <option value="8">Octal</option>
+          <option value="10">Decimal</option>
           <option value="16">Hex</option>
         </select>
-        <button className={btnCls} data-value="&amp;" data-key="&amp;" aria-label="bitwise and">&amp;</button>
-        <button className={btnCls} data-value="|" data-key="|" aria-label="bitwise or">|</button>
-        <button className={btnCls} data-value="^" data-key="^" aria-label="bitwise xor">^</button>
-        <button className={btnCls} data-value="~" data-key="~" aria-label="bitwise not">~</button>
-        <button className={btnCls} data-value="<<" data-key="&lt;" aria-label="left shift">&lt;&lt;</button>
-        <button className={btnCls} data-value=">>" data-key="&gt;" aria-label="right shift">&gt;&gt;</button>
-      <button className={btnCls} data-action="ans" aria-label="previous answer">Ans</button>
-      <button id="print-tape" className={btnCls} data-action="print" aria-label="print tape">Print</button>
-        <div id="paren-indicator" />
+        <div className="grid grid-cols-3 gap-2 pt-2">
+          <button className={keypadBtnCls} data-value="&amp;" data-key="&amp;" aria-label="bitwise and">
+            &amp;
+          </button>
+          <button className={keypadBtnCls} data-value="|" data-key="|" aria-label="bitwise or">
+            |
+          </button>
+          <button className={keypadBtnCls} data-value="^" data-key="^" aria-label="bitwise xor">
+            ^
+          </button>
+          <button className={keypadBtnCls} data-value="~" data-key="~" aria-label="bitwise not">
+            ~
+          </button>
+          <button className={keypadBtnCls} data-value="<<" data-key="&lt;" aria-label="left shift">
+            &lt;&lt;
+          </button>
+          <button className={keypadBtnCls} data-value=">>" data-key="&gt;" aria-label="right shift">
+            &gt;&gt;
+          </button>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button className={keypadBtnCls} data-action="ans" aria-label="previous answer">
+            Ans
+          </button>
+          <button id="print-tape" className={keypadBtnCls} data-action="print" aria-label="print tape">
+            Print
+          </button>
+        </div>
+        <div id="paren-indicator" className="mt-2 h-1 rounded-full bg-white/10" />
       </div>
-      <FormulaEditor />
-      <div id="history" className="history hidden" aria-live="polite">
-        {history.map(({ expr, result }, i) => (
-          <div key={i} className="history-entry">
-            {expr} = {result}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
+          <div id="history" className="history hidden space-y-2 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-200" aria-live="polite">
+            {history.length === 0 && (
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                No history yet
+              </p>
+            )}
+            {history.map(({ expr, result }, i) => (
+              <div key={i} className="history-entry flex items-center justify-between gap-2 rounded-xl bg-black/20 px-3 py-2">
+                <span className="font-mono text-sm text-slate-100">{expr}</span>
+                <span className="font-semibold text-[#f97316]">{result}</span>
+              </div>
+            ))}
           </div>
-        ))}
+          <Tape entries={history} />
+        </div>
+        <div className="space-y-4">
+          <div className="memory-grid grid grid-cols-3 gap-2" aria-label="memory functions">
+            <button className={keypadBtnCls} data-action="mplus" aria-label="add to memory">
+              M+
+            </button>
+            <button className={keypadBtnCls} data-action="mminus" aria-label="subtract from memory">
+              M−
+            </button>
+            <button className={keypadBtnCls} data-action="mr" aria-label="recall memory">
+              MR
+            </button>
+          </div>
+          <MemorySlots />
+          <FormulaEditor />
+        </div>
       </div>
-      <Tape entries={history} />
     </div>
   );
 }
