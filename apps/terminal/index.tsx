@@ -303,16 +303,26 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
+      const styles = getComputedStyle(document.documentElement);
+      const getToken = (name: string, fallback: string) =>
+        (styles.getPropertyValue(name) || '').trim() || fallback;
+
+      const fontFamily = getToken(
+        '--terminal-font-family',
+        '"Hack", "Fira Code", monospace',
+      );
+
       const term = new XTerm({
         cursorBlink: true,
         scrollback: 1000,
         cols: 80,
         rows: 24,
-        fontFamily: '"Fira Code", monospace',
+        fontFamily,
         theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
+          background: getToken('--terminal-background', '#0f1317'),
+          foreground: getToken('--terminal-foreground', '#f5f5f5'),
+          cursor: getToken('--terminal-cursor', '#1793d1'),
+          selection: getToken('--terminal-selection', 'rgba(23, 147, 209, 0.35)'),
         },
       });
       const fit = new FitAddon();
