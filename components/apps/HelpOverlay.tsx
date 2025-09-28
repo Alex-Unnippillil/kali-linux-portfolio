@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import InputRemap from "./Games/common/input-remap/InputRemap";
 import useInputMapping from "./Games/common/input-remap/useInputMapping";
 
@@ -12,6 +12,14 @@ interface Instruction {
   controls: string;
   actions?: Record<string, string>;
 }
+
+type MappingManager = {
+  conflicts: Record<string, string[]>;
+  exportMapping: () => string;
+  importMapping: (
+    payload: string,
+  ) => { ok: boolean; error?: string; conflicts?: Record<string, string[]> };
+};
 
 export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   "2048": {
@@ -168,10 +176,49 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
-  const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
+  const [mapping, setKey, manager] = useInputMapping(
+    gameId,
+    info?.actions || {},
+  ) as [
+    Record<string, string>,
+    (action: string, key: string) => string[] | null,
+    MappingManager | undefined,
+  ];
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
-  const noop = () => null;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [status, setStatus] = useState<{
+    tone: "info" | "warning" | "error";
+    message: string;
+  } | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+
+  const conflictEntries = useMemo(
+    () => Object.entries(manager?.conflicts ?? {}),
+    [manager?.conflicts],
+  );
+  const conflictActions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          conflictEntries.flatMap(([, actions]) => actions),
+        ),
+      ),
+    [conflictEntries],
+  );
+
+  const headingId = useMemo(() => `${gameId}-help-title`, [gameId]);
+  const descriptionId = useMemo(() => `${gameId}-help-description`, [gameId]);
+  const summaryId = info?.actions ? `${gameId}-shortcut-summary` : undefined;
+  const conflictSummaryId =
+    info?.actions && conflictEntries.length > 0
+      ? `${gameId}-conflict-summary`
+      : undefined;
+  const summaryToken = summaryId && announcement ? summaryId : undefined;
+  const describedBy = [descriptionId, summaryToken, conflictSummaryId]
+    .filter(Boolean)
+    .join(" ") || undefined;
+  const statusId = status ? `${gameId}-help-status` : undefined;
 
   useEffect(() => {
     if (!overlayRef.current) return;
@@ -208,43 +255,211 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
     };
   }, [onClose]);
 
+  useEffect(() => {
+    if (!info?.actions) {
+      setAnnouncement("");
+      return;
+    }
+    const summary = Object.entries(mapping)
+      .map(([action, key]) => `${action} is ${key}`)
+      .join(", ");
+    setAnnouncement(
+      summary ? `Available shortcuts: ${summary}.` : "",
+    );
+  }, [info?.actions, mapping]);
+
+  useEffect(() => {
+    setStatus(null);
+  }, [gameId]);
+
+  const handleExport = useCallback(() => {
+    if (!manager) {
+      setStatus({
+        tone: "error",
+        message: "Export is not available for this game.",
+      });
+      return;
+    }
+    try {
+      const data = manager.exportMapping();
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${gameId}-shortcuts.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus({
+        tone: "info",
+        message: "Shortcut mappings exported.",
+      });
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: "Unable to export mappings.",
+      });
+    }
+  }, [manager, gameId]);
+
+  const handleImportClick = useCallback(() => {
+    setStatus(null);
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImportChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!manager) {
+        setStatus({
+          tone: "error",
+          message: "Import is not available for this game.",
+        });
+        event.target.value = "";
+        return;
+      }
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const result = manager.importMapping(text);
+        if (!result.ok) {
+          setStatus({
+            tone: "error",
+            message: result.error ?? "Unable to import mapping.",
+          });
+        } else {
+          const conflictSummary = result.conflicts
+            ? Object.entries(result.conflicts)
+                .map(([key, actions]) => `${key}: ${actions.join(", ")}`)
+                .join("; ")
+            : "";
+          if (conflictSummary) {
+            setStatus({
+              tone: "warning",
+              message: `Mapping imported with conflicts — ${conflictSummary}.`,
+            });
+          } else {
+            setStatus({
+              tone: "info",
+              message: "Shortcut mappings imported.",
+            });
+          }
+        }
+      } catch (error) {
+        setStatus({
+          tone: "error",
+          message: "Unable to read mapping file.",
+        });
+      } finally {
+        event.target.value = "";
+      }
+    },
+    [manager],
+  );
+
   if (!info) return null;
   return (
     <div
       ref={overlayRef}
-      className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 px-4 text-white"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={headingId}
+      aria-describedby={describedBy}
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
-        <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
-        <p className="mb-2">
+      <div className="w-full max-w-xl rounded-lg bg-gray-800 p-4 shadow-lg focus:outline-none sm:p-6">
+        <h2 id={headingId} className="text-2xl font-semibold capitalize">
+          {gameId} Help
+        </h2>
+        <p id={descriptionId} className="mt-2 text-sm">
           <strong>Objective:</strong> {info.objective}
         </p>
+        {summaryId && announcement && (
+          <p id={summaryId} className="sr-only" aria-live="polite">
+            {announcement}
+          </p>
+        )}
         {info.actions ? (
           <>
-            <p>
+            <p className="mt-2 text-sm">
               <strong>Controls:</strong>{" "}
               {Object.entries(mapping)
                 .map(([a, k]) => `${a}: ${k}`)
                 .join(", ")}
             </p>
-            <div className="mt-2">
+            {conflictSummaryId && (
+              <div
+                id={conflictSummaryId}
+                className="mt-3 rounded border border-amber-500/40 bg-amber-900/30 p-3 text-xs text-amber-100 sm:text-sm"
+                role="alert"
+                aria-live="polite"
+              >
+                <p className="font-semibold">Shortcut conflicts</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {conflictEntries.map(([key, actions]) => (
+                    <li key={key}>
+                      <span className="font-mono">{key}</span> → {actions.join(", ")}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="mt-3">
               <InputRemap
                 mapping={mapping}
-                setKey={setKey as (action: string, key: string) => string | null}
+                setKey={setKey}
                 actions={info.actions}
+                conflictActions={conflictActions}
+              />
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <button
+                type="button"
+                onClick={handleExport}
+                className="rounded bg-gray-700 px-3 py-1 text-sm focus:outline-none focus:ring"
+              >
+                Export shortcuts
+              </button>
+              <button
+                type="button"
+                onClick={handleImportClick}
+                className="rounded bg-gray-700 px-3 py-1 text-sm focus:outline-none focus:ring"
+              >
+                Import shortcuts
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                className="sr-only"
+                onChange={handleImportChange}
               />
             </div>
           </>
         ) : (
-          <p>
+          <p className="mt-2 text-sm">
             <strong>Controls:</strong> {info.controls}
           </p>
         )}
+        {status && (
+          <p
+            id={statusId}
+            className={`mt-3 text-sm ${
+              status.tone === "error"
+                ? "text-red-300"
+                : status.tone === "warning"
+                ? "text-amber-200"
+                : "text-emerald-200"
+            }`}
+            role={status.tone === "info" ? "status" : "alert"}
+            aria-live="assertive"
+          >
+            {status.message}
+          </p>
+        )}
         <button
+          type="button"
           onClick={onClose}
-          className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+          className="mt-6 w-full rounded bg-gray-700 px-3 py-2 text-sm font-medium focus:outline-none focus:ring"
         >
           Close
         </button>
