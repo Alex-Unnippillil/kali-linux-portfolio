@@ -103,7 +103,10 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
   };
 
   return (
-    <div className="p-2 space-y-2 text-sm">
+    <div
+      className="p-2 space-y-2 text-sm"
+      style={{ fontFamily: 'var(--font-terminal)' }}
+    >
       <p className="text-xs">
         Need sample scripts?{' '}
         <a

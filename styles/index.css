@@ -505,7 +505,7 @@ dialog {
 /* Ensure monospace layout for app outputs */
 textarea,
 pre {
-    font-family: monospace;
+    font-family: var(--font-terminal, monospace);
     line-height: 1.2;
 }
 

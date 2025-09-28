@@ -29,7 +29,10 @@ export default function PipeSandbox() {
   }
 
   return (
-    <div className="space-y-2 p-4">
+    <div
+      className="space-y-2 p-4"
+      style={{ fontFamily: 'var(--font-terminal)' }}
+    >
       <input
         className="w-full border px-2 py-1"
         value={command}
