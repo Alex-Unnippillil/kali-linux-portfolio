@@ -33,9 +33,10 @@
   --kali-blue-dark: #0f6fa1;
   --kali-blue-glow: rgba(23, 147, 209, 0.35);
   --kali-bg-solid: #0f1317;
-  --kali-panel: rgba(26, 31, 38, 0.9);
-  --kali-panel-border: rgba(255, 255, 255, 0.08);
-  --kali-panel-highlight: rgba(255, 255, 255, 0.05);
+  --panel-height: calc(max(var(--hit-area), 2.5rem) + var(--space-1));
+  --kali-panel: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  --kali-panel-border: color-mix(in srgb, var(--color-text) 18%, transparent);
+  --kali-panel-highlight: color-mix(in srgb, var(--color-text) 12%, transparent);
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
 
@@ -97,6 +98,9 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --kali-panel: color-mix(in srgb, var(--color-bg) 92%, var(--color-text) 8%);
+  --kali-panel-border: var(--color-text);
+  --kali-panel-highlight: color-mix(in srgb, var(--color-text) 70%, transparent);
 }
 
 /* Dyslexia-friendly fonts */
@@ -136,5 +140,8 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --kali-panel: color-mix(in srgb, var(--color-bg) 90%, var(--color-text) 10%);
+    --kali-panel-border: color-mix(in srgb, var(--color-text) 80%, transparent);
+    --kali-panel-highlight: color-mix(in srgb, var(--color-text) 60%, transparent);
   }
 }
