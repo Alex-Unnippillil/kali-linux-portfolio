@@ -1,5 +1,41 @@
 @import './tokens.css';
 
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Fira Code Regular'),
+    local('FiraCode-Regular'),
+    url('https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/woff2/FiraCode-Regular.woff2')
+      format('woff2');
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src:
+    local('Fira Code SemiBold'),
+    local('FiraCode-SemiBold'),
+    url('https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/woff2/FiraCode-SemiBold.woff2')
+      format('woff2');
+}
+
+@font-face {
+  font-family: 'Hack';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Hack Regular'),
+    local('Hack-Regular'),
+    url('https://cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack-regular.woff2')
+      format('woff2');
+}
+
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
   /* Base colors */
@@ -21,6 +57,9 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
+  --font-terminal: 'Fira Code', 'Hack', 'Source Code Pro', 'SFMono-Regular',
+    ui-monospace, 'DejaVu Sans Mono', Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
   accent-color: var(--color-control-accent);
 }
 

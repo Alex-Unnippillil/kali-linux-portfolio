@@ -17,11 +17,16 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
   };
 
   return (
-    <TabbedWindow
+    <div
       className="h-full w-full"
-      initialTabs={[createTab()]}
-      onNewTab={createTab}
-    />
+      style={{ fontFamily: 'var(--font-terminal)' }}
+    >
+      <TabbedWindow
+        className="h-full w-full"
+        initialTabs={[createTab()]}
+        onNewTab={createTab}
+      />
+    </div>
   );
 };
 
