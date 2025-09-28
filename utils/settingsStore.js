@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  terminalProfile: 'default',
+  terminalOpacity: 0.85,
 };
 
 export async function getAccent() {
@@ -135,6 +137,28 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTerminalProfile() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.terminalProfile;
+  return window.localStorage.getItem('terminal-profile') || DEFAULT_SETTINGS.terminalProfile;
+}
+
+export async function setTerminalProfile(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('terminal-profile', value);
+}
+
+export async function getTerminalOpacity() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.terminalOpacity;
+  const stored = window.localStorage.getItem('terminal-opacity');
+  const parsed = stored ? parseFloat(stored) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.terminalOpacity;
+}
+
+export async function setTerminalOpacity(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('terminal-opacity', String(value));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +174,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('terminal-profile');
+  window.localStorage.removeItem('terminal-opacity');
 }
 
 export async function exportSettings() {
@@ -177,6 +203,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTerminalProfile(),
+    getTerminalOpacity(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +220,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    terminalProfile,
+    terminalOpacity,
   });
 }
 
@@ -217,6 +247,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    terminalProfile,
+    terminalOpacity,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +262,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (terminalProfile !== undefined) await setTerminalProfile(terminalProfile);
+  if (terminalOpacity !== undefined) await setTerminalOpacity(terminalOpacity);
 }
 
 export const defaults = DEFAULT_SETTINGS;

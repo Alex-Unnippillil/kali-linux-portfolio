@@ -22,10 +22,15 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTerminalProfile as loadTerminalProfile,
+  setTerminalProfile as saveTerminalProfile,
+  getTerminalOpacity as loadTerminalOpacity,
+  setTerminalOpacity as saveTerminalOpacity,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+export type TerminalProfile = 'default' | 'lowContrast' | 'solarized';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -67,6 +72,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  terminalProfile: TerminalProfile;
+  terminalOpacity: number;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +86,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setTerminalProfile: (value: TerminalProfile) => void;
+  setTerminalOpacity: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +104,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  terminalProfile: defaults.terminalProfile as TerminalProfile,
+  terminalOpacity: defaults.terminalOpacity,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +118,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setTerminalProfile: () => {},
+  setTerminalOpacity: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,6 +135,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [terminalProfile, setTerminalProfile] = useState<TerminalProfile>(
+    (defaults.terminalProfile as TerminalProfile) ?? 'default',
+  );
+  const [terminalOpacity, setTerminalOpacity] = useState<number>(
+    defaults.terminalOpacity ?? 0.85,
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -138,6 +157,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setTerminalProfile((await loadTerminalProfile()) as TerminalProfile);
+      setTerminalOpacity(await loadTerminalOpacity());
     })();
   }, []);
 
@@ -250,6 +271,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveTerminalProfile(terminalProfile);
+  }, [terminalProfile]);
+
+  useEffect(() => {
+    saveTerminalOpacity(terminalOpacity);
+  }, [terminalOpacity]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +297,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        terminalProfile,
+        terminalOpacity,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +311,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setTerminalProfile,
+        setTerminalOpacity,
       }}
     >
       {children}
