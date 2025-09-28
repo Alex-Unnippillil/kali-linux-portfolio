@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import UbuntuApp from '../base/ubuntu_app';
+import KaliApp from '../base/KaliApp';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
@@ -475,7 +475,7 @@ const WhiskerMenu: React.FC = () => {
                     idx === highlight ? 'ring-2 ring-ubb-orange ring-offset-gray-900' : 'ring-0'
                   }`}
                 >
-                  <UbuntuApp
+                  <KaliApp
                     id={app.id}
                     icon={app.icon}
                     name={app.title}
