@@ -39,6 +39,14 @@
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
 
+  /* Terminal theme tokens */
+  --terminal-background: #0f1317;
+  --terminal-border: color-mix(in srgb, var(--kali-blue) 25%, transparent);
+  --terminal-foreground: var(--kali-terminal-text);
+  --terminal-cursor: var(--kali-blue);
+  --terminal-selection: color-mix(in srgb, var(--kali-blue) 35%, transparent);
+  --terminal-font-family: 'Hack', 'Fira Code', monospace;
+
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
   --game-color-success: #15803d;
