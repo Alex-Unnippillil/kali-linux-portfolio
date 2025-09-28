@@ -712,6 +712,36 @@ export class Desktop extends Component {
         this.giveFocusToLastApp();
     }
 
+    minimizeAllWindows = () => {
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+        let hasChanges = false;
+
+        Object.keys(this.state.closed_windows).forEach((id) => {
+            if (this.state.closed_windows[id] === false) {
+                if (!minimized_windows[id]) {
+                    minimized_windows[id] = true;
+                    hasChanges = true;
+                }
+                if (focused_windows[id]) {
+                    focused_windows[id] = false;
+                    hasChanges = true;
+                }
+            }
+        });
+
+        if (!hasChanges) {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+            return;
+        }
+
+        this.setWorkspaceState({ minimized_windows, focused_windows }, () => {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+        });
+    }
+
     giveFocusToLastApp = () => {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
@@ -1103,6 +1133,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    minimizeAll={this.minimizeAllWindows}
                     workspaces={workspaceSummaries}
                     activeWorkspace={this.state.activeWorkspace}
                     onSelectWorkspace={this.switchWorkspace}
