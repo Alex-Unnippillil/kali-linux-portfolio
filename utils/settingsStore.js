@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  zshHints: true,
 };
 
 export async function getAccent() {
@@ -135,6 +136,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getZshHints() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.zshHints;
+  const stored = window.localStorage.getItem('zsh-hints');
+  return stored === null ? DEFAULT_SETTINGS.zshHints : stored === 'true';
+}
+
+export async function setZshHints(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('zsh-hints', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +162,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('zsh-hints');
 }
 
 export async function exportSettings() {
@@ -165,6 +178,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    zshHints,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +191,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getZshHints(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -190,6 +205,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    zshHints,
     useKaliWallpaper,
     theme,
   });
@@ -216,6 +232,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    zshHints,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -229,6 +246,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (zshHints !== undefined) await setZshHints(zshHints);
   if (theme !== undefined) setTheme(theme);
 }
 

@@ -22,6 +22,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getZshHints as loadZshHints,
+  setZshHints as saveZshHints,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -66,6 +68,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  zshHints: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +81,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setZshHints: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +98,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  zshHints: defaults.zshHints,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +111,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setZshHints: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +127,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [zshHints, setZshHints] = useState<boolean>(defaults.zshHints);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +144,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setZshHints(await loadZshHints());
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +258,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveZshHints(zshHints);
+  }, [zshHints]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +279,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        zshHints,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +292,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setZshHints,
         setTheme,
       }}
     >
