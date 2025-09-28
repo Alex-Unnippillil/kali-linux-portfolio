@@ -590,8 +590,8 @@ export class Desktop extends Component {
 
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
+        const appsJsx = [];
+        apps.forEach((app) => {
             if (this.state.desktop_apps.includes(app.id)) {
 
                 const props = {
@@ -608,7 +608,15 @@ export class Desktop extends Component {
                 );
             }
         });
-        return appsJsx;
+        if (!appsJsx.length) return null;
+        return (
+            <div
+                className="absolute inset-0 flex flex-wrap content-start items-start gap-[96px] p-10"
+                data-context="desktop-area"
+            >
+                {appsJsx}
+            </div>
+        );
     }
 
     renderWindows = () => {
