@@ -9,6 +9,10 @@
   .transition-active {
     @apply transition ease-out duration-100;
   }
+  .glass {
+    @apply border border-white/10 shadow-kali-panel backdrop-blur;
+    background-color: var(--kali-panel);
+  }
 }
 
 @layer base {

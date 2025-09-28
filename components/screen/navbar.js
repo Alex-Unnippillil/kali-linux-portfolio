@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
-import NotificationBell from '../ui/NotificationBell';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 
@@ -42,7 +41,7 @@ export default class Navbar extends Component {
 							'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
 						}
 					>
-						<Status />
+                                                <Status visuallyHidden />
 						<QuickSettings open={this.state.status_card} />
 					</button>
 				</div>
