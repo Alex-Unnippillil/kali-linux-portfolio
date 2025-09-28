@@ -155,6 +155,7 @@ const WhiskerMenu: React.FC = () => {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
@@ -240,6 +241,16 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     if (!isVisible) return;
+    setHighlight((current) => {
+      if (currentApps.length === 0) {
+        return 0;
+      }
+      return Math.min(current, currentApps.length - 1);
+    });
+  }, [currentApps.length, isVisible]);
+
+  useEffect(() => {
+    if (!isVisible) return;
     const index = categoryConfigs.findIndex(cat => cat.id === currentCategory.id);
     setCategoryHighlight(index === -1 ? 0 : index);
   }, [isVisible, currentCategory.id, categoryConfigs]);
@@ -319,6 +330,11 @@ const WhiskerMenu: React.FC = () => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    searchInputRef.current?.focus();
+  }, [category, isVisible]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -456,17 +472,19 @@ const WhiskerMenu: React.FC = () => {
               </ul>
             </div>
           </div>
-          <div className="flex flex-col p-3">
-            <input
-              className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
-
-              placeholder="Search"
-              aria-label="Search applications"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
-            <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
+          <div className="flex flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-gray-800 px-3 py-2">
+              <span className="text-sm font-medium text-gray-200">{currentCategory.label}</span>
+              <input
+                ref={searchInputRef}
+                className="w-64 rounded bg-black bg-opacity-20 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ubb-orange focus:ring-offset-2 focus:ring-offset-gray-900"
+                placeholder="Type to search…"
+                aria-label="Search applications"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+            </div>
+            <div className="grid max-h-64 flex-1 grid-cols-3 gap-2 overflow-y-auto p-3">
 
               {currentApps.map((app, idx) => (
                 <div
