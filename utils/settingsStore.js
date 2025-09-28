@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   useKaliWallpaper: false,
   density: 'regular',
   reducedMotion: false,
+  panelAutohide: false,
   fontScale: 1,
   highContrast: false,
   largeHitAreas: false,
@@ -70,6 +71,17 @@ export async function getReducedMotion() {
 export async function setReducedMotion(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+}
+
+export async function getPanelAutohide() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.panelAutohide;
+  const stored = window.localStorage.getItem('panel-autohide');
+  return stored === null ? DEFAULT_SETTINGS.panelAutohide : stored === 'true';
+}
+
+export async function setPanelAutohide(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('panel-autohide', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
@@ -143,6 +155,7 @@ export async function resetSettings() {
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
+  window.localStorage.removeItem('panel-autohide');
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
@@ -159,6 +172,7 @@ export async function exportSettings() {
     useKaliWallpaper,
     density,
     reducedMotion,
+    panelAutohide,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -171,6 +185,7 @@ export async function exportSettings() {
     getUseKaliWallpaper(),
     getDensity(),
     getReducedMotion(),
+    getPanelAutohide(),
     getFontScale(),
     getHighContrast(),
     getLargeHitAreas(),
@@ -184,6 +199,7 @@ export async function exportSettings() {
     wallpaper,
     density,
     reducedMotion,
+    panelAutohide,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -210,6 +226,7 @@ export async function importSettings(json) {
     useKaliWallpaper,
     density,
     reducedMotion,
+    panelAutohide,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -223,6 +240,7 @@ export async function importSettings(json) {
   if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
+  if (panelAutohide !== undefined) await setPanelAutohide(panelAutohide);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
