@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
-import Draggable from 'react-draggable';
+import SafeDraggable from '../base/SafeDraggable';
 import {
   MonteCarloAI,
   RandomSalvoAI,
@@ -452,7 +454,7 @@ const Battleship = () => {
             <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
               {renderBoard(playerBoard)}
                 {ships.map((ship,i)=>(
-                  <Draggable
+                  <SafeDraggable
                     key={ship.id}
                     grid={[CELL,CELL]}
                     position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
@@ -466,7 +468,7 @@ const Battleship = () => {
                       style={{width:(ship.dir===0?ship.len:1)*CELL,height:(ship.dir===1?ship.len:1)*CELL}}
                       onDoubleClick={()=>rotateShip(ship.id)}
                     />
-                  </Draggable>
+                  </SafeDraggable>
                 ))}
             </div>
             <div className="flex flex-col space-y-2">
