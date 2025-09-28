@@ -16,7 +16,7 @@ const tabs = [
 ];
 
 export default function SecurityTools() {
-  const [active, setActive] = useState('repeater');
+  const [openMenu, setOpenMenu] = useState('repeater');
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [fixtureData, setFixtureData] = useState([]);
@@ -82,15 +82,22 @@ export default function SecurityTools() {
     mitreResults.length ||
     (yaraMatch ? 1 : 0);
 
-  const tabButton = (t) => (
-    <button
-      key={t.id}
-      onClick={() => setActive(t.id)}
-      className={`px-2 py-1 text-xs ${active === t.id ? 'bg-ub-yellow text-black' : 'bg-ub-cool-grey text-white'} mr-1 mb-2`}
-    >
-      {t.label}
-    </button>
-  );
+  const tabButton = (t) => {
+    const isOpen = openMenu === t.id;
+    return (
+      <button
+        key={t.id}
+        onClick={() => setOpenMenu(t.id)}
+        className={`relative px-2 py-1 text-xs mr-1 mb-2 ${
+          isOpen
+            ? "bg-ub-yellow text-black after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-kali-blue"
+            : 'bg-ub-cool-grey text-white'
+        }`}
+      >
+        {t.label}
+      </button>
+    );
+  };
 
   if (!authorized) {
     return (
@@ -196,7 +203,7 @@ export default function SecurityTools() {
             <p className="text-xs mb-2">All tools are static demos using local fixtures. No external network activity occurs.</p>
             <div className="mb-2 flex flex-wrap">{tabs.map(tabButton)}</div>
 
-            {active === 'repeater' && (
+            {openMenu === 'repeater' && (
               <div>
                 <CommandBuilder
                   doc="Build a curl command. Output is copy-only and not executed."
@@ -205,7 +212,7 @@ export default function SecurityTools() {
               </div>
             )}
 
-            {active === 'suricata' && (
+            {openMenu === 'suricata' && (
             <div>
               <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
               {suricata.map((log, i) => (
@@ -214,7 +221,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-            {active === 'zeek' && (
+            {openMenu === 'zeek' && (
             <div>
               <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
               {zeek.map((log, i) => (
@@ -223,7 +230,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-            {active === 'sigma' && (
+            {openMenu === 'sigma' && (
             <div>
               <p className="text-xs mb-2">Static Sigma rules loaded from fixture.</p>
               {sigma.map((rule) => (
@@ -235,7 +242,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-            {active === 'yara' && (
+            {openMenu === 'yara' && (
             <div>
               <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
               <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
@@ -246,7 +253,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-            {active === 'mitre' && (
+            {openMenu === 'mitre' && (
             <div>
               <p className="text-xs mb-2">Mini MITRE ATT&CK navigator from static data.</p>
               {mitre.tactics.map((tac) => (
@@ -262,7 +269,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-            {active === 'fixtures' && (
+            {openMenu === 'fixtures' && (
               <div className="flex">
                 <div className="w-1/2 pr-2">
                   <FixturesLoader onData={setFixtureData} />
