@@ -1,4 +1,14 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+  Dispatch,
+  SetStateAction,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -22,10 +32,26 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getLauncherFavorites as loadLauncherFavorites,
+  setLauncherFavorites as saveLauncherFavorites,
+  getPanelPins as loadPanelPins,
+  setPanelPins as savePanelPins,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+const sanitizeIds = (ids: readonly string[]) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  ids.forEach((id) => {
+    if (typeof id !== 'string') return;
+    if (seen.has(id)) return;
+    seen.add(id);
+    result.push(id);
+  });
+  return result;
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -67,6 +93,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  launcherFavorites: string[];
+  panelPins: string[];
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +107,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setLauncherFavorites: Dispatch<SetStateAction<string[]>>;
+  setPanelPins: Dispatch<SetStateAction<string[]>>;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +125,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  launcherFavorites: defaults.launcherFavorites ?? [],
+  panelPins: defaults.panelPins ?? [],
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +139,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setLauncherFavorites: () => {},
+  setPanelPins: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,7 +156,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [launcherFavorites, setLauncherFavorites] = useState<string[]>(
+    sanitizeIds(defaults.launcherFavorites ?? []),
+  );
+  const [panelPins, setPanelPins] = useState<string[]>(sanitizeIds(defaults.panelPins ?? []));
   const fetchRef = useRef<typeof fetch | null>(null);
+  const favoritesLoaded = useRef(false);
+  const panelPinsLoaded = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -137,6 +177,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      const [favorites, pins] = await Promise.all([
+        loadLauncherFavorites(),
+        loadPanelPins(),
+      ]);
+      favoritesLoaded.current = true;
+      panelPinsLoaded.current = true;
+      setLauncherFavorites(sanitizeIds(favorites));
+      setPanelPins(sanitizeIds(pins));
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +298,64 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (!favoritesLoaded.current) return;
+    saveLauncherFavorites(launcherFavorites);
+  }, [launcherFavorites]);
+
+  useEffect(() => {
+    if (!panelPinsLoaded.current) return;
+    savePanelPins(panelPins);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('panel-pins-updated', {
+          detail: { pins: panelPins, source: 'settings' },
+        }),
+      );
+    }
+  }, [panelPins]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleExternalPins = (event: Event) => {
+      const { detail } = event as CustomEvent<{ pins?: unknown; source?: string }>;
+      if (!detail || detail.source === 'settings') return;
+      const pins = Array.isArray(detail)
+        ? sanitizeIds(detail as string[])
+        : sanitizeIds(Array.isArray(detail.pins) ? (detail.pins as string[]) : []);
+      panelPinsLoaded.current = true;
+      setPanelPins(pins);
+    };
+    window.addEventListener('panel-pins-updated', handleExternalPins);
+    return () => window.removeEventListener('panel-pins-updated', handleExternalPins);
+  }, []);
+
+  const updateLauncherFavorites = useCallback(
+    (updater: SetStateAction<string[]>) => {
+      setLauncherFavorites((prev) => {
+        const next =
+          typeof updater === 'function'
+            ? sanitizeIds((updater as (value: string[]) => string[])(prev))
+            : sanitizeIds(updater);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const updatePanelPins = useCallback(
+    (updater: SetStateAction<string[]>) => {
+      setPanelPins((prev) => {
+        const next =
+          typeof updater === 'function'
+            ? sanitizeIds((updater as (value: string[]) => string[])(prev))
+            : sanitizeIds(updater);
+        return next;
+      });
+    },
+    [],
+  );
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +374,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        launcherFavorites,
+        panelPins,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +388,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setLauncherFavorites: updateLauncherFavorites,
+        setPanelPins: updatePanelPins,
       }}
     >
       {children}

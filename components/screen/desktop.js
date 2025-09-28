@@ -222,6 +222,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('panel-pins-updated', this.handlePanelPinsUpdated);
     }
 
     componentWillUnmount() {
@@ -229,6 +230,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('panel-pins-updated', this.handlePanelPinsUpdated);
     }
 
     checkForNewFolders = () => {
@@ -748,6 +750,42 @@ export class Desktop extends Component {
         }
     }
 
+    handlePanelPinsUpdated = (event) => {
+        const detail = event?.detail ?? null;
+        const source = detail && typeof detail === 'object' && !Array.isArray(detail)
+            ? detail.source
+            : undefined;
+        if (source === 'desktop') return;
+        const pins = Array.isArray(detail)
+            ? detail
+            : Array.isArray(detail?.pins)
+                ? detail.pins
+                : [];
+        this.syncPinnedApps(pins);
+    }
+
+    syncPinnedApps = (pins) => {
+        if (!Array.isArray(pins)) return;
+        const seen = new Set();
+        const sanitized = [];
+        pins.forEach((id) => {
+            if (typeof id !== 'string' || seen.has(id)) return;
+            seen.add(id);
+            sanitized.push(id);
+        });
+        const pinnedSet = new Set(sanitized);
+        const favourite_apps = { ...this.state.favourite_apps };
+        apps.forEach((app) => {
+            const shouldPin = pinnedSet.has(app.id);
+            app.favourite = shouldPin;
+            this.initFavourite[app.id] = shouldPin;
+            const isOpen = this.state.closed_windows[app.id] === false;
+            favourite_apps[app.id] = isOpen ? true : shouldPin;
+        });
+        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(sanitized));
+        this.setState({ favourite_apps }, () => { this.saveSession(); });
+    }
+
     openApp = (objId, params) => {
         const context = params && typeof params === 'object'
             ? {
@@ -915,7 +953,11 @@ export class Desktop extends Component {
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const sanitizedPins = Array.from(new Set(pinnedApps.filter(pinId => typeof pinId === 'string')))
+        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(sanitizedPins))
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('panel-pins-updated', { detail: { pins: sanitizedPins, source: 'desktop' } }))
+        }
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -929,7 +971,11 @@ export class Desktop extends Component {
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const sanitizedPins = Array.from(new Set(pinnedApps.filter(pinId => typeof pinId === 'string')))
+        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(sanitizedPins))
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('panel-pins-updated', { detail: { pins: sanitizedPins, source: 'desktop' } }))
+        }
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
