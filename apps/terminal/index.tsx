@@ -480,8 +480,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </div>
         </div>
       )}
-      <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2 bg-gray-800 p-1">
+      <div className="flex h-full flex-col">
+        <div className="flex flex-wrap items-center gap-2 bg-gray-800 p-2">
           <button onClick={handleCopy} aria-label="Copy">
             <CopyIcon />
           </button>
@@ -492,13 +492,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             <SettingsIcon />
           </button>
         </div>
-        <div className="relative">
+        <div className="relative flex-1 min-h-0">
           <TerminalContainer
             ref={containerRef}
-            className="resize overflow-hidden font-mono"
+            className="h-full w-full overflow-hidden font-mono"
             style={{
-              width: '80ch',
-              height: '24em',
               fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
               lineHeight: 1.4,
             }}
