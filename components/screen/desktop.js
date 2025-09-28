@@ -41,6 +41,7 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -611,6 +612,14 @@ export class Desktop extends Component {
         return appsJsx;
     }
 
+    setWindowRef = (id, ref) => {
+        if (ref) {
+            this.windowRefs[id] = ref;
+        } else {
+            delete this.windowRefs[id];
+        }
+    }
+
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
@@ -641,7 +650,7 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window key={app.id} ref={(node) => this.setWindowRef(app.id, node)} {...props} />
                 )
             }
         });
@@ -698,11 +707,19 @@ export class Desktop extends Component {
         this.setWorkspaceState({ hideSideBar: hide, overlapped_windows });
     }
 
-    hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
+    hasMinimised = async (objId) => {
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
 
-        // remove focus and minimise this window
+        const ref = this.windowRefs[objId];
+        if (ref && typeof ref.playMinimizeAnimation === 'function') {
+            try {
+                await ref.playMinimizeAnimation();
+            } catch (e) {
+                // swallow animation errors to avoid blocking state updates
+            }
+        }
+
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
         this.setWorkspaceState({ minimized_windows, focused_windows });
@@ -748,7 +765,7 @@ export class Desktop extends Component {
         }
     }
 
-    openApp = (objId, params) => {
+    openApp = async (objId, params) => {
         const context = params && typeof params === 'object'
             ? {
                 ...params,
@@ -771,35 +788,38 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setWorkspaceState({ minimized_windows }, this.saveSession);
-
-            }
-
-            const reopen = () => {
-                // if it's minimised, restore its last position
+            const restoreWindow = async () => {
                 if (this.state.minimized_windows[objId]) {
                     this.focus(objId);
-                    var r = document.querySelector("#" + objId);
-                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
+                    const ref = this.windowRefs[objId];
+                    if (ref && typeof ref.playRestoreAnimation === 'function') {
+                        try {
+                            await ref.playRestoreAnimation();
+                        } catch (e) {
+                            // ignore animation errors
+                        }
+                    } else {
+                        const r = document.querySelector(`#${objId}`);
+                        if (r) {
+                            const x = r.style.getPropertyValue('--window-transform-x');
+                            const y = r.style.getPropertyValue('--window-transform-y');
+                            r.style.transform = `translate(${x},${y}) scale(1)`;
+                        }
+                    }
+                    const minimized_windows = { ...this.state.minimized_windows };
                     minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                    this.setWorkspaceState({ minimized_windows }, this.saveSession);
                 } else {
                     this.focus(objId);
                     this.saveSession();
                 }
             };
+
             if (context) {
-                this.setState({ window_context: contextState }, reopen);
+                await new Promise((resolve) => this.setState({ window_context: contextState }, resolve));
+                await restoreWindow();
             } else {
-                reopen();
+                await restoreWindow();
             }
             return;
         } else {
