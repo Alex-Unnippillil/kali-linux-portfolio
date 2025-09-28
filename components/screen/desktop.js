@@ -24,6 +24,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import Toast from '../ui/Toast';
 
 export class Desktop extends Component {
     constructor() {
@@ -69,6 +70,8 @@ export class Desktop extends Component {
                 id: index,
                 label: `Workspace ${index + 1}`,
             })),
+            trashDropActive: false,
+            toast: null,
         }
     }
 
@@ -162,7 +165,7 @@ export class Desktop extends Component {
         });
     };
 
-    switchWorkspace = (workspaceId) => {
+    switchWorkspace = (workspaceId, callback) => {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
@@ -178,6 +181,9 @@ export class Desktop extends Component {
             switcherWindows: [],
         }, () => {
             this.giveFocusToLastApp();
+            if (typeof callback === 'function') {
+                callback();
+            }
         });
     };
 
@@ -222,6 +228,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('restore-trash-item', this.handleRestoreFromTrashEvent);
     }
 
     componentWillUnmount() {
@@ -229,6 +236,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('restore-trash-item', this.handleRestoreFromTrashEvent);
     }
 
     checkForNewFolders = () => {
@@ -594,6 +602,7 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.desktop_apps.includes(app.id)) {
 
+                const isTrash = app.id === 'trash';
                 const props = {
                     name: app.title,
                     id: app.id,
@@ -601,6 +610,13 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    ...(isTrash ? {
+                        onDrop: this.handleTrashDrop,
+                        onDragOver: this.handleTrashDragOver,
+                        onDragEnter: this.handleTrashDragEnter,
+                        onDragLeave: this.handleTrashDragLeave,
+                        isDropTarget: this.state.trashDropActive,
+                    } : {}),
                 }
 
                 appsJsx.push(
@@ -638,6 +654,7 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    onDropToTrash: this.handleWindowDropToTrash,
                 }
 
                 windowsJsx.push(
@@ -850,7 +867,223 @@ export class Desktop extends Component {
         }
     }
 
-    closeApp = async (objId) => {
+    handleWindowDropToTrash = (objId) => {
+        if (!objId) return;
+        this.closeApp(objId, { source: 'trash-drop' });
+    }
+
+    handleTrashDragOver = (event) => {
+        if (!event) return;
+        event.preventDefault();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'move';
+        }
+    }
+
+    handleTrashDragEnter = (event) => {
+        if (event) {
+            event.preventDefault();
+        }
+        if (!this.state.trashDropActive) {
+            this.setState({ trashDropActive: true });
+        }
+    }
+
+    handleTrashDragLeave = (event) => {
+        if (!event) return;
+        const current = event.currentTarget;
+        const related = event.relatedTarget;
+        if (!current || (related && current.contains(related))) return;
+        this.setState({ trashDropActive: false });
+    }
+
+    handleTrashDrop = (event) => {
+        if (event) {
+            event.preventDefault();
+        }
+        this.setState({ trashDropActive: false });
+        if (!event || !event.dataTransfer) return;
+        let payload = null;
+        try {
+            const raw = event.dataTransfer.getData('application/x-ubuntu-app');
+            if (raw) payload = JSON.parse(raw);
+        } catch (e) {
+            payload = null;
+        }
+        if (!payload || payload.type !== 'desktop-app') return;
+        if (!payload.id || payload.id === 'trash') return;
+        const item = this.removeDesktopShortcut(payload.id);
+        if (!item) return;
+        const [stored] = this.persistTrashItems(item);
+        if (stored) {
+            this.showTrashToast(stored, { message: `Moved ${stored.title} to Trash` });
+        }
+        if (event.dataTransfer) {
+            try { event.dataTransfer.clearData('application/x-ubuntu-app'); } catch (e) { }
+        }
+    }
+
+    removeDesktopShortcut = (appId) => {
+        const appIndex = apps.findIndex(app => app.id === appId);
+        if (appIndex === -1) return null;
+        const app = apps[appIndex];
+        const closedAt = Date.now();
+        const desktopIndex = this.state.desktop_apps.indexOf(appId);
+        const item = {
+            id: app.id,
+            title: app.title || app.id,
+            icon: app.icon,
+            closedAt,
+            source: 'desktop-icon',
+            desktopIndex,
+            appIndex,
+        };
+        let shortcuts = [];
+        try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
+        shortcuts = shortcuts.filter(id => id !== appId);
+        safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
+
+        if (appId.startsWith('new-folder-')) {
+            let newFolders = [];
+            try { newFolders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { newFolders = []; }
+            newFolders = newFolders.filter(folder => folder.id !== appId && folder.id !== appId.replace(/^new-folder-/, ''));
+            safeLocalStorage?.setItem('new_folders', JSON.stringify(newFolders));
+            const removed = apps.splice(appIndex, 1)[0];
+            if (removed) {
+                item.payload = {
+                    type: 'new-folder',
+                    app: { ...removed },
+                    folder: { id: removed.id, name: removed.title },
+                };
+            }
+        } else {
+            apps[appIndex].desktop_shortcut = false;
+        }
+
+        this.updateAppsData();
+        return item;
+    }
+
+    restoreDesktopShortcut = (item) => {
+        if (!item || item.source !== 'desktop-icon') return;
+        if (item.payload && item.payload.type === 'new-folder') {
+            const insertIndex = typeof item.appIndex === 'number' ? item.appIndex : apps.length;
+            const appData = item.payload.app || {
+                id: item.id,
+                title: item.title,
+                icon: item.icon,
+                disabled: true,
+                favourite: false,
+                desktop_shortcut: true,
+                screen: () => { },
+            };
+            apps.splice(insertIndex, 0, { ...appData, desktop_shortcut: true });
+            const folderRecord = item.payload.folder || { id: item.id, name: appData.title };
+            let newFolders = [];
+            try { newFolders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { newFolders = []; }
+            const exists = newFolders.some(folder => folder.id === folderRecord.id || folder.id === item.id.replace(/^new-folder-/, ''));
+            if (!exists) {
+                newFolders.push(folderRecord);
+                safeLocalStorage?.setItem('new_folders', JSON.stringify(newFolders));
+            }
+        } else {
+            const appIndex = apps.findIndex(app => app.id === item.id);
+            if (appIndex !== -1) {
+                apps[appIndex].desktop_shortcut = true;
+            }
+            let shortcuts = [];
+            try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
+            if (!shortcuts.includes(item.id)) {
+                shortcuts.push(item.id);
+                safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
+            }
+        }
+        this.updateAppsData();
+    }
+
+    persistTrashItems = (items) => {
+        const queue = Array.isArray(items) ? items : [items];
+        const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
+        const ms = purgeDays * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        let trash = [];
+        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        trash = trash.filter(item => now - item.closedAt <= ms);
+        const enriched = queue.map(item => ({ ...item, closedAt: item.closedAt || now }));
+        const next = [...trash, ...enriched];
+        safeLocalStorage?.setItem('window-trash', JSON.stringify(next));
+        window.dispatchEvent(new Event('trash-change'));
+        this.updateTrashIcon();
+        return enriched;
+    }
+
+    removeTrashEntry = (item) => {
+        if (!item) return;
+        let trash = [];
+        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        const filtered = trash.filter(entry => entry.closedAt !== item.closedAt || entry.id !== item.id);
+        safeLocalStorage?.setItem('window-trash', JSON.stringify(filtered));
+        window.dispatchEvent(new Event('trash-change'));
+        this.updateTrashIcon();
+    }
+
+    showTrashToast = (item, options = {}) => {
+        if (!item) return;
+        const message = options.message || `Moved ${item.title} to Trash`;
+        this.setState({ toast: { item, message } });
+    }
+
+    dismissToast = () => {
+        if (this.state.toast) {
+            this.setState({ toast: null });
+        }
+    }
+
+    handleToastUndo = () => {
+        const { toast } = this.state;
+        if (!toast) return;
+        this.restoreTrashItem(toast.item, { keepToast: false });
+    }
+
+    openRestoredWindow = (item) => {
+        if (!item) return;
+        const position = item.position;
+        const open = () => {
+            if (position) {
+                this.setWorkspaceState(prev => ({
+                    window_positions: { ...prev.window_positions, [item.id]: position }
+                }), () => this.openApp(item.id));
+            } else {
+                this.openApp(item.id);
+            }
+        };
+        if (typeof item.workspace === 'number' && item.workspace !== this.state.activeWorkspace) {
+            this.switchWorkspace(item.workspace, open);
+        } else {
+            open();
+        }
+    }
+
+    restoreTrashItem = (item, options = {}) => {
+        if (!item) return;
+        this.removeTrashEntry(item);
+        if (item.source === 'desktop-icon') {
+            this.restoreDesktopShortcut(item);
+        } else {
+            this.openRestoredWindow(item);
+        }
+        if (!options.keepToast) {
+            this.setState({ toast: null });
+        }
+    }
+
+    handleRestoreFromTrashEvent = (event) => {
+        const item = event && event.detail;
+        if (!item) return;
+        this.restoreTrashItem(item);
+    }
+
+    closeApp = async (objId, options = {}) => {
 
         // capture window snapshot
         let image = null;
@@ -863,23 +1096,22 @@ export class Desktop extends Component {
             }
         }
 
-        // persist in trash with autopurge
         const appMeta = apps.find(a => a.id === objId) || {};
-        const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
-        const ms = purgeDays * 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        let trash = [];
-        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
-        trash = trash.filter(item => now - item.closedAt <= ms);
-        trash.push({
+        const position = this.state.window_positions[objId];
+        const payload = {
             id: objId,
             title: appMeta.title || objId,
             icon: appMeta.icon,
             image,
-            closedAt: now,
-        });
-        safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
-        this.updateTrashIcon();
+            source: 'window',
+            closedAt: Date.now(),
+            workspace: this.state.activeWorkspace,
+            position: position ? { ...position } : undefined,
+        };
+        const [stored] = this.persistTrashItems(payload);
+        if (stored && options.showToast !== false) {
+            this.showTrashToast(stored, { message: `Moved ${stored.title} to Trash` });
+        }
 
         // remove app from the app stack
         const stack = this.getActiveStack();
@@ -904,6 +1136,7 @@ export class Desktop extends Component {
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
         this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        return stored;
     }
 
     pinApp = (id) => {
@@ -1172,6 +1405,15 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                {this.state.toast && (
+                    <Toast
+                        message={this.state.toast.message}
+                        actionLabel="Undo"
+                        onAction={this.handleToastUndo}
+                        onClose={this.dismissToast}
+                    />
+                )}
 
             </main>
         );

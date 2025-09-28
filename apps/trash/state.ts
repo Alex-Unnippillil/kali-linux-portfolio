@@ -7,6 +7,12 @@ export interface TrashItem {
   icon?: string;
   image?: string;
   closedAt: number;
+  source?: 'window' | 'desktop-icon' | string;
+  workspace?: number;
+  position?: { x: number; y: number };
+  desktopIndex?: number;
+  appIndex?: number;
+  payload?: unknown;
 }
 
 const ITEMS_KEY = 'window-trash';
