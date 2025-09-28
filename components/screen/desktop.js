@@ -177,6 +177,7 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
         }, () => {
+            this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
         });
     };
@@ -188,9 +189,31 @@ export class Desktop extends Component {
         this.switchWorkspace(next);
     };
 
+    handleExternalWorkspaceSelect = (event) => {
+        const workspaceId = event?.detail?.workspaceId;
+        if (typeof workspaceId === 'number') {
+            this.switchWorkspace(workspaceId);
+        }
+    };
+
+    broadcastWorkspaceState = () => {
+        if (typeof window === 'undefined') return;
+        const detail = {
+            workspaces: this.getWorkspaceSummaries(),
+            activeWorkspace: this.state.activeWorkspace,
+        };
+        window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
+    };
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
+            window.addEventListener('workspace-request', this.broadcastWorkspaceState);
+            this.broadcastWorkspaceState();
+        }
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -224,11 +247,25 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
+    componentDidUpdate(_prevProps, prevState) {
+        if (
+            prevState.activeWorkspace !== this.state.activeWorkspace ||
+            prevState.closed_windows !== this.state.closed_windows ||
+            prevState.workspaces !== this.state.workspaces
+        ) {
+            this.broadcastWorkspaceState();
+        }
+    }
+
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
+            window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
+        }
     }
 
     checkForNewFolders = () => {
@@ -1041,7 +1078,15 @@ export class Desktop extends Component {
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input
+                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        aria-label="Folder name"
+                    />
                 </div>
                 <div className="flex">
                     <button
@@ -1066,7 +1111,6 @@ export class Desktop extends Component {
     };
 
     render() {
-        const workspaceSummaries = this.getWorkspaceSummaries();
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -1103,9 +1147,6 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
-                    workspaces={workspaceSummaries}
-                    activeWorkspace={this.state.activeWorkspace}
-                    onSelectWorkspace={this.switchWorkspace}
                 />
 
                 {/* Desktop Apps */}
