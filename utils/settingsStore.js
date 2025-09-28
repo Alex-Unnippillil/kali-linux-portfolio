@@ -7,6 +7,9 @@ const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
   useKaliWallpaper: false,
+  randomDailyWallpaper: false,
+  lastRandomWallpaper: null,
+  lastRandomWallpaperDate: null,
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -37,6 +40,9 @@ export async function setWallpaper(wallpaper) {
   await set('bg-image', wallpaper);
 }
 
+const RANDOM_DAILY_KEY = 'random-daily-wallpaper';
+const LAST_RANDOM_KEY = 'random-daily-wallpaper-last';
+
 export async function getUseKaliWallpaper() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.useKaliWallpaper;
   const stored = window.localStorage.getItem('use-kali-wallpaper');
@@ -46,6 +52,73 @@ export async function getUseKaliWallpaper() {
 export async function setUseKaliWallpaper(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('use-kali-wallpaper', value ? 'true' : 'false');
+}
+
+export async function getRandomDailyWallpaper() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.randomDailyWallpaper;
+  const stored = window.localStorage.getItem(RANDOM_DAILY_KEY);
+  return stored === null ? DEFAULT_SETTINGS.randomDailyWallpaper : stored === 'true';
+}
+
+export async function setRandomDailyWallpaper(value) {
+  if (typeof window === 'undefined') return;
+  if (!value) {
+    window.localStorage.removeItem(RANDOM_DAILY_KEY);
+    return;
+  }
+  window.localStorage.setItem(RANDOM_DAILY_KEY, value ? 'true' : 'false');
+}
+
+export async function getLastRandomDailyWallpaper() {
+  if (typeof window === 'undefined') {
+    return {
+      wallpaper: DEFAULT_SETTINGS.lastRandomWallpaper,
+      date: DEFAULT_SETTINGS.lastRandomWallpaperDate,
+    };
+  }
+  const stored = window.localStorage.getItem(LAST_RANDOM_KEY);
+  if (!stored) {
+    return {
+      wallpaper: DEFAULT_SETTINGS.lastRandomWallpaper,
+      date: DEFAULT_SETTINGS.lastRandomWallpaperDate,
+    };
+  }
+  try {
+    const parsed = JSON.parse(stored);
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('Invalid format');
+    }
+    const { wallpaper, date } = parsed;
+    return {
+      wallpaper: typeof wallpaper === 'string' ? wallpaper : DEFAULT_SETTINGS.lastRandomWallpaper,
+      date: typeof date === 'string' ? date : DEFAULT_SETTINGS.lastRandomWallpaperDate,
+    };
+  } catch (error) {
+    console.warn('Failed to parse last random wallpaper data', error);
+    return {
+      wallpaper: DEFAULT_SETTINGS.lastRandomWallpaper,
+      date: DEFAULT_SETTINGS.lastRandomWallpaperDate,
+    };
+  }
+}
+
+export async function setLastRandomDailyWallpaper(value) {
+  if (typeof window === 'undefined') return;
+  if (!value || (!value.wallpaper && !value.date)) {
+    window.localStorage.removeItem(LAST_RANDOM_KEY);
+    return;
+  }
+  try {
+    window.localStorage.setItem(
+      LAST_RANDOM_KEY,
+      JSON.stringify({
+        wallpaper: value.wallpaper || null,
+        date: value.date || null,
+      }),
+    );
+  } catch (error) {
+    console.warn('Failed to persist last random wallpaper', error);
+  }
 }
 
 export async function getDensity() {
@@ -150,6 +223,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem(RANDOM_DAILY_KEY);
+  window.localStorage.removeItem(LAST_RANDOM_KEY);
 }
 
 export async function exportSettings() {
@@ -157,6 +232,8 @@ export async function exportSettings() {
     accent,
     wallpaper,
     useKaliWallpaper,
+    randomDailyWallpaper,
+    lastRandomDaily,
     density,
     reducedMotion,
     fontScale,
@@ -169,6 +246,8 @@ export async function exportSettings() {
     getAccent(),
     getWallpaper(),
     getUseKaliWallpaper(),
+    getRandomDailyWallpaper(),
+    getLastRandomDailyWallpaper(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -191,6 +270,9 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    randomDailyWallpaper,
+    lastRandomWallpaper: lastRandomDaily.wallpaper,
+    lastRandomWallpaperDate: lastRandomDaily.date,
     theme,
   });
 }
@@ -208,6 +290,9 @@ export async function importSettings(json) {
     accent,
     wallpaper,
     useKaliWallpaper,
+    randomDailyWallpaper,
+    lastRandomWallpaper,
+    lastRandomWallpaperDate,
     density,
     reducedMotion,
     fontScale,
@@ -221,6 +306,13 @@ export async function importSettings(json) {
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
+  if (randomDailyWallpaper !== undefined) await setRandomDailyWallpaper(randomDailyWallpaper);
+  if (lastRandomWallpaper !== undefined || lastRandomWallpaperDate !== undefined) {
+    await setLastRandomDailyWallpaper({
+      wallpaper: lastRandomWallpaper,
+      date: lastRandomWallpaperDate,
+    });
+  }
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);

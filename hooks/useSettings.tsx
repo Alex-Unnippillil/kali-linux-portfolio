@@ -6,6 +6,10 @@ import {
   setWallpaper as saveWallpaper,
   getUseKaliWallpaper as loadUseKaliWallpaper,
   setUseKaliWallpaper as saveUseKaliWallpaper,
+  getRandomDailyWallpaper as loadRandomDailyWallpaper,
+  setRandomDailyWallpaper as saveRandomDailyWallpaper,
+  getLastRandomDailyWallpaper as loadLastRandomDailyWallpaper,
+  setLastRandomDailyWallpaper as saveLastRandomDailyWallpaper,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -25,6 +29,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import wallpaperManifest from '../public/wallpapers/manifest.json';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -58,6 +63,8 @@ interface SettingsContextValue {
   wallpaper: string;
   bgImageName: string;
   useKaliWallpaper: boolean;
+  randomDailyWallpaper: boolean;
+  lastRandomWallpaper: string | null;
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -70,6 +77,7 @@ interface SettingsContextValue {
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
+  setRandomDailyWallpaper: (value: boolean) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -86,6 +94,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
+  randomDailyWallpaper: defaults.randomDailyWallpaper,
+  lastRandomWallpaper: defaults.lastRandomWallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -98,6 +108,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
+  setRandomDailyWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
@@ -109,10 +120,40 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setTheme: () => {},
 });
 
+interface WallpaperManifestItem {
+  id: string;
+  file?: string;
+  name?: string;
+}
+
+interface WallpaperManifestData {
+  items?: WallpaperManifestItem[];
+}
+
+const manifestData = wallpaperManifest as WallpaperManifestData;
+const WALLPAPER_IDS = Array.isArray(manifestData.items)
+  ? (manifestData.items as WallpaperManifestItem[]).map((item) => item.id)
+  : [];
+
+const getWallpaperOverride = () => {
+  if (typeof document === 'undefined') return null;
+  return document.documentElement.getAttribute('data-wallpaper-override');
+};
+
+const formatLocalDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
+  const [randomDailyWallpaper, setRandomDailyWallpaper] = useState<boolean>(defaults.randomDailyWallpaper);
+  const [lastRandomWallpaper, setLastRandomWallpaper] = useState<string | null>(defaults.lastRandomWallpaper);
+  const [lastRandomWallpaperDate, setLastRandomWallpaperDate] = useState<string | null>(defaults.lastRandomWallpaperDate);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -123,12 +164,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const [wallpaperOverride, setWallpaperOverride] = useState<string | null>(null);
+  const [randomWallpaperTick, setRandomWallpaperTick] = useState<number>(0);
 
   useEffect(() => {
     (async () => {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
       setUseKaliWallpaper(await loadUseKaliWallpaper());
+      setRandomDailyWallpaper(await loadRandomDailyWallpaper());
+      const lastRandom = await loadLastRandomDailyWallpaper();
+      setLastRandomWallpaper(lastRandom.wallpaper ?? defaults.lastRandomWallpaper);
+      setLastRandomWallpaperDate(lastRandom.date ?? defaults.lastRandomWallpaperDate);
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -140,6 +187,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setTheme(loadTheme());
     })();
   }, []);
+
+  useEffect(() => {
+    saveRandomDailyWallpaper(randomDailyWallpaper);
+  }, [randomDailyWallpaper]);
+
+  useEffect(() => {
+    saveLastRandomDailyWallpaper({
+      wallpaper: lastRandomWallpaper,
+      date: lastRandomWallpaperDate,
+    });
+  }, [lastRandomWallpaper, lastRandomWallpaperDate]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -169,6 +227,68 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveUseKaliWallpaper(useKaliWallpaper);
   }, [useKaliWallpaper]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const applyOverride = () => {
+      setWallpaperOverride(getWallpaperOverride());
+    };
+    applyOverride();
+    const observer = new MutationObserver(applyOverride);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-wallpaper-override'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!randomDailyWallpaper || wallpaperOverride) {
+      return;
+    }
+    if (!WALLPAPER_IDS.length) return;
+
+    const now = new Date();
+    const todayKey = formatLocalDate(now);
+
+    let nextWallpaper = lastRandomWallpaper;
+    const needsNewSelection =
+      !nextWallpaper ||
+      lastRandomWallpaperDate !== todayKey ||
+      !WALLPAPER_IDS.includes(nextWallpaper);
+
+    if (needsNewSelection) {
+      const randomIndex = Math.floor(Math.random() * WALLPAPER_IDS.length);
+      const candidate = WALLPAPER_IDS[randomIndex];
+      nextWallpaper = candidate;
+      if (candidate !== lastRandomWallpaper) {
+        setLastRandomWallpaper(candidate);
+      }
+      if (lastRandomWallpaperDate !== todayKey) {
+        setLastRandomWallpaperDate(todayKey);
+      }
+    }
+
+    if (nextWallpaper && !useKaliWallpaper && wallpaper !== nextWallpaper) {
+      setWallpaper(nextWallpaper);
+    }
+
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const msUntilNextDay = nextMidnight.getTime() - now.getTime();
+    const timeout = window.setTimeout(() => {
+      setRandomWallpaperTick((tick) => tick + 1);
+    }, msUntilNextDay);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    randomDailyWallpaper,
+    wallpaperOverride,
+    lastRandomWallpaper,
+    lastRandomWallpaperDate,
+    wallpaper,
+    useKaliWallpaper,
+    randomWallpaperTick,
+  ]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -250,7 +370,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
-  const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+  const bgImageName = wallpaperOverride
+    ? wallpaperOverride
+    : useKaliWallpaper
+      ? 'kali-gradient'
+      : wallpaper;
 
   return (
     <SettingsContext.Provider
@@ -259,6 +383,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         wallpaper,
         bgImageName,
         useKaliWallpaper,
+        randomDailyWallpaper,
+        lastRandomWallpaper,
         density,
         reducedMotion,
         fontScale,
@@ -271,6 +397,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
+        setRandomDailyWallpaper,
         setDensity,
         setReducedMotion,
         setFontScale,

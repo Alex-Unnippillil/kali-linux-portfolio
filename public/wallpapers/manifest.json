@@ -1,0 +1,14 @@
+{
+  "collection": "kali-dragon",
+  "version": 1,
+  "items": [
+    { "id": "wall-1", "file": "wall-1.webp", "name": "Kali Dragon Aurora" },
+    { "id": "wall-2", "file": "wall-2.webp", "name": "Kali Dragon Storm" },
+    { "id": "wall-3", "file": "wall-3.webp", "name": "Kali Dragon Horizon" },
+    { "id": "wall-4", "file": "wall-4.webp", "name": "Kali Dragon Pulse" },
+    { "id": "wall-5", "file": "wall-5.webp", "name": "Kali Dragon Prism" },
+    { "id": "wall-6", "file": "wall-6.webp", "name": "Kali Dragon Midnight" },
+    { "id": "wall-7", "file": "wall-7.webp", "name": "Kali Dragon Ember" },
+    { "id": "wall-8", "file": "wall-8.webp", "name": "Kali Dragon Flux" }
+  ]
+}
