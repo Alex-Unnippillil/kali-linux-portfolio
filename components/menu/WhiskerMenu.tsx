@@ -6,6 +6,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
+import { FAVORITES_CHANGED_EVENT, getStoredFavoriteIds } from '../../utils/favoritesStorage';
 
 type AppMeta = {
   id: string;
@@ -153,6 +154,8 @@ const WhiskerMenu: React.FC = () => {
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [storedFavoriteIds, setStoredFavoriteIds] = useState<string[]>([]);
+  const [hasStoredFavorites, setHasStoredFavorites] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -162,7 +165,38 @@ const WhiskerMenu: React.FC = () => {
 
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const loadStoredFavorites = useCallback(() => {
+    const { ids, hasStoredValue } = getStoredFavoriteIds();
+    setStoredFavoriteIds(ids);
+    setHasStoredFavorites(hasStoredValue);
+  }, []);
+
+  const appMap = useMemo(() => new Map(allApps.map(app => [app.id, app] as const)), [allApps]);
+
+  const favoriteApps = useMemo(() => {
+    if (hasStoredFavorites) {
+      return storedFavoriteIds
+        .map(appId => appMap.get(appId))
+        .filter((app): app is AppMeta => Boolean(app));
+    }
+    return allApps.filter(a => a.favourite);
+  }, [allApps, appMap, hasStoredFavorites, storedFavoriteIds]);
+
+  useEffect(() => {
+    loadStoredFavorites();
+  }, [loadStoredFavorites]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleFavoritesChanged = () => {
+      loadStoredFavorites();
+    };
+    window.addEventListener(FAVORITES_CHANGED_EVENT, handleFavoritesChanged);
+    return () => {
+      window.removeEventListener(FAVORITES_CHANGED_EVENT, handleFavoritesChanged);
+    };
+  }, [loadStoredFavorites]);
+
   useEffect(() => {
     setRecentIds(readRecentAppIds());
   }, []);
@@ -173,14 +207,11 @@ const WhiskerMenu: React.FC = () => {
   }, [isOpen]);
 
   const recentApps = useMemo(() => {
-    const mapById = new Map(allApps.map(app => [app.id, app] as const));
     return recentIds
-      .map(appId => mapById.get(appId))
+      .map(appId => appMap.get(appId))
       .filter((app): app is AppMeta => Boolean(app));
-  }, [allApps, recentIds]);
+  }, [appMap, recentIds]);
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
-    const mapById = new Map(allApps.map(app => [app.id, app] as const));
-
     return CATEGORY_DEFINITIONS.map((definition) => {
       let appsForCategory: AppMeta[] = [];
       switch (definition.type) {
@@ -195,7 +226,7 @@ const WhiskerMenu: React.FC = () => {
           break;
         case 'ids':
           appsForCategory = definition.appIds
-            .map(appId => mapById.get(appId))
+            .map(appId => appMap.get(appId))
             .filter((app): app is AppMeta => Boolean(app));
           break;
         default:
@@ -206,7 +237,7 @@ const WhiskerMenu: React.FC = () => {
         apps: appsForCategory,
       } as CategoryConfig;
     });
-  }, [allApps, favoriteApps, recentApps]);
+  }, [allApps, appMap, favoriteApps, recentApps]);
 
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);
