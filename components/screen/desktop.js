@@ -24,11 +24,15 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { SettingsContext } from '../../hooks/useSettings';
 
 export class Desktop extends Component {
-    constructor() {
-        super();
-        this.workspaceCount = 4;
+    static contextType = SettingsContext;
+
+    constructor(props, context) {
+        super(props, context);
+        const initialWorkspaceCount = this.getWorkspaceCountFromContext(context);
+        this.workspaceCount = initialWorkspaceCount;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
         this.workspaceKeys = new Set([
@@ -65,12 +69,26 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
             activeWorkspace: 0,
-            workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
-                id: index,
-                label: `Workspace ${index + 1}`,
-            })),
+            workspaces: this.createWorkspaceList(this.workspaceCount),
         }
     }
+
+    getWorkspaceCountFromContext(context = this.context) {
+        const count = context && typeof context.workspaceCount === 'number'
+            ? context.workspaceCount
+            : 4;
+        if (!Number.isFinite(count) || count < 1) {
+            return 1;
+        }
+        return Math.max(1, Math.round(count));
+    }
+
+    createWorkspaceList = (count) => {
+        return Array.from({ length: count }, (_, index) => ({
+            id: index,
+            label: `Workspace ${index + 1}`,
+        }));
+    };
 
     createEmptyWorkspaceState = () => ({
         focused_windows: {},
@@ -187,6 +205,68 @@ export class Desktop extends Component {
         const next = (activeWorkspace + direction + count) % count;
         this.switchWorkspace(next);
     };
+
+    applyWorkspaceCount = (requestedCount) => {
+        const normalized = Math.max(1, Math.round(Number(requestedCount) || 0));
+        if (normalized === this.workspaceCount) return;
+
+        const baseState = {
+            focused_windows: { ...this.state.focused_windows },
+            closed_windows: { ...this.state.closed_windows },
+            overlapped_windows: { ...this.state.overlapped_windows },
+            minimized_windows: { ...this.state.minimized_windows },
+            window_positions: { ...this.state.window_positions },
+            hideSideBar: this.state.hideSideBar,
+        };
+        this.updateWorkspaceSnapshots(baseState);
+
+        const previousStacks = this.workspaceStacks.map((stack) => [...stack]);
+        const previousSnapshots = this.workspaceSnapshots.map((snapshot) =>
+            snapshot ? this.cloneWorkspaceState(snapshot) : this.createEmptyWorkspaceState()
+        );
+
+        this.workspaceCount = normalized;
+        this.workspaceStacks = Array.from({ length: normalized }, (_, index) =>
+            previousStacks[index] ? [...previousStacks[index]] : []
+        );
+        this.workspaceSnapshots = Array.from({ length: normalized }, (_, index) =>
+            previousSnapshots[index]
+                ? this.cloneWorkspaceState(previousSnapshots[index])
+                : this.createEmptyWorkspaceState()
+        );
+
+        const workspaces = this.createWorkspaceList(normalized);
+        const previousActive = this.state.activeWorkspace;
+
+        this.setState((prevState) => {
+            let activeWorkspace = prevState.activeWorkspace;
+            if (activeWorkspace >= normalized) {
+                activeWorkspace = normalized - 1;
+            }
+            const nextState = { workspaces, activeWorkspace };
+            if (activeWorkspace !== prevState.activeWorkspace) {
+                const snapshot = this.workspaceSnapshots[activeWorkspace] || this.createEmptyWorkspaceState();
+                nextState.focused_windows = { ...snapshot.focused_windows };
+                nextState.closed_windows = { ...snapshot.closed_windows };
+                nextState.overlapped_windows = { ...snapshot.overlapped_windows };
+                nextState.minimized_windows = { ...snapshot.minimized_windows };
+                nextState.window_positions = { ...snapshot.window_positions };
+                nextState.hideSideBar = snapshot.hideSideBar ?? false;
+            }
+            return nextState;
+        }, () => {
+            if (this.state.activeWorkspace !== previousActive) {
+                this.giveFocusToLastApp();
+            }
+        });
+    };
+
+    componentDidUpdate() {
+        const desiredCount = this.getWorkspaceCountFromContext();
+        if (desiredCount !== this.workspaceCount) {
+            this.applyWorkspaceCount(desiredCount);
+        }
+    }
 
     componentDidMount() {
         // google analytics
@@ -1106,6 +1186,7 @@ export class Desktop extends Component {
                     workspaces={workspaceSummaries}
                     activeWorkspace={this.state.activeWorkspace}
                     onSelectWorkspace={this.switchWorkspace}
+                    onCycleWorkspace={this.shiftWorkspace}
                 />
 
                 {/* Desktop Apps */}

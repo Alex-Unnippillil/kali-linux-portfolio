@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  workspaceCount: 4,
 };
 
 export async function getAccent() {
@@ -135,6 +136,22 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getWorkspaceCount() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.workspaceCount;
+  const stored = window.localStorage.getItem('workspace-count');
+  const parsed = stored ? parseInt(stored, 10) : NaN;
+  if (Number.isNaN(parsed) || parsed < 1) {
+    return DEFAULT_SETTINGS.workspaceCount;
+  }
+  return parsed;
+}
+
+export async function setWorkspaceCount(value) {
+  if (typeof window === 'undefined') return;
+  const clamped = Math.max(1, Math.round(value));
+  window.localStorage.setItem('workspace-count', String(clamped));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +167,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('workspace-count');
 }
 
 export async function exportSettings() {
@@ -165,6 +183,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    workspaceCount,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +196,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getWorkspaceCount(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +212,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    workspaceCount,
   });
 }
 
@@ -217,6 +238,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    workspaceCount,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -229,6 +251,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (workspaceCount !== undefined) await setWorkspaceCount(workspaceCount);
   if (theme !== undefined) setTheme(theme);
 }
 
