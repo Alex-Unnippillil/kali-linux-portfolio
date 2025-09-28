@@ -149,6 +149,7 @@ const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasOpenRef = useRef(false);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
 
   const [query, setQuery] = useState('');
@@ -159,6 +160,7 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -235,8 +237,13 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     if (!isVisible) return;
-    setHighlight(0);
-  }, [isVisible, category, query]);
+    setHighlight(current => {
+      if (currentApps.length === 0) {
+        return 0;
+      }
+      return Math.min(current, currentApps.length - 1);
+    });
+  }, [currentApps.length, isVisible]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -306,10 +313,39 @@ const WhiskerMenu: React.FC = () => {
         hideMenu();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        setHighlight(h => {
+          if (currentApps.length === 0) {
+            return 0;
+          }
+          return Math.min(h + 1, currentApps.length - 1);
+        });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlight(h => Math.max(h - 1, 0));
+        setHighlight(h => {
+          if (currentApps.length === 0) {
+            return 0;
+          }
+          return Math.max(h - 1, 0);
+        });
+      } else if (e.key === 'PageDown') {
+        e.preventDefault();
+        setHighlight(h => {
+          if (currentApps.length === 0) {
+            return 0;
+          }
+          return Math.min(h + 10, currentApps.length - 1);
+        });
+      } else if (e.key === 'PageUp') {
+        e.preventDefault();
+        setHighlight(h => {
+          if (currentApps.length === 0) {
+            return 0;
+          }
+          return Math.max(h - 10, 0);
+        });
+      } else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault();
+        handleCategoryNavigation(e.key === 'ArrowRight' ? 1 : -1);
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const app = currentApps[highlight];
@@ -318,7 +354,7 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu, handleCategoryNavigation]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -332,11 +368,64 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [hideMenu, isVisible]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      if (wasOpenRef.current) {
+        buttonRef.current?.focus();
+      }
+    } else {
+      requestAnimationFrame(() => {
+        if (!isOpen) return;
+        const active = document.activeElement;
+        const input = searchInputRef.current;
+        if (input && (!active || !menuRef.current?.contains(active))) {
+          input.focus();
+        }
+      });
+    }
+
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
+
   useEffect(() => () => {
     if (hideTimer.current) {
       clearTimeout(hideTimer.current);
     }
   }, []);
+
+  const getFocusableElements = useCallback(() => {
+    if (!menuRef.current) return [] as HTMLElement[];
+    const selectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    return Array.from(menuRef.current.querySelectorAll<HTMLElement>(selectors)).filter(
+      el => !el.hasAttribute('disabled') && el.tabIndex !== -1 && !el.getAttribute('aria-hidden'),
+    );
+  }, []);
+
+  const handleMenuKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const current = document.activeElement as HTMLElement | null;
+      const currentIndex = current ? focusable.indexOf(current) : -1;
+      let nextIndex = currentIndex;
+
+      if (event.shiftKey) {
+        nextIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
+      } else {
+        nextIndex = currentIndex === focusable.length - 1 ? 0 : currentIndex + 1;
+      }
+
+      event.preventDefault();
+      focusable[nextIndex]?.focus();
+    },
+    [getFocusableElements],
+  );
 
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
@@ -345,7 +434,7 @@ const WhiskerMenu: React.FC = () => {
     }
   };
 
-  const handleCategoryNavigation = (direction: 1 | -1) => {
+  const handleCategoryNavigation = useCallback((direction: 1 | -1) => {
     setCategoryHighlight((current) => {
       const nextIndex = (current + direction + categoryConfigs.length) % categoryConfigs.length;
       const nextCategory = categoryConfigs[nextIndex];
@@ -355,7 +444,7 @@ const WhiskerMenu: React.FC = () => {
       }
       return nextIndex;
     });
-  };
+  }, [categoryConfigs]);
 
   const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowDown') {
@@ -398,6 +487,7 @@ const WhiskerMenu: React.FC = () => {
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
+          onKeyDown={handleMenuKeyDown}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               hideMenu();
@@ -458,6 +548,7 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="flex flex-col p-3">
             <input
+              ref={searchInputRef}
               className="mb-3 w-64 rounded bg-black bg-opacity-20 px-2 py-1 focus:outline-none"
 
               placeholder="Search"
