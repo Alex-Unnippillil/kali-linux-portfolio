@@ -34,6 +34,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    simulateZshPrompt,
+    setSimulateZshPrompt,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,6 +86,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.simulateZshPrompt !== undefined)
+        setSimulateZshPrompt(parsed.simulateZshPrompt);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -105,6 +109,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setSimulateZshPrompt(defaults.simulateZshPrompt);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -139,6 +144,14 @@ export default function Settings() {
               <option value="neon">Neon</option>
               <option value="matrix">Matrix</option>
             </select>
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Simulate zsh prompt:</span>
+            <ToggleSwitch
+              checked={simulateZshPrompt}
+              onChange={setSimulateZshPrompt}
+              ariaLabel="Simulate zsh prompt"
+            />
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>

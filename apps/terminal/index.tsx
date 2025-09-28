@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import { useSettings } from '../../hooks/useSettings';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -124,6 +125,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#FFFFFF',
   ];
 
+  const { simulateZshPrompt } = useSettings();
+  const simulateZshPromptRef = useRef(simulateZshPrompt);
+
+  useEffect(() => {
+    simulateZshPromptRef.current = simulateZshPrompt;
+  }, [simulateZshPrompt]);
+
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
@@ -145,13 +153,42 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.writeLine = writeLine;
 
+  const clearInlineSuggestion = useCallback(() => {
+    if (!termRef.current) return;
+    termRef.current.write('\x1b7\x1b[0m\x1b[0K\x1b8');
+  }, []);
+
   const prompt = useCallback(() => {
     if (!termRef.current) return;
-    termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+    clearInlineSuggestion();
+    if (simulateZshPromptRef.current) {
+      termRef.current.writeln(
+        '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+      );
+      termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
+    } else {
+      termRef.current.write('\x1b[32muser@portfolio\x1b[0m:\x1b[34m~\x1b[0m$ ');
+    }
+  }, [clearInlineSuggestion]);
+
+  const updateInlineSuggestion = useCallback(() => {
+    if (!termRef.current) return;
+    clearInlineSuggestion();
+    if (!simulateZshPromptRef.current) return;
+    const current = commandRef.current;
+    if (!current) return;
+    const historySuggestion = [...historyRef.current]
+      .reverse()
+      .find((cmd) => cmd.startsWith(current) && cmd !== current);
+    const registrySuggestion = Object.keys(registryRef.current).find(
+      (cmd) => cmd.startsWith(current) && cmd !== current,
     );
-    termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
-  }, []);
+    const suggestion = historySuggestion || registrySuggestion;
+    if (!suggestion) return;
+    const remainder = suggestion.slice(current.length);
+    if (!remainder) return;
+    termRef.current.write(`\x1b7\x1b[90m${remainder}\x1b[0m\x1b8`);
+  }, [clearInlineSuggestion]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -202,6 +239,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         );
         writeLine(
           'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
+        );
+        writeLine(
+          'Toggle “Simulate zsh prompt” in Settings → Appearance for themed prompts and inline suggestions.',
         );
       },
       ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
@@ -259,39 +299,72 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         const completion = matches[0].slice(current.length);
         termRef.current?.write(completion);
         commandRef.current = matches[0];
+        updateInlineSuggestion();
       } else if (matches.length > 1) {
-        writeLine(matches.join('  '));
+        const hintLine = matches.join('  ');
+        if (simulateZshPromptRef.current) {
+          writeLine(`\x1b[90m${hintLine}\x1b[0m`);
+        } else {
+          writeLine(hintLine);
+        }
         prompt();
         termRef.current?.write(commandRef.current);
+        updateInlineSuggestion();
+      } else {
+        updateInlineSuggestion();
       }
-    }, [prompt, writeLine]);
+    }, [prompt, updateInlineSuggestion, writeLine]);
 
     const handleInput = useCallback(
       (data: string) => {
         for (const ch of data) {
           if (ch === '\r') {
+            clearInlineSuggestion();
             termRef.current?.writeln('');
             runCommand(commandRef.current.trim());
             commandRef.current = '';
             prompt();
+            updateInlineSuggestion();
           } else if (ch === '\u007F') {
             if (commandRef.current.length > 0) {
+              clearInlineSuggestion();
               termRef.current?.write('\b \b');
               commandRef.current = commandRef.current.slice(0, -1);
             }
+            updateInlineSuggestion();
           } else {
             commandRef.current += ch;
             termRef.current?.write(ch);
+            updateInlineSuggestion();
           }
         }
       },
-      [runCommand, prompt],
+      [runCommand, prompt, updateInlineSuggestion, clearInlineSuggestion],
     );
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
   }));
+
+  useEffect(() => {
+    if (!termRef.current) return;
+    clearInlineSuggestion();
+    writeLine(
+      simulateZshPrompt
+        ? 'Simulate zsh prompt enabled — inline suggestions are active.'
+        : 'Simulate zsh prompt disabled — reverting to bash-style prompt.',
+    );
+    prompt();
+    termRef.current.write(commandRef.current);
+    updateInlineSuggestion();
+  }, [
+    simulateZshPrompt,
+    writeLine,
+    prompt,
+    updateInlineSuggestion,
+    clearInlineSuggestion,
+  ]);
 
   useEffect(() => {
     let disposed = false;
@@ -364,9 +437,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               prompt();
               termRef.current.write(match);
               commandRef.current = match;
+              updateInlineSuggestion();
             } else {
               writeLine(`No match: ${q}`);
               prompt();
+              updateInlineSuggestion();
             }
           }
         }
@@ -378,7 +453,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      updateInlineSuggestion,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
