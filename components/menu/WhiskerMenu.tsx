@@ -5,6 +5,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { readRecentAppIds as readStoredRecentAppIds } from '../../utils/recentStorage';
 import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
 
 type AppMeta = {
@@ -28,7 +29,6 @@ type CategoryDefinitionBase = {
 } & CategorySource;
 
 const TRANSITION_DURATION = 180;
-const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
 const CATEGORY_DEFINITIONS = [
@@ -121,29 +121,12 @@ const isCategoryId = (
 ): value is CategoryDefinition['id'] =>
   CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
-type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
+type CategoryConfig = CategoryDefinition & { apps: AppMeta[]; total: number };
 
 const KALI_CATEGORIES = BASE_KALI_CATEGORIES.map((category, index) => ({
   ...category,
   number: String(index + 1).padStart(2, '0'),
 }));
-
-const readRecentAppIds = (): string[] => {
-  try {
-    const stored = safeLocalStorage?.getItem(RECENT_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter((value): value is string => typeof value === 'string');
-  } catch {
-    return [];
-  }
-};
-
 
 const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -153,6 +136,7 @@ const WhiskerMenu: React.FC = () => {
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [appDataVersion, setAppDataVersion] = useState(0);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -162,22 +146,51 @@ const WhiskerMenu: React.FC = () => {
 
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const favoriteApps = useMemo(() => {
+    // tie memoization to metadata mutations without cloning app objects
+    void appDataVersion;
+    return allApps.filter(a => a.favourite);
+  }, [allApps, appDataVersion]);
   useEffect(() => {
-    setRecentIds(readRecentAppIds());
+    setRecentIds(readStoredRecentAppIds());
   }, []);
 
   useEffect(() => {
     if (!isOpen) return;
-    setRecentIds(readRecentAppIds());
+    setRecentIds(readStoredRecentAppIds());
   }, [isOpen]);
 
+  useEffect(() => {
+    const handleRecentUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<string[]>).detail;
+      if (Array.isArray(detail)) {
+        setRecentIds(detail);
+      } else {
+        setRecentIds(readStoredRecentAppIds());
+      }
+    };
+    const handleAppMetaChange = () => {
+      setAppDataVersion(version => version + 1);
+    };
+
+    window.addEventListener('recent-apps-updated', handleRecentUpdate);
+    window.addEventListener('pinned-apps-updated', handleAppMetaChange);
+    window.addEventListener('app-metadata-updated', handleAppMetaChange);
+
+    return () => {
+      window.removeEventListener('recent-apps-updated', handleRecentUpdate);
+      window.removeEventListener('pinned-apps-updated', handleAppMetaChange);
+      window.removeEventListener('app-metadata-updated', handleAppMetaChange);
+    };
+  }, []);
+
   const recentApps = useMemo(() => {
+    void appDataVersion;
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
     return recentIds
       .map(appId => mapById.get(appId))
       .filter((app): app is AppMeta => Boolean(app));
-  }, [allApps, recentIds]);
+  }, [allApps, recentIds, appDataVersion]);
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
 
@@ -204,9 +217,18 @@ const WhiskerMenu: React.FC = () => {
       return {
         ...definition,
         apps: appsForCategory,
-      } as CategoryConfig;
+        total: appsForCategory.length,
+      } satisfies CategoryConfig;
     });
   }, [allApps, favoriteApps, recentApps]);
+
+  const categoryTotals = useMemo(() => {
+    const totals = new Map<CategoryDefinition['id'], number>();
+    categoryConfigs.forEach(cat => {
+      totals.set(cat.id, cat.total);
+    });
+    return totals;
+  }, [categoryConfigs]);
 
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);
@@ -431,7 +453,7 @@ const WhiskerMenu: React.FC = () => {
 
               >
                 <span className="w-8 font-mono text-xs text-gray-300">{String(index + 1).padStart(2, '0')}</span>
-                <span className="flex items-center gap-2">
+                <span className="flex flex-1 items-center gap-2">
                   <Image
                     src={cat.icon}
                     alt=""
@@ -441,6 +463,9 @@ const WhiskerMenu: React.FC = () => {
                     sizes="20px"
                   />
                   <span className="text-sm">{cat.label}</span>
+                </span>
+                <span className="ml-auto rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-200">
+                  {categoryTotals.get(cat.id) ?? 0}
                 </span>
               </button>
             ))}

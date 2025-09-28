@@ -17,6 +17,11 @@ const parseIds = (raw: string | null): RecentId[] => {
   }
 };
 
+const emitRecentUpdate = (ids: RecentId[]): void => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<RecentId[]>('recent-apps-updated', { detail: ids }));
+};
+
 export const seedRecentAppsFromLegacy = (): RecentId[] => {
   if (!safeLocalStorage) return [];
   const currentRaw = safeLocalStorage.getItem(RECENT_STORAGE_KEY);
@@ -51,28 +56,39 @@ export const readRecentAppIds = (): RecentId[] => {
 };
 
 export const writeRecentAppIds = (ids: RecentId[]): void => {
-  if (!safeLocalStorage) return;
+  const normalized = ids
+    .filter((id): id is RecentId => typeof id === 'string')
+    .slice(0, MAX_RECENT_ENTRIES);
+  if (!safeLocalStorage) {
+    emitRecentUpdate(normalized);
+    return;
+  }
   try {
-    safeLocalStorage.setItem(
-      RECENT_STORAGE_KEY,
-      JSON.stringify(ids.filter((id): id is RecentId => typeof id === 'string').slice(0, MAX_RECENT_ENTRIES))
-    );
+    safeLocalStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(normalized));
   } catch {
     // ignore storage failures
   }
+  emitRecentUpdate(normalized);
 };
 
 export const addRecentApp = (id: RecentId): RecentId[] => {
-  if (!safeLocalStorage || !id) return [];
+  if (!id) return [];
 
   const current = seedRecentAppsFromLegacy();
   const updated = [id, ...current.filter(existingId => existingId !== id)].slice(0, MAX_RECENT_ENTRIES);
+
+  if (!safeLocalStorage) {
+    emitRecentUpdate(updated);
+    return updated;
+  }
 
   try {
     safeLocalStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(updated));
   } catch {
     // ignore storage failures
   }
+
+  emitRecentUpdate(updated);
 
   return updated;
 };

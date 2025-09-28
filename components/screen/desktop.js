@@ -25,6 +25,11 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const emitPinnedAppsUpdate = (ids, payload = {}) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('pinned-apps-updated', { detail: { ids, ...payload } }));
+};
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -916,6 +921,7 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        emitPinnedAppsUpdate(pinnedApps, { id, pinned: true })
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -930,6 +936,7 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         pinnedApps = pinnedApps.filter(appId => appId !== id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        emitPinnedAppsUpdate(pinnedApps, { id, pinned: false })
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -1041,7 +1048,7 @@ export class Desktop extends Component {
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="Folder name" />
                 </div>
                 <div className="flex">
                     <button
