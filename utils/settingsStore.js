@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  simulateZshPrompt: true,
 };
 
 export async function getAccent() {
@@ -135,6 +136,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getSimulateZshPrompt() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.simulateZshPrompt;
+  const stored = window.localStorage.getItem('simulate-zsh-prompt');
+  return stored === null ? DEFAULT_SETTINGS.simulateZshPrompt : stored === 'true';
+}
+
+export async function setSimulateZshPrompt(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('simulate-zsh-prompt', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +162,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('simulate-zsh-prompt');
 }
 
 export async function exportSettings() {
@@ -165,6 +178,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    simulateZshPrompt,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +191,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getSimulateZshPrompt(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +207,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    simulateZshPrompt,
   });
 }
 
@@ -217,6 +233,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    simulateZshPrompt,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -229,6 +246,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (simulateZshPrompt !== undefined)
+    await setSimulateZshPrompt(simulateZshPrompt);
   if (theme !== undefined) setTheme(theme);
 }
 
