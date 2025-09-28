@@ -18,18 +18,21 @@ const QuickSettings = ({ open }: Props) => {
   }, [theme]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduce-motion', reduceMotion);
+    document.documentElement.classList.toggle('reduced-motion', reduceMotion);
   }, [reduceMotion]);
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute right-3 top-9 z-50 w-56 rounded-md py-4 shadow-lg surface-popover ${
         open ? '' : 'hidden'
       }`}
+      role="dialog"
+      aria-label="Quick settings"
     >
       <div className="px-4 pb-2">
         <button
-          className="w-full flex justify-between"
+          className="flex w-full items-center justify-between rounded px-2 py-1 text-sm transition-colors duration-[var(--motion-fast)] hover:bg-[color:color-mix(in_srgb,var(--color-text)_12%,transparent)] focus-visible:bg-[color:color-mix(in_srgb,var(--color-text)_18%,transparent)]"
+          aria-pressed={theme === 'dark'}
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
         >
           <span>Theme</span>
