@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { VirtuosoGrid } from 'react-virtuoso';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
 
@@ -27,6 +28,12 @@ const PopularModules: React.FC = () => {
   const [logFilter, setLogFilter] = useState<string>('');
 
   const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
+  const handleSelect = useCallback((m: Module) => {
+    setSelected(m);
+    setOptions(Object.fromEntries(m.options.map((o) => [o.name, ''])));
+    setLogFilter('');
+  }, []);
+
   let listed = filter ? modules.filter((m) => m.tags.includes(filter)) : modules;
   listed = search
     ? listed.filter(
@@ -36,11 +43,27 @@ const PopularModules: React.FC = () => {
       )
     : listed;
 
-  const handleSelect = (m: Module) => {
-    setSelected(m);
-    setOptions(Object.fromEntries(m.options.map((o) => [o.name, ''])));
-    setLogFilter('');
-  };
+  const shouldVirtualize = listed.length > 24;
+
+  const renderModuleCard = useCallback(
+    (m: Module) => (
+      <button
+        onClick={() => handleSelect(m)}
+        className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      >
+        <h3 className="font-semibold">{m.name}</h3>
+        <p className="text-sm text-gray-300">{m.description}</p>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {m.tags.map((tag) => (
+            <span key={tag} className="px-2 py-0.5 text-xs rounded bg-gray-700">
+              {tag}
+            </span>
+          ))}
+        </div>
+      </button>
+    ),
+    [handleSelect]
+  );
 
   const commandPreview = selected
     ? `${selected.id}${Object.entries(options)
@@ -203,6 +226,7 @@ const PopularModules: React.FC = () => {
         placeholder="Search modules"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        aria-label="Search modules"
         className="w-full p-2 text-black rounded"
       />
       <div className="flex flex-wrap gap-2">
@@ -226,28 +250,23 @@ const PopularModules: React.FC = () => {
           </button>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {listed.map((m) => (
-          <button
-            key={m.id}
-            onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            <h3 className="font-semibold">{m.name}</h3>
-            <p className="text-sm text-gray-300">{m.description}</p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {m.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 text-xs rounded bg-gray-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </button>
-        ))}
-      </div>
+      {shouldVirtualize ? (
+        <VirtuosoGrid
+          useWindowScroll
+          data={listed}
+          overscan={300}
+          listClassName="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          itemClassName="contents"
+          computeItemKey={(_, item) => item.id}
+          itemContent={(_, item) => renderModuleCard(item)}
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {listed.map((m) => (
+            <React.Fragment key={m.id}>{renderModuleCard(m)}</React.Fragment>
+          ))}
+        </div>
+      )}
       {selected ? (
         <div className="space-y-2">
           <form className="space-y-2">
@@ -289,6 +308,7 @@ const PopularModules: React.FC = () => {
                 type="text"
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
+                aria-label="Filter logs"
                 className="w-full p-1 mt-1 text-black rounded"
               />
             </label>
