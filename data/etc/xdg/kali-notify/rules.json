@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "defaultPriority": "normal",
+  "rules": [
+    {
+      "id": "hint-urgency-critical",
+      "description": "Promote any notification carrying a D-Bus urgency hint of 2 or \"critical\".",
+      "priority": "critical",
+      "match": {
+        "hints": {
+          "urgency": [2, "2", "critical"],
+          "urgency-level": ["critical"]
+        }
+      }
+    },
+    {
+      "id": "hint-urgency-high",
+      "description": "Urgency hint 1 is elevated above the default priority.",
+      "priority": "high",
+      "match": {
+        "hints": {
+          "urgency": [1, "1", "high"],
+          "urgency-level": ["high"]
+        }
+      }
+    },
+    {
+      "id": "security-tool-failure",
+      "description": "Security simulators reporting failed actions should bubble up for review.",
+      "priority": "high",
+      "match": {
+        "appId": ["openvas", "nmap", "metasploit", "msfconsole"],
+        "bodyContains": ["failed", "error", "critical", "exploit", "vulnerability"]
+      }
+    },
+    {
+      "id": "security-tool-complete",
+      "description": "Successful scan completions stay visible but avoid critical alert styling.",
+      "priority": "normal",
+      "match": {
+        "appId": ["openvas", "nmap", "metasploit", "msfconsole"],
+        "bodyContains": ["completed", "finished", "report", "exported"]
+      }
+    },
+    {
+      "id": "noisy-cli-output",
+      "description": "Shell utilities can emit noisy stdout dumps that should fold away by default.",
+      "priority": "low",
+      "match": {
+        "appId": ["terminal", "console", "shell", "logs", "tool-noisy"],
+        "bodyContains": ["stdout", "stderr", "log", "debug", "trace", "line"]
+      }
+    },
+    {
+      "id": "chatty-background",
+      "description": "Background daemons that ping frequently stay collapsed unless promoted by hints.",
+      "priority": "low",
+      "match": {
+        "appId": ["update-service", "sync-daemon", "telemetry"],
+        "titleContains": ["heartbeat", "status", "ping"]
+      }
+    }
+  ]
+}
