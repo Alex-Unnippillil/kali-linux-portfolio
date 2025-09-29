@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import VpnWizard from "./components/network/VpnWizard";
 
 export default function Settings() {
   const {
@@ -41,6 +42,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "network", label: "Network" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -310,18 +312,23 @@ export default function Settings() {
           </div>
         </>
       )}
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          aria-label="Import settings file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handleImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
+      {activeTab === "network" && (
+        <div className="px-4 py-6">
+          <VpnWizard />
+        </div>
+      )}
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        aria-label="Import settings file"
+        onChange={(e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) handleImport(file);
+          e.target.value = "";
+        }}
+        className="hidden"
+      />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );
