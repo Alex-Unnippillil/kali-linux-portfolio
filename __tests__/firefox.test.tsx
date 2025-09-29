@@ -12,9 +12,9 @@ describe('Firefox app', () => {
   it('renders the default address', () => {
     render(<Firefox />);
     const input = screen.getByLabelText('Address');
-    expect(input).toHaveValue('https://developer.mozilla.org/');
+    expect(input).toHaveValue('https://www.kali.org/docs/');
     const frame = screen.getByTitle('Firefox');
-    expect(frame).toHaveAttribute('src', 'https://developer.mozilla.org/');
+    expect(frame).toHaveAttribute('src', 'https://www.kali.org/docs/');
   });
 
   it('navigates to entered urls', async () => {
@@ -27,5 +27,15 @@ describe('Firefox app', () => {
     const frame = await screen.findByTitle('Firefox');
     expect(frame).toHaveAttribute('src', 'https://example.com/');
     expect(localStorage.getItem('firefox:last-url')).toBe('https://example.com/');
+  });
+
+  it('opens bookmarks when clicked', async () => {
+    const user = userEvent.setup();
+    render(<Firefox />);
+    const bookmark = await screen.findByRole('button', { name: 'Kali NetHunter' });
+    await user.click(bookmark);
+    const frame = await screen.findByTitle('Firefox');
+    expect(frame).toHaveAttribute('src', 'https://www.kali.org/get-kali/#kali-platforms');
+    expect(localStorage.getItem('firefox:last-url')).toBe('https://www.kali.org/get-kali/#kali-platforms');
   });
 });
