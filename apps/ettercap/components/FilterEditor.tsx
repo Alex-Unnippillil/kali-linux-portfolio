@@ -1,58 +1,41 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
+import { DEFAULT_SAMPLES, SampleFilter } from '../constants';
+import { useEttercapFilterState } from './FilterStateProvider';
 
-interface SampleFilter {
-  name: string;
-  code: string;
-}
+const lineHeight = '1.5rem';
 
-const DEFAULT_SAMPLES: SampleFilter[] = [
-  { name: 'Drop DNS', code: 'drop DNS' },
-  { name: 'Replace example.com', code: 'replace example.com test.com' },
-];
-
-const EXAMPLE_PACKETS = [
-  'DNS query example.com',
-  'HTTP GET /index.html',
-  'SSH handshake from 10.0.0.1',
-];
-
-const applyFilters = (text: string, packets: string[]) => {
-  let result = packets;
-  text
-    .split(/\n+/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .forEach((line) => {
-      const [cmd, ...rest] = line.split(/\s+/);
-      if (cmd === 'drop') {
-        const pattern = rest.join(' ');
-        result = result.filter((p) => !p.includes(pattern));
-      } else if (cmd === 'replace') {
-        const [pattern, replacement] = rest;
-        if (pattern && replacement !== undefined) {
-          result = result.map((p) => p.split(pattern).join(replacement));
-        }
-      }
-    });
-  return result;
+const buildLineWarnings = (messages: { line: number; message: string }[]) => {
+  const map = new Map<number, string[]>();
+  messages.forEach((message) => {
+    const lineMessages = map.get(message.line) ?? [];
+    lineMessages.push(message.message);
+    map.set(message.line, lineMessages);
+  });
+  return map;
 };
 
 export default function FilterEditor() {
+  const { filterText, setFilterText, lintMessages, isLinting } =
+    useEttercapFilterState();
   const [samples, setSamples] = usePersistentState<SampleFilter[]>(
     'ettercap-samples',
     DEFAULT_SAMPLES,
   );
-  const [filterText, setFilterText] = usePersistentState(
-    'ettercap-filter-text',
-    DEFAULT_SAMPLES[0].code,
+
+  const lineWarnings = useMemo(
+    () => buildLineWarnings(lintMessages),
+    [lintMessages],
   );
-  const output = applyFilters(filterText, EXAMPLE_PACKETS);
 
   const loadSample = useCallback(
-    (idx: number) => setFilterText(samples[idx]?.code || ''),
+    (idx: number) => {
+      const selected = samples[idx];
+      if (!selected) return;
+      setFilterText(selected.code);
+    },
     [samples, setFilterText],
   );
 
@@ -61,6 +44,8 @@ export default function FilterEditor() {
     if (!name) return;
     setSamples((s) => [...s, { name, code: filterText }]);
   };
+
+  const lines = useMemo(() => filterText.split('\n'), [filterText]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -85,30 +70,67 @@ export default function FilterEditor() {
           Save
         </button>
       </div>
-      <textarea
-        className="w-full h-32 border p-2 font-mono"
-        value={filterText}
-        onChange={(e) => setFilterText(e.target.value)}
-      />
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <h3 className="font-bold mb-2">Before</h3>
-          <ul className="bg-gray-100 p-2 font-mono text-sm space-y-1">
-            {EXAMPLE_PACKETS.map((p, i) => (
-              <li key={i}>{p}</li>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="filterTextarea" className="font-semibold">
+          Filter script
+        </label>
+        <div className="grid grid-cols-[3rem_1fr] overflow-hidden rounded border bg-gray-900 text-gray-200">
+          <div className="bg-gray-800 text-right text-xs">
+            {lines.map((_, idx) => {
+              const lineNumber = idx + 1;
+              const hasWarning = lineWarnings.has(lineNumber);
+              return (
+                <div
+                  key={lineNumber}
+                  className="flex items-center justify-end gap-1 px-2"
+                  style={{ lineHeight }}
+                >
+                  <span>{lineNumber}</span>
+                  {hasWarning && (
+                    <span
+                      aria-label={`Warning on line ${lineNumber}`}
+                      className="text-red-400"
+                    >
+                      ⚠
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <textarea
+            id="filterTextarea"
+            className="w-full resize-y bg-gray-950 p-2 font-mono text-sm text-white focus:outline-none"
+            style={{ lineHeight }}
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            aria-describedby="ettercap-lint-messages"
+          />
+        </div>
+      </div>
+
+      <div
+        id="ettercap-lint-messages"
+        aria-live="polite"
+        className="space-y-1 rounded border border-gray-800 bg-gray-900 p-3 text-sm"
+      >
+        <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-400">
+          <span>Lint warnings</span>
+          {isLinting && <span className="text-blue-300">Analyzing…</span>}
+        </div>
+        {lintMessages.length === 0 ? (
+          <p className="text-green-300">No lint warnings detected.</p>
+        ) : (
+          <ul className="space-y-1">
+            {lintMessages.map((message, idx) => (
+              <li key={`${message.line}-${idx}`} className="text-red-300">
+                <span className="font-semibold">Line {message.line}:</span> {message.message}
+              </li>
             ))}
           </ul>
-        </div>
-        <div>
-          <h3 className="font-bold mb-2">After</h3>
-          <ul className="bg-gray-100 p-2 font-mono text-sm space-y-1">
-            {output.map((p, i) => (
-              <li key={i}>{p}</li>
-            ))}
-          </ul>
-        </div>
+        )}
       </div>
     </div>
   );
 }
-

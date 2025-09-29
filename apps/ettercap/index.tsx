@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import FilterEditor from './components/FilterEditor';
+import FilterPreview from './components/FilterPreview';
+import { EttercapFilterProvider } from './components/FilterStateProvider';
 import LogPane, { LogEntry } from './components/LogPane';
 import ArpDiagram from './components/ArpDiagram';
 
@@ -54,7 +56,10 @@ export default function EttercapPage() {
       {started && <ArpDiagram />}
 
       <h1 className="mt-6 mb-4 text-xl font-bold">Ettercap Filter Editor</h1>
-      <FilterEditor />
+      <EttercapFilterProvider>
+        <FilterEditor />
+        <FilterPreview />
+      </EttercapFilterProvider>
     </div>
   );
 }
