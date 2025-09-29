@@ -1,4 +1,6 @@
-import React from 'react';
+import type { CSSProperties } from 'react';
+import React, { useEffect } from 'react';
+import { useMenuNavigation } from '../../hooks/useMenuNavigation';
 
 export type PlacesMenuItem = {
   id: string;
@@ -43,14 +45,35 @@ const resolveKaliIcon = (id: string): string | undefined => {
   return KALI_ICON_MAP[normalizedId];
 };
 
+const surfaceStyle = {
+  '--menu-hover-bg': 'rgba(30, 41, 59, 0.65)',
+  '--menu-active-bg': 'rgba(30, 41, 59, 0.95)',
+  '--menu-ring-color': 'rgba(249, 115, 22, 0.9)',
+} as CSSProperties;
+
 const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
+  const navigation = useMenuNavigation({
+    itemCount: items.length,
+    hoverDelay: 120,
+    onActivate: (index) => {
+      const item = items[index];
+      item?.onSelect?.();
+    },
+  });
+
+  useEffect(() => {
+    if (items.length > 0) {
+      navigation.setActiveIndex(0);
+    }
+  }, [items.length, navigation]);
+
   return (
-    <nav aria-label={heading} className="w-56 select-none text-sm text-white">
+    <nav aria-label={heading} className="w-56 select-none text-sm text-white" data-menu-surface style={surfaceStyle}>
       <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
         {heading}
       </header>
-      <ul className="space-y-1">
-        {items.map((item) => {
+      <ul className="space-y-1" {...navigation.getListProps<HTMLUListElement>({ 'aria-label': heading })}>
+        {items.map((item, index) => {
           const kaliIcon = resolveKaliIcon(item.id);
           const src = kaliIcon ?? item.icon;
 
@@ -61,9 +84,11 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
           return (
             <li key={item.id}>
               <button
+                {...navigation.getItemProps<HTMLButtonElement>(index, {
+                  onClick: handleClick,
+                })}
+                ref={(node) => navigation.registerItem(index, node)}
                 type="button"
-                onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
               >
                 <img
                   src={src}
