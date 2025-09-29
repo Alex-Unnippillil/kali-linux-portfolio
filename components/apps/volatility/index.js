@@ -5,6 +5,8 @@ import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthr
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
+import glossaryData from '../../../data/glossary.json';
+import { createGlossaryLookup } from '../../../utils/glossary';
 
 // pull demo data for various volatility plugins from the memory fixture
 const pstree = Array.isArray(memoryFixture.pstree)
@@ -30,37 +32,48 @@ const heuristicColors = {
   malicious: 'bg-red-600',
 };
 
+const glossaryLookup = createGlossaryLookup(glossaryData);
+
+const glossaryEntry = (key, fallback) => {
+  const entry = glossaryLookup[key.toLowerCase()];
+  return {
+    title: entry?.term ?? fallback.title,
+    description: entry?.definition ?? fallback.description,
+    link: entry?.link ?? fallback.link,
+  };
+};
+
 const glossary = {
-  pstree: {
+  pstree: glossaryEntry('pstree', {
     title: 'Process Tree',
     description: 'Hierarchy of running processes.',
     link: '/docs/template-glossary#process-tree',
-  },
-  pslist: {
+  }),
+  pslist: glossaryEntry('pslist', {
     title: 'Process List',
     description: 'Active processes captured from memory.',
     link: '/docs/template-glossary#pslist',
-  },
-  dlllist: {
+  }),
+  dlllist: glossaryEntry('dlllist', {
     title: 'Module List',
     description: 'DLLs and modules loaded by the selected process.',
     link: '/docs/template-glossary#module',
-  },
-  netscan: {
+  }),
+  netscan: glossaryEntry('netscan', {
     title: 'Network Connections',
     description: 'Sockets and network endpoints identified in memory.',
     link: '/docs/template-glossary#netscan',
-  },
-  malfind: {
+  }),
+  malfind: glossaryEntry('malfind', {
     title: 'Malfind',
     description: 'Heuristics to locate injected or malicious code.',
     link: '/docs/template-glossary#malfind',
-  },
-  yara: {
+  }),
+  yara: glossaryEntry('yara', {
     title: 'Yara Scan',
     description: 'Pattern-based rules that highlight suspicious memory content.',
     link: '/docs/template-glossary#yara',
-  },
+  }),
 };
 
 const SortableTable = ({ columns, data, onRowClick }) => {
