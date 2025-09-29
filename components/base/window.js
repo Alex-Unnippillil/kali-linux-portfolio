@@ -7,12 +7,11 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
-import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
-const SNAP_BOTTOM_INSET = 28;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
