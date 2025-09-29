@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import MaskBuilder from './components/MaskBuilder';
 import RulesSandbox from './components/RulesSandbox';
-import StatsChart from '../../components/StatsChart';
 
 interface Preset {
   value: string;
@@ -31,8 +31,6 @@ const defaultRuleSets: RuleSets = {
 const Hashcat: React.FC = () => {
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
-  const appendMask = (token: string) => setMask((m) => m + token);
-  const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
 
   const [hashInput, setHashInput] = useState('');
   const [showHash, setShowHash] = useState(false);
@@ -129,43 +127,6 @@ const Hashcat: React.FC = () => {
 
   const showMask = attackMode === '3' || attackMode === '6' || attackMode === '7';
 
-  const formatTime = (seconds: number) => {
-    if (seconds < 60) return `${seconds.toFixed(2)}s`;
-    const minutes = seconds / 60;
-    if (minutes < 60) return `${minutes.toFixed(2)}m`;
-    const hours = minutes / 60;
-    if (hours < 24) return `${hours.toFixed(2)}h`;
-    const days = hours / 24;
-    return `${days.toFixed(2)}d`;
-  };
-
-  useEffect(() => {
-    if (!mask) {
-      setMaskStats({ count: 0, time: 0 });
-      return;
-    }
-    const sets: Record<string, number> = {
-      '?l': 26,
-      '?u': 26,
-      '?d': 10,
-      '?s': 33,
-      '?a': 95,
-    };
-    let total = 1;
-    for (let i = 0; i < mask.length; i++) {
-      if (mask[i] === '?' && i < mask.length - 1) {
-        const token = mask.slice(i, i + 2);
-        if (sets[token]) {
-          total *= sets[token];
-          i++;
-          continue;
-        }
-      }
-      total *= 1;
-    }
-    setMaskStats({ count: total, time: total / 1_000_000 });
-  }, [mask]);
-
   // progress and eta are displayed in a neutral banner
 
   return (
@@ -191,38 +152,7 @@ const Hashcat: React.FC = () => {
         </div>
       </div>
 
-      {showMask && (
-        <div>
-          <label className="block mb-1">Mask</label>
-          <input
-            type="text"
-            value={mask}
-            onChange={(e) => setMask(e.target.value)}
-            className="text-black p-1 w-full font-mono mb-2"
-          />
-          <div className="space-x-2">
-            {['?l', '?u', '?d', '?s', '?a'].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => appendMask(t)}
-                className="px-2 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          {mask && (
-            <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
-              <p className="text-sm">
-                Estimated @1M/s: {formatTime(maskStats.time)}
-              </p>
-              <StatsChart count={maskStats.count} time={maskStats.time} />
-            </div>
-          )}
-        </div>
-      )}
+      {showMask && <MaskBuilder value={mask} onChange={setMask} />}
 
       <div>
         <label className="block mb-1">Hash</label>
