@@ -17,6 +17,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { broadcastStatus, STATUS_DEFAULT_MESSAGES } from '@/src/pwa/status';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -52,6 +53,35 @@ function MyApp(props) {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
           window.manualRefresh = () => registration.update();
+
+          const shareStatus = (detail) => {
+            if (!detail || typeof detail.type !== 'string') return;
+            const defaultMessage = STATUS_DEFAULT_MESSAGES[detail.type];
+            const message = detail.message || defaultMessage;
+            broadcastStatus({ ...detail, ...(message ? { message } : {}) });
+          };
+
+          if (registration.waiting) {
+            shareStatus({ type: 'update-ready', action: 'reload' });
+          }
+
+          registration.addEventListener('updatefound', () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  shareStatus({ type: 'update-ready', action: 'reload' });
+                } else {
+                  shareStatus({ type: 'installed' });
+                }
+              }
+            });
+          });
+
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            shareStatus({ type: 'updated' });
+          });
 
           if ('periodicSync' in registration) {
             try {

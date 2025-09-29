@@ -7,7 +7,7 @@ describe('InstallButton', () => {
   test('shows install prompt when beforeinstallprompt fires', async () => {
     render(<InstallButton />);
     initA2HS();
-    expect(screen.queryByText(/install/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /install/i })).toBeNull();
 
     let resolveChoice: (value: any) => void = () => {};
     const userChoice = new Promise((resolve) => {
@@ -27,7 +27,7 @@ describe('InstallButton', () => {
     // The install prompt shouldn't trigger automatically.
     expect(prompt).not.toHaveBeenCalled();
 
-    const button = await screen.findByText(/install/i);
+    const button = await screen.findByRole('button', { name: /install/i });
     await userEvent.click(button);
     expect(prompt).toHaveBeenCalledTimes(1);
 
@@ -36,7 +36,9 @@ describe('InstallButton', () => {
       await userChoice;
     });
 
-    await waitFor(() => expect(screen.queryByText(/install/i)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /install/i })).toBeNull(),
+    );
   });
 
   test('can be focused via keyboard', async () => {

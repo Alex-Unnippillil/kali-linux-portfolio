@@ -147,20 +147,41 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
-    navigateFallback: '/offline.html',
-    additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
+    navigateFallback: (() => {
+      if (normalizedBasePath === '/') return '/offline.html';
+      return `${normalizedBasePath}/offline.html`;
+    })(),
+    additionalManifestEntries: (() => {
+      const applyBasePath = (path) => {
+        if (!path) return path;
+        if (normalizedBasePath === '/' || path.startsWith('http')) return path;
+        if (path === '/') return normalizedBasePath;
+        return `${normalizedBasePath}${path.startsWith('/') ? path : `/${path}`}`;
+      };
+
+      const essentialPaths = [
+        '/',
+        '/feeds',
+        '/about',
+        '/projects',
+        '/projects.json',
+        '/apps',
+        '/apps/weather',
+        '/apps/terminal',
+        '/apps/checkers',
+        '/offline.html',
+        '/offline.css',
+        '/offline.js',
+        '/manifest.webmanifest',
+        '/favicon.ico',
+        '/favicon.svg',
+        '/images/logos/fevicon.png',
+        '/images/logos/logo_1024.png',
+      ];
+
+      const unique = Array.from(new Set(essentialPaths));
+      return unique.map((path) => ({ url: applyBasePath(path), revision: null }));
+    })(),
     runtimeCaching,
     ...(workboxCacheId && { cacheId: workboxCacheId }),
   },
