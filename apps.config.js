@@ -1,4 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import { isResourceMonitorEnabled } from './apps/resource-monitor/feature';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -709,15 +710,19 @@ const apps = [
     desktop_shortcut: false,
     screen: displayFileExplorer,
   },
-  {
-    id: 'resource-monitor',
-    title: 'Resource Monitor',
-    icon: '/themes/Yaru/apps/resource-monitor.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayResourceMonitor,
-  },
+  ...(isResourceMonitorEnabled
+    ? [
+        {
+          id: 'resource-monitor',
+          title: 'Resource Monitor',
+          icon: '/themes/Yaru/apps/resource-monitor.svg',
+          disabled: false,
+          favourite: false,
+          desktop_shortcut: false,
+          screen: displayResourceMonitor,
+        },
+      ]
+    : []),
   {
     id: 'screen-recorder',
     title: 'Screen Recorder',
