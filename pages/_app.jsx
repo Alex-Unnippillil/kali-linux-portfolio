@@ -85,9 +85,41 @@ function MyApp(props) {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
-    const update = (message) => {
+    const timers = new Set();
+    let revertTimer = null;
+
+    const schedule = (callback, delay = 0) => {
+      const timer = setTimeout(() => {
+        timers.delete(timer);
+        callback();
+      }, delay);
+      timers.add(timer);
+      return timer;
+    };
+
+    const setPoliteness = (politeness) => {
+      if (!politeness) return;
+      const value = politeness === 'assertive' ? 'assertive' : 'polite';
+      if (liveRegion.getAttribute('aria-live') !== value) {
+        liveRegion.setAttribute('aria-live', value);
+      }
+      if (value === 'assertive') {
+        if (revertTimer) {
+          clearTimeout(revertTimer);
+          timers.delete(revertTimer);
+        }
+        revertTimer = schedule(() => {
+          liveRegion.setAttribute('aria-live', 'polite');
+          revertTimer = null;
+        }, 1000);
+      }
+    };
+
+    const update = (message, politeness = 'polite') => {
+      if (typeof message !== 'string') return;
+      setPoliteness(politeness);
       liveRegion.textContent = '';
-      setTimeout(() => {
+      schedule(() => {
         liveRegion.textContent = message;
       }, 100);
     };
@@ -96,9 +128,22 @@ function MyApp(props) {
     const handleCut = () => update('Cut to clipboard');
     const handlePaste = () => update('Pasted from clipboard');
 
+    const handleAnnounce = (event) => {
+      const detail = event?.detail ?? {};
+      if (typeof detail === 'string') {
+        update(detail);
+        return;
+      }
+      const { message, politeness } = detail;
+      if (typeof message === 'string') {
+        update(message, politeness);
+      }
+    };
+
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
     window.addEventListener('paste', handlePaste);
+    window.addEventListener('sr-announce', handleAnnounce);
 
     const { clipboard } = navigator;
     const originalWrite = clipboard?.writeText?.bind(clipboard);
@@ -137,6 +182,13 @@ function MyApp(props) {
       window.removeEventListener('copy', handleCopy);
       window.removeEventListener('cut', handleCut);
       window.removeEventListener('paste', handlePaste);
+      window.removeEventListener('sr-announce', handleAnnounce);
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
+      if (revertTimer) {
+        clearTimeout(revertTimer);
+        revertTimer = null;
+      }
       if (clipboard) {
         if (originalWrite) clipboard.writeText = originalWrite;
         if (originalRead) clipboard.readText = originalRead;
