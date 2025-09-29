@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  gestureNavigationEnabled: true,
+  gestureNavigationSensitivity: 1,
 };
 
 export async function getAccent() {
@@ -114,6 +116,32 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getGestureNavigationEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.gestureNavigationEnabled;
+  const stored = window.localStorage.getItem('gesture-navigation-enabled');
+  return stored === null ? DEFAULT_SETTINGS.gestureNavigationEnabled : stored === 'true';
+}
+
+export async function setGestureNavigationEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('gesture-navigation-enabled', value ? 'true' : 'false');
+}
+
+export async function getGestureNavigationSensitivity() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.gestureNavigationSensitivity;
+  const stored = window.localStorage.getItem('gesture-navigation-sensitivity');
+  if (stored === null) {
+    return DEFAULT_SETTINGS.gestureNavigationSensitivity;
+  }
+  const parsed = parseFloat(stored);
+  return Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.gestureNavigationSensitivity;
+}
+
+export async function setGestureNavigationSensitivity(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('gesture-navigation-sensitivity', String(value));
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +178,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('gesture-navigation-enabled');
+  window.localStorage.removeItem('gesture-navigation-sensitivity');
 }
 
 export async function exportSettings() {
@@ -165,6 +195,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    gestureNavigationEnabled,
+    gestureNavigationSensitivity,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +209,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getGestureNavigationEnabled(),
+    getGestureNavigationSensitivity(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -191,6 +225,8 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    gestureNavigationEnabled,
+    gestureNavigationSensitivity,
     theme,
   });
 }
@@ -216,6 +252,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    gestureNavigationEnabled,
+    gestureNavigationSensitivity,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -229,6 +267,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (gestureNavigationEnabled !== undefined) await setGestureNavigationEnabled(gestureNavigationEnabled);
+  if (gestureNavigationSensitivity !== undefined) await setGestureNavigationSensitivity(gestureNavigationSensitivity);
   if (theme !== undefined) setTheme(theme);
 }
 
