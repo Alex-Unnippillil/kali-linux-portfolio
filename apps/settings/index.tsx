@@ -157,15 +157,22 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
+            <div className="flex items-center">
               <input
+                id="kali-gradient-wallpaper"
                 type="checkbox"
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Kali Gradient Wallpaper"
               />
-              Kali Gradient Wallpaper
-            </label>
+              <label
+                htmlFor="kali-gradient-wallpaper"
+                className="text-ubt-grey cursor-pointer"
+              >
+                Kali Gradient Wallpaper
+              </label>
+            </div>
           </div>
           {useKaliWallpaper && (
             <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
@@ -258,30 +265,27 @@ export default function Settings() {
               <option value="compact">Compact</option>
             </select>
           </div>
-          <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
-            <ToggleSwitch
-              checked={reducedMotion}
-              onChange={setReducedMotion}
-              ariaLabel="Reduced Motion"
-            />
-          </div>
-          <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">High Contrast:</span>
-            <ToggleSwitch
-              checked={highContrast}
-              onChange={setHighContrast}
-              ariaLabel="High Contrast"
-            />
-          </div>
-          <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Haptics:</span>
-            <ToggleSwitch
-              checked={haptics}
-              onChange={setHaptics}
-              ariaLabel="Haptics"
-            />
-          </div>
+          <ToggleSwitch
+            id="settings-reduced-motion"
+            label="Reduced Motion"
+            checked={reducedMotion}
+            onChange={setReducedMotion}
+            className="justify-center w-full my-4"
+          />
+          <ToggleSwitch
+            id="settings-high-contrast"
+            label="High Contrast"
+            checked={highContrast}
+            onChange={setHighContrast}
+            className="justify-center w-full my-4"
+          />
+          <ToggleSwitch
+            id="settings-haptics"
+            label="Haptics"
+            checked={haptics}
+            onChange={setHaptics}
+            className="justify-center w-full my-4"
+          />
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
