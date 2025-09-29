@@ -55,20 +55,23 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
         aria-label="Help"
         aria-expanded={open}
         onClick={toggle}
-        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        className="fixed top-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-lg font-semibold text-white shadow-lg transition-transform focus:outline-none focus:ring focus:ring-offset-2 focus:ring-offset-gray-900 hover:scale-105"
       >
         ?
       </button>
       {open && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-end p-4"
+          className="fixed inset-0 z-50 flex items-start justify-end bg-black bg-opacity-60 p-4 md:p-8"
           onClick={toggle}
         >
           <div
-            className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
+            className="h-full w-full max-w-lg overflow-auto rounded-3xl bg-white px-6 py-8 text-black shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div dangerouslySetInnerHTML={{ __html: html }} />
+            <article
+              className="prose prose-slate max-w-none text-base leading-7 prose-headings:mb-2 prose-headings:mt-6 prose-headings:leading-snug prose-p:leading-7 prose-p:my-4 prose-li:leading-7 prose-strong:font-semibold prose-a:text-blue-600 hover:prose-a:text-blue-500"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
           </div>
         </div>
       )}
