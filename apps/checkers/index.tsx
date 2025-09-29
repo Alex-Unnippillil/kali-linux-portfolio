@@ -237,6 +237,7 @@ export default function CheckersPage() {
             max={8}
             value={difficulty}
             onChange={(e) => setDifficulty(Number(e.target.value))}
+            aria-label="Difficulty"
           />
         </label>
         <button

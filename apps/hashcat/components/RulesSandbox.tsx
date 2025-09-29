@@ -87,18 +87,28 @@ const RulesSandbox: React.FC<Props> = ({ savedSets, onChange, setRuleSet }) => {
   return (
     <div className="space-y-2 mt-4">
       <h2 className="text-xl">Rule Set Editor</h2>
-      <input
-        className="w-full p-2 text-black"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Rule set name"
-      />
-      <textarea
-        className="w-full h-32 text-black p-2 font-mono"
-        value={rules}
-        onChange={(e) => setRules(e.target.value)}
-        placeholder="Enter hashcat rules, one per line"
-      />
+        <label htmlFor="hashcat-rule-name" className="sr-only" id="hashcat-rule-name-label">
+          Rule set name
+        </label>
+        <input
+          id="hashcat-rule-name"
+          className="w-full p-2 text-black"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Rule set name"
+          aria-labelledby="hashcat-rule-name-label"
+        />
+        <label htmlFor="hashcat-rule-text" className="sr-only" id="hashcat-rule-text-label">
+          Rule definitions
+        </label>
+        <textarea
+          id="hashcat-rule-text"
+          className="w-full h-32 text-black p-2 font-mono"
+          value={rules}
+          onChange={(e) => setRules(e.target.value)}
+          placeholder="Enter hashcat rules, one per line"
+          aria-labelledby="hashcat-rule-text-label"
+        />
       {errors.length > 0 && (
         <div className="text-red-400 text-sm">{errors[0]}</div>
       )}

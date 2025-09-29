@@ -129,20 +129,39 @@ const EvidenceVault: React.FC = () => {
 
   return (
     <div className="mt-4">
-      <h3 className="font-semibold mb-2">Evidence Vault</h3>
-      <textarea
-        className="w-full p-2 mb-2 text-black"
-        placeholder="Note"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <input type="file" className="mb-2" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-      <input
-        className="w-full p-2 mb-2 text-black"
-        placeholder="Tags (comma separated)"
-        value={tags}
-        onChange={(e) => setTags(e.target.value)}
-      />
+        <h3 className="font-semibold mb-2">Evidence Vault</h3>
+        <label htmlFor="metasploit-evidence-note" className="sr-only" id="metasploit-evidence-note-label">
+          Note
+        </label>
+        <textarea
+          id="metasploit-evidence-note"
+          className="w-full p-2 mb-2 text-black"
+          placeholder="Note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          aria-labelledby="metasploit-evidence-note-label"
+        />
+        <label htmlFor="metasploit-evidence-file" className="sr-only" id="metasploit-evidence-file-label">
+          Attachment
+        </label>
+        <input
+          id="metasploit-evidence-file"
+          type="file"
+          className="mb-2"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          aria-labelledby="metasploit-evidence-file-label"
+        />
+        <label htmlFor="metasploit-evidence-tags" className="sr-only" id="metasploit-evidence-tags-label">
+          Tags
+        </label>
+        <input
+          id="metasploit-evidence-tags"
+          className="w-full p-2 mb-2 text-black"
+          placeholder="Tags (comma separated)"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          aria-labelledby="metasploit-evidence-tags-label"
+        />
       <button onClick={addItem} className="px-3 py-1 bg-blue-600 rounded">Add</button>
       <ul className="mt-4 list-disc pl-6">
         {items.map((i) => (
@@ -297,16 +316,25 @@ const MetasploitPost: React.FC = () => {
             <div>
               <h2 className="font-semibold mb-2">{selected.path}</h2>
               <p className="mb-2 text-sm text-gray-300">{selected.description}</p>
-              {selected.options?.map((o) => (
-                <label key={o.name} className="block mb-2">
-                  {o.label}
-                  <input
-                    className="w-full p-1 bg-gray-800 rounded mt-1"
-                    value={params[o.name] || ''}
-                    onChange={(e) => handleParamChange(o.name, e.target.value)}
-                  />
-                </label>
-              ))}
+                  {selected.options?.map((o) => {
+                    const inputId = `metasploit-post-option-${o.name}`;
+                    const labelId = `${inputId}-label`;
+                    return (
+                      <div key={o.name} className="mb-2">
+                        <label className="block" htmlFor={inputId} id={labelId}>
+                          {o.label}
+                        </label>
+                        <input
+                          id={inputId}
+                          type="text"
+                          className="w-full p-1 bg-gray-800 rounded mt-1"
+                          value={params[o.name] || ''}
+                          onChange={(e) => handleParamChange(o.name, e.target.value)}
+                          aria-labelledby={labelId}
+                        />
+                      </div>
+                    );
+                  })}
               <button onClick={run} className="mt-2 px-3 py-1 bg-green-600 rounded">
                 Run
               </button>
@@ -326,15 +354,20 @@ const MetasploitPost: React.FC = () => {
                 ))}
               </ul>
               <div className="flex items-center space-x-2 mt-2">
-                <button onClick={runQueue} className="px-3 py-1 bg-green-600 rounded">
-                  Run Queue
-                </button>
-                <input
-                  className="p-1 text-black"
-                  placeholder="Set name"
-                  value={setName}
-                  onChange={(e) => setSetName(e.target.value)}
-                />
+                  <button onClick={runQueue} className="px-3 py-1 bg-green-600 rounded">
+                    Run Queue
+                  </button>
+                  <label htmlFor="metasploit-post-set-name" className="sr-only" id="metasploit-post-set-name-label">
+                    Set name
+                  </label>
+                  <input
+                    id="metasploit-post-set-name"
+                    className="p-1 text-black"
+                    placeholder="Set name"
+                    value={setName}
+                    onChange={(e) => setSetName(e.target.value)}
+                    aria-labelledby="metasploit-post-set-name-label"
+                  />
                 <button onClick={saveSet} className="px-3 py-1 bg-blue-600 rounded">
                   Save Set
                 </button>

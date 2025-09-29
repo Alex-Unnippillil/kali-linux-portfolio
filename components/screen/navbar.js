@@ -2,10 +2,10 @@ import React, { PureComponent } from 'react';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
-import NotificationBell from '../ui/NotificationBell';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -78,7 +78,10 @@ export default class Navbar extends PureComponent {
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
-                                <div className="main-navbar-vp absolute top-0 right-0 z-50 flex w-screen items-center justify-between bg-slate-950/80 px-3 py-2 text-ubt-grey shadow-lg backdrop-blur-md">
+                                <div
+                                        className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex h-14 w-full items-center justify-between bg-slate-950/80 px-3 text-ubt-grey shadow-lg backdrop-blur-md"
+                                        style={{ minHeight: NAVBAR_HEIGHT }}
+                                >
                                         <div className="flex items-center gap-2 text-xs md:text-sm">
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (

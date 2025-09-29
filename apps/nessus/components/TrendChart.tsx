@@ -94,8 +94,17 @@ export default function TrendChart() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <input type="file" accept="application/json" onChange={handleFile} />
+        <div className="flex items-center gap-2">
+          <label htmlFor="nessus-trend-upload" className="sr-only" id="nessus-trend-upload-label">
+            Upload history JSON
+          </label>
+          <input
+            id="nessus-trend-upload"
+            type="file"
+            accept="application/json"
+            onChange={handleFile}
+            aria-labelledby="nessus-trend-upload-label"
+          />
         {history.length > 0 && (
           <button
             type="button"

@@ -137,13 +137,18 @@ const NmapNSE: React.FC = () => {
                 {tag}
               </button>
             ))}
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
-              className="h-6 px-2 rounded text-black font-mono flex-1"
-            />
+              <label htmlFor="nmap-nse-search" className="sr-only" id="nmap-nse-search-label">
+                Search scripts
+              </label>
+              <input
+                id="nmap-nse-search"
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search"
+                className="h-6 px-2 rounded text-black font-mono flex-1"
+                aria-labelledby="nmap-nse-search-label"
+              />
             <button
               className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50"
               onClick={run}

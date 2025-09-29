@@ -12,11 +12,11 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
+import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
-const SNAP_BOTTOM_INSET = 28;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -36,6 +36,7 @@ const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WI
         left: { left: 0, top: safeTop, width: halfWidth, height: availableHeight },
         right: { left: viewportWidth - halfWidth, top: safeTop, width: halfWidth, height: availableHeight },
         top: { left: 0, top: safeTop, width: viewportWidth, height: topHeight },
+
     };
 };
 
@@ -52,6 +53,7 @@ export class Window extends Component {
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = clampWindowTopPosition(props.initialY, initialTopInset);
+
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || (isPortrait ? 90 : 60),
@@ -145,6 +147,7 @@ export class Window extends Component {
                 width: availableHorizontal,
             },
             safeAreaTop: topInset,
+
         }, () => {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
@@ -286,6 +289,7 @@ export class Window extends Component {
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
         node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
         node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+
         if (this.props.onPositionChange) {
             this.props.onPositionChange(snappedX, absoluteY);
         }
@@ -325,7 +329,8 @@ export class Window extends Component {
         const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            const offsetTop = region.top - DESKTOP_TOP_PADDING;
+            node.style.transform = `translate(${region.left}px, ${offsetTop}px)`;
         }
         this.setState({
             snapPreview: null,
@@ -366,6 +371,7 @@ export class Window extends Component {
 
         let candidate = null;
         if (rect.top <= topInset + verticalThreshold && regions.top.height > 0) {
+
             candidate = { position: 'top', preview: regions.top };
         } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
@@ -475,10 +481,13 @@ export class Window extends Component {
             const node = this.getWindowNode();
             this.setWinowsPosition();
             // translate window to maximize position
+            const viewportHeight = window.innerHeight;
+            const availableHeight = Math.max(0, viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET);
+            const heightPercent = percentOf(availableHeight, viewportHeight);
             if (node) {
-                node.style.transform = `translate(-1pt,-2pt)`;
+                node.style.transform = `translate(-1pt, 0px)`;
             }
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
         }
     }
 

@@ -173,24 +173,26 @@ export default function Converter() {
           </button>
         ))}
       </div>
-      <div className="mb-4 flex items-center gap-2">
-        <select
-          className="text-black p-1 rounded"
-          value={notation}
-          onChange={(e) => setNotation(e.target.value as Notation)}
-        >
-          <option value="fixed">Fixed</option>
-          <option value="engineering">Engineering</option>
-          <option value="scientific">Scientific</option>
-        </select>
-        <label className="flex items-center gap-1 text-sm">
-          <input
-            type="checkbox"
-            checked={trailingZeros}
-            onChange={(e) => setTrailingZeros(e.target.checked)}
-          />
-          Trailing zeros
-        </label>
+        <div className="mb-4 flex items-center gap-2">
+          <select
+            className="text-black p-1 rounded"
+            value={notation}
+            onChange={(e) => setNotation(e.target.value as Notation)}
+          >
+            <option value="fixed">Fixed</option>
+            <option value="engineering">Engineering</option>
+            <option value="scientific">Scientific</option>
+          </select>
+          <div className="flex items-center gap-1 text-sm">
+            <input
+              id="converter-trailing-zeros"
+              type="checkbox"
+              checked={trailingZeros}
+              onChange={(e) => setTrailingZeros(e.target.checked)}
+              aria-label="Include trailing zeros"
+            />
+            <label htmlFor="converter-trailing-zeros">Trailing zeros</label>
+          </div>
       </div>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-center gap-[6px]">

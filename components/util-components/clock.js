@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const MONTHS = [
     "Jan",
@@ -130,6 +131,8 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
     const previouslyOpenRef = useRef(false)
     const headingId = useId()
     const popoverId = `${headingId}-popover`
+    const [canUsePortal, setCanUsePortal] = useState(false)
+    const [popoverStyles, setPopoverStyles] = useState({})
 
     useEffect(() => {
         const update = () => setCurrentTime(new Date())
@@ -196,6 +199,72 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
         }
         previouslyOpenRef.current = isOpen
     }, [isOpen, prefersReducedMotion])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        setCanUsePortal(true)
+        return undefined
+    }, [])
+
+    useEffect(() => {
+        if (!isOpen) {
+            setPopoverStyles({})
+            return undefined
+        }
+        if (typeof window === 'undefined') {
+            return undefined
+        }
+        const margin = 12
+
+        const updatePosition = () => {
+            const button = buttonRef.current
+            const popover = popoverRef.current
+            if (!button || !popover) return
+
+            const buttonRect = button.getBoundingClientRect()
+            const popoverRect = popover.getBoundingClientRect()
+
+            const viewportWidth = window.innerWidth
+            const viewportHeight = window.innerHeight
+
+            let top = buttonRect.bottom + margin
+            let left = buttonRect.right - popoverRect.width
+
+            const horizontalMargin = margin
+            if (left < horizontalMargin) {
+                left = horizontalMargin
+            }
+            if (left + popoverRect.width > viewportWidth - horizontalMargin) {
+                left = Math.max(horizontalMargin, viewportWidth - horizontalMargin - popoverRect.width)
+            }
+
+            if (top + popoverRect.height > viewportHeight - margin) {
+                const aboveTop = buttonRect.top - margin - popoverRect.height
+                if (aboveTop >= margin) {
+                    top = aboveTop
+                } else {
+                    top = Math.max(margin, viewportHeight - margin - popoverRect.height)
+                }
+            }
+
+            setPopoverStyles({
+                position: 'fixed',
+                top,
+                left,
+                zIndex: 60
+            })
+        }
+
+        const animationFrame = window.requestAnimationFrame(updatePosition)
+        window.addEventListener('resize', updatePosition)
+        window.addEventListener('scroll', updatePosition, true)
+
+        return () => {
+            window.cancelAnimationFrame(animationFrame)
+            window.removeEventListener('resize', updatePosition)
+            window.removeEventListener('scroll', updatePosition, true)
+        }
+    }, [isOpen, viewDate, focusedDate])
 
     const headingFormatter = useMemo(
         () =>
@@ -327,6 +396,125 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
 
     const friendlyTimeLabel = useMemo(() => (currentTime ? friendlyTimeFormatter.format(currentTime) : ''), [currentTime, friendlyTimeFormatter])
 
+    const popoverStyle = isOpen
+        ? {
+              ...popoverStyles,
+              visibility: typeof popoverStyles.top === 'number' ? 'visible' : 'hidden'
+          }
+        : popoverStyles
+
+    const popoverNode = (
+        <div
+            ref={popoverRef}
+            id={popoverId}
+            role="dialog"
+            aria-modal="false"
+            aria-label="Calendar"
+            className="fixed z-50 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
+            style={popoverStyle}
+        >
+            <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
+                <div className="flex flex-col" aria-live="polite" id={headingId}>
+                    <span className="text-[0.65rem] uppercase tracking-[0.22em] text-cyan-200/70">{friendlyDateLabel}</span>
+                    <span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
+                    <span className="text-xs font-medium tracking-tight text-white/60">{friendlyTimeLabel}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => handleMonthChange(-1)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                        aria-label="Previous month"
+                    >
+                        ‹
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleMonthChange(1)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                        aria-label="Next month"
+                    >
+                        ›
+                    </button>
+                </div>
+            </div>
+            <table
+                role="grid"
+                aria-labelledby={headingId}
+                className="w-full border-collapse text-center"
+            >
+                <thead>
+                    <tr role="row">
+                        <th scope="col" className="w-12 pb-2 text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/30" aria-label="Week">
+                            Wk
+                        </th>
+                        {DAYS.map((day) => (
+                            <th key={day} scope="col" className="pb-2 text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/60">
+                                {day}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {weeks.map((week) => (
+                        <tr key={`week-${week.days[0].date.toISOString()}`} role="row">
+                            <th scope="row" className="py-1 text-[0.65rem] font-semibold text-white/35" aria-label={`Week ${week.weekNumber}`}>
+                                {week.weekNumber}
+                            </th>
+                            {week.days.map(({ date, inCurrentMonth }) => {
+                                const isToday = currentTime && isSameDay(date, currentTime)
+                                const isFocused = isSameDay(date, focusedDate)
+                                return (
+                                    <td
+                                        key={date.toISOString()}
+                                        role="gridcell"
+                                        aria-selected={isFocused}
+                                        className="p-1"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={handleDayClick}
+                                            onKeyDown={(event) => handleDayKeyDown(event, date)}
+                                            className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                                                inCurrentMonth ? 'text-white' : 'text-white/35'
+                                            } ${
+                                                isToday
+                                                    ? 'bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 text-slate-950 shadow-lg ring-1 ring-white/60'
+                                                    : isFocused
+                                                        ? 'bg-white/20 text-white shadow-inner'
+                                                        : 'hover:bg-white/10'
+                                            }`}
+                                            tabIndex={isFocused ? 0 : -1}
+                                            ref={isFocused ? activeCellRef : null}
+                                        >
+                                            {date.getDate()}
+                                        </button>
+                                    </td>
+                                )
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            <div className="mt-4 flex items-center justify-between">
+                <button
+                    type="button"
+                    onClick={handleToday}
+                    className="rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                >
+                    Today
+                </button>
+                <button
+                    type="button"
+                    onClick={handleClose}
+                    className="rounded-full border border-white/20 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    )
+
     if (!currentTime) {
         return <span suppressHydrationWarning></span>
     }
@@ -360,116 +548,11 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                     </span>
                 ) : null}
             </button>
-            {isOpen ? (
-                <div
-                    ref={popoverRef}
-                    id={popoverId}
-                    role="dialog"
-                    aria-modal="false"
-                    aria-label="Calendar"
-                    className="absolute right-0 z-50 mt-3 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
-                >
-                    <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
-                        <div className="flex flex-col" aria-live="polite" id={headingId}>
-                            <span className="text-[0.65rem] uppercase tracking-[0.22em] text-cyan-200/70">{friendlyDateLabel}</span>
-                            <span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
-                            <span className="text-xs font-medium tracking-tight text-white/60">{friendlyTimeLabel}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={() => handleMonthChange(-1)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
-                                aria-label="Previous month"
-                            >
-                                ‹
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleMonthChange(1)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
-                                aria-label="Next month"
-                            >
-                                ›
-                            </button>
-                        </div>
-                    </div>
-                    <table
-                        role="grid"
-                        aria-labelledby={headingId}
-                        className="w-full border-collapse text-center"
-                    >
-                        <thead>
-                            <tr role="row">
-                                <th scope="col" className="w-12 pb-2 text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/30" aria-label="Week">
-                                    Wk
-                                </th>
-                                {DAYS.map((day) => (
-                                    <th key={day} scope="col" className="pb-2 text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/60">
-                                        {day}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {weeks.map((week) => (
-                                <tr key={`week-${week.days[0].date.toISOString()}`} role="row">
-                                    <th scope="row" className="py-1 text-[0.65rem] font-semibold text-white/35" aria-label={`Week ${week.weekNumber}`}>
-                                        {week.weekNumber}
-                                    </th>
-                                    {week.days.map(({ date, inCurrentMonth }) => {
-                                        const isToday = currentTime && isSameDay(date, currentTime)
-                                        const isFocused = isSameDay(date, focusedDate)
-                                        return (
-                                            <td
-                                                key={date.toISOString()}
-                                                role="gridcell"
-                                                aria-selected={isFocused}
-                                                className="p-1"
-                                            >
-                                                <button
-                                                    type="button"
-                                                    onClick={handleDayClick}
-                                                    onKeyDown={(event) => handleDayKeyDown(event, date)}
-                                                    className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-                                                        inCurrentMonth ? 'text-white' : 'text-white/35'
-                                                    } ${
-                                                        isToday
-                                                            ? 'bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 text-slate-950 shadow-lg ring-1 ring-white/60'
-                                                            : isFocused
-                                                                ? 'bg-white/20 text-white shadow-inner'
-                                                                : 'hover:bg-white/10'
-                                                    }`}
-                                                    tabIndex={isFocused ? 0 : -1}
-                                                    ref={isFocused ? activeCellRef : null}
-                                                >
-                                                    {date.getDate()}
-                                                </button>
-                                            </td>
-                                        )
-                                    })}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div className="mt-4 flex items-center justify-between">
-                        <button
-                            type="button"
-                            onClick={handleToday}
-                            className="rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
-                        >
-                            Today
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="rounded-full border border-white/20 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            ) : null}
+            {isOpen
+                ? canUsePortal && typeof document !== 'undefined'
+                    ? createPortal(popoverNode, document.body)
+                    : popoverNode
+                : null}
         </div>
     )
 }

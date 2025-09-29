@@ -28,6 +28,7 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -76,20 +77,17 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
+
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
-        this.defaultDesktopPadding = { top: 64, right: 24, bottom: 120, left: 24 };
+        this.defaultDesktopPadding = { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 };
+
         this.iconDimensions = { ...this.defaultIconDimensions };
         this.iconGridSpacing = { ...this.defaultIconGridSpacing };
         this.desktopPadding = { ...this.defaultDesktopPadding };
-        this.gestureState = {
-            pointer: null,
-            overview: null,
-        };
-        this.pointerMedia = null;
-        this.pointerMediaListener = null;
-        this.gestureListenersAttached = false;
-        this.gestureRoot = null;
+
+        this.gestureState = { pointer: null, overview: null };
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -425,27 +423,12 @@ export class Desktop extends Component {
     ensureIconPositions = (desktopApps = []) => {
         if (!Array.isArray(desktopApps)) return;
         this.setState((prevState) => {
-            const existing = { ...(prevState.desktop_icon_positions || {}) };
-            const validIds = new Set(desktopApps);
-            let changed = false;
-
-            Object.keys(existing).forEach((id) => {
-                if (!validIds.has(id)) {
-                    delete existing[id];
-                    changed = true;
-                }
-            });
-
-            desktopApps.forEach((id, index) => {
-                if (!existing[id]) {
-                    const stored = this.savedIconPositions[id];
-                    existing[id] = stored || this.computeGridPosition(index);
-                    changed = true;
-                }
-            });
-
-            if (!changed) return null;
-            return { desktop_icon_positions: existing };
+            const current = prevState.desktop_icon_positions || {};
+            const layout = this.resolveIconLayout(desktopApps, current);
+            if (this.areIconLayoutsEqual(current, layout)) {
+                return null;
+            }
+            return { desktop_icon_positions: layout };
         }, () => {
             this.persistIconPositions();
         });
@@ -492,6 +475,97 @@ export class Desktop extends Component {
         const x = offsetX + column * columnSpacing;
         const y = offsetY + row * rowSpacing;
         return this.clampIconPosition(x, y);
+    };
+
+    isValidIconPosition = (position) => {
+        if (!position) return false;
+        const { x, y } = position;
+        return Number.isFinite(x) && Number.isFinite(y);
+    };
+
+    getIconPositionKey = (position) => {
+        if (!this.isValidIconPosition(position)) return null;
+        return `${Math.round(position.x)}:${Math.round(position.y)}`;
+    };
+
+    areIconLayoutsEqual = (a = {}, b = {}) => {
+        const aKeys = Object.keys(a);
+        const bKeys = Object.keys(b);
+        if (aKeys.length !== bKeys.length) return false;
+        return aKeys.every((key) => {
+            const first = a[key];
+            const second = b[key];
+            if (!this.isValidIconPosition(first) || !this.isValidIconPosition(second)) {
+                return false;
+            }
+            return first.x === second.x && first.y === second.y;
+        });
+    };
+
+    resolveIconLayout = (desktopApps = [], current = {}, options = {}) => {
+        const next = {};
+        const taken = new Set();
+        const clampOnly = options?.clampOnly === true;
+
+        const claimPosition = (position) => {
+            if (!this.isValidIconPosition(position)) return null;
+            const base = this.clampIconPosition(position.x, position.y);
+            const key = this.getIconPositionKey(base);
+            if (!key || taken.has(key)) return null;
+            taken.add(key);
+            return base;
+        };
+
+        let fallbackIndex = 0;
+        const assignFallback = (startIndex) => {
+            let index = Math.max(startIndex, fallbackIndex);
+            while (index < startIndex + 1000) {
+                const candidate = this.computeGridPosition(index);
+                const key = this.getIconPositionKey(candidate);
+                if (key && !taken.has(key)) {
+                    taken.add(key);
+                    fallbackIndex = index + 1;
+                    return candidate;
+                }
+                index += 1;
+            }
+            const fallback = this.computeGridPosition(startIndex);
+            const fallbackKey = this.getIconPositionKey(fallback);
+            if (fallbackKey && !taken.has(fallbackKey)) {
+                taken.add(fallbackKey);
+            }
+            return fallback;
+        };
+
+        desktopApps.forEach((id, orderIndex) => {
+            const candidates = [];
+            if (current[id]) {
+                candidates.push(current[id]);
+            }
+            if (!clampOnly) {
+                const saved = this.savedIconPositions?.[id];
+                if (saved) {
+                    candidates.push(saved);
+                }
+            }
+
+            let assigned = null;
+            for (let i = 0; i < candidates.length; i += 1) {
+                const candidate = claimPosition(candidates[i]);
+                if (candidate) {
+                    assigned = candidate;
+                    break;
+                }
+            }
+
+            if (!assigned) {
+                assigned = assignFallback(orderIndex);
+            }
+
+            next[id] = assigned;
+        });
+
+        return next;
     };
 
     clampIconPosition = (x, y) => {
@@ -543,6 +617,16 @@ export class Desktop extends Component {
         const offsetY = event.clientY - rect.top;
         container.setPointerCapture?.(event.pointerId);
         this.preventNextIconClick = false;
+        let startPosition = null;
+        const positions = this.state.desktop_icon_positions || {};
+        if (positions[appId]) {
+            startPosition = { ...positions[appId] };
+        } else if (typeof window !== 'undefined') {
+            const style = window.getComputedStyle(container);
+            const left = parseFloat(style.left) || 0;
+            const top = parseFloat(style.top) || 0;
+            startPosition = { x: left, y: top };
+        }
         this.iconDragState = {
             id: appId,
             pointerId: event.pointerId,
@@ -552,8 +636,11 @@ export class Desktop extends Component {
             startY: event.clientY,
             moved: false,
             container,
+            startPosition,
+            lastPosition: startPosition,
         };
         this.setState({ draggingIconId: appId });
+        this.attachIconKeyboardListeners();
     };
 
     handleIconPointerMove = (event) => {
@@ -570,24 +657,32 @@ export class Desktop extends Component {
         }
         event.preventDefault();
         const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
+        dragState.lastPosition = position;
         this.updateIconPosition(dragState.id, position.x, position.y, false);
     };
 
     handleIconPointerUp = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
-        this.iconDragState.container?.releasePointerCapture?.(event.pointerId);
         const dragState = this.iconDragState;
         const moved = dragState.moved;
         this.iconDragState = null;
+        dragState.container?.releasePointerCapture?.(event.pointerId);
+        this.detachIconKeyboardListeners();
         if (moved) {
             event.preventDefault();
             event.stopPropagation();
-            const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
+            const position = this.resolveDropPosition(event, dragState);
             this.preventNextIconClick = true;
             this.updateIconPosition(dragState.id, position.x, position.y, true);
         } else {
             this.setState({ draggingIconId: null });
         }
+    };
+
+    handleIconPointerCancel = (event) => {
+        if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
+        event.preventDefault();
+        this.cancelIconDrag(true);
     };
 
     handleIconClickCapture = (event) => {
@@ -599,20 +694,15 @@ export class Desktop extends Component {
     };
 
     realignIconPositions = () => {
+        const desktopApps = this.state.desktop_apps || [];
+        if (!desktopApps.length) return;
         this.setState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
-            let changed = false;
-            const next = {};
-            Object.entries(current).forEach(([id, pos]) => {
-                if (!pos) return;
-                const clamped = this.clampIconPosition(pos.x, pos.y);
-                if (!pos || pos.x !== clamped.x || pos.y !== clamped.y) {
-                    changed = true;
-                }
-                next[id] = clamped;
-            });
-            if (!changed) return null;
-            return { desktop_icon_positions: next };
+            const layout = this.resolveIconLayout(desktopApps, current, { clampOnly: true });
+            if (this.areIconLayoutsEqual(current, layout)) {
+                return null;
+            }
+            return { desktop_icon_positions: layout };
         }, () => {
             this.persistIconPositions();
         });
@@ -725,6 +815,7 @@ export class Desktop extends Component {
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.realignIconPositions);
+        this.detachIconKeyboardListeners();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -732,6 +823,63 @@ export class Desktop extends Component {
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
     }
+
+    attachIconKeyboardListeners = () => {
+        if (this.iconKeyListenerAttached || typeof document === 'undefined') return;
+        document.addEventListener('keydown', this.handleIconKeyboardCancel, true);
+        this.iconKeyListenerAttached = true;
+    };
+
+    detachIconKeyboardListeners = () => {
+        if (!this.iconKeyListenerAttached || typeof document === 'undefined') return;
+        document.removeEventListener('keydown', this.handleIconKeyboardCancel, true);
+        this.iconKeyListenerAttached = false;
+    };
+
+    handleIconKeyboardCancel = (event) => {
+        if (!this.iconDragState) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.cancelIconDrag(true);
+        }
+    };
+
+    cancelIconDrag = (revert = false) => {
+        const dragState = this.iconDragState;
+        if (!dragState) return;
+
+        dragState.container?.releasePointerCapture?.(dragState.pointerId);
+        this.iconDragState = null;
+        this.detachIconKeyboardListeners();
+
+        if (revert && dragState.startPosition) {
+            const original = this.clampIconPosition(dragState.startPosition.x, dragState.startPosition.y);
+            this.setState((prevState) => {
+                const current = prevState.desktop_icon_positions || {};
+                const previous = current[dragState.id];
+                if (previous && previous.x === original.x && previous.y === original.y && prevState.draggingIconId === null) {
+                    return { draggingIconId: null };
+                }
+                return {
+                    desktop_icon_positions: { ...current, [dragState.id]: original },
+                    draggingIconId: null,
+                };
+            });
+        } else {
+            this.setState({ draggingIconId: null });
+        }
+
+        this.preventNextIconClick = false;
+    };
+
+    resolveDropPosition = (event, dragState) => {
+        const hasValidCoordinates = Number.isFinite(event?.clientX) && Number.isFinite(event?.clientY);
+        if (hasValidCoordinates) {
+            return this.calculateIconPosition(event.clientX, event.clientY, dragState);
+        }
+        return dragState?.lastPosition || dragState?.startPosition || { x: 0, y: 0 };
+    };
 
     checkForNewFolders = () => {
         const stored = safeLocalStorage?.getItem('new_folders');
@@ -1059,10 +1207,20 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    hasVisibleWindows = () => {
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+        return Object.keys(closed).some((id) => closed[id] === false && !minimized[id]);
+    };
+
     renderDesktopApps = () => {
-        if (!this.state.desktop_apps || this.state.desktop_apps.length === 0) return null;
-        const positions = this.state.desktop_icon_positions || {};
-        return this.state.desktop_apps.map((appId, index) => {
+        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        if (!desktopApps || desktopApps.length === 0) return null;
+
+        const hasOpenWindows = this.hasVisibleWindows();
+        const blockIcons = hasOpenWindows && !draggingIconId;
+        const iconBaseZIndex = blockIcons ? 1 : 15;
+        const icons = desktopApps.map((appId, index) => {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
 
@@ -1076,14 +1234,14 @@ export class Desktop extends Component {
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
-            const isDragging = this.state.draggingIconId === appId;
+            const isDragging = draggingIconId === appId;
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
                 top: `${position.y}px`,
                 touchAction: 'none',
                 cursor: isDragging ? 'grabbing' : 'pointer',
-                zIndex: isDragging ? 40 : 20,
+                zIndex: isDragging ? 60 : iconBaseZIndex,
             };
 
             return (
@@ -1093,13 +1251,28 @@ export class Desktop extends Component {
                     onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
                     onPointerMove={this.handleIconPointerMove}
                     onPointerUp={this.handleIconPointerUp}
-                    onPointerCancel={this.handleIconPointerUp}
+                    onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
                 >
                     <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
                 </div>
             );
-        });
+        }).filter(Boolean);
+
+        if (!icons.length) return null;
+
+        return (
+            <div
+                className="absolute inset-0"
+                aria-hidden={blockIcons ? 'true' : 'false'}
+                style={{
+                    pointerEvents: blockIcons ? 'none' : 'auto',
+                    zIndex: iconBaseZIndex,
+                }}
+            >
+                {icons}
+            </div>
+        );
     }
 
     renderWindows = () => {
@@ -1126,6 +1299,7 @@ export class Desktop extends Component {
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
+
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
@@ -1161,6 +1335,7 @@ export class Desktop extends Component {
             const nextY = clampWindowTopPosition(position.y, safeTopOffset);
             return { id, x: nextX, y: nextY };
         });
+
         const nextSession = { ...this.props.session, windows };
         if ('dock' in nextSession) {
             delete nextSession.dock;
@@ -1548,7 +1723,8 @@ export class Desktop extends Component {
                 id="desktop"
                 role="main"
                 ref={this.desktopRef}
-                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                style={{ paddingTop: DESKTOP_TOP_PADDING }}
             >
 
                 {/* Window Area */}

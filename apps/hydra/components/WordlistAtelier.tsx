@@ -87,42 +87,53 @@ const WordlistAtelier: React.FC = () => {
   return (
     <div className="space-y-4 p-4 bg-gray-900 text-white">
       <h2 className="text-xl font-bold">Wordlist Atelier</h2>
-      <textarea
-        className="w-full p-2 rounded text-black"
-        rows={4}
-        value={baseWords}
-        onChange={(e) => setBaseWords(e.target.value)}
-        placeholder="One word per line"
-      />
-      <div className="space-x-4">
-        <label>
-          <input
-            type="checkbox"
-            checked={upper}
-            onChange={(e) => setUpper(e.target.checked)}
-            className="mr-1"
-          />
-          Uppercase
+        <label htmlFor="wordlist-atelier-base" className="sr-only" id="wordlist-atelier-base-label">
+          Base words
         </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={leet}
-            onChange={(e) => setLeet(e.target.checked)}
-            className="mr-1"
-          />
-          Leet
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={digits}
-            onChange={(e) => setDigits(e.target.checked)}
-            className="mr-1"
-          />
-          Append 0-9
-        </label>
-      </div>
+        <textarea
+          id="wordlist-atelier-base"
+          className="w-full p-2 rounded text-black"
+          rows={4}
+          value={baseWords}
+          onChange={(e) => setBaseWords(e.target.value)}
+          placeholder="One word per line"
+          aria-labelledby="wordlist-atelier-base-label"
+        />
+        <div className="space-x-4">
+          <div className="inline-flex items-center">
+            <input
+              id="wordlist-atelier-upper"
+              type="checkbox"
+              checked={upper}
+              onChange={(e) => setUpper(e.target.checked)}
+              className="mr-1"
+              aria-label="Toggle uppercase mutations"
+            />
+            <label htmlFor="wordlist-atelier-upper">Uppercase</label>
+          </div>
+          <div className="inline-flex items-center">
+            <input
+              id="wordlist-atelier-leet"
+              type="checkbox"
+              checked={leet}
+              onChange={(e) => setLeet(e.target.checked)}
+              className="mr-1"
+              aria-label="Toggle leet substitutions"
+            />
+            <label htmlFor="wordlist-atelier-leet">Leet</label>
+          </div>
+          <div className="inline-flex items-center">
+            <input
+              id="wordlist-atelier-digits"
+              type="checkbox"
+              checked={digits}
+              onChange={(e) => setDigits(e.target.checked)}
+              className="mr-1"
+              aria-label="Toggle digit suffix"
+            />
+            <label htmlFor="wordlist-atelier-digits">Append 0-9</label>
+          </div>
+        </div>
       <button
         onClick={generate}
         className="px-4 py-2 bg-green-600 rounded"

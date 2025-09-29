@@ -32,3 +32,8 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 - `yarn why bare-fs` shows the module is required by `tar-fs@3.1.0` via `@puppeteer/browsers@2.10.7`.
 - Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
 - `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
+
+## Headless screenshot compatibility (2025-09-29)
+
+- Development middleware now appends `'unsafe-eval'` to `script-src` when `NODE_ENV !== 'production'` so the Next.js dev bundle can run inside headless browsers (e.g., Playwright) and capture screenshots.
+- Removed the manual note that explained screenshots were unavailable due to the stricter dev CSP; the automation workaround is no longer needed.
