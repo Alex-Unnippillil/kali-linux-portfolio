@@ -179,6 +179,7 @@ const NiktoApp = () => {
             className="w-full p-2 rounded text-black"
             value={host}
             onChange={(e) => setHost(e.target.value)}
+            aria-label="Target host"
           />
         </div>
         <div>
@@ -191,6 +192,7 @@ const NiktoApp = () => {
             className="w-full p-2 rounded text-black"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            aria-label="Target port"
           />
         </div>
         <div className="flex items-center mt-2">
@@ -200,6 +202,7 @@ const NiktoApp = () => {
             className="mr-2"
             checked={ssl}
             onChange={(e) => setSsl(e.target.checked)}
+            aria-label="Use SSL"
           />
           <label htmlFor="nikto-ssl" className="text-sm">
             SSL
@@ -289,6 +292,8 @@ const NiktoApp = () => {
           title="Nikto HTML Report"
           srcDoc={htmlReport}
           className="w-full h-64 bg-white"
+          loading="lazy"
+          importance="low"
         />
       </div>
       <div>
@@ -305,18 +310,20 @@ const NiktoApp = () => {
         {entries.length > 0 && (
           <div>
             <div className="flex space-x-2 mb-2">
-              <input
-                placeholder="Filter host"
-                value={filterHost}
-                onChange={(e) => setFilterHost(e.target.value)}
-                className="p-1 rounded text-black flex-1"
-              />
-              <input
-                placeholder="Filter path"
-                value={filterPath}
-                onChange={(e) => setFilterPath(e.target.value)}
-                className="p-1 rounded text-black flex-1"
-              />
+            <input
+              placeholder="Filter host"
+              value={filterHost}
+              onChange={(e) => setFilterHost(e.target.value)}
+              className="p-1 rounded text-black flex-1"
+              aria-label="Filter host"
+            />
+            <input
+              placeholder="Filter path"
+              value={filterPath}
+              onChange={(e) => setFilterPath(e.target.value)}
+              className="p-1 rounded text-black flex-1"
+              aria-label="Filter path"
+            />
               <select
                 aria-label="Filter severity"
                 value={filterSeverity}

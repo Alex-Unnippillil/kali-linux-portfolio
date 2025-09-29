@@ -68,6 +68,7 @@ export default function PayloadBuilder() {
         readOnly
         rows={6}
         className="w-full text-black p-1 rounded"
+        aria-label="Generated payload HTML"
       />
       <div className="border h-48">
         <iframe
@@ -75,6 +76,8 @@ export default function PayloadBuilder() {
           sandbox="allow-scripts"
           srcDoc={page}
           className="w-full h-full border-0"
+          loading="lazy"
+          importance="low"
         />
       </div>
       <p className="text-xs">

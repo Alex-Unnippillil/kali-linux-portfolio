@@ -95,13 +95,14 @@ const Firefox: React.FC = () => {
         <label htmlFor="firefox-address" className="sr-only">
           Address
         </label>
-        <input
-          id="firefox-address"
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder="Enter a URL"
-          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-        />
+          <input
+            id="firefox-address"
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            placeholder="Enter a URL"
+            className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+            aria-label="Address bar"
+          />
         <button
           type="submit"
           className="rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
@@ -132,6 +133,9 @@ const Firefox: React.FC = () => {
             className="h-full w-full border-0"
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            importance="low"
           />
         )}
       </div>
