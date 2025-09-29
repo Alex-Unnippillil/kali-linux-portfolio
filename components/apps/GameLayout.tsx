@@ -6,6 +6,7 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useMemo,
 } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
@@ -14,6 +15,10 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import AppTitleBar, {
+  AppBreadcrumb,
+  AppTitleBarAction,
+} from '../ui/AppTitleBar';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -23,6 +28,10 @@ interface GameLayoutProps {
   score?: number;
   highScore?: number;
   editor?: React.ReactNode;
+  title?: string;
+  breadcrumbs?: AppBreadcrumb[];
+  onBack?: () => void;
+  contextLabel?: string;
 }
 
 interface RecordedInput {
@@ -43,6 +52,11 @@ const RecorderContext = createContext<RecorderContextValue>({
 
 export const useInputRecorder = () => useContext(RecorderContext);
 
+const formatTitle = (value: string) =>
+  value
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+
 const GameLayout: React.FC<GameLayoutProps> = ({
   gameId = 'unknown',
   children,
@@ -51,6 +65,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   score,
   highScore,
   editor,
+  title,
+  breadcrumbs,
+  onBack,
+  contextLabel,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -209,85 +227,116 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const contextValue = { record, registerReplay };
 
+  const displayTitle = useMemo(
+    () => title ?? formatTitle(gameId),
+    [gameId, title],
+  );
+
+  const actions: AppTitleBarAction[] = useMemo(() => {
+    const base: AppTitleBarAction[] = [
+      {
+        id: 'pause',
+        label: paused ? 'Resume' : 'Pause',
+        onSelect: () => setPaused((p) => !p),
+        ariaLabel: paused ? 'Resume gameplay' : 'Pause gameplay',
+      },
+      {
+        id: 'snapshot',
+        label: 'Snapshot',
+        onSelect: snapshot,
+        ariaLabel: 'Download a snapshot of recent inputs',
+      },
+      {
+        id: 'replay',
+        label: 'Replay',
+        onSelect: replay,
+        ariaLabel: 'Replay your last recorded inputs',
+      },
+      {
+        id: 'share',
+        label: 'Share',
+        onSelect: shareApp,
+        ariaLabel: 'Share this game',
+      },
+    ];
+
+    if (highScore !== undefined) {
+      base.push({
+        id: 'share-score',
+        label: 'Share score',
+        onSelect: shareScore,
+        ariaLabel: 'Share your high score',
+      });
+    }
+
+    base.push({
+      id: 'help',
+      label: showHelp ? 'Hide help' : 'Help',
+      onSelect: toggle,
+      ariaLabel: showHelp ? 'Close help overlay' : 'Open help overlay',
+      pressed: showHelp,
+      ariaExpanded: showHelp,
+    });
+
+    return base;
+  }, [
+    highScore,
+    paused,
+    replay,
+    shareApp,
+    shareScore,
+    showHelp,
+    snapshot,
+    toggle,
+  ]);
+
+  const effectiveContextLabel =
+    contextLabel ?? `Currently playing ${displayTitle}`;
+
   return (
     <RecorderContext.Provider value={contextValue}>
-      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
-        {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
-        {paused && (
-          <div
-            className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
-            role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
-          >
-            Resume
-          </button>
+      <div
+        className="flex h-full w-full flex-col"
+        data-reduced-motion={prefersReducedMotion}
+      >
+        <AppTitleBar
+          title={displayTitle}
+          breadcrumbs={breadcrumbs}
+          onBack={onBack}
+          contextLabel={effectiveContextLabel}
+          actions={actions}
+          actionsLabel="Game actions"
+        />
+        <div className="relative flex-1">
+          {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+          {paused && (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+              role="dialog"
+              aria-modal="true"
+            >
+              <button
+                type="button"
+                onClick={resume}
+                className="rounded bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring"
+                autoFocus
+              >
+                Resume
+              </button>
+            </div>
+          )}
+          {children}
+          <div className="absolute top-2 left-2 z-10 space-y-1 text-sm">
+            {stage !== undefined && <div>Stage: {stage}</div>}
+            {lives !== undefined && <div>Lives: {lives}</div>}
+            {score !== undefined && <div>Score: {score}</div>}
+            {highScore !== undefined && <div>High: {highScore}</div>}
+          </div>
+          {!prefersReducedMotion && <PerfOverlay />}
+          {editor && (
+            <div className="absolute bottom-2 left-2 z-30">{editor}</div>
+          )}
         </div>
-      )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Snapshot
-        </button>
-        <button
-          type="button"
-          onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Replay
-        </button>
-        <button
-          type="button"
-          onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Share
-        </button>
-        {highScore !== undefined && (
-          <button
-            type="button"
-            onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-          >
-            Share Score
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label="Help"
-          aria-expanded={showHelp}
-          onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-        >
-          ?
-        </button>
-      </div>
-      {children}
-      <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
-        {stage !== undefined && <div>Stage: {stage}</div>}
-        {lives !== undefined && <div>Lives: {lives}</div>}
-        {score !== undefined && <div>Score: {score}</div>}
-        {highScore !== undefined && <div>High: {highScore}</div>}
-      </div>
-      {!prefersReducedMotion && <PerfOverlay />}
-      {editor && (
-        <div className="absolute bottom-2 left-2 z-30">{editor}</div>
-      )}
       </div>
     </RecorderContext.Provider>
   );
