@@ -612,7 +612,7 @@ const apps = [
   {
     id: 'calculator',
     title: 'Calculator',
-    icon: '/themes/Yaru/apps/calc.png',
+    icon: '/themes/Yaru/apps/calc.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -802,7 +802,7 @@ const apps = [
   {
     id: 'converter',
     title: 'Converter',
-    icon: '/themes/Yaru/apps/calc.png',
+    icon: '/themes/Yaru/apps/calc.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
