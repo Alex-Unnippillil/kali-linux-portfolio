@@ -12,7 +12,14 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
-import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../../utils/uiConstants';
+import {
+    clampPercentFromPx,
+    enforceSizeConstraints,
+    getConstraintPreset,
+    getMinDimensions,
+    resolveConstraints,
+} from '../../utils/windowConstraints';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -70,11 +77,14 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            contentConstraints: getConstraintPreset(),
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._contentObserver = null;
+        this._constraintsFrame = null;
     }
 
     componentDidMount() {
@@ -91,6 +101,8 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        this.initContentObserver();
+        this.queueConstraintEvaluation();
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -106,6 +118,14 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._contentObserver) {
+            this._contentObserver.disconnect();
+            this._contentObserver = null;
+        }
+        if (typeof window !== 'undefined' && this._constraintsFrame) {
+            window.cancelAnimationFrame(this._constraintsFrame);
+            this._constraintsFrame = null;
         }
     }
 
@@ -135,19 +155,39 @@ export class Window extends Component {
         const topInset = typeof window !== 'undefined'
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
-        const windowHeightPx = viewportHeight * (this.state.height / 100.0);
-        const windowWidthPx = viewportWidth * (this.state.width / 100.0);
-        const availableVertical = Math.max(viewportHeight - topInset - SNAP_BOTTOM_INSET, 0);
-        const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
-        const maxTop = Math.max(availableVertical - windowHeightPx, 0);
+        const constraints = this.state.contentConstraints;
 
-        this.setState({
-            parentSize: {
-                height: maxTop,
-                width: availableHorizontal,
-            },
-            safeAreaTop: topInset,
+        this.setState((prevState) => {
+            const enforced = enforceSizeConstraints(
+                prevState.width,
+                prevState.height,
+                viewportWidth,
+                viewportHeight,
+                constraints
+            );
+            const widthPercent = enforced.widthPercent;
+            const heightPercent = enforced.heightPercent;
+            const windowHeightPx = viewportHeight * (heightPercent / 100.0);
+            const windowWidthPx = viewportWidth * (widthPercent / 100.0);
+            const availableVertical = Math.max(viewportHeight - topInset - SNAP_BOTTOM_INSET, 0);
+            const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
+            const maxTop = Math.max(availableVertical - windowHeightPx, 0);
 
+            const nextState = {
+                parentSize: {
+                    height: maxTop,
+                    width: availableHorizontal,
+                },
+                safeAreaTop: topInset,
+            };
+
+            if (widthPercent !== prevState.width) {
+                nextState.width = widthPercent;
+            }
+            if (heightPercent !== prevState.height) {
+                nextState.height = heightPercent;
+            }
+            return nextState;
         }, () => {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
@@ -180,6 +220,67 @@ export class Window extends Component {
         }, 200);
     }
 
+    getContentRoot = () => {
+        const node = this.getWindowNode();
+        if (!node) return null;
+        return node.querySelector('.windowMainScreen');
+    }
+
+    queueConstraintEvaluation = () => {
+        if (typeof window === 'undefined') {
+            this.updateContentConstraints();
+            return;
+        }
+        if (this._constraintsFrame) {
+            window.cancelAnimationFrame(this._constraintsFrame);
+        }
+        this._constraintsFrame = window.requestAnimationFrame(() => {
+            this._constraintsFrame = null;
+            this.updateContentConstraints();
+        });
+    }
+
+    initContentObserver = () => {
+        if (typeof MutationObserver === 'undefined') {
+            this.queueConstraintEvaluation();
+            return;
+        }
+        if (this._contentObserver) {
+            this._contentObserver.disconnect();
+        }
+        const root = this.getWindowNode();
+        if (!root) return;
+        this._contentObserver = new MutationObserver(() => {
+            this.queueConstraintEvaluation();
+        });
+        this._contentObserver.observe(root, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+        });
+    }
+
+    updateContentConstraints = () => {
+        const container = this.getContentRoot();
+        if (!container) return;
+        const nextConstraints = resolveConstraints(container);
+        this.setState((prev) => {
+            const current = prev.contentConstraints || getConstraintPreset();
+            if (
+                current.type === nextConstraints.type &&
+                current.minWidthPx === nextConstraints.minWidthPx &&
+                current.minHeightPx === nextConstraints.minHeightPx
+            ) {
+                return null;
+            }
+            return { contentConstraints: nextConstraints };
+        }, this.resizeBoundries);
+    }
+
+    getMinWidthPx = () => getMinDimensions(this.state.contentConstraints).minWidthPx;
+
+    getMinHeightPx = () => getMinDimensions(this.state.contentConstraints).minHeightPx;
+
     optimizeWindow = () => {
         const root = this.getWindowNode();
         if (!root) return;
@@ -189,12 +290,19 @@ export class Window extends Component {
         container.style.padding = '0px';
 
         const shrink = () => {
+            if (typeof window === 'undefined') return;
             const usage = this.computeContentUsage();
             if (usage >= 80) return;
-            this.setState(prev => ({
-                width: Math.max(prev.width - 1, 20),
-                height: Math.max(prev.height - 1, 20)
-            }), () => {
+            this.setState(prev => {
+                const minWidthPercent = clampPercentFromPx(this.getMinWidthPx(), window.innerWidth) || 20;
+                const minHeightPercent = clampPercentFromPx(this.getMinHeightPx(), window.innerHeight) || 20;
+                const width = Math.max(prev.width - 1, minWidthPercent);
+                const height = Math.max(prev.height - 1, minHeightPercent);
+                if (width === prev.width && height === prev.height) {
+                    return null;
+                }
+                return { width, height };
+            }, () => {
                 if (this.computeContentUsage() < 80) {
                     setTimeout(shrink, 50);
                 }
@@ -264,17 +372,25 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        if (!viewportHeight) return;
+        const px = (this.state.height / 100) * viewportHeight + 1;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
+        const minHeightPx = Math.min(this.getMinHeightPx(), viewportHeight) || 0;
+        const targetPx = Math.min(Math.max(snapped, minHeightPx), viewportHeight);
+        const heightPercent = (targetPx / viewportHeight) * 100;
         this.setState({ height: heightPercent }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        if (!viewportWidth) return;
+        const px = (this.state.width / 100) * viewportWidth + 1;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
+        const minWidthPx = Math.min(this.getMinWidthPx(), viewportWidth) || 0;
+        const targetPx = Math.min(Math.max(snapped, minWidthPx), viewportWidth);
+        const widthPercent = (targetPx / viewportWidth) * 100;
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
@@ -326,6 +442,12 @@ export class Window extends Component {
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
         const region = regions[position];
         if (!region) return;
+        const minWidthPx = this.getMinWidthPx();
+        const minHeightPx = this.getMinHeightPx();
+        if ((minWidthPx && region.width < minWidthPx) || (minHeightPx && region.height < minHeightPx)) {
+            this.setState({ snapPreview: null, snapPosition: null });
+            return;
+        }
         const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
@@ -377,6 +499,14 @@ export class Window extends Component {
             candidate = { position: 'left', preview: regions.left };
         } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
             candidate = { position: 'right', preview: regions.right };
+        }
+
+        if (candidate) {
+            const minWidthPx = this.getMinWidthPx();
+            const minHeightPx = this.getMinHeightPx();
+            if ((minWidthPx && candidate.preview.width < minWidthPx) || (minHeightPx && candidate.preview.height < minHeightPx)) {
+                candidate = null;
+            }
         }
 
         if (candidate) {
@@ -570,19 +700,39 @@ export class Window extends Component {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+                this.setState(prev => {
+                    const minWidthPercent = clampPercentFromPx(this.getMinWidthPx(), viewportWidth) || 20;
+                    const width = Math.max(prev.width - step, minWidthPercent);
+                    if (width === prev.width) return null;
+                    return { width };
+                }, this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                this.setState(prev => {
+                    const width = Math.min(prev.width + step, 100);
+                    if (width === prev.width) return null;
+                    return { width };
+                }, this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+                this.setState(prev => {
+                    const minHeightPercent = clampPercentFromPx(this.getMinHeightPx(), viewportHeight) || 20;
+                    const height = Math.max(prev.height - step, minHeightPercent);
+                    if (height === prev.height) return null;
+                    return { height };
+                }, this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                this.setState(prev => {
+                    const height = Math.min(prev.height + step, 100);
+                    if (height === prev.height) return null;
+                    return { height };
+                }, this.resizeBoundries);
             }
             this.focusWindow();
         }
@@ -608,6 +758,7 @@ export class Window extends Component {
     }
 
     render() {
+        const { minWidthPx, minHeightPx } = getMinDimensions(this.state.contentConstraints);
         return (
             <>
                 {this.state.snapPreview && (
@@ -645,7 +796,12 @@ export class Window extends Component {
                 >
                     <div
                         ref={this.windowRef}
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{
+                            width: `${this.state.width}%`,
+                            height: `${this.state.height}%`,
+                            minWidth: minWidthPx ? `${minWidthPx}px` : undefined,
+                            minHeight: minHeightPx ? `${minHeightPx}px` : undefined,
+                        }}
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
