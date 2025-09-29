@@ -6,6 +6,7 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  type CSSProperties,
 } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
@@ -42,6 +43,13 @@ const RecorderContext = createContext<RecorderContextValue>({
 });
 
 export const useInputRecorder = () => useContext(RecorderContext);
+
+const overlaySafeAreaStyles: CSSProperties = {
+  paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)',
+  paddingRight: 'max(env(safe-area-inset-right, 0px), 12px)',
+  paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+  paddingLeft: 'max(env(safe-area-inset-left, 0px), 12px)',
+};
 
 const GameLayout: React.FC<GameLayoutProps> = ({
   gameId = 'unknown',
@@ -208,6 +216,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const resume = useCallback(() => setPaused(false), []);
 
   const contextValue = { record, registerReplay };
+  const hasHudMetrics =
+    stage !== undefined ||
+    lives !== undefined ||
+    score !== undefined ||
+    highScore !== undefined;
 
   return (
     <RecorderContext.Provider value={contextValue}>
@@ -229,65 +242,82 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           </button>
         </div>
       )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+        <div
+          className="pointer-events-none absolute inset-0 z-40 flex flex-col"
+          style={overlaySafeAreaStyles}
         >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Snapshot
-        </button>
-        <button
-          type="button"
-          onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Replay
-        </button>
-        <button
-          type="button"
-          onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Share
-        </button>
-        {highScore !== undefined && (
-          <button
-            type="button"
-            onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-          >
-            Share Score
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label="Help"
-          aria-expanded={showHelp}
-          onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-        >
-          ?
-        </button>
-      </div>
-      {children}
-      <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
-        {stage !== undefined && <div>Stage: {stage}</div>}
-        {lives !== undefined && <div>Lives: {lives}</div>}
-        {score !== undefined && <div>Score: {score}</div>}
-        {highScore !== undefined && <div>High: {highScore}</div>}
-      </div>
-      {!prefersReducedMotion && <PerfOverlay />}
-      {editor && (
-        <div className="absolute bottom-2 left-2 z-30">{editor}</div>
-      )}
+          <div className="flex w-full flex-wrap items-start gap-3">
+            {hasHudMetrics && (
+              <div className="pointer-events-auto rounded-md bg-black/50 px-3 py-2 text-xs text-white shadow-lg backdrop-blur">
+                {stage !== undefined && <div className="leading-tight">Stage: {stage}</div>}
+                {lives !== undefined && <div className="leading-tight">Lives: {lives}</div>}
+                {score !== undefined && <div className="leading-tight">Score: {score}</div>}
+                {highScore !== undefined && <div className="leading-tight">High: {highScore}</div>}
+              </div>
+            )}
+            <div
+              className={`pointer-events-auto flex max-w-full flex-wrap gap-2 text-xs sm:text-sm ${
+                hasHudMetrics ? 'ml-auto justify-end' : 'ml-auto'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setPaused((p) => !p)}
+                className="rounded-full bg-gray-700 px-3 py-2 text-white shadow focus:outline-none focus:ring"
+              >
+                {paused ? 'Resume' : 'Pause'}
+              </button>
+              <button
+                type="button"
+                onClick={snapshot}
+                className="rounded-full bg-gray-700 px-3 py-2 text-white shadow focus:outline-none focus:ring"
+              >
+                Snapshot
+              </button>
+              <button
+                type="button"
+                onClick={replay}
+                className="rounded-full bg-gray-700 px-3 py-2 text-white shadow focus:outline-none focus:ring"
+              >
+                Replay
+              </button>
+              <button
+                type="button"
+                onClick={shareApp}
+                className="rounded-full bg-gray-700 px-3 py-2 text-white shadow focus:outline-none focus:ring"
+              >
+                Share
+              </button>
+              {highScore !== undefined && (
+                <button
+                  type="button"
+                  onClick={shareScore}
+                  className="rounded-full bg-gray-700 px-3 py-2 text-white shadow focus:outline-none focus:ring"
+                >
+                  Share Score
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Help"
+                aria-expanded={showHelp}
+                onClick={toggle}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-700 text-white shadow focus:outline-none focus:ring"
+              >
+                ?
+              </button>
+            </div>
+          </div>
+          <div className="mt-auto flex w-full justify-between gap-3">
+            {editor && (
+              <div className="pointer-events-auto rounded-md bg-black/50 p-2 text-white shadow-lg backdrop-blur">
+                {editor}
+              </div>
+            )}
+          </div>
+        </div>
+        {children}
+        {!prefersReducedMotion && <PerfOverlay />}
       </div>
     </RecorderContext.Provider>
   );
