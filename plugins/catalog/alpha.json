@@ -1,0 +1,5 @@
+{
+  "id": "alpha",
+  "sandbox": "worker",
+  "code": "self.postMessage('alpha ready');"
+}
