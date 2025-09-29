@@ -3,6 +3,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
 
+const resolveCssVar = (name, fallback) => {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return value?.trim() || fallback;
+};
+
 const ResourceMonitor = () => {
   const cpuCanvas = useRef(null);
   const memCanvas = useRef(null);
@@ -127,10 +133,34 @@ const ResourceMonitor = () => {
   };
 
   const drawCharts = (dataset = dataRef.current) => {
-    drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'CPU %', 100);
-    drawChart(memCanvas.current, dataset.mem, '#ffd700', 'Memory %', 100);
-    drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 120);
-    drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
+    drawChart(
+      cpuCanvas.current,
+      dataset.cpu,
+      resolveCssVar('--chart-cpu-line', '#00ff00'),
+      'CPU %',
+      100,
+    );
+    drawChart(
+      memCanvas.current,
+      dataset.mem,
+      resolveCssVar('--chart-mem-line', '#ffd700'),
+      'Memory %',
+      100,
+    );
+    drawChart(
+      fpsCanvas.current,
+      dataset.fps,
+      resolveCssVar('--chart-fps-line', '#00ffff'),
+      'FPS',
+      120,
+    );
+    drawChart(
+      netCanvas.current,
+      dataset.net,
+      resolveCssVar('--chart-net-line', '#ff00ff'),
+      'Mbps',
+      100,
+    );
   };
 
   const animateCharts = useCallback(() => {
@@ -176,13 +206,33 @@ const ResourceMonitor = () => {
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu overflow-hidden"
+      className="relative h-full w-full flex flex-col font-ubuntu overflow-hidden"
+      style={{
+        backgroundColor: 'var(--theme-color-background)',
+        color: 'var(--theme-color-text)',
+      }}
     >
       <div className="p-2 flex gap-2 items-center">
-        <button onClick={togglePause} className="px-2 py-1 bg-ub-dark-grey rounded">
+        <button
+          onClick={togglePause}
+          className="px-2 py-1 rounded border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-color-accent)] focus-visible:ring-offset-2"
+          style={{
+            backgroundColor: 'var(--theme-color-surface)',
+            color: 'var(--theme-color-text)',
+            borderColor: 'var(--theme-border-subtle)',
+          }}
+        >
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
+        <button
+          onClick={toggleStress}
+          className="px-2 py-1 rounded border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-color-accent)] focus-visible:ring-offset-2"
+          style={{
+            backgroundColor: 'var(--theme-color-surface)',
+            color: 'var(--theme-color-text)',
+            borderColor: 'var(--theme-border-subtle)',
+          }}
+        >
           {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
         <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
@@ -194,7 +244,11 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="CPU usage chart"
-          className="bg-ub-dark-grey"
+          style={{
+            backgroundColor: 'var(--chart-surface)',
+            borderRadius: 'var(--radius-md)',
+            border: `1px solid var(--theme-border-subtle)`,
+          }}
         />
         <canvas
           ref={memCanvas}
@@ -202,7 +256,11 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Memory usage chart"
-          className="bg-ub-dark-grey"
+          style={{
+            backgroundColor: 'var(--chart-surface)',
+            borderRadius: 'var(--radius-md)',
+            border: `1px solid var(--theme-border-subtle)`,
+          }}
         />
         <canvas
           ref={fpsCanvas}
@@ -210,7 +268,11 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="FPS chart"
-          className="bg-ub-dark-grey"
+          style={{
+            backgroundColor: 'var(--chart-surface)',
+            borderRadius: 'var(--radius-md)',
+            border: `1px solid var(--theme-border-subtle)`,
+          }}
         />
         <canvas
           ref={netCanvas}
@@ -218,7 +280,11 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Network speed chart"
-          className="bg-ub-dark-grey"
+          style={{
+            backgroundColor: 'var(--chart-surface)',
+            borderRadius: 'var(--radius-md)',
+            border: `1px solid var(--theme-border-subtle)`,
+          }}
         />
       </div>
       {stressWindows.current.map((_, i) => (
@@ -227,7 +293,11 @@ const ResourceMonitor = () => {
           ref={(el) => {
             stressEls.current[i] = el;
           }}
-          className="absolute w-8 h-6 bg-white bg-opacity-20 border border-gray-500 pointer-events-none"
+          className="absolute w-8 h-6 pointer-events-none rounded"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--theme-color-text) 20%, transparent)',
+            border: `1px solid var(--theme-border-subtle)`,
+          }}
         />
       ))}
     </div>
@@ -252,7 +322,7 @@ function drawChart(canvas, values, color, label, maxVal) {
   });
   ctx.stroke();
   const latest = values[values.length - 1] || 0;
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = resolveCssVar('--chart-label', '#ffffff');
   ctx.font = '12px sans-serif';
   ctx.fillText(`${label}: ${latest.toFixed(1)}`, 4, 12);
 }

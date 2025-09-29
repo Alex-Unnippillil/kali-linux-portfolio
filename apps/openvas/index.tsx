@@ -19,10 +19,10 @@ interface HostReport {
 }
 
 const riskColors: Record<HostReport['risk'], string> = {
-  Low: 'bg-green-700',
-  Medium: 'bg-yellow-700',
-  High: 'bg-orange-700',
-  Critical: 'bg-red-700',
+  Low: 'var(--severity-low)',
+  Medium: 'var(--severity-medium)',
+  High: 'var(--severity-high)',
+  Critical: 'var(--severity-critical)',
 };
 
 const sampleData: HostReport[] = [
@@ -65,10 +65,10 @@ const sampleData: HostReport[] = [
 ];
 
 const cvssColor = (score: number) => {
-  if (score >= 9) return 'bg-red-700';
-  if (score >= 7) return 'bg-orange-700';
-  if (score >= 4) return 'bg-yellow-700';
-  return 'bg-green-700';
+  if (score >= 9) return 'var(--severity-critical)';
+  if (score >= 7) return 'var(--severity-high)';
+  if (score >= 4) return 'var(--severity-medium)';
+  return 'var(--severity-low)';
 };
 
 const OpenVASReport: React.FC = () => {
@@ -147,21 +147,35 @@ const OpenVASReport: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 space-y-6">
+    <div
+      className="min-h-screen p-4 space-y-6"
+      style={{
+        backgroundColor: 'var(--theme-color-background)',
+        color: 'var(--theme-color-text)',
+      }}
+    >
       <div className="flex items-center justify-between">
         <h1 className="text-2xl">OpenVAS Report</h1>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={exportJSON}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className="px-2 py-1 rounded text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-color-accent)] focus-visible:ring-offset-2"
+            style={{
+              backgroundColor: 'var(--theme-color-accent)',
+              color: 'var(--theme-color-on-accent)',
+            }}
           >
             Export JSON
           </button>
           <button
             type="button"
             onClick={exportCSV}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className="px-2 py-1 rounded text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-color-accent)] focus-visible:ring-offset-2"
+            style={{
+              backgroundColor: 'var(--theme-color-accent)',
+              color: 'var(--theme-color-on-accent)',
+            }}
           >
             Export CSV
           </button>
@@ -174,7 +188,11 @@ const OpenVASReport: React.FC = () => {
           {Object.entries(riskSummary).map(([risk, count]) => (
             <div
               key={risk}
-              className={`p-4 rounded ${riskColors[risk as keyof typeof riskColors]}`}
+              className="p-4 rounded"
+              style={{
+                backgroundColor: riskColors[risk as keyof typeof riskColors],
+                color: 'var(--severity-text)',
+              }}
             >
               <p className="text-sm">{risk}</p>
               <p className="text-2xl font-bold">{count}</p>
@@ -184,9 +202,17 @@ const OpenVASReport: React.FC = () => {
         <svg
           width={trendWidth}
           height={trendHeight}
-          className="bg-gray-800 rounded"
+          style={{
+            backgroundColor: 'var(--chart-surface)',
+            borderRadius: 'var(--radius-md)',
+          }}
         >
-          <path d={trendPath} stroke="#0ea5e9" strokeWidth={2} fill="none" />
+          <path
+            d={trendPath}
+            stroke="var(--chart-line)"
+            strokeWidth={2}
+            fill="none"
+          />
         </svg>
       </section>
 
@@ -198,33 +224,66 @@ const OpenVASReport: React.FC = () => {
               <th className="p-2">Host</th>
               <th className="p-2">Vulnerability</th>
               <th className="p-2">CVSS</th>
+              <th className="p-2">Details</th>
             </tr>
           </thead>
           <tbody>
             {findings.map((f) => {
               const key = `${f.host}-${f.id}`;
+              const isExpanded = Boolean(expanded[key]);
               return (
                 <React.Fragment key={key}>
                   <tr
-                    className="cursor-pointer hover:bg-gray-800"
-                    onClick={() => toggle(key)}
+                    style={{
+                      backgroundColor: isExpanded
+                        ? 'var(--table-row-alt)'
+                        : 'transparent',
+                    }}
                   >
                     <td className="p-2">{f.host}</td>
                     <td className="p-2">{f.name}</td>
+                    <td className="p-2 align-middle">
+                      <progress
+                        value={f.cvss}
+                        max={10}
+                        aria-label={`CVSS score ${f.cvss}`}
+                        className="w-full h-3 rounded"
+                        style={{
+                          accentColor: cvssColor(f.cvss),
+                          backgroundColor: 'var(--chart-grid)',
+                        }}
+                      />
+                    </td>
                     <td className="p-2">
-                      <div className="w-full bg-gray-700 rounded h-3">
-                        <div
-                          className={`${cvssColor(f.cvss)} h-3 rounded`}
-                          style={{ width: `${(f.cvss / 10) * 100}%` }}
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggle(key)}
+                        className={`${tabButtonBase} ml-0`}
+                        style={tabButtonStyle(isExpanded)}
+                        aria-expanded={isExpanded}
+                        aria-label={`Toggle details for ${f.name} on ${f.host}`}
+                      >
+                        {isExpanded ? 'Hide' : 'View'}
+                      </button>
                     </td>
                   </tr>
-                  {expanded[key] && (
-                    <tr>
-                      <td colSpan={3} className="p-2 bg-gray-800">
+                  {isExpanded && (
+                    <tr role="presentation" aria-label={`Details for ${f.name} on ${f.host}`}>
+                      <td
+                        colSpan={4}
+                        className="p-2"
+                        style={{
+                          backgroundColor: 'var(--chart-surface)',
+                          border: `1px solid var(--theme-border-subtle)`,
+                        }}
+                      >
                         <p className="text-sm mb-1">{f.description}</p>
-                        <p className="text-xs text-yellow-300">{f.remediation}</p>
+                        <p
+                          className="text-xs"
+                          style={{ color: 'var(--theme-muted-text)' }}
+                        >
+                          {f.remediation}
+                        </p>
                       </td>
                     </tr>
                   )}
@@ -241,7 +300,11 @@ const OpenVASReport: React.FC = () => {
           <span
             key={tag}
             role="listitem"
-            className="px-2 py-1 bg-green-700 rounded text-sm"
+            className="px-2 py-1 rounded text-sm"
+            style={{
+              backgroundColor: 'var(--chart-series-2)',
+              color: 'var(--theme-color-on-accent)',
+            }}
           >
             {tag}
           </span>
@@ -250,7 +313,10 @@ const OpenVASReport: React.FC = () => {
 
       <h2 className="text-xl mt-6 mb-2">Compare Reports</h2>
       <ResultDiff />
-      <p className="mt-4 text-xs text-gray-400">
+      <p
+        className="mt-4 text-xs"
+        style={{ color: 'var(--theme-muted-text)' }}
+      >
         All data is static and for demonstration only. Use OpenVAS responsibly
         and only on systems you are authorized to test.
       </p>

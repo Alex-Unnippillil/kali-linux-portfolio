@@ -1,12 +1,45 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { forwardRef, useState, useMemo, useEffect } from 'react';
+
+const chartPalette = [
+  'var(--chart-series-1)',
+  'var(--chart-series-2)',
+  'var(--chart-series-3)',
+  'var(--chart-series-4)',
+  'var(--chart-series-5)',
+];
+
+const tabButtonBase =
+  'px-2 py-1 rounded border text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent transition-colors';
+
+const tabButtonStyle = (active: boolean) => ({
+  backgroundColor: active
+    ? 'var(--theme-color-accent)'
+    : 'var(--theme-color-surface)',
+  color: active ? 'var(--theme-color-on-accent)' : 'var(--theme-color-text)',
+  borderColor: 'var(--theme-border-subtle)',
+});
+
+const controlStyle = {
+  backgroundColor: 'var(--theme-control-background)',
+  color: 'var(--theme-control-text)',
+  borderColor: 'var(--theme-border-subtle)',
+};
+
+const surfaceStyle = {
+  backgroundColor: 'var(--theme-color-surface)',
+  color: 'var(--theme-color-text)',
+};
 
 interface ViewerProps {
   data: any[];
 }
 
-export default function ResultViewer({ data }: ViewerProps) {
+const ResultViewer = forwardRef<HTMLDivElement, ViewerProps>(function ResultViewer(
+  { data }: ViewerProps,
+  ref,
+) {
   const [tab, setTab] = useState<'raw' | 'parsed' | 'chart'>('raw');
   const [sortKey, setSortKey] = useState('');
   const [filter, setFilter] = useState('');
@@ -50,41 +83,103 @@ export default function ResultViewer({ data }: ViewerProps) {
   };
 
   return (
-    <div className="text-xs" aria-label="result viewer">
-      <div role="tablist" className="mb-2 flex">
-        <button role="tab" aria-selected={tab === 'raw'} onClick={() => setTab('raw')} className="px-2 py-1 bg-ub-cool-grey text-white mr-2">
+    <div
+      ref={ref}
+      className="text-xs"
+      aria-label="result viewer"
+      style={{ color: 'var(--theme-color-text)' }}
+    >
+      <div role="tablist" className="mb-2 flex gap-2">
+        <button
+          role="tab"
+          aria-selected={tab === 'raw'}
+          onClick={() => setTab('raw')}
+          className={`${tabButtonBase}`}
+          style={tabButtonStyle(tab === 'raw')}
+        >
           Raw
         </button>
-        <button role="tab" aria-selected={tab === 'parsed'} onClick={() => setTab('parsed')} className="px-2 py-1 bg-ub-cool-grey text-white mr-2">
+        <button
+          role="tab"
+          aria-selected={tab === 'parsed'}
+          onClick={() => setTab('parsed')}
+          className={tabButtonBase}
+          style={tabButtonStyle(tab === 'parsed')}
+        >
           Parsed
         </button>
-        <button role="tab" aria-selected={tab === 'chart'} onClick={() => setTab('chart')} className="px-2 py-1 bg-ub-cool-grey text-white">
+        <button
+          role="tab"
+          aria-selected={tab === 'chart'}
+          onClick={() => setTab('chart')}
+          className={tabButtonBase}
+          style={tabButtonStyle(tab === 'chart')}
+        >
           Chart
         </button>
       </div>
-      {tab === 'raw' && <pre className="bg-black text-white p-1 h-40 overflow-auto">{JSON.stringify(data, null, 2)}</pre>}
+      {tab === 'raw' && (
+        <pre
+          className="p-2 h-40 overflow-auto rounded"
+          style={{
+            ...surfaceStyle,
+            backgroundColor: 'var(--chart-surface)',
+          }}
+        >
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      )}
       {tab === 'parsed' && (
-        <div>
-          <div className="mb-2">
-            <label>
-              Filter:
-              <input value={filter} onChange={(e) => setFilter(e.target.value)} className="border p-1 text-black ml-1" />
-            </label>
+        <div style={{ color: 'var(--theme-color-text)' }}>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <label htmlFor="result-viewer-filter">Filter:</label>
+            <input
+              id="result-viewer-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="ml-1 rounded border px-2 py-1"
+              style={controlStyle}
+              aria-label="Filter results"
+            />
             {keys.map((k) => (
-              <button key={k} onClick={() => setSortKey(k)} className="px-2 py-1 bg-ub-cool-grey text-white ml-2">
+              <button
+                key={k}
+                onClick={() => setSortKey(k)}
+                className={`${tabButtonBase} ml-0`}
+                style={tabButtonStyle(sortKey === k)}
+              >
                 {k}
               </button>
             ))}
-            <button onClick={exportCsv} className="px-2 py-1 bg-ub-green text-black ml-2" type="button">
+            <button
+              onClick={exportCsv}
+              className={`${tabButtonBase} ml-0`}
+              type="button"
+              style={{
+                ...tabButtonStyle(true),
+                backgroundColor: 'var(--theme-color-accent)',
+                color: 'var(--theme-color-on-accent)',
+              }}
+            >
               CSV
             </button>
           </div>
           <div className="overflow-auto max-h-60">
-            <table className="w-full text-left">
+            <table
+              className="w-full text-left border-collapse"
+              style={{ color: 'var(--theme-color-text)' }}
+            >
               <thead>
                 <tr>
                   {keys.map((k) => (
-                    <th key={k} className="border px-1">
+                    <th
+                      key={k}
+                      className="px-2 py-1"
+                      style={{
+                        border: '1px solid var(--theme-border-subtle)',
+                        backgroundColor: 'var(--theme-color-surface)',
+                      }}
+                    >
                       {k}
                     </th>
                   ))}
@@ -92,9 +187,19 @@ export default function ResultViewer({ data }: ViewerProps) {
               </thead>
               <tbody>
                 {sorted.map((row, i) => (
-                  <tr key={i}>
+                  <tr
+                    key={i}
+                    style={{
+                      backgroundColor:
+                        i % 2 === 0 ? 'transparent' : 'var(--table-row-alt)',
+                    }}
+                  >
                     {keys.map((k) => (
-                      <td key={k} className="border px-1">
+                      <td
+                        key={k}
+                        className="px-2 py-1"
+                        style={{ border: '1px solid var(--theme-border-subtle)' }}
+                      >
                         {String(row[k])}
                       </td>
                     ))}
@@ -106,7 +211,13 @@ export default function ResultViewer({ data }: ViewerProps) {
         </div>
       )}
       {tab === 'chart' && (
-        <svg width="100%" height="100" role="img" aria-label="bar chart">
+        <svg
+          width="100%"
+          height="100"
+          role="img"
+          aria-label="bar chart"
+          style={{ backgroundColor: 'var(--chart-surface)' }}
+        >
           {data.slice(0, keys.length).map((row, i) => (
             <rect
               key={i}
@@ -114,12 +225,14 @@ export default function ResultViewer({ data }: ViewerProps) {
               y={100 - Number(row[keys[0]])}
               width={30}
               height={Number(row[keys[0]])}
-              fill={['#377eb8', '#4daf4a', '#e41a1c', '#984ea3', '#ff7f00'][i % 5]}
+              fill={chartPalette[i % chartPalette.length]}
             />
           ))}
         </svg>
       )}
     </div>
   );
-}
+});
+
+export default ResultViewer;
 

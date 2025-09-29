@@ -163,6 +163,7 @@ export default function Settings() {
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Use Kali gradient wallpaper"
               />
               Kali Gradient Wallpaper
             </label>
@@ -274,6 +275,14 @@ export default function Settings() {
               ariaLabel="High Contrast"
             />
           </div>
+          <p
+            className="mx-auto max-w-xl text-center text-xs px-6"
+            style={{ color: 'var(--theme-muted-text)' }}
+          >
+            High contrast swaps the desktop, charts, and badges to a yellow, cyan,
+            and white palette for WCAG compliance. Tool dashboards and games now
+            follow the same tokens, so their accents shift automatically.
+          </p>
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Haptics:</span>
             <ToggleSwitch

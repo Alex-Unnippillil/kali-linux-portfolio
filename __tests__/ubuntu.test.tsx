@@ -25,8 +25,8 @@ describe('Ubuntu component', () => {
 
   it('renders boot screen then desktop', () => {
     render(<Ubuntu />);
-    const bootLogo = screen.getByAltText('Ubuntu Logo');
-    const bootScreen = bootLogo.parentElement as HTMLElement;
+    const bootLogo = screen.getByAltText('Kali Linux dragon emblem');
+    const bootScreen = bootLogo.closest('[role="status"]') as HTMLElement;
     expect(bootScreen).toHaveClass('visible');
 
     act(() => {

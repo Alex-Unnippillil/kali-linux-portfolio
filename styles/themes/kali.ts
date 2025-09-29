@@ -1,8 +1,10 @@
+import { themeTokens } from '../theme';
+
 export const kaliTheme = {
-  background: 'var(--color-bg)',
-  text: 'var(--color-text)',
-  accent: 'var(--color-primary)',
-  sidebar: 'var(--color-secondary)',
+  background: themeTokens.background,
+  text: themeTokens.text,
+  accent: themeTokens.accent,
+  sidebar: 'var(--theme-color-surface)',
 };
 
 export type KaliTheme = typeof kaliTheme;
