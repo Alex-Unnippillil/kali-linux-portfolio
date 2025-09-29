@@ -70,7 +70,7 @@ export class UbuntuApp extends Component {
                 onPointerCancel={onPointerCancel}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
-                    " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
+                    " m-px z-10 flex select-none flex-col justify-start items-center text-center font-normal text-white rounded-lg border border-transparent bg-transparent transition-hover transition-active hover:border-interactive-border-hover hover:bg-interactive-hover hover:shadow-interactive-hover focus-visible:border-interactive-border-hover focus-visible:bg-interactive-hover focus-visible:shadow-interactive-hover active:border-interactive-border-active active:bg-interactive-active active:shadow-interactive-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}

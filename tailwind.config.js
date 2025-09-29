@@ -53,9 +53,20 @@ module.exports = {
           control: 'var(--color-control-accent)',
           backdrop: 'var(--kali-bg)',
         },
+        interactive: {
+          surface: 'var(--interactive-surface)',
+          hover: 'var(--interactive-surface-hover)',
+          active: 'var(--interactive-surface-active)',
+          border: 'var(--interactive-border)',
+          'border-hover': 'var(--interactive-border-hover)',
+          'border-active': 'var(--interactive-border-active)',
+        },
       },
       boxShadow: {
         'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
+        interactive: 'var(--interactive-shadow)',
+        'interactive-hover': 'var(--interactive-shadow-hover)',
+        'interactive-active': 'var(--interactive-shadow-active)',
       },
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
