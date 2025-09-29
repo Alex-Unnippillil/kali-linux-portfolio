@@ -9,6 +9,7 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
     <div
       ref={ref}
       data-testid="xterm-container"
+      data-osk-target="terminal"
       className={`text-white ${className}`}
       style={{
         background: 'var(--kali-bg)',
@@ -17,6 +18,8 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
         fontFamily: 'monospace',
         fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
         lineHeight: 1.4,
+        paddingBottom: 'calc(var(--osk-viewport-offset, 0px) + 0.5rem)',
+        transition: 'padding-bottom 0.25s ease',
         ...style,
       }}
       {...props}

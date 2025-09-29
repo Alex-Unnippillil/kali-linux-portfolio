@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  onScreenKeyboardEnabled: true,
+  onScreenKeyboardAutoShow: true,
 };
 
 export async function getAccent() {
@@ -114,6 +116,28 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getOnScreenKeyboardEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.onScreenKeyboardEnabled;
+  const stored = window.localStorage.getItem('osk-enabled');
+  return stored === null ? DEFAULT_SETTINGS.onScreenKeyboardEnabled : stored === 'true';
+}
+
+export async function setOnScreenKeyboardEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('osk-enabled', value ? 'true' : 'false');
+}
+
+export async function getOnScreenKeyboardAutoShow() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.onScreenKeyboardAutoShow;
+  const stored = window.localStorage.getItem('osk-auto-show');
+  return stored === null ? DEFAULT_SETTINGS.onScreenKeyboardAutoShow : stored === 'true';
+}
+
+export async function setOnScreenKeyboardAutoShow(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('osk-auto-show', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +174,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('osk-enabled');
+  window.localStorage.removeItem('osk-auto-show');
 }
 
 export async function exportSettings() {
@@ -177,6 +203,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getOnScreenKeyboardEnabled(),
+    getOnScreenKeyboardAutoShow(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +220,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    onScreenKeyboardEnabled,
+    onScreenKeyboardAutoShow,
   });
 }
 
@@ -217,6 +247,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    onScreenKeyboardEnabled,
+    onScreenKeyboardAutoShow,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -229,6 +261,10 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (onScreenKeyboardEnabled !== undefined)
+    await setOnScreenKeyboardEnabled(onScreenKeyboardEnabled);
+  if (onScreenKeyboardAutoShow !== undefined)
+    await setOnScreenKeyboardAutoShow(onScreenKeyboardAutoShow);
   if (theme !== undefined) setTheme(theme);
 }
 

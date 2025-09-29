@@ -1,0 +1,579 @@
+{
+  "meta": {
+    "name": "NetHunter Extended",
+    "version": 1,
+    "description": "Desktop-style keyboard with function keys and dedicated modifier rows"
+  },
+  "rows": [
+    [
+      {
+        "label": "Esc",
+        "code": "Escape",
+        "key": "Escape",
+        "type": "action",
+        "ariaLabel": "Escape",
+        "width": 1.2
+      },
+      {
+        "label": "F1",
+        "code": "F1",
+        "key": "F1",
+        "type": "function"
+      },
+      {
+        "label": "F2",
+        "code": "F2",
+        "key": "F2",
+        "type": "function"
+      },
+      {
+        "label": "F3",
+        "code": "F3",
+        "key": "F3",
+        "type": "function"
+      },
+      {
+        "label": "F4",
+        "code": "F4",
+        "key": "F4",
+        "type": "function"
+      },
+      {
+        "label": "F5",
+        "code": "F5",
+        "key": "F5",
+        "type": "function"
+      },
+      {
+        "label": "F6",
+        "code": "F6",
+        "key": "F6",
+        "type": "function"
+      },
+      {
+        "label": "F7",
+        "code": "F7",
+        "key": "F7",
+        "type": "function"
+      },
+      {
+        "label": "F8",
+        "code": "F8",
+        "key": "F8",
+        "type": "function"
+      },
+      {
+        "label": "F9",
+        "code": "F9",
+        "key": "F9",
+        "type": "function"
+      },
+      {
+        "label": "F10",
+        "code": "F10",
+        "key": "F10",
+        "type": "function"
+      },
+      {
+        "label": "F11",
+        "code": "F11",
+        "key": "F11",
+        "type": "function"
+      },
+      {
+        "label": "F12",
+        "code": "F12",
+        "key": "F12",
+        "type": "function"
+      },
+      {
+        "label": "Del",
+        "code": "Delete",
+        "key": "Delete",
+        "type": "action",
+        "ariaLabel": "Delete",
+        "width": 1.2
+      }
+    ],
+    [
+      {
+        "label": "`",
+        "code": "Backquote",
+        "key": "`",
+        "shiftValue": "~",
+        "type": "char"
+      },
+      {
+        "label": "1",
+        "code": "Digit1",
+        "key": "1",
+        "shiftValue": "!",
+        "type": "char"
+      },
+      {
+        "label": "2",
+        "code": "Digit2",
+        "key": "2",
+        "shiftValue": "@",
+        "type": "char"
+      },
+      {
+        "label": "3",
+        "code": "Digit3",
+        "key": "3",
+        "shiftValue": "#",
+        "type": "char"
+      },
+      {
+        "label": "4",
+        "code": "Digit4",
+        "key": "4",
+        "shiftValue": "$",
+        "type": "char"
+      },
+      {
+        "label": "5",
+        "code": "Digit5",
+        "key": "5",
+        "shiftValue": "%",
+        "type": "char"
+      },
+      {
+        "label": "6",
+        "code": "Digit6",
+        "key": "6",
+        "shiftValue": "^",
+        "type": "char"
+      },
+      {
+        "label": "7",
+        "code": "Digit7",
+        "key": "7",
+        "shiftValue": "&",
+        "type": "char"
+      },
+      {
+        "label": "8",
+        "code": "Digit8",
+        "key": "8",
+        "shiftValue": "*",
+        "type": "char"
+      },
+      {
+        "label": "9",
+        "code": "Digit9",
+        "key": "9",
+        "shiftValue": "(",
+        "type": "char"
+      },
+      {
+        "label": "0",
+        "code": "Digit0",
+        "key": "0",
+        "shiftValue": ")",
+        "type": "char"
+      },
+      {
+        "label": "-",
+        "code": "Minus",
+        "key": "-",
+        "shiftValue": "_",
+        "type": "char"
+      },
+      {
+        "label": "=",
+        "code": "Equal",
+        "key": "=",
+        "shiftValue": "+",
+        "type": "char"
+      },
+      {
+        "label": "Backspace",
+        "code": "Backspace",
+        "key": "Backspace",
+        "type": "action",
+        "ariaLabel": "Backspace",
+        "width": 2
+      }
+    ],
+    [
+      {
+        "label": "Tab",
+        "code": "Tab",
+        "key": "Tab",
+        "type": "action",
+        "ariaLabel": "Tab",
+        "width": 1.6
+      },
+      {
+        "label": "Q",
+        "code": "KeyQ",
+        "key": "q",
+        "shiftValue": "Q",
+        "type": "char"
+      },
+      {
+        "label": "W",
+        "code": "KeyW",
+        "key": "w",
+        "shiftValue": "W",
+        "type": "char"
+      },
+      {
+        "label": "E",
+        "code": "KeyE",
+        "key": "e",
+        "shiftValue": "E",
+        "type": "char"
+      },
+      {
+        "label": "R",
+        "code": "KeyR",
+        "key": "r",
+        "shiftValue": "R",
+        "type": "char"
+      },
+      {
+        "label": "T",
+        "code": "KeyT",
+        "key": "t",
+        "shiftValue": "T",
+        "type": "char"
+      },
+      {
+        "label": "Y",
+        "code": "KeyY",
+        "key": "y",
+        "shiftValue": "Y",
+        "type": "char"
+      },
+      {
+        "label": "U",
+        "code": "KeyU",
+        "key": "u",
+        "shiftValue": "U",
+        "type": "char"
+      },
+      {
+        "label": "I",
+        "code": "KeyI",
+        "key": "i",
+        "shiftValue": "I",
+        "type": "char"
+      },
+      {
+        "label": "O",
+        "code": "KeyO",
+        "key": "o",
+        "shiftValue": "O",
+        "type": "char"
+      },
+      {
+        "label": "P",
+        "code": "KeyP",
+        "key": "p",
+        "shiftValue": "P",
+        "type": "char"
+      },
+      {
+        "label": "[",
+        "code": "BracketLeft",
+        "key": "[",
+        "shiftValue": "{",
+        "type": "char"
+      },
+      {
+        "label": "]",
+        "code": "BracketRight",
+        "key": "]",
+        "shiftValue": "}",
+        "type": "char"
+      },
+      {
+        "label": "\\",
+        "code": "Backslash",
+        "key": "\\",
+        "shiftValue": "|",
+        "type": "char",
+        "width": 1.6
+      }
+    ],
+    [
+      {
+        "label": "Caps",
+        "code": "CapsLock",
+        "key": "CapsLock",
+        "type": "action",
+        "ariaLabel": "Caps Lock",
+        "width": 1.9
+      },
+      {
+        "label": "A",
+        "code": "KeyA",
+        "key": "a",
+        "shiftValue": "A",
+        "type": "char"
+      },
+      {
+        "label": "S",
+        "code": "KeyS",
+        "key": "s",
+        "shiftValue": "S",
+        "type": "char"
+      },
+      {
+        "label": "D",
+        "code": "KeyD",
+        "key": "d",
+        "shiftValue": "D",
+        "type": "char"
+      },
+      {
+        "label": "F",
+        "code": "KeyF",
+        "key": "f",
+        "shiftValue": "F",
+        "type": "char"
+      },
+      {
+        "label": "G",
+        "code": "KeyG",
+        "key": "g",
+        "shiftValue": "G",
+        "type": "char"
+      },
+      {
+        "label": "H",
+        "code": "KeyH",
+        "key": "h",
+        "shiftValue": "H",
+        "type": "char"
+      },
+      {
+        "label": "J",
+        "code": "KeyJ",
+        "key": "j",
+        "shiftValue": "J",
+        "type": "char"
+      },
+      {
+        "label": "K",
+        "code": "KeyK",
+        "key": "k",
+        "shiftValue": "K",
+        "type": "char"
+      },
+      {
+        "label": "L",
+        "code": "KeyL",
+        "key": "l",
+        "shiftValue": "L",
+        "type": "char"
+      },
+      {
+        "label": ";",
+        "code": "Semicolon",
+        "key": ";",
+        "shiftValue": ":",
+        "type": "char"
+      },
+      {
+        "label": "'",
+        "code": "Quote",
+        "key": "'",
+        "shiftValue": "\"",
+        "type": "char"
+      },
+      {
+        "label": "Enter",
+        "code": "Enter",
+        "key": "Enter",
+        "type": "action",
+        "ariaLabel": "Enter",
+        "width": 2.2
+      }
+    ],
+    [
+      {
+        "label": "Shift",
+        "code": "ShiftLeft",
+        "key": "Shift",
+        "type": "modifier",
+        "modifier": "Shift",
+        "behavior": "momentary",
+        "ariaLabel": "Left Shift",
+        "width": 2.2
+      },
+      {
+        "label": "Z",
+        "code": "KeyZ",
+        "key": "z",
+        "shiftValue": "Z",
+        "type": "char"
+      },
+      {
+        "label": "X",
+        "code": "KeyX",
+        "key": "x",
+        "shiftValue": "X",
+        "type": "char"
+      },
+      {
+        "label": "C",
+        "code": "KeyC",
+        "key": "c",
+        "shiftValue": "C",
+        "type": "char"
+      },
+      {
+        "label": "V",
+        "code": "KeyV",
+        "key": "v",
+        "shiftValue": "V",
+        "type": "char"
+      },
+      {
+        "label": "B",
+        "code": "KeyB",
+        "key": "b",
+        "shiftValue": "B",
+        "type": "char"
+      },
+      {
+        "label": "N",
+        "code": "KeyN",
+        "key": "n",
+        "shiftValue": "N",
+        "type": "char"
+      },
+      {
+        "label": "M",
+        "code": "KeyM",
+        "key": "m",
+        "shiftValue": "M",
+        "type": "char"
+      },
+      {
+        "label": ",",
+        "code": "Comma",
+        "key": ",",
+        "shiftValue": "<",
+        "type": "char"
+      },
+      {
+        "label": ".",
+        "code": "Period",
+        "key": ".",
+        "shiftValue": ">",
+        "type": "char"
+      },
+      {
+        "label": "/",
+        "code": "Slash",
+        "key": "/",
+        "shiftValue": "?",
+        "type": "char"
+      },
+      {
+        "label": "Shift",
+        "code": "ShiftRight",
+        "key": "Shift",
+        "type": "modifier",
+        "modifier": "Shift",
+        "behavior": "momentary",
+        "ariaLabel": "Right Shift",
+        "width": 2.4
+      }
+    ],
+    [
+      {
+        "label": "Ctrl",
+        "code": "ControlLeft",
+        "key": "Control",
+        "type": "modifier",
+        "modifier": "Control",
+        "behavior": "toggle",
+        "ariaLabel": "Left Control",
+        "width": 1.6
+      },
+      {
+        "label": "Alt",
+        "code": "AltLeft",
+        "key": "Alt",
+        "type": "modifier",
+        "modifier": "Alt",
+        "behavior": "toggle",
+        "ariaLabel": "Left Alt",
+        "width": 1.5
+      },
+      {
+        "label": "Fn",
+        "code": "ContextMenu",
+        "key": "ContextMenu",
+        "type": "action",
+        "ariaLabel": "Menu",
+        "width": 1.5
+      },
+      {
+        "label": "Space",
+        "code": "Space",
+        "key": " ",
+        "type": "char",
+        "ariaLabel": "Space",
+        "width": 6.2
+      },
+      {
+        "label": "Alt",
+        "code": "AltRight",
+        "key": "Alt",
+        "type": "modifier",
+        "modifier": "Alt",
+        "behavior": "toggle",
+        "ariaLabel": "Right Alt",
+        "width": 1.5
+      },
+      {
+        "label": "Ctrl",
+        "code": "ControlRight",
+        "key": "Control",
+        "type": "modifier",
+        "modifier": "Control",
+        "behavior": "toggle",
+        "ariaLabel": "Right Control",
+        "width": 1.6
+      },
+      {
+        "label": "\u25c0",
+        "code": "ArrowLeft",
+        "key": "ArrowLeft",
+        "type": "action",
+        "ariaLabel": "Arrow Left",
+        "width": 1.2
+      },
+      {
+        "label": "\u25b2",
+        "code": "ArrowUp",
+        "key": "ArrowUp",
+        "type": "action",
+        "ariaLabel": "Arrow Up",
+        "width": 1.2
+      },
+      {
+        "label": "\u25bc",
+        "code": "ArrowDown",
+        "key": "ArrowDown",
+        "type": "action",
+        "ariaLabel": "Arrow Down",
+        "width": 1.2
+      },
+      {
+        "label": "\u25b6",
+        "code": "ArrowRight",
+        "key": "ArrowRight",
+        "type": "action",
+        "ariaLabel": "Arrow Right",
+        "width": 1.2
+      }
+    ]
+  ]
+}

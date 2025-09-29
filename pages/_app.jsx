@@ -15,6 +15,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import { OnScreenKeyboardProvider } from '../components/osk/OnScreenKeyboardProvider';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
@@ -158,23 +159,25 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+          <OnScreenKeyboardProvider>
+            <NotificationCenter>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(e) => {
+                    if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                    const evt = e;
+                    if (evt.metadata?.email) delete evt.metadata.email;
+                    return e;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </OnScreenKeyboardProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>
