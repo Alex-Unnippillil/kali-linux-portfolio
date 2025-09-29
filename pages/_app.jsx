@@ -11,7 +11,6 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
-import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -162,7 +161,6 @@ function MyApp(props) {
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
-              <ShortcutOverlay />
               <Analytics
                 beforeSend={(e) => {
                   if (e.url.includes('/admin') || e.url.includes('/private')) return null;

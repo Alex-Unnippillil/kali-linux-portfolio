@@ -17,6 +17,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
+import CheatSheetOverlay from '../desktop/CheatSheetOverlay';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
@@ -28,6 +29,56 @@ import {
     clampWindowTopPosition,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { CHEAT_SHEET_SHORTCUT } from '../../data/desktop/interactionGuides';
+
+const CHEAT_SHEET_DESCRIPTION = CHEAT_SHEET_SHORTCUT.description;
+const DEFAULT_CHEAT_SHEET_COMBO = CHEAT_SHEET_SHORTCUT.combo;
+
+const isEditableElement = (target) => {
+    if (!target || typeof target !== 'object') return false;
+    const element = target && target.nodeType === 1 ? target : null;
+    if (!element) return false;
+    const tagName = element.tagName;
+    return (
+        tagName === 'INPUT' ||
+        tagName === 'TEXTAREA' ||
+        tagName === 'SELECT' ||
+        element.isContentEditable
+    );
+};
+
+const formatShortcutEvent = (event) => {
+    const parts = [];
+    if (event.ctrlKey) parts.push('Ctrl');
+    if (event.altKey) parts.push('Alt');
+    if (event.shiftKey) parts.push('Shift');
+    if (event.metaKey) parts.push('Meta');
+    const key = event.key && event.key.length === 1 ? event.key.toUpperCase() : event.key;
+    if (key && !['Control', 'Shift', 'Alt', 'Meta'].includes(key)) {
+        parts.push(key);
+    }
+    return parts.join('+');
+};
+
+const getCheatSheetComboFromStorage = () => {
+    if (!safeLocalStorage) return DEFAULT_CHEAT_SHEET_COMBO;
+    try {
+        const stored = safeLocalStorage.getItem('keymap');
+        if (!stored) return DEFAULT_CHEAT_SHEET_COMBO;
+        const parsed = JSON.parse(stored);
+        if (
+            parsed &&
+            typeof parsed === 'object' &&
+            !Array.isArray(parsed) &&
+            typeof parsed[CHEAT_SHEET_DESCRIPTION] === 'string'
+        ) {
+            return parsed[CHEAT_SHEET_DESCRIPTION];
+        }
+    } catch (error) {
+        // Ignore malformed keymap settings and fall back to defaults.
+    }
+    return DEFAULT_CHEAT_SHEET_COMBO;
+};
 
 
 export class Desktop extends Component {
@@ -63,6 +114,7 @@ export class Desktop extends Component {
             },
             context_app: null,
             showNameBar: false,
+            showCheatSheet: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
@@ -97,6 +149,18 @@ export class Desktop extends Component {
         minimized_windows: {},
         window_positions: {},
     });
+
+    getCheatSheetShortcutCombo = () => getCheatSheetComboFromStorage();
+
+    toggleCheatSheet = () => {
+        this.setState((prevState) => ({ showCheatSheet: !prevState.showCheatSheet }));
+    };
+
+    closeCheatSheet = () => {
+        if (this.state.showCheatSheet) {
+            this.setState({ showCheatSheet: false });
+        }
+    };
 
     cloneWorkspaceState = (state) => ({
         focused_windows: { ...state.focused_windows },
@@ -952,6 +1016,31 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        const { showCheatSheet } = this.state;
+
+        if (showCheatSheet && e.key === 'Escape') {
+            e.preventDefault();
+            this.closeCheatSheet();
+            return;
+        }
+
+        const targetIsEditable = isEditableElement(e.target);
+
+        const cheatSheetCombo = this.getCheatSheetShortcutCombo() || DEFAULT_CHEAT_SHEET_COMBO;
+        const formatted = formatShortcutEvent(e) || '';
+        const matchesCheatSheet =
+            formatted.toLowerCase() === cheatSheetCombo.toLowerCase() ||
+            (cheatSheetCombo === '?' && e.key === '?');
+
+        if (matchesCheatSheet) {
+            if (targetIsEditable) {
+                return;
+            }
+            e.preventDefault();
+            this.toggleCheatSheet();
+            return;
+        }
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
@@ -1836,6 +1925,11 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <CheatSheetOverlay
+                    open={this.state.showCheatSheet}
+                    onClose={this.closeCheatSheet}
+                />
 
             </main>
         );
