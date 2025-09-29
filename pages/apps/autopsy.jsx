@@ -1,10 +1,23 @@
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import AppWindowSkeleton from '../../components/ui/AppWindowSkeleton';
 
 const Autopsy = dynamic(() => import('../../apps/autopsy'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  suspense: true,
 });
 
 export default function AutopsyPage() {
-  return <Autopsy />;
+  return (
+    <Suspense
+      fallback={
+        <AppWindowSkeleton
+          title="Autopsy"
+          description="Mounting evidence timeline"
+        />
+      }
+    >
+      <Autopsy />
+    </Suspense>
+  );
 }
