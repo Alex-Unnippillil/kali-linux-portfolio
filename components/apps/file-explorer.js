@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -116,7 +116,16 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
-
+  const readDir = useCallback(async (handle) => {
+    const ds = [];
+    const fs = [];
+    for await (const [name, h] of handle.entries()) {
+      if (h.kind === 'file') fs.push({ name, handle: h });
+      else if (h.kind === 'directory') ds.push({ name, handle: h });
+    }
+    setDirs(ds);
+    setFiles(fs);
+  }, []);
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
@@ -131,7 +140,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -190,17 +199,6 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
     setContent(text);
   };
-
-  const readDir = useCallback(async (handle) => {
-    const ds = [];
-    const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
-    }
-    setDirs(ds);
-    setFiles(fs);
-  }, []);
 
   useEffect(() => {
     const requested =
@@ -312,10 +310,37 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  const responsiveBreadcrumbs = useMemo(() => {
+    const collapsedCount = Math.max(path.length - 2, 0);
+    return [
+      {
+        type: 'dropdown',
+        maxWidth: 768,
+        triggerLabel: '⋯',
+        srLabel: 'Show intermediate folders',
+      },
+      {
+        type: 'label',
+        maxWidth: 480,
+        label: collapsedCount === 1 ? '1 folder hidden' : `${collapsedCount} folders hidden`,
+        srLabel:
+          collapsedCount === 1
+            ? '1 folder level collapsed'
+            : `${collapsedCount} folder levels collapsed`,
+      },
+    ];
+  }, [path.length]);
+
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Select file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +355,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -359,7 +385,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Back
           </button>
         )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
+        <Breadcrumbs path={path} onNavigate={navigateTo} responsive={responsiveBreadcrumbs} />
         {locationError && (
           <div className="text-xs text-red-300" role="status">
             {locationError}
@@ -406,7 +432,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -414,6 +445,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Find within files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search

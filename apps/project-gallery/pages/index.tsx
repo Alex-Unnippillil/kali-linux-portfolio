@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import Breadcrumbs from '../../../components/ui/Breadcrumbs';
 
 const TagIcon = () => (
   <svg
@@ -113,6 +114,50 @@ export default function ProjectGalleryPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const { breadcrumbSegments, breadcrumbTargets } = useMemo(() => {
+    const rawPath = (router.asPath || '').split('?')[0];
+    const parts = rawPath.split('/').filter(Boolean);
+    const segments = [{ name: 'Home' }, ...parts.map((part) => ({
+      name: part
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase()),
+    }))];
+    const targets: string[] = ['/'];
+    parts.forEach((_, index) => {
+      targets.push(`/${parts.slice(0, index + 1).join('/')}`);
+    });
+    return { breadcrumbSegments: segments, breadcrumbTargets: targets };
+  }, [router.asPath]);
+
+  const onBreadcrumbNavigate = useCallback(
+    (index: number) => {
+      const target = breadcrumbTargets[index];
+      if (!target) return;
+      void router.push(target);
+    },
+    [breadcrumbTargets, router]
+  );
+
+  const breadcrumbResponsive = useMemo(() => {
+    const hiddenCount = Math.max(breadcrumbSegments.length - 2, 0);
+    const label =
+      hiddenCount === 1 ? '1 section hidden' : `${hiddenCount} sections hidden`;
+    return [
+      {
+        type: 'dropdown' as const,
+        maxWidth: 768,
+        triggerLabel: '⋯',
+        srLabel: 'Show previous navigation levels',
+      },
+      {
+        type: 'label' as const,
+        maxWidth: 480,
+        label,
+        srLabel: label,
+      },
+    ];
+  }, [breadcrumbSegments.length]);
+
   const [tech, setTech] = usePersistentState<string[]>('pg-tech', []);
   const [year, setYear] = usePersistentState<string>('pg-year', '');
   const [type, setType] = usePersistentState<string>('pg-type', '');
@@ -205,6 +250,11 @@ export default function ProjectGalleryPage() {
 
   return (
     <div className="p-4 space-y-4 text-black">
+      <Breadcrumbs
+        path={breadcrumbSegments}
+        onNavigate={onBreadcrumbNavigate}
+        responsive={breadcrumbResponsive}
+      />
       <div className="flex flex-wrap gap-2 items-center">
         <input
           type="text"
@@ -212,6 +262,7 @@ export default function ProjectGalleryPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="px-2 py-1 border rounded"
+          aria-label="Search projects"
         />
         <FilterChip
           label="Playable"
