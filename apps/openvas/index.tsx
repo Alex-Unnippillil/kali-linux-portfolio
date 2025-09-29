@@ -2,67 +2,22 @@
 
 import React, { useMemo, useState } from 'react';
 import ResultDiff from './components/ResultDiff';
+import { sampleData } from './data';
+import {
+  computeAggregatedTotal,
+  computeSeverityTimeline,
+  computeSeverityTotals,
+  flattenFindings,
+  severityLevels,
+} from './analytics';
+import type { Severity } from './types';
 
-interface Vulnerability {
-  id: string;
-  name: string;
-  cvss: number;
-  epss: number;
-  description: string;
-  remediation: string;
-}
-
-interface HostReport {
-  host: string;
-  risk: 'Low' | 'Medium' | 'High' | 'Critical';
-  vulns: Vulnerability[];
-}
-
-const riskColors: Record<HostReport['risk'], string> = {
+const riskColors: Record<Severity, string> = {
   Low: 'bg-green-700',
   Medium: 'bg-yellow-700',
   High: 'bg-orange-700',
   Critical: 'bg-red-700',
 };
-
-const sampleData: HostReport[] = [
-  {
-    host: '192.168.56.10',
-    risk: 'High',
-    vulns: [
-      {
-        id: 'CVE-2023-0001',
-        name: 'OpenSSL Buffer Overflow',
-        cvss: 9.8,
-        epss: 0.97,
-        description: 'Remote code execution via crafted packet.',
-        remediation: 'Update OpenSSL to the latest version',
-      },
-      {
-        id: 'CVE-2022-1234',
-        name: 'Apache Path Traversal',
-        cvss: 7.5,
-        epss: 0.32,
-        description: 'Improper input validation allows directory traversal.',
-        remediation: 'Apply vendor patch for Apache',
-      },
-    ],
-  },
-  {
-    host: '192.168.56.20',
-    risk: 'Medium',
-    vulns: [
-      {
-        id: 'CVE-2021-9999',
-        name: 'SSH Weak Cipher',
-        cvss: 5.0,
-        epss: 0.04,
-        description: 'Server supports deprecated SSH ciphers.',
-        remediation: 'Disable weak ciphers in SSH config',
-      },
-    ],
-  },
-];
 
 const cvssColor = (score: number) => {
   if (score >= 9) return 'bg-red-700';
@@ -80,16 +35,10 @@ const OpenVASReport: React.FC = () => {
     return Array.from(tags);
   }, []);
 
-  const findings = useMemo(
-    () =>
-      sampleData.flatMap((host) =>
-        host.vulns.map((v) => ({ ...v, host: host.host }))
-      ),
-    [],
-  );
+  const findings = useMemo(() => flattenFindings(sampleData), []);
 
   const riskSummary = useMemo(() => {
-    const summary: Record<HostReport['risk'], number> = {
+    const summary: Record<Severity, number> = {
       Low: 0,
       Medium: 0,
       High: 0,
@@ -101,10 +50,28 @@ const OpenVASReport: React.FC = () => {
     return summary;
   }, []);
 
-  const trendData = [5, 7, 6, 9, 4];
+  const severityTimeline = useMemo(
+    () => computeSeverityTimeline(sampleData),
+    [],
+  );
+
+  const severityTotals = useMemo(
+    () => computeSeverityTotals(severityTimeline),
+    [severityTimeline],
+  );
+
+  const aggregatedTotal = useMemo(
+    () => computeAggregatedTotal(severityTimeline),
+    [severityTimeline],
+  );
+
+  const trendData = useMemo(
+    () => severityTimeline.map((entry) => entry.total),
+    [severityTimeline],
+  );
   const maxTrend = Math.max(...trendData, 1);
-  const trendWidth = 300;
-  const trendHeight = 80;
+  const trendWidth = 360;
+  const trendHeight = 120;
   const trendStep =
     trendData.length > 1 ? trendWidth / (trendData.length - 1) : trendWidth;
   const trendPath = trendData
@@ -114,6 +81,16 @@ const OpenVASReport: React.FC = () => {
       return `${i === 0 ? 'M' : 'L'}${x},${y}`;
     })
     .join(' ');
+
+  const maxHeatValue = useMemo(() => {
+    let max = 0;
+    severityTimeline.forEach((entry) => {
+      severityLevels.forEach((severity) => {
+        max = Math.max(max, entry.counts[severity]);
+      });
+    });
+    return Math.max(max, 1);
+  }, [severityTimeline]);
 
   const toggle = (id: string) =>
     setExpanded((e) => ({ ...e, [id]: !e[id] }));
@@ -181,13 +158,71 @@ const OpenVASReport: React.FC = () => {
             </div>
           ))}
         </div>
-        <svg
-          width={trendWidth}
-          height={trendHeight}
-          className="bg-gray-800 rounded"
-        >
-          <path d={trendPath} stroke="#0ea5e9" strokeWidth={2} fill="none" />
-        </svg>
+        <div className="space-y-4">
+          <svg
+            width={trendWidth}
+            height={trendHeight}
+            className="bg-gray-800 rounded"
+          >
+            <path d={trendPath} stroke="#0ea5e9" strokeWidth={2} fill="none" />
+          </svg>
+          <div className="text-xs text-gray-300">
+            Aggregated timeline total: {aggregatedTotal} findings (dataset total:{' '}
+            {findings.length})
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl mb-2">Severity Heatmap</h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-gray-700 text-sm">
+            <thead className="bg-gray-800">
+              <tr>
+                <th className="p-2 text-left">Severity</th>
+                {severityTimeline.map((entry) => (
+                  <th key={entry.date} className="p-2 text-center">
+                    {new Date(entry.date).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {severityLevels.map((severity) => (
+                <tr key={severity}>
+                  <th className="p-2 text-left bg-gray-800 font-medium">
+                    {severity}
+                    <span className="ml-2 text-xs text-gray-400">
+                      {severityTotals[severity]}
+                    </span>
+                  </th>
+                  {severityTimeline.map((entry) => {
+                    const value = entry.counts[severity];
+                    const intensity = value
+                      ? 0.2 + (0.7 * value) / maxHeatValue
+                      : 0;
+                    return (
+                      <td
+                        key={`${entry.date}-${severity}`}
+                        className="p-2 text-center align-middle"
+                        style={{
+                          backgroundColor: value
+                            ? `rgba(14, 165, 233, ${intensity.toFixed(2)})`
+                            : 'transparent',
+                        }}
+                      >
+                        {value > 0 ? value : ''}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section>
@@ -197,6 +232,7 @@ const OpenVASReport: React.FC = () => {
             <tr>
               <th className="p-2">Host</th>
               <th className="p-2">Vulnerability</th>
+              <th className="p-2">Detected</th>
               <th className="p-2">CVSS</th>
             </tr>
           </thead>
@@ -211,6 +247,13 @@ const OpenVASReport: React.FC = () => {
                   >
                     <td className="p-2">{f.host}</td>
                     <td className="p-2">{f.name}</td>
+                    <td className="p-2 whitespace-nowrap">
+                      {new Date(f.detectedAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </td>
                     <td className="p-2">
                       <div className="w-full bg-gray-700 rounded h-3">
                         <div
@@ -222,7 +265,7 @@ const OpenVASReport: React.FC = () => {
                   </tr>
                   {expanded[key] && (
                     <tr>
-                      <td colSpan={3} className="p-2 bg-gray-800">
+                      <td colSpan={4} className="p-2 bg-gray-800">
                         <p className="text-sm mb-1">{f.description}</p>
                         <p className="text-xs text-yellow-300">{f.remediation}</p>
                       </td>
