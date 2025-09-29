@@ -1,28 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import {
-  getAccent as loadAccent,
-  setAccent as saveAccent,
-  getWallpaper as loadWallpaper,
-  setWallpaper as saveWallpaper,
-  getUseKaliWallpaper as loadUseKaliWallpaper,
-  setUseKaliWallpaper as saveUseKaliWallpaper,
-  getDensity as loadDensity,
-  setDensity as saveDensity,
-  getReducedMotion as loadReducedMotion,
-  setReducedMotion as saveReducedMotion,
-  getFontScale as loadFontScale,
-  setFontScale as saveFontScale,
-  getHighContrast as loadHighContrast,
-  setHighContrast as saveHighContrast,
-  getLargeHitAreas as loadLargeHitAreas,
-  setLargeHitAreas as saveLargeHitAreas,
-  getPongSpin as loadPongSpin,
-  setPongSpin as savePongSpin,
-  getAllowNetwork as loadAllowNetwork,
-  setAllowNetwork as saveAllowNetwork,
-  getHaptics as loadHaptics,
-  setHaptics as saveHaptics,
   defaults,
+  getPreferences,
+  updatePreferences,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
@@ -126,17 +106,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      const preferences = await getPreferences();
+      setAccent(preferences.accent);
+      setWallpaper(preferences.wallpaper);
+      setUseKaliWallpaper(preferences.useKaliWallpaper);
+      setDensity(preferences.density as Density);
+      setReducedMotion(preferences.reducedMotion);
+      setFontScale(preferences.fontScale);
+      setHighContrast(preferences.highContrast);
+      setLargeHitAreas(preferences.largeHitAreas);
+      setPongSpin(preferences.pongSpin);
+      setAllowNetwork(preferences.allowNetwork);
+      setHaptics(preferences.haptics);
       setTheme(loadTheme());
     })();
   }, []);
@@ -159,15 +140,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
+    void updatePreferences({ accent });
   }, [accent]);
 
   useEffect(() => {
-    saveWallpaper(wallpaper);
+    void updatePreferences({ wallpaper });
   }, [wallpaper]);
 
   useEffect(() => {
-    saveUseKaliWallpaper(useKaliWallpaper);
+    void updatePreferences({ useKaliWallpaper });
   }, [useKaliWallpaper]);
 
   useEffect(() => {
@@ -193,35 +174,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveDensity(density);
+    void updatePreferences({ density });
   }, [density]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
-    saveReducedMotion(reducedMotion);
+    void updatePreferences({ reducedMotion });
   }, [reducedMotion]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
+    void updatePreferences({ fontScale });
   }, [fontScale]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
-    saveHighContrast(highContrast);
+    void updatePreferences({ highContrast });
   }, [highContrast]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
-    saveLargeHitAreas(largeHitAreas);
+    void updatePreferences({ largeHitAreas });
   }, [largeHitAreas]);
 
   useEffect(() => {
-    savePongSpin(pongSpin);
+    void updatePreferences({ pongSpin });
   }, [pongSpin]);
 
   useEffect(() => {
-    saveAllowNetwork(allowNetwork);
+    void updatePreferences({ allowNetwork });
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
@@ -247,7 +228,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork]);
 
   useEffect(() => {
-    saveHaptics(haptics);
+    void updatePreferences({ haptics });
   }, [haptics]);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;

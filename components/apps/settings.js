@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import {
+    defaults,
+    exportPreferences as exportPreferencesData,
+    importPreferences as importPreferencesData,
+    resetPreferences,
+} from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -248,7 +253,7 @@ export function Settings() {
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
                     onClick={async () => {
-                        const data = await exportSettingsData();
+                        const data = await exportPreferencesData();
                         const blob = new Blob([data], { type: 'application/json' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
@@ -269,14 +274,18 @@ export function Settings() {
                 </button>
                 <button
                     onClick={async () => {
-                        await resetSettings();
+                        await resetPreferences();
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
+                        setUseKaliWallpaper(defaults.useKaliWallpaper);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setPongSpin(defaults.pongSpin);
+                        setAllowNetwork(defaults.allowNetwork);
+                        setHaptics(defaults.haptics);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -291,18 +300,26 @@ export function Settings() {
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
-                    const text = await file.text();
-                    await importSettingsData(text);
                     try {
-                        const parsed = JSON.parse(text);
-                        if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-                        if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
-                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
-                        if (parsed.theme !== undefined) { setTheme(parsed.theme); }
-                    } catch (err) {
+                        const text = await file.text();
+                        const preferences = await importPreferencesData(text);
+                        setAccent(preferences.accent);
+                        setWallpaper(preferences.wallpaper);
+                        setUseKaliWallpaper(preferences.useKaliWallpaper);
+                        setDensity(preferences.density);
+                        setReducedMotion(preferences.reducedMotion);
+                        setLargeHitAreas(preferences.largeHitAreas);
+                        setFontScale(preferences.fontScale);
+                        setHighContrast(preferences.highContrast);
+                        setPongSpin(preferences.pongSpin);
+                        setAllowNetwork(preferences.allowNetwork);
+                        setHaptics(preferences.haptics);
+                        const payload = JSON.parse(text);
+                        if (payload.theme !== undefined) {
+                            setTheme(payload.theme);
+                        }
+                    }
+                    catch (err) {
                         console.error('Invalid settings', err);
                     }
                     e.target.value = '';
