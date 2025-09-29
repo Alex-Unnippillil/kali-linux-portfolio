@@ -1,12 +1,34 @@
 'use client';
 
+import clsx from 'clsx';
 import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
-import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
+import {
+  CloseIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+  WINDOW_CONTROL_TOOLTIPS,
+} from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
+import {
+  WINDOW_CONTROL_CLASSES,
+  WINDOW_CONTROL_ICON_CLASS,
+  WINDOW_CONTROL_SIZE,
+} from '../../styles/theme';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
 export default function VsCode() {
+  const buttonDimensions = {
+    width: WINDOW_CONTROL_SIZE,
+    height: WINDOW_CONTROL_SIZE,
+    minWidth: WINDOW_CONTROL_SIZE,
+    minHeight: WINDOW_CONTROL_SIZE,
+  } as const;
+
+  const baseButtonClass = WINDOW_CONTROL_CLASSES.base;
+  const defaultButtonClass = clsx(baseButtonClass, WINDOW_CONTROL_CLASSES.defaultState);
+  const destructiveButtonClass = clsx(baseButtonClass, WINDOW_CONTROL_CLASSES.destructiveState);
+
   return (
     <div
       className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
@@ -35,17 +57,35 @@ export default function VsCode() {
       </aside>
       <div className="flex-1 flex flex-col border border-black/20 rounded-md overflow-hidden">
         <div
-          className="flex items-center justify-end gap-2 px-2 py-1 border-b border-black/20"
-          style={{ backgroundColor: kaliTheme.background }}
+          className="flex items-center justify-end gap-2 px-2 border-b border-black/20"
+          style={{ backgroundColor: kaliTheme.background, minHeight: WINDOW_CONTROL_SIZE }}
         >
-          <button aria-label="Minimize">
-            <MinimizeIcon />
+          <button
+            type="button"
+            aria-label={WINDOW_CONTROL_TOOLTIPS.minimize}
+            title={WINDOW_CONTROL_TOOLTIPS.minimize}
+            className={defaultButtonClass}
+            style={buttonDimensions}
+          >
+            <MinimizeIcon className={WINDOW_CONTROL_ICON_CLASS} />
           </button>
-          <button aria-label="Maximize">
-            <MaximizeIcon />
+          <button
+            type="button"
+            aria-label={WINDOW_CONTROL_TOOLTIPS.maximize}
+            title={WINDOW_CONTROL_TOOLTIPS.maximize}
+            className={defaultButtonClass}
+            style={buttonDimensions}
+          >
+            <MaximizeIcon className={WINDOW_CONTROL_ICON_CLASS} />
           </button>
-          <button aria-label="Close">
-            <CloseIcon />
+          <button
+            type="button"
+            aria-label={WINDOW_CONTROL_TOOLTIPS.close}
+            title={WINDOW_CONTROL_TOOLTIPS.close}
+            className={destructiveButtonClass}
+            style={buttonDimensions}
+          >
+            <CloseIcon className={WINDOW_CONTROL_ICON_CLASS} />
           </button>
         </div>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
