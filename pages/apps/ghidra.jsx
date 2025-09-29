@@ -2,22 +2,22 @@ import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import AppWindowSkeleton from '../../components/ui/AppWindowSkeleton';
 
-const Wireshark = dynamic(() => import('../../apps/wireshark'), {
+const Ghidra = dynamic(() => import('../../apps/ghidra'), {
   ssr: false,
   suspense: true,
 });
 
-export default function WiresharkPage() {
+export default function GhidraPage() {
   return (
     <Suspense
       fallback={
         <AppWindowSkeleton
-          title="Wireshark"
-          description="Preparing packet capture fixtures"
+          title="Ghidra"
+          description="Bootstrapping reverse engineering workspace"
         />
       }
     >
-      <Wireshark />
+      <Ghidra />
     </Suspense>
   );
 }

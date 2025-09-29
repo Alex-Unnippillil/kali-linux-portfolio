@@ -1,10 +1,23 @@
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import AppWindowSkeleton from '../../components/ui/AppWindowSkeleton';
 
 const Metasploit = dynamic(() => import('../../apps/metasploit'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  suspense: true,
 });
 
 export default function MetasploitPage() {
-  return <Metasploit />;
+  return (
+    <Suspense
+      fallback={
+        <AppWindowSkeleton
+          title="Metasploit"
+          description="Loading module catalog"
+        />
+      }
+    >
+      <Metasploit />
+    </Suspense>
+  );
 }

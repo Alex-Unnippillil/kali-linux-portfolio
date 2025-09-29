@@ -1,10 +1,23 @@
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import AppWindowSkeleton from '../../components/ui/AppWindowSkeleton';
 
 const Volatility = dynamic(() => import('../../apps/volatility'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  suspense: true,
 });
 
 export default function VolatilityPage() {
-  return <Volatility />;
+  return (
+    <Suspense
+      fallback={
+        <AppWindowSkeleton
+          title="Volatility"
+          description="Analyzing memory snapshot"
+        />
+      }
+    >
+      <Volatility />
+    </Suspense>
+  );
 }
