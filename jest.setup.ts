@@ -1,4 +1,5 @@
 import { TextEncoder, TextDecoder } from 'util';
+import { webcrypto } from 'crypto';
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
 if (typeof global.structuredClone !== 'function') {
@@ -13,6 +14,13 @@ import '@testing-library/jest-dom';
 global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
+
+// Ensure WebCrypto is available for modules relying on it
+// @ts-ignore
+if (!global.crypto) {
+  // @ts-ignore
+  global.crypto = webcrypto as unknown as Crypto;
+}
 
 // Provide a minimal structuredClone polyfill for environments lacking it
 // @ts-ignore

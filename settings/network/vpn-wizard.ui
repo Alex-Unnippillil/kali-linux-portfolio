@@ -1,0 +1,22 @@
+{
+  "id": "vpn-wizard",
+  "title": "VPN Profile Wizard",
+  "component": "apps/settings/components/network/VpnWizard.tsx",
+  "steps": [
+    {
+      "id": "method",
+      "title": "Select VPN profile type",
+      "description": "Choose WireGuard, OpenVPN, or import from QR."
+    },
+    {
+      "id": "details",
+      "title": "Configure profile",
+      "description": "Collect interface, peer, and credential details or decode a QR payload."
+    },
+    {
+      "id": "review",
+      "title": "Review and save",
+      "description": "Summarise the mapped NetworkManager connection and persist encrypted secrets."
+    }
+  ]
+}
