@@ -1,10 +1,44 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { DEFAULT_WINDOW_TOP_OFFSET } from '../utils/windowLayout';
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
+};
+
+type RectConfig = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  followTransform?: boolean;
+};
+
+const mockClientRect = (element: HTMLElement, config: RectConfig) => {
+  element.getBoundingClientRect = () => {
+    const { followTransform, width, height } = config;
+    let { x, y } = config;
+    if (followTransform) {
+      const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(element.style.transform || '');
+      if (match) {
+        x = parseFloat(match[1]);
+        y = parseFloat(match[2]);
+      }
+    }
+    return {
+      left: x,
+      top: y,
+      right: x + width,
+      bottom: y + height,
+      width,
+      height,
+      x,
+      y,
+      toJSON: () => {},
+    } as DOMRect;
+  };
 };
 
 beforeEach(() => {
@@ -66,17 +100,7 @@ describe('Window snapping preview', () => {
 
     const winEl = document.getElementById('test-window')!;
     // Simulate being near the left edge
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: 150,
-      right: 105,
-      bottom: 250,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: 150,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 5, y: 150, width: 100, height: 100 });
 
     act(() => {
       ref.current!.handleDrag();
@@ -104,17 +128,7 @@ describe('Window snapping preview', () => {
 
     const winEl = document.getElementById('test-window')!;
     // Position far from edges
-    winEl.getBoundingClientRect = () => ({
-      left: 200,
-      top: 200,
-      right: 300,
-      bottom: 300,
-      width: 100,
-      height: 100,
-      x: 200,
-      y: 200,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 200, y: 200, width: 100, height: 100 });
 
     act(() => {
       ref.current!.handleDrag();
@@ -140,17 +154,7 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 400,
-      top: 5,
-      right: 500,
-      bottom: 105,
-      width: 100,
-      height: 100,
-      x: 400,
-      y: 5,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 400, y: 5, width: 100, height: 100 });
 
     act(() => {
       ref.current!.handleDrag();
@@ -180,17 +184,8 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: 120,
-      right: 105,
-      bottom: 220,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: 120,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 5, y: 120, width: 100, height: 100, followTransform: true });
+    winEl.style.transform = 'translate(5px, 120px)';
 
     act(() => {
       ref.current!.handleDrag();
@@ -201,9 +196,9 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
     expect(ref.current!.state.width).toBeCloseTo(50);
-    const expectedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const expectedHeight = ((window.innerHeight - DEFAULT_WINDOW_TOP_OFFSET - 28) / window.innerHeight) * 100;
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
-    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    expect(winEl.style.transform).toBe(`translate(0px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`);
   });
 
   it('snaps window on drag stop near right edge on large viewport', () => {
@@ -223,17 +218,8 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1820,
-      top: 200,
-      right: 1920,
-      bottom: 300,
-      width: 100,
-      height: 100,
-      x: 1820,
-      y: 200,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 1820, y: 200, width: 100, height: 100, followTransform: true });
+    winEl.style.transform = 'translate(1820px, 200px)';
 
     act(() => {
       ref.current!.handleDrag();
@@ -244,9 +230,9 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('right');
     expect(ref.current!.state.width).toBeCloseTo(50);
-    const expectedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const expectedHeight = ((window.innerHeight - DEFAULT_WINDOW_TOP_OFFSET - 28) / window.innerHeight) * 100;
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
-    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, 0px)`);
+    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`);
   });
 
   it('snaps window on drag stop near top edge', () => {
@@ -266,17 +252,8 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 400,
-      top: 6,
-      right: 500,
-      bottom: 106,
-      width: 100,
-      height: 100,
-      x: 400,
-      y: 6,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 400, y: 6, width: 100, height: 100, followTransform: true });
+    winEl.style.transform = 'translate(400px, 6px)';
 
     act(() => {
       ref.current!.handleDrag();
@@ -288,7 +265,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('top');
     expect(ref.current!.state.width).toBeCloseTo(100, 2);
     expect(ref.current!.state.height).toBeCloseTo(50, 2);
-    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    expect(winEl.style.transform).toBe(`translate(0px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
@@ -308,17 +285,8 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: 120,
-      right: 105,
-      bottom: 220,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: 120,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 5, y: 120, width: 100, height: 100, followTransform: true });
+    winEl.style.transform = 'translate(5px, 120px)';
 
     act(() => {
       ref.current!.handleDrag();
@@ -328,7 +296,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     expect(ref.current!.state.snapped).toBe('left');
-    const snappedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const snappedHeight = ((window.innerHeight - DEFAULT_WINDOW_TOP_OFFSET - 28) / window.innerHeight) * 100;
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
 
     const keyboardEvent = {
@@ -370,17 +338,8 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: 150,
-      right: 105,
-      bottom: 250,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: 150,
-      toJSON: () => {}
-    });
+    mockClientRect(winEl, { x: 5, y: 150, width: 100, height: 100, followTransform: true });
+    winEl.style.transform = 'translate(5px, 150px)';
 
     act(() => {
       ref.current!.handleDrag();
@@ -390,7 +349,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     expect(ref.current!.state.snapped).toBe('left');
-    const snappedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const snappedHeight = ((window.innerHeight - DEFAULT_WINDOW_TOP_OFFSET - 28) / window.innerHeight) * 100;
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
 
     act(() => {
@@ -417,13 +376,22 @@ describe('Window keyboard dragging', () => {
       />
     );
 
+    const winEl = document.getElementById('test-window')!;
+    mockClientRect(winEl, {
+      x: 0,
+      y: DEFAULT_WINDOW_TOP_OFFSET,
+      width: 100,
+      height: 100,
+      followTransform: true,
+    });
+    winEl.style.transform = `translate(0px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`;
+
     const handle = screen.getByText('Test').parentElement!;
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
-    const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    expect(winEl.style.transform).toBe(`translate(10px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`);
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
@@ -448,23 +416,20 @@ describe('Edge resistance', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 0,
-      top: 0,
-      right: 100,
-      bottom: 100,
+    mockClientRect(winEl, {
+      x: 0,
+      y: DEFAULT_WINDOW_TOP_OFFSET,
       width: 100,
       height: 100,
-      x: 0,
-      y: 0,
-      toJSON: () => {}
+      followTransform: true,
     });
+    winEl.style.transform = `translate(0px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`;
 
     act(() => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
 
-    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    expect(winEl.style.transform).toBe(`translate(0px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`);
   });
 });
 

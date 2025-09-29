@@ -146,6 +146,7 @@ export class Window extends Component {
             },
             safeAreaTop: topInset,
         }, () => {
+            this.setWinowsPosition();
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
@@ -277,17 +278,28 @@ export class Window extends Component {
 
     setWinowsPosition = () => {
         const node = this.getWindowNode();
-        if (!node) return;
+        if (!node || typeof window === 'undefined') return;
         const rect = node.getBoundingClientRect();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const snappedX = this.snapToGrid(rect.x);
         const relativeY = rect.y - topInset;
         const snappedRelativeY = this.snapToGrid(relativeY);
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
-        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const maxX = typeof this.state.parentSize?.width === 'number' ? this.state.parentSize.width : 0;
+        const maxYBase = typeof this.state.parentSize?.height === 'number' ? this.state.parentSize.height : 0;
+        const maxY = topInset + Math.max(maxYBase, 0);
+        const clampedX = clamp(snappedX, 0, maxX);
+        const clampedY = clamp(absoluteY, topInset, maxY);
+        const changed = Math.abs(rect.x - clampedX) > 0.5 || Math.abs(rect.y - clampedY) > 0.5;
+
+        if (changed) {
+            node.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+        }
+
+        node.style.setProperty('--window-transform-x', `${clampedX.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${clampedY.toFixed(1)}px`);
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(snappedX, absoluteY);
+            this.props.onPositionChange(clampedX, clampedY);
         }
     }
 
