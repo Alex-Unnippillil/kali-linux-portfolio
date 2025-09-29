@@ -30,6 +30,54 @@ import {
 } from '../../utils/windowLayout';
 
 
+const globalScope = typeof globalThis !== 'undefined' ? globalThis : {};
+const requestFrame = typeof globalScope.requestAnimationFrame === 'function'
+    ? globalScope.requestAnimationFrame.bind(globalScope)
+    : (callback) => setTimeout(callback, 16);
+const cancelFrame = typeof globalScope.cancelAnimationFrame === 'function'
+    ? globalScope.cancelAnimationFrame.bind(globalScope)
+    : (handle) => clearTimeout(handle);
+
+class RafBatcher {
+    constructor(callback) {
+        this.callback = callback;
+        this.pending = null;
+        this.frameId = null;
+        this.run = () => {
+            this.frameId = null;
+            if (this.pending === null) return;
+            const payload = this.pending;
+            this.pending = null;
+            this.callback(payload);
+        };
+    }
+
+    schedule(payload) {
+        this.pending = payload;
+        if (this.frameId !== null) return;
+        this.frameId = requestFrame(this.run);
+    }
+
+    flush() {
+        if (this.frameId !== null) {
+            cancelFrame(this.frameId);
+            this.frameId = null;
+        }
+        if (this.pending === null) return;
+        const payload = this.pending;
+        this.pending = null;
+        this.callback(payload);
+    }
+
+    cancel() {
+        if (this.frameId !== null) {
+            cancelFrame(this.frameId);
+            this.frameId = null;
+        }
+        this.pending = null;
+    }
+}
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -89,6 +137,13 @@ export class Desktop extends Component {
 
         this.gestureState = { pointer: null, overview: null };
 
+        this.iconMoveBatcher = new RafBatcher((payload) => this.applyBatchedIconPosition(payload));
+        this.devMetrics =
+            process.env.NODE_ENV !== 'production'
+                ? {
+                      iconMove: { events: 0, flushes: 0 },
+                  }
+                : null;
     }
 
     createEmptyWorkspaceState = () => ({
@@ -631,12 +686,17 @@ export class Desktop extends Component {
 
     handleIconPointerDown = (event, appId) => {
         if (event.button !== 0) return;
+        this.iconMoveBatcher.cancel();
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
         const offsetY = event.clientY - rect.top;
         container.setPointerCapture?.(event.pointerId);
         this.preventNextIconClick = false;
+        if (this.devMetrics?.iconMove) {
+            this.devMetrics.iconMove.events = 0;
+            this.devMetrics.iconMove.flushes = 0;
+        }
         let startPosition = null;
         const positions = this.state.desktop_icon_positions || {};
         if (positions[appId]) {
@@ -676,14 +736,16 @@ export class Desktop extends Component {
             dragState.moved = true;
         }
         event.preventDefault();
-        const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
-        dragState.lastPosition = position;
-        this.updateIconPosition(dragState.id, position.x, position.y, false);
+        if (this.devMetrics?.iconMove) {
+            this.devMetrics.iconMove.events += 1;
+        }
+        this.iconMoveBatcher.schedule({ clientX: event.clientX, clientY: event.clientY });
     };
 
     handleIconPointerUp = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         const dragState = this.iconDragState;
+        this.iconMoveBatcher.flush();
         const moved = dragState.moved;
         this.iconDragState = null;
         dragState.container?.releasePointerCapture?.(event.pointerId);
@@ -697,11 +759,14 @@ export class Desktop extends Component {
         } else {
             this.setState({ draggingIconId: null });
         }
+        this.reportIconMoveMetrics();
     };
 
     handleIconPointerCancel = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         event.preventDefault();
+        this.iconMoveBatcher.cancel();
+        this.reportIconMoveMetrics();
         this.cancelIconDrag(true);
     };
 
@@ -861,6 +926,7 @@ export class Desktop extends Component {
         if (event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
+            this.reportIconMoveMetrics();
             this.cancelIconDrag(true);
         }
     };
@@ -868,6 +934,8 @@ export class Desktop extends Component {
     cancelIconDrag = (revert = false) => {
         const dragState = this.iconDragState;
         if (!dragState) return;
+
+        this.iconMoveBatcher.cancel();
 
         dragState.container?.releasePointerCapture?.(dragState.pointerId);
         this.iconDragState = null;
@@ -891,6 +959,26 @@ export class Desktop extends Component {
         }
 
         this.preventNextIconClick = false;
+    };
+
+    applyBatchedIconPosition = ({ clientX, clientY }) => {
+        const dragState = this.iconDragState;
+        if (!dragState) return;
+        const position = this.calculateIconPosition(clientX, clientY, dragState);
+        dragState.lastPosition = position;
+        this.updateIconPosition(dragState.id, position.x, position.y, false);
+        if (this.devMetrics?.iconMove) {
+            this.devMetrics.iconMove.flushes += 1;
+        }
+    };
+
+    reportIconMoveMetrics = () => {
+        if (!this.devMetrics?.iconMove) return;
+        const { events, flushes } = this.devMetrics.iconMove;
+        if (!events && !flushes) return;
+        console.debug('[Desktop] Icon drag batching', { events, flushes });
+        this.devMetrics.iconMove.events = 0;
+        this.devMetrics.iconMove.flushes = 0;
     };
 
     resolveDropPosition = (event, dragState) => {
