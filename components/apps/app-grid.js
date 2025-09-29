@@ -6,6 +6,7 @@ import { Grid } from 'react-window';
 import DelayedTooltip from '../ui/DelayedTooltip';
 import AppTooltipContent from '../ui/AppTooltipContent';
 import { createRegistryMap, buildAppMetadata } from '../../lib/appRegistry';
+import resolveAppPath from '../../utils/resolveAppPath';
 
 const registryMetadata = createRegistryMap(apps);
 
@@ -81,6 +82,7 @@ export default function AppGrid({ openApp }) {
     if (index >= data.items.length) return null;
     const app = data.items[index];
     const meta = data.metadata[app.id] ?? buildAppMetadata(app);
+    const prefetchRoute = app.disabled ? null : (meta?.path ?? resolveAppPath(app));
     return (
       <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
         {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
@@ -104,6 +106,7 @@ export default function AppGrid({ openApp }) {
               name={app.title}
               displayName={<>{app.nodes}</>}
               openApp={() => openApp && openApp(app.id)}
+              prefetchRoute={prefetchRoute}
             />
           </div>
         )}
@@ -118,6 +121,7 @@ export default function AppGrid({ openApp }) {
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search apps"
       />
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
