@@ -24,6 +24,7 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useUserPrefs from '../../hooks/useUserPrefs';
 import {
     clampWindowTopPosition,
     measureWindowTopOffset,
@@ -819,7 +820,10 @@ export class Desktop extends Component {
         this.setupGestureListeners();
     }
 
-    componentDidUpdate(_prevProps, prevState) {
+    componentDidUpdate(prevProps, prevState) {
+        if (prevProps?.pinnedAppIds !== this.props.pinnedAppIds) {
+            this.syncPinnedAppsFromProps();
+        }
         if (
             prevState.activeWorkspace !== this.state.activeWorkspace ||
             prevState.closed_windows !== this.state.closed_windows ||
@@ -1148,15 +1152,37 @@ export class Desktop extends Component {
         }
     }
 
-    fetchAppsData = (callback) => {
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
-        } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
+    getPinnedAppIds = () => Array.isArray(this.props.pinnedAppIds) ? this.props.pinnedAppIds : [];
+
+    syncPinnedAppsFromProps = () => {
+        const pinnedSet = new Set(this.getPinnedAppIds());
+        let favouritesChanged = false;
+        apps.forEach((app) => {
+            const shouldBeFavourite = pinnedSet.has(app.id);
+            if (app.favourite !== shouldBeFavourite) {
+                app.favourite = shouldBeFavourite;
+                favouritesChanged = true;
+            }
+        });
+        if (favouritesChanged) {
+            this.setState((previous) => {
+                const favourite_apps = { ...previous.favourite_apps };
+                Object.keys(favourite_apps).forEach((id) => {
+                    favourite_apps[id] = pinnedSet.has(id);
+                });
+                return { favourite_apps };
+            });
         }
+    };
+
+    fetchAppsData = (callback) => {
+        let pinnedApps = this.getPinnedAppIds();
+        if (!pinnedApps.length) {
+            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
+            this.props.ensurePinnedApps?.(pinnedApps);
+        }
+        const pinnedSet = new Set(pinnedApps);
+        apps.forEach(app => { app.favourite = pinnedSet.has(app.id); });
 
         const focused_windows = {};
         const closed_windows = {};
@@ -1578,10 +1604,10 @@ export class Desktop extends Component {
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const currentOrder = this.getPinnedAppIds();
+        if (!currentOrder.includes(id)) {
+            this.props.onPinnedAppsChange?.([...currentOrder, id]);
+        }
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -1592,10 +1618,8 @@ export class Desktop extends Component {
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const nextOrder = this.getPinnedAppIds().filter(appId => appId !== id)
+        this.props.onPinnedAppsChange?.(nextOrder)
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -1765,6 +1789,8 @@ export class Desktop extends Component {
                 {/* Taskbar */}
                 <Taskbar
                     apps={apps}
+                    pinnedAppIds={this.getPinnedAppIds()}
+                    onReorderPinnedApps={this.props.onPinnedAppsChange}
                     closed_windows={this.state.closed_windows}
                     minimized_windows={this.state.minimized_windows}
                     focused_windows={this.state.focused_windows}
@@ -1844,5 +1870,14 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { dockPinnedOrder, setDockPinnedOrder, ensureDockPinnedApps } = useUserPrefs();
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            pinnedAppIds={dockPinnedOrder}
+            onPinnedAppsChange={setDockPinnedOrder}
+            ensurePinnedApps={ensureDockPinnedApps}
+        />
+    );
 }
