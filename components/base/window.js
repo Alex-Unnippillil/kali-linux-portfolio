@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
@@ -73,8 +73,13 @@ export class Window extends Component {
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
+        this._optimizeTimeout = null;
+        this._closeTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._pointerMediaQuery = null;
+        this._pointerMediaListener = null;
+        this._isCoarsePointer = false;
     }
 
     componentDidMount() {
@@ -94,6 +99,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.setupPointerMediaWatcher();
     }
 
     componentWillUnmount() {
@@ -104,9 +110,12 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
-        if (this._usageTimeout) {
-            clearTimeout(this._usageTimeout);
-        }
+        this.clearUsageTimeout();
+        this.clearOptimizeTimeout();
+        this.clearCloseTimeout();
+        this.removeInertBackground();
+        this.deactivateOverlay();
+        this.teardownPointerMediaWatcher();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -169,15 +178,74 @@ export class Window extends Component {
     }
 
     scheduleUsageCheck = () => {
-        if (this._usageTimeout) {
-            clearTimeout(this._usageTimeout);
-        }
+        this.clearUsageTimeout();
         this._usageTimeout = setTimeout(() => {
             const usage = this.computeContentUsage();
             if (usage < 65) {
                 this.optimizeWindow();
             }
         }, 200);
+    }
+
+    clearUsageTimeout = () => {
+        if (this._usageTimeout) {
+            clearTimeout(this._usageTimeout);
+            this._usageTimeout = null;
+        }
+    }
+
+    clearOptimizeTimeout = () => {
+        if (this._optimizeTimeout) {
+            clearTimeout(this._optimizeTimeout);
+            this._optimizeTimeout = null;
+        }
+    }
+
+    clearCloseTimeout = () => {
+        if (this._closeTimeout) {
+            clearTimeout(this._closeTimeout);
+            this._closeTimeout = null;
+        }
+    }
+
+    setupPointerMediaWatcher = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            this._isCoarsePointer = false;
+            return;
+        }
+        const query = window.matchMedia('(pointer: coarse)');
+        this._pointerMediaQuery = query;
+        const listener = (event) => {
+            this.handlePointerMediaChange(event.matches);
+        };
+        this._pointerMediaListener = listener;
+        this.handlePointerMediaChange(query.matches);
+        if (typeof query.addEventListener === 'function') {
+            query.addEventListener('change', listener);
+        } else if (typeof query.addListener === 'function') {
+            query.addListener(listener);
+        }
+    }
+
+    teardownPointerMediaWatcher = () => {
+        const query = this._pointerMediaQuery;
+        const listener = this._pointerMediaListener;
+        if (query && listener) {
+            if (typeof query.removeEventListener === 'function') {
+                query.removeEventListener('change', listener);
+            } else if (typeof query.removeListener === 'function') {
+                query.removeListener(listener);
+            }
+        }
+        this._pointerMediaQuery = null;
+        this._pointerMediaListener = null;
+    }
+
+    handlePointerMediaChange = (isCoarse) => {
+        this._isCoarsePointer = isCoarse;
+        if (isCoarse && this.state.cursorType !== 'cursor-default') {
+            this.setState({ cursorType: 'cursor-default' });
+        }
     }
 
     optimizeWindow = () => {
@@ -190,16 +258,23 @@ export class Window extends Component {
 
         const shrink = () => {
             const usage = this.computeContentUsage();
-            if (usage >= 80) return;
+            if (usage >= 80) {
+                this.clearOptimizeTimeout();
+                return;
+            }
             this.setState(prev => ({
                 width: Math.max(prev.width - 1, 20),
                 height: Math.max(prev.height - 1, 20)
             }), () => {
                 if (this.computeContentUsage() < 80) {
-                    setTimeout(shrink, 50);
+                    this.clearOptimizeTimeout();
+                    this._optimizeTimeout = setTimeout(shrink, 50);
+                } else {
+                    this.clearOptimizeTimeout();
                 }
             });
         };
+        this.clearOptimizeTimeout();
         shrink();
     }
 
@@ -250,7 +325,10 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.setState({
+            cursorType: this._isCoarsePointer ? "cursor-default" : "cursor-move",
+            grabbed: true
+        })
     }
 
     changeCursorToDefault = () => {
@@ -495,7 +573,9 @@ export class Window extends Component {
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
-            setTimeout(() => {
+            this.clearCloseTimeout();
+            this._closeTimeout = setTimeout(() => {
+                this._closeTimeout = null;
                 this.props.closed(this.id)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
         });
@@ -852,23 +932,24 @@ export function WindowEditButtons(props) {
 }
 
 // Window's Main Screen
-export class WindowMainScreen extends Component {
-    constructor() {
-        super();
-        this.state = {
-            setDarkBg: false,
+export function WindowMainScreen({ addFolder, openApp, context, screen }) {
+    const [hasDarkBg, setHasDarkBg] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
         }
-    }
-    componentDidMount() {
-        setTimeout(() => {
-            this.setState({ setDarkBg: true });
+        const timeoutId = window.setTimeout(() => {
+            setHasDarkBg(true);
         }, 3000);
-    }
-    render() {
-        return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
-            </div>
-        )
-    }
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, []);
+
+    return (
+        <div className={`w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen${hasDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey"}`}>
+            {screen(addFolder, openApp, context)}
+        </div>
+    );
 }
