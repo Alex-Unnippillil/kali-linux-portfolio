@@ -11,6 +11,11 @@ body{
     color: var(--color-text);
 }
 
+.whisker-menu-motion {
+    transition-duration: var(--whisker-menu-transition-duration);
+    transition-timing-function: var(--whisker-menu-transition-easing);
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
