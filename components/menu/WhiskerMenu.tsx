@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -158,6 +158,8 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const menuId = useId();
+  const menuPanelId = `whisker-menu-${menuId}`;
 
 
   const allApps: AppMeta[] = apps as any;
@@ -276,8 +278,13 @@ const WhiskerMenu: React.FC = () => {
     requestAnimationFrame(() => setIsOpen(true));
   }, []);
 
-  const hideMenu = useCallback(() => {
+  const hideMenu = useCallback((options?: { returnFocus?: boolean }) => {
     setIsOpen(false);
+    if (options?.returnFocus) {
+      requestAnimationFrame(() => {
+        buttonRef.current?.focus();
+      });
+    }
   }, []);
 
   const toggleMenu = useCallback(() => {
@@ -302,7 +309,7 @@ const WhiskerMenu: React.FC = () => {
       }
 
       if (e.key === 'Escape') {
-        hideMenu();
+        hideMenu({ returnFocus: true });
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setHighlight(h => Math.min(h + 1, currentApps.length - 1));
@@ -372,13 +379,38 @@ const WhiskerMenu: React.FC = () => {
     }
   };
 
+  const focusCategoryList = () => {
+    requestAnimationFrame(() => {
+      categoryListRef.current?.focus();
+    });
+  };
+
+  const handleButtonKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!isVisible) {
+        showMenu();
+        focusCategoryList();
+      } else {
+        focusCategoryList();
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      hideMenu({ returnFocus: true });
+    }
+  };
+
   return (
     <div className="relative inline-flex">
       <button
         ref={buttonRef}
         type="button"
+        aria-haspopup="true"
+        aria-expanded={isVisible}
+        aria-controls={menuPanelId}
+        onKeyDown={handleButtonKeyDown}
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="pl-3 pr-3 border-b-2 border-transparent py-1 transition duration-100 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b121c]"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -392,6 +424,7 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
+          id={menuPanelId}
           className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
