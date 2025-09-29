@@ -833,7 +833,7 @@ export class Desktop extends Component {
                 top: `${position.y}px`,
                 touchAction: 'none',
                 cursor: isDragging ? 'grabbing' : 'pointer',
-                zIndex: isDragging ? 40 : 20,
+                zIndex: isDragging ? 40 : 10,
             };
 
             return (
