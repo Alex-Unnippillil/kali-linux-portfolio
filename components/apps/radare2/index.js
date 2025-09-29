@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import HexEditor from "./HexEditor";
 import {
   loadNotes,
@@ -10,6 +10,36 @@ import {
 import GraphView from "../../../apps/radare2/components/GraphView";
 import GuideOverlay from "./GuideOverlay";
 import { useTheme } from "../../../hooks/useTheme";
+
+const initialNavState = { stack: [], index: -1 };
+
+const navigationReducer = (state, action) => {
+  switch (action.type) {
+    case "RESET": {
+      if (!action.addr) return initialNavState;
+      return { stack: [action.addr], index: 0 };
+    }
+    case "PUSH": {
+      if (!action.addr) return state;
+      const trimmed =
+        state.index >= 0 ? state.stack.slice(0, state.index + 1) : [];
+      const last = trimmed[trimmed.length - 1];
+      if (last === action.addr) {
+        return { stack: trimmed, index: trimmed.length - 1 };
+      }
+      const nextStack = [...trimmed, action.addr];
+      return { stack: nextStack, index: nextStack.length - 1 };
+    }
+    case "STEP": {
+      if (!action.delta) return state;
+      const nextIndex = state.index + action.delta;
+      if (nextIndex < 0 || nextIndex >= state.stack.length) return state;
+      return { ...state, index: nextIndex };
+    }
+    default:
+      return state;
+  }
+};
 
 const Radare2 = ({ initialData = {} }) => {
   const {
@@ -30,6 +60,9 @@ const Radare2 = ({ initialData = {} }) => {
   const [strings, setStrings] = useState([]);
   const disasmRef = useRef(null);
   const { theme } = useTheme();
+  const [navState, dispatchNav] = useReducer(navigationReducer, initialNavState);
+  const navigationHistory = navState.stack;
+  const historyIndex = navState.index;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -56,19 +89,60 @@ const Radare2 = ({ initialData = {} }) => {
     setStrings(extractStrings(hex, base));
   }, [hex, disasm]);
 
-  const scrollToAddr = (addr) => {
-    const idx = disasm.findIndex(
-      (l) => l.addr.toLowerCase() === addr.toLowerCase(),
-    );
-    if (idx >= 0) {
-      setCurrentAddr(disasm[idx].addr);
-      const el = document.getElementById(`asm-${idx}`);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  useEffect(() => {
+    if (disasm.length > 0 && navigationHistory.length === 0) {
+      dispatchNav({ type: "PUSH", addr: disasm[0].addr });
     }
-  };
+  }, [disasm, dispatchNav, navigationHistory]);
+
+  const focusAddr = useCallback(
+    (addr) => {
+      const idx = disasm.findIndex(
+        (l) => l.addr.toLowerCase() === addr.toLowerCase(),
+      );
+      if (idx >= 0) {
+        setCurrentAddr(disasm[idx].addr);
+        const el = document.getElementById(`asm-${idx}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return true;
+      }
+      return false;
+    },
+    [disasm],
+  );
+
+  useEffect(() => {
+    if (historyIndex >= 0 && navigationHistory[historyIndex]) {
+      focusAddr(navigationHistory[historyIndex]);
+    }
+  }, [focusAddr, historyIndex, navigationHistory]);
+
+  const navigateTo = useCallback(
+    (addr) => {
+      if (!addr) return false;
+      const idx = disasm.findIndex(
+        (l) => l.addr.toLowerCase() === addr.toLowerCase(),
+      );
+      if (idx === -1) return false;
+      const normalized = disasm[idx].addr;
+      dispatchNav({ type: "PUSH", addr: normalized });
+      return true;
+    },
+    [dispatchNav, disasm],
+  );
+
+  const goBack = useCallback(() => {
+    dispatchNav({ type: "STEP", delta: -1 });
+  }, [dispatchNav]);
+
+  const goForward = useCallback(() => {
+    dispatchNav({ type: "STEP", delta: 1 });
+  }, [dispatchNav]);
 
   const handleSeek = () => {
-    if (seekAddr) scrollToAddr(seekAddr);
+    if (seekAddr) navigateTo(seekAddr);
   };
 
   const handleFind = () => {
@@ -79,9 +153,7 @@ const Radare2 = ({ initialData = {} }) => {
         l.addr.toLowerCase() === findTerm.toLowerCase(),
     );
     if (idx >= 0) {
-      setCurrentAddr(disasm[idx].addr);
-      const el = document.getElementById(`asm-${idx}`);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      navigateTo(disasm[idx].addr);
     }
   };
 
@@ -175,6 +247,30 @@ const Radare2 = ({ initialData = {} }) => {
         >
           Help
         </button>
+        <button
+          onClick={goBack}
+          disabled={historyIndex <= 0}
+          className="px-3 py-1 rounded disabled:opacity-50"
+          style={{
+            backgroundColor: "var(--r2-surface)",
+            border: "1px solid var(--r2-border)",
+          }}
+        >
+          Back
+        </button>
+        <button
+          onClick={goForward}
+          disabled={
+            historyIndex < 0 || historyIndex >= navigationHistory.length - 1
+          }
+          className="px-3 py-1 rounded disabled:opacity-50"
+          style={{
+            backgroundColor: "var(--r2-surface)",
+            border: "1px solid var(--r2-border)",
+          }}
+        >
+          Forward
+        </button>
       </div>
 
       {mode === "graph" ? (
@@ -208,7 +304,7 @@ const Radare2 = ({ initialData = {} }) => {
                     color:
                       currentAddr === line.addr ? "#000" : "var(--r2-text)",
                   }}
-                  onClick={() => setCurrentAddr(line.addr)}
+                  onClick={() => navigateTo(line.addr)}
                 >
                   <button
                     onClick={(e) => {
@@ -239,10 +335,7 @@ const Radare2 = ({ initialData = {} }) => {
           >
             {strings.map((s) => (
               <li key={s.addr}>
-                <button
-                  onClick={() => scrollToAddr(s.addr)}
-                  className="underline"
-                >
+                <button onClick={() => navigateTo(s.addr)} className="underline">
                   {s.addr}: {s.text}
                 </button>
               </li>
@@ -254,9 +347,27 @@ const Radare2 = ({ initialData = {} }) => {
       {currentAddr && (
         <div className="mt-4">
           <h2 className="text-lg">Xrefs for {currentAddr}</h2>
-          <p className="mb-2">
-            {(xrefs[currentAddr] || []).join(", ") || "None"}
-          </p>
+          <ul className="mb-2 space-y-1">
+            {(xrefs[currentAddr] || []).length === 0 ? (
+              <li>None</li>
+            ) : (
+              (xrefs[currentAddr] || []).map((xref) => (
+                <li key={xref} className="flex items-center gap-2">
+                  <span>{xref}</span>
+                  <button
+                    onClick={() => navigateTo(xref)}
+                    className="px-2 py-0.5 rounded"
+                    style={{
+                      backgroundColor: "var(--r2-surface)",
+                      border: "1px solid var(--r2-border)",
+                    }}
+                  >
+                    Seek to
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
           <textarea
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
