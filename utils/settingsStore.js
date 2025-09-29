@@ -1,7 +1,10 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import { z } from 'zod';
 import { getTheme, setTheme } from './theme';
+
+export const SETTINGS_VERSION = 1;
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -16,6 +19,173 @@ const DEFAULT_SETTINGS = {
   allowNetwork: false,
   haptics: true,
 };
+
+const booleanField = z.coerce.boolean();
+
+const settingsDataSchema = z
+  .object({
+    accent: z.string().min(1),
+    wallpaper: z.string().min(1),
+    useKaliWallpaper: booleanField,
+    density: z
+      .enum(['regular', 'compact'])
+      .catch(DEFAULT_SETTINGS.density),
+    reducedMotion: booleanField,
+    fontScale: z.coerce.number(),
+    highContrast: booleanField,
+    largeHitAreas: booleanField,
+    pongSpin: booleanField,
+    allowNetwork: booleanField,
+    haptics: booleanField,
+    theme: z.string().min(1).catch('default'),
+  })
+  .strip();
+
+const settingsFileSchema = z
+  .object({
+    version: z.literal(SETTINGS_VERSION),
+    exportedAt: z.string().datetime().optional(),
+    data: settingsDataSchema,
+  })
+  .or(settingsDataSchema);
+
+const toSettingsData = (parsed) =>
+  'data' in parsed ? parsed.data : parsed;
+
+export const defaults = DEFAULT_SETTINGS;
+
+export async function getSettingsSnapshot() {
+  const [
+    accent,
+    wallpaper,
+    useKaliWallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+  ] = await Promise.all([
+    getAccent(),
+    getWallpaper(),
+    getUseKaliWallpaper(),
+    getDensity(),
+    getReducedMotion(),
+    getFontScale(),
+    getHighContrast(),
+    getLargeHitAreas(),
+    getPongSpin(),
+    getAllowNetwork(),
+    getHaptics(),
+  ]);
+  const theme = getTheme();
+  const data = {
+    accent,
+    wallpaper,
+    useKaliWallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+  };
+
+  return {
+    version: SETTINGS_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+}
+
+export async function exportSettings() {
+  const snapshot = await getSettingsSnapshot();
+  return JSON.stringify(snapshot, null, 2);
+}
+
+export function parseSettings(json) {
+  try {
+    const raw = typeof json === 'string' ? JSON.parse(json) : json;
+    const parsed = settingsFileSchema.parse(raw);
+    const data = settingsDataSchema.parse(toSettingsData(parsed));
+    return {
+      success: true,
+      data,
+      metadata: {
+        version: 'version' in parsed ? parsed.version : 0,
+        exportedAt:
+          'version' in parsed && parsed.exportedAt ? parsed.exportedAt : null,
+      },
+    };
+  } catch (error) {
+    console.error('Invalid settings payload', error);
+    return {
+      success: false,
+      error: 'invalid-settings',
+    };
+  }
+}
+
+async function applySettingsData(data) {
+  if (typeof window === 'undefined') return;
+  const {
+    accent,
+    wallpaper,
+    useKaliWallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+  } = data;
+
+  await Promise.all([
+    accent !== undefined ? setAccent(accent) : Promise.resolve(),
+    wallpaper !== undefined ? setWallpaper(wallpaper) : Promise.resolve(),
+    useKaliWallpaper !== undefined
+      ? setUseKaliWallpaper(useKaliWallpaper)
+      : Promise.resolve(),
+    density !== undefined ? setDensity(density) : Promise.resolve(),
+    reducedMotion !== undefined
+      ? setReducedMotion(reducedMotion)
+      : Promise.resolve(),
+    fontScale !== undefined ? setFontScale(fontScale) : Promise.resolve(),
+    highContrast !== undefined
+      ? setHighContrast(highContrast)
+      : Promise.resolve(),
+    largeHitAreas !== undefined
+      ? setLargeHitAreas(largeHitAreas)
+      : Promise.resolve(),
+    pongSpin !== undefined ? setPongSpin(pongSpin) : Promise.resolve(),
+    allowNetwork !== undefined
+      ? setAllowNetwork(allowNetwork)
+      : Promise.resolve(),
+    haptics !== undefined ? setHaptics(haptics) : Promise.resolve(),
+  ]);
+  if (theme !== undefined) setTheme(theme);
+}
+
+export async function importSettings(json) {
+  const result = parseSettings(json);
+  if (!result.success) {
+    return result;
+  }
+  await applySettingsData(result.data);
+  return result;
+}
+
+export async function applySettingsFromData(data) {
+  await applySettingsData(settingsDataSchema.parse(data));
+}
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -152,84 +322,3 @@ export async function resetSettings() {
   window.localStorage.removeItem('use-kali-wallpaper');
 }
 
-export async function exportSettings() {
-  const [
-    accent,
-    wallpaper,
-    useKaliWallpaper,
-    density,
-    reducedMotion,
-    fontScale,
-    highContrast,
-    largeHitAreas,
-    pongSpin,
-    allowNetwork,
-    haptics,
-  ] = await Promise.all([
-    getAccent(),
-    getWallpaper(),
-    getUseKaliWallpaper(),
-    getDensity(),
-    getReducedMotion(),
-    getFontScale(),
-    getHighContrast(),
-    getLargeHitAreas(),
-    getPongSpin(),
-    getAllowNetwork(),
-    getHaptics(),
-  ]);
-  const theme = getTheme();
-  return JSON.stringify({
-    accent,
-    wallpaper,
-    density,
-    reducedMotion,
-    fontScale,
-    highContrast,
-    largeHitAreas,
-    pongSpin,
-    allowNetwork,
-    haptics,
-    useKaliWallpaper,
-    theme,
-  });
-}
-
-export async function importSettings(json) {
-  if (typeof window === 'undefined') return;
-  let settings;
-  try {
-    settings = typeof json === 'string' ? JSON.parse(json) : json;
-  } catch (e) {
-    console.error('Invalid settings', e);
-    return;
-  }
-  const {
-    accent,
-    wallpaper,
-    useKaliWallpaper,
-    density,
-    reducedMotion,
-    fontScale,
-    highContrast,
-    largeHitAreas,
-    pongSpin,
-    allowNetwork,
-    haptics,
-    theme,
-  } = settings;
-  if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
-  if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
-  if (density !== undefined) await setDensity(density);
-  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
-  if (fontScale !== undefined) await setFontScale(fontScale);
-  if (highContrast !== undefined) await setHighContrast(highContrast);
-  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
-  if (pongSpin !== undefined) await setPongSpin(pongSpin);
-  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
-  if (haptics !== undefined) await setHaptics(haptics);
-  if (theme !== undefined) setTheme(theme);
-}
-
-export const defaults = DEFAULT_SETTINGS;

@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import {
+    resetSettings,
+    defaults,
+    exportSettings as exportSettingsData,
+    parseSettings,
+    applySettingsFromData,
+} from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -8,6 +14,115 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+
+
+    const getCurrentSettings = useCallback(() => ({
+        accent,
+        wallpaper,
+        useKaliWallpaper,
+        density,
+        reducedMotion,
+        fontScale,
+        highContrast,
+        largeHitAreas,
+        pongSpin,
+        allowNetwork,
+        haptics,
+        theme,
+    }), [
+        accent,
+        wallpaper,
+        useKaliWallpaper,
+        density,
+        reducedMotion,
+        fontScale,
+        highContrast,
+        largeHitAreas,
+        pongSpin,
+        allowNetwork,
+        haptics,
+        theme,
+    ]);
+
+    const syncState = useCallback((next) => {
+        if (next.accent !== undefined) setAccent(next.accent);
+        if (next.wallpaper !== undefined) setWallpaper(next.wallpaper);
+        if (next.useKaliWallpaper !== undefined) setUseKaliWallpaper(next.useKaliWallpaper);
+        if (next.density !== undefined) setDensity(next.density);
+        if (next.reducedMotion !== undefined) setReducedMotion(next.reducedMotion);
+        if (next.fontScale !== undefined) setFontScale(next.fontScale);
+        if (next.highContrast !== undefined) setHighContrast(next.highContrast);
+        if (next.largeHitAreas !== undefined) setLargeHitAreas(next.largeHitAreas);
+        if (next.pongSpin !== undefined) setPongSpin(next.pongSpin);
+        if (next.allowNetwork !== undefined) setAllowNetwork(next.allowNetwork);
+        if (next.haptics !== undefined) setHaptics(next.haptics);
+        if (next.theme !== undefined) setTheme(next.theme);
+    }, [
+        setAccent,
+        setWallpaper,
+        setUseKaliWallpaper,
+        setDensity,
+        setReducedMotion,
+        setFontScale,
+        setHighContrast,
+        setLargeHitAreas,
+        setPongSpin,
+        setAllowNetwork,
+        setHaptics,
+        setTheme,
+    ]);
+
+    const handleExport = useCallback(async () => {
+        const data = await exportSettingsData();
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'settings.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }, []);
+
+    const handleImport = useCallback(async (file) => {
+        const text = await file.text();
+        const result = parseSettings(text);
+        if (!result.success) {
+            window.alert('The selected file is not a valid settings export.');
+            return;
+        }
+        const nextSettings = result.data;
+        const currentSettings = getCurrentSettings();
+        const hasDifferences = Object.keys(nextSettings).some((key) => currentSettings[key] !== nextSettings[key]);
+        if (hasDifferences) {
+            const confirmed = window.confirm('Importing will overwrite your current desktop preferences. Continue?');
+            if (!confirmed) return;
+        }
+        await applySettingsFromData(nextSettings);
+        syncState(nextSettings);
+        window.alert('Settings imported successfully.');
+    }, [getCurrentSettings, syncState]);
+
+    const handleImportSelection = useCallback(async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        try {
+            await handleImport(file);
+        } catch (error) {
+            console.error('Failed to import settings', error);
+            window.alert('An unexpected error occurred while importing settings.');
+        } finally {
+            event.target.value = '';
+        }
+    }, [handleImport]);
+
+    const handleExportClick = useCallback(async () => {
+        try {
+            await handleExport();
+        } catch (error) {
+            console.error('Failed to export settings', error);
+            window.alert('Unable to export settings. Please try again.');
+        }
+    }, [handleExport]);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -70,8 +185,9 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-theme-select">Theme:</label>
                 <select
+                    id="settings-theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -82,14 +198,16 @@ export function Settings() {
                     <option value="matrix">Matrix</option>
                 </select>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={useKaliWallpaper}
-                        onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="settings-use-kali-wallpaper"
+                    type="checkbox"
+                    checked={useKaliWallpaper}
+                    onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Use Kali wallpaper"
+                />
+                <label className="text-ubt-grey cursor-pointer" htmlFor="settings-use-kali-wallpaper">
                     Kali Gradient Wallpaper
                 </label>
             </div>
@@ -115,8 +233,9 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-density-select">Density:</label>
                 <select
+                    id="settings-density-select"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -126,8 +245,9 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-font-scale">Font Size:</label>
                 <input
+                    id="settings-font-scale"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -135,71 +255,84 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Font size"
                 />
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={reducedMotion}
-                        onChange={(e) => setReducedMotion(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="settings-reduced-motion"
+                    type="checkbox"
+                    checked={reducedMotion}
+                    onChange={(e) => setReducedMotion(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Reduced motion"
+                />
+                <label className="text-ubt-grey cursor-pointer" htmlFor="settings-reduced-motion">
                     Reduced Motion
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={largeHitAreas}
-                        onChange={(e) => setLargeHitAreas(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="settings-large-hit-areas"
+                    type="checkbox"
+                    checked={largeHitAreas}
+                    onChange={(e) => setLargeHitAreas(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Large hit areas"
+                />
+                <label className="text-ubt-grey cursor-pointer" htmlFor="settings-large-hit-areas">
                     Large Hit Areas
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={highContrast}
-                        onChange={(e) => setHighContrast(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="settings-high-contrast"
+                    type="checkbox"
+                    checked={highContrast}
+                    onChange={(e) => setHighContrast(e.target.checked)}
+                    className="mr-2"
+                    aria-label="High contrast"
+                />
+                <label className="text-ubt-grey cursor-pointer" htmlFor="settings-high-contrast">
                     High Contrast
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={allowNetwork}
-                        onChange={(e) => setAllowNetwork(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="settings-allow-network"
+                    type="checkbox"
+                    checked={allowNetwork}
+                    onChange={(e) => setAllowNetwork(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Allow network requests"
+                />
+                <label className="text-ubt-grey cursor-pointer" htmlFor="settings-allow-network">
                     Allow Network Requests
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={haptics}
-                        onChange={(e) => setHaptics(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="settings-haptics"
+                    type="checkbox"
+                    checked={haptics}
+                    onChange={(e) => setHaptics(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Haptics"
+                />
+                <label className="text-ubt-grey cursor-pointer" htmlFor="settings-haptics">
                     Haptics
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={pongSpin}
-                        onChange={(e) => setPongSpin(e.target.checked)}
-                        className="mr-2"
-                    />
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="settings-pong-spin"
+                    type="checkbox"
+                    checked={pongSpin}
+                    onChange={(e) => setPongSpin(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Pong spin"
+                />
+                <label className="text-ubt-grey cursor-pointer" htmlFor="settings-pong-spin">
                     Pong Spin
                 </label>
             </div>
@@ -247,16 +380,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
-                    onClick={async () => {
-                        const data = await exportSettingsData();
-                        const blob = new Blob([data], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'settings.json';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    }}
+                    onClick={handleExportClick}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Export Settings
@@ -272,11 +396,15 @@ export function Settings() {
                         await resetSettings();
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
+                        setUseKaliWallpaper(defaults.useKaliWallpaper);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setPongSpin(defaults.pongSpin);
+                        setAllowNetwork(defaults.allowNetwork);
+                        setHaptics(defaults.haptics);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -288,25 +416,8 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
-                onChange={async (e) => {
-                    const file = e.target.files && e.target.files[0];
-                    if (!file) return;
-                    const text = await file.text();
-                    await importSettingsData(text);
-                    try {
-                        const parsed = JSON.parse(text);
-                        if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-                        if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
-                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
-                        if (parsed.theme !== undefined) { setTheme(parsed.theme); }
-                    } catch (err) {
-                        console.error('Invalid settings', err);
-                    }
-                    e.target.value = '';
-                }}
+                onChange={handleImportSelection}
+                aria-label="Import settings file"
                 className="hidden"
             />
         </div>
