@@ -1,10 +1,13 @@
 import React from "react";
 import clsx from "clsx";
+import { useLocalization } from "../../hooks/useLocalization";
 
 type LayoutProps = React.HTMLAttributes<HTMLDivElement>;
 
 const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
   ({ className, children, ...props }, ref) => {
+    const { direction } = useLocalization();
+
     return (
       <div
         ref={ref}
@@ -12,6 +15,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
           "desktop-shell relative h-screen w-screen overflow-hidden bg-transparent text-white antialiased",
           className,
         )}
+        dir={direction}
         {...props}
       >
         {children}

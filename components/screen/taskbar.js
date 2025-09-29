@@ -18,7 +18,7 @@ export default function Taskbar(props) {
     return (
 
         <div
-            className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 flex items-center justify-start z-40 backdrop-blur-sm"
+            className="absolute bottom-0 inset-x-0 w-full bg-black bg-opacity-50 flex items-center justify-start z-40 backdrop-blur-sm"
             role="toolbar"
             style={{
                 height: 'var(--shell-taskbar-height, 2.5rem)',
@@ -74,8 +74,10 @@ export default function Taskbar(props) {
                                 <span
                                     aria-hidden="true"
                                     data-testid="running-indicator"
-                                    className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded"
+                                    className="absolute bottom-1 rounded"
                                     style={{
+                                        insetInlineStart: '50%',
+                                        transform: 'translateX(-50%)',
                                         width: '0.5rem',
                                         height: '0.25rem',
                                         background: 'currentColor',
