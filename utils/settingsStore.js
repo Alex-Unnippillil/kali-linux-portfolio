@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
+  allowEmbeds: false,
   haptics: true,
 };
 
@@ -135,6 +136,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getAllowEmbeds() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowEmbeds;
+  return window.localStorage.getItem('allow-embeds') === 'true';
+}
+
+export async function setAllowEmbeds(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('allow-embeds', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -148,6 +159,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
+  window.localStorage.removeItem('allow-embeds');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
 }
@@ -164,6 +176,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    allowEmbeds,
     haptics,
   ] = await Promise.all([
     getAccent(),
@@ -176,6 +189,7 @@ export async function exportSettings() {
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
+    getAllowEmbeds(),
     getHaptics(),
   ]);
   const theme = getTheme();
@@ -189,6 +203,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    allowEmbeds,
     haptics,
     useKaliWallpaper,
     theme,
@@ -215,6 +230,7 @@ export async function importSettings(json) {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    allowEmbeds,
     haptics,
     theme,
   } = settings;
@@ -228,6 +244,7 @@ export async function importSettings(json) {
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
+  if (allowEmbeds !== undefined) await setAllowEmbeds(allowEmbeds);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
 }

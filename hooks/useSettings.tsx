@@ -20,6 +20,8 @@ import {
   setPongSpin as savePongSpin,
   getAllowNetwork as loadAllowNetwork,
   setAllowNetwork as saveAllowNetwork,
+  getAllowEmbeds as loadAllowEmbeds,
+  setAllowEmbeds as saveAllowEmbeds,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
@@ -65,6 +67,7 @@ interface SettingsContextValue {
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
+  allowEmbeds: boolean;
   haptics: boolean;
   theme: string;
   setAccent: (accent: string) => void;
@@ -77,6 +80,7 @@ interface SettingsContextValue {
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
+  setAllowEmbeds: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
@@ -93,6 +97,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  allowEmbeds: defaults.allowEmbeds,
   haptics: defaults.haptics,
   theme: 'default',
   setAccent: () => {},
@@ -105,6 +110,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
+  setAllowEmbeds: () => {},
   setHaptics: () => {},
   setTheme: () => {},
 });
@@ -120,6 +126,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [allowEmbeds, setAllowEmbeds] = useState<boolean>(defaults.allowEmbeds);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
@@ -136,6 +143,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
+      setAllowEmbeds(await loadAllowEmbeds());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
@@ -247,6 +255,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork]);
 
   useEffect(() => {
+    saveAllowEmbeds(allowEmbeds);
+  }, [allowEmbeds]);
+
+  useEffect(() => {
     saveHaptics(haptics);
   }, [haptics]);
 
@@ -266,6 +278,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        allowEmbeds,
         haptics,
         theme,
         setAccent,
@@ -278,6 +291,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
+        setAllowEmbeds,
         setHaptics,
         setTheme,
       }}

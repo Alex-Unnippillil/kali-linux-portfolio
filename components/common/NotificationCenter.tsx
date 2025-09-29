@@ -11,6 +11,7 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import EmbedConsentBanner from '../privacy/EmbedConsentBanner';
 
 export type {
   ClassificationResult,
@@ -187,6 +188,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       }}
     >
       {children}
+      <EmbedConsentBanner />
     </NotificationsContext.Provider>
   );
 };
