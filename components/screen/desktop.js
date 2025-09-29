@@ -24,6 +24,7 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { SettingsContext } from '../../hooks/useSettings';
 import {
     clampWindowTopPosition,
     measureWindowTopOffset,
@@ -88,6 +89,12 @@ export class Desktop extends Component {
         this.desktopPadding = { ...this.defaultDesktopPadding };
 
         this.gestureState = { pointer: null, overview: null };
+
+        this.trackpadGestureState = null;
+        this.trackpadGestureSupported = false;
+        this.trackpadWheelAttached = false;
+        this.trackpadWheelNode = null;
+        this.lastGestureSettings = null;
 
     }
 
@@ -244,6 +251,214 @@ export class Desktop extends Component {
         node.removeEventListener('touchend', this.handleShellTouchEnd);
         node.removeEventListener('touchcancel', this.handleShellTouchCancel);
         this.gestureRoot = null;
+    };
+
+    detectTrackpadGestureSupport = () => {
+        if (typeof window === 'undefined') return false;
+        if (!('PointerEvent' in window)) return false;
+        const nav = typeof navigator !== 'undefined' ? navigator : null;
+        if (!nav) return false;
+        const maxTouchPoints = typeof nav.maxTouchPoints === 'number' ? nav.maxTouchPoints : 0;
+        const platformSource = nav.platform || (nav.userAgentData && nav.userAgentData.platform) || '';
+        const platform = platformSource.toLowerCase();
+        const hasWheelSupport = 'onwheel' in window || 'WheelEvent' in window;
+        const hasFinePointer = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(pointer: fine)').matches
+            : false;
+        const anyFinePointer = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(any-pointer: fine)').matches
+            : hasFinePointer;
+        const hasGestureEvent = 'GestureEvent' in window;
+        const desktopPlatform = /mac|win/.test(platform);
+
+        if (!hasWheelSupport) return false;
+
+        if (maxTouchPoints > 0 && anyFinePointer) return true;
+
+        if (platform.includes('mac') && hasFinePointer && (hasGestureEvent || maxTouchPoints > 0)) {
+            return true;
+        }
+
+        if (desktopPlatform && hasFinePointer && maxTouchPoints > 0) {
+            return true;
+        }
+
+        return false;
+    };
+
+    ensureTrackpadGestureListener = () => {
+        const supported = this.detectTrackpadGestureSupport();
+        this.trackpadGestureSupported = supported;
+        if (!supported) {
+            this.teardownTrackpadGestureListeners();
+            return;
+        }
+        const node = this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
+        if (!node) return;
+        if (this.trackpadWheelNode && this.trackpadWheelNode !== node) {
+            this.trackpadWheelNode.removeEventListener('wheel', this.handleTrackpadWheel);
+            this.trackpadWheelAttached = false;
+        }
+        if (!this.trackpadWheelAttached) {
+            node.addEventListener('wheel', this.handleTrackpadWheel, { passive: false });
+            this.trackpadWheelAttached = true;
+            this.trackpadWheelNode = node;
+        }
+    };
+
+    teardownTrackpadGestureListeners = () => {
+        if (this.trackpadWheelNode && this.trackpadWheelAttached) {
+            this.trackpadWheelNode.removeEventListener('wheel', this.handleTrackpadWheel);
+        }
+        this.trackpadWheelAttached = false;
+        this.trackpadWheelNode = null;
+        this.trackpadGestureState = null;
+    };
+
+    getGestureSettings = () => {
+        const context = this.context || {};
+        const enabled =
+            typeof context.gestureNavigationEnabled === 'boolean'
+                ? context.gestureNavigationEnabled
+                : true;
+        const sensitivity = Number.isFinite(context.gestureNavigationSensitivity)
+            ? context.gestureNavigationSensitivity
+            : 1;
+        return {
+            enabled,
+            sensitivity,
+        };
+    };
+
+    getTrackpadSwipeThreshold = () => {
+        const { sensitivity } = this.getGestureSettings();
+        const clamped = Math.min(Math.max(sensitivity, 0.5), 1.5);
+        const baseDistance = 240;
+        return baseDistance / clamped;
+    };
+
+    getTrackpadDurationLimit = () => {
+        const { sensitivity } = this.getGestureSettings();
+        const clamped = Math.min(Math.max(sensitivity, 0.5), 1.5);
+        return 600 / Math.max(clamped, 0.5);
+    };
+
+    resetTrackpadGestureState = () => {
+        this.trackpadGestureState = null;
+    };
+
+    getTimestamp = () => (typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now()
+    );
+
+    normalizeWheelDelta = (delta = 0, mode = 0) => {
+        if (!Number.isFinite(delta)) return 0;
+        if (mode === 1) return delta * 16;
+        if (mode === 2) {
+            const height = typeof window !== 'undefined' ? window.innerHeight || 800 : 800;
+            return delta * height;
+        }
+        return delta;
+    };
+
+    hasHorizontalScrollableAncestor = (target) => {
+        if (typeof window === 'undefined' || typeof Element === 'undefined' || !target) {
+            return false;
+        }
+        if (!(target instanceof Element)) {
+            return false;
+        }
+        const root = this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
+        let node = target;
+        while (node && node !== root) {
+            if (node instanceof HTMLElement) {
+                const style = window.getComputedStyle(node);
+                const overflowX = style.overflowX || style.overflow;
+                const canScroll = node.scrollWidth > node.clientWidth + 1;
+                if (
+                    canScroll &&
+                    (overflowX === 'auto' || overflowX === 'scroll' || style.overflow === 'auto' || style.overflow === 'scroll')
+                ) {
+                    return true;
+                }
+            }
+            node = node.parentElement;
+        }
+        return false;
+    };
+
+    handleTrackpadWheel = (event) => {
+        if (!this.trackpadGestureSupported) return;
+        if (!event) return;
+
+        const { enabled } = this.getGestureSettings();
+        if (!enabled) {
+            this.resetTrackpadGestureState();
+            return;
+        }
+
+        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+            this.resetTrackpadGestureState();
+            return;
+        }
+
+        if (this.hasHorizontalScrollableAncestor(event.target)) {
+            this.resetTrackpadGestureState();
+            return;
+        }
+
+        const horizontal = Math.abs(event.deltaX);
+        const vertical = Math.abs(event.deltaY);
+        if (horizontal <= vertical) {
+            this.resetTrackpadGestureState();
+            return;
+        }
+
+        const stack = this.getActiveStack();
+        if (!Array.isArray(stack) || stack.length <= 1) {
+            this.resetTrackpadGestureState();
+            return;
+        }
+
+        const now = this.getTimestamp();
+        const normalizedX = this.normalizeWheelDelta(event.deltaX, event.deltaMode);
+        const normalizedY = Math.abs(this.normalizeWheelDelta(event.deltaY, event.deltaMode));
+
+        if (!this.trackpadGestureState || now - this.trackpadGestureState.lastTime > 280) {
+            this.trackpadGestureState = {
+                distanceX: normalizedX,
+                driftY: normalizedY,
+                startTime: now,
+                lastTime: now,
+            };
+        } else {
+            this.trackpadGestureState.distanceX += normalizedX;
+            this.trackpadGestureState.driftY += normalizedY;
+            this.trackpadGestureState.lastTime = now;
+        }
+
+        const threshold = this.getTrackpadSwipeThreshold();
+        const driftLimit = threshold * 0.45 + 20;
+        const duration = now - (this.trackpadGestureState ? this.trackpadGestureState.startTime : now);
+        const durationLimit = this.getTrackpadDurationLimit();
+
+        if (
+            this.trackpadGestureState &&
+            Math.abs(this.trackpadGestureState.distanceX) >= threshold &&
+            this.trackpadGestureState.driftY <= driftLimit &&
+            duration <= durationLimit
+        ) {
+            event.preventDefault();
+            const direction = this.trackpadGestureState.distanceX > 0 ? 1 : -1;
+            this.cycleApps(direction);
+            this.resetTrackpadGestureState();
+            return;
+        }
+
+        if (duration > durationLimit) {
+            this.resetTrackpadGestureState();
+        }
     };
 
     handleShellPointerDown = (event) => {
@@ -817,6 +1032,8 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.ensureTrackpadGestureListener();
+        this.lastGestureSettings = this.getGestureSettings();
     }
 
     componentDidUpdate(_prevProps, prevState) {
@@ -827,6 +1044,19 @@ export class Desktop extends Component {
         ) {
             this.broadcastWorkspaceState();
         }
+        const currentSettings = this.getGestureSettings();
+        const previousSettings = this.lastGestureSettings;
+        if (
+            !previousSettings ||
+            previousSettings.enabled !== currentSettings.enabled ||
+            previousSettings.sensitivity !== currentSettings.sensitivity
+        ) {
+            if (!currentSettings.enabled) {
+                this.resetTrackpadGestureState();
+            }
+            this.lastGestureSettings = { ...currentSettings };
+        }
+        this.ensureTrackpadGestureListener();
     }
 
     componentWillUnmount() {
@@ -842,6 +1072,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.teardownTrackpadGestureListeners();
     }
 
     attachIconKeyboardListeners = () => {
@@ -1841,6 +2072,8 @@ export class Desktop extends Component {
         );
     }
 }
+
+Desktop.contextType = SettingsContext;
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();

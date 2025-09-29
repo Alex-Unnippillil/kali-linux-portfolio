@@ -22,6 +22,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getGestureNavigationEnabled as loadGestureNavigationEnabled,
+  setGestureNavigationEnabled as saveGestureNavigationEnabled,
+  getGestureNavigationSensitivity as loadGestureNavigationSensitivity,
+  setGestureNavigationSensitivity as saveGestureNavigationSensitivity,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -67,6 +71,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  gestureNavigationEnabled: boolean;
+  gestureNavigationSensitivity: number;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +85,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setGestureNavigationEnabled: (value: boolean) => void;
+  setGestureNavigationSensitivity: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +103,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  gestureNavigationEnabled: defaults.gestureNavigationEnabled,
+  gestureNavigationSensitivity: defaults.gestureNavigationSensitivity,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +117,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setGestureNavigationEnabled: () => {},
+  setGestureNavigationSensitivity: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,6 +134,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [gestureNavigationEnabled, setGestureNavigationEnabled] = useState<boolean>(
+    defaults.gestureNavigationEnabled,
+  );
+  const [gestureNavigationSensitivity, setGestureNavigationSensitivity] = useState<number>(
+    defaults.gestureNavigationSensitivity,
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -137,6 +155,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setGestureNavigationEnabled(await loadGestureNavigationEnabled());
+      setGestureNavigationSensitivity(await loadGestureNavigationSensitivity());
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +270,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveGestureNavigationEnabled(gestureNavigationEnabled);
+  }, [gestureNavigationEnabled]);
+
+  useEffect(() => {
+    const clamped = Math.min(Math.max(gestureNavigationSensitivity, 0.25), 4);
+    if (clamped !== gestureNavigationSensitivity) {
+      setGestureNavigationSensitivity(clamped);
+      return;
+    }
+    saveGestureNavigationSensitivity(clamped);
+  }, [gestureNavigationSensitivity]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +301,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        gestureNavigationEnabled,
+        gestureNavigationSensitivity,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +315,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setGestureNavigationEnabled,
+        setGestureNavigationSensitivity,
       }}
     >
       {children}

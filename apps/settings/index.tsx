@@ -34,6 +34,10 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    gestureNavigationEnabled,
+    setGestureNavigationEnabled,
+    gestureNavigationSensitivity,
+    setGestureNavigationSensitivity,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,6 +88,10 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.gestureNavigationEnabled !== undefined)
+        setGestureNavigationEnabled(parsed.gestureNavigationEnabled);
+      if (parsed.gestureNavigationSensitivity !== undefined)
+        setGestureNavigationSensitivity(parsed.gestureNavigationSensitivity);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -105,9 +113,17 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setGestureNavigationEnabled(defaults.gestureNavigationEnabled);
+    setGestureNavigationSensitivity(defaults.gestureNavigationSensitivity);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+
+  const describeSensitivity = (value: number) => {
+    if (value <= 0.7) return "Low";
+    if (value >= 1.3) return "High";
+    return "Balanced";
+  };
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -156,14 +172,16 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex justify-center my-4 items-center">
+            <input
+              id="kali-wallpaper-toggle"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Enable Kali gradient wallpaper"
+            />
+            <label htmlFor="kali-wallpaper-toggle" className="text-ubt-grey">
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -281,6 +299,40 @@ export default function Settings() {
               onChange={setHaptics}
               ariaLabel="Haptics"
             />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Trackpad Swipes:</span>
+            <ToggleSwitch
+              checked={gestureNavigationEnabled}
+              onChange={setGestureNavigationEnabled}
+              ariaLabel="Enable trackpad swipe navigation"
+            />
+          </div>
+          <div className="flex flex-col items-center my-4">
+            <label htmlFor="gesture-sensitivity" className="text-ubt-grey">
+              Swipe Sensitivity ({describeSensitivity(gestureNavigationSensitivity)})
+            </label>
+            <input
+              id="gesture-sensitivity"
+              type="range"
+              min="0.5"
+              max="1.5"
+              step="0.1"
+              value={gestureNavigationSensitivity}
+              disabled={!gestureNavigationEnabled}
+              onChange={(e) =>
+                setGestureNavigationSensitivity(parseFloat(e.target.value))
+              }
+              className="ubuntu-slider mt-2"
+              aria-label="Swipe sensitivity"
+              aria-valuemin={0.5}
+              aria-valuemax={1.5}
+              aria-valuenow={gestureNavigationSensitivity}
+              aria-valuetext={`${describeSensitivity(gestureNavigationSensitivity)} sensitivity`}
+            />
+            <p className="text-xs text-ubt-grey/70 mt-2 px-6 text-center">
+              Adjust how far a horizontal swipe must travel before cycling windows.
+            </p>
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
