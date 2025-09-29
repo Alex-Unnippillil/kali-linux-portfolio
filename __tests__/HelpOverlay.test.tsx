@@ -4,12 +4,14 @@ import HelpOverlay from '../components/apps/HelpOverlay';
 
 describe('HelpOverlay', () => {
   it('returns null when no instructions exist for the game', () => {
-    const { container } = render(<HelpOverlay gameId="unknown" onClose={() => {}} />);
+    const { container } = render(
+      <HelpOverlay gameId="unknown" open onOpenChange={() => {}} />,
+    );
     expect(container.firstChild).toBeNull();
   });
 
   it('renders instructions when available', () => {
-    render(<HelpOverlay gameId="2048" onClose={() => {}} />);
+    render(<HelpOverlay gameId="2048" open onOpenChange={() => {}} />);
     expect(screen.getByText('2048 Help')).toBeInTheDocument();
     expect(
       screen.getByText('Reach the 2048 tile by merging numbers.')

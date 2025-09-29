@@ -14,6 +14,7 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import { useOnboardingProgress } from '../ui/OnboardingOverlay';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -52,7 +53,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   highScore,
   editor,
 }) => {
-  const [showHelp, setShowHelp] = useState(false);
+  const { dismissed } = useOnboardingProgress(`game:${gameId}`);
+  const [showHelp, setShowHelp] = useState(() => !dismissed);
   const [paused, setPaused] = useState(false);
   const [log, setLog] = useState<RecordedInput[]>([]);
   const [replayHandler, setReplayHandler] = useState<
@@ -61,7 +63,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const [replaying, setReplaying] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
-  const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
 
   const fallbackCopy = useCallback((text: string) => {
@@ -163,31 +164,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Show tutorial overlay on first visit
   useEffect(() => {
-    try {
-      const key = `seen_tutorial_${gameId}`;
-      if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {
-        setShowHelp(true);
-        window.localStorage.setItem(key, '1');
-      }
-    } catch {
-      // ignore storage errors
+    if (!dismissed) {
+      setShowHelp(true);
     }
-  }, [gameId]);
-
-  // Allow closing overlay with Escape
-  useEffect(() => {
-    if (!showHelp) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowHelp(false);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [showHelp]);
+  }, [dismissed]);
 
   // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
@@ -212,7 +193,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
-        {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+        <HelpOverlay
+          gameId={gameId}
+          open={showHelp}
+          onOpenChange={(openState) => setShowHelp(openState)}
+        />
         {paused && (
           <div
             className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
