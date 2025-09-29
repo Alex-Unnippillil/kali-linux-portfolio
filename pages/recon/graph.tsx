@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+} from 'react';
 import dynamic from 'next/dynamic';
 
 interface CytoscapeNode {
@@ -37,6 +43,19 @@ const ForceGraph2D = dynamic(
 
 const ReconGraph: React.FC = () => {
   const [data, setData] = useState<ReconChainData | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  const updateSize = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { clientWidth, clientHeight } = el;
+    setSize((prev) =>
+      prev.width === clientWidth && prev.height === clientHeight
+        ? prev
+        : { width: clientWidth, height: clientHeight },
+    );
+  }, []);
 
   useEffect(() => {
     fetch('/reconng-chain.json')
@@ -44,6 +63,34 @@ const ReconGraph: React.FC = () => {
       .then((json) => setData(json as ReconChainData))
       .catch(() => setData(null));
   }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    updateSize();
+
+    let frame = 0;
+    const handle = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updateSize);
+    };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(handle);
+      observer.observe(el);
+      return () => {
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+      };
+    }
+
+    window.addEventListener('resize', handle);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', handle);
+    };
+  }, [updateSize]);
 
   const graphData = useMemo(() => {
     if (!data) return { nodes: [] as GraphNode[], links: [] as GraphLink[] };
@@ -82,21 +129,42 @@ const ReconGraph: React.FC = () => {
       <p className="mb-2 text-sm">
         Nodes: {graphData.nodes.length} | Edges: {graphData.links.length}
       </p>
-      <div className="h-96 bg-black rounded">
-        <ForceGraph2D
-          graphData={graphData}
-          nodeId="id"
-          nodeCanvasObject={(node: any, ctx) => {
-            ctx.fillStyle = 'lightblue';
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI, false);
-            ctx.fill();
-            ctx.font = '8px sans-serif';
-            const label = node.label || node.id;
-            ctx.fillText(label, node.x + 6, node.y + 2);
-          }}
-          linkDirectionalArrowLength={4}
-        />
+      <div
+        ref={containerRef}
+        className="relative w-full bg-black rounded"
+        style={{ aspectRatio: '4 / 3' }}
+        data-chart-ready={Boolean(data)}
+        aria-busy={!data}
+      >
+        {!data && (
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
+            Loading graph…
+          </div>
+        )}
+        {data && size.width > 0 && size.height > 0 ? (
+          <ForceGraph2D
+            width={size.width}
+            height={size.height}
+            graphData={graphData}
+            nodeId="id"
+            nodeCanvasObject={(node: any, ctx) => {
+              ctx.fillStyle = 'lightblue';
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI, false);
+              ctx.fill();
+              ctx.font = '8px sans-serif';
+              const label = node.label || node.id;
+              ctx.fillText(label, node.x + 6, node.y + 2);
+            }}
+            linkDirectionalArrowLength={4}
+          />
+        ) : (
+          data && (
+            <div className="absolute inset-0" aria-hidden>
+              {/* Reserve space to avoid layout shift until measurements are available */}
+            </div>
+          )
+        )}
       </div>
     </div>
   );
