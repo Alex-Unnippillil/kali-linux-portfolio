@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -24,12 +25,13 @@ const percentOf = (value, total) => {
 
 const computeSnapRegions = (viewportWidth, viewportHeight) => {
     const halfWidth = viewportWidth / 2;
-    const availableHeight = Math.max(0, viewportHeight - SNAP_BOTTOM_INSET);
+    const availableHeight = Math.max(0, viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET);
+    const topOffset = DESKTOP_TOP_PADDING;
     const topHeight = Math.min(availableHeight, viewportHeight / 2);
     return {
-        left: { left: 0, top: 0, width: halfWidth, height: availableHeight },
-        right: { left: viewportWidth - halfWidth, top: 0, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: 0, width: viewportWidth, height: topHeight },
+        left: { left: 0, top: topOffset, width: halfWidth, height: availableHeight },
+        right: { left: viewportWidth - halfWidth, top: topOffset, width: halfWidth, height: availableHeight },
+        top: { left: 0, top: topOffset, width: viewportWidth, height: topHeight },
     };
 };
 
@@ -42,7 +44,7 @@ export class Window extends Component {
         this.startX =
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? 10;
+        this.startY = props.initialY ?? WINDOW_TOP_INSET;
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || (isPortrait ? 90 : 60),
@@ -118,14 +120,18 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        const windowHeightPx = viewportHeight * (this.state.height / 100.0);
+        const availableVertical = Math.max(
+            0,
+            viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET - windowHeightPx
+        );
+
         this.setState({
             parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
+                height: availableVertical,
+                width: viewportWidth - (viewportWidth * (this.state.width / 100.0))
             }
         }, () => {
             if (this._uiExperiments) {
@@ -262,7 +268,7 @@ export class Window extends Component {
         if (!node) return;
         const rect = node.getBoundingClientRect();
         const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
+        const y = this.snapToGrid(rect.y - DESKTOP_TOP_PADDING);
         node.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         node.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
@@ -303,7 +309,8 @@ export class Window extends Component {
         const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            const offsetTop = region.top - DESKTOP_TOP_PADDING;
+            node.style.transform = `translate(${region.left}px, ${offsetTop}px)`;
         }
         this.setState({
             snapPreview: null,
@@ -342,7 +349,7 @@ export class Window extends Component {
         const regions = computeSnapRegions(viewportWidth, viewportHeight);
 
         let candidate = null;
-        if (rect.top <= verticalThreshold && regions.top.height > 0) {
+        if (rect.top <= DESKTOP_TOP_PADDING + verticalThreshold && regions.top.height > 0) {
             candidate = { position: 'top', preview: regions.top };
         } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
@@ -451,10 +458,13 @@ export class Window extends Component {
             const node = this.getWindowNode();
             this.setWinowsPosition();
             // translate window to maximize position
+            const viewportHeight = window.innerHeight;
+            const availableHeight = Math.max(0, viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET);
+            const heightPercent = percentOf(availableHeight, viewportHeight);
             if (node) {
-                node.style.transform = `translate(-1pt,-2pt)`;
+                node.style.transform = `translate(-1pt, 0px)`;
             }
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
         }
     }
 

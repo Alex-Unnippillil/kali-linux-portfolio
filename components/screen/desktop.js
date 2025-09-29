@@ -23,6 +23,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
 export class Desktop extends Component {
     constructor() {
@@ -74,8 +75,7 @@ export class Desktop extends Component {
         this.savedIconPositions = {};
         this.iconDimensions = { width: 96, height: 88 };
         this.iconGridSpacing = { row: 112, column: 128 };
-        this.desktopPadding = { top: 64, right: 24, bottom: 120, left: 24 };
-        this.iconKeyListenerAttached = false;
+        this.desktopPadding = { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 };
 
     }
 
@@ -1186,7 +1186,7 @@ export class Desktop extends Component {
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
-                    initialY: pos ? pos.y : undefined,
+                    initialY: pos ? pos.y : WINDOW_TOP_INSET,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
@@ -1215,7 +1215,7 @@ export class Desktop extends Component {
         const windows = openWindows.map(id => ({
             id,
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : WINDOW_TOP_INSET
         }));
         const nextSession = { ...this.props.session, windows };
         if ('dock' in nextSession) {
@@ -1604,7 +1604,8 @@ export class Desktop extends Component {
                 id="desktop"
                 role="main"
                 ref={this.desktopRef}
-                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                style={{ paddingTop: DESKTOP_TOP_PADDING }}
             >
 
                 {/* Window Area */}
