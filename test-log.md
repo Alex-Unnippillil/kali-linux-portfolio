@@ -37,3 +37,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 
 - Development middleware now appends `'unsafe-eval'` to `script-src` when `NODE_ENV !== 'production'` so the Next.js dev bundle can run inside headless browsers (e.g., Playwright) and capture screenshots.
 - Removed the manual note that explained screenshots were unavailable due to the stricter dev CSP; the automation workaround is no longer needed.
+
+## Keyboard focus audit (2025-10-31)
+
+- Toggled the desktop between default, dark, and neon themes and used keyboard navigation (Tab/Shift+Tab) to traverse the dock, global menu trigger, category list, and app results. Focus rings track the accent color for each theme and remain visible against the surrounding chrome.
+- Verified the window controls (pin, minimize, maximize/restore, close) expose the shared focus ring token and remain reachable while the title bar is focused.
+- Confirmed Whisker menu list items and Places/Applications menu entries inherit the same focus treatment without regressing pointer interactions.
