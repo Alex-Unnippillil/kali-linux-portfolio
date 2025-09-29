@@ -4,7 +4,8 @@
   border-radius: var(--radius-6);
   box-shadow: var(--shadow-2);
   overflow: hidden;
-  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  transition: filter var(--motion-fast) var(--motion-ease-out),
+    box-shadow var(--motion-fast) var(--motion-ease-out);
 }
 
 .windowFrame::before {
@@ -19,7 +20,7 @@
   pointer-events: none;
   border-top-left-radius: calc(var(--radius-6) - 1px);
   border-top-right-radius: calc(var(--radius-6) - 1px);
-  transition: opacity var(--motion-fast) ease;
+  transition: opacity var(--motion-fast) var(--motion-ease-out);
   z-index: 2;
 }
 

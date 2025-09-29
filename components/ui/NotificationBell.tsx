@@ -243,7 +243,7 @@ const NotificationBell: React.FC = () => {
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition duration-medium ease-motion focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
       >
         <svg
           aria-hidden="true"
@@ -279,7 +279,7 @@ const NotificationBell: React.FC = () => {
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className="text-xs font-medium text-ubb-orange transition duration-fast ease-motion disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
             >
               Dismiss all
             </button>
@@ -302,7 +302,7 @@ const NotificationBell: React.FC = () => {
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition duration-medium ease-motion hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
                       >
                         <span className="flex items-center gap-2">
                           {group.metadata.label}
@@ -316,7 +316,7 @@ const NotificationBell: React.FC = () => {
                         <svg
                           aria-hidden="true"
                           focusable="false"
-                          className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-0' : 'rotate-90'}`}
+                          className={`h-4 w-4 transition-transform duration-fast ease-motion ${collapsed ? 'rotate-0' : 'rotate-90'}`}
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >

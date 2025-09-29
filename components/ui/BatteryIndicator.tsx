@@ -69,7 +69,7 @@ const BatteryGlyph: FC<{ level: number; charging: boolean; saver: boolean }> = (
         height="7"
         rx="1.5"
         fill={fillColor}
-        style={{ transition: "width 150ms ease" }}
+        style={{ transition: "width var(--motion-medium) var(--motion-ease-out)" }}
       />
       {charging && (
         <path
@@ -244,7 +244,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
             {(Object.keys(POWER_MODE_LABEL) as PowerMode[]).map((mode) => (
               <label
                 key={mode}
-                className="flex items-center justify-between rounded px-2 py-2 text-sm transition hover:bg-white hover:bg-opacity-10"
+                className="flex items-center justify-between rounded px-2 py-2 text-sm transition duration-medium ease-motion hover:bg-white hover:bg-opacity-10"
               >
                 <span className="font-medium text-white">{POWER_MODE_LABEL[mode]}</span>
                 <input

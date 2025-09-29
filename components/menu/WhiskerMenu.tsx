@@ -25,7 +25,18 @@ type CategoryDefinitionBase = {
   icon: string;
 } & CategorySource;
 
-const TRANSITION_DURATION = 180;
+const DEFAULT_TRANSITION_MS = 150;
+const readMotionMediumDuration = () => {
+  if (typeof window === 'undefined') {
+    return DEFAULT_TRANSITION_MS;
+  }
+  const value = getComputedStyle(document.documentElement).getPropertyValue('--motion-medium');
+  const parsed = Number.parseFloat(value);
+  if (Number.isFinite(parsed)) {
+    return parsed;
+  }
+  return DEFAULT_TRANSITION_MS;
+};
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
@@ -247,7 +258,7 @@ const WhiskerMenu: React.FC = () => {
     if (!isOpen && isVisible) {
       hideTimer.current = setTimeout(() => {
         setIsVisible(false);
-      }, TRANSITION_DURATION);
+      }, readMotionMediumDuration());
       return () => {
         if (hideTimer.current) clearTimeout(hideTimer.current);
       };
@@ -373,7 +384,7 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="pl-3 pr-3 outline-none transition duration-fast ease-motion border-b-2 border-transparent py-1"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -387,10 +398,10 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
+          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-medium ease-motion sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
-          style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
+          style={{ transitionDuration: 'var(--motion-medium)' }}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -418,7 +429,7 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition duration-medium ease-motion focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
                     category === cat.id
                       ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
                       : 'text-gray-300 hover:bg-[#152133] hover:text-white'
@@ -463,7 +474,7 @@ const WhiskerMenu: React.FC = () => {
                     key={app.id}
                     type="button"
                     onClick={() => openSelectedApp(app.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition duration-medium ease-motion hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
                     aria-label={`Open ${app.title}`}
                   >
                     <Image
@@ -522,7 +533,7 @@ const WhiskerMenu: React.FC = () => {
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition duration-medium ease-motion focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
                           idx === highlight
                             ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
                             : 'text-gray-200 hover:bg-[#142132]'

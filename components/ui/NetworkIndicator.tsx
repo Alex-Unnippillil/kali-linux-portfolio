@@ -616,7 +616,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                     <button
                       type="button"
                       className={classNames(
-                        "flex-1 rounded px-2 py-2 text-left transition",
+                        "flex-1 rounded px-2 py-2 text-left transition duration-medium ease-motion",
                         connected ? "bg-ub-blue bg-opacity-60" : "hover:bg-white hover:bg-opacity-10",
                         disabled && "cursor-not-allowed opacity-60",
                       )}
@@ -643,7 +643,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                     {network.type === "wifi" && (
                       <button
                         type="button"
-                        className="h-full min-h-[2.75rem] rounded border border-white/20 px-2 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                        className="h-full min-h-[2.75rem] rounded border border-white/20 px-2 text-[11px] uppercase tracking-wide text-gray-200 transition duration-fast ease-motion hover:border-white/40 hover:text-white"
                         onClick={() => handleShare(network)}
                         aria-label={`Share ${network.name}`}
                       >
@@ -657,7 +657,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
           </ul>
           <button
             type="button"
-            className="mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-300 transition hover:border-white/40 hover:text-white"
+            className="mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-300 transition duration-medium ease-motion hover:border-white/40 hover:text-white"
             onClick={() => setShowLogs((prev) => !prev)}
             aria-expanded={showLogs}
           >
@@ -708,7 +708,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
               </div>
               <button
                 type="button"
-                className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition duration-fast ease-motion hover:border-white/40 hover:text-white"
                 onClick={closeShare}
                 aria-label="Close share dialog"
               >
@@ -737,7 +737,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
               {!shareConfirmed && (
                 <button
                   type="button"
-                  className="w-full rounded bg-ub-blue px-3 py-2 text-sm font-semibold text-white transition hover:bg-ub-blue/80"
+                  className="w-full rounded bg-ub-blue px-3 py-2 text-sm font-semibold text-white transition duration-medium ease-motion hover:bg-ub-blue/80"
                   onClick={handleConfirmShare}
                 >
                   Reveal &amp; Generate QR

@@ -113,6 +113,14 @@ module.exports = {
         flourish: 'flourish 0.6s ease-out',
         mine: 'mine 0.4s ease-in-out',
       },
+      transitionDuration: {
+        fast: 'var(--motion-fast)',
+        medium: 'var(--motion-medium)',
+        slow: 'var(--motion-slow)',
+      },
+      transitionTimingFunction: {
+        motion: 'var(--motion-ease-out)',
+      },
     },
   },
   plugins: [
