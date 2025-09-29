@@ -11983,6 +11983,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-virtuoso@npm:^4.14.1":
+  version: 4.14.1
+  resolution: "react-virtuoso@npm:4.14.1"
+  peerDependencies:
+    react: ">=16 || >=17 || >= 18 || >= 19"
+    react-dom: ">=16 || >=17 || >= 18 || >=19"
+  checksum: 10c0/1a9287e787b14f670475928f87e2d482da6d295b3de379a0a66d25e5bd570b63d0c130860abd3b897d663e0aab427278adbc3511637b0eea6f2e40c1e1e40923
+  languageName: node
+  linkType: hard
+
 "react-window@npm:^2.0.2":
   version: 2.0.2
   resolution: "react-window@npm:2.0.2"
@@ -13952,6 +13962,7 @@ __metadata:
     react-leaflet: "npm:^5.0.0"
     react-transition-group: "npm:^4.4.5"
     react-virtualized-auto-sizer: "npm:^1.0.26"
+    react-virtuoso: "npm:^4.14.1"
     react-window: "npm:^2.0.2"
     rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
