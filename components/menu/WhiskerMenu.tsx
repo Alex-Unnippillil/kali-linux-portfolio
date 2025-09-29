@@ -152,6 +152,7 @@ const WhiskerMenu: React.FC = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
 
@@ -273,6 +274,9 @@ const WhiskerMenu: React.FC = () => {
 
   const hideMenu = useCallback(() => {
     setIsOpen(false);
+    requestAnimationFrame(() => {
+      buttonRef.current?.focus();
+    });
   }, []);
 
   const toggleMenu = useCallback(() => {
@@ -358,6 +362,9 @@ const WhiskerMenu: React.FC = () => {
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       handleCategoryNavigation(-1);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      hideMenu();
     } else if (event.key === 'Enter') {
       event.preventDefault();
       const selected = categoryConfigs[categoryHighlight];
@@ -366,6 +373,82 @@ const WhiskerMenu: React.FC = () => {
       }
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const menuNode = menuRef.current;
+    if (!menuNode) {
+      return;
+    }
+
+    const getFocusableElements = () => {
+      const focusableSelectors = [
+        'a[href]',
+        'button:not([disabled])',
+        'textarea:not([disabled])',
+        'input:not([disabled])',
+        'select:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])',
+      ].join(',');
+      return Array.from(menuNode.querySelectorAll<HTMLElement>(focusableSelectors)).filter(
+        element => !element.hasAttribute('aria-hidden') && element.tabIndex !== -1,
+      );
+    };
+
+    const handleTab = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (!active || !menuNode.contains(active) || active === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (!active || !menuNode.contains(active) || active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!menuNode.contains(event.target as Node)) {
+        const focusable = getFocusableElements();
+        if (focusable.length > 0) {
+          focusable[0].focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    document.addEventListener('focusin', handleFocusIn);
+
+    return () => {
+      document.removeEventListener('keydown', handleTab);
+      document.removeEventListener('focusin', handleFocusIn);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && isVisible) {
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+      });
+    }
+  }, [isOpen, isVisible]);
 
   return (
     <div className="relative inline-flex">
@@ -485,12 +568,12 @@ const WhiskerMenu: React.FC = () => {
                   </svg>
                 </span>
                 <input
+                  ref={searchInputRef}
                   className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
                   placeholder="Search applications"
                   aria-label="Search applications"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  autoFocus
                 />
               </div>
             </div>
