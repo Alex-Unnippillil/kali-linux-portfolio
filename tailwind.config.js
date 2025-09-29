@@ -36,6 +36,7 @@ module.exports = {
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
+        card: 'var(--border-card)',
         kali: {
           background: 'var(--color-bg)',
           text: 'var(--color-text)',
