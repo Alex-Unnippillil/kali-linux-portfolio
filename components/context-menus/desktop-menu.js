@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import logger from '../../utils/logger'
+import MenuSurface from './MenuSurface'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+
+    const checkFullScreen = () => {
+        if (document.fullscreenElement) {
+            setIsFullScreen(true)
+        } else {
+            setIsFullScreen(false)
+        }
+    }
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -12,21 +21,12 @@ function DesktopMenu(props) {
         };
     }, [])
 
-
     const openTerminal = () => {
         props.openApp("terminal");
     }
 
     const openSettings = () => {
         props.openApp("settings");
-    }
-
-    const checkFullScreen = () => {
-        if (document.fullscreenElement) {
-            setIsFullScreen(true)
-        } else {
-            setIsFullScreen(false)
-        }
     }
 
     const goFullScreen = () => {
@@ -44,11 +44,12 @@ function DesktopMenu(props) {
     }
 
     return (
-        <div
+        <MenuSurface
             id="desktop-menu"
-            role="menu"
+            active={props.active}
+            onClose={props.onClose}
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className="cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"
         >
             <button
                 onClick={props.addNewFolder}
@@ -128,7 +129,7 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Clear Session</span>
             </button>
-        </div>
+        </MenuSurface>
     )
 }
 
@@ -139,6 +140,5 @@ function Devider() {
         </div>
     );
 }
-
 
 export default DesktopMenu

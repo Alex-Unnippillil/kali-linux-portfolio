@@ -1,18 +1,7 @@
-import React, { useRef } from 'react'
-import useFocusTrap from '../../hooks/useFocusTrap'
-import useRovingTabIndex from '../../hooks/useRovingTabIndex'
+import React from 'react'
+import MenuSurface from './MenuSurface'
 
 function AppMenu(props) {
-    const menuRef = useRef(null)
-    useFocusTrap(menuRef, props.active)
-    useRovingTabIndex(menuRef, props.active, 'vertical')
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-            props.onClose && props.onClose()
-        }
-    }
-
     const handlePin = () => {
         if (props.pinned) {
             props.unpinApp && props.unpinApp()
@@ -22,13 +11,11 @@ function AppMenu(props) {
     }
 
     return (
-        <div
+        <MenuSurface
             id="app-menu"
-            role="menu"
-            aria-hidden={!props.active}
-            ref={menuRef}
-            onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
+            active={props.active}
+            onClose={props.onClose}
+            className="cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm"
         >
             <button
                 type="button"
@@ -39,7 +26,7 @@ function AppMenu(props) {
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
             </button>
-        </div>
+        </MenuSurface>
     )
 }
 

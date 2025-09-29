@@ -1,18 +1,7 @@
-import React, { useRef } from 'react';
-import useFocusTrap from '../../hooks/useFocusTrap';
-import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import React from 'react';
+import MenuSurface from './MenuSurface';
 
 function TaskbarMenu(props) {
-    const menuRef = useRef(null);
-    useFocusTrap(menuRef, props.active);
-    useRovingTabIndex(menuRef, props.active, 'vertical');
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-            props.onCloseMenu && props.onCloseMenu();
-        }
-    };
-
     const handleMinimize = () => {
         props.onMinimize && props.onMinimize();
         props.onCloseMenu && props.onCloseMenu();
@@ -24,13 +13,11 @@ function TaskbarMenu(props) {
     };
 
     return (
-        <div
+        <MenuSurface
             id="taskbar-menu"
-            role="menu"
-            aria-hidden={!props.active}
-            ref={menuRef}
-            onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
+            active={props.active}
+            onClose={props.onCloseMenu}
+            className="cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm"
         >
             <button
                 type="button"
@@ -50,7 +37,7 @@ function TaskbarMenu(props) {
             >
                 <span className="ml-5">Close</span>
             </button>
-        </div>
+        </MenuSurface>
     );
 }
 
