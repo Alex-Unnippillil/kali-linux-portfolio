@@ -1,0 +1,46 @@
+{
+  "10.10.1.15": {
+    "previous": [
+      {
+        "title": "post/windows/gather/hashdump",
+        "output": "Captured 3 hashes (Administrator, Bob, Carol) from SAM hive."
+      },
+      {
+        "title": "post/windows/manage/persistence",
+        "output": "Created run key for payload at HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run."
+      }
+    ],
+    "current": [
+      {
+        "title": "post/windows/gather/hashdump",
+        "output": "Captured 4 hashes (Administrator, Bob, Carol, Service) from SAM hive."
+      },
+      {
+        "title": "post/windows/gather/enum_logged_on_users",
+        "output": "Logged on users: Administrator, Bob, helpdesk."
+      }
+    ]
+  },
+  "172.16.5.20": {
+    "previous": [
+      {
+        "title": "post/linux/gather/enum_network",
+        "output": "Interfaces: eth0 172.16.5.20/24; Routes: 0.0.0.0 via 172.16.5.1."
+      }
+    ],
+    "current": [
+      {
+        "title": "post/linux/gather/enum_network",
+        "output": "Interfaces: eth0 172.16.5.20/24; Routes: 0.0.0.0 via 172.16.5.1."
+      },
+      {
+        "title": "post/linux/manage/sshkey_persistence",
+        "output": "Authorized key added for user deploy."
+      }
+    ]
+  },
+  "192.168.56.12": {
+    "previous": [],
+    "current": []
+  }
+}
