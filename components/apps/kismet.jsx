@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import sampleChannelScan from './kismet/sampleCapture.json';
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -85,6 +86,14 @@ const parsePcap = (arrayBuffer, onNetwork) => {
   };
 };
 
+const CONGESTION_THRESHOLDS = {
+  elevated: 0.6,
+  severe: 0.85,
+};
+
+const SCAN_REFRESH_MS = 500;
+const SCAN_WINDOW_SIZE = 8;
+
 const ChannelChart = ({ data }) => {
   const channels = Object.keys(data)
     .map(Number)
@@ -132,10 +141,129 @@ const TimeChart = ({ data }) => {
   );
 };
 
-const KismetApp = ({ onNetworkDiscovered }) => {
+const ChannelMeter = ({ loads }) => {
+  const channels = useMemo(
+    () =>
+      Object.keys(loads)
+        .map(Number)
+        .sort((a, b) => a - b),
+    [loads],
+  );
+
+  const maxLoad = useMemo(
+    () => Math.max(1, ...channels.map((channel) => loads[channel] || 0)),
+    [channels, loads],
+  );
+
+  if (!channels.length) {
+    return (
+      <p className="text-sm text-gray-400" data-testid="channel-meter-empty">
+        Awaiting channel scan data…
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2" aria-label="Channel congestion meter">
+      {channels.map((channel) => {
+        const load = loads[channel] || 0;
+        const ratio = Math.min(1, load / maxLoad);
+        let level = 'clear';
+        if (ratio >= CONGESTION_THRESHOLDS.severe) {
+          level = 'severe';
+        } else if (ratio >= CONGESTION_THRESHOLDS.elevated) {
+          level = 'crowded';
+        }
+
+        const levelStyles = {
+          clear: 'border-emerald-500/60',
+          crowded: 'border-amber-400',
+          severe: 'border-red-500',
+        };
+
+        const barStyles = {
+          clear: 'bg-emerald-500',
+          crowded: 'bg-amber-400',
+          severe: 'bg-red-500 animate-pulse',
+        };
+
+        return (
+          <div
+            key={channel}
+            className={`rounded border px-3 py-2 transition-colors ${levelStyles[level]}`}
+            data-testid={`channel-meter-${channel}`}
+            data-congestion-level={level}
+          >
+            <div className="flex items-center justify-between text-xs uppercase tracking-wide">
+              <span>Ch {channel}</span>
+              <span>{load} sightings</span>
+            </div>
+            <div className="mt-2 h-2 w-full rounded-full bg-gray-800">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${barStyles[level]}`}
+                style={{ width: `${Math.max(4, ratio * 100)}%` }}
+                aria-label={`Channel ${channel} congestion ${level}`}
+              />
+            </div>
+            <p className="mt-1 text-[10px] uppercase text-gray-400">Status: {level}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const KismetApp = ({ onNetworkDiscovered, initialChannelScan }) => {
   const [networks, setNetworks] = useState([]);
   const [channels, setChannels] = useState({});
   const [times, setTimes] = useState({});
+  const [scanData, setScanData] = useState(
+    Array.isArray(initialChannelScan) && initialChannelScan.length
+      ? initialChannelScan
+      : sampleChannelScan,
+  );
+  const [channelLoads, setChannelLoads] = useState({});
+  const scanIndexRef = useRef(0);
+  const scanWindowRef = useRef([]);
+
+  useEffect(() => {
+    if (!Array.isArray(initialChannelScan) || !initialChannelScan.length) {
+      return;
+    }
+    setScanData(initialChannelScan);
+  }, [initialChannelScan]);
+
+  useEffect(() => {
+    if (!scanData?.length) {
+      setChannelLoads({});
+      return undefined;
+    }
+
+    scanIndexRef.current = 0;
+    scanWindowRef.current = [];
+    setChannelLoads({});
+
+    const intervalId = setInterval(() => {
+      const item = scanData[scanIndexRef.current];
+      scanIndexRef.current = (scanIndexRef.current + 1) % scanData.length;
+
+      scanWindowRef.current = [...scanWindowRef.current, item];
+      if (scanWindowRef.current.length > SCAN_WINDOW_SIZE) {
+        scanWindowRef.current.shift();
+      }
+
+      const nextLoads = scanWindowRef.current.reduce((acc, entry) => {
+        if (entry && typeof entry.channel === 'number') {
+          acc[entry.channel] = (acc[entry.channel] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      setChannelLoads(nextLoads);
+    }, SCAN_REFRESH_MS);
+
+    return () => clearInterval(intervalId);
+  }, [scanData]);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -150,6 +278,20 @@ const KismetApp = ({ onNetworkDiscovered }) => {
     setTimes(timeCounts);
   };
 
+  const handleChannelScanFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        setScanData(parsed);
+      }
+    } catch (err) {
+      console.warn('Failed to parse channel scan', err);
+    }
+  };
+
   return (
     <div className="p-4 text-white space-y-4">
       <input
@@ -159,6 +301,20 @@ const KismetApp = ({ onNetworkDiscovered }) => {
         aria-label="pcap file"
         className="block"
       />
+
+      <div className="space-y-2">
+        <label className="block text-sm font-semibold" htmlFor="channel-scan-input">
+          Channel scan JSON
+        </label>
+        <input
+          id="channel-scan-input"
+          type="file"
+          accept="application/json"
+          onChange={handleChannelScanFile}
+          className="block text-sm"
+          aria-label="channel scan file"
+        />
+      </div>
 
       {networks.length > 0 && (
         <>
@@ -194,6 +350,11 @@ const KismetApp = ({ onNetworkDiscovered }) => {
           </div>
         </>
       )}
+
+      <div>
+        <h3 className="font-bold mb-1">Channel Congestion</h3>
+        <ChannelMeter loads={channelLoads} />
+      </div>
     </div>
   );
 };
