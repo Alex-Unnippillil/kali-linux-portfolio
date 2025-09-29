@@ -15,6 +15,9 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  notificationForwarding: true,
+  notificationPrivacyMode: true,
+  notificationShowPreview: true,
 };
 
 export async function getAccent() {
@@ -135,6 +138,39 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getNotificationForwarding() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.notificationForwarding;
+  const value = window.localStorage.getItem('notification-forwarding');
+  return value === null ? DEFAULT_SETTINGS.notificationForwarding : value === 'true';
+}
+
+export async function setNotificationForwarding(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('notification-forwarding', value ? 'true' : 'false');
+}
+
+export async function getNotificationPrivacyMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.notificationPrivacyMode;
+  const value = window.localStorage.getItem('notification-privacy-mode');
+  return value === null ? DEFAULT_SETTINGS.notificationPrivacyMode : value === 'true';
+}
+
+export async function setNotificationPrivacyMode(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('notification-privacy-mode', value ? 'true' : 'false');
+}
+
+export async function getNotificationShowPreview() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.notificationShowPreview;
+  const value = window.localStorage.getItem('notification-show-preview');
+  return value === null ? DEFAULT_SETTINGS.notificationShowPreview : value === 'true';
+}
+
+export async function setNotificationShowPreview(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('notification-show-preview', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +186,9 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('notification-forwarding');
+  window.localStorage.removeItem('notification-privacy-mode');
+  window.localStorage.removeItem('notification-show-preview');
 }
 
 export async function exportSettings() {
@@ -165,6 +204,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    notificationForwarding,
+    notificationPrivacyMode,
+    notificationShowPreview,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +219,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getNotificationForwarding(),
+    getNotificationPrivacyMode(),
+    getNotificationShowPreview(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -191,6 +236,9 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    notificationForwarding,
+    notificationPrivacyMode,
+    notificationShowPreview,
     theme,
   });
 }
@@ -217,6 +265,9 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    notificationForwarding,
+    notificationPrivacyMode,
+    notificationShowPreview,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -229,6 +280,12 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (notificationForwarding !== undefined)
+    await setNotificationForwarding(notificationForwarding);
+  if (notificationPrivacyMode !== undefined)
+    await setNotificationPrivacyMode(notificationPrivacyMode);
+  if (notificationShowPreview !== undefined)
+    await setNotificationShowPreview(notificationShowPreview);
   if (theme !== undefined) setTheme(theme);
 }
 

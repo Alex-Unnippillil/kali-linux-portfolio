@@ -22,6 +22,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getNotificationForwarding as loadNotificationForwarding,
+  setNotificationForwarding as saveNotificationForwarding,
+  getNotificationPrivacyMode as loadNotificationPrivacyMode,
+  setNotificationPrivacyMode as saveNotificationPrivacyMode,
+  getNotificationShowPreview as loadNotificationShowPreview,
+  setNotificationShowPreview as saveNotificationShowPreview,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -66,6 +72,9 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  notificationForwarding: boolean;
+  notificationPrivacyMode: boolean;
+  notificationShowPreview: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +87,9 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setNotificationForwarding: (value: boolean) => void;
+  setNotificationPrivacyMode: (value: boolean) => void;
+  setNotificationShowPreview: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +106,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  notificationForwarding: defaults.notificationForwarding,
+  notificationPrivacyMode: defaults.notificationPrivacyMode,
+  notificationShowPreview: defaults.notificationShowPreview,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +121,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setNotificationForwarding: () => {},
+  setNotificationPrivacyMode: () => {},
+  setNotificationShowPreview: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +139,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [notificationForwarding, setNotificationForwarding] = useState<boolean>(
+    defaults.notificationForwarding,
+  );
+  const [notificationPrivacyMode, setNotificationPrivacyMode] = useState<boolean>(
+    defaults.notificationPrivacyMode,
+  );
+  const [notificationShowPreview, setNotificationShowPreview] = useState<boolean>(
+    defaults.notificationShowPreview,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +164,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setNotificationForwarding(await loadNotificationForwarding());
+      setNotificationPrivacyMode(await loadNotificationPrivacyMode());
+      setNotificationShowPreview(await loadNotificationShowPreview());
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +280,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveNotificationForwarding(notificationForwarding);
+  }, [notificationForwarding]);
+
+  useEffect(() => {
+    saveNotificationPrivacyMode(notificationPrivacyMode);
+  }, [notificationPrivacyMode]);
+
+  useEffect(() => {
+    saveNotificationShowPreview(notificationShowPreview);
+  }, [notificationShowPreview]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +309,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        notificationForwarding,
+        notificationPrivacyMode,
+        notificationShowPreview,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +324,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setNotificationForwarding,
+        setNotificationPrivacyMode,
+        setNotificationShowPreview,
         setTheme,
       }}
     >

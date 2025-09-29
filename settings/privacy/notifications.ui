@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.12" />
+  <requires lib="adw" version="1.4" />
+
+  <object class="AdwPreferencesPage" id="privacy_notifications_page">
+    <property name="title" translatable="yes">Notifications</property>
+    <child>
+      <object class="AdwPreferencesGroup" id="forwarding_group">
+        <property name="title" translatable="yes">Greeter forwarding</property>
+        <child>
+          <object class="AdwActionRow" id="forwarding_row">
+            <property name="title" translatable="yes">Forward to login screen</property>
+            <property name="subtitle" translatable="yes">
+              Mirror unread alerts to the greeter using org.gnome.desktop.notifications.
+            </property>
+            <child>
+              <object class="GtkSwitch" id="forwarding_switch">
+                <property name="valign">center</property>
+                <binding name="active">
+                  <lookup name="forward-to-greeter" type="GSettings">org.gnome.desktop.notifications</lookup>
+                </binding>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="AdwPreferencesGroup" id="privacy_group">
+        <property name="title" translatable="yes">Privacy redaction</property>
+        <child>
+          <object class="AdwActionRow" id="redaction_row">
+            <property name="title" translatable="yes">Enable privacy mode</property>
+            <property name="subtitle" translatable="yes">
+              Mask secrets and personal data before forwarding to XFCE&apos;s notification daemon.
+            </property>
+            <child>
+              <object class="GtkSwitch" id="redaction_switch">
+                <property name="valign">center</property>
+                <binding name="active">
+                  <lookup name="privacy-mode" type="GSettings">org.gnome.desktop.notifications</lookup>
+                </binding>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow" id="preview_row">
+            <property name="title" translatable="yes">Show masked previews</property>
+            <property name="subtitle" translatable="yes">
+              Display sanitized message bodies instead of a generic ellipsis when privacy mode is enabled.
+            </property>
+            <child>
+              <object class="GtkSwitch" id="preview_switch">
+                <property name="valign">center</property>
+                <binding name="active">
+                  <lookup name="show-preview" type="GSettings">org.xfce.notifyd.preferences</lookup>
+                </binding>
+                <binding name="sensitive">
+                  <lookup name="privacy-mode" type="GSettings">org.gnome.desktop.notifications</lookup>
+                </binding>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

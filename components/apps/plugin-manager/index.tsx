@@ -1,5 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNotifications } from '../../../hooks/useNotifications';
+import { useSettings } from '../../../hooks/useSettings';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -40,6 +42,27 @@ export default function PluginManager() {
     return null;
   });
 
+  const { notifications } = useNotifications();
+  const {
+    notificationForwarding,
+    notificationPrivacyMode,
+    notificationShowPreview,
+  } = useSettings();
+
+  const unreadNotifications = useMemo(
+    () =>
+      notifications
+        .filter(notification => !notification.read)
+        .map(notification => ({
+          id: notification.id,
+          appId: notification.appId,
+          title: notification.title,
+          body: notification.body,
+          timestamp: notification.timestamp,
+        })),
+    [notifications],
+  );
+
   useEffect(() => {
     fetch('/api/plugins')
       .then((res) => res.json())
@@ -69,22 +92,49 @@ export default function PluginManager() {
       }
     };
 
+    const serializeOutput = (value: unknown) =>
+      typeof value === 'string' ? value : JSON.stringify(value);
+
     if (manifest.sandbox === 'worker') {
       const blob = new Blob([manifest.code], { type: 'text/javascript' });
       const url = URL.createObjectURL(blob);
       const worker = new Worker(url);
+      const respondWithNotifications = () => {
+        worker.postMessage({
+          type: 'notifications',
+          forwarded: notificationForwarding,
+          privacyMode: notificationPrivacyMode,
+          showPreview: notificationShowPreview,
+          payload: notificationForwarding ? unreadNotifications : [],
+          reason: notificationForwarding ? undefined : 'forwarding-disabled',
+        });
+      };
       worker.onmessage = (e) => {
-        output.push(String(e.data));
+        const data = e.data;
+        if (data && typeof data === 'object' && 'type' in data) {
+          const typed = data as { type?: string };
+          if (typed.type === 'request-notifications') {
+            respondWithNotifications();
+            return;
+          }
+        }
+        output.push(serializeOutput(data));
       };
       worker.onerror = () => {
         output.push('error');
       };
+      worker.postMessage({
+        type: 'notification-policy',
+        forwardingEnabled: notificationForwarding,
+        privacyMode: notificationPrivacyMode,
+        showPreview: notificationShowPreview,
+      });
       // collect messages briefly then terminate
       setTimeout(() => {
         worker.terminate();
         URL.revokeObjectURL(url);
         finalize();
-      }, 10);
+      }, 20);
     } else {
       const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none';"></head><body><script>${manifest.code}<\/script></body></html>`;
       const blob = new Blob([html], { type: 'text/html' });
@@ -93,18 +143,47 @@ export default function PluginManager() {
       iframe.sandbox.add('allow-scripts');
       const listener = (e: MessageEvent) => {
         if (e.source === iframe.contentWindow) {
-          output.push(String(e.data));
+          const data = e.data;
+          if (data && typeof data === 'object' && 'type' in data) {
+            const typed = data as { type?: string };
+            if (typed.type === 'request-notifications') {
+              iframe.contentWindow?.postMessage(
+                {
+                  type: 'notifications',
+                  forwarded: notificationForwarding,
+                  privacyMode: notificationPrivacyMode,
+                  showPreview: notificationShowPreview,
+                  payload: notificationForwarding ? unreadNotifications : [],
+                  reason: notificationForwarding ? undefined : 'forwarding-disabled',
+                },
+                '*',
+              );
+              return;
+            }
+          }
+          output.push(serializeOutput(data));
         }
       };
       window.addEventListener('message', listener);
       iframe.src = url;
       document.body.appendChild(iframe);
+      iframe.addEventListener('load', () => {
+        iframe.contentWindow?.postMessage(
+          {
+            type: 'notification-policy',
+            forwardingEnabled: notificationForwarding,
+            privacyMode: notificationPrivacyMode,
+            showPreview: notificationShowPreview,
+          },
+          '*',
+        );
+      });
       setTimeout(() => {
         window.removeEventListener('message', listener);
         document.body.removeChild(iframe);
         URL.revokeObjectURL(url);
         finalize();
-      }, 10);
+      }, 20);
     }
   };
 

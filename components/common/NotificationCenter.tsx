@@ -5,6 +5,11 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { useSettings } from '../../hooks/useSettings';
+import {
+  DEFAULT_REDACTION_MESSAGE,
+  maskSensitiveContent,
+} from '../../utils/notificationPrivacy';
 
 export interface AppNotification {
   id: string;
@@ -13,6 +18,8 @@ export interface AppNotification {
   body?: string;
   timestamp: number;
   read: boolean;
+  rawTitle?: string;
+  rawBody?: string;
 }
 
 export interface PushNotificationInput {
@@ -36,33 +43,73 @@ export const NotificationsContext = createContext<NotificationsContextValue | nu
 
 const createId = () => `ntf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+type InternalNotification = AppNotification & { rawTitle: string; rawBody?: string };
+
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [notificationsByApp, setNotificationsByApp] = useState<
-    Record<string, AppNotification[]>
+    Record<string, InternalNotification[]>
   >({});
+  const {
+    notificationPrivacyMode,
+    notificationShowPreview,
+  } = useSettings();
+
+  const applyPrivacy = useCallback(
+    (notification: InternalNotification): InternalNotification => {
+      const sanitizedTitle = notificationPrivacyMode
+        ? maskSensitiveContent(notification.rawTitle) || ''
+        : notification.rawTitle;
+      let sanitizedBody: string | undefined;
+      if (notification.rawBody === undefined) {
+        sanitizedBody = undefined;
+      } else if (!notificationPrivacyMode) {
+        sanitizedBody = notification.rawBody;
+      } else if (!notificationShowPreview) {
+        sanitizedBody = DEFAULT_REDACTION_MESSAGE;
+      } else {
+        sanitizedBody = maskSensitiveContent(notification.rawBody) ?? '';
+      }
+
+      if (
+        sanitizedTitle === notification.title &&
+        sanitizedBody === notification.body
+      ) {
+        return notification;
+      }
+
+      return {
+        ...notification,
+        title: sanitizedTitle,
+        body: sanitizedBody,
+      };
+    },
+    [notificationPrivacyMode, notificationShowPreview],
+  );
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
     const timestamp = input.timestamp ?? Date.now();
     setNotificationsByApp(prev => {
       const list = prev[input.appId] ?? [];
-      const nextNotification: AppNotification = {
+      const nextNotification: InternalNotification = {
         id,
         appId: input.appId,
         title: input.title,
         body: input.body,
+        rawTitle: input.title,
+        rawBody: input.body,
         timestamp,
         read: false,
       };
 
       return {
         ...prev,
-        [input.appId]: [nextNotification, ...list],
+        [input.appId]: [applyPrivacy(nextNotification), ...list],
       };
     });
 
     return id;
-  }, []);
+  }, [applyPrivacy]);
 
   const dismissNotification = useCallback((appId: string, id: string) => {
     setNotificationsByApp(prev => {
@@ -104,7 +151,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       }
 
       let changed = false;
-      const next: Record<string, AppNotification[]> = {};
+      const next: Record<string, InternalNotification[]> = {};
       Object.entries(prev).forEach(([key, list]) => {
         const updated = list.map(notification => {
           if (notification.read) return notification;
@@ -117,11 +164,28 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
     });
   }, []);
 
-  const notifications = useMemo(() =>
-    Object.values(notificationsByApp)
-      .flat()
-      .sort((a, b) => b.timestamp - a.timestamp),
-  [notificationsByApp]);
+  useEffect(() => {
+    setNotificationsByApp(prev => {
+      let mutated = false;
+      const next: Record<string, InternalNotification[]> = {};
+      Object.entries(prev).forEach(([appId, list]) => {
+        const transformed = list.map(notification => applyPrivacy(notification));
+        if (!mutated) {
+          mutated = transformed.some((notification, index) => notification !== list[index]);
+        }
+        next[appId] = transformed;
+      });
+      return mutated ? next : prev;
+    });
+  }, [applyPrivacy]);
+
+  const notifications = useMemo(
+    () =>
+      Object.values(notificationsByApp)
+        .flat()
+        .sort((a, b) => b.timestamp - a.timestamp),
+    [notificationsByApp],
+  );
 
   const unreadCount = useMemo(
     () => notifications.reduce((sum, notification) => sum + (notification.read ? 0 : 1), 0),

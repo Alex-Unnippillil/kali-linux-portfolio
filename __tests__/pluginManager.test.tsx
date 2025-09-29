@@ -1,11 +1,26 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PluginManager from '../components/apps/plugin-manager';
+import NotificationCenter from '../components/common/NotificationCenter';
+import { SettingsProvider } from '../hooks/useSettings';
+
+const renderWithProviders = () =>
+  render(
+    <SettingsProvider>
+      <NotificationCenter>
+        <PluginManager />
+      </NotificationCenter>
+    </SettingsProvider>,
+  );
 
 describe('PluginManager', () => {
   beforeEach(() => {
     localStorage.clear();
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:mock');
     (global as any).URL.revokeObjectURL = jest.fn();
+    Object.defineProperty(global, 'navigator', {
+      value: {},
+      configurable: true,
+    });
 
     class MockWorker {
       onmessage: ((e: { data: any }) => void) | null = null;
@@ -40,8 +55,12 @@ describe('PluginManager', () => {
     });
   });
 
+  afterEach(() => {
+    delete (global as any).navigator;
+  });
+
   test('installs plugin from catalog', async () => {
-    render(<PluginManager />);
+    renderWithProviders();
     const button = await screen.findByText('Install');
     fireEvent.click(button);
     await waitFor(() =>
@@ -51,7 +70,7 @@ describe('PluginManager', () => {
   });
 
   test('persists last plugin run and exports CSV', async () => {
-    const { unmount } = render(<PluginManager />);
+    const { unmount } = renderWithProviders();
     const installBtn = await screen.findByText('Install');
     fireEvent.click(installBtn);
     await waitFor(() =>
@@ -65,7 +84,7 @@ describe('PluginManager', () => {
     unmount();
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:csv');
     (global as any).URL.revokeObjectURL = jest.fn();
-    render(<PluginManager />);
+    renderWithProviders();
     expect(await screen.findByText(/Last Run: demo/)).toBeInTheDocument();
     const exportBtn = screen.getByText('Export CSV');
     fireEvent.click(exportBtn);

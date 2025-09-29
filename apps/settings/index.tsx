@@ -34,6 +34,12 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    notificationForwarding,
+    setNotificationForwarding,
+    notificationPrivacyMode,
+    setNotificationPrivacyMode,
+    notificationShowPreview,
+    setNotificationShowPreview,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -294,6 +300,67 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          <div className="px-6 pt-6 space-y-6">
+            <section className="rounded-lg border border-white/10 bg-black/30 p-4 text-ubt-grey">
+              <h3 className="text-sm font-semibold text-white">Notification privacy</h3>
+              <p className="mt-2 text-xs text-ubt-grey/80">
+                Configure how desktop alerts are forwarded to the greeter and how much detail
+                is visible when privacy mode is enabled. Sensitive content is automatically
+                redacted with ellipses.
+              </p>
+              <ul className="mt-4 space-y-4" role="list">
+                <li className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-white">Forward to greeter</p>
+                    <p className="text-xs text-ubt-grey/70">
+                      Mirror unread notifications to the login screen using the XFCE daemon bridge.
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={notificationForwarding}
+                    onChange={setNotificationForwarding}
+                    ariaLabel="Toggle greeter notification forwarding"
+                  />
+                </li>
+                <li className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-white">Privacy mode</p>
+                    <p className="text-xs text-ubt-grey/70">
+                      Apply redaction rules that mask secrets and personal data in GNOME and XFCE alerts.
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={notificationPrivacyMode}
+                    onChange={setNotificationPrivacyMode}
+                    ariaLabel="Toggle notification privacy mode"
+                  />
+                </li>
+                <li className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-white">Show previews</p>
+                    <p className="text-xs text-ubt-grey/70">
+                      When enabled, masked previews are shown instead of a generic placeholder.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ToggleSwitch
+                      checked={notificationShowPreview && notificationPrivacyMode}
+                      onChange={(checked) => {
+                        if (!notificationPrivacyMode) return;
+                        setNotificationShowPreview(checked);
+                      }}
+                      ariaLabel="Toggle notification previews"
+                    />
+                    {!notificationPrivacyMode && (
+                      <span className="text-[0.65rem] uppercase tracking-wide text-ubt-grey/60">
+                        Enable privacy mode first
+                      </span>
+                    )}
+                  </div>
+                </li>
+              </ul>
+            </section>
+          </div>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
