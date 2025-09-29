@@ -5,6 +5,19 @@ import type {
   SimulatorParserResponse,
   ParsedLine,
 } from '../../workers/simulatorParser.worker';
+import {
+  createWorkerManager,
+  type WorkerClient,
+} from '../../utils/workers';
+
+const simulatorWorkerManager = createWorkerManager<
+  SimulatorParserRequest,
+  SimulatorParserResponse
+>({
+  name: 'simulator-parser',
+  create: () =>
+    new Worker(new URL('../../workers/simulatorParser.worker.ts', import.meta.url)),
+});
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
@@ -23,18 +36,19 @@ const Simulator: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [progress, setProgress] = useState(0);
   const [eta, setEta] = useState(0);
-  const workerRef = useRef<Worker|null>(null);
+  const workerRef = useRef<WorkerClient<SimulatorParserRequest> | null>(null);
+  const encoderRef = useRef<TextEncoder | null>(
+    typeof TextEncoder !== 'undefined' ? new TextEncoder() : null,
+  );
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
 
   useEffect(() => {
-    const worker = new Worker(
-      new URL('../../workers/simulatorParser.worker.ts', import.meta.url),
-    );
-    workerRef.current = worker;
-    worker.onmessage = (e: MessageEvent<SimulatorParserResponse>) => {
-      const data = e.data;
+    if (typeof window === 'undefined') return () => {};
+
+    const session = simulatorWorkerManager.acquire((event) => {
+      const data = event.data;
       if (data.type === 'progress') {
         setProgress(data.progress);
         setEta(data.eta);
@@ -42,9 +56,19 @@ const Simulator: React.FC = () => {
         setParsed(data.parsed);
         setProgress(1);
         setEta(0);
+      } else if (data.type === 'cancelled') {
+        setProgress(0);
+        setEta(0);
       }
+    });
+
+    workerRef.current = session;
+
+    return () => {
+      session.postMessage({ action: 'cancel' } as SimulatorParserRequest);
+      session.release();
+      workerRef.current = null;
     };
-    return () => worker.terminate();
   }, []);
 
   const parseText = useCallback((text: string) => {
@@ -52,7 +76,19 @@ const Simulator: React.FC = () => {
     setParsed([]);
     setProgress(0);
     setEta(0);
-    workerRef.current?.postMessage({ action: 'parse', text } as SimulatorParserRequest);
+    const encoder = encoderRef.current ?? new TextEncoder();
+    if (!encoderRef.current) {
+      encoderRef.current = encoder;
+    }
+    const encoded = encoder.encode(text);
+    const buffer = encoded.buffer.slice(
+      encoded.byteOffset,
+      encoded.byteOffset + encoded.byteLength,
+    );
+    workerRef.current?.postMessage(
+      { action: 'parse', buffer } as SimulatorParserRequest,
+      [buffer],
+    );
   }, []);
 
   const cancelParse = () =>
@@ -159,10 +195,16 @@ const Simulator: React.FC = () => {
 
   return (
     <div className="space-y-4" aria-label="Simulator">
-      <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
-        <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
-      </div>
+        <div className="flex items-center space-x-2">
+          <input
+            id="labmode"
+            type="checkbox"
+            checked={labMode}
+            onChange={e => setLabMode(e.target.checked)}
+            aria-label="Toggle lab mode"
+          />
+          <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
+        </div>
       {!labMode && (
         <div className="bg-yellow-100 text-yellow-800 p-2" role="alert">
           {LAB_BANNER}
