@@ -1,0 +1,5 @@
+{
+  "id": "bravo",
+  "sandbox": "worker",
+  "code": "self.postMessage('bravo ready');"
+}
