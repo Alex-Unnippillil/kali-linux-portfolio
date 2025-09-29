@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import GameLayout from "../../components/apps/GameLayout";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
@@ -8,10 +9,13 @@ import {
   ENEMY_TYPES,
   Tower,
   upgradeTower,
-  Enemy,
-  createEnemyPool,
-  spawnEnemy,
 } from "../games/tower-defense";
+import {
+  TowerDefenseEngine,
+  TowerDefenseStatus,
+  createTowerDefenseEngine,
+} from "../games/tower-defense/engine";
+import { canUseOffscreenRendering } from "../games/offscreen";
 
 const GRID_SIZE = 10;
 const CELL_SIZE = 40;
@@ -19,109 +23,177 @@ const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
 
 type Vec = { x: number; y: number };
 
-const DIRS: Vec[] = [
-  { x: 1, y: 0 },
-  { x: -1, y: 0 },
-  { x: 0, y: 1 },
-  { x: 0, y: -1 },
-];
-
-const computeFlowField = (
-  start: Vec,
-  goal: Vec,
-  towers: Tower[],
-): Vec[][] | null => {
-  const obstacle = new Set(towers.map((t) => `${t.x},${t.y}`));
-  const h = (a: Vec) => Math.abs(a.x - goal.x) + Math.abs(a.y - goal.y);
-  const key = (p: Vec) => `${p.x},${p.y}`;
-  const open: (Vec & { f: number })[] = [{ ...start, f: h(start) }];
-  const came = new Map<string, string>();
-  const g = new Map<string, number>();
-  g.set(key(start), 0);
-  while (open.length) {
-    open.sort((a, b) => a.f - b.f);
-    const current = open.shift()!;
-    if (current.x === goal.x && current.y === goal.y) break;
-    for (const d of DIRS) {
-      const nx = current.x + d.x;
-      const ny = current.y + d.y;
-      if (
-        nx < 0 ||
-        ny < 0 ||
-        nx >= GRID_SIZE ||
-        ny >= GRID_SIZE ||
-        obstacle.has(key({ x: nx, y: ny }))
-      )
-        continue;
-      const nk = key({ x: nx, y: ny });
-      const tentative = (g.get(key(current)) ?? 0) + 1;
-      if (tentative < (g.get(nk) ?? Infinity)) {
-        came.set(nk, key(current));
-        g.set(nk, tentative);
-        const f = tentative + h({ x: nx, y: ny });
-        const existing = open.find((o) => o.x === nx && o.y === ny);
-        if (existing) existing.f = f;
-        else open.push({ x: nx, y: ny, f });
-      }
-    }
-  }
-  if (!came.has(key(goal))) return null;
-  const field: Vec[][] = Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => ({ x: 0, y: 0 })),
-  );
-  let cur = key(goal);
-  while (cur !== key(start)) {
-    const prev = came.get(cur);
-    if (!prev) break;
-    const [cx, cy] = cur.split(",").map(Number);
-    const [px, py] = prev.split(",").map(Number);
-    field[px][py] = { x: cx - px, y: cy - py };
-    cur = prev;
-  }
-  return field;
+type WorkerStateMessage = {
+  type: "state";
+  payload: {
+    path: Vec[];
+    towers: Tower[];
+    waveConfig: (keyof typeof ENEMY_TYPES)[][];
+    selected: number | null;
+    hovered: number | null;
+  };
 };
 
-interface EnemyInstance extends Enemy {
-  pathIndex: number;
-  progress: number;
+type WorkerStartMessage = { type: "start" };
+type WorkerInitMessage = {
+  type: "init";
+  canvas: OffscreenCanvas;
+  width: number;
+  height: number;
+  cellSize: number;
+  gridSize: number;
+  dpr: number;
+};
+type WorkerResizeMessage = { type: "resize"; width: number; height: number; dpr: number };
+
+interface WorkerStatusMessage {
+  type: "status";
+  status: TowerDefenseStatus;
 }
 
 const TowerDefense = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const engineRef = useRef<TowerDefenseEngine | null>(null);
+  const animationRef = useRef<number>();
   const [editing, setEditing] = useState(true);
-  const [path, setPath] = useState<{ x: number; y: number }[]>([]);
+  const [path, setPath] = useState<Vec[]>([]);
   const pathSetRef = useRef<Set<string>>(new Set());
   const [towers, setTowers] = useState<Tower[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
-  const enemiesRef = useRef<EnemyInstance[]>([]);
-  const enemyPool = useRef(createEnemyPool(50));
-  const lastTime = useRef(0);
-  const running = useRef(false);
-  const spawnTimer = useRef(0);
-  const waveRef = useRef(1);
-  const waveCountdownRef = useRef<number | null>(null);
-  const [, forceRerender] = useState(0);
-  const enemiesSpawnedRef = useRef(0);
-  const damageNumbersRef = useRef<
-    {
-      x: number;
-      y: number;
-      value: number;
-      life: number;
-    }[]
-  >([]);
-  const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
-  const flowFieldRef = useRef<Vec[][] | null>(null);
-
   const [waveConfig, setWaveConfig] = useState<
     (keyof typeof ENEMY_TYPES)[][]
   >([Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[]]);
   const [waveJson, setWaveJson] = useState("");
+  const [status, setStatus] = useState<TowerDefenseStatus>({
+    wave: 1,
+    totalWaves: 1,
+    waveCountdown: null,
+    running: false,
+  });
+  const [supportsWorker, setSupportsWorker] = useState(false);
+
   useEffect(() => {
     setWaveJson(JSON.stringify(waveConfig, null, 2));
   }, [waveConfig]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setSupportsWorker(canUseOffscreenRendering());
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof window === "undefined") return;
+
+    const configureCanvasSize = () => {
+      canvas.style.width = `${CANVAS_SIZE}px`;
+      canvas.style.height = `${CANVAS_SIZE}px`;
+    };
+    configureCanvasSize();
+
+    if (supportsWorker) {
+      const worker = new Worker(
+        new URL("../games/tower-defense/worker.ts", import.meta.url),
+      );
+      workerRef.current = worker;
+      const offscreen = canvas.transferControlToOffscreen();
+      const initMessage: WorkerInitMessage = {
+        type: "init",
+        canvas: offscreen,
+        width: CANVAS_SIZE,
+        height: CANVAS_SIZE,
+        cellSize: CELL_SIZE,
+        gridSize: GRID_SIZE,
+        dpr: window.devicePixelRatio || 1,
+      };
+      worker.postMessage(initMessage, [offscreen]);
+      worker.onmessage = (event: MessageEvent<WorkerStatusMessage>) => {
+        if (event.data?.type === "status") {
+          setStatus(event.data.status);
+        }
+      };
+      const handleResize = () => {
+        const resizeMessage: WorkerResizeMessage = {
+          type: "resize",
+          width: CANVAS_SIZE,
+          height: CANVAS_SIZE,
+          dpr: window.devicePixelRatio || 1,
+        };
+        worker.postMessage(resizeMessage);
+      };
+      handleResize();
+      window.addEventListener("resize", handleResize);
+      return () => {
+        worker.terminate();
+        window.removeEventListener("resize", handleResize);
+        workerRef.current = null;
+      };
+    }
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const engine = createTowerDefenseEngine({
+      cellSize: CELL_SIZE,
+      gridSize: GRID_SIZE,
+      onStatusChange: setStatus,
+    });
+    engineRef.current = engine;
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.style.width = `${CANVAS_SIZE}px`;
+      canvas.style.height = `${CANVAS_SIZE}px`;
+      canvas.width = Math.floor(CANVAS_SIZE * dpr);
+      canvas.height = Math.floor(CANVAS_SIZE * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+
+    let last = performance.now();
+    const loop = (time: number) => {
+      const dt = (time - last) / 1000;
+      last = time;
+      engine.step(dt);
+      engine.draw(ctx);
+      animationRef.current = requestAnimationFrame(loop);
+    };
+    animationRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      animationRef.current = undefined;
+      engineRef.current = null;
+    };
+  }, [supportsWorker]);
+
+  useEffect(() => {
+    if (supportsWorker) {
+      const worker = workerRef.current;
+      if (!worker) return;
+      const message: WorkerStateMessage = {
+        type: "state",
+        payload: { path, towers, waveConfig, selected, hovered },
+      };
+      worker.postMessage(message);
+    } else {
+      engineRef.current?.setConfig({
+        path,
+        towers,
+        waveConfig,
+        selected,
+        hovered,
+      });
+    }
+  }, [path, towers, waveConfig, selected, hovered, supportsWorker]);
+
   const addWave = () => setWaveConfig((w) => [...w, []]);
+
   const addEnemyToWave = (
     index: number,
     type: keyof typeof ENEMY_TYPES,
@@ -132,6 +204,7 @@ const TowerDefense = () => {
       return copy;
     });
   };
+
   const importWaves = () => {
     try {
       const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
@@ -140,6 +213,7 @@ const TowerDefense = () => {
       alert("Invalid wave JSON");
     }
   };
+
   const exportWaves = () => {
     const json = JSON.stringify(waveConfig, null, 2);
     setWaveJson(json);
@@ -161,7 +235,7 @@ const TowerDefense = () => {
     });
   };
 
-  const handleCanvasClick = (e: React.MouseEvent) => {
+  const handleCanvasClick = (e: MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
@@ -179,7 +253,7 @@ const TowerDefense = () => {
     setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
   };
 
-  const handleCanvasMove = (e: React.MouseEvent) => {
+  const handleCanvasMove = (e: MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
@@ -189,222 +263,19 @@ const TowerDefense = () => {
 
   const handleCanvasLeave = () => setHovered(null);
 
-  useEffect(() => {
-    if (path.length >= 2) {
-      flowFieldRef.current = computeFlowField(
-        path[0],
-        path[path.length - 1],
-        towers,
-      );
+  const start = () => {
+    if (!path.length || !waveConfig.length) return;
+    setEditing(false);
+    if (supportsWorker) {
+      const worker = workerRef.current;
+      if (worker) {
+        const message: WorkerStartMessage = { type: "start" };
+        worker.postMessage(message);
+      }
+    } else {
+      engineRef.current?.start();
     }
-  }, [path, towers]);
-
-  const draw = () => {
-    const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-    ctx.strokeStyle = "#555";
-    for (let i = 0; i <= GRID_SIZE; i += 1) {
-      ctx.beginPath();
-      ctx.moveTo(i * CELL_SIZE, 0);
-      ctx.lineTo(i * CELL_SIZE, CANVAS_SIZE);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, i * CELL_SIZE);
-      ctx.lineTo(CANVAS_SIZE, i * CELL_SIZE);
-      ctx.stroke();
-    }
-    ctx.fillStyle = "rgba(255,255,0,0.2)";
-    path.forEach((c) => {
-      ctx.fillRect(c.x * CELL_SIZE, c.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-      ctx.strokeStyle = "yellow";
-      ctx.strokeRect(c.x * CELL_SIZE, c.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    });
-    ctx.fillStyle = "blue";
-    towers.forEach((t, i) => {
-      ctx.beginPath();
-      ctx.arc(
-        t.x * CELL_SIZE + CELL_SIZE / 2,
-        t.y * CELL_SIZE + CELL_SIZE / 2,
-        CELL_SIZE / 3,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-      if (selected === i || hovered === i) {
-        ctx.strokeStyle = "yellow";
-        ctx.beginPath();
-        ctx.arc(
-          t.x * CELL_SIZE + CELL_SIZE / 2,
-          t.y * CELL_SIZE + CELL_SIZE / 2,
-          t.range * CELL_SIZE,
-          0,
-          Math.PI * 2,
-        );
-        ctx.stroke();
-      }
-    });
-    ctx.fillStyle = "red";
-    enemiesRef.current.forEach((en) => {
-      ctx.beginPath();
-      ctx.arc(
-        en.x * CELL_SIZE + CELL_SIZE / 2,
-        en.y * CELL_SIZE + CELL_SIZE / 2,
-        CELL_SIZE / 4,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-    });
-    damageTicksRef.current.forEach((t) => {
-      ctx.strokeStyle = `rgba(255,0,0,${t.life})`;
-      ctx.beginPath();
-      ctx.arc(
-        t.x * CELL_SIZE + CELL_SIZE / 2,
-        t.y * CELL_SIZE + CELL_SIZE / 2,
-        (CELL_SIZE / 2) * (1 - t.life),
-        0,
-        Math.PI * 2,
-      );
-      ctx.stroke();
-    });
-    damageNumbersRef.current.forEach((d) => {
-      ctx.fillStyle = `rgba(255,255,255,${d.life})`;
-      ctx.font = "12px sans-serif";
-      ctx.fillText(
-        d.value.toString(),
-        d.x * CELL_SIZE + CELL_SIZE / 2,
-        d.y * CELL_SIZE + CELL_SIZE / 2 - (1 - d.life) * 10,
-      );
-    });
   };
-
-  const spawnEnemyInstance = () => {
-    if (!path.length) return;
-    const wave = waveConfig[waveRef.current - 1] || [];
-    const type = wave[enemiesSpawnedRef.current];
-    if (!type) return;
-    const spec = ENEMY_TYPES[type];
-    const enemy = spawnEnemy(enemyPool.current, {
-      id: Date.now(),
-      x: path[0].x,
-      y: path[0].y,
-      pathIndex: 0,
-      progress: 0,
-      health: spec.health,
-      resistance: 0,
-      baseSpeed: spec.speed,
-      slow: null,
-      dot: null,
-      type,
-    });
-    if (enemy) enemiesRef.current.push(enemy as EnemyInstance);
-  };
-
-  const update = (time: number) => {
-    const dt = (time - lastTime.current) / 1000;
-    lastTime.current = time;
-
-    if (waveCountdownRef.current !== null) {
-      waveCountdownRef.current -= dt;
-      forceRerender((n) => n + 1);
-      if (waveCountdownRef.current <= 0) {
-        waveCountdownRef.current = null;
-        running.current = true;
-        spawnTimer.current = 0;
-        enemiesSpawnedRef.current = 0;
-      }
-    } else if (running.current) {
-      spawnTimer.current += dt;
-      const currentWave = waveConfig[waveRef.current - 1] || [];
-      if (
-        spawnTimer.current > 1 &&
-        enemiesSpawnedRef.current < currentWave.length
-      ) {
-        spawnTimer.current = 0;
-        spawnEnemyInstance();
-        enemiesSpawnedRef.current += 1;
-      }
-      enemiesRef.current.forEach((en) => {
-        const field = flowFieldRef.current;
-        if (!field) return;
-        const cellX = Math.floor(en.x);
-        const cellY = Math.floor(en.y);
-        const vec = field[cellX]?.[cellY];
-        if (!vec) return;
-        const step = (en.baseSpeed * dt) / CELL_SIZE;
-        en.x += vec.x * step;
-        en.y += vec.y * step;
-      });
-      enemiesRef.current = enemiesRef.current.filter((e) => {
-        const goal = path[path.length - 1];
-        const reached =
-          Math.floor(e.x) === goal?.x && Math.floor(e.y) === goal?.y;
-        return e.health > 0 && !reached;
-      });
-      towers.forEach((t) => {
-        (t as any).cool = (t as any).cool ? (t as any).cool - dt : 0;
-        if ((t as any).cool <= 0) {
-          const enemy = enemiesRef.current.find(
-            (e) => Math.hypot(e.x - t.x, e.y - t.y) <= t.range,
-          );
-          if (enemy) {
-            enemy.health -= t.damage;
-            damageNumbersRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
-              value: t.damage,
-              life: 1,
-            });
-            damageTicksRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
-              life: 1,
-            });
-            (t as any).cool = 1;
-          }
-        }
-      });
-      damageNumbersRef.current.forEach((d) => {
-        d.y -= dt * 0.5;
-        d.life -= dt * 2;
-      });
-      damageNumbersRef.current = damageNumbersRef.current.filter(
-        (d) => d.life > 0,
-      );
-      damageTicksRef.current.forEach((t) => {
-        t.life -= dt * 2;
-      });
-      damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
-        if (
-          enemiesSpawnedRef.current >= currentWave.length &&
-          enemiesRef.current.length === 0
-        ) {
-          running.current = false;
-          if (waveRef.current < waveConfig.length) {
-            waveRef.current += 1;
-            waveCountdownRef.current = 5;
-          }
-          forceRerender((n) => n + 1);
-        }
-      }
-      draw();
-      requestAnimationFrame(update);
-    };
-
-  useEffect(() => {
-    lastTime.current = performance.now();
-    requestAnimationFrame(update);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
-    };
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
@@ -417,12 +288,21 @@ const TowerDefense = () => {
     });
   };
 
+  const statusSummary = useMemo(
+    () => ({
+      countdown: status.waveCountdown,
+      wave: status.wave,
+      running: status.running,
+    }),
+    [status.waveCountdown, status.wave, status.running],
+  );
+
   return (
     <GameLayout gameId="tower-defense">
       <div className="p-2 space-y-2">
-        {waveCountdownRef.current !== null && (
+        {statusSummary.countdown !== null && (
           <div className="text-center bg-gray-700 text-white py-1 rounded">
-            Wave {waveRef.current} in {Math.ceil(waveCountdownRef.current)}
+            Wave {statusSummary.wave} in {Math.max(0, Math.ceil(statusSummary.countdown))}
           </div>
         )}
         <div className="space-x-2 mb-2">
@@ -435,7 +315,7 @@ const TowerDefense = () => {
           <button
             className="px-2 py-1 bg-gray-700 rounded"
             onClick={start}
-            disabled={running.current || waveCountdownRef.current !== null}
+            disabled={statusSummary.running || statusSummary.countdown !== null}
           >
             Start
           </button>
@@ -446,9 +326,7 @@ const TowerDefense = () => {
               <span>
                 Wave {i + 1}: {wave.join(", ") || "empty"}
               </span>
-              {(
-                Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]
-              ).map((t) => (
+              {(Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]).map((t) => (
                 <button
                   key={t}
                   className="bg-gray-700 px-1 rounded"
@@ -459,10 +337,7 @@ const TowerDefense = () => {
               ))}
             </div>
           ))}
-          <button
-            className="bg-gray-700 text-xs px-2 py-1 rounded"
-            onClick={addWave}
-          >
+          <button className="bg-gray-700 text-xs px-2 py-1 rounded" onClick={addWave}>
             Add Wave
           </button>
           <textarea
@@ -471,16 +346,10 @@ const TowerDefense = () => {
             onChange={(e) => setWaveJson(e.target.value)}
           />
           <div className="space-x-2">
-            <button
-              className="px-2 py-1 bg-gray-700 rounded"
-              onClick={importWaves}
-            >
+            <button className="px-2 py-1 bg-gray-700 rounded" onClick={importWaves}>
               Import
             </button>
-            <button
-              className="px-2 py-1 bg-gray-700 rounded"
-              onClick={exportWaves}
-            >
+            <button className="px-2 py-1 bg-gray-700 rounded" onClick={exportWaves}>
               Export
             </button>
           </div>
