@@ -26,6 +26,7 @@ import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import {
     clampWindowTopPosition,
+    getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
@@ -88,6 +89,8 @@ export class Desktop extends Component {
         this.desktopPadding = { ...this.defaultDesktopPadding };
 
         this.gestureState = { pointer: null, overview: null };
+
+        this.currentPointerIsCoarse = false;
 
     }
 
@@ -166,21 +169,30 @@ export class Desktop extends Component {
     };
 
     configureTouchTargets = (isCoarse) => {
-        const nextDimensions = isCoarse
+        this.currentPointerIsCoarse = Boolean(isCoarse);
+
+        const baseDimensions = isCoarse
             ? { width: 120, height: 108 }
             : { ...this.defaultIconDimensions };
-        const nextSpacing = isCoarse
+        const baseSpacing = isCoarse
             ? { row: 144, column: 156 }
             : { ...this.defaultIconGridSpacing };
-        const nextPadding = isCoarse
+        const basePadding = isCoarse
             ? { top: 72, right: 32, bottom: 168, left: 32 }
             : { ...this.defaultDesktopPadding };
+        const safeArea = getSafeAreaInsets();
+        const nextPadding = {
+            top: basePadding.top + safeArea.top,
+            right: basePadding.right + safeArea.right,
+            bottom: basePadding.bottom + safeArea.bottom,
+            left: basePadding.left + safeArea.left,
+        };
 
         const changed =
-            nextDimensions.width !== this.iconDimensions.width ||
-            nextDimensions.height !== this.iconDimensions.height ||
-            nextSpacing.row !== this.iconGridSpacing.row ||
-            nextSpacing.column !== this.iconGridSpacing.column ||
+            baseDimensions.width !== this.iconDimensions.width ||
+            baseDimensions.height !== this.iconDimensions.height ||
+            baseSpacing.row !== this.iconGridSpacing.row ||
+            baseSpacing.column !== this.iconGridSpacing.column ||
             nextPadding.top !== this.desktopPadding.top ||
             nextPadding.right !== this.desktopPadding.right ||
             nextPadding.bottom !== this.desktopPadding.bottom ||
@@ -188,9 +200,14 @@ export class Desktop extends Component {
 
         if (!changed) return;
 
-        this.iconDimensions = { ...nextDimensions };
-        this.iconGridSpacing = { ...nextSpacing };
-        this.desktopPadding = { ...nextPadding };
+        this.iconDimensions = { ...baseDimensions };
+        this.iconGridSpacing = { ...baseSpacing };
+        this.desktopPadding = nextPadding;
+        this.realignIconPositions();
+    };
+
+    handleViewportResize = () => {
+        this.configureTouchTargets(this.currentPointerIsCoarse);
         this.realignIconPositions();
     };
 
@@ -812,7 +829,7 @@ export class Desktop extends Component {
         this.checkForAppShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
-        window.addEventListener('resize', this.realignIconPositions);
+        window.addEventListener('resize', this.handleViewportResize);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
@@ -834,7 +851,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
-        window.removeEventListener('resize', this.realignIconPositions);
+        window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);

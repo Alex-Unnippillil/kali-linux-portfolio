@@ -9,6 +9,7 @@ import useDocPiP from '../../hooks/useDocPiP';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
+    measureSafeAreaInset,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
@@ -30,7 +31,8 @@ const percentOf = (value, total) => {
 const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
     const halfWidth = viewportWidth / 2;
     const safeTop = Math.max(topInset, DEFAULT_WINDOW_TOP_OFFSET);
-    const availableHeight = Math.max(0, viewportHeight - safeTop - SNAP_BOTTOM_INSET);
+    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+    const availableHeight = Math.max(0, viewportHeight - safeTop - SNAP_BOTTOM_INSET - safeBottom);
     const topHeight = Math.min(availableHeight, Math.max(viewportHeight / 2, 0));
     return {
         left: { left: 0, top: safeTop, width: halfWidth, height: availableHeight },
@@ -137,7 +139,8 @@ export class Window extends Component {
             : DEFAULT_WINDOW_TOP_OFFSET;
         const windowHeightPx = viewportHeight * (this.state.height / 100.0);
         const windowWidthPx = viewportWidth * (this.state.width / 100.0);
-        const availableVertical = Math.max(viewportHeight - topInset - SNAP_BOTTOM_INSET, 0);
+        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
+        const availableVertical = Math.max(viewportHeight - topInset - SNAP_BOTTOM_INSET - safeAreaBottom, 0);
         const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
         const maxTop = Math.max(availableVertical - windowHeightPx, 0);
 
@@ -482,7 +485,10 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             const viewportHeight = window.innerHeight;
-            const availableHeight = Math.max(0, viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET);
+            const availableHeight = Math.max(
+                0,
+                viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),
+            );
             const heightPercent = percentOf(availableHeight, viewportHeight);
             if (node) {
                 node.style.transform = `translate(-1pt, 0px)`;
