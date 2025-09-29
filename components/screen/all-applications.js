@@ -1,6 +1,7 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { typography, typeClassName } from '@/styles/theme';
 
 const FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
@@ -134,7 +135,7 @@ class AllApplications extends React.Component {
                             : `Add ${app.title} to favorites`
                     }
                     onClick={(event) => this.handleToggleFavorite(event, app.id)}
-                    className={`absolute right-2 top-2 text-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    className={`absolute right-2 top-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${typeClassName('lg')} ${
                         isFavorite ? 'text-yellow-300' : 'text-white/60 hover:text-white'
                     }`}
                 >
@@ -156,7 +157,7 @@ class AllApplications extends React.Component {
         if (!apps.length) return null;
         return (
             <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
+                <h2 className={`mb-3 font-semibold uppercase tracking-wider text-white/70 ${typography.bodySm}`}>
                     {title}
                 </h2>
                 <div className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
@@ -198,7 +199,7 @@ class AllApplications extends React.Component {
                         group.length ? this.renderSection(`Group ${index + 1}`, group) : null
                     )}
                     {!hasResults && (
-                        <p className="mt-6 text-center text-sm text-white/70">
+                        <p className={`mt-6 text-center text-white/70 ${typography.bodySm}`}>
                             No applications match your search.
                         </p>
                     )}

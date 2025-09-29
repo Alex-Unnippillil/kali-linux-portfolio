@@ -1,4 +1,5 @@
 import React from 'react';
+import { typography } from '@/styles/theme';
 
 interface FormErrorProps {
   id?: string;
@@ -11,7 +12,7 @@ const FormError = ({ id, className = '', children }: FormErrorProps) => (
     id={id}
     role="status"
     aria-live="polite"
-    className={`text-red-600 text-sm mt-2 ${className}`.trim()}
+    className={`mt-2 text-red-600 ${typography.bodySm} ${className}`.trim()}
   >
     {children}
   </p>

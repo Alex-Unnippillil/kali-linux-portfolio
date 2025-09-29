@@ -3,6 +3,8 @@
 import type { ChangeEvent, FC, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { typography } from "@/styles/theme";
+
 import usePersistentState from "../../hooks/usePersistentState";
 
 export const clampLevel = (value: number) => Math.min(1, Math.max(0, value));
@@ -193,21 +195,25 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"
+          className={`absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-white shadow-lg ${typography.caption}`}
           role="menu"
           aria-label="Battery menu"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Battery</div>
-          <div className="mb-3 rounded bg-black bg-opacity-20 p-3 text-[11px] text-gray-200">
+          <div className={`mb-3 uppercase tracking-wide text-gray-200 ${typography.label}`}>
+            Battery
+          </div>
+          <div className={`mb-3 rounded bg-black bg-opacity-20 p-3 text-gray-200 ${typography.label}`}>
             <div className="flex items-center justify-between text-white">
-              <span className="text-base font-semibold">{formattedLevel}</span>
-              <span className="uppercase">{charging ? "Charging" : "On battery"}</span>
+              <span className={`font-semibold ${typography.body}`}>{formattedLevel}</span>
+              <span className={`uppercase ${typography.label}`}>{charging ? "Charging" : "On battery"}</span>
             </div>
             <p className="mt-1 text-gray-300">{estimateBatteryTime(level, charging)}</p>
           </div>
-          <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Adjust level</div>
+          <div className={`mb-3 uppercase tracking-wide text-gray-200 ${typography.label}`}>
+            Adjust level
+          </div>
           <input
             ref={sliderRef}
             type="range"
@@ -221,8 +227,10 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
               setLevel(clampLevel(Number(event.target.value) / 100))
             }
           />
-          <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span className="text-white normal-case">Charging</span>
+          <label
+            className={`mb-3 flex items-center justify-between uppercase tracking-wide text-gray-200 ${typography.label}`}
+          >
+            <span className={`text-white normal-case ${typography.bodySm}`}>Charging</span>
             <input
               type="checkbox"
               checked={charging}
@@ -230,8 +238,10 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
               aria-label={charging ? "Stop charging" : "Start charging"}
             />
           </label>
-          <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span className="text-white normal-case">Battery saver</span>
+          <label
+            className={`mb-3 flex items-center justify-between uppercase tracking-wide text-gray-200 ${typography.label}`}
+          >
+            <span className={`text-white normal-case ${typography.bodySm}`}>Battery saver</span>
             <input
               type="checkbox"
               checked={batterySaver}
@@ -239,14 +249,18 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
               aria-label="Toggle battery saver"
             />
           </label>
-          <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-200">Power mode</div>
+          <div className={`mb-2 uppercase tracking-wide text-gray-200 ${typography.label}`}>
+            Power mode
+          </div>
           <div className="space-y-1" role="group" aria-label="Power mode">
             {(Object.keys(POWER_MODE_LABEL) as PowerMode[]).map((mode) => (
               <label
                 key={mode}
-                className="flex items-center justify-between rounded px-2 py-2 text-sm transition hover:bg-white hover:bg-opacity-10"
+                className={`flex items-center justify-between rounded px-2 py-2 transition hover:bg-white hover:bg-opacity-10 ${typography.bodySm}`}
               >
-                <span className="font-medium text-white">{POWER_MODE_LABEL[mode]}</span>
+                <span className={`font-medium text-white ${typography.bodySm}`}>
+                  {POWER_MODE_LABEL[mode]}
+                </span>
                 <input
                   type="radio"
                   name="power-mode"

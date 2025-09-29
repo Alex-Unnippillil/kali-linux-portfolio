@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import { typography } from '@/styles/theme';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -168,7 +169,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className={`flex flex-shrink-0 bg-gray-800 text-white overflow-x-auto ${typography.bodySm}`}>
         {tabs.map((t, i) => (
           <div
             key={t.id}
