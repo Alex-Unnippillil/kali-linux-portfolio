@@ -38,6 +38,11 @@
   --kali-panel-highlight: rgba(255, 255, 255, 0.05);
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
+  --chart-line-strong: color-mix(in srgb, var(--color-primary) 85%, #ffffff 15%);
+  --chart-line-soft: color-mix(in srgb, var(--color-primary) 35%, transparent 65%);
+  --chart-grid-line: color-mix(in srgb, var(--color-text) 55%, var(--color-bg) 45%);
+  --chart-legend-text: color-mix(in srgb, var(--color-text) 70%, var(--color-bg) 30%);
+  --chart-swatch-border: color-mix(in srgb, var(--color-text) 65%, transparent 35%);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;

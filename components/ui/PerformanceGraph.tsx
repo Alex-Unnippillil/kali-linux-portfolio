@@ -1,9 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useId } from 'react';
 
 const SAMPLE_INTERVAL = 1000;
 const MAX_POINTS = 32;
 const GRAPH_HEIGHT = 18;
 const GRAPH_WIDTH = 80;
+const GRID_LINE_FRACTIONS = [0.25, 0.5, 0.75];
+const GRID_LINE_POSITIONS = GRID_LINE_FRACTIONS.map(fraction =>
+  Number((GRAPH_HEIGHT * fraction).toFixed(2))
+);
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -107,6 +111,8 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
     };
   }, [prefersReducedMotion]);
 
+  const gradientId = useId();
+
   const path = useMemo(() => {
     if (points.length === 0) {
       return '';
@@ -128,7 +134,8 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   return (
     <div
       className={
-        'hidden items-center pr-2 text-ubt-grey/70 sm:flex md:pr-3 lg:pr-4' + (className ? ` ${className}` : '')
+        'hidden items-center gap-2 pr-2 text-ubt-grey/70 sm:flex md:pr-3 lg:pr-4' +
+        (className ? ` ${className}` : '')
       }
       aria-hidden="true"
       data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}
@@ -142,20 +149,49 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
         focusable="false"
       >
         <defs>
-          <linearGradient id="kaliSpark" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#61a3ff" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#1f4aa8" stopOpacity="0.25" />
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="var(--chart-line-strong)" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="var(--chart-line-soft)" stopOpacity="0.35" />
           </linearGradient>
         </defs>
+        <g aria-hidden="true">
+          {GRID_LINE_POSITIONS.map(position => (
+            <line
+              key={position}
+              x1={0}
+              x2={GRAPH_WIDTH}
+              y1={position}
+              y2={position}
+              stroke="var(--chart-grid-line)"
+              strokeWidth={0.4}
+              strokeDasharray="4 3"
+              shapeRendering="crispEdges"
+            />
+          ))}
+        </g>
         <path
           d={path}
           fill="none"
-          stroke="url(#kaliSpark)"
+          stroke={`url(#${gradientId})`}
           strokeWidth={1.6}
           strokeLinecap="round"
           shapeRendering="geometricPrecision"
         />
       </svg>
+      <div
+        className="hidden items-center gap-1 text-[0.625rem] font-medium uppercase tracking-wide sm:flex"
+        style={{ color: 'var(--chart-legend-text)' }}
+      >
+        <span
+          aria-hidden="true"
+          className="inline-flex h-2 w-3 rounded-sm"
+          style={{
+            background: 'var(--chart-line-strong)',
+            boxShadow: '0 0 0 1px var(--chart-swatch-border)',
+          }}
+        />
+        <span>Frame time</span>
+      </div>
     </div>
   );
 };
