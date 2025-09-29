@@ -18,6 +18,23 @@ describe('contact form', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('ignores honeytoken submissions', async () => {
+    const fetchMock = jest.fn();
+    const result = await processContactForm(
+      {
+        name: 'Alex',
+        email: 'alex@example.com',
+        message: 'Hello',
+        honeypot: 'filled',
+        csrfToken: 'csrf',
+        recaptchaToken: 'rc',
+      },
+      fetchMock
+    );
+    expect(result).toEqual({ success: true, ignored: true });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('success posts to api', async () => {
     const fetchMock = jest.fn().mockResolvedValue({ ok: true });
     const result = await processContactForm(
@@ -38,6 +55,6 @@ describe('contact form', () => {
         headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf' }),
       })
     );
-    expect(result.success).toBe(true);
+    expect(result).toEqual({ success: true });
   });
 });

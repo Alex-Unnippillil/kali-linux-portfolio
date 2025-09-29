@@ -29,18 +29,27 @@ const errorMap: Record<string, string> = {
 
 };
 
+type ProcessContactFormArgs = {
+  name: string;
+  email: string;
+  message: string;
+  honeypot: string;
+  csrfToken: string;
+  recaptchaToken: string;
+};
+
+type ProcessContactFormResult =
+  | { success: true; ignored?: boolean }
+  | { success: false; error?: string; code?: string };
+
 export const processContactForm = async (
-  data: {
-    name: string;
-    email: string;
-    message: string;
-    honeypot: string;
-    csrfToken: string;
-    recaptchaToken: string;
-  },
+  data: ProcessContactFormArgs,
   fetchImpl: typeof fetch = fetch,
-) => {
+): Promise<ProcessContactFormResult> => {
   try {
+    if (data.honeypot && data.honeypot.trim().length > 0) {
+      return { success: true, ignored: true };
+    }
     const parsed = contactSchema.parse(data);
     const res = await fetchImpl('/api/contact', {
       method: 'POST',
@@ -143,7 +152,7 @@ const ContactApp: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [honeypot, setHoneypot] = useState('');
+  const [honeytoken, setHoneytoken] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [banner, setBanner] = useState<
@@ -179,6 +188,18 @@ const ContactApp: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    if (honeytoken.trim().length > 0) {
+      setSubmitting(false);
+      setBanner({ type: 'success', message: 'Message sent' });
+      setHoneytoken('');
+      setName('');
+      setEmail('');
+      setMessage('');
+      setAttachments([]);
+      setError('');
+      void deleteDraft();
+      return;
+    }
     setSubmitting(true);
     setError('');
     setBanner(null);
@@ -232,7 +253,7 @@ const ContactApp: React.FC = () => {
       name,
       email,
       message,
-      honeypot,
+      honeypot: honeytoken,
       csrfToken,
       recaptchaToken,
     });
@@ -241,8 +262,10 @@ const ContactApp: React.FC = () => {
       setName('');
       setEmail('');
       setMessage('');
-      setHoneypot('');
-      await uploadAttachments(attachments);
+      setHoneytoken('');
+      if (!result.ignored) {
+        await uploadAttachments(attachments);
+      }
       setAttachments([]);
       void deleteDraft();
     } else {
@@ -376,8 +399,10 @@ const ContactApp: React.FC = () => {
         />
         <input
           type="text"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
+          name="company"
+          aria-hidden="true"
+          value={honeytoken}
+          onChange={(e) => setHoneytoken(e.target.value)}
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
