@@ -6,14 +6,38 @@ const GitHubStars = ({ user, repo }) => {
   const [visible, setVisible] = useState(false);
   const [stars, setStars] = usePersistentState(`gh-stars-${user}/${repo}`, null);
   const [loading, setLoading] = useState(stars === null);
+  const etagRef = useRef(null);
 
   const fetchStars = useCallback(async () => {
+    if (!user || !repo) return;
     try {
       setLoading(true);
-      const res = await fetch(`https://api.github.com/repos/${user}/${repo}`);
-      if (!res.ok) throw new Error('Request failed');
+      const headers = {};
+      if (etagRef.current) {
+        headers['If-None-Match'] = etagRef.current;
+      }
+
+      const res = await fetch(`/api/github-stars?user=${encodeURIComponent(user)}&repo=${encodeURIComponent(repo)}`, {
+        headers,
+      });
+
+      const nextEtag = res.headers.get('ETag');
+      if (nextEtag) {
+        etagRef.current = nextEtag;
+      }
+
+      if (res.status === 304) {
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+
       const data = await res.json();
-      setStars(data.stargazers_count || 0);
+      if (typeof data?.stars === 'number') {
+        setStars(data.stars);
+      }
     } catch (e) {
       console.error('Failed to fetch star count', e);
     } finally {
