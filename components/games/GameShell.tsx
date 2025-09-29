@@ -75,56 +75,76 @@ export default function GameShell({
   };
 
   return (
-    <div className={`game-shell${paused ? ' paused' : ''}${muted ? ' muted' : ''}`}
-         data-speed={speed}>
-      <div className="game-content">{children}</div>
-      {controls && <div className="game-controls">{controls}</div>}
-      {showSettings && settings && (
-        <div className="game-settings">{settings}</div>
-      )}
-      <button onClick={paused ? resume : pause} aria-label={paused ? 'Resume' : 'Pause'}>
-        {paused ? 'Resume' : 'Pause'}
-      </button>
-      <button onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
-        {muted ? 'Unmute' : 'Mute'}
-      </button>
-      <label>
-        Speed
-        <select
-          value={speed}
-          onChange={(e) => setSpeed(parseFloat(e.target.value))}
-        >
-          <option value={0.5}>0.5x</option>
-          <option value={1}>1x</option>
-          <option value={1.5}>1.5x</option>
-          <option value={2}>2x</option>
-        </select>
-      </label>
-      {settings && (
-        <button onClick={toggleSettings} aria-label="Settings">
-          Settings
-        </button>
-      )}
-      <button onClick={handleExport} aria-label="Export Settings">
-        Export
-      </button>
-      <button
-        onClick={() => fileRef.current?.click()}
-        aria-label="Import Settings"
+    <div
+      className={`game-shell${paused ? ' paused' : ''}${muted ? ' muted' : ''}`}
+      data-speed={speed}
+    >
+      <main
+        role="main"
+        aria-label={`${game} gameplay area`}
+        tabIndex={-1}
+        className="game-content"
       >
-        Import
-      </button>
-      <input
-        type="file"
-        accept="application/json"
-        ref={fileRef}
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files && e.target.files[0];
-          if (file) handleImport(file);
-          if (e.target) e.target.value = '';
-        }}
-      />
+        {children}
+      </main>
+      <nav
+        role="navigation"
+        aria-label={`${game} controls`}
+        tabIndex={-1}
+        className="game-shell-controls"
+      >
+        {controls && <div className="game-controls">{controls}</div>}
+        {showSettings && settings && (
+          <section className="game-settings" aria-label={`${game} settings`}>
+            {settings}
+          </section>
+        )}
+        <button onClick={paused ? resume : pause} aria-label={paused ? 'Resume' : 'Pause'}>
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
+          {muted ? 'Unmute' : 'Mute'}
+        </button>
+        <label>
+          Speed
+          <select
+            value={speed}
+            onChange={(e) => setSpeed(parseFloat(e.target.value))}
+          >
+            <option value={0.5}>0.5x</option>
+            <option value={1}>1x</option>
+            <option value={1.5}>1.5x</option>
+            <option value={2}>2x</option>
+          </select>
+        </label>
+        {settings && (
+          <button onClick={toggleSettings} aria-label="Settings">
+            Settings
+          </button>
+        )}
+        <button onClick={handleExport} aria-label="Export Settings">
+          Export
+        </button>
+        <button
+          onClick={() => fileRef.current?.click()}
+          aria-label="Import Settings"
+        >
+          Import
+        </button>
+        <input
+          type="file"
+          accept="application/json"
+          ref={fileRef}
+          style={{ display: 'none' }}
+          aria-label="Import settings file"
+          tabIndex={-1}
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleImport(file);
+            if (e.target) e.target.value = '';
+          }}
+        />
+      </nav>
     </div>
   );
 }

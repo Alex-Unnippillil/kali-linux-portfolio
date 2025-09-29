@@ -17,15 +17,20 @@ export default function Taskbar(props) {
 
     return (
 
-        <div
+        <nav
+            id="desktop-dock"
+            role="navigation"
+            aria-label="Desktop dock"
+            tabIndex={-1}
             className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 flex items-center justify-start z-40 backdrop-blur-sm"
-            role="toolbar"
             style={{
                 height: 'var(--shell-taskbar-height, 2.5rem)',
                 paddingInline: 'var(--shell-taskbar-padding-x, 0.75rem)',
             }}
         >
             <div
+                role="toolbar"
+                aria-label="Open applications"
                 className="flex items-center overflow-x-auto"
                 style={{ gap: 'var(--shell-taskbar-gap, 0.5rem)' }}
             >
@@ -86,6 +91,6 @@ export default function Taskbar(props) {
                     );
                 })}
             </div>
-        </div>
+        </nav>
     );
 }
