@@ -23,7 +23,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border border-card ${
         open ? '' : 'hidden'
       }`}
     >
@@ -36,22 +36,33 @@ const QuickSettings = ({ open }: Props) => {
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
         </button>
       </div>
-      <div className="px-4 pb-2 flex justify-between">
+      <label className="px-4 pb-2 flex cursor-pointer items-center justify-between">
         <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
+        <input
+          aria-label="Toggle sound"
+          type="checkbox"
+          checked={sound}
+          onChange={() => setSound(!sound)}
+        />
+      </label>
+      <label className="px-4 pb-2 flex cursor-pointer items-center justify-between">
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
-      </div>
-      <div className="px-4 flex justify-between">
+        <input
+          aria-label="Toggle network availability"
+          type="checkbox"
+          checked={online}
+          onChange={() => setOnline(!online)}
+        />
+      </label>
+      <label className="px-4 flex cursor-pointer items-center justify-between">
         <span>Reduced motion</span>
         <input
+          aria-label="Toggle reduced motion"
           type="checkbox"
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
         />
-      </div>
+      </label>
     </div>
   );
 };
