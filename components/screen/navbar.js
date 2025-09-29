@@ -75,43 +75,73 @@ export default class Navbar extends PureComponent {
                 this.setState((state) => ({ status_card: !state.status_card }));
         };
 
-                render() {
-                        const { workspaces, activeWorkspace } = this.state;
-                        return (
-                                <div className="main-navbar-vp absolute top-0 right-0 z-50 flex w-screen items-center justify-between bg-slate-950/80 px-3 py-2 text-ubt-grey shadow-lg backdrop-blur-md">
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
-                                                <WhiskerMenu />
-                                                {workspaces.length > 0 && (
-                                                        <WorkspaceSwitcher
-                                                                workspaces={workspaces}
-                                                                activeWorkspace={activeWorkspace}
-                                                                onSelect={this.handleWorkspaceSelect}
-                                                        />
-                                                )}
-                                                <PerformanceGraph />
-                                        </div>
-                                        <div
-                                                className={
-                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
-                                                }
-                                        >
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} />
-                                        </div>
-                                        <button
-                                                type="button"
-                                                id="status-bar"
-                                                aria-label="System status"
-                                                onClick={this.handleStatusToggle}
-                                                className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                }
-                                        >
-                                                <Status />
-                                                <QuickSettings open={this.state.status_card} />
-                                        </button>
-				</div>
-			);
-		}
+        handleSkipToContent = (event) => {
+                if (event && typeof event.preventDefault === 'function') {
+                        event.preventDefault();
+                }
+                if (typeof document !== 'undefined') {
+                        const mainContent = document.getElementById('desktop');
+                        if (mainContent && typeof mainContent.focus === 'function') {
+                                try {
+                                        mainContent.focus({ preventScroll: true });
+                                } catch (error) {
+                                        mainContent.focus();
+                                }
+                                if (typeof mainContent.scrollIntoView === 'function') {
+                                        mainContent.scrollIntoView({ block: 'start' });
+                                }
+                        }
+                }
+        };
+
+        render() {
+                const { workspaces, activeWorkspace } = this.state;
+                return (
+                        <nav
+                                role="navigation"
+                                aria-label="Desktop navigation"
+                                className="main-navbar-vp absolute top-0 right-0 z-50 flex w-screen items-center justify-between bg-slate-950/80 px-3 py-2 text-ubt-grey shadow-lg backdrop-blur-md"
+                        >
+                                <a
+                                        href="#desktop"
+                                        onClick={this.handleSkipToContent}
+                                        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded focus:bg-[var(--kali-blue)] focus:px-4 focus:py-2 focus:text-black focus:no-underline"
+                                >
+                                        Skip to main content
+                                </a>
+                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <WhiskerMenu />
+                                        {workspaces.length > 0 && (
+                                                <WorkspaceSwitcher
+                                                        workspaces={workspaces}
+                                                        activeWorkspace={activeWorkspace}
+                                                        onSelect={this.handleWorkspaceSelect}
+                                                />
+                                        )}
+                                        <PerformanceGraph />
+                                </div>
+                                <div
+                                        className={
+                                                'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
+                                        }
+                                >
+                                        <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                </div>
+                                <button
+                                        type="button"
+                                        id="status-bar"
+                                        aria-label="System status"
+                                        onClick={this.handleStatusToggle}
+                                        className={
+                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                        }
+                                >
+                                        <Status />
+                                        <QuickSettings open={this.state.status_card} />
+                                </button>
+                        </nav>
+                );
+        }
 
 
 }
