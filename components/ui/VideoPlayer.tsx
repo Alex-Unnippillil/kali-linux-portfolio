@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 
 interface VideoPlayerProps {
@@ -8,6 +8,20 @@ interface VideoPlayerProps {
   poster?: string;
   className?: string;
 }
+
+const CAPTION_STORAGE_KEY = "videoPlayerCaptionsEnabled";
+
+const getCaptionTracks = (video: HTMLVideoElement) => {
+  const tracks: TextTrack[] = [];
+  const list = video.textTracks;
+  for (let i = 0; i < list.length; i += 1) {
+    const track = list[i];
+    if (track.kind === "captions" || track.kind === "subtitles") {
+      tracks.push(track);
+    }
+  }
+  return tracks;
+};
 
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
@@ -19,6 +33,30 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+  const [hasTextTracks, setHasTextTracks] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    const stored = window.localStorage.getItem(CAPTION_STORAGE_KEY);
+    return stored !== null ? stored === "true" : true;
+  });
+  const captionsEnabledRef = useRef(captionsEnabled);
+
+  useEffect(() => {
+    captionsEnabledRef.current = captionsEnabled;
+  }, [captionsEnabled]);
+
+  const applyCaptionsPreference = useCallback(
+    (video: HTMLVideoElement | null, enabled: boolean) => {
+      if (!video) return;
+      const captionTracks = getCaptionTracks(video);
+      captionTracks.forEach((track) => {
+        track.mode = enabled ? "showing" : "disabled";
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     const video = videoRef.current;
@@ -44,6 +82,50 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     };
   }, [close]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updateTrackAvailability = () => {
+      const hasCaptions = getCaptionTracks(video).length > 0;
+      setHasTextTracks(hasCaptions);
+      if (hasCaptions) {
+        applyCaptionsPreference(video, captionsEnabledRef.current);
+      }
+    };
+
+    updateTrackAvailability();
+
+    const onLoadedMetadata = () => updateTrackAvailability();
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+
+    const tracks = video.textTracks as TextTrackList & {
+      addEventListener?: (type: string, listener: () => void) => void;
+      removeEventListener?: (type: string, listener: () => void) => void;
+    };
+
+    let cleanupTracks: (() => void) | undefined;
+    if (typeof tracks.addEventListener === "function") {
+      const handleTrackChange = () => updateTrackAvailability();
+      tracks.addEventListener("addtrack", handleTrackChange);
+      tracks.addEventListener("removetrack", handleTrackChange);
+      cleanupTracks = () => {
+        tracks.removeEventListener?.("addtrack", handleTrackChange);
+        tracks.removeEventListener?.("removetrack", handleTrackChange);
+      };
+    }
+
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      cleanupTracks?.();
+    };
+  }, [applyCaptionsPreference]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    applyCaptionsPreference(video, captionsEnabled);
+  }, [applyCaptionsPreference, captionsEnabled, hasTextTracks]);
+
   const togglePiP = async () => {
     const video = videoRef.current;
     if (!video) return;
@@ -58,6 +140,15 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     } catch {
       setIsPip(false);
     }
+  };
+
+  const toggleCaptions = () => {
+    const next = !captionsEnabled;
+    setCaptionsEnabled(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(CAPTION_STORAGE_KEY, String(next));
+    }
+    applyCaptionsPreference(videoRef.current, next);
   };
 
   // Listen for messages from the Doc-PiP window
@@ -119,6 +210,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
               setVol(v);
               send({ type: "volume", value: v });
             }}
+            aria-label="Adjust volume"
           />
         </div>
       );
@@ -129,24 +221,46 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
-      {pipSupported && (
-        <button
-          type="button"
-          onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
-        >
-          {isPip ? "Exit PiP" : "PiP"}
-        </button>
-      )}
-      {docPipSupported && (
-        <button
-          type="button"
-          onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
-        >
-          Doc-PiP
-        </button>
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        className="w-full h-auto"
+        aria-label="Video player"
+      />
+      {(pipSupported || docPipSupported || hasTextTracks) && (
+        <div className="absolute bottom-2 right-2 flex gap-2">
+          {hasTextTracks && (
+            <button
+              type="button"
+              onClick={toggleCaptions}
+              className="rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+              aria-pressed={captionsEnabled}
+              aria-label={captionsEnabled ? "Disable captions" : "Enable captions"}
+            >
+              {captionsEnabled ? "CC On" : "CC Off"}
+            </button>
+          )}
+          {docPipSupported && (
+            <button
+              type="button"
+              onClick={openDocPip}
+              className="rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+            >
+              Doc-PiP
+            </button>
+          )}
+          {pipSupported && (
+            <button
+              type="button"
+              onClick={togglePiP}
+              className="rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+            >
+              {isPip ? "Exit PiP" : "PiP"}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
