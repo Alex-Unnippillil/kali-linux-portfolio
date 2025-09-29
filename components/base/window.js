@@ -667,8 +667,12 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowResizeHandles
+                                onHorizontalResize={this.handleHorizontalResize}
+                                onVerticalResize={this.handleVerticleResize}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -717,46 +721,73 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
     )
 }
 
-// Window's Borders
-export class WindowYBorder extends Component {
+// Window's resize handles
+export class WindowResizeHandles extends Component {
     componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
+        this.transparentImage = new window.Image(0, 0);
+        this.transparentImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        this.transparentImage.style.opacity = 0;
     }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+
+    handleDragStart = (event) => {
+        if (event?.dataTransfer && this.transparentImage) {
+            event.dataTransfer.setDragImage(this.transparentImage, 0, 0);
         }
+    };
+
+    createDragHandler = (handlers = []) => {
+        const validHandlers = handlers.filter(Boolean);
+        if (!validHandlers.length) return undefined;
+        return (event) => {
+            event.preventDefault();
+            validHandlers.forEach((handler) => handler(event));
+        };
+    };
+
+    renderHandle(className, ...handlers) {
+        return (
+            <div
+                draggable
+                className={className}
+                onDragStart={this.handleDragStart}
+                onDrag={this.createDragHandler(handlers)}
+                role="presentation"
+            />
+        );
     }
 
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
     render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
+        const { onHorizontalResize, onVerticalResize } = this.props;
+        return (
+            <div className={styles.resizeHandles} aria-hidden="true">
+                {this.renderHandle(`${styles.resizeHandle} ${styles.handleNorth}`, onVerticalResize)}
+                {this.renderHandle(`${styles.resizeHandle} ${styles.handleSouth}`, onVerticalResize)}
+                {this.renderHandle(`${styles.resizeHandle} ${styles.handleEast}`, onHorizontalResize)}
+                {this.renderHandle(`${styles.resizeHandle} ${styles.handleWest}`, onHorizontalResize)}
+                {this.renderHandle(
+                    `${styles.resizeHandle} ${styles.handleNorthEast}`,
+                    onHorizontalResize,
+                    onVerticalResize,
+                )}
+                {this.renderHandle(
+                    `${styles.resizeHandle} ${styles.handleNorthWest}`,
+                    onHorizontalResize,
+                    onVerticalResize,
+                )}
+                {this.renderHandle(
+                    `${styles.resizeHandle} ${styles.handleSouthEast}`,
+                    onHorizontalResize,
+                    onVerticalResize,
+                )}
+                {this.renderHandle(
+                    `${styles.resizeHandle} ${styles.handleSouthWest}`,
+                    onHorizontalResize,
+                    onVerticalResize,
+                )}
+            </div>
+        );
     }
-
+}
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
