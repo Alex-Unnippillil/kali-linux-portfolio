@@ -18,27 +18,53 @@ export default function Preferences() {
 
   const [active, setActive] = useState<TabId>("display");
 
-  const [size, setSize] = useState(() => {
-    if (typeof window === "undefined") return 24;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}size`);
-    return stored ? parseInt(stored, 10) : 24;
-  });
-  const [length, setLength] = useState(() => {
-    if (typeof window === "undefined") return 100;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}length`);
-    return stored ? parseInt(stored, 10) : 100;
-  });
-  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(() => {
-    if (typeof window === "undefined") return "horizontal";
-    return (localStorage.getItem(`${PANEL_PREFIX}orientation`) as
-      | "horizontal"
-      | "vertical"
-      | null) || "horizontal";
-  });
-  const [autohide, setAutohide] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
-  });
+  const isCoarsePointer = () => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return false;
+    }
+    try {
+      return window.matchMedia("(pointer: coarse)").matches;
+    } catch {
+      return false;
+    }
+  };
+
+  const resolveNumberSetting = (key: string, touchDefault: number, desktopDefault: number) => {
+    if (typeof window === "undefined") return desktopDefault;
+    const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
+    if (stored !== null) {
+      const parsed = parseInt(stored, 10);
+      return Number.isNaN(parsed) ? desktopDefault : parsed;
+    }
+    return isCoarsePointer() ? touchDefault : desktopDefault;
+  };
+
+  const resolveBooleanSetting = (key: string, touchDefault: boolean, desktopDefault: boolean) => {
+    if (typeof window === "undefined") return desktopDefault;
+    const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
+    if (stored !== null) {
+      return stored === "true";
+    }
+    return isCoarsePointer() ? touchDefault : desktopDefault;
+  };
+
+  const resolveOrientationSetting = () => {
+    if (typeof window === "undefined") {
+      return isCoarsePointer() ? "horizontal" : "horizontal";
+    }
+    const stored = localStorage.getItem(`${PANEL_PREFIX}orientation`);
+    if (stored === "horizontal" || stored === "vertical") {
+      return stored;
+    }
+    return isCoarsePointer() ? "horizontal" : "horizontal";
+  };
+
+  const [size, setSize] = useState(() => resolveNumberSetting("size", 40, 24));
+  const [length, setLength] = useState(() => resolveNumberSetting("length", 100, 100));
+  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
+    resolveOrientationSetting,
+  );
+  const [autohide, setAutohide] = useState(() => resolveBooleanSetting("autohide", true, false));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,6 +85,34 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(pointer: coarse)");
+    const handleChange = () => {
+      if (!localStorage.getItem(`${PANEL_PREFIX}size`)) {
+        setSize(resolveNumberSetting("size", 40, 24));
+      }
+      if (!localStorage.getItem(`${PANEL_PREFIX}autohide`)) {
+        setAutohide(resolveBooleanSetting("autohide", true, false));
+      }
+      if (!localStorage.getItem(`${PANEL_PREFIX}orientation`)) {
+        setOrientation(resolveOrientationSetting());
+      }
+    };
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", handleChange);
+    } else if (typeof media.addListener === "function") {
+      media.addListener(handleChange);
+    }
+    return () => {
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", handleChange);
+      } else if (typeof media.removeListener === "function") {
+        media.removeListener(handleChange);
+      }
+    };
+  }, []);
 
   return (
     <div>

@@ -72,9 +72,20 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
-        this.iconDimensions = { width: 96, height: 88 };
-        this.iconGridSpacing = { row: 112, column: 128 };
-        this.desktopPadding = { top: 64, right: 24, bottom: 120, left: 24 };
+        this.defaultIconDimensions = { width: 96, height: 88 };
+        this.defaultIconGridSpacing = { row: 112, column: 128 };
+        this.defaultDesktopPadding = { top: 64, right: 24, bottom: 120, left: 24 };
+        this.iconDimensions = { ...this.defaultIconDimensions };
+        this.iconGridSpacing = { ...this.defaultIconGridSpacing };
+        this.desktopPadding = { ...this.defaultDesktopPadding };
+        this.gestureState = {
+            pointer: null,
+            overview: null,
+        };
+        this.pointerMedia = null;
+        this.pointerMediaListener = null;
+        this.gestureListenersAttached = false;
+        this.gestureRoot = null;
     }
 
     createEmptyWorkspaceState = () => ({
@@ -116,6 +127,233 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    setupPointerMediaWatcher = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            this.configureTouchTargets(false);
+            return;
+        }
+        const query = window.matchMedia('(pointer: coarse)');
+        this.pointerMedia = query;
+        const listener = (event) => {
+            this.configureTouchTargets(event.matches);
+        };
+        this.pointerMediaListener = listener;
+        this.configureTouchTargets(query.matches);
+        if (typeof query.addEventListener === 'function') {
+            query.addEventListener('change', listener);
+        } else if (typeof query.addListener === 'function') {
+            query.addListener(listener);
+        }
+    };
+
+    teardownPointerMediaWatcher = () => {
+        if (!this.pointerMedia) return;
+        const listener = this.pointerMediaListener;
+        if (listener) {
+            if (typeof this.pointerMedia.removeEventListener === 'function') {
+                this.pointerMedia.removeEventListener('change', listener);
+            } else if (typeof this.pointerMedia.removeListener === 'function') {
+                this.pointerMedia.removeListener(listener);
+            }
+        }
+        this.pointerMedia = null;
+        this.pointerMediaListener = null;
+    };
+
+    configureTouchTargets = (isCoarse) => {
+        const nextDimensions = isCoarse
+            ? { width: 120, height: 108 }
+            : { ...this.defaultIconDimensions };
+        const nextSpacing = isCoarse
+            ? { row: 144, column: 156 }
+            : { ...this.defaultIconGridSpacing };
+        const nextPadding = isCoarse
+            ? { top: 72, right: 32, bottom: 168, left: 32 }
+            : { ...this.defaultDesktopPadding };
+
+        const changed =
+            nextDimensions.width !== this.iconDimensions.width ||
+            nextDimensions.height !== this.iconDimensions.height ||
+            nextSpacing.row !== this.iconGridSpacing.row ||
+            nextSpacing.column !== this.iconGridSpacing.column ||
+            nextPadding.top !== this.desktopPadding.top ||
+            nextPadding.right !== this.desktopPadding.right ||
+            nextPadding.bottom !== this.desktopPadding.bottom ||
+            nextPadding.left !== this.desktopPadding.left;
+
+        if (!changed) return;
+
+        this.iconDimensions = { ...nextDimensions };
+        this.iconGridSpacing = { ...nextSpacing };
+        this.desktopPadding = { ...nextPadding };
+        this.realignIconPositions();
+    };
+
+    computeTouchCentroid = (touchList) => {
+        if (!touchList || touchList.length === 0) return null;
+        const touches = Array.from(touchList);
+        const total = touches.reduce(
+            (acc, touch) => {
+                acc.x += touch.clientX;
+                acc.y += touch.clientY;
+                return acc;
+            },
+            { x: 0, y: 0 }
+        );
+        return {
+            x: total.x / touches.length,
+            y: total.y / touches.length,
+        };
+    };
+
+    setupGestureListeners = () => {
+        const node = this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
+        if (!node) return;
+        if (this.gestureRoot && this.gestureRoot !== node) {
+            this.teardownGestureListeners();
+        }
+        if (this.gestureListenersAttached) return;
+        this.gestureListenersAttached = true;
+        this.gestureRoot = node;
+        const options = { passive: true };
+        node.addEventListener('pointerdown', this.handleShellPointerDown, options);
+        node.addEventListener('pointermove', this.handleShellPointerMove, options);
+        node.addEventListener('pointerup', this.handleShellPointerUp, options);
+        node.addEventListener('pointercancel', this.handleShellPointerCancel, options);
+        node.addEventListener('touchstart', this.handleShellTouchStart, options);
+        node.addEventListener('touchmove', this.handleShellTouchMove, options);
+        node.addEventListener('touchend', this.handleShellTouchEnd, options);
+        node.addEventListener('touchcancel', this.handleShellTouchCancel, options);
+    };
+
+    teardownGestureListeners = () => {
+        const node = this.gestureRoot;
+        if (!node || !this.gestureListenersAttached) return;
+        this.gestureListenersAttached = false;
+        node.removeEventListener('pointerdown', this.handleShellPointerDown);
+        node.removeEventListener('pointermove', this.handleShellPointerMove);
+        node.removeEventListener('pointerup', this.handleShellPointerUp);
+        node.removeEventListener('pointercancel', this.handleShellPointerCancel);
+        node.removeEventListener('touchstart', this.handleShellTouchStart);
+        node.removeEventListener('touchmove', this.handleShellTouchMove);
+        node.removeEventListener('touchend', this.handleShellTouchEnd);
+        node.removeEventListener('touchcancel', this.handleShellTouchCancel);
+        this.gestureRoot = null;
+    };
+
+    handleShellPointerDown = (event) => {
+        if (event.pointerType !== 'touch' || event.isPrimary === false) return;
+        const targetWindow = event.target && event.target.closest ? event.target.closest('.opened-window') : null;
+        if (!targetWindow || !targetWindow.id) return;
+        this.gestureState.pointer = {
+            pointerId: event.pointerId,
+            windowId: targetWindow.id,
+            startX: event.clientX,
+            startY: event.clientY,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            startTime: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+        };
+    };
+
+    handleShellPointerMove = (event) => {
+        const gesture = this.gestureState.pointer;
+        if (!gesture || gesture.pointerId !== event.pointerId) return;
+        gesture.lastX = event.clientX;
+        gesture.lastY = event.clientY;
+    };
+
+    handleShellPointerUp = (event) => {
+        const gesture = this.gestureState.pointer;
+        if (!gesture || gesture.pointerId !== event.pointerId) {
+            return;
+        }
+        this.gestureState.pointer = null;
+        if (!gesture.windowId) return;
+        const deltaX = gesture.lastX - gesture.startX;
+        const deltaY = gesture.lastY - gesture.startY;
+        const distance = Math.abs(deltaX);
+        const verticalDrift = Math.abs(deltaY);
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const duration = now - gesture.startTime;
+        if (distance < 120 || verticalDrift > 90 || duration > 600) {
+            return;
+        }
+        const velocity = distance / Math.max(duration, 1);
+        if (velocity < 0.35) {
+            return;
+        }
+        const direction = deltaX > 0 ? 'ArrowRight' : 'ArrowLeft';
+        const dispatched = this.dispatchWindowCommand(gesture.windowId, direction);
+        if (dispatched) {
+            this.focus(gesture.windowId);
+        }
+    };
+
+    handleShellPointerCancel = (event) => {
+        const gesture = this.gestureState.pointer;
+        if (gesture && gesture.pointerId === event.pointerId) {
+            this.gestureState.pointer = null;
+        }
+    };
+
+    handleShellTouchStart = (event) => {
+        if (event.touches && event.touches.length > 1) {
+            this.gestureState.pointer = null;
+        }
+        if (!event.touches || event.touches.length !== 3) return;
+        const centroid = this.computeTouchCentroid(event.touches);
+        if (!centroid) return;
+        this.gestureState.overview = {
+            startY: centroid.y,
+            lastY: centroid.y,
+            startTime: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+            triggered: false,
+        };
+    };
+
+    handleShellTouchMove = (event) => {
+        const gesture = this.gestureState.overview;
+        if (!gesture) return;
+        const centroid = this.computeTouchCentroid(event.touches);
+        if (!centroid) return;
+        gesture.lastY = centroid.y;
+    };
+
+    handleShellTouchEnd = (event) => {
+        const gesture = this.gestureState.overview;
+        if (!gesture) {
+            return;
+        }
+        if (event.touches && event.touches.length > 0) {
+            return;
+        }
+        const deltaY = gesture.startY - (gesture.lastY ?? gesture.startY);
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const duration = now - gesture.startTime;
+        const shouldTrigger = deltaY > 60 || (deltaY > 40 && duration < 400);
+        if (shouldTrigger && !gesture.triggered) {
+            if (!this.state.showWindowSwitcher) {
+                this.openWindowSwitcher();
+            }
+            gesture.triggered = true;
+        }
+        this.gestureState.overview = null;
+    };
+
+    handleShellTouchCancel = () => {
+        this.gestureState.overview = null;
+    };
+
+    dispatchWindowCommand = (windowId, key) => {
+        if (!windowId) return false;
+        const node = typeof document !== 'undefined' ? document.getElementById(windowId) : null;
+        if (!node) return false;
+        const event = new CustomEvent('super-arrow', { detail: key, bubbles: true });
+        node.dispatchEvent(event);
+        return true;
     };
 
     updateWorkspaceSnapshots = (baseState) => {
@@ -459,6 +697,8 @@ export class Desktop extends Component {
         window.addEventListener('resize', this.realignIconPositions);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.setupPointerMediaWatcher();
+        this.setupGestureListeners();
     }
 
     componentDidUpdate(_prevProps, prevState) {
@@ -481,6 +721,8 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
         }
+        this.teardownGestureListeners();
+        this.teardownPointerMediaWatcher();
     }
 
     checkForNewFolders = () => {
