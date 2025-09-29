@@ -21,6 +21,12 @@ function DesktopMenu(props) {
         props.openApp("settings");
     }
 
+    const openCommandPalette = () => {
+        if (typeof props.openCommandPalette === 'function') {
+            props.openCommandPalette();
+        }
+    }
+
     const checkFullScreen = () => {
         if (document.fullscreenElement) {
             setIsFullScreen(true)
@@ -67,6 +73,15 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">Create Shortcut...</span>
+            </button>
+            <button
+                onClick={openCommandPalette}
+                type="button"
+                role="menuitem"
+                aria-label="Command Palette"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Command Palette...</span>
             </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">

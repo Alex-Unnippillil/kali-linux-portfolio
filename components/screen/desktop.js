@@ -18,6 +18,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import CommandPalette from '../ui/CommandPalette';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -72,6 +73,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            showCommandPalette: false,
         }
 
         this.desktopRef = React.createRef();
@@ -761,6 +763,42 @@ export class Desktop extends Component {
         return this.workspaceStacks[activeWorkspace];
     };
 
+    getOpenWindows = () => {
+        const stack = this.getActiveStack();
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+        const openIds = Object.entries(closed)
+            .filter(([, value]) => value === false)
+            .map(([id]) => id);
+        const ordered = stack.filter(id => openIds.includes(id));
+        openIds.forEach((id) => {
+            if (!ordered.includes(id)) {
+                ordered.push(id);
+            }
+        });
+        return ordered.map((id) => {
+            const meta = apps.find(app => app.id === id) || {};
+            return {
+                id,
+                title: meta.title || id,
+                icon: meta.icon,
+                minimized: Boolean(minimized[id]),
+            };
+        });
+    };
+
+    openCommandPalette = () => {
+        if (!this.state.showCommandPalette) {
+            this.setState({ showCommandPalette: true });
+        }
+    };
+
+    closeCommandPalette = () => {
+        if (this.state.showCommandPalette) {
+            this.setState({ showCommandPalette: false });
+        }
+    };
+
     handleExternalWorkspaceSelect = (event) => {
         const workspaceId = event?.detail?.workspaceId;
         if (typeof workspaceId === 'number') {
@@ -952,7 +990,14 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            if (this.state.showCommandPalette) {
+                this.closeCommandPalette();
+            } else {
+                this.openCommandPalette();
+            }
+        } else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
@@ -1770,6 +1815,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    onOpenCommandPalette={this.openCommandPalette}
                 />
 
                 {/* Desktop Apps */}
@@ -1781,6 +1827,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    openCommandPalette={this.openCommandPalette}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -1836,6 +1883,15 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <CommandPalette
+                    open={this.state.showCommandPalette}
+                    onClose={this.closeCommandPalette}
+                    apps={apps}
+                    onOpenApp={this.openApp}
+                    windows={this.getOpenWindows()}
+                    onFocusWindow={this.openApp}
+                />
 
             </main>
         );
