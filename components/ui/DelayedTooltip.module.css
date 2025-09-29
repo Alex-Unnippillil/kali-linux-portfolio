@@ -1,0 +1,66 @@
+.tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  --tooltip-arrow-size: 12px;
+  --tooltip-arrow-x: 0px;
+  --tooltip-arrow-y: 0px;
+  --tooltip-arrow-offset: 8px;
+}
+
+.content {
+  position: relative;
+  pointer-events: none;
+  display: inline-block;
+}
+
+.arrow {
+  position: absolute;
+  width: var(--tooltip-arrow-size);
+  height: var(--tooltip-arrow-size);
+  pointer-events: none;
+}
+
+.tooltip[data-placement='bottom'] .arrow {
+  top: calc(var(--tooltip-arrow-size) / -2);
+  left: calc(
+    clamp(
+      var(--tooltip-arrow-offset),
+      var(--tooltip-arrow-x),
+      calc(100% - var(--tooltip-arrow-offset))
+    ) - var(--tooltip-arrow-size) / 2
+  );
+}
+
+.tooltip[data-placement='top'] .arrow {
+  bottom: calc(var(--tooltip-arrow-size) / -2);
+  left: calc(
+    clamp(
+      var(--tooltip-arrow-offset),
+      var(--tooltip-arrow-x),
+      calc(100% - var(--tooltip-arrow-offset))
+    ) - var(--tooltip-arrow-size) / 2
+  );
+}
+
+.tooltip[data-placement='left'] .arrow {
+  right: calc(var(--tooltip-arrow-size) / -2);
+  top: calc(
+    clamp(
+      var(--tooltip-arrow-offset),
+      var(--tooltip-arrow-y),
+      calc(100% - var(--tooltip-arrow-offset))
+    ) - var(--tooltip-arrow-size) / 2
+  );
+}
+
+.tooltip[data-placement='right'] .arrow {
+  left: calc(var(--tooltip-arrow-size) / -2);
+  top: calc(
+    clamp(
+      var(--tooltip-arrow-offset),
+      var(--tooltip-arrow-y),
+      calc(100% - var(--tooltip-arrow-offset))
+    ) - var(--tooltip-arrow-size) / 2
+  );
+}
