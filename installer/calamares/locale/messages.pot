@@ -1,0 +1,82 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Kali Calamares\n"
+"POT-Creation-Date: 2024-05-08 00:00+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Welcome to the Kali Linux Installer"
+msgstr ""
+
+msgid "Choose an installation preset to get started"
+msgstr ""
+
+msgid "You can customise disk layouts later using the Advanced options below."
+msgstr ""
+
+msgid "Guided install"
+msgstr ""
+
+msgid "Use the entire disk"
+msgstr ""
+
+msgid "Creates an ext4 root partition with an automatically sized swap file."
+msgstr ""
+
+msgid "Install alongside another OS"
+msgstr ""
+
+msgid "Shrink the largest partition"
+msgstr ""
+
+msgid "Resizes the largest volume to free space, keeping existing operating systems intact."
+msgstr ""
+
+msgid "Manual partitioning"
+msgstr ""
+
+msgid "Control every partition"
+msgstr ""
+
+msgid "Opens the manual partitioning tool for complete control of mounts and flags."
+msgstr ""
+
+msgid "Advanced disk options"
+msgstr ""
+
+msgid "Enable full-disk encryption"
+msgstr ""
+
+msgid "Use LVM volume management"
+msgstr ""
+
+msgid "File system"
+msgstr ""
+
+msgid "Bootloader settings"
+msgstr ""
+
+msgid "Install bootloader to"
+msgstr ""
+
+msgid "Default (first disk)"
+msgstr ""
+
+msgid "Specific device /dev/sda"
+msgstr ""
+
+msgid "Specific device /dev/nvme0n1"
+msgstr ""
+
+msgid "Skip bootloader installation"
+msgstr ""
+
+msgid "Create a legacy BIOS fallback entry"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid "Next"
+msgstr ""
