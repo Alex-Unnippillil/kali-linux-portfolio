@@ -1,8 +1,19 @@
 import React, { FormEvent, useMemo, useState } from 'react';
 
-const DEFAULT_URL = 'https://developer.mozilla.org/';
+const DEFAULT_URL = 'https://www.kali.org/docs/';
 const STORAGE_KEY = 'firefox:last-url';
 const START_URL_KEY = 'firefox:start-url';
+
+const BOOKMARKS = [
+  { label: 'OffSec', url: 'https://www.offsec.com/?utm_source=kali&utm_medium=os&utm_campaign=firefox' },
+  { label: 'Kali Linux', url: 'https://www.kali.org/' },
+  { label: 'Kali Tools', url: 'https://www.kali.org/tools/' },
+  { label: 'Kali Docs', url: 'https://www.kali.org/docs/' },
+  { label: 'Kali Forums', url: 'https://forums.kali.org/' },
+  { label: 'Kali NetHunter', url: 'https://www.kali.org/get-kali/#kali-platforms' },
+  { label: 'Exploit-DB', url: 'https://www.exploit-db.com/' },
+  { label: 'GoogleHackingDB', url: 'https://www.exploit-db.com/google-hacking-database' },
+];
 
 const normaliseUrl = (value: string) => {
   const trimmed = value.trim();
@@ -87,6 +98,18 @@ const Firefox: React.FC = () => {
           Go
         </button>
       </form>
+      <nav className="flex flex-wrap gap-1 border-b border-gray-800 bg-gray-900 px-3 py-2 text-xs">
+        {BOOKMARKS.map((bookmark) => (
+          <button
+            key={bookmark.url}
+            type="button"
+            onClick={() => updateAddress(bookmark.url)}
+            className="rounded bg-gray-800 px-3 py-1 font-medium text-gray-200 transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            {bookmark.label}
+          </button>
+        ))}
+      </nav>
       <div className="flex-1 bg-black">
         <iframe
           key={address}
