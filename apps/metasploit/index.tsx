@@ -4,19 +4,17 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
 import Toast from '../../components/ui/Toast';
-
-interface Module {
-  name: string;
-  description: string;
-  type: string;
-  severity: string;
-  [key: string]: any;
-}
+import type { Module } from './types';
+import { calculateRevision, ensureModuleCache } from './cache';
+import { buildSearchIndex, computeFacets, filterModules } from './search';
 
 interface TreeNode {
   [key: string]: TreeNode | Module[] | undefined;
   __modules?: Module[];
 }
+
+const seedModules = modulesData as Module[];
+const cacheRevision = calculateRevision(seedModules);
 
 const typeColors: Record<string, string> = {
   auxiliary: 'bg-blue-500',
@@ -50,36 +48,61 @@ const MetasploitPage: React.FC = () => {
   const [toast, setToast] = useState('');
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('');
+  const [modules, setModules] = useState<Module[]>(seedModules);
 
-  const allTags = useMemo(
-    () =>
-      Array.from(
-        new Set((modulesData as Module[]).flatMap((m) => m.tags || [])),
-      ).sort(),
-    [],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await ensureModuleCache(seedModules, cacheRevision);
+      if (!cancelled) {
+        setModules(result.modules);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const facets = useMemo(() => computeFacets(modules), [modules]);
+
+  useEffect(() => {
+    if (tag && !facets.tags.includes(tag)) {
+      setTag('');
+    }
+  }, [tag, facets.tags]);
+
+  useEffect(() => {
+    if (typeFilter && !facets.types.includes(typeFilter)) {
+      setTypeFilter('');
+    }
+  }, [typeFilter, facets.types]);
+
+  useEffect(() => {
+    if (platformFilter && !facets.platforms.includes(platformFilter)) {
+      setPlatformFilter('');
+    }
+  }, [platformFilter, facets.platforms]);
+
+  const searchIndex = useMemo(() => buildSearchIndex(modules), [modules]);
 
   const filteredModules = useMemo(
     () =>
-      (modulesData as Module[]).filter((m) => {
-        if (tag && !(m.tags || []).includes(tag)) return false;
-        if (query) {
-          const q = query.toLowerCase();
-          return (
-            m.name.toLowerCase().includes(q) ||
-            m.description.toLowerCase().includes(q)
-          );
-        }
-        return true;
+      filterModules(searchIndex, {
+        query,
+        tag,
+        type: typeFilter,
+        platform: platformFilter,
       }),
-    [tag, query],
+    [searchIndex, query, tag, typeFilter, platformFilter],
   );
 
   const tree = useMemo(() => buildTree(filteredModules), [filteredModules]);
 
   useEffect(() => {
     setSelected(null);
-  }, [query, tag]);
+  }, [query, tag, typeFilter, platformFilter]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -134,13 +157,51 @@ const MetasploitPage: React.FC = () => {
   return (
     <div className="flex h-full">
       <div className="w-1/3 border-r overflow-auto p-2">
-        <input
-          type="text"
-          placeholder="Search modules"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full p-1 mb-2 border rounded"
-        />
+        <div className="mb-2">
+          <input
+            id="metasploit-search-input"
+            type="text"
+            placeholder="Search modules"
+            aria-label="Search modules"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full p-1 border rounded"
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-2 mb-2 text-sm">
+          <label className="flex flex-col gap-1" htmlFor="metasploit-type-filter">
+            Type
+            <select
+              id="metasploit-type-filter"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-full p-1 border rounded"
+            >
+              <option value="">All types</option>
+              {facets.types.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1" htmlFor="metasploit-platform-filter">
+            Platform
+            <select
+              id="metasploit-platform-filter"
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value)}
+              className="w-full p-1 border rounded"
+            >
+              <option value="">All platforms</option>
+              {facets.platforms.map((platform) => (
+                <option key={platform} value={platform}>
+                  {platform}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <div className="flex flex-wrap gap-1 mb-2">
           <button
             onClick={() => setTag('')}
@@ -150,7 +211,7 @@ const MetasploitPage: React.FC = () => {
           >
             All
           </button>
-          {allTags.map((t) => (
+          {facets.tags.map((t) => (
             <button
               key={t}
               onClick={() => setTag(t)}
@@ -162,7 +223,11 @@ const MetasploitPage: React.FC = () => {
             </button>
           ))}
         </div>
-        {renderTree(tree)}
+        {filteredModules.length === 0 ? (
+          <p className="text-sm text-gray-500">No modules match your filters.</p>
+        ) : (
+          renderTree(tree)
+        )}
       </div>
       <div className="flex-1 flex flex-col">
         <div className="flex-1 overflow-auto p-4">
@@ -196,8 +261,10 @@ const MetasploitPage: React.FC = () => {
           >
             <h3 className="font-semibold">Generate Payload</h3>
             <input
+              id="metasploit-payload-options"
               type="text"
               placeholder="Payload options..."
+              aria-label="Payload options"
               className="border p-1 w-full"
             />
             <button
