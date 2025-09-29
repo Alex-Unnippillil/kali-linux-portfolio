@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -105,6 +105,18 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const [draggingFile, setDraggingFile] = useState(null);
+  const [dropActive, setDropActive] = useState(false);
+  const [lastDeleted, setLastDeleted] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
+  const instructionsId = useMemo(
+    () => `file-explorer-delete-${Math.random().toString(36).slice(2, 10)}`,
+    [],
+  );
+  const liveRegionId = useMemo(
+    () => `file-explorer-live-${Math.random().toString(36).slice(2, 10)}`,
+    [],
+  );
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -116,6 +128,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const announce = useCallback((message) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setStatusMessage(`${message} (${timestamp})`);
+  }, []);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -131,20 +148,29 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [getDir, opfsSupported, readDir, root]);
 
-  const saveBuffer = async (name, data) => {
-    if (unsavedDir) await opfsWrite(name, data, unsavedDir);
-  };
+  const saveBuffer = useCallback(
+    async (name, data) => {
+      if (unsavedDir) await opfsWrite(name, data, unsavedDir);
+    },
+    [opfsWrite, unsavedDir],
+  );
 
-  const loadBuffer = async (name) => {
-    if (!unsavedDir) return null;
-    return await opfsRead(name, unsavedDir);
-  };
+  const loadBuffer = useCallback(
+    async (name) => {
+      if (!unsavedDir) return null;
+      return await opfsRead(name, unsavedDir);
+    },
+    [opfsRead, unsavedDir],
+  );
 
-  const removeBuffer = async (name) => {
-    if (unsavedDir) await opfsDelete(name, unsavedDir);
-  };
+  const removeBuffer = useCallback(
+    async (name) => {
+      if (unsavedDir) await opfsDelete(name, unsavedDir);
+    },
+    [opfsDelete, unsavedDir],
+  );
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -282,6 +308,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       await writable.write(content);
       await writable.close();
       if (opfsSupported) await removeBuffer(currentFile.name);
+      announce(`${currentFile.name} saved.`);
     } catch {}
   };
 
@@ -310,12 +337,141 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
   };
 
+  const handleFileDragStart = useCallback((event, entry) => {
+    if (!entry?.handle || entry.handle.kind !== 'file') return;
+    const dataTransfer = event.dataTransfer;
+    if (!dataTransfer) return;
+    dataTransfer.setData('text/plain', entry.name);
+    dataTransfer.setData('application/x-kali-file', entry.name);
+    dataTransfer.effectAllowed = 'move';
+    setDraggingFile(entry);
+    setDropActive(false);
+  }, []);
+
+  const handleFileDragEnd = useCallback(() => {
+    setDraggingFile(null);
+    setDropActive(false);
+  }, []);
+
+  const handleFileDelete = useCallback(
+    async (entry) => {
+      if (!entry || !dirHandle) return;
+      if (!entry.handle || entry.handle.kind !== 'file') {
+        announce(`Only files can be removed. ${entry.name} is a folder.`);
+        return;
+      }
+      try {
+        const fileObj = await entry.handle.getFile();
+        const buffer = await fileObj.arrayBuffer();
+        await dirHandle.removeEntry(entry.name);
+        if (currentFile?.name === entry.name) {
+          setCurrentFile(null);
+          setContent('');
+        }
+        if (opfsSupported) await removeBuffer(entry.name);
+        await readDir(dirHandle);
+        setLastDeleted({
+          name: entry.name,
+          data: buffer,
+          type: fileObj.type,
+          directory: dirHandle,
+        });
+        announce(`${entry.name} deleted. Undo available.`);
+      } catch (error) {
+        console.error('Failed to delete file', error);
+        announce(`Failed to delete ${entry.name}.`);
+      }
+    },
+    [announce, currentFile, dirHandle, opfsSupported, readDir, removeBuffer],
+  );
+
+  const handleDropZoneDragOver = useCallback(
+    (event) => {
+      if (!draggingFile) return;
+      event.preventDefault();
+      const dataTransfer = event.dataTransfer;
+      if (dataTransfer) dataTransfer.dropEffect = 'move';
+      setDropActive(true);
+    },
+    [draggingFile],
+  );
+
+  const handleDropZoneDragEnter = useCallback(
+    (event) => {
+      if (!draggingFile) return;
+      event.preventDefault();
+      setDropActive(true);
+    },
+    [draggingFile],
+  );
+
+  const handleDropZoneDragLeave = useCallback((event) => {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    setDropActive(false);
+  }, []);
+
+  const handleDropZoneDrop = useCallback(
+    async (event) => {
+      event.preventDefault();
+      if (!draggingFile) return;
+      await handleFileDelete(draggingFile);
+      setDraggingFile(null);
+      setDropActive(false);
+    },
+    [draggingFile, handleFileDelete],
+  );
+
+  const handleUndoDelete = useCallback(async () => {
+    if (!lastDeleted) return;
+    try {
+      const targetDir = lastDeleted.directory || dirHandle;
+      if (!targetDir) return;
+      const fileHandle = await targetDir.getFileHandle(lastDeleted.name, { create: true });
+      const writable = await fileHandle.createWritable();
+      const blob = new Blob([lastDeleted.data], {
+        type: lastDeleted.type || 'application/octet-stream',
+      });
+      await writable.write(blob);
+      await writable.close();
+      await readDir(targetDir);
+      announce(`${lastDeleted.name} restored.`);
+      setLastDeleted(null);
+    } catch (error) {
+      console.error('Failed to restore file', error);
+      announce(`Unable to restore ${lastDeleted?.name || 'file'}.`);
+    }
+  }, [announce, dirHandle, lastDeleted, readDir]);
+
+  useEffect(() => {
+    if (!lastDeleted) return;
+    const handler = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        handleUndoDelete();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndoDelete, lastDeleted]);
+
   useEffect(() => () => workerRef.current?.terminate(), []);
 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <p id={instructionsId} className="mb-2 text-xs text-gray-300">
+          Keyboard: Focus the file view and press Delete to remove it. Press Ctrl+Z to undo deletions.
+        </p>
+        <div id={liveRegionId} className="sr-only" role="status" aria-live="polite">
+          {statusMessage}
+        </div>
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Select file to open"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +486,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -371,6 +528,28 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </button>
         )}
       </div>
+      <div className="px-4 py-2 text-xs text-gray-300" id={instructionsId}>
+        Drag files into the delete zone or focus a file and press Delete to remove it. Press Ctrl+Z to undo.
+      </div>
+      <div id={liveRegionId} className="sr-only" role="status" aria-live="polite">
+        {statusMessage}
+      </div>
+      {lastDeleted && (
+        <div
+          className="mx-4 flex items-center justify-between rounded bg-black/40 px-3 py-2 text-xs text-gray-100"
+          role="status"
+          aria-live="polite"
+        >
+          <span>{lastDeleted.name} deleted. Press Ctrl+Z or use Undo to restore.</span>
+          <button
+            type="button"
+            onClick={handleUndoDelete}
+            className="rounded bg-sky-500 px-2 py-1 text-white hover:bg-sky-400 focus:outline-none focus-visible:ring focus-visible:ring-sky-300"
+          >
+            Undo
+          </button>
+        </div>
+      )}
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
@@ -395,18 +574,34 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
-            <div
+            <button
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              type="button"
+              className="flex w-full cursor-pointer px-2 py-1 text-left hover:bg-black hover:bg-opacity-30 focus:outline-none focus-visible:ring focus-visible:ring-sky-400"
               onClick={() => openFile(f)}
+              draggable
+              onDragStart={(event) => handleFileDragStart(event, f)}
+              onDragEnd={handleFileDragEnd}
+              onKeyDown={(event) => {
+                if (event.key === 'Delete' || event.key === 'Backspace') {
+                  event.preventDefault();
+                  handleFileDelete(f);
+                }
+              }}
+              aria-describedby={instructionsId}
             >
               {f.name}
-            </div>
+            </button>
           ))}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -414,6 +609,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search text in files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
@@ -427,6 +623,24 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             </div>
           </div>
         </div>
+      </div>
+      <div
+        className={`mx-4 my-4 rounded border-2 border-dashed px-4 py-3 text-center text-xs transition focus:outline-none focus-visible:ring focus-visible:ring-red-300 ${
+          dropActive ? 'border-red-400 bg-red-500/20 text-white' : 'border-gray-500 text-gray-200'
+        }`}
+        onDragEnter={handleDropZoneDragEnter}
+        onDragOver={handleDropZoneDragOver}
+        onDragLeave={handleDropZoneDragLeave}
+        onDrop={handleDropZoneDrop}
+        role="region"
+        aria-live="polite"
+        aria-describedby={instructionsId}
+        aria-label="File deletion drop zone"
+      >
+        <p className="font-medium">Drag files here to delete them.</p>
+        <p className="mt-1">
+          Keyboard: Focus a file and press Delete to remove it. Press Ctrl+Z to undo.
+        </p>
       </div>
     </div>
   );
