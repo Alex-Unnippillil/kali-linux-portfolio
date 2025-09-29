@@ -71,6 +71,9 @@
   --motion-fast: 150ms;
   --motion-medium: 300ms;
   --motion-slow: 500ms;
+  /* Whisker menu motion */
+  --whisker-menu-transition-duration: 190ms;
+  --whisker-menu-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
