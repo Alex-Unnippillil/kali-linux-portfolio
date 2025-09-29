@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import MobileOverridesPanel from "./components/MobileOverridesPanel";
 
 export default function Settings() {
   const {
@@ -40,6 +41,7 @@ export default function Settings() {
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "mobile", label: "Mobile" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
@@ -292,6 +294,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "mobile" && <MobileOverridesPanel />}
       {activeTab === "privacy" && (
         <>
           <div className="flex justify-center my-4 space-x-4">
