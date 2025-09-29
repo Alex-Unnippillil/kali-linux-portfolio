@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -6,6 +6,7 @@ import { Grid } from 'react-window';
 import DelayedTooltip from '../ui/DelayedTooltip';
 import AppTooltipContent from '../ui/AppTooltipContent';
 import { createRegistryMap, buildAppMetadata } from '../../lib/appRegistry';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 const registryMetadata = createRegistryMap(apps);
 
@@ -30,6 +31,8 @@ export default function AppGrid({ openApp }) {
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [gridColumns, setGridColumns] = useState(3);
+  const hintId = useId();
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -42,10 +45,54 @@ export default function AppGrid({ openApp }) {
   }, [query]);
 
   useEffect(() => {
+    if (filtered.length === 0) {
+      setFocusedIndex(0);
+      return;
+    }
     if (focusedIndex >= filtered.length) {
       setFocusedIndex(0);
     }
   }, [filtered, focusedIndex]);
+
+  const {
+    getItemProps,
+    onKeyDown,
+    activeIndex,
+    setActiveIndex,
+  } = useRovingTabIndex({
+    itemCount: filtered.length,
+    orientation: 'grid',
+    columns: gridColumns,
+    enabled: filtered.length > 0,
+    initialIndex: focusedIndex,
+    onActiveChange: (index) => {
+      setFocusedIndex(index);
+      const colCount = columnCountRef.current || 1;
+      const row = Math.floor(index / colCount);
+      const col = index % colCount;
+      gridRef.current?.scrollToCell({
+        rowIndex: row,
+        columnIndex: col,
+        rowAlign: 'smart',
+        columnAlign: 'smart',
+      });
+      const target = filtered[index];
+      if (target) {
+        requestAnimationFrame(() => {
+          const el = document.getElementById('app-' + target.id);
+          el?.focus();
+        });
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    const next = Math.min(focusedIndex, filtered.length - 1);
+    if (next !== activeIndex) {
+      setActiveIndex(next);
+    }
+  }, [activeIndex, filtered.length, focusedIndex, setActiveIndex]);
 
   const getColumnCount = (width) => {
     if (width >= 1024) return 8;
@@ -53,28 +100,6 @@ export default function AppGrid({ openApp }) {
     if (width >= 640) return 4;
     return 3;
   };
-
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-      e.preventDefault();
-      const colCount = columnCountRef.current;
-      let idx = focusedIndex;
-      if (e.key === 'ArrowRight') idx = Math.min(idx + 1, filtered.length - 1);
-      if (e.key === 'ArrowLeft') idx = Math.max(idx - 1, 0);
-      if (e.key === 'ArrowDown') idx = Math.min(idx + colCount, filtered.length - 1);
-      if (e.key === 'ArrowUp') idx = Math.max(idx - colCount, 0);
-      setFocusedIndex(idx);
-      const row = Math.floor(idx / colCount);
-      const col = idx % colCount;
-      gridRef.current?.scrollToCell({ rowIndex: row, columnIndex: col, rowAlign: 'smart', columnAlign: 'smart' });
-      setTimeout(() => {
-        const el = document.getElementById('app-' + filtered[idx].id);
-        el?.focus();
-      }, 0);
-    },
-    [filtered, focusedIndex]
-  );
 
   const Cell = ({ columnIndex, rowIndex, style, data }) => {
     const index = rowIndex * data.columnCount + columnIndex;
@@ -104,6 +129,9 @@ export default function AppGrid({ openApp }) {
               name={app.title}
               displayName={<>{app.nodes}</>}
               openApp={() => openApp && openApp(app.id)}
+              focusProps={getItemProps(index, {
+                onFocus: () => setFocusedIndex(index),
+              })}
             />
           </div>
         )}
@@ -118,12 +146,25 @@ export default function AppGrid({ openApp }) {
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search applications"
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div
+        className="w-full flex-1 h-[70vh] outline-none"
+        role="grid"
+        aria-label="All applications"
+        aria-describedby={hintId}
+        onKeyDown={onKeyDown}
+      >
+        <p id={hintId} className="sr-only">
+          Use arrow keys to move across the launcher grid. Home focuses the first app and End focuses the last.
+        </p>
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);
             columnCountRef.current = columnCount;
+            if (gridColumns !== columnCount) {
+              setGridColumns(columnCount);
+            }
             const rowCount = Math.ceil(filtered.length / columnCount);
             return (
               <Grid
@@ -139,7 +180,11 @@ export default function AppGrid({ openApp }) {
                 {(props) => (
                   <Cell
                     {...props}
-                    data={{ items: filtered, columnCount, metadata: registryMetadata }}
+                    data={{
+                      items: filtered,
+                      columnCount,
+                      metadata: registryMetadata,
+                    }}
                   />
                 )}
               </Grid>
