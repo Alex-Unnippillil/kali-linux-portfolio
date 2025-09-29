@@ -38,7 +38,10 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerUp,
             onPointerCancel,
+            onKeyDown,
             style,
+            ariaGrabbed,
+            ariaDescribedBy,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -59,6 +62,8 @@ export class UbuntuApp extends Component {
                 role="button"
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
+                aria-grabbed={typeof ariaGrabbed === 'boolean' ? ariaGrabbed : undefined}
+                aria-describedby={ariaDescribedBy}
                 data-context="app"
                 data-app-id={this.props.id}
                 draggable={draggable}
@@ -68,12 +73,21 @@ export class UbuntuApp extends Component {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerCancel}
+                onKeyDown={(event) => {
+                    if (typeof onKeyDown === 'function') {
+                        onKeyDown(event);
+                    }
+                    if (event.defaultPrevented) return;
+                    if ((event.key === 'Enter' || event.key === ' ') && !this.props.disabled) {
+                        event.preventDefault();
+                        this.openApp();
+                    }
+                }}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}

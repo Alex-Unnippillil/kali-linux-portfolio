@@ -29,6 +29,8 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+const ICON_DRAG_INSTRUCTIONS_ID = 'desktop-drag-instructions';
+
 
 export class Desktop extends Component {
     constructor() {
@@ -610,6 +612,166 @@ export class Desktop extends Component {
         return this.clampIconPosition(snapped.x, snapped.y);
     };
 
+    announce = (message, politeness = 'polite') => {
+        if (typeof window === 'undefined') return;
+        if (typeof message !== 'string' || message.trim() === '') return;
+        try {
+            window.dispatchEvent(new CustomEvent('sr-announce', {
+                detail: { message, politeness },
+            }));
+        } catch (e) {
+            // ignore announcement errors in unsupported environments
+        }
+    };
+
+    getAppById = (id) => apps.find((item) => item.id === id);
+
+    describeIconPosition = (position) => {
+        if (!position) {
+            return { column: 1, row: 1 };
+        }
+        const metrics = this.computeGridMetrics();
+        const columnSpacing = metrics.columnSpacing || this.iconGridSpacing.column || 1;
+        const rowSpacing = metrics.rowSpacing || this.iconGridSpacing.row || 1;
+        const column = Math.max(1, Math.round((position.x - metrics.offsetX) / columnSpacing) + 1);
+        const row = Math.max(1, Math.round((position.y - metrics.offsetY) / rowSpacing) + 1);
+        return { column, row };
+    };
+
+    announcePickup = (id) => {
+        const app = this.getAppById(id);
+        if (!app) return;
+        this.announce(`Picked up ${app.title}. Use arrow keys to move, space to drop, escape to cancel.`);
+    };
+
+    announceMove = (id, position) => {
+        const app = this.getAppById(id);
+        if (!app) return;
+        const { column, row } = this.describeIconPosition(position);
+        this.announce(`${app.title} moved to column ${column}, row ${row}.`);
+    };
+
+    announceDrop = (id) => {
+        const app = this.getAppById(id);
+        if (!app) return;
+        this.announce(`Dropped ${app.title}.`);
+    };
+
+    announceCancel = (id) => {
+        const app = this.getAppById(id);
+        if (!app) return;
+        this.announce(`Cancelled drag for ${app.title}.`);
+    };
+
+    startKeyboardDrag = (appId, target) => {
+        if (!appId) return;
+        if (this.iconDragState && this.iconDragState.mode === 'pointer') {
+            return;
+        }
+        const desktopApps = this.state.desktop_apps || [];
+        const positions = this.state.desktop_icon_positions || {};
+        let startPosition = positions[appId] || null;
+        if (!startPosition) {
+            const index = desktopApps.indexOf(appId);
+            if (index >= 0) {
+                startPosition = this.computeGridPosition(index);
+            }
+        }
+        const basePosition = startPosition
+            ? this.clampIconPosition(startPosition.x, startPosition.y)
+            : this.computeGridPosition(0);
+
+        this.iconDragState = {
+            id: appId,
+            pointerId: null,
+            offsetX: 0,
+            offsetY: 0,
+            startX: basePosition.x,
+            startY: basePosition.y,
+            moved: false,
+            container: target?.parentElement || null,
+            startPosition: basePosition,
+            lastPosition: basePosition,
+            mode: 'keyboard',
+        };
+        this.setState({ draggingIconId: appId });
+        this.attachIconKeyboardListeners();
+        this.announcePickup(appId);
+    };
+
+    moveKeyboardDrag = (deltaX, deltaY) => {
+        const dragState = this.iconDragState;
+        if (!dragState || dragState.mode !== 'keyboard') return;
+        const metrics = this.computeGridMetrics();
+        const columnSpacing = metrics.columnSpacing || this.iconGridSpacing.column || 1;
+        const rowSpacing = metrics.rowSpacing || this.iconGridSpacing.row || 1;
+        const current = dragState.lastPosition || dragState.startPosition || this.computeGridPosition(0);
+        const next = this.clampIconPosition(
+            current.x + deltaX * columnSpacing,
+            current.y + deltaY * rowSpacing,
+        );
+        dragState.lastPosition = next;
+        dragState.moved = true;
+        this.updateIconPosition(dragState.id, next.x, next.y, false);
+        this.announceMove(dragState.id, next);
+    };
+
+    completeKeyboardDrop = () => {
+        const dragState = this.iconDragState;
+        if (!dragState || dragState.mode !== 'keyboard') return;
+        const finalPosition = dragState.lastPosition || dragState.startPosition;
+        this.iconDragState = null;
+        this.detachIconKeyboardListeners();
+        this.preventNextIconClick = false;
+        if (finalPosition) {
+            this.updateIconPosition(dragState.id, finalPosition.x, finalPosition.y, true);
+        } else {
+            this.setState({ draggingIconId: null });
+        }
+        this.announceDrop(dragState.id);
+    };
+
+    handleIconKeyDown = (appId, event) => {
+        const key = event.key;
+        if (key === ' ' || key === 'Spacebar') {
+            event.preventDefault();
+            if (this.iconDragState && this.iconDragState.mode === 'keyboard' && this.iconDragState.id === appId) {
+                this.completeKeyboardDrop();
+            } else if (!this.iconDragState || this.iconDragState.mode !== 'pointer') {
+                this.startKeyboardDrag(appId, event.currentTarget);
+            }
+            return;
+        }
+
+        const dragState = this.iconDragState;
+        if (!dragState || dragState.mode !== 'keyboard' || dragState.id !== appId) return;
+
+        switch (key) {
+            case 'ArrowUp':
+                event.preventDefault();
+                this.moveKeyboardDrag(0, -1);
+                break;
+            case 'ArrowDown':
+                event.preventDefault();
+                this.moveKeyboardDrag(0, 1);
+                break;
+            case 'ArrowLeft':
+                event.preventDefault();
+                this.moveKeyboardDrag(-1, 0);
+                break;
+            case 'ArrowRight':
+                event.preventDefault();
+                this.moveKeyboardDrag(1, 0);
+                break;
+            case 'Enter':
+                event.preventDefault();
+                this.completeKeyboardDrop();
+                break;
+            default:
+                break;
+        }
+    };
+
     updateIconPosition = (id, x, y, persist = false) => {
         this.setState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
@@ -631,6 +793,9 @@ export class Desktop extends Component {
 
     handleIconPointerDown = (event, appId) => {
         if (event.button !== 0) return;
+        if (this.iconDragState && this.iconDragState.mode === 'keyboard') {
+            this.completeKeyboardDrop();
+        }
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
@@ -658,6 +823,7 @@ export class Desktop extends Component {
             container,
             startPosition,
             lastPosition: startPosition,
+            mode: 'pointer',
         };
         this.setState({ draggingIconId: appId });
         this.attachIconKeyboardListeners();
@@ -869,9 +1035,15 @@ export class Desktop extends Component {
         const dragState = this.iconDragState;
         if (!dragState) return;
 
-        dragState.container?.releasePointerCapture?.(dragState.pointerId);
+        if (typeof dragState.pointerId === 'number') {
+            dragState.container?.releasePointerCapture?.(dragState.pointerId);
+        }
         this.iconDragState = null;
         this.detachIconKeyboardListeners();
+
+        if (dragState.mode === 'keyboard') {
+            this.announceCancel(dragState.id);
+        }
 
         if (revert && dragState.startPosition) {
             const original = this.clampIconPosition(dragState.startPosition.x, dragState.startPosition.y);
@@ -1270,13 +1442,22 @@ export class Desktop extends Component {
                 <div
                     key={app.id}
                     style={wrapperStyle}
+                    role="gridcell"
+                    aria-selected={isDragging ? 'true' : 'false'}
                     onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
                     onPointerMove={this.handleIconPointerMove}
                     onPointerUp={this.handleIconPointerUp}
                     onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
                 >
-                    <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
+                    <UbuntuApp
+                        {...props}
+                        draggable={false}
+                        isBeingDragged={isDragging}
+                        ariaGrabbed={isDragging}
+                        ariaDescribedBy={ICON_DRAG_INSTRUCTIONS_ID}
+                        onKeyDown={(event) => this.handleIconKeyDown(app.id, event)}
+                    />
                 </div>
             );
         }).filter(Boolean);
@@ -1287,11 +1468,18 @@ export class Desktop extends Component {
             <div
                 className="absolute inset-0"
                 aria-hidden={blockIcons ? 'true' : 'false'}
+                role="grid"
+                aria-label="Desktop icons"
+                aria-dropeffect={draggingIconId ? 'move' : undefined}
                 style={{
                     pointerEvents: blockIcons ? 'none' : 'auto',
                     zIndex: iconBaseZIndex,
                 }}
             >
+                <div id={ICON_DRAG_INSTRUCTIONS_ID} className="sr-only">
+                    Press space to pick up an icon, use the arrow keys to move, press space again to drop, or press escape to
+                    cancel.
+                </div>
                 {icons}
             </div>
         );
@@ -1770,6 +1958,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    dragActive={Boolean(this.state.draggingIconId)}
                 />
 
                 {/* Desktop Apps */}
