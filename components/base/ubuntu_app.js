@@ -62,10 +62,28 @@ export class UbuntuApp extends Component {
                     " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
+                onKeyDown={(e) => {
+                    if (typeof this.props.onKeyDown === 'function') {
+                        this.props.onKeyDown(e);
+                    }
+                    if (!e.defaultPrevented && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        this.openApp();
+                    }
+                }}
                 tabIndex={this.props.disabled ? -1 : 0}
-                onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onMouseEnter={(event) => {
+                    this.handlePrefetch();
+                    if (typeof this.props.onMouseEnter === 'function') {
+                        this.props.onMouseEnter(event);
+                    }
+                }}
+                onFocus={(event) => {
+                    this.handlePrefetch();
+                    if (typeof this.props.onFocus === 'function') {
+                        this.props.onFocus(event);
+                    }
+                }}
             >
                 <Image
                     width={40}
