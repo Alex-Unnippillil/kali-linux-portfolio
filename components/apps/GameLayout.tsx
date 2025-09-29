@@ -10,6 +10,7 @@ import React, {
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useOrientationGuard from '../../hooks/useOrientationGuard';
 import {
   serialize as serializeRng,
   deserialize as deserializeRng,
@@ -23,6 +24,7 @@ interface GameLayoutProps {
   score?: number;
   highScore?: number;
   editor?: React.ReactNode;
+  requiredOrientation?: 'landscape' | 'portrait';
 }
 
 interface RecordedInput {
@@ -51,6 +53,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   score,
   highScore,
   editor,
+  requiredOrientation = 'landscape',
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -60,6 +63,13 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   >(undefined);
   const [replaying, setReplaying] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const [orientationDismissed, setOrientationDismissed] = useState(false);
+
+  const { requiresRotation, requiredOrientation: enforcedOrientation } = useOrientationGuard({
+    requiredOrientation,
+    onRequireRotation: () => setOrientationDismissed(false),
+    onOrientationMatch: () => setOrientationDismissed(false),
+  });
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -209,85 +219,113 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const contextValue = { record, registerReplay };
 
+  const orientationLabel = enforcedOrientation === 'portrait' ? 'portrait' : 'landscape';
+
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+        {requiresRotation && !orientationDismissed && (
+          <div
+            className={`absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/80 px-6 text-center text-white ${
+              prefersReducedMotion ? '' : 'transition-opacity duration-300'
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="orientation-overlay-title"
+            data-reduced-motion={prefersReducedMotion}
+          >
+            <h2 id="orientation-overlay-title" className="text-xl font-semibold">
+              Rotate your device
+            </h2>
+            <p className="mt-2 max-w-sm text-sm text-gray-200">
+              This game plays best in {orientationLabel} mode. Please rotate your device or
+              expand the window to continue.
+            </p>
+            <button
+              type="button"
+              onClick={() => setOrientationDismissed(true)}
+              className="mt-4 rounded bg-gray-700 px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring focus:ring-gray-400"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {paused && (
           <div
             className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
             role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            aria-modal="true"
           >
-            Resume
-          </button>
-        </div>
-      )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Snapshot
-        </button>
-        <button
-          type="button"
-          onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Replay
-        </button>
-        <button
-          type="button"
-          onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Share
-        </button>
-        {highScore !== undefined && (
+            <button
+              type="button"
+              onClick={resume}
+              className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+              autoFocus
+            >
+              Resume
+            </button>
+          </div>
+        )}
+        <div className="absolute top-2 right-2 z-40 flex space-x-2">
           <button
             type="button"
-            onClick={shareScore}
+            onClick={() => setPaused((p) => !p)}
             className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
           >
-            Share Score
+            {paused ? 'Resume' : 'Pause'}
           </button>
+          <button
+            type="button"
+            onClick={snapshot}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Snapshot
+          </button>
+          <button
+            type="button"
+            onClick={replay}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Replay
+          </button>
+          <button
+            type="button"
+            onClick={shareApp}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Share
+          </button>
+          {highScore !== undefined && (
+            <button
+              type="button"
+              onClick={shareScore}
+              className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            >
+              Share Score
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Help"
+            aria-expanded={showHelp}
+            onClick={toggle}
+            className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+          >
+            ?
+          </button>
+        </div>
+        {children}
+        <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
+          {stage !== undefined && <div>Stage: {stage}</div>}
+          {lives !== undefined && <div>Lives: {lives}</div>}
+          {score !== undefined && <div>Score: {score}</div>}
+          {highScore !== undefined && <div>High: {highScore}</div>}
+        </div>
+        {!prefersReducedMotion && <PerfOverlay />}
+        {editor && (
+          <div className="absolute bottom-2 left-2 z-30">{editor}</div>
         )}
-        <button
-          type="button"
-          aria-label="Help"
-          aria-expanded={showHelp}
-          onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-        >
-          ?
-        </button>
-      </div>
-      {children}
-      <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
-        {stage !== undefined && <div>Stage: {stage}</div>}
-        {lives !== undefined && <div>Lives: {lives}</div>}
-        {score !== undefined && <div>Score: {score}</div>}
-        {highScore !== undefined && <div>High: {highScore}</div>}
-      </div>
-      {!prefersReducedMotion && <PerfOverlay />}
-      {editor && (
-        <div className="absolute bottom-2 left-2 z-30">{editor}</div>
-      )}
       </div>
     </RecorderContext.Provider>
   );
