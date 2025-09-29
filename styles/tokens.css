@@ -80,6 +80,8 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+  --focus-ring-window: 0 0 0 1px rgba(23, 147, 209, 0.85),
+    0 0 0 6px rgba(23, 147, 209, 0.25);
 }
 
 /* High contrast theme */

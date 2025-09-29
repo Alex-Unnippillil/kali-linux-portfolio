@@ -85,6 +85,10 @@ html[data-theme='matrix'] {
   outline-offset: 2px;
 }
 
+.opened-window:focus-visible {
+  outline: none;
+}
+
 html {
   scrollbar-color: var(--kali-border, var(--color-border)) transparent;
 }
