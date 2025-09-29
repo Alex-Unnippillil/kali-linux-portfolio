@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { KALI_CATEGORIES as BASE_KALI_CATEGORIES } from './ApplicationsMenu';
 
 type AppMeta = {
   id: string;
@@ -122,10 +121,6 @@ const isCategoryId = (
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
-const KALI_CATEGORIES = BASE_KALI_CATEGORIES.map((category, index) => ({
-  ...category,
-  number: String(index + 1).padStart(2, '0'),
-}));
 
 const readRecentAppIds = (): string[] => {
   try {
@@ -449,17 +444,6 @@ const WhiskerMenu: React.FC = () => {
                   </span>
                 </button>
               ))}
-            </div>
-            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-300">
-              <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[#4aa8ff]">Kali Groups</p>
-              <ul className="space-y-1 text-xs">
-                {KALI_CATEGORIES.map((cat) => (
-                  <li key={cat.id} className="flex items-baseline gap-3 text-gray-400">
-                    <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-[#53b9ff]">{cat.number}</span>
-                    <span className="truncate">{cat.label}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
             <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
               <div className="flex items-center gap-2">
