@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
 import FindingCard from './components/FindingCard';
@@ -33,7 +32,6 @@ const Nessus: React.FC = () => {
     Info: 0,
   });
   const [trend, setTrend] = useState<number[]>([]);
-  const chartRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const PAGE_SIZE = 50;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -151,19 +149,6 @@ const Nessus: React.FC = () => {
     }
   };
 
-  const exportChart = async () => {
-    if (!chartRef.current) return;
-    try {
-      const dataUrl = await toPng(chartRef.current);
-      const link = document.createElement('a');
-      link.download = 'nessus-summary.png';
-      link.href = dataUrl;
-      link.click();
-    } catch {
-      // ignore
-    }
-  };
-
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
       <h1 className="text-2xl">Nessus Demo</h1>
@@ -214,16 +199,11 @@ const Nessus: React.FC = () => {
 
       <section>
         <h2 className="text-xl mb-2">Executive Summary</h2>
-        <div ref={chartRef}>
-          <SummaryDashboard summary={summary} trend={trend} />
-        </div>
-        <button
-          type="button"
-          onClick={exportChart}
-          className="mt-4 px-4 py-2 bg-blue-700 rounded"
-        >
-          Export
-        </button>
+        <SummaryDashboard
+          summary={summary}
+          trend={trend}
+          filters={{ severity: severityFilters, tags: tagFilters }}
+        />
       </section>
       <section>
         <h2 className="text-xl mb-2">Trends</h2>
