@@ -1,12 +1,25 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
 import FindingCard from './components/FindingCard';
 import FiltersDrawer from './components/FiltersDrawer';
 import { Plugin, Severity, Scan, Finding, severities } from './types';
+import SuspenseGate from '../shared/SuspenseGate';
+import {
+  PluginListSkeleton,
+  SummarySkeleton,
+  TrendSkeleton,
+} from './components/LoadingSkeletons';
 
 const Nessus: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
@@ -37,39 +50,85 @@ const Nessus: React.FC = () => {
   const listRef = useRef<HTMLUListElement>(null);
   const PAGE_SIZE = 50;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [loadingPlugins, setLoadingPlugins] = useState(true);
+  const [loadingScans, setLoadingScans] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/demo-data/nessus/plugins.json');
-        const json: Plugin[] = await res.json();
-        setPlugins(json);
-        const tagSet = new Set<string>();
-        for (const p of json) {
-          p.tags?.forEach((t) => tagSet.add(t));
-        }
-        setTags(Array.from(tagSet));
-      } catch {
-        // ignore fetch errors
-      }
+    let active = true;
+    setLoadingPlugins(true);
+    startTransition(() => {
+      fetch('/demo-data/nessus/plugins.json')
+        .then((res) => res.json())
+        .then((json: Plugin[]) => {
+          if (!active) return;
+          setPlugins(json);
+          const tagSet = new Set<string>();
+          for (const p of json) {
+            p.tags?.forEach((t) => tagSet.add(t));
+          }
+          setTags(Array.from(tagSet));
+          setFeedError(null);
+        })
+        .catch(() => {
+          if (!active) return;
+          setFeedError(
+            'Nessus plugin feed is unavailable offline. Cached results will be used when possible.'
+          );
+          setPlugins([]);
+          setTags([]);
+        })
+        .finally(() => {
+          if (active) {
+            setLoadingPlugins(false);
+          }
+        });
+    });
+    return () => {
+      active = false;
     };
-    load();
-  }, []);
+  }, [startTransition]);
 
   useEffect(() => {
-    const loadScans = async () => {
-      try {
-        const [a, b] = await Promise.all([
-          fetch('/demo-data/nessus/scanA.json').then((r) => r.json()),
-          fetch('/demo-data/nessus/scanB.json').then((r) => r.json()),
-        ]);
-        compareScans(a, b);
-      } catch {
-        // ignore
-      }
+    let active = true;
+    setLoadingScans(true);
+    startTransition(() => {
+      Promise.all([
+        fetch('/demo-data/nessus/scanA.json').then((r) => r.json()),
+        fetch('/demo-data/nessus/scanB.json').then((r) => r.json()),
+      ])
+        .then(([a, b]) => {
+          if (!active) return;
+          compareScans(a, b);
+          setScanError(null);
+        })
+        .catch(() => {
+          if (!active) return;
+          setScanError(
+            'Scan comparison fixtures failed to load offline. Use saved exports or retry when online.'
+          );
+          setDiff({ added: [], removed: [], changed: [] });
+          setSummary({
+            Critical: 0,
+            High: 0,
+            Medium: 0,
+            Low: 0,
+            Info: 0,
+          });
+          setTrend([]);
+        })
+        .finally(() => {
+          if (active) {
+            setLoadingScans(false);
+          }
+        });
+    });
+    return () => {
+      active = false;
     };
-    loadScans();
-  }, []);
+  }, [startTransition]);
 
   const compareScans = (a: Scan, b: Scan) => {
     const mapA = new Map(a.findings.map((f) => [f.plugin, f.severity] as const));
@@ -164,9 +223,18 @@ const Nessus: React.FC = () => {
     }
   };
 
+  const loadingFeed = loadingPlugins || pending;
+  const loadingSummary = loadingScans || pending;
+  const activeError = feedError || scanError;
+
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
       <h1 className="text-2xl">Nessus Demo</h1>
+      {activeError && (
+        <p className="text-sm text-amber-300" role="status" aria-live="polite">
+          {activeError}
+        </p>
+      )}
 
       <section>
         <h2 className="text-xl mb-2">Plugin Feed</h2>
@@ -182,11 +250,18 @@ const Nessus: React.FC = () => {
           onScroll={handleScroll}
           className="space-y-2 max-h-96 overflow-auto"
         >
-          {filtered.slice(0, visibleCount).map((p) => (
-            <li key={p.id}>
-              <FindingCard plugin={p} />
-            </li>
-          ))}
+          <Suspense fallback={<PluginListSkeleton count={visibleCount} />}>
+            <SuspenseGate active={loadingFeed}>
+              {filtered.slice(0, visibleCount).map((p) => (
+                <li key={p.id}>
+                  <FindingCard plugin={p} />
+                </li>
+              ))}
+              {filtered.length === 0 && !loadingFeed && (
+                <li className="text-sm text-gray-400">No plugins available. Load fixtures when back online.</li>
+              )}
+            </SuspenseGate>
+          </Suspense>
         </ul>
         {visibleCount < filtered.length && (
           <div className="mt-2 text-center text-sm text-gray-400">
@@ -197,26 +272,40 @@ const Nessus: React.FC = () => {
 
       <section>
         <h2 className="text-xl mb-2">Scan Comparison</h2>
-        <div className="mb-2">
-          {diff.changed.map((c) => (
-            <div key={c.plugin}>
-              Plugin {c.plugin} severity changed from {c.from} to {c.to}
+        <Suspense fallback={<SummarySkeleton />}>
+          <SuspenseGate active={loadingSummary}>
+            <div className="mb-2">
+              {diff.changed.map((c) => (
+                <div key={c.plugin}>
+                  Plugin {c.plugin} severity changed from {c.from} to {c.to}
+                </div>
+              ))}
+              {diff.added.map((f) => (
+                <div key={f.plugin}>Plugin {f.plugin} new ({f.severity})</div>
+              ))}
+              {diff.removed.map((f) => (
+                <div key={f.plugin}>Plugin {f.plugin} resolved</div>
+              ))}
+              {diff.added.length === 0 &&
+                diff.removed.length === 0 &&
+                diff.changed.length === 0 &&
+                !loadingSummary && (
+                  <p className="text-sm text-gray-400">No recent changes detected.</p>
+                )}
             </div>
-          ))}
-          {diff.added.map((f) => (
-            <div key={f.plugin}>Plugin {f.plugin} new ({f.severity})</div>
-          ))}
-          {diff.removed.map((f) => (
-            <div key={f.plugin}>Plugin {f.plugin} resolved</div>
-          ))}
-        </div>
+          </SuspenseGate>
+        </Suspense>
       </section>
 
       <section>
         <h2 className="text-xl mb-2">Executive Summary</h2>
-        <div ref={chartRef}>
-          <SummaryDashboard summary={summary} trend={trend} />
-        </div>
+        <Suspense fallback={<SummarySkeleton />}>
+          <SuspenseGate active={loadingSummary}>
+            <div ref={chartRef}>
+              <SummaryDashboard summary={summary} trend={trend} />
+            </div>
+          </SuspenseGate>
+        </Suspense>
         <button
           type="button"
           onClick={exportChart}
@@ -227,7 +316,11 @@ const Nessus: React.FC = () => {
       </section>
       <section>
         <h2 className="text-xl mb-2">Trends</h2>
-        <TrendChart />
+        <Suspense fallback={<TrendSkeleton />}>
+          <SuspenseGate active={loadingSummary}>
+            <TrendChart />
+          </SuspenseGate>
+        </Suspense>
       </section>
       <FiltersDrawer
         open={drawerOpen}
