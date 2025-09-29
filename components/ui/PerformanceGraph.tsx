@@ -1,9 +1,79 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { Chart } from 'chart.js';
+import { loadFND03 } from '../../utils/fnd-03';
 
 const SAMPLE_INTERVAL = 1000;
-const MAX_POINTS = 32;
-const GRAPH_HEIGHT = 18;
-const GRAPH_WIDTH = 80;
+const MAX_POINTS = 50000;
+const DEFAULT_GRAPH_WIDTH = 96;
+
+type ChartPoint = { x: number; y: number };
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+function downsampleLTTB(points: ChartPoint[], threshold: number): ChartPoint[] {
+  if (threshold <= 0 || threshold >= points.length) {
+    return points.slice();
+  }
+
+  const sampled: ChartPoint[] = [];
+  let sampledIndex = 0;
+  const every = (points.length - 2) / (threshold - 2);
+
+  sampled.push(points[0]);
+
+  for (let i = 0; i < threshold - 2; i += 1) {
+    const rawRangeStart = Math.floor((i + 1) * every) + 1;
+    const rawRangeEnd = Math.floor((i + 2) * every) + 1;
+
+    const bucketStart = Math.max(Math.floor(i * every) + 1, 1);
+    const bucketEnd = Math.max(
+      bucketStart,
+      Math.min(Math.floor((i + 1) * every) + 1, points.length - 1)
+    );
+
+    const avgRangeStart = Math.min(rawRangeStart, points.length - 1);
+    const avgRangeEnd = Math.min(rawRangeEnd, points.length);
+
+    let avgX = 0;
+    let avgY = 0;
+    let avgRangeLength = Math.max(0, avgRangeEnd - avgRangeStart);
+
+    if (avgRangeLength === 0) {
+      avgRangeLength = 1;
+      avgX = points[avgRangeStart].x;
+      avgY = points[avgRangeStart].y;
+    } else {
+      for (let j = avgRangeStart; j < avgRangeEnd; j += 1) {
+        avgX += points[j].x;
+        avgY += points[j].y;
+      }
+
+      avgX /= avgRangeLength;
+      avgY /= avgRangeLength;
+    }
+
+    let maxArea = -1;
+    let nextPointIndex = bucketStart;
+
+    for (let j = bucketStart; j <= bucketEnd; j += 1) {
+      const area = Math.abs(
+        (points[sampledIndex].x - avgX) * (points[j].y - points[sampledIndex].y) -
+          (points[sampledIndex].x - points[j].x) * (avgY - points[sampledIndex].y)
+      );
+
+      if (area > maxArea) {
+        maxArea = area;
+        nextPointIndex = j;
+      }
+    }
+
+    sampled.push(points[nextPointIndex]);
+    sampledIndex = nextPointIndex;
+  }
+
+  sampled.push(points[points.length - 1]);
+  return sampled;
+}
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -50,11 +120,17 @@ type PerformanceGraphProps = {
 const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [points, setPoints] = useState<number[]>(() =>
-    Array.from({ length: MAX_POINTS }, (_, index) => 0.32 + (index % 3) * 0.04)
+    Array.from({ length: 64 }, (_, index) => 0.32 + (index % 3) * 0.04)
   );
   const timeoutRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastSampleRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
+  const chartRef = useRef<Chart<'line', ChartPoint[]> | null>(null);
+  const chartModuleRef = useRef<typeof import('chart.js/auto') | null>(null);
+  const [chartReady, setChartReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(DEFAULT_GRAPH_WIDTH);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -80,9 +156,10 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
       const delta = time - lastSampleRef.current;
       lastSampleRef.current = time;
       setPoints(prev => {
-        const next = prev.slice(-MAX_POINTS + 1);
-        next.push(normaliseDelta(delta));
-        return next;
+        const trimmed =
+          prev.length >= MAX_POINTS ? prev.slice(prev.length - MAX_POINTS + 1) : prev.slice();
+        trimmed.push(normaliseDelta(delta));
+        return trimmed;
       });
 
       scheduleNext();
@@ -107,23 +184,187 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
     };
   }, [prefersReducedMotion]);
 
-  const path = useMemo(() => {
-    if (points.length === 0) {
-      return '';
+  useEffect(() => {
+    if (typeof window === 'undefined' || !containerRef.current) {
+      return;
     }
 
-    const visiblePoints = points.slice(-MAX_POINTS);
-    const step = visiblePoints.length > 1 ? GRAPH_WIDTH / (visiblePoints.length - 1) : GRAPH_WIDTH;
+    if (typeof ResizeObserver === 'undefined') {
+      setContainerWidth(containerRef.current.offsetWidth || DEFAULT_GRAPH_WIDTH);
+      return;
+    }
 
-    return visiblePoints
-      .map((value, index) => {
-        const clamped = Math.max(0, Math.min(1, value));
-        const x = Number((index * step).toFixed(2));
-        const y = Number(((1 - clamped) * GRAPH_HEIGHT).toFixed(2));
-        return `${index === 0 ? 'M' : 'L'}${x} ${y}`;
+    const observer = new ResizeObserver(entries => {
+      entries.forEach(entry => {
+        const width = entry.contentRect.width;
+        if (width > 0) {
+          setContainerWidth(width);
+        }
+      });
+    });
+
+    observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadFND03('chart.js', () => import('chart.js/auto'))
+      .then(module => {
+        if (cancelled) return;
+        chartModuleRef.current = module;
+        setChartReady(true);
       })
-      .join(' ');
-  }, [points]);
+      .catch(error => {
+        console.error('Failed to load performance chart module', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const preparedPoints = useMemo<ChartPoint[]>(
+    () => points.map((value, index) => ({ x: index, y: clamp01(value) })),
+    [points]
+  );
+
+  const downsampledPoints = useMemo(() => {
+    if (preparedPoints.length === 0) {
+      return preparedPoints;
+    }
+
+    const target = Math.max(
+      2,
+      Math.min(preparedPoints.length, Math.round(containerWidth || DEFAULT_GRAPH_WIDTH))
+    );
+
+    return downsampleLTTB(preparedPoints, target);
+  }, [preparedPoints, containerWidth]);
+
+  const latestPointsRef = useRef<ChartPoint[]>(downsampledPoints);
+
+  useEffect(() => {
+    latestPointsRef.current = downsampledPoints;
+  }, [downsampledPoints]);
+
+  useEffect(() => {
+    const module = chartModuleRef.current;
+    const canvas = canvasRef.current;
+
+    if (!chartReady || !module || !canvas) {
+      return;
+    }
+
+    const exported = module as unknown as { Chart?: typeof Chart; default?: typeof Chart };
+    const ChartConstructor = exported.Chart ?? exported.default;
+    const context = canvas.getContext('2d');
+
+    if (!ChartConstructor || !context) {
+      return;
+    }
+
+    const chartInstance = new ChartConstructor(context, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Latency',
+            data: latestPointsRef.current,
+            parsing: false,
+            borderColor: '#61a3ff',
+            borderWidth: 1.6,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            fill: {
+              target: 'origin',
+              above: 'rgba(97, 163, 255, 0.25)',
+              below: 'rgba(97, 163, 255, 0.1)',
+            },
+            tension: 0.28,
+          },
+        ],
+      },
+      options: {
+        animation: prefersReducedMotion
+          ? false
+          : {
+              duration: 180,
+              easing: 'linear',
+            },
+        events: [],
+        responsive: true,
+        maintainAspectRatio: false,
+        normalized: true,
+        scales: {
+          x: {
+            type: 'linear',
+            display: false,
+          },
+          y: {
+            min: 0,
+            max: 1,
+            display: false,
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            enabled: false,
+          },
+          decimation: {
+            enabled: true,
+            algorithm: 'lttb',
+            samples: Math.max(2, Math.round(containerWidth || DEFAULT_GRAPH_WIDTH)),
+          },
+        },
+        elements: {
+          line: {
+            borderCapStyle: 'round',
+            borderJoinStyle: 'round',
+          },
+        },
+      },
+    });
+
+    chartRef.current = chartInstance;
+
+    return () => {
+      chartInstance.destroy();
+      chartRef.current = null;
+    };
+  }, [chartReady]);
+
+  useEffect(() => {
+    if (!chartRef.current) {
+      return;
+    }
+
+    const chartInstance = chartRef.current;
+    const dataset = chartInstance.data.datasets[0];
+
+    dataset.data = downsampledPoints;
+
+    if (chartInstance.options.plugins?.decimation) {
+      chartInstance.options.plugins.decimation.samples = Math.max(
+        2,
+        Math.round(containerWidth || DEFAULT_GRAPH_WIDTH)
+      );
+    }
+
+    chartInstance.options.animation = prefersReducedMotion
+      ? false
+      : {
+          duration: 120,
+          easing: 'linear',
+        };
+
+    chartInstance.update('none');
+  }, [downsampledPoints, containerWidth, prefersReducedMotion]);
 
   return (
     <div
@@ -133,29 +374,22 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
       aria-hidden="true"
       data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}
     >
-      <svg
-        width={GRAPH_WIDTH}
-        height={GRAPH_HEIGHT}
-        viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
-        className="opacity-90"
-        role="presentation"
-        focusable="false"
+      <div
+        ref={containerRef}
+        className="relative h-[18px] w-[80px] sm:w-[96px] md:w-[112px]"
+        aria-hidden="true"
       >
-        <defs>
-          <linearGradient id="kaliSpark" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#61a3ff" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#1f4aa8" stopOpacity="0.25" />
-          </linearGradient>
-        </defs>
-        <path
-          d={path}
-          fill="none"
-          stroke="url(#kaliSpark)"
-          strokeWidth={1.6}
-          strokeLinecap="round"
-          shapeRendering="geometricPrecision"
-        />
-      </svg>
+        {chartReady ? (
+          <canvas
+            ref={canvasRef}
+            className="h-full w-full"
+            role="presentation"
+            aria-hidden="true"
+          />
+        ) : (
+          <div className="h-full w-full animate-pulse rounded-sm bg-gradient-to-r from-ubt-blue/40 via-ubt-blue/20 to-ubt-blue/40" />
+        )}
+      </div>
     </div>
   );
 };
