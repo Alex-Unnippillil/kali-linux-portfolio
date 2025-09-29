@@ -1,0 +1,121 @@
+.root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  color: var(--color-text);
+  background: linear-gradient(160deg, var(--kali-bg-solid) 0%, var(--color-ub-drk-abrgn) 100%);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.titleBadge {
+  background: color-mix(in srgb, var(--kali-blue) 25%, transparent);
+  color: var(--kali-blue);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-round);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.modeSwitcher {
+  display: inline-flex;
+  background: color-mix(in srgb, var(--kali-panel) 80%, transparent);
+  border: 1px solid var(--kali-panel-border);
+  border-radius: var(--radius-round);
+  padding: var(--space-1);
+  gap: var(--space-1);
+}
+
+.modeButton {
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-round);
+  font-weight: 600;
+  min-width: 120px;
+  cursor: pointer;
+  transition: background var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.modeButton[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--kali-blue) 35%, var(--kali-panel));
+  color: var(--color-bg);
+}
+
+.content {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.standardPanel {
+  background: color-mix(in srgb, var(--kali-panel) 95%, transparent);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--kali-panel-border);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-2);
+}
+
+.standardGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.standardCard {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--kali-panel-border);
+  background: color-mix(in srgb, var(--color-ub-lite-abrgn) 70%, transparent);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.standardCard h3 {
+  font-size: 1.1rem;
+  color: var(--kali-blue);
+}
+
+.standardCard ul {
+  display: grid;
+  gap: var(--space-2);
+  font-size: 0.95rem;
+  color: color-mix(in srgb, var(--color-text), transparent 20%);
+}
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.95rem;
+}
+
+.feedback output {
+  font-weight: 600;
+  color: var(--kali-blue);
+}
+
+.carMode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
