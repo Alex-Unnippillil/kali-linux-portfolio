@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 
 export type KaliCategory = {
@@ -87,20 +87,81 @@ type ApplicationsMenuProps = {
 };
 
 const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onSelect }) => {
+  const categoryIds = useMemo(() => KALI_CATEGORIES.map((category) => category.id), []);
+  const [focusedIndex, setFocusedIndex] = useState(() => {
+    const initialIndex = categoryIds.indexOf(activeCategory);
+    return initialIndex >= 0 ? initialIndex : 0;
+  });
+  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    const activeIndex = categoryIds.indexOf(activeCategory);
+    if (activeIndex >= 0) {
+      setFocusedIndex(activeIndex);
+      if (document.activeElement && buttonRefs.current.includes(document.activeElement as HTMLButtonElement)) {
+        buttonRefs.current[activeIndex]?.focus();
+      }
+    }
+  }, [activeCategory, categoryIds]);
+
+  const moveFocus = (nextIndex: number) => {
+    const clampedIndex = (nextIndex + KALI_CATEGORIES.length) % KALI_CATEGORIES.length;
+    setFocusedIndex(clampedIndex);
+    const nextCategory = KALI_CATEGORIES[clampedIndex];
+    onSelect(nextCategory.id);
+    buttonRefs.current[clampedIndex]?.focus();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+    switch (event.key) {
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        event.preventDefault();
+        moveFocus(currentIndex - 1);
+        break;
+      case 'ArrowDown':
+      case 'ArrowRight':
+        event.preventDefault();
+        moveFocus(currentIndex + 1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        moveFocus(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        moveFocus(KALI_CATEGORIES.length - 1);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <nav aria-label="Kali application categories">
       <ul className="space-y-1">
-        {KALI_CATEGORIES.map((category) => {
+        {KALI_CATEGORIES.map((category, index) => {
           const isActive = category.id === activeCategory;
+          const isFocused = index === focusedIndex;
           return (
             <li key={category.id}>
               <button
+                ref={(element) => {
+                  buttonRefs.current[index] = element;
+                }}
                 type="button"
-                onClick={() => onSelect(category.id)}
-                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
+                tabIndex={isFocused ? 0 : -1}
+                onFocus={() => setFocusedIndex(index)}
+                onKeyDown={(event) => handleKeyDown(event, index)}
+                onClick={() => {
+                  setFocusedIndex(index);
+                  onSelect(category.id);
+                }}
+                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue ${
                   isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
                 }`}
                 aria-pressed={isActive}
+                aria-current={isActive ? 'true' : undefined}
               >
                 <CategoryIcon categoryId={category.id} label={category.label} />
                 <span className="text-sm font-medium">{category.label}</span>
