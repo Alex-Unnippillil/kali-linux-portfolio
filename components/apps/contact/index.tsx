@@ -302,7 +302,7 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <input
             id="contact-name"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -310,7 +310,7 @@ const ContactApp: React.FC = () => {
           />
           <label
             htmlFor="contact-name"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus-visible:-top-2 peer-focus-visible:text-xs peer-focus-visible:text-blue-400"
           >
             Name
           </label>
@@ -319,7 +319,7 @@ const ContactApp: React.FC = () => {
           <input
             id="contact-email"
             type="email"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -329,7 +329,7 @@ const ContactApp: React.FC = () => {
           />
           <label
             htmlFor="contact-email"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus-visible:-top-2 peer-focus-visible:text-xs peer-focus-visible:text-blue-400"
           >
             Email
           </label>
@@ -342,7 +342,7 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <textarea
             id="contact-message"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -353,7 +353,7 @@ const ContactApp: React.FC = () => {
           />
           <label
             htmlFor="contact-message"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus-visible:-top-2 peer-focus-visible:text-xs peer-focus-visible:text-blue-400"
           >
             Message
           </label>

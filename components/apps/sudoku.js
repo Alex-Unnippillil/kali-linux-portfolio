@@ -269,7 +269,7 @@ const Sudoku = () => {
                 } ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
-                  className={`w-full h-full text-center bg-transparent outline-none focus:outline-none ${
+                  className={`w-full h-full text-center bg-transparent outline-none focus-visible:outline-none ${
                     conflict || wrong ? 'text-white' : 'text-black'
                   }`}
                   ref={(el) => (inputRefs.current[r][c] = el)}

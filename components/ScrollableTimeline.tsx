@@ -98,7 +98,7 @@ const ScrollableTimeline: React.FC = () => {
       </div>
       <div
         ref={containerRef}
-        className="overflow-x-auto snap-x snap-mandatory focus:outline-none"
+        className="overflow-x-auto snap-x snap-mandatory focus-visible:outline-none"
         aria-labelledby="timeline-heading"
       >
         <h3 id="timeline-heading" className="sr-only">
@@ -115,7 +115,7 @@ const ScrollableTimeline: React.FC = () => {
                       itemRefs.current[index] = el;
                     }}
                     tabIndex={-1}
-                    className="snap-center flex-shrink-0 w-64 p-4 bg-gray-800 rounded-lg focus:outline-none"
+                    className="snap-center flex-shrink-0 w-64 p-4 bg-gray-800 rounded-lg focus-visible:outline-none"
                   >
                     <button
                       type="button"
@@ -123,7 +123,7 @@ const ScrollableTimeline: React.FC = () => {
                         setView('month');
                         setSelectedYear(year);
                       }}
-                      className="text-left w-full focus:outline-none"
+                      className="text-left w-full focus-visible:outline-none"
                     >
                       <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
                       <img
@@ -144,7 +144,7 @@ const ScrollableTimeline: React.FC = () => {
                     itemRefs.current[index] = el;
                   }}
                   tabIndex={-1}
-                  className="snap-center flex-shrink-0 w-64 p-4 bg-gray-800 rounded-lg focus:outline-none"
+                  className="snap-center flex-shrink-0 w-64 p-4 bg-gray-800 rounded-lg focus-visible:outline-none"
                 >
                   <div className="text-ubt-blue font-bold text-lg mb-2">
                     {selectedYear}-{m.month}

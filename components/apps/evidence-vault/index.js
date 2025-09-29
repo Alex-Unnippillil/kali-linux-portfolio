@@ -47,7 +47,7 @@ const TagTreeNode = ({ name, node, onSelect }) => {
       ) : (
         <button
           onClick={() => onSelect(node)}
-          className="text-left hover:underline focus:outline-none"
+          className="text-left hover:underline focus-visible:outline-none"
         >
           {name}
         </button>

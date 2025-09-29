@@ -75,7 +75,7 @@ export default function ClipMaker() {
         value={videoId}
         onChange={(e) => setVideoId(extractVideoId(e.target.value))}
         placeholder="YouTube URL or ID"
-        className="w-full rounded bg-gray-800 p-2 text-black focus:text-white"
+        className="w-full rounded bg-gray-800 p-2 text-black focus-visible:text-white"
       />
       <div ref={containerRef} className="aspect-video w-full bg-black" />
       <div className="flex gap-2">

@@ -134,7 +134,7 @@ class AllApplications extends React.Component {
                             : `Add ${app.title} to favorites`
                     }
                     onClick={(event) => this.handleToggleFavorite(event, app.id)}
-                    className={`absolute right-2 top-2 text-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    className={`absolute right-2 top-2 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
                         isFavorite ? 'text-yellow-300' : 'text-white/60 hover:text-white'
                     }`}
                 >
@@ -185,7 +185,7 @@ class AllApplications extends React.Component {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
                 <input
-                    className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
+                    className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus-visible:outline-none md:w-1/3"
                     placeholder="Search"
                     value={this.state.query}
                     onChange={this.handleChange}

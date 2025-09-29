@@ -261,7 +261,7 @@ const SpotifyApp = () => {
               {queue.map((t, i) => (
                 <li key={t.url} className={i === current ? "bg-gray-700" : ""}>
                   <button
-                    className="w-full text-left px-2 py-1 hover:bg-gray-600 focus:outline-none"
+                    className="w-full text-left px-2 py-1 hover:bg-gray-600 focus-visible:outline-none"
                     onClick={() => setCurrent(i)}
                   >
                     {t.title || t.url}

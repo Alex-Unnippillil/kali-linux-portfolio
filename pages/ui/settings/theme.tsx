@@ -26,7 +26,7 @@ function Toggle({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+      className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus-visible:outline-none ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
       }`}
     >

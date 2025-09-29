@@ -286,7 +286,7 @@ export default function ProjectGalleryPage() {
               <div
                 key={p.id}
                 tabIndex={0}
-                className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
+                className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus-visible:scale-105 focus-visible:opacity-90 focus-visible:outline-none"
                 aria-label={`${p.title}: ${p.description}`}
               >
                 <div className="w-full aspect-video overflow-hidden">

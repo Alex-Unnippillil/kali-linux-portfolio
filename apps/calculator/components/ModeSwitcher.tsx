@@ -31,7 +31,7 @@ export default function ModeSwitcher({ onChange }: Props) {
         id="mode-select"
         value={mode}
         onChange={(event) => setMode(event.target.value as Mode)}
-        className="appearance-none rounded-xl border border-white/10 bg-[#2a2d35] py-2 pl-3 pr-10 text-sm font-semibold capitalize text-slate-100 shadow-inner focus:border-[#f97316] focus:outline-none focus:ring-2 focus:ring-[#f97316]"
+        className="appearance-none rounded-xl border border-white/10 bg-[#2a2d35] py-2 pl-3 pr-10 text-sm font-semibold capitalize text-slate-100 shadow-inner focus-visible:border-[#f97316] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316]"
       >
         {MODES.map((m) => (
           <option key={m} value={m} className="bg-[#1f212a] capitalize">
