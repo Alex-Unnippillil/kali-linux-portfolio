@@ -11,6 +11,14 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import {
+  DEFAULT_TERMINAL_SETTINGS,
+  formatTerminalSettings,
+  parseTerminalSettings,
+  resolvePasteGuardConfig,
+  sanitizePaste,
+  ResolvedPasteGuardConfig,
+} from './utils/pasteGuard';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -87,6 +95,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
+  const configDirRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const pasteGuardConfigRef = useRef<ResolvedPasteGuardConfig>(
+    resolvePasteGuardConfig(DEFAULT_TERMINAL_SETTINGS.pasteGuard),
+  );
   const historyRef = useRef<string[]>([]);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
@@ -145,6 +157,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.writeLine = writeLine;
 
+  const applyPasteGuard = useCallback(
+    (input: string): string => {
+      if (!input) return '';
+      const result = sanitizePaste(input, pasteGuardConfigRef.current);
+      if (result.warnings.length > 0) {
+        result.warnings.forEach((message) => {
+          writeLine(`\u001b[33m[Paste Guard]\u001b[0m ${message}`);
+        });
+      }
+      return result.text;
+    },
+    [writeLine],
+  );
+
   const prompt = useCallback(() => {
     if (!termRef.current) return;
     termRef.current.writeln(
@@ -152,17 +178,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     );
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      handleInput(text);
-    } catch {}
-  };
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -192,6 +207,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.runWorker = runWorker;
+
+  useEffect(() => {
+    loadPasteGuardConfig().catch(() => {
+      pasteGuardConfigRef.current = resolvePasteGuardConfig(
+        DEFAULT_TERMINAL_SETTINGS.pasteGuard,
+      );
+    });
+  }, [loadPasteGuardConfig]);
 
   useEffect(() => {
     registryRef.current = {
@@ -288,6 +311,92 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       [runCommand, prompt],
     );
 
+    const sendSanitizedPaste = useCallback(
+      (raw: string) => {
+        const sanitized = applyPasteGuard(raw);
+        if (!sanitized) return;
+        const normalized = sanitized.replace(/\n/g, '\r');
+        handleInput(normalized);
+      },
+      [applyPasteGuard, handleInput],
+    );
+
+    const handleCopy = useCallback(() => {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+      navigator.clipboard.writeText(contentRef.current).catch(() => {});
+    }, []);
+
+    const handlePaste = useCallback(async () => {
+      let text: string | null = null;
+      try {
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+          text = await navigator.clipboard.readText();
+        }
+      } catch {
+        text = null;
+      }
+      if ((!text || text.length === 0) && typeof window !== 'undefined') {
+        const fallback = window.prompt('Paste text to send to the terminal:');
+        if (fallback !== null) text = fallback;
+      }
+      if (!text) return;
+      sendSanitizedPaste(text);
+    }, [sendSanitizedPaste]);
+
+    const loadPasteGuardConfig = useCallback(async () => {
+      let raw: string | null = null;
+
+      if (opfsSupported) {
+        const dir = await getDir('.config/kali-terminal');
+        configDirRef.current = dir;
+        if (dir) {
+          raw = await readFile('settings.json', dir);
+          if (!raw) {
+            const serialized = formatTerminalSettings(DEFAULT_TERMINAL_SETTINGS);
+            await writeFile('settings.json', serialized, dir);
+            raw = serialized;
+          }
+        }
+      }
+
+      const readLocalSettings = (): string | null => {
+        if (typeof window === 'undefined') return null;
+        try {
+          return window.localStorage.getItem('kali-terminal-settings');
+        } catch {
+          return null;
+        }
+      };
+
+      const writeLocalSettings = (value: string) => {
+        if (typeof window === 'undefined') return;
+        try {
+          window.localStorage.setItem('kali-terminal-settings', value);
+        } catch {}
+      };
+
+      if (!raw) {
+        raw = readLocalSettings();
+        if (!raw) {
+          raw = formatTerminalSettings(DEFAULT_TERMINAL_SETTINGS);
+          writeLocalSettings(raw);
+        }
+      } else {
+        writeLocalSettings(raw);
+      }
+
+      const parsed = parseTerminalSettings(raw);
+      const canonical = formatTerminalSettings(parsed);
+      if (raw !== canonical) {
+        if (configDirRef.current) {
+          await writeFile('settings.json', canonical, configDirRef.current);
+        }
+        writeLocalSettings(canonical);
+      }
+
+      pasteGuardConfigRef.current = resolvePasteGuardConfig(parsed.pasteGuard);
+    }, [getDir, opfsSupported, readFile, writeFile]);
+
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
@@ -295,6 +404,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     let disposed = false;
+    let clipboardListener: ((event: ClipboardEvent) => void) | null = null;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
         import('@xterm/xterm'),
@@ -344,6 +454,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Type "help" to see available commands.');
       prompt();
       term.onData((d: string) => handleInput(d));
+      clipboardListener = (event: ClipboardEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (!target?.classList?.contains('xterm-helper-textarea')) return;
+        const text = event.clipboardData?.getData('text/plain');
+        if (!text) return;
+        event.preventDefault();
+        sendSanitizedPaste(text);
+      };
+      document.addEventListener('paste', clipboardListener);
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
@@ -376,9 +495,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     })();
     return () => {
       disposed = true;
+      if (clipboardListener) {
+        document.removeEventListener('paste', clipboardListener);
+      }
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow, sendSanitizedPaste]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
