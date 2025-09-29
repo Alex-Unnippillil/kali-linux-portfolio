@@ -43,6 +43,17 @@ export class UbuntuApp extends Component {
 
         const dragging = this.state.dragging || isBeingDragged;
 
+        const combinedStyle = {
+            width: 'var(--desktop-icon-width, 6rem)',
+            minWidth: 'var(--desktop-icon-width, 6rem)',
+            height: 'var(--desktop-icon-height, 5.5rem)',
+            minHeight: 'var(--desktop-icon-height, 5.5rem)',
+            padding: 'var(--desktop-icon-padding, 0.25rem)',
+            fontSize: 'var(--desktop-icon-font-size, 0.75rem)',
+            gap: 'var(--desktop-icon-gap, 0.375rem)',
+            ...style,
+        };
+
         return (
             <div
                 role="button"
@@ -57,9 +68,9 @@ export class UbuntuApp extends Component {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerCancel}
-                style={style}
+                style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
-                    " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
+                    " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
@@ -68,12 +79,16 @@ export class UbuntuApp extends Component {
                 onFocus={this.handlePrefetch}
             >
                 <Image
-                    width={40}
-                    height={40}
-                    className="mb-1 w-10"
+                    width={48}
+                    height={48}
+                    className="mb-1"
+                    style={{
+                        width: 'var(--desktop-icon-image, 2.5rem)',
+                        height: 'var(--desktop-icon-image, 2.5rem)'
+                    }}
                     src={this.props.icon.replace('./', '/')}
                     alt={"Kali " + this.props.name}
-                    sizes="40px"
+                    sizes="(max-width: 768px) 48px, 64px"
                 />
                 {this.props.displayName || this.props.name}
 
