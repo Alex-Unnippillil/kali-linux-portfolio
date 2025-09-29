@@ -39,6 +39,8 @@ export class UbuntuApp extends Component {
             onPointerUp,
             onPointerCancel,
             style,
+            tabIndex,
+            onFocus,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -53,6 +55,13 @@ export class UbuntuApp extends Component {
             gap: 'var(--desktop-icon-gap, 0.375rem)',
             ...style,
         };
+
+        const computedTabIndex =
+            typeof tabIndex === 'number'
+                ? tabIndex
+                : this.props.disabled
+                ? -1
+                : 0;
 
         return (
             <div
@@ -74,9 +83,14 @@ export class UbuntuApp extends Component {
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                tabIndex={computedTabIndex}
                 onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onFocus={(event) => {
+                    this.handlePrefetch();
+                    if (typeof onFocus === 'function') {
+                        onFocus(event);
+                    }
+                }}
             >
                 <Image
                     width={48}
