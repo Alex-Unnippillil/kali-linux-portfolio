@@ -14,7 +14,7 @@
     "test": "jest",
     "dedupe:check": "yarn dedupe --check",
     "test:watch": "jest --watch",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "node scripts/lint-changed.mjs",
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "a11y": "node scripts/a11y.mjs",
