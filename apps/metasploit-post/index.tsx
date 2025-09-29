@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import modules from './modules.json';
 import privTree from './priv-esc.json';
+import Collector from './components/Collector';
 import RemediationTable from './components/RemediationTable';
 import ResultCard from './components/ResultCard';
 import usePersistentState from '../../hooks/usePersistentState';
@@ -385,6 +386,7 @@ const MetasploitPost: React.FC = () => {
           </div>
           <RemediationTable />
           <EvidenceVault />
+          <Collector />
         </div>
       </div>
       {report.length > 0 && (
