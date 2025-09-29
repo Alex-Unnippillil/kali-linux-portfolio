@@ -6,6 +6,7 @@ import { Grid } from 'react-window';
 import DelayedTooltip from '../ui/DelayedTooltip';
 import AppTooltipContent from '../ui/AppTooltipContent';
 import { createRegistryMap, buildAppMetadata } from '../../lib/appRegistry';
+import { useDebouncedCallback, useThrottledEvent } from '../../utils/performance';
 
 const registryMetadata = createRegistryMap(apps);
 
@@ -27,9 +28,11 @@ function fuzzyHighlight(text, query) {
 
 export default function AppGrid({ openApp }) {
   const [query, setQuery] = useState('');
+  const [searchValue, setSearchValue] = useState('');
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const updateQuery = useDebouncedCallback((value) => setQuery(value), 150);
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -76,6 +79,17 @@ export default function AppGrid({ openApp }) {
     [filtered, focusedIndex]
   );
 
+  const throttledKeyDown = useThrottledEvent(handleKeyDown, 80);
+
+  const handleSearchChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      setSearchValue(value);
+      updateQuery(value);
+    },
+    [updateQuery]
+  );
+
   const Cell = ({ columnIndex, rowIndex, style, data }) => {
     const index = rowIndex * data.columnCount + columnIndex;
     if (index >= data.items.length) return null;
@@ -116,10 +130,12 @@ export default function AppGrid({ openApp }) {
       <input
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        value={searchValue}
+        onChange={handleSearchChange}
+        onBlur={() => updateQuery.flush()}
+        aria-label="Search applications"
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={throttledKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);

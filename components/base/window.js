@@ -13,6 +13,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { createThrottledCallback } from '../../utils/performance';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -75,6 +76,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.handleResize = createThrottledCallback(this.updateWindowBounds, 100);
     }
 
     componentDidMount() {
@@ -85,7 +87,7 @@ export class Window extends Component {
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
         // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
+        window.addEventListener('resize', this.handleResize);
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
@@ -99,7 +101,7 @@ export class Window extends Component {
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        window.removeEventListener('resize', this.resizeBoundries);
+        window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
@@ -107,13 +109,14 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.handleResize?.cancel?.();
     }
 
     setDefaultWindowDimenstion = () => {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
-                this.resizeBoundries
+                this.updateWindowBounds
             );
             return;
         }
@@ -121,15 +124,15 @@ export class Window extends Component {
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 90 }, this.updateWindowBounds);
         } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+            this.setState({ height: 60, width: 85 }, this.updateWindowBounds);
         } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 60 }, this.updateWindowBounds);
         }
     }
 
-    resizeBoundries = () => {
+    updateWindowBounds = () => {
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const topInset = typeof window !== 'undefined'
@@ -267,7 +270,7 @@ export class Window extends Component {
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        this.setState({ height: heightPercent }, this.updateWindowBounds);
     }
 
     handleHorizontalResize = () => {
@@ -275,7 +278,7 @@ export class Window extends Component {
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        this.setState({ width: widthPercent }, this.updateWindowBounds);
     }
 
     setWinowsPosition = () => {
@@ -310,9 +313,9 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, this.updateWindowBounds);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, this.updateWindowBounds);
         }
     }
 
@@ -339,7 +342,7 @@ export class Window extends Component {
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
-        }, this.resizeBoundries);
+        }, this.updateWindowBounds);
     }
 
     setInertBackground = () => {
@@ -570,19 +573,19 @@ export class Window extends Component {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.updateWindowBounds);
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.updateWindowBounds);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.updateWindowBounds);
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.updateWindowBounds);
             }
             this.focusWindow();
         }
