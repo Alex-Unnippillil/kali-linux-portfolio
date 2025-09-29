@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { colors } from "../../styles/theme";
 
 export interface WorkspaceSummary {
   id: number;
@@ -35,7 +36,12 @@ export default function WorkspaceSwitcher({
   return (
     <nav
       aria-label="Workspace switcher"
-      className="flex items-center overflow-hidden rounded-md border border-white/10 bg-[#1e2430]"
+      className="flex items-center overflow-hidden rounded-md border border-white/10 bg-[var(--workspace-bg)]"
+      style={{
+        "--workspace-bg": colors.menu.panelAlt,
+        "--workspace-ring-offset": colors.menu.ringOffset,
+        "--workspace-ring-color": colors.primary,
+      } as React.CSSProperties}
     >
       {workspaces.map((workspace, index) => {
         const isActive = workspace.id === activeWorkspace;
@@ -48,7 +54,7 @@ export default function WorkspaceSwitcher({
             aria-pressed={isActive}
             aria-label={formatAriaLabel(workspace)}
             onClick={() => onSelect(workspace.id)}
-            className={`relative flex h-8 min-w-[2.25rem] items-center justify-center px-3 text-xs font-medium text-white/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161b25] ${
+            className={`relative flex h-8 min-w-[2.25rem] items-center justify-center px-3 text-xs font-medium text-white/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--workspace-ring-offset)] ${
               index > 0 ? "border-l border-white/10" : ""
             } ${isActive ? "text-white" : "hover:text-white"}`}
           >

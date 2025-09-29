@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { colors, spacing, shadows, zIndex } from '../../styles/theme';
 
 type AppMeta = {
   id: string;
@@ -28,6 +29,40 @@ type CategoryDefinitionBase = {
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+
+const MENU_CSS_VARIABLES: React.CSSProperties = {
+  '--menu-shell': colors.menu.shell,
+  '--menu-border': colors.menu.border,
+  '--menu-shadow': shadows.menu,
+  '--menu-text': colors.text,
+  '--menu-column-from': colors.menu.columnStart,
+  '--menu-column-via': colors.menu.columnMid,
+  '--menu-column-to': colors.menu.columnEnd,
+  '--menu-divider': colors.menu.divider,
+  '--menu-accent': colors.menu.accent,
+  '--menu-accent-strong': colors.menu.accentStrong,
+  '--menu-ring-color': colors.menu.accentStrong,
+  '--menu-ring-offset-dark': colors.menu.ringOffset,
+  '--menu-ring-offset-panel': colors.menu.panel,
+  '--menu-panel': colors.menu.panel,
+  '--menu-panel-alt': colors.menu.panelAlt,
+  '--menu-panel-hover': colors.menu.panelHover,
+  '--menu-search-bg': colors.menu.search,
+  '--menu-app-icon-bg': colors.menu.appIcon,
+  '--menu-app-active-bg': colors.menu.appActive,
+  '--menu-app-hover-bg': colors.menu.appHover,
+  '--menu-profile-bg': colors.menu.badge,
+  '--menu-favorite-bg': colors.menu.favorite,
+  '--menu-favorite-hover': colors.menu.favoriteHover,
+  '--menu-search-icon': colors.menu.accent,
+  '--menu-info-chip': colors.menu.accentStrong,
+  '--menu-offset-y': spacing.md,
+  '--menu-offset-sm': spacing.xs,
+  '--menu-horizontal-margin': spacing.xl,
+  '--menu-focus-shadow': '0 0 0 1px color-mix(in srgb, var(--menu-accent-strong) 65%, transparent)',
+  '--menu-active-shadow': 'inset 2px 0 0 var(--menu-accent-strong)',
+  '--menu-z-index': zIndex.dropdown,
+};
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -387,10 +422,13 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
+          className={`absolute top-full left-1/2 mt-[var(--menu-offset-y)] z-[var(--menu-z-index)] flex max-h-[80vh] w-[min(100vw-var(--menu-horizontal-margin),680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[var(--menu-border)] bg-[var(--menu-shell)] text-[color:var(--menu-text)] shadow-[var(--menu-shadow)] transition-all duration-200 ease-out sm:left-0 sm:mt-[var(--menu-offset-sm)] sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
-          style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
+          style={{
+            ...MENU_CSS_VARIABLES,
+            transitionDuration: `${TRANSITION_DURATION}ms`,
+          }}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -398,9 +436,9 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
-            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
-              <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
+          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[var(--menu-column-from)] via-[var(--menu-column-via)] to-[var(--menu-column-to)] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
+            <div className="flex items-center gap-2 border-b border-[var(--menu-divider)] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[color:var(--menu-accent)]">
+              <span className="inline-flex h-2 w-2 rounded-full bg-[var(--menu-accent)]" aria-hidden />
               Categories
             </div>
             <div
@@ -418,10 +456,10 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--menu-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--menu-ring-offset-dark)] ${
                     category === cat.id
-                      ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
-                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
+                      ? 'bg-[var(--menu-app-active-bg)] text-white shadow-[var(--menu-active-shadow)]'
+                      : 'text-gray-300 hover:bg-[var(--menu-app-hover-bg)] hover:text-white'
                   }`}
                   role="option"
                   aria-selected={category === cat.id}
@@ -430,7 +468,7 @@ const WhiskerMenu: React.FC = () => {
                     setCategoryHighlight(index);
                   }}
                 >
-                  <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--menu-accent)]">{String(index + 1).padStart(2, '0')}</span>
                   <span className="flex items-center gap-2">
                     <Image
                       src={cat.icon}
@@ -445,9 +483,9 @@ const WhiskerMenu: React.FC = () => {
                 </button>
               ))}
             </div>
-            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
+            <div className="border-t border-[var(--menu-divider)] px-4 py-3 text-sm text-gray-400">
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--menu-profile-bg)] text-sm font-semibold uppercase text-[color:var(--menu-info-chip)]">k</span>
                 <div>
                   <p className="text-sm font-semibold text-white">kali</p>
                   <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
@@ -455,15 +493,15 @@ const WhiskerMenu: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
-            <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
+          <div className="flex max-h-[44vh] flex-1 flex-col bg-[var(--menu-panel)] sm:max-h-full">
+            <div className="border-b border-[var(--menu-divider)] px-4 py-4 sm:px-5">
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 {favoriteApps.slice(0, 6).map((app) => (
                   <button
                     key={app.id}
                     type="button"
                     onClick={() => openSelectedApp(app.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--menu-favorite-bg)] text-white transition hover:-translate-y-0.5 hover:bg-[var(--menu-favorite-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--menu-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--menu-ring-offset-panel)]"
                     aria-label={`Open ${app.title}`}
                   >
                     <Image
@@ -478,14 +516,14 @@ const WhiskerMenu: React.FC = () => {
                 ))}
               </div>
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--menu-search-icon)]">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" />
                     <line x1="20" y1="20" x2="16.65" y2="16.65" />
                   </svg>
                 </span>
                 <input
-                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  className="h-10 w-full rounded-lg border border-transparent bg-[var(--menu-search-bg)] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[var(--menu-ring-color)] focus:outline-none focus:ring-0"
                   placeholder="Search applications"
                   aria-label="Search applications"
                   value={query}
@@ -497,7 +535,7 @@ const WhiskerMenu: React.FC = () => {
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-2">
               {currentApps.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--menu-app-icon-bg)] text-[color:var(--menu-accent)]">
                     <svg
                       width="24"
                       height="24"
@@ -522,10 +560,10 @@ const WhiskerMenu: React.FC = () => {
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--menu-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--menu-ring-offset-panel)] ${
                           idx === highlight
-                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
-                            : 'text-gray-200 hover:bg-[#142132]'
+                            ? 'bg-[var(--menu-app-active-bg)] text-white shadow-[var(--menu-focus-shadow)]'
+                            : 'text-gray-200 hover:bg-[var(--menu-app-hover-bg)]'
                         } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                         aria-label={app.title}
                         disabled={app.disabled}
@@ -537,7 +575,7 @@ const WhiskerMenu: React.FC = () => {
                         onMouseEnter={() => setHighlight(idx)}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--menu-app-icon-bg)]">
                             <Image
                               src={app.icon}
                               alt=""
@@ -549,11 +587,11 @@ const WhiskerMenu: React.FC = () => {
                           </div>
                           <div>
                             <p className="font-medium text-[15px]">{app.title}</p>
-                            <p className="text-xs uppercase tracking-[0.25em] text-[#4aa8ff]">Application</p>
+                            <p className="text-xs uppercase tracking-[0.25em] text-[color:var(--menu-accent)]">Application</p>
                           </div>
                         </div>
                         <svg
-                          className="h-4 w-4 text-[#4aa8ff]"
+                          className="h-4 w-4 text-[color:var(--menu-accent)]"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -568,9 +606,9 @@ const WhiskerMenu: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
+            )}
           </div>
+        </div>
         </div>
       )}
     </div>
