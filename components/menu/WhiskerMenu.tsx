@@ -149,14 +149,31 @@ const WhiskerMenu: React.FC = () => {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
+  const [filteredApps, setFilteredApps] = useState<AppMeta[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [lastDurationMs, setLastDurationMs] = useState<number | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const workerRef = useRef<Worker | null>(null);
+  const messageHandlerRef = useRef<(event: MessageEvent) => void>();
+  const pendingRequestId = useRef(0);
+  const baseAppsRef = useRef<AppMeta[]>([]);
+  const queryRef = useRef('');
 
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+
+  const runFallbackSearch = useCallback((appsList: AppMeta[], q: string) => {
+    const normalized = q.trim().toLowerCase();
+    if (!normalized) {
+      return appsList;
+    }
+    return appsList.filter(app => app.title.toLowerCase().includes(normalized));
+  }, []);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
   }, []);
@@ -165,6 +182,87 @@ const WhiskerMenu: React.FC = () => {
     if (!isOpen) return;
     setRecentIds(readRecentAppIds());
   }, [isOpen]);
+
+  useEffect(() => {
+    queryRef.current = query;
+  }, [query]);
+
+  useEffect(() => {
+    messageHandlerRef.current = (event: MessageEvent) => {
+      const data = event.data as
+        | { type: 'ready' }
+        | { type: 'result'; payload: { requestId: number; duration: number; apps: AppMeta[] } }
+        | { type: 'error'; payload: { message: string; requestId?: number } };
+
+      if (!data) return;
+
+      if (data.type === 'ready') {
+        return;
+      }
+
+      if (data.type === 'result') {
+        if (data.payload.requestId !== pendingRequestId.current) return;
+        setFilteredApps(data.payload.apps as AppMeta[]);
+        setIsSearching(false);
+        setSearchError(null);
+        setLastDurationMs(data.payload.duration);
+        return;
+      }
+
+      if (data.type === 'error') {
+        if (data.payload.requestId && data.payload.requestId !== pendingRequestId.current) {
+          return;
+        }
+        setIsSearching(false);
+        setSearchError(`Search worker error: ${data.payload.message}. Showing fallback results.`);
+        const fallbackResult = runFallbackSearch(baseAppsRef.current, queryRef.current);
+        setFilteredApps(fallbackResult);
+        setLastDurationMs(null);
+      }
+    };
+  }, [runFallbackSearch]);
+
+  const terminateWorker = useCallback(() => {
+    if (workerRef.current) {
+      try {
+        workerRef.current.postMessage({ type: 'shutdown' });
+      } catch {
+        // ignored - the worker might already be shutting down
+      }
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+  }, []);
+
+  const ensureWorker = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    if (workerRef.current) return workerRef.current;
+
+    try {
+      const worker = new Worker(new URL('../../workers/searchIndexer.ts', import.meta.url));
+      worker.onmessage = event => messageHandlerRef.current?.(event);
+      worker.onerror = event => {
+        setIsSearching(false);
+        const message = (event as ErrorEvent)?.message ?? 'Unexpected error from search worker.';
+        setSearchError(`Search worker error: ${message}. Showing fallback results.`);
+        const fallbackResult = runFallbackSearch(baseAppsRef.current, queryRef.current);
+        setFilteredApps(fallbackResult);
+        setLastDurationMs(null);
+        terminateWorker();
+      };
+      worker.postMessage({ type: 'initialize', payload: { apps: allApps } });
+      workerRef.current = worker;
+      return worker;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown failure during worker start.';
+      setSearchError(`Search worker error: ${message}. Showing fallback results.`);
+      setIsSearching(false);
+      const fallbackResult = runFallbackSearch(baseAppsRef.current, queryRef.current);
+      setFilteredApps(fallbackResult);
+      setLastDurationMs(null);
+      return null;
+    }
+  }, [allApps, runFallbackSearch, terminateWorker]);
 
   const recentApps = useMemo(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
@@ -207,14 +305,63 @@ const WhiskerMenu: React.FC = () => {
     return found ?? categoryConfigs[0];
   }, [category, categoryConfigs]);
 
-  const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+  const baseApps = useMemo(() => currentCategory?.apps ?? [], [currentCategory]);
+
+  useEffect(() => {
+    baseAppsRef.current = baseApps;
+    if (!query) {
+      setFilteredApps(baseApps);
     }
-    return list;
-  }, [currentCategory, query]);
+  }, [baseApps, query]);
+
+  useEffect(() => {
+    if (!query) {
+      setFilteredApps(baseApps);
+      setIsSearching(false);
+      setSearchError(null);
+      setLastDurationMs(null);
+      return;
+    }
+
+    if (!isVisible) {
+      const fallbackResult = runFallbackSearch(baseApps, query);
+      setFilteredApps(fallbackResult);
+      setIsSearching(false);
+      setLastDurationMs(null);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+    const worker = ensureWorker();
+    const requestId = ++pendingRequestId.current;
+
+    if (worker) {
+      worker.postMessage({
+        type: 'search',
+        payload: {
+          query,
+          appIds: baseApps.map(app => app.id),
+          requestId,
+        },
+      });
+    } else {
+      const fallbackResult = runFallbackSearch(baseApps, query);
+      setFilteredApps(fallbackResult);
+      setIsSearching(false);
+      setLastDurationMs(null);
+    }
+  }, [query, baseApps, isVisible, ensureWorker, runFallbackSearch]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      terminateWorker();
+    }
+  }, [isVisible, terminateWorker]);
+
+  useEffect(() => () => {
+    terminateWorker();
+  }, [terminateWorker]);
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
@@ -230,7 +377,14 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     if (!isVisible) return;
     setHighlight(0);
-  }, [isVisible, category, query]);
+  }, [isVisible, category, query, filteredApps.length]);
+
+  useEffect(() => {
+    setHighlight(current => {
+      if (filteredApps.length === 0) return 0;
+      return Math.min(current, filteredApps.length - 1);
+    });
+  }, [filteredApps.length]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -300,19 +454,19 @@ const WhiskerMenu: React.FC = () => {
         hideMenu();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        setHighlight(h => Math.min(h + 1, filteredApps.length - 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const app = currentApps[highlight];
+        const app = filteredApps[highlight];
         if (app) openSelectedApp(app.id);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [filteredApps, highlight, hideMenu, isVisible, toggleMenu]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -493,9 +647,54 @@ const WhiskerMenu: React.FC = () => {
                   autoFocus
                 />
               </div>
+              {lastDurationMs !== null && (
+                <p
+                  data-testid="search-metric"
+                  data-duration={lastDurationMs}
+                  className="mt-2 text-[10px] uppercase tracking-[0.3em] text-[#4aa8ff]"
+                >
+                  Indexed search {lastDurationMs.toFixed(1)}ms
+                </p>
+              )}
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-2">
-              {currentApps.length === 0 ? (
+            <div
+              className="flex-1 overflow-y-auto px-3 py-3 sm:px-2"
+              data-search-duration={lastDurationMs ?? undefined}
+              data-testid="search-results"
+            >
+              {searchError && (
+                <div className="mb-3 rounded-md border border-[#3d1a1a] bg-[#1a0d0d] px-3 py-2 text-xs text-red-200">
+                  {searchError}
+                </div>
+              )}
+              {isSearching ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500" role="status">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
+                    <svg
+                      className="h-6 w-6 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                      />
+                    </svg>
+                  </span>
+                  <p>Searching...</p>
+                </div>
+              ) : filteredApps.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
                     <svg
@@ -518,7 +717,7 @@ const WhiskerMenu: React.FC = () => {
                 </div>
               ) : (
                 <ul className="space-y-1">
-                  {currentApps.map((app, idx) => (
+                  {filteredApps.map((app, idx) => (
                     <li key={app.id}>
                       <button
                         type="button"
