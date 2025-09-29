@@ -5,6 +5,11 @@
   box-shadow: var(--shadow-2);
   overflow: hidden;
   transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  outline: none;
+}
+
+.windowFrame:focus-visible {
+  outline: none;
 }
 
 .windowFrame::before {
@@ -23,12 +28,17 @@
   z-index: 2;
 }
 
+.windowFrameActive {
+  box-shadow: var(--shadow-2), var(--focus-ring-window);
+  filter: none;
+}
+
 .windowFrameActive::before {
   opacity: 1;
 }
 
 .windowFrameInactive {
-  filter: brightness(0.85);
+  filter: brightness(0.85) saturate(0.9);
 }
 
 .windowFrameMaximized {
