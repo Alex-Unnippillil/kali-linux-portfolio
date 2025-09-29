@@ -153,6 +153,7 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -282,6 +283,25 @@ const WhiskerMenu: React.FC = () => {
       showMenu();
     }
   }, [hideMenu, isOpen, isVisible, showMenu]);
+
+  useEffect(() => {
+    const handleCommandPaletteOpen = () => {
+      setQuery('');
+      setHighlight(0);
+      setCategory('all');
+      setCategoryHighlight(0);
+      showMenu();
+      requestAnimationFrame(() => {
+        const input = searchInputRef.current;
+        input?.focus();
+        input?.select();
+      });
+    };
+    window.addEventListener('command-palette:open', handleCommandPaletteOpen);
+    return () => {
+      window.removeEventListener('command-palette:open', handleCommandPaletteOpen);
+    };
+  }, [showMenu]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -485,6 +505,7 @@ const WhiskerMenu: React.FC = () => {
                   </svg>
                 </span>
                 <input
+                  ref={searchInputRef}
                   className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
                   placeholder="Search applications"
                   aria-label="Search applications"

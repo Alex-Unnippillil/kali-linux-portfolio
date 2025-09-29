@@ -33,12 +33,14 @@ export default class Navbar extends PureComponent {
                 if (typeof window !== 'undefined') {
                         window.addEventListener('workspace-state', this.handleWorkspaceStateUpdate);
                         window.dispatchEvent(new CustomEvent('workspace-request'));
+                        window.addEventListener('quick-settings:open', this.handleExternalQuickSettingsOpen);
                 }
         }
 
         componentWillUnmount() {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
+                        window.removeEventListener('quick-settings:open', this.handleExternalQuickSettingsOpen);
                 }
         }
 
@@ -73,6 +75,10 @@ export default class Navbar extends PureComponent {
 
         handleStatusToggle = () => {
                 this.setState((state) => ({ status_card: !state.status_card }));
+        };
+
+        handleExternalQuickSettingsOpen = () => {
+                this.setState({ status_card: true });
         };
 
                 render() {

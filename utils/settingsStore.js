@@ -3,6 +3,15 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+export const DEFAULT_HOT_CORNER_CONFIG = {
+  topLeft: 'none',
+  topRight: 'none',
+  bottomLeft: 'none',
+  bottomRight: 'none',
+};
+
+const HOT_CORNER_KEY = 'hot-corners';
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
@@ -15,6 +24,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  hotCorners: { ...DEFAULT_HOT_CORNER_CONFIG },
 };
 
 export async function getAccent() {
@@ -114,6 +124,50 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+const isValidHotCornerAction = (value) =>
+  value === 'none' ||
+  value === 'show-desktop' ||
+  value === 'quick-settings' ||
+  value === 'command-palette';
+
+const sanitizeHotCorners = (value) => {
+  if (typeof value !== 'object' || value === null) {
+    return { ...DEFAULT_HOT_CORNER_CONFIG };
+  }
+  const next = { ...DEFAULT_HOT_CORNER_CONFIG };
+  ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].forEach((key) => {
+    if (isValidHotCornerAction(value[key])) {
+      next[key] = value[key];
+    }
+  });
+  return next;
+};
+
+export async function getHotCorners() {
+  if (typeof window === 'undefined') return { ...DEFAULT_HOT_CORNER_CONFIG };
+  try {
+    const stored = window.localStorage.getItem(HOT_CORNER_KEY);
+    if (!stored) {
+      return { ...DEFAULT_HOT_CORNER_CONFIG };
+    }
+    const parsed = JSON.parse(stored);
+    return sanitizeHotCorners(parsed);
+  } catch (error) {
+    console.error('Failed to read hot corner settings', error);
+    return { ...DEFAULT_HOT_CORNER_CONFIG };
+  }
+}
+
+export async function setHotCorners(config) {
+  if (typeof window === 'undefined') return;
+  try {
+    const normalized = sanitizeHotCorners(config);
+    window.localStorage.setItem(HOT_CORNER_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    console.error('Failed to save hot corner settings', error);
+  }
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +204,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem(HOT_CORNER_KEY);
 }
 
 export async function exportSettings() {
@@ -165,6 +220,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    hotCorners,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +233,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getHotCorners(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +249,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    hotCorners,
   });
 }
 
@@ -217,6 +275,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    hotCorners,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +289,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (hotCorners !== undefined) await setHotCorners(hotCorners);
 }
 
 export const defaults = DEFAULT_SETTINGS;
