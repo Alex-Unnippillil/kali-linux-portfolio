@@ -4,6 +4,7 @@ import React from 'react';
 import DsniffApp from '../../components/apps/dsniff';
 import CredentialExplainer from './components/CredentialExplainer';
 import StressSandbox from './components/StressSandbox';
+import PcapImporter from './components/PcapImporter';
 
 const DsniffPage: React.FC = () => {
   return (
@@ -11,6 +12,7 @@ const DsniffPage: React.FC = () => {
       <DsniffApp />
       <CredentialExplainer />
       <StressSandbox />
+      <PcapImporter />
     </>
   );
 };
