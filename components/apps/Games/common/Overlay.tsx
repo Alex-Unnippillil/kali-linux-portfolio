@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Toast from '../../../ui/Toast';
+import useToast from '@/hooks/useToast';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -21,8 +21,9 @@ export default function Overlay({
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
-  const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+  const toastIdRef = useRef<string | null>(null);
+  const { pushToast, dismissToast } = useToast();
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -65,25 +66,36 @@ export default function Overlay({
   useEffect(() => {
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
-      setToast('Controller disconnected. Reconnect to resume.');
+      if (!toastIdRef.current) {
+        toastIdRef.current = pushToast({
+          message: 'Controller disconnected. Reconnect to resume.',
+          duration: 1000000,
+        });
+      }
       setPaused(true);
       onPause?.();
     };
     const handleConnect = () => {
-      if (pausedByDisconnect.current) {
-        pausedByDisconnect.current = false;
-        setToast('');
-        setPaused(false);
-        onResume?.();
+      if (!pausedByDisconnect.current) return;
+      pausedByDisconnect.current = false;
+      if (toastIdRef.current) {
+        dismissToast(toastIdRef.current);
+        toastIdRef.current = null;
       }
+      setPaused(false);
+      onResume?.();
     };
     window.addEventListener('gamepaddisconnected', handleDisconnect);
     window.addEventListener('gamepadconnected', handleConnect);
     return () => {
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
       window.removeEventListener('gamepadconnected', handleConnect);
+      if (toastIdRef.current) {
+        dismissToast(toastIdRef.current);
+        toastIdRef.current = null;
+      }
     };
-  }, [onPause, onResume]);
+  }, [dismissToast, onPause, onResume, pushToast]);
 
   return (
     <>
@@ -96,13 +108,6 @@ export default function Overlay({
         </button>
         <span className="fps">{fps} FPS</span>
       </div>
-      {toast && (
-        <Toast
-          message={toast}
-          onClose={() => setToast('')}
-          duration={1000000}
-        />
-      )}
     </>
   );
 }

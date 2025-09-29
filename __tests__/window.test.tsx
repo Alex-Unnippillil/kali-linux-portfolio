@@ -2,6 +2,12 @@ import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
+import ToastProvider from '../components/ui/ToastProvider';
+
+const renderWithToasts = (
+  ui: React.ReactElement,
+  options?: Parameters<typeof render>[1],
+) => render(<ToastProvider>{ui}</ToastProvider>, options);
 
 const computeSnappedHeightPercent = () => {
   const availableHeight = window.innerHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET;
@@ -29,7 +35,7 @@ describe('Window lifecycle', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
   
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -57,7 +63,7 @@ describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     setViewport(1920, 1080);
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -95,7 +101,7 @@ describe('Window snapping preview', () => {
 
   it('hides preview when away from edge', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -132,7 +138,7 @@ describe('Window snapping preview', () => {
   it('shows top preview when dragged near top edge', () => {
     setViewport(1280, 720);
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -172,7 +178,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     setViewport(1024, 768);
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -215,7 +221,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near right edge on large viewport', () => {
     setViewport(1920, 1080);
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -258,7 +264,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near top edge', () => {
     setViewport(1366, 768);
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -300,7 +306,7 @@ describe('Window snapping finalize and release', () => {
   it('releases snap with Alt+ArrowDown restoring size', () => {
     setViewport(1024, 768);
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -362,7 +368,7 @@ describe('Window snapping finalize and release', () => {
   it('releases snap when starting drag', () => {
     setViewport(1440, 900);
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -411,7 +417,7 @@ describe('Window snapping finalize and release', () => {
 
 describe('Window keyboard dragging', () => {
   it('moves window using arrow keys with grabbed state', () => {
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -440,7 +446,7 @@ describe('Window keyboard dragging', () => {
 describe('Edge resistance', () => {
   it('clamps drag movement near boundaries', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -470,7 +476,9 @@ describe('Edge resistance', () => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
 
-    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    expect(winEl.style.transform).toBe(
+      `translate(0px, ${DESKTOP_TOP_PADDING}px)`,
+    );
   });
 });
 
@@ -485,7 +493,7 @@ describe('Window overlay inert behaviour', () => {
     document.body.appendChild(opener);
     opener.focus();
 
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
@@ -525,7 +533,7 @@ describe('Window overlay inert behaviour', () => {
     document.body.appendChild(opener);
     opener.focus();
 
-    render(
+    renderWithToasts(
       <Window
         id="test-window"
         title="Test"
