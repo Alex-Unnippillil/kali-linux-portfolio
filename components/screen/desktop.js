@@ -579,15 +579,34 @@ export class Desktop extends Component {
         return { x: Math.round(clampedX), y: Math.round(clampedY) };
     };
 
+    snapIconPosition = (x, y) => {
+        const metrics = this.computeGridMetrics();
+        const snapAxis = (value, offset, spacing) => {
+            if (!Number.isFinite(value) || !Number.isFinite(offset) || !Number.isFinite(spacing) || spacing <= 0) {
+                return value;
+            }
+            const relative = value - offset;
+            const snappedRelative = Math.round(relative / spacing) * spacing;
+            return offset + snappedRelative;
+        };
+
+        const snappedX = snapAxis(x, metrics.offsetX, metrics.columnSpacing);
+        const snappedY = snapAxis(y, metrics.offsetY, metrics.rowSpacing);
+
+        return { x: snappedX, y: snappedY };
+    };
+
     calculateIconPosition = (clientX, clientY, dragState = this.iconDragState) => {
         if (!dragState) return { x: 0, y: 0 };
         const rect = this.getDesktopRect();
         if (!rect) {
-            return this.clampIconPosition(clientX - dragState.offsetX, clientY - dragState.offsetY);
+            const snapped = this.snapIconPosition(clientX - dragState.offsetX, clientY - dragState.offsetY);
+            return this.clampIconPosition(snapped.x, snapped.y);
         }
         const x = clientX - rect.left - dragState.offsetX;
         const y = clientY - rect.top - dragState.offsetY;
-        return this.clampIconPosition(x, y);
+        const snapped = this.snapIconPosition(x, y);
+        return this.clampIconPosition(snapped.x, snapped.y);
     };
 
     updateIconPosition = (id, x, y, persist = false) => {
@@ -878,7 +897,9 @@ export class Desktop extends Component {
         if (hasValidCoordinates) {
             return this.calculateIconPosition(event.clientX, event.clientY, dragState);
         }
-        return dragState?.lastPosition || dragState?.startPosition || { x: 0, y: 0 };
+        const fallback = dragState?.lastPosition || dragState?.startPosition || { x: 0, y: 0 };
+        const snapped = this.snapIconPosition(fallback.x, fallback.y);
+        return this.clampIconPosition(snapped.x, snapped.y);
     };
 
     checkForNewFolders = () => {
