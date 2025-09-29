@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import LabMode from '../../LabMode';
+import LabMode from '../../util-components/LabMode';
 import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
