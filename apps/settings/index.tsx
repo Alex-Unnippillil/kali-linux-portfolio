@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import AccentPicker from "../../components/AccentPicker";
 
 export default function Settings() {
   const {
@@ -140,30 +141,30 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
-              {ACCENT_OPTIONS.map((c) => (
-                <button
-                  key={c}
-                  aria-label={`select-accent-${c}`}
-                  role="radio"
-                  aria-checked={accent === c}
-                  onClick={() => setAccent(c)}
-                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+          <div className="mx-auto my-6 w-full max-w-2xl px-4">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-ubt-grey">Accent</label>
+              <span className="text-xs uppercase tracking-wide text-ubt-grey/70">
+                WCAG AA contrast
+              </span>
             </div>
+            <AccentPicker
+              value={accent}
+              options={ACCENT_OPTIONS}
+              onChange={setAccent}
+              className="md:grid-cols-3"
+            />
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex items-center justify-center gap-2 my-4 text-ubt-grey">
+            <input
+              id="kali-gradient-toggle"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="h-4 w-4"
+              aria-labelledby="kali-gradient-label"
+            />
+            <label id="kali-gradient-label" htmlFor="kali-gradient-toggle">
               Kali Gradient Wallpaper
             </label>
           </div>
