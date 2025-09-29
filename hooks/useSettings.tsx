@@ -22,6 +22,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getOnScreenKeyboardEnabled as loadOnScreenKeyboardEnabled,
+  setOnScreenKeyboardEnabled as saveOnScreenKeyboardEnabled,
+  getOnScreenKeyboardAutoShow as loadOnScreenKeyboardAutoShow,
+  setOnScreenKeyboardAutoShow as saveOnScreenKeyboardAutoShow,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -66,6 +70,8 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  onScreenKeyboardEnabled: boolean;
+  onScreenKeyboardAutoShow: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +84,8 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setOnScreenKeyboardEnabled: (value: boolean) => void;
+  setOnScreenKeyboardAutoShow: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +102,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  onScreenKeyboardEnabled: defaults.onScreenKeyboardEnabled,
+  onScreenKeyboardAutoShow: defaults.onScreenKeyboardAutoShow,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +116,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setOnScreenKeyboardEnabled: () => {},
+  setOnScreenKeyboardAutoShow: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +133,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [onScreenKeyboardEnabled, setOnScreenKeyboardEnabled] = useState<boolean>(
+    defaults.onScreenKeyboardEnabled,
+  );
+  const [onScreenKeyboardAutoShow, setOnScreenKeyboardAutoShow] = useState<boolean>(
+    defaults.onScreenKeyboardAutoShow,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +155,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setOnScreenKeyboardEnabled(await loadOnScreenKeyboardEnabled());
+      setOnScreenKeyboardAutoShow(await loadOnScreenKeyboardAutoShow());
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +270,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveOnScreenKeyboardEnabled(onScreenKeyboardEnabled);
+  }, [onScreenKeyboardEnabled]);
+
+  useEffect(() => {
+    saveOnScreenKeyboardAutoShow(onScreenKeyboardAutoShow);
+  }, [onScreenKeyboardAutoShow]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +295,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        onScreenKeyboardEnabled,
+        onScreenKeyboardAutoShow,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +309,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setOnScreenKeyboardEnabled,
+        setOnScreenKeyboardAutoShow,
         setTheme,
       }}
     >

@@ -395,6 +395,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, []);
 
   useEffect(() => {
+    const handleKeyboardResize = () => {
+      requestAnimationFrame(() => {
+        fitRef.current?.fit();
+      });
+    };
+    window.addEventListener('oskchange' as any, handleKeyboardResize as EventListener);
+    return () =>
+      window.removeEventListener('oskchange' as any, handleKeyboardResize as EventListener);
+  }, []);
+
+  useEffect(() => {
     const listener = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
