@@ -19,6 +19,7 @@ const NotificationBell: React.FC = () => {
     unreadCount,
     clearNotifications,
     markAllRead,
+    dismissNotification,
   } = useNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -26,9 +27,21 @@ const NotificationBell: React.FC = () => {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const headingId = useId();
   const panelId = `${headingId}-panel`;
+  const menuItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [liveMessage, setLiveMessage] = useState('');
+  const announcedIdsRef = useRef<Set<string>>(new Set());
+  const initializedAnnouncementsRef = useRef(false);
+
+  const buttonLabel = useMemo(() => {
+    if (unreadCount === 0) return 'Notifications, no unread messages';
+    if (unreadCount === 1) return 'Notifications, 1 unread message';
+    return `Notifications, ${unreadCount} unread messages`;
+  }, [unreadCount]);
 
   const closePanel = useCallback(() => {
     setIsOpen(false);
+    setActiveIndex(-1);
     setTimeout(() => {
       buttonRef.current?.focus({ preventScroll: true });
     }, 0);
@@ -95,23 +108,6 @@ const NotificationBell: React.FC = () => {
     };
   }, [closePanel, isOpen]);
 
-  const hasOpenedRef = useRef(false);
-
-  useEffect(() => {
-    if (!isOpen) {
-      hasOpenedRef.current = false;
-      return;
-    }
-    if (hasOpenedRef.current) return;
-    hasOpenedRef.current = true;
-    const panel = panelRef.current;
-    if (panel) {
-      panel.focus({ preventScroll: true });
-      const firstFocusable = panel.querySelector<HTMLElement>(focusableSelector);
-      firstFocusable?.focus({ preventScroll: true });
-    }
-  }, [isOpen]);
-
   useEffect(() => {
     if (!isOpen) return;
     if (notifications.some(notification => !notification.read)) {
@@ -138,19 +134,124 @@ const NotificationBell: React.FC = () => {
     [notifications, timeFormatter],
   );
 
+  const handleMenuKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.defaultPrevented) return;
+      const totalItems = formattedNotifications.length;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePanel();
+        return;
+      }
+      if (totalItems === 0) return;
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        setActiveIndex(prev => {
+          if (prev === -1) return 0;
+          return (prev + 1) % totalItems;
+        });
+      } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setActiveIndex(prev => {
+          if (prev === -1) return totalItems - 1;
+          return (prev - 1 + totalItems) % totalItems;
+        });
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        setActiveIndex(totalItems > 0 ? 0 : -1);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        setActiveIndex(totalItems > 0 ? totalItems - 1 : -1);
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        if (activeIndex >= 0) {
+          event.preventDefault();
+          menuItemRefs.current[activeIndex]?.click();
+        }
+      }
+    },
+    [activeIndex, closePanel, formattedNotifications.length],
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setActiveIndex(prev => {
+      if (formattedNotifications.length === 0) return -1;
+      if (prev === -1) return 0;
+      if (prev >= formattedNotifications.length)
+        return formattedNotifications.length - 1;
+      return prev;
+    });
+  }, [formattedNotifications.length, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (activeIndex === -1) {
+      panelRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    menuItemRefs.current[activeIndex]?.focus({ preventScroll: true });
+  }, [activeIndex, isOpen]);
+
+  useEffect(() => {
+    if (!initializedAnnouncementsRef.current) {
+      notifications.forEach(notification =>
+        announcedIdsRef.current.add(notification.id),
+      );
+      initializedAnnouncementsRef.current = true;
+      return;
+    }
+
+    const newNotifications = notifications.filter(
+      notification => !announcedIdsRef.current.has(notification.id),
+    );
+
+    if (newNotifications.length === 0) return;
+
+    newNotifications.forEach(notification =>
+      announcedIdsRef.current.add(notification.id),
+    );
+
+    const summary = newNotifications
+      .map(notification =>
+        notification.body
+          ? `${notification.title}: ${notification.body}`
+          : notification.title,
+      )
+      .join('. ');
+
+    const prefix =
+      newNotifications.length === 1
+        ? 'New notification:'
+        : 'New notifications:';
+    setLiveMessage(`${prefix} ${summary}`);
+  }, [notifications]);
+
   const handleDismissAll = useCallback(() => {
     if (notifications.length === 0) return;
     clearNotifications();
     closePanel();
   }, [clearNotifications, closePanel, notifications.length]);
 
+  const setMenuItemRef = useCallback((index: number, node: HTMLButtonElement | null) => {
+    menuItemRefs.current[index] = node;
+  }, []);
+
+  const handleNotificationActivate = useCallback(
+    (notification: (typeof formattedNotifications)[number]) => {
+      dismissNotification(notification.appId, notification.id);
+      closePanel();
+    },
+    [closePanel, dismissNotification],
+  );
+
   return (
     <div className="relative">
       <button
         type="button"
         ref={buttonRef}
-        aria-label="Open notifications"
-        aria-haspopup="dialog"
+        aria-label={buttonLabel}
+        aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
@@ -176,11 +277,11 @@ const NotificationBell: React.FC = () => {
         <div
           ref={panelRef}
           id={panelId}
-          role="dialog"
-          aria-modal="false"
+          role="menu"
           aria-labelledby={headingId}
           tabIndex={-1}
           className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
+          onKeyDown={handleMenuKeyDown}
         >
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
             <h2 id={headingId} className="text-sm font-semibold text-white">
@@ -201,19 +302,32 @@ const NotificationBell: React.FC = () => {
                 You&apos;re all caught up.
               </p>
             ) : (
-              <ul role="list" className="divide-y divide-white/10">
-                {formattedNotifications.map(notification => (
-                  <li key={notification.id} className="px-4 py-3 text-sm text-white">
-                    <p className="font-medium">{notification.title}</p>
-                    {notification.body && (
-                      <p className="mt-1 text-xs text-ubt-grey text-opacity-80">
-                        {notification.body}
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
-                      <span>{notification.appId}</span>
-                      <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
-                    </div>
+              <ul role="none" className="divide-y divide-white/10">
+                {formattedNotifications.map((notification, index) => (
+                  <li role="none" key={notification.id}>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      ref={node => setMenuItemRef(index, node)}
+                      tabIndex={activeIndex === index ? 0 : -1}
+                      onClick={() => handleNotificationActivate(notification)}
+                      onFocus={() => setActiveIndex(index)}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      className={`flex w-full flex-col px-4 py-3 text-left text-sm text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
+                        activeIndex === index ? 'bg-white/10' : ''
+                      }`}
+                    >
+                      <span className="font-medium">{notification.title}</span>
+                      {notification.body && (
+                        <span className="mt-1 text-xs text-ubt-grey text-opacity-80">
+                          {notification.body}
+                        </span>
+                      )}
+                      <div className="mt-2 flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+                        <span>{notification.appId}</span>
+                        <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
+                      </div>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -221,6 +335,9 @@ const NotificationBell: React.FC = () => {
           </div>
         </div>
       )}
+      <div role="status" aria-live="polite" className="sr-only">
+        {liveMessage}
+      </div>
     </div>
   );
 };
