@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import GameLayout from "../../components/apps/GameLayout";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
@@ -87,6 +88,7 @@ interface EnemyInstance extends Enemy {
 }
 
 const TowerDefense = () => {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [editing, setEditing] = useState(true);
   const [path, setPath] = useState<{ x: number; y: number }[]>([]);
@@ -417,8 +419,29 @@ const TowerDefense = () => {
     });
   };
 
+  const goToGames = useCallback(() => {
+    void router.push("/apps?category=games");
+  }, [router]);
+
+  const handleBack = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      goToGames();
+    }
+  }, [goToGames, router]);
+
   return (
-    <GameLayout gameId="tower-defense">
+    <GameLayout
+      gameId="tower-defense"
+      title="Tower Defense"
+      breadcrumbs={[
+        { label: "Games", onSelect: goToGames },
+        { label: "Tower Defense" },
+      ]}
+      onBack={handleBack}
+      contextLabel="Games collection. Tower Defense strategy builder."
+    >
       <div className="p-2 space-y-2">
         {waveCountdownRef.current !== null && (
           <div className="text-center bg-gray-700 text-white py-1 rounded">
@@ -469,6 +492,7 @@ const TowerDefense = () => {
             className="w-full bg-black text-white p-1 rounded h-24"
             value={waveJson}
             onChange={(e) => setWaveJson(e.target.value)}
+            aria-label="Wave configuration JSON"
           />
           <div className="space-x-2">
             <button
@@ -494,6 +518,7 @@ const TowerDefense = () => {
             onClick={handleCanvasClick}
             onMouseMove={handleCanvasMove}
             onMouseLeave={handleCanvasLeave}
+            aria-label="Tower defense map editor grid"
           />
           {selected !== null && (
             <div className="ml-2 flex flex-col space-y-1 items-center">

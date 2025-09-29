@@ -1,4 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+} from 'react';
 import { z } from 'zod';
 import { useRouter } from 'next/router';
 import { generateGrid, createRNG } from './generator';
@@ -64,6 +69,11 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const [allowDiagonal, setAllowDiagonal] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [announce, setAnnounce] = useState('');
+  const backwardsId = 'word-search-allow-backwards';
+  const diagonalId = 'word-search-allow-diagonal';
+  const qualityId = 'word-search-quality';
+  const highContrastId = 'word-search-high-contrast';
+  const importId = 'word-search-import';
 
   // load saved game on mount
   useEffect(() => {
@@ -451,35 +461,44 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           <text x="18" y="20.5" textAnchor="middle" className="text-xs">{`${found.size}/${words.length}`}</text>
         </svg>
         <span className="text-sm">Time: {elapsed}s</span>
-        <select
-          value={pack}
-          onChange={(e) => setPack(e.target.value as PackName | 'random' | 'custom')}
-          className="px-2 py-1 border rounded"
-        >
-          <option value="random">Random</option>
-          <option value="custom">Custom</option>
-          {Object.keys(PUZZLE_PACKS).map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center space-x-1">
-          <input
-            type="checkbox"
-            checked={allowBackwards}
-            onChange={(e) => setAllowBackwards(e.target.checked)}
-          />
-          <span className="text-sm">Backwards</span>
-        </label>
-        <label className="flex items-center space-x-1">
-          <input
-            type="checkbox"
-            checked={allowDiagonal}
-            onChange={(e) => setAllowDiagonal(e.target.checked)}
-          />
-          <span className="text-sm">Diagonal</span>
-        </label>
+          <select
+            value={pack}
+            onChange={(e) => setPack(e.target.value as PackName | 'random' | 'custom')}
+            className="px-2 py-1 border rounded"
+            aria-label="Choose puzzle pack"
+          >
+            <option value="random">Random</option>
+            <option value="custom">Custom</option>
+            {Object.keys(PUZZLE_PACKS).map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center space-x-1">
+            <input
+              id={backwardsId}
+              type="checkbox"
+              checked={allowBackwards}
+              onChange={(e) => setAllowBackwards(e.target.checked)}
+              aria-label="Allow backwards words"
+            />
+            <label htmlFor={backwardsId} className="text-sm">
+              Backwards
+            </label>
+          </div>
+          <div className="flex items-center space-x-1">
+            <input
+              id={diagonalId}
+              type="checkbox"
+              checked={allowDiagonal}
+              onChange={(e) => setAllowDiagonal(e.target.checked)}
+              aria-label="Allow diagonal words"
+            />
+            <label htmlFor={diagonalId} className="text-sm">
+              Diagonal
+            </label>
+          </div>
         <button type="button" onClick={newPuzzle} className="px-2 py-1 bg-blue-700 text-white rounded">
           New
         </button>
@@ -506,7 +525,14 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         >
           Import LB
         </button>
-        <input ref={inputRef} type="file" className="hidden" onChange={importLeaderboard} />
+          <input
+            ref={inputRef}
+            id={importId}
+            type="file"
+            className="hidden"
+            onChange={importLeaderboard}
+            aria-label="Import leaderboard file"
+          />
         <button
           type="button"
           onClick={useFirstHint}
@@ -523,25 +549,33 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         >
           Last Hint ({lastHints})
         </button>
-        <label className="flex items-center space-x-1">
-          <span className="text-sm">Quality</span>
-          <input
-            type="range"
-            min="0.5"
-            max="1"
-            step="0.1"
-            value={quality}
-            onChange={(e) => setQuality(parseFloat(e.target.value))}
-          />
-        </label>
-        <label className="flex items-center space-x-1">
-          <input
-            type="checkbox"
-            checked={highContrast}
-            onChange={(e) => setHighContrast(e.target.checked)}
-          />
-          <span className="text-sm">High Contrast Letters</span>
-        </label>
+          <div className="flex items-center space-x-1">
+            <label htmlFor={qualityId} className="text-sm">
+              Quality
+            </label>
+            <input
+              id={qualityId}
+              type="range"
+              min="0.5"
+              max="1"
+              step="0.1"
+              value={quality}
+              onChange={(e) => setQuality(parseFloat(e.target.value))}
+              aria-label="Adjust grid quality"
+            />
+          </div>
+          <div className="flex items-center space-x-1">
+            <input
+              id={highContrastId}
+              type="checkbox"
+              checked={highContrast}
+              onChange={(e) => setHighContrast(e.target.checked)}
+              aria-label="Toggle high contrast letters"
+            />
+            <label htmlFor={highContrastId} className="text-sm">
+              High Contrast Letters
+            </label>
+          </div>
       </div>
       <div
         className="relative w-max"
@@ -624,12 +658,37 @@ interface WordSearchProps {
   getDailySeed?: () => Promise<string>;
 }
 
-const WordSearch: React.FC<WordSearchProps> = ({ getDailySeed }) => (
-  <SettingsProvider>
-    <GameLayout gameId="word_search">
-      <WordSearchInner getDailySeed={getDailySeed} />
-    </GameLayout>
-  </SettingsProvider>
-);
+const WordSearch: React.FC<WordSearchProps> = ({ getDailySeed }) => {
+  const router = useRouter();
+
+  const goToGames = useCallback(() => {
+    void router.push('/apps?category=games');
+  }, [router]);
+
+  const handleBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      goToGames();
+    }
+  }, [goToGames, router]);
+
+  return (
+    <SettingsProvider>
+      <GameLayout
+        gameId="word_search"
+        title="Word Search"
+        breadcrumbs={[
+          { label: 'Games', onSelect: goToGames },
+          { label: 'Word Search' },
+        ]}
+        onBack={handleBack}
+        contextLabel="Games collection. Word Search puzzle."
+      >
+        <WordSearchInner getDailySeed={getDailySeed} />
+      </GameLayout>
+    </SettingsProvider>
+  );
+};
 
 export default WordSearch;
