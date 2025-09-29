@@ -8,6 +8,7 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import apps, { games } from '../../apps.config';
+import appDocs from '../../docs/app-docs.json';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -1304,6 +1305,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const docConfig = appDocs?.[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -1325,6 +1327,7 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    docs: docConfig,
                 }
 
                 windowsJsx.push(
