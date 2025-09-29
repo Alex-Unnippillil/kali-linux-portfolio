@@ -1,5 +1,5 @@
 import React from 'react';
-import PopularModules from '../components/PopularModules';
+import PopularModules from '../components/util-components/PopularModules';
 
 const PopularModulesPage: React.FC = () => {
   return <PopularModules />;

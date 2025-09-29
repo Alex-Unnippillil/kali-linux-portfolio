@@ -4,6 +4,8 @@
     "name": "Port Scanner",
     "description": "Scans for open network ports",
     "tags": ["network", "scanner"],
+    "stars": 4820,
+    "downloads": 19400,
     "log": [
       {"level": "info", "message": "Starting port scan..."},
       {"level": "success", "message": "Found open port 22 on 192.168.0.1"},
@@ -26,6 +28,8 @@
     "name": "Brute Force",
     "description": "Attempts common passwords",
     "tags": ["attack", "password"],
+    "stars": 3560,
+    "downloads": 15875,
     "log": [
       {"level": "info", "message": "Starting brute force..."},
       {"level": "warning", "message": "Tried 100 passwords"},
@@ -48,6 +52,8 @@
     "name": "Vuln Check",
     "description": "Checks for known CVEs",
     "tags": ["vulnerability", "scanner"],
+    "stars": 4210,
+    "downloads": 17640,
     "log": [
       {"level": "info", "message": "Checking for vulnerabilities..."},
       {"level": "success", "message": "CVE-2024-1234 found on host1"},
