@@ -4,10 +4,10 @@ import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
-  resetSettings,
   defaults,
-  exportSettings as exportSettingsData,
-  importSettings as importSettingsData,
+  exportPreferences as exportPreferencesData,
+  importPreferences as importPreferencesData,
+  resetPreferences,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
@@ -60,7 +60,7 @@ export default function Settings() {
   const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
 
   const handleExport = async () => {
-    const data = await exportSettingsData();
+    const data = await exportPreferencesData();
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -72,18 +72,18 @@ export default function Settings() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    await importSettingsData(text);
     try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
+      const preferences = await importPreferencesData(text);
+      setAccent(preferences.accent);
+      setWallpaper(preferences.wallpaper);
+      setUseKaliWallpaper(preferences.useKaliWallpaper);
+      setDensity(preferences.density);
+      setReducedMotion(preferences.reducedMotion);
+      setFontScale(preferences.fontScale);
+      setHighContrast(preferences.highContrast);
+      setHaptics(preferences.haptics);
+      const payload = JSON.parse(text);
+      if (payload.theme !== undefined) setTheme(payload.theme);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -96,14 +96,16 @@ export default function Settings() {
       )
     )
       return;
-    await resetSettings();
+    await resetPreferences();
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setUseKaliWallpaper(defaults.useKaliWallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setHaptics(defaults.haptics);
     setTheme("default");
   };
 
