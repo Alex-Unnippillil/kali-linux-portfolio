@@ -1,6 +1,1 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <circle cx="32" cy="32" r="30" fill="#ffd700"/>
-  <polygon points="32,32 62,16 62,48" fill="#2e3436"/>
-  <circle cx="42" cy="22" r="4" fill="#2e3436"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#2e3436" d="M0 0h64v64H0z"/><circle cx="32" cy="32" r="30" fill="gold"/><path fill="#2e3436" d="m32 32 30-16v32z"/><circle cx="42" cy="22" r="4" fill="#2e3436"/></svg>

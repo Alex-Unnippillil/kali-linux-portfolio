@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import React from 'react';
+
+import { Icon, type IconName } from '../ui/Icon';
 
 export type KaliCategory = {
   id: string;
@@ -25,32 +26,32 @@ export const KALI_CATEGORIES: KaliCategory[] = [
   { id: 'top10', label: 'Top 10 Security Tools' },
 ];
 
-const DEFAULT_CATEGORY_ICON = '/themes/Yaru/status/preferences-system-symbolic.svg';
+const DEFAULT_CATEGORY_ICON: IconName = 'preferences-system-symbolic';
 
-const CATEGORY_ICON_LOOKUP: Record<string, string> = {
-  'information-gathering': '/themes/kali/categories/information-gathering.svg',
-  'vulnerability-analysis': '/themes/kali/categories/vulnerability-analysis.svg',
-  'web-application-analysis': '/themes/kali/categories/web-application-analysis.svg',
-  'database-assessment': '/themes/kali/categories/database-assessment.svg',
-  'password-attacks': '/themes/kali/categories/password-attacks.svg',
-  'wireless-attacks': '/themes/kali/categories/wireless-attacks.svg',
-  'reverse-engineering': '/themes/kali/categories/reverse-engineering.svg',
-  'exploitation-tools': '/themes/kali/categories/exploitation-tools.svg',
-  'sniffing-spoofing': '/themes/kali/categories/sniffing-spoofing.svg',
-  'sniffing-and-spoofing': '/themes/kali/categories/sniffing-spoofing.svg',
-  'post-exploitation': '/themes/kali/categories/post-exploitation.svg',
-  'maintaining-access': '/themes/kali/categories/post-exploitation.svg',
-  'forensics': '/themes/kali/categories/forensics.svg',
-  'reporting': '/themes/kali/categories/reporting.svg',
-  'reporting-tools': '/themes/kali/categories/reporting.svg',
-  'social-engineering': '/themes/kali/categories/social-engineering.svg',
-  'social-engineering-tools': '/themes/kali/categories/social-engineering.svg',
-  'hardware-hacking': '/themes/kali/categories/hardware-hacking.svg',
-  'extra': '/themes/kali/categories/extra.svg',
-  'miscellaneous': '/themes/kali/categories/extra.svg',
-  'top10': '/themes/kali/categories/top10.svg',
-  'top-10-tools': '/themes/kali/categories/top10.svg',
-  'stress-testing': '/themes/kali/categories/exploitation-tools.svg',
+const CATEGORY_ICON_LOOKUP: Partial<Record<string, IconName>> = {
+  'information-gathering': 'information-gathering',
+  'vulnerability-analysis': 'vulnerability-analysis',
+  'web-application-analysis': 'web-application-analysis',
+  'database-assessment': 'database-assessment',
+  'password-attacks': 'password-attacks',
+  'wireless-attacks': 'wireless-attacks',
+  'reverse-engineering': 'reverse-engineering',
+  'exploitation-tools': 'exploitation-tools',
+  'sniffing-spoofing': 'sniffing-spoofing',
+  'sniffing-and-spoofing': 'sniffing-spoofing',
+  'post-exploitation': 'post-exploitation',
+  'maintaining-access': 'post-exploitation',
+  forensics: 'forensics',
+  reporting: 'reporting',
+  'reporting-tools': 'reporting',
+  'social-engineering': 'social-engineering',
+  'social-engineering-tools': 'social-engineering',
+  'hardware-hacking': 'hardware-hacking',
+  extra: 'extra',
+  miscellaneous: 'extra',
+  top10: 'top10',
+  'top-10-tools': 'top10',
+  'stress-testing': 'exploitation-tools',
 };
 
 type CategoryIconProps = {
@@ -59,26 +60,8 @@ type CategoryIconProps = {
 };
 
 const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryId, label }) => {
-  const [src, setSrc] = useState<string>(CATEGORY_ICON_LOOKUP[categoryId] ?? DEFAULT_CATEGORY_ICON);
-
-  useEffect(() => {
-    setSrc(CATEGORY_ICON_LOOKUP[categoryId] ?? DEFAULT_CATEGORY_ICON);
-  }, [categoryId]);
-
-  return (
-    <Image
-      src={src}
-      alt={`${label} category icon`}
-      width={20}
-      height={20}
-      className="h-5 w-5 flex-shrink-0"
-      onError={() => {
-        if (src !== DEFAULT_CATEGORY_ICON) {
-          setSrc(DEFAULT_CATEGORY_ICON);
-        }
-      }}
-    />
-  );
+  const iconName = CATEGORY_ICON_LOOKUP[categoryId] ?? DEFAULT_CATEGORY_ICON;
+  return <Icon name={iconName} label={`${label} category icon`} size={20} className="h-5 w-5 flex-shrink-0" />;
 };
 
 type ApplicationsMenuProps = {

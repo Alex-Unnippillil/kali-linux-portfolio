@@ -1,56 +1,31 @@
-import Image from 'next/image';
+import { Icon } from './ui/Icon';
 
 export function CloseIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-close-symbolic.svg"
-      alt="Close"
-      width={16}
-      height={16}
-    />
+    <Icon name="window-close-symbolic" label="Close" />
   );
 }
 
 export function MinimizeIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-minimize-symbolic.svg"
-      alt="Minimize"
-      width={16}
-      height={16}
-    />
+    <Icon name="window-minimize-symbolic" label="Minimize" />
   );
 }
 
 export function MaximizeIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-maximize-symbolic.svg"
-      alt="Maximize"
-      width={16}
-      height={16}
-    />
+    <Icon name="window-maximize-symbolic" label="Maximize" />
   );
 }
 
 export function RestoreIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-restore-symbolic.svg"
-      alt="Restore"
-      width={16}
-      height={16}
-    />
+    <Icon name="window-restore-symbolic" label="Restore" />
   );
 }
 
 export function PinIcon() {
   return (
-    <Image
-      src="/themes/Yaru/window/window-pin-symbolic.svg"
-      alt="Pin"
-      width={16}
-      height={16}
-    />
+    <Icon name="window-pin-symbolic" label="Pin" />
   );
 }

@@ -1,9 +1,12 @@
 import React from 'react';
 
+import { Icon, type IconName } from '../ui/Icon';
+
 export type PlacesMenuItem = {
   id: string;
   label: string;
-  icon: string;
+  iconName?: IconName;
+  icon?: string;
   onSelect?: () => void;
 };
 
@@ -12,33 +15,30 @@ export interface PlacesMenuProps {
   items: PlacesMenuItem[];
 }
 
-const KALI_ICON_MAP: Record<string, string> = {
-  home: '/themes/Kali/places/user-home.svg',
-  'user-home': '/themes/Kali/places/user-home.svg',
-  desktop: '/themes/Kali/places/user-desktop.svg',
-  'user-desktop': '/themes/Kali/places/user-desktop.svg',
-  documents: '/themes/Kali/places/folder-documents.svg',
-  'folder-documents': '/themes/Kali/places/folder-documents.svg',
-  downloads: '/themes/Kali/places/folder-downloads.svg',
-  'folder-downloads': '/themes/Kali/places/folder-downloads.svg',
-  music: '/themes/Kali/places/folder-music.svg',
-  'folder-music': '/themes/Kali/places/folder-music.svg',
-  pictures: '/themes/Kali/places/folder-pictures.svg',
-  'folder-pictures': '/themes/Kali/places/folder-pictures.svg',
-  photos: '/themes/Kali/places/folder-pictures.svg',
-  videos: '/themes/Kali/places/folder-videos.svg',
-  'folder-videos': '/themes/Kali/places/folder-videos.svg',
-  movies: '/themes/Kali/places/folder-videos.svg',
-  trash: '/themes/Kali/places/user-trash.svg',
-  'user-trash': '/themes/Kali/places/user-trash.svg',
-  'trash-full': '/themes/Kali/places/user-trash-full.svg',
-  'user-trash-full': '/themes/Kali/places/user-trash-full.svg',
+const KALI_ICON_MAP: Record<string, IconName> = {
+  home: 'user-home',
+  'user-home': 'user-home',
+  desktop: 'user-desktop',
+  'user-desktop': 'user-desktop',
+  documents: 'folder-documents',
+  'folder-documents': 'folder-documents',
+  downloads: 'folder-downloads',
+  'folder-downloads': 'folder-downloads',
+  music: 'folder-music',
+  'folder-music': 'folder-music',
+  pictures: 'folder-pictures',
+  'folder-pictures': 'folder-pictures',
+  photos: 'folder-pictures',
+  videos: 'folder-videos',
+  'folder-videos': 'folder-videos',
+  movies: 'folder-videos',
+  trash: 'user-trash',
+  'user-trash': 'user-trash',
+  'trash-full': 'user-trash-full',
+  'user-trash-full': 'user-trash-full',
 };
 
-const FALLBACK_FLAG = 'data-fallback-applied';
-const FALLBACK_SRC = 'data-fallback-src';
-
-const resolveKaliIcon = (id: string): string | undefined => {
+const resolveKaliIcon = (id: string): IconName | undefined => {
   const normalizedId = id.toLowerCase();
   return KALI_ICON_MAP[normalizedId];
 };
@@ -52,7 +52,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
       <ul className="space-y-1">
         {items.map((item) => {
           const kaliIcon = resolveKaliIcon(item.id);
-          const src = kaliIcon ?? item.icon;
+          const iconName = item.iconName ?? kaliIcon;
 
           const handleClick = () => {
             item.onSelect?.();
@@ -65,28 +65,13 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
                 onClick={handleClick}
                 className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
               >
-                <img
-                  src={src}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="h-7 w-7 flex-shrink-0"
-                  data-fallback-src={item.icon}
-                  onError={(event) => {
-                    const target = event.currentTarget;
-                    if (target.getAttribute(FALLBACK_FLAG) === 'true') {
-                      return;
-                    }
-
-                    const fallback = target.getAttribute(FALLBACK_SRC);
-                    if (!fallback) {
-                      return;
-                    }
-
-                    target.setAttribute(FALLBACK_FLAG, 'true');
-                    target.src = fallback;
-                  }}
-                />
+                {iconName ? (
+                  <Icon name={iconName} size={28} className="h-7 w-7 flex-shrink-0" aria-hidden />
+                ) : item.icon ? (
+                  <img src={item.icon} alt="" width={28} height={28} className="h-7 w-7 flex-shrink-0" />
+                ) : (
+                  <span className="h-7 w-7 flex-shrink-0" aria-hidden />
+                )}
                 <span className="truncate">{item.label}</span>
               </button>
             </li>
