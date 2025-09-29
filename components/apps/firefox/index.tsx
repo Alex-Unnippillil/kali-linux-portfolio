@@ -1,4 +1,5 @@
 import React, { FormEvent, useMemo, useState } from 'react';
+import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
 
 const DEFAULT_URL = 'https://www.kali.org/docs/';
 const STORAGE_KEY = 'firefox:last-url';
@@ -36,6 +37,14 @@ const normaliseUrl = (value: string) => {
   }
 };
 
+const getSimulation = (value: string) => {
+  const key = toSimulationKey(value);
+  if (!key) {
+    return null;
+  }
+  return SIMULATIONS[key] ?? null;
+};
+
 const Firefox: React.FC = () => {
   const initialUrl = useMemo(() => {
     if (typeof window === 'undefined') {
@@ -58,11 +67,13 @@ const Firefox: React.FC = () => {
 
   const [address, setAddress] = useState(initialUrl);
   const [inputValue, setInputValue] = useState(initialUrl);
+  const [simulation, setSimulation] = useState(() => getSimulation(initialUrl));
 
   const updateAddress = (value: string) => {
     const url = normaliseUrl(value);
     setAddress(url);
     setInputValue(url);
+    setSimulation(getSimulation(url));
     try {
       localStorage.setItem(STORAGE_KEY, url);
     } catch {
@@ -111,14 +122,18 @@ const Firefox: React.FC = () => {
         ))}
       </nav>
       <div className="flex-1 bg-black">
-        <iframe
-          key={address}
-          title="Firefox"
-          src={address}
-          className="h-full w-full border-0"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        />
+        {simulation ? (
+          <FirefoxSimulationView simulation={simulation} />
+        ) : (
+          <iframe
+            key={address}
+            title="Firefox"
+            src={address}
+            className="h-full w-full border-0"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          />
+        )}
       </div>
     </div>
   );
