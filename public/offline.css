@@ -1,2 +1,112 @@
-body { font-family: sans-serif; padding: 2rem; text-align: center; }
-ul { list-style: none; padding: 0; }
+body {
+  font-family: 'Ubuntu', sans-serif;
+  background: radial-gradient(circle at top, #1f2933, #0b0f14);
+  color: #f8fafc;
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+main {
+  max-width: 480px;
+  width: 100%;
+  background: rgba(15, 19, 23, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.5);
+  text-align: left;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 1.75rem;
+}
+
+p {
+  line-height: 1.5;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:focus-visible {
+  outline: 2px solid #e2e8f0;
+  outline-offset: 2px;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button.primary {
+  background: #2563eb;
+  color: #f8fafc;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+}
+
+button.accent {
+  background: #f97316;
+  color: #0b0f14;
+  box-shadow: 0 10px 30px rgba(249, 115, 22, 0.35);
+}
+
+button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.status-card {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: rgba(51, 65, 85, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.status-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+section h2 {
+  margin-top: 2rem;
+  font-size: 1.25rem;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+a {
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
