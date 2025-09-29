@@ -78,8 +78,9 @@ export default class Navbar extends PureComponent {
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
-                                <div
+                                <nav
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex h-14 w-full items-center justify-between bg-slate-950/80 px-3 text-ubt-grey shadow-lg backdrop-blur-md"
+                                        aria-label="Desktop controls"
                                         style={{ minHeight: NAVBAR_HEIGHT }}
                                 >
                                         <div className="flex items-center gap-2 text-xs md:text-sm">
@@ -112,9 +113,9 @@ export default class Navbar extends PureComponent {
                                                 <Status />
                                                 <QuickSettings open={this.state.status_card} />
                                         </button>
-				</div>
-			);
-		}
+                                </nav>
+                        );
+                }
 
 
 }

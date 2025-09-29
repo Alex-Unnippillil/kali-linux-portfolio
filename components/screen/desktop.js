@@ -1743,7 +1743,7 @@ export class Desktop extends Component {
         return (
             <main
                 id="desktop"
-                role="main"
+                aria-label="Desktop workspace"
                 ref={this.desktopRef}
                 className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={{ paddingTop: DESKTOP_TOP_PADDING }}
@@ -1752,7 +1752,9 @@ export class Desktop extends Component {
                 {/* Window Area */}
                 <div
                     id="window-area"
-                    role="main"
+                    role="region"
+                    aria-label="Open windows"
+                    tabIndex={-1}
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >
