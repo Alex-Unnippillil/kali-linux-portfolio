@@ -1,10 +1,37 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { useSettings, ACCENT_OPTIONS, HOT_CORNER_OPTIONS } from '../../hooks/useSettings';
+import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData, DEFAULT_HOT_CORNER_CONFIG } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        useKaliWallpaper,
+        setUseKaliWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+        hotCorners,
+        setHotCorners,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -56,6 +83,21 @@ export function Settings() {
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
 
+    const cornerOptions = HOT_CORNER_OPTIONS;
+    const handleHotCornerChange = (cornerKey) => (event) => {
+        const value = event.target.value;
+        setHotCorners((prev) => ({ ...prev, [cornerKey]: value }));
+    };
+
+    const cornerLabels = {
+        topLeft: 'Top left',
+        topRight: 'Top right',
+        bottomLeft: 'Bottom left',
+        bottomRight: 'Bottom right',
+    };
+
+    const isValidHotCorner = (value) => HOT_CORNER_OPTIONS.some((option) => option.value === value);
+
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
@@ -75,6 +117,7 @@ export function Settings() {
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    aria-label="Theme"
                 >
                     <option value="default">Default</option>
                     <option value="dark">Dark</option>
@@ -89,6 +132,7 @@ export function Settings() {
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Use Kali wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -120,6 +164,7 @@ export function Settings() {
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    aria-label="Density"
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
@@ -135,6 +180,7 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Font size"
                 />
             </div>
             <div className="flex justify-center my-4">
@@ -144,6 +190,7 @@ export function Settings() {
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Reduced motion"
                     />
                     Reduced Motion
                 </label>
@@ -155,6 +202,7 @@ export function Settings() {
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Large hit areas"
                     />
                     Large Hit Areas
                 </label>
@@ -166,6 +214,7 @@ export function Settings() {
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="High contrast"
                     />
                     High Contrast
                 </label>
@@ -177,6 +226,7 @@ export function Settings() {
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Allow network requests"
                     />
                     Allow Network Requests
                 </label>
@@ -188,9 +238,35 @@ export function Settings() {
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable haptics"
                     />
                     Haptics
                 </label>
+            </div>
+            <div className="px-6 py-4">
+                <h2 className="text-lg font-semibold text-white mb-2">Hot Corners</h2>
+                <p className="text-ubt-grey text-xs mb-4">
+                    Assign an action when the pointer dwells in a screen corner. Keyboard equivalents remain available for accessibility.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {Object.keys(cornerLabels).map((key) => (
+                        <label key={key} className="flex flex-col text-ubt-grey text-sm">
+                            <span className="mb-1">{cornerLabels[key]}</span>
+                            <select
+                                value={hotCorners?.[key] || 'none'}
+                                onChange={handleHotCornerChange(key)}
+                                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                                aria-label={`${cornerLabels[key]} hot corner action`}
+                            >
+                                {cornerOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    ))}
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
@@ -199,6 +275,7 @@ export function Settings() {
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable pong spin"
                     />
                     Pong Spin
                 </label>
@@ -278,6 +355,7 @@ export function Settings() {
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
+                        setHotCorners({ ...DEFAULT_HOT_CORNER_CONFIG, ...(defaults.hotCorners || {}) });
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
@@ -288,6 +366,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
@@ -302,6 +381,18 @@ export function Settings() {
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
+                        if (parsed.hotCorners && typeof parsed.hotCorners === 'object') {
+                            setHotCorners((prev) => {
+                                const next = { ...prev };
+                                Object.keys(next).forEach((corner) => {
+                                    const candidate = parsed.hotCorners[corner];
+                                    if (isValidHotCorner(candidate)) {
+                                        next[corner] = candidate;
+                                    }
+                                });
+                                return next;
+                            });
+                        }
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }

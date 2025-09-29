@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import {
+  useSettings,
+  ACCENT_OPTIONS,
+  HOT_CORNER_OPTIONS,
+  HotCornerConfig,
+  HotCornerAction,
+} from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
+  DEFAULT_HOT_CORNER_CONFIG,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
@@ -34,6 +41,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    hotCorners,
+    setHotCorners,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,6 +79,9 @@ export default function Settings() {
     URL.revokeObjectURL(url);
   };
 
+  const isValidHotCorner = (value: unknown): value is HotCornerAction =>
+    HOT_CORNER_OPTIONS.some((option) => option.value === value);
+
   const handleImport = async (file: File) => {
     const text = await file.text();
     await importSettingsData(text);
@@ -84,6 +96,19 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.hotCorners && typeof parsed.hotCorners === "object") {
+        const incoming = parsed.hotCorners as Partial<HotCornerConfig>;
+        setHotCorners((prev) => {
+          const next = { ...prev };
+          (Object.keys(next) as Array<keyof HotCornerConfig>).forEach((corner) => {
+            const candidate = incoming[corner];
+            if (candidate && isValidHotCorner(candidate)) {
+              next[corner] = candidate;
+            }
+          });
+          return next;
+        });
+      }
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -105,7 +130,24 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setHotCorners({
+      ...DEFAULT_HOT_CORNER_CONFIG,
+      ...((defaults.hotCorners as HotCornerConfig) || {}),
+    });
   };
+
+  const cornerLabels: Record<keyof HotCornerConfig, string> = {
+    topLeft: "Top left",
+    topRight: "Top right",
+    bottomLeft: "Bottom left",
+    bottomRight: "Bottom right",
+  };
+
+  const handleCornerChange = (corner: keyof HotCornerConfig) =>
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = event.target.value as HotCornerAction;
+      setHotCorners((prev) => ({ ...prev, [corner]: value }));
+    };
 
   const [showKeymap, setShowKeymap] = useState(false);
 
@@ -163,6 +205,7 @@ export default function Settings() {
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Use Kali wallpaper"
               />
               Kali Gradient Wallpaper
             </label>
@@ -190,6 +233,31 @@ export default function Settings() {
           </div>
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
+          </div>
+          <div className="px-6 py-4">
+            <h2 className="text-lg font-semibold text-white mb-2">Hot Corners</h2>
+            <p className="text-ubt-grey text-xs mb-4">
+              Configure actions for each corner. Keyboard shortcuts remain available as documented below.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(Object.keys(cornerLabels) as Array<keyof HotCornerConfig>).map((corner) => (
+                <label key={corner} className="flex flex-col text-ubt-grey text-sm">
+                  <span className="mb-1">{cornerLabels[corner]}</span>
+                  <select
+                    value={hotCorners[corner]}
+                    onChange={handleCornerChange(corner)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    aria-label={`${cornerLabels[corner]} hot corner action`}
+                  >
+                    {HOT_CORNER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
             {wallpapers.map((name) => (

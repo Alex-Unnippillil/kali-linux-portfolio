@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  Dispatch,
+  SetStateAction,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -23,9 +32,30 @@ import {
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
+  getHotCorners as loadHotCorners,
+  setHotCorners as persistHotCorners,
+  DEFAULT_HOT_CORNER_CONFIG,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+export type HotCornerAction =
+  | 'none'
+  | 'show-desktop'
+  | 'quick-settings'
+  | 'command-palette';
+
+export type HotCornerConfig = typeof DEFAULT_HOT_CORNER_CONFIG;
+
+export const HOT_CORNER_OPTIONS: ReadonlyArray<{
+  value: HotCornerAction;
+  label: string;
+}> = [
+  { value: 'none', label: 'Do nothing' },
+  { value: 'show-desktop', label: 'Show desktop' },
+  { value: 'quick-settings', label: 'Open quick settings' },
+  { value: 'command-palette', label: 'Open command palette' },
+];
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -67,6 +97,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  hotCorners: HotCornerConfig;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +110,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setHotCorners: Dispatch<SetStateAction<HotCornerConfig>>;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +127,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  hotCorners: DEFAULT_HOT_CORNER_CONFIG,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +140,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setHotCorners: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,6 +156,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [hotCorners, setHotCorners] = useState<HotCornerConfig>({
+    ...DEFAULT_HOT_CORNER_CONFIG,
+    ...(defaults.hotCorners || {}),
+  });
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -138,6 +176,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setHotCorners(await loadHotCorners());
     })();
   }, []);
 
@@ -250,6 +289,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    persistHotCorners(hotCorners);
+  }, [hotCorners]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +311,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        hotCorners,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +324,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setHotCorners,
       }}
     >
       {children}

@@ -28,6 +28,12 @@ import {
     clampWindowTopPosition,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { DEFAULT_HOT_CORNER_CONFIG } from '../../utils/settingsStore';
+import { useSettings } from '../../hooks/useSettings';
+
+
+const HOT_CORNER_RADIUS = 64;
+const HOT_CORNER_DEBOUNCE_MS = 180;
 
 
 export class Desktop extends Component {
@@ -88,6 +94,13 @@ export class Desktop extends Component {
         this.desktopPadding = { ...this.defaultDesktopPadding };
 
         this.gestureState = { pointer: null, overview: null };
+
+        this.hotCornerState = { active: null, pending: null };
+        this.hotCornerTimer = null;
+        this.lastPointerPosition = { x: 0, y: 0 };
+        this.hiddenDesktopWindows = null;
+        this.lastDesktopFocusId = null;
+        this.hotCornerListenersAttached = false;
 
     }
 
@@ -350,12 +363,219 @@ export class Desktop extends Component {
         this.gestureState.overview = null;
     };
 
+    getHotCornerConfig = () => {
+        const incoming = this.props.hotCorners;
+        if (incoming && typeof incoming === 'object') {
+            return { ...DEFAULT_HOT_CORNER_CONFIG, ...incoming };
+        }
+        return { ...DEFAULT_HOT_CORNER_CONFIG };
+    };
+
+    setupHotCornerListeners = () => {
+        if (typeof window === 'undefined' || this.hotCornerListenersAttached) return;
+        window.addEventListener('pointermove', this.handleHotCornerPointerMove, { passive: true });
+        window.addEventListener('pointerleave', this.handleHotCornerPointerLeave, { passive: true });
+        window.addEventListener('blur', this.handleHotCornerPointerLeave);
+        this.hotCornerListenersAttached = true;
+    };
+
+    teardownHotCornerListeners = () => {
+        if (typeof window === 'undefined' || !this.hotCornerListenersAttached) return;
+        window.removeEventListener('pointermove', this.handleHotCornerPointerMove);
+        window.removeEventListener('pointerleave', this.handleHotCornerPointerLeave);
+        window.removeEventListener('blur', this.handleHotCornerPointerLeave);
+        this.hotCornerListenersAttached = false;
+        this.clearHotCornerTimer();
+        this.hotCornerState = { active: null, pending: null };
+    };
+
+    clearHotCornerTimer = () => {
+        if (this.hotCornerTimer) {
+            clearTimeout(this.hotCornerTimer);
+            this.hotCornerTimer = null;
+        }
+        this.hotCornerState.pending = null;
+    };
+
+    handleHotCornerPointerLeave = () => {
+        this.clearHotCornerTimer();
+        this.hotCornerState.active = null;
+    };
+
+    handleHotCornerPointerMove = (event) => {
+        if (!event) return;
+        const type = event.pointerType;
+        if (type && type !== 'mouse' && type !== 'pen') {
+            return;
+        }
+        if (typeof event.buttons === 'number' && event.buttons !== 0) {
+            this.handleHotCornerPointerLeave();
+            return;
+        }
+        if (!Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) {
+            return;
+        }
+        this.lastPointerPosition = { x: event.clientX, y: event.clientY };
+        const corner = this.resolveHotCorner(event.clientX, event.clientY);
+        if (!corner) {
+            if (this.hotCornerState.active) {
+                this.hotCornerState.active = null;
+            }
+            this.clearHotCornerTimer();
+            return;
+        }
+        const config = this.getHotCornerConfig();
+        const action = config[corner];
+        if (!action || action === 'none') {
+            this.clearHotCornerTimer();
+            this.hotCornerState.active = null;
+            return;
+        }
+        if (this.hotCornerState.active === corner || this.hotCornerState.pending === corner) {
+            return;
+        }
+        this.scheduleHotCornerActivation(corner);
+    };
+
+    resolveHotCorner = (x, y) => {
+        if (typeof window === 'undefined') return null;
+        const width = window.innerWidth || 0;
+        const height = window.innerHeight || 0;
+        const minDimension = Math.max(Math.min(width, height), 1);
+        const radius = Math.max(24, Math.min(HOT_CORNER_RADIUS, minDimension * 0.12));
+        const nearLeft = x <= radius;
+        const nearRight = width - x <= radius;
+        const nearTop = y <= radius;
+        const nearBottom = height - y <= radius;
+        if (nearTop && nearLeft) return 'topLeft';
+        if (nearTop && nearRight) return 'topRight';
+        if (nearBottom && nearLeft) return 'bottomLeft';
+        if (nearBottom && nearRight) return 'bottomRight';
+        return null;
+    };
+
+    scheduleHotCornerActivation = (corner) => {
+        if (typeof window === 'undefined') return;
+        this.clearHotCornerTimer();
+        this.hotCornerState.pending = corner;
+        this.hotCornerTimer = window.setTimeout(() => {
+            this.hotCornerTimer = null;
+            const currentCorner = this.resolveHotCorner(this.lastPointerPosition.x, this.lastPointerPosition.y);
+            if (currentCorner === corner) {
+                const config = this.getHotCornerConfig();
+                const action = config[corner];
+                const performed = this.triggerDesktopAction(action, 'hot-corner', corner);
+                if (performed) {
+                    this.hotCornerState.active = corner;
+                }
+            }
+            this.hotCornerState.pending = null;
+        }, HOT_CORNER_DEBOUNCE_MS);
+    };
+
     dispatchWindowCommand = (windowId, key) => {
         if (!windowId) return false;
         const node = typeof document !== 'undefined' ? document.getElementById(windowId) : null;
         if (!node) return false;
         const event = new CustomEvent('super-arrow', { detail: key, bubbles: true });
         node.dispatchEvent(event);
+        return true;
+    };
+
+    triggerDesktopAction = (action, source = 'keyboard', context = null) => {
+        if (!action || action === 'none') return false;
+        let performed = false;
+        switch (action) {
+            case 'show-desktop':
+                performed = this.toggleShowDesktop();
+                break;
+            case 'quick-settings':
+                performed = this.openQuickSettingsPanel(source);
+                break;
+            case 'command-palette':
+                performed = this.openCommandPalette(source);
+                break;
+            default:
+                performed = false;
+        }
+        if (performed) {
+            const label = context ? `${source}:${context}` : source;
+            ReactGA.event({
+                category: source === 'hot-corner' ? 'Hot Corner' : 'Shell Action',
+                action: `activate-${action}`,
+                label,
+            });
+        }
+        return performed;
+    };
+
+    toggleShowDesktop = () => {
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+        const openWindows = Object.keys(closed).filter((id) => closed[id] === false);
+        if (!openWindows.length) {
+            this.hiddenDesktopWindows = null;
+            this.lastDesktopFocusId = null;
+            return false;
+        }
+        const visible = openWindows.filter((id) => !minimized[id]);
+        if (visible.length) {
+            this.hiddenDesktopWindows = [...visible];
+            this.lastDesktopFocusId = this.getFocusedWindowId();
+            this.setWorkspaceState((prev) => {
+                const minimizedNext = { ...prev.minimized_windows };
+                const focusedNext = { ...prev.focused_windows };
+                visible.forEach((id) => {
+                    minimizedNext[id] = true;
+                    if (focusedNext[id]) {
+                        focusedNext[id] = false;
+                    }
+                });
+                return { minimized_windows: minimizedNext, focused_windows: focusedNext };
+            }, () => {
+                this.giveFocusToLastApp();
+                this.saveSession();
+            });
+            return true;
+        }
+
+        const stored = Array.isArray(this.hiddenDesktopWindows) ? this.hiddenDesktopWindows : [];
+        const toRestore = stored.filter((id) => closed[id] === false);
+        if (!toRestore.length) {
+            this.hiddenDesktopWindows = null;
+            this.lastDesktopFocusId = null;
+            return false;
+        }
+
+        this.setWorkspaceState((prev) => {
+            const minimizedNext = { ...prev.minimized_windows };
+            toRestore.forEach((id) => {
+                minimizedNext[id] = false;
+            });
+            return { minimized_windows: minimizedNext };
+        }, () => {
+            const focusTarget = this.lastDesktopFocusId && closed[this.lastDesktopFocusId] === false
+                ? this.lastDesktopFocusId
+                : toRestore[0];
+            this.hiddenDesktopWindows = null;
+            this.lastDesktopFocusId = null;
+            if (focusTarget) {
+                this.focus(focusTarget);
+            }
+            this.saveSession();
+        });
+        return true;
+    };
+
+    openQuickSettingsPanel = (source = 'keyboard') => {
+        if (typeof window === 'undefined') return false;
+        window.dispatchEvent(new CustomEvent('quick-settings:open', { detail: { source } }));
+        return true;
+    };
+
+    openCommandPalette = (source = 'keyboard') => {
+        if (typeof window === 'undefined') return false;
+        window.dispatchEvent(new CustomEvent('command-palette:open', { detail: { source } }));
         return true;
     };
 
@@ -817,15 +1037,19 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.setupHotCornerListeners();
     }
 
-    componentDidUpdate(_prevProps, prevState) {
+    componentDidUpdate(prevProps, prevState) {
         if (
             prevState.activeWorkspace !== this.state.activeWorkspace ||
             prevState.closed_windows !== this.state.closed_windows ||
             prevState.workspaces !== this.state.workspaces
         ) {
             this.broadcastWorkspaceState();
+        }
+        if (prevProps && prevProps.hotCorners !== this.props.hotCorners) {
+            this.handleHotCornerPointerLeave();
         }
     }
 
@@ -842,6 +1066,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.teardownHotCornerListeners();
     }
 
     attachIconKeyboardListeners = () => {
@@ -952,6 +1177,21 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
+            e.preventDefault();
+            this.triggerDesktopAction('command-palette', 'keyboard', 'ctrl+shift+p');
+            return;
+        }
+        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'd') {
+            e.preventDefault();
+            this.triggerDesktopAction('show-desktop', 'keyboard', 'ctrl+alt+d');
+            return;
+        }
+        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            this.triggerDesktopAction('quick-settings', 'keyboard', 'ctrl+alt+s');
+            return;
+        }
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
@@ -1844,5 +2084,6 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { hotCorners } = useSettings();
+    return <Desktop {...props} snapEnabled={snapEnabled} hotCorners={hotCorners} />;
 }
