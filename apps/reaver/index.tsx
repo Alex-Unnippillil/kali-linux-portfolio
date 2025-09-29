@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
@@ -8,6 +8,7 @@ import RouterProfiles, {
 } from './components/RouterProfiles';
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
+import { AttemptStatus, useScheduler } from './components/Scheduler';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -27,8 +28,11 @@ interface RouterMeta {
 }
 
 interface LogEntry {
+  id: string;
   level: 'info' | 'warn' | 'success' | 'error';
   text: string;
+  timestamp: string;
+  status?: AttemptStatus;
 }
 
 const stages = [
@@ -75,11 +79,34 @@ const ReaverPanel: React.FC = () => {
   const [running, setRunning] = useState(false);
   const [lockRemaining, setLockRemaining] = useState(0);
   const [stageIdx, setStageIdx] = useState(-1);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const burstRef = useRef(0); // attempts since last lock
-  const lockRef = useRef(0); // lockout seconds remaining
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const burstRef = useRef(0);
+  const lockRef = useRef(0);
+  const attemptsRef = useRef(0);
+  const cycleRef = useRef(0);
+  const [eventLogs, setEventLogs] = useState<LogEntry[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
+
+  const createLogEntry = useCallback(
+    (text: string, level: LogEntry['level'], status?: AttemptStatus): LogEntry => {
+      const timestamp = new Date().toISOString();
+      return {
+        id: `${timestamp}-${Math.random().toString(16).slice(2, 8)}`,
+        level,
+        text,
+        timestamp,
+        status,
+      };
+    },
+    []
+  );
+
+  const appendEventLog = useCallback(
+    (text: string, level: LogEntry['level'], status?: AttemptStatus) => {
+      const entry = createLogEntry(text, level, status);
+      setEventLogs((prev) => [...prev, entry]);
+    },
+    [createLogEntry]
+  );
 
   useEffect(() => {
     fetch('/demo-data/reaver/routers.json')
@@ -89,70 +116,160 @@ const ReaverPanel: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!running) return;
-    intervalRef.current = setInterval(() => {
-      setAttempts((prev) => {
-        // handle lockout countdown
-        if (lockRef.current > 0) {
-          lockRef.current -= 1;
-          setLockRemaining(lockRef.current);
-          return prev;
-        }
+    attemptsRef.current = attempts;
+  }, [attempts]);
 
-        const next = prev + rate;
-        burstRef.current += rate;
-
-        if (burstRef.current >= profile.lockAttempts) {
-          burstRef.current = 0;
-          if (profile.lockDuration > 0) {
-            lockRef.current = profile.lockDuration;
-            setLockRemaining(lockRef.current);
-            setLogs((l) => [
-              ...l,
-              { level: 'warn', text: `WPS locked for ${profile.lockDuration}s` },
-            ]);
-          }
-        }
-
-        if (next % 1000 === 0) {
-          setLogs((l) => [...l, { level: 'info', text: `Tried ${next} PINs` }]);
-        }
-
-        if (next >= TOTAL_PINS) {
-          clearInterval(intervalRef.current!);
-          setRunning(false);
-          setStageIdx(stages.length);
-          setLogs((l) => [...l, { level: 'success', text: `PIN found: ${FOUND_PIN}` }]);
-          return TOTAL_PINS;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current!);
-  }, [running, rate, profile]);
-
-  // reset counters when profile changes
   useEffect(() => {
     burstRef.current = 0;
     lockRef.current = 0;
+    cycleRef.current = 0;
     setLockRemaining(0);
   }, [profile]);
 
+  useEffect(() => {
+    if (!running || lockRemaining <= 0) {
+      return;
+    }
+    const timer = setInterval(() => {
+      setLockRemaining((prev) => {
+        if (prev <= 1) {
+          lockRef.current = 0;
+          return 0;
+        }
+        lockRef.current = prev - 1;
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockRemaining, running]);
+
+  const baseIntervalMs = useMemo(
+    () => Math.max(250, Math.floor(1000 / Math.max(rate, 1))),
+    [rate]
+  );
+
+  const maxIntervalMs = useMemo(() => {
+    const lockMs = profile.lockDuration > 0 ? profile.lockDuration * 1000 : 0;
+    return Math.max(baseIntervalMs * 16, lockMs || baseIntervalMs * 4);
+  }, [baseIntervalMs, profile.lockDuration]);
+
+  const maxSchedulerAttempts = useMemo(
+    () => Math.ceil(TOTAL_PINS / Math.max(rate, 1)),
+    [rate]
+  );
+
+  const resolveAttempt = useCallback(() => {
+    if (lockRef.current > 0) {
+      return {
+        status: 'locked' as AttemptStatus,
+        message: `Lockout active (${lockRef.current}s remaining)`,
+        overrideDelayMs: lockRef.current * 1000,
+      };
+    }
+
+    cycleRef.current += 1;
+
+    const nextAttempts = Math.min(attemptsRef.current + rate, TOTAL_PINS);
+    attemptsRef.current = nextAttempts;
+    setAttempts(nextAttempts);
+
+    if (nextAttempts % 1000 === 0) {
+      appendEventLog(`Tried ${nextAttempts} PINs`, 'info');
+    }
+
+    burstRef.current += 1;
+
+    if (
+      profile.lockAttempts !== Infinity &&
+      burstRef.current >= profile.lockAttempts
+    ) {
+      burstRef.current = 0;
+      if (profile.lockDuration > 0) {
+        lockRef.current = profile.lockDuration;
+        setLockRemaining(profile.lockDuration);
+        appendEventLog(`WPS locked for ${profile.lockDuration}s`, 'warn', 'locked');
+        return {
+          status: 'locked' as AttemptStatus,
+          message: `WPS locked for ${profile.lockDuration}s`,
+          overrideDelayMs: profile.lockDuration * 1000,
+        };
+      }
+    }
+
+    if (nextAttempts >= TOTAL_PINS) {
+      setRunning(false);
+      setStageIdx(stages.length);
+      return {
+        status: 'success' as AttemptStatus,
+        message: `PIN found: ${FOUND_PIN}`,
+        completed: true,
+      };
+    }
+
+    if (cycleRef.current % 5 === 0) {
+      return {
+        status: 'retry' as AttemptStatus,
+        message: 'Handshake rejected, retrying with backoff',
+      };
+    }
+
+    return {
+      status: 'success' as AttemptStatus,
+      message: `Processed ${rate} PINs`,
+    };
+  }, [appendEventLog, profile.lockAttempts, profile.lockDuration, rate]);
+
+  const { logs: attemptLogs, currentDelayMs, reset: resetScheduler } = useScheduler({
+    running,
+    resolver: resolveAttempt,
+    baseIntervalMs,
+    maxIntervalMs,
+    maxAttempts: maxSchedulerAttempts,
+  });
+
+  const attemptLogEntries = useMemo<LogEntry[]>(() => {
+    return attemptLogs.map((log) => {
+      const level: LogEntry['level'] =
+        log.status === 'locked'
+          ? 'warn'
+          : log.status === 'retry'
+          ? 'info'
+          : 'success';
+      return {
+        id: `attempt-${log.attempt}`,
+        level,
+        text: `Attempt ${log.attempt}: ${log.message}`,
+        timestamp: log.timestamp,
+        status: log.status,
+      };
+    });
+  }, [attemptLogs]);
+
+  const combinedLogs = useMemo(
+    () =>
+      [...eventLogs, ...attemptLogEntries].sort((a, b) =>
+        a.timestamp.localeCompare(b.timestamp)
+      ),
+    [attemptLogEntries, eventLogs]
+  );
+
   const start = () => {
+    resetScheduler();
     setAttempts(0);
+    attemptsRef.current = 0;
     burstRef.current = 0;
+    cycleRef.current = 0;
     lockRef.current = 0;
     setLockRemaining(0);
     setStageIdx(0);
+    setEventLogs([createLogEntry('Attack started', 'info')]);
     setRunning(true);
-    setLogs([{ level: 'info', text: 'Attack started' }]);
   };
 
   const stop = () => {
     setRunning(false);
-    clearInterval(intervalRef.current!);
     setStageIdx(-1);
-    setLogs((l) => [...l, { level: 'warn', text: 'Attack stopped' }]);
+    appendEventLog('Attack stopped', 'warn');
   };
 
   useEffect(() => {
@@ -165,19 +282,15 @@ const ReaverPanel: React.FC = () => {
 
   useEffect(() => {
     if (stageIdx >= 0 && stageIdx < stages.length) {
-      setLogs((l) => [
-        ...l,
-        { level: 'info', text: `Stage: ${stages[stageIdx].title}` },
-      ]);
+      appendEventLog(`Stage: ${stages[stageIdx].title}`, 'info');
+    } else if (stageIdx === stages.length) {
+      appendEventLog('Attack complete', 'success');
     }
-    if (stageIdx === stages.length) {
-      setLogs((l) => [...l, { level: 'success', text: 'Attack complete' }]);
-    }
-    }, [stageIdx]);
+  }, [appendEventLog, stageIdx]);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
-  }, [logs]);
+  }, [combinedLogs]);
 
   const stageStatus = (i: number) => {
     if (i < stageIdx) return 'completed';
@@ -199,7 +312,13 @@ const ReaverPanel: React.FC = () => {
     }
   };
 
-  const timeRemaining = (TOTAL_PINS - attempts) / rate + lockRemaining;
+  const timeRemaining = useMemo(() => {
+    const remainingPins = Math.max(TOTAL_PINS - attempts, 0);
+    const baseSeconds = remainingPins / Math.max(rate, 1);
+    const multiplier = baseIntervalMs > 0 ? currentDelayMs / baseIntervalMs : 1;
+    const normalizedMultiplier = Number.isFinite(multiplier) ? multiplier : 1;
+    return baseSeconds * normalizedMultiplier + lockRemaining;
+  }, [attempts, rate, lockRemaining, currentDelayMs, baseIntervalMs]);
 
   return (
     <div className="p-4 bg-gray-900 text-white h-full overflow-y-auto">
@@ -294,17 +413,25 @@ const ReaverPanel: React.FC = () => {
         <div className="text-sm mb-2">
           Est. time remaining: {formatTime(timeRemaining)}
         </div>
+        <div className="text-xs text-gray-400 mb-2">
+          Current retry delay: {(currentDelayMs / 1000).toFixed(2)}s
+        </div>
         <div
           ref={logRef}
           className="h-32 bg-gray-800 rounded p-2 overflow-y-auto text-xs font-mono mb-4"
         >
-          {logs.map((log, i) => (
-            <div key={i} className="flex items-start">
+          {combinedLogs.map((log) => (
+            <div key={log.id} className="flex items-start gap-2">
               <span
-                className={`w-1 h-4 mr-2 rounded ${stripColor(log.level)}`}
+                className={`w-1 h-4 rounded ${stripColor(log.level)}`}
                 aria-hidden="true"
               />
-              <span>{log.text}</span>
+              <div>
+                <div className="text-[10px] text-gray-400 uppercase tracking-wide">
+                  {new Date(log.timestamp).toLocaleTimeString()} {log.status ? `· ${log.status}` : ''}
+                </div>
+                <div>{log.text}</div>
+              </div>
             </div>
           ))}
         </div>
