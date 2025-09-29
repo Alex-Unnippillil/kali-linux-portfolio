@@ -77,9 +77,49 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    afterDimensionChange = () => {
+        this.resizeBoundries();
+        this.emitMetrics();
+    }
+
+    emitMetrics = () => {
+        if (typeof this.props.onMetricsChange !== 'function') return;
+        this.props.onMetricsChange({
+            width: this.state.width,
+            height: this.state.height,
+            maximized: this.state.maximized,
+            snapped: this.state.snapped,
+        });
+    }
+
+    applyInitialMetrics = () => {
+        const metrics = this.props.initialMetrics;
+        if (!metrics) {
+            return false;
+        }
+        const width = typeof metrics.width === 'number' ? metrics.width : this.state.width;
+        const height = typeof metrics.height === 'number' ? metrics.height : this.state.height;
+        const maximized = typeof metrics.maximized === 'boolean' ? metrics.maximized : this.state.maximized;
+        const snapped = metrics.snapped === 'left' || metrics.snapped === 'right' || metrics.snapped === 'top'
+            ? metrics.snapped
+            : null;
+        this.setState(
+            {
+                width,
+                height,
+                maximized,
+                snapped,
+            },
+            this.afterDimensionChange,
+        );
+        return true;
+    }
+
     componentDidMount() {
         this.id = this.props.id;
-        this.setDefaultWindowDimenstion();
+        if (!this.applyInitialMetrics()) {
+            this.setDefaultWindowDimenstion();
+        }
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -113,7 +153,7 @@ export class Window extends Component {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
-                this.resizeBoundries
+                this.afterDimensionChange
             );
             return;
         }
@@ -121,11 +161,11 @@ export class Window extends Component {
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 90 }, this.afterDimensionChange);
         } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+            this.setState({ height: 60, width: 85 }, this.afterDimensionChange);
         } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 60 }, this.afterDimensionChange);
         }
     }
 
@@ -267,7 +307,7 @@ export class Window extends Component {
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        this.setState({ height: heightPercent }, this.afterDimensionChange);
     }
 
     handleHorizontalResize = () => {
@@ -275,7 +315,7 @@ export class Window extends Component {
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        this.setState({ width: widthPercent }, this.afterDimensionChange);
     }
 
     setWinowsPosition = () => {
@@ -310,9 +350,9 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, this.afterDimensionChange);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, this.afterDimensionChange);
         }
     }
 
@@ -339,7 +379,7 @@ export class Window extends Component {
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
-        }, this.resizeBoundries);
+        }, this.afterDimensionChange);
     }
 
     setInertBackground = () => {
@@ -456,7 +496,7 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false }, this.emitMetrics);
             return;
         }
 
@@ -467,7 +507,7 @@ export class Window extends Component {
         );
         animation.onfinish = () => {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false }, this.emitMetrics);
         };
     }
 
@@ -487,7 +527,7 @@ export class Window extends Component {
             if (node) {
                 node.style.transform = `translate(-1pt, 0px)`;
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
+            this.setState({ maximized: true, height: heightPercent, width: 100.2 }, this.emitMetrics);
         }
     }
 
