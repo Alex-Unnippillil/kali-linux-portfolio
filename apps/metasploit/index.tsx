@@ -4,11 +4,9 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
 import Toast from '../../components/ui/Toast';
+import RunPlan, { RunPlanModule, SerializedStep } from './components/RunPlan';
 
-interface Module {
-  name: string;
-  description: string;
-  type: string;
+interface Module extends RunPlanModule {
   severity: string;
   [key: string]: any;
 }
@@ -99,7 +97,9 @@ const MetasploitPage: React.FC = () => {
     };
   }, []);
 
-  const handleGenerate = () => setToast('Payload generated');
+  const handlePlanRun = (plan: SerializedStep[]) => {
+    setToast(`Plan queued (${plan.length} step${plan.length === 1 ? '' : 's'})`);
+  };
 
   const renderTree = (node: TreeNode) => (
     <ul className="ml-2">
@@ -137,6 +137,7 @@ const MetasploitPage: React.FC = () => {
         <input
           type="text"
           placeholder="Search modules"
+          aria-label="Search modules"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full p-1 mb-2 border rounded"
@@ -194,18 +195,10 @@ const MetasploitPage: React.FC = () => {
             style={{ height: `calc(${100 - split}% - 2px)` }}
             className="overflow-auto p-2 space-y-2"
           >
-            <h3 className="font-semibold">Generate Payload</h3>
-            <input
-              type="text"
-              placeholder="Payload options..."
-              className="border p-1 w-full"
+            <RunPlan
+              modules={modulesData as RunPlanModule[]}
+              onRun={handlePlanRun}
             />
-            <button
-              onClick={handleGenerate}
-              className="px-2 py-1 bg-blue-500 text-white rounded"
-            >
-              Generate
-            </button>
           </div>
         </div>
       </div>
