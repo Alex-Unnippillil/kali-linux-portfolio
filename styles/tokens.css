@@ -67,10 +67,11 @@
   --color-window-border: #0d1a2a;
   --color-window-accent: var(--color-primary);
 
-  /* Motion durations */
-  --motion-fast: 150ms;
-  --motion-medium: 300ms;
-  --motion-slow: 500ms;
+  /* Motion */
+  --motion-fast: 100ms;
+  --motion-medium: 150ms;
+  --motion-slow: 240ms;
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
@@ -114,6 +115,7 @@
   --motion-fast: 0ms;
   --motion-medium: 0ms;
   --motion-slow: 0ms;
+  --motion-ease-out: linear;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -121,6 +123,7 @@
     --motion-fast: 0ms;
     --motion-medium: 0ms;
     --motion-slow: 0ms;
+    --motion-ease-out: linear;
   }
 }
 

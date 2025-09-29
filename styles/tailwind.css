@@ -4,10 +4,10 @@
 
 @layer utilities {
   .transition-hover {
-    @apply transition ease-out duration-150;
+    @apply transition ease-motion duration-medium;
   }
   .transition-active {
-    @apply transition ease-out duration-100;
+    @apply transition ease-motion duration-fast;
   }
   .glass {
     background-color: color-mix(in srgb, var(--color-bg), transparent 55%);

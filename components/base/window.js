@@ -613,7 +613,7 @@ export class Window extends Component {
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity duration-medium ease-motion"
                         style={{
                             left: `${this.state.snapPreview.left}px`,
                             top: `${this.state.snapPreview.top}px`,
@@ -649,12 +649,12 @@ export class Window extends Component {
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
-                            this.state.maximized ? 'duration-300' : '',
-                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+                            this.state.maximized ? 'duration-slow' : '',
+                            this.props.minimized ? 'opacity-0 invisible duration-medium' : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             this.props.isFocused ? 'z-30' : 'z-20',
-                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
+                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow ease-motion',
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',

@@ -95,7 +95,7 @@ export default class Navbar extends PureComponent {
                                         </div>
                                         <div
                                                 className={
-                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
+                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-medium ease-motion hover:border-white/30 hover:bg-white/10'
                                                 }
                                         >
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} />
@@ -106,7 +106,7 @@ export default class Navbar extends PureComponent {
                                                 aria-label="System status"
                                                 onClick={this.handleStatusToggle}
                                                 className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-medium ease-motion hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                 }
                                         >
                                                 <Status />
