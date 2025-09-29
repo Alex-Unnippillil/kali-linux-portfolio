@@ -1,46 +1,19 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+    FAVORITES_KEY,
+    RECENTS_KEY,
+    arraysEqual,
+    persistIds,
+    readStoredIds,
+    sanitizeIds,
+    updateRecentIds,
+} from '../../utils/appPreferences';
+import { useAppSearch } from '../../hooks/useAppSearch';
+import { buildCategoryConfigs } from '../../lib/appCategories';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
-const FAVORITES_KEY = 'launcherFavorites';
-const RECENTS_KEY = 'recentApps';
 const GROUP_SIZE = 9;
-
-const readStoredIds = (key) => {
-    if (!safeLocalStorage) return [];
-    try {
-        const raw = JSON.parse(safeLocalStorage.getItem(key) || '[]');
-        if (Array.isArray(raw)) {
-            return raw.filter((id) => typeof id === 'string');
-        }
-    } catch (e) {
-        // ignore malformed storage entries
-    }
-    return [];
-};
-
-const persistIds = (key, ids) => {
-    if (!safeLocalStorage) return;
-    try {
-        safeLocalStorage.setItem(key, JSON.stringify(ids));
-    } catch (e) {
-        // ignore quota errors
-    }
-};
-
-const sanitizeIds = (ids, availableIds, limit) => {
-    const unique = [];
-    const seen = new Set();
-    ids.forEach((id) => {
-        if (!availableIds.has(id) || seen.has(id)) return;
-        seen.add(id);
-        unique.push(id);
-    });
-    if (typeof limit === 'number') {
-        return unique.slice(0, limit);
-    }
-    return unique;
-};
 
 const chunkApps = (apps, size) => {
     const chunks = [];
@@ -50,163 +23,273 @@ const chunkApps = (apps, size) => {
     return chunks;
 };
 
-class AllApplications extends React.Component {
-    constructor() {
-        super();
-        this.state = {
-            query: '',
-            apps: [],
-            unfilteredApps: [],
-            favorites: [],
-            recents: [],
-        };
-    }
+const combineAppLists = (apps = [], games = []) => {
+    const map = new Map();
+    [...apps, ...games].forEach((app) => {
+        if (app && typeof app.id === 'string' && !map.has(app.id)) {
+            map.set(app.id, app);
+        }
+    });
+    return Array.from(map.values());
+};
 
-    componentDidMount() {
-        const { apps = [], games = [] } = this.props;
-        const combined = [...apps];
-        games.forEach((game) => {
-            if (!combined.some((app) => app.id === game.id)) combined.push(game);
-        });
-        const availableIds = new Set(combined.map((app) => app.id));
-        const favorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
-        const recents = sanitizeIds(readStoredIds(RECENTS_KEY), availableIds, 10);
+const buildAvailableIdSet = (apps) => new Set(apps.map((app) => app.id));
 
-        persistIds(FAVORITES_KEY, favorites);
-        persistIds(RECENTS_KEY, recents);
+const AllApplications = ({ apps = [], games = [], openApp }) => {
+    const combinedApps = useMemo(() => combineAppLists(apps, games), [apps, games]);
+    const availableIds = useMemo(() => buildAvailableIdSet(combinedApps), [combinedApps]);
 
-        this.setState({
-            apps: combined,
-            unfilteredApps: combined,
-            favorites,
-            recents,
-        });
-    }
+    const [favoriteIds, setFavoriteIds] = useState([]);
+    const [recentIds, setRecentIds] = useState([]);
+    const [activeCategory, setActiveCategory] = useState('all');
+    const categoryListRef = useRef(null);
 
-    handleChange = (e) => {
-        const value = e.target.value;
-        const { unfilteredApps } = this.state;
-        const apps =
-            value === '' || value === null
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
-                  );
-        this.setState({ query: value, apps });
-    };
+    useRovingTabIndex(categoryListRef, true, 'horizontal');
 
-    openApp = (id) => {
-        this.setState((state) => {
-            const filtered = state.recents.filter((recentId) => recentId !== id);
-            const next = [id, ...filtered].slice(0, 10);
-            persistIds(RECENTS_KEY, next);
-            return { recents: next };
-        }, () => {
-            if (typeof this.props.openApp === 'function') {
-                this.props.openApp(id);
+    useEffect(() => {
+        const storedFavorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
+        const storedRecents = sanitizeIds(readStoredIds(RECENTS_KEY), availableIds, 10);
+        setFavoriteIds(storedFavorites);
+        setRecentIds(storedRecents);
+        persistIds(FAVORITES_KEY, storedFavorites);
+        persistIds(RECENTS_KEY, storedRecents);
+    }, [availableIds]);
+
+    useEffect(() => {
+        setFavoriteIds((current) => {
+            const sanitized = sanitizeIds(current, availableIds);
+            if (!arraysEqual(sanitized, current)) {
+                persistIds(FAVORITES_KEY, sanitized);
+                return sanitized;
             }
+            return current;
         });
-    };
+        setRecentIds((current) => {
+            const sanitized = sanitizeIds(current, availableIds, 10);
+            if (!arraysEqual(sanitized, current)) {
+                persistIds(RECENTS_KEY, sanitized);
+                return sanitized;
+            }
+            return current;
+        });
+    }, [availableIds]);
 
-    handleToggleFavorite = (event, id) => {
+    const { query, setQuery, filtered } = useAppSearch(combinedApps, {
+        fuseOptions: { keys: ['title', 'id'] },
+    });
+
+    const filteredMap = useMemo(
+        () => new Map(filtered.map((app) => [app.id, app])),
+        [filtered],
+    );
+
+    const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+    const favorites = useMemo(
+        () => filtered.filter((app) => favoriteSet.has(app.id)),
+        [filtered, favoriteSet],
+    );
+
+    const recent = useMemo(
+        () =>
+            recentIds
+                .map((id) => filteredMap.get(id))
+                .filter(Boolean),
+        [recentIds, filteredMap],
+    );
+
+    const categories = useMemo(
+        () =>
+            buildCategoryConfigs(filtered, {
+                favoriteIds,
+                recentIds,
+            }),
+        [filtered, favoriteIds, recentIds],
+    );
+
+    useEffect(() => {
+        if (!categories.some((category) => category.id === activeCategory)) {
+            setActiveCategory(categories[0]?.id ?? 'all');
+        }
+    }, [categories, activeCategory]);
+
+    const activeCategoryConfig = useMemo(
+        () => categories.find((category) => category.id === activeCategory) ?? categories[0],
+        [categories, activeCategory],
+    );
+
+    const seenIds = useMemo(() => {
+        const ids = new Set();
+        favorites.forEach((app) => ids.add(app.id));
+        recent.forEach((app) => ids.add(app.id));
+        return ids;
+    }, [favorites, recent]);
+
+    const browsePool = useMemo(() => {
+        if (!activeCategoryConfig) return [];
+        switch (activeCategoryConfig.type) {
+            case 'favorites':
+                return favorites;
+            case 'recent':
+                return recent;
+            case 'all':
+                return filtered;
+            case 'ids':
+            default:
+                return activeCategoryConfig.apps;
+        }
+    }, [activeCategoryConfig, favorites, filtered, recent]);
+
+    const browsingApps = useMemo(() => {
+        if (!activeCategoryConfig) return [];
+        if (activeCategoryConfig.type === 'favorites' || activeCategoryConfig.type === 'recent') {
+            return browsePool;
+        }
+        return browsePool.filter((app) => !seenIds.has(app.id));
+    }, [activeCategoryConfig, browsePool, seenIds]);
+
+    const groupedApps = useMemo(
+        () => chunkApps(browsingApps, GROUP_SIZE),
+        [browsingApps],
+    );
+
+    const hasResults =
+        favorites.length > 0 ||
+        recent.length > 0 ||
+        groupedApps.some((group) => group.length > 0);
+
+    const handleOpenApp = useCallback(
+        (id) => {
+            setRecentIds((current) => {
+                const next = updateRecentIds(current, id, 10);
+                persistIds(RECENTS_KEY, next);
+                return next;
+            });
+            if (typeof openApp === 'function') {
+                openApp(id);
+            }
+        },
+        [openApp],
+    );
+
+    const handleToggleFavorite = useCallback((event, id) => {
         event.preventDefault();
         event.stopPropagation();
-        this.setState((state) => {
-            const isFavorite = state.favorites.includes(id);
+        setFavoriteIds((current) => {
+            const isFavorite = current.includes(id);
             const favorites = isFavorite
-                ? state.favorites.filter((favId) => favId !== id)
-                : [...state.favorites, id];
+                ? current.filter((favId) => favId !== id)
+                : [...current, id];
             persistIds(FAVORITES_KEY, favorites);
-            return { favorites };
+            return favorites;
         });
-    };
+    }, []);
 
-    renderAppTile = (app) => {
-        const isFavorite = this.state.favorites.includes(app.id);
-        return (
-            <div key={app.id} className="relative flex w-full justify-center">
-                <button
-                    type="button"
-                    aria-pressed={isFavorite}
-                    aria-label={
-                        isFavorite
-                            ? `Remove ${app.title} from favorites`
-                            : `Add ${app.title} to favorites`
-                    }
-                    onClick={(event) => this.handleToggleFavorite(event, app.id)}
-                    className={`absolute right-2 top-2 text-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                        isFavorite ? 'text-yellow-300' : 'text-white/60 hover:text-white'
-                    }`}
-                >
-                    ★
-                </button>
-                <UbuntuApp
-                    name={app.title}
-                    id={app.id}
-                    icon={app.icon}
-                    openApp={() => this.openApp(app.id)}
-                    disabled={app.disabled}
-                    prefetch={app.screen?.prefetch}
-                />
-            </div>
-        );
-    };
+    const renderAppTile = useCallback(
+        (app) => {
+            const isFavorite = favoriteSet.has(app.id);
+            return (
+                <div key={app.id} className="relative flex w-full justify-center">
+                    <button
+                        type="button"
+                        aria-pressed={isFavorite}
+                        aria-label={
+                            isFavorite
+                                ? `Remove ${app.title} from favorites`
+                                : `Add ${app.title} to favorites`
+                        }
+                        onClick={(event) => handleToggleFavorite(event, app.id)}
+                        className={`absolute right-2 top-2 text-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                            isFavorite ? 'text-yellow-300' : 'text-white/60 hover:text-white'
+                        }`}
+                    >
+                        ★
+                    </button>
+                    <UbuntuApp
+                        name={app.title}
+                        id={app.id}
+                        icon={app.icon}
+                        openApp={() => handleOpenApp(app.id)}
+                        disabled={app.disabled}
+                        prefetch={app.screen?.prefetch}
+                    />
+                </div>
+            );
+        },
+        [favoriteSet, handleOpenApp, handleToggleFavorite],
+    );
 
-    renderSection = (title, apps) => {
-        if (!apps.length) return null;
+    const renderSection = useCallback((title, list) => {
+        if (!list.length) return null;
         return (
             <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
-                    {title}
-                </h2>
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">{title}</h2>
                 <div className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-                    {apps.map((app) => this.renderAppTile(app))}
+                    {list.map((app) => renderAppTile(app))}
                 </div>
             </section>
         );
-    };
+    }, [renderAppTile]);
 
-    render() {
-        const { apps, favorites, recents } = this.state;
-        const favoriteSet = new Set(favorites);
-        const appMap = new Map(apps.map((app) => [app.id, app]));
-        const favoriteApps = apps.filter((app) => favoriteSet.has(app.id));
-        const recentApps = recents
-            .map((id) => appMap.get(id))
-            .filter(Boolean);
-        const seenIds = new Set([...favoriteApps, ...recentApps].map((app) => app.id));
-        const remainingApps = apps.filter((app) => !seenIds.has(app.id));
-        const groupedApps = chunkApps(remainingApps, GROUP_SIZE);
-        const hasResults =
-            favoriteApps.length > 0 ||
-            recentApps.length > 0 ||
-            groupedApps.some((group) => group.length > 0);
-
-        return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
-                <input
-                    className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
-                    placeholder="Search"
-                    value={this.state.query}
-                    onChange={this.handleChange}
-                    aria-label="Search applications"
-                />
-                <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
-                    {this.renderSection('Favorites', favoriteApps)}
-                    {this.renderSection('Recent', recentApps)}
-                    {groupedApps.map((group, index) =>
-                        group.length ? this.renderSection(`Group ${index + 1}`, group) : null
-                    )}
-                    {!hasResults && (
-                        <p className="mt-6 text-center text-sm text-white/70">
-                            No applications match your search.
-                        </p>
-                    )}
+    return (
+        <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+            <label htmlFor="all-applications-search" className="sr-only">
+                Search applications
+            </label>
+            <input
+                id="all-applications-search"
+                className="mt-10 mb-6 w-11/12 max-w-xl rounded bg-black bg-opacity-20 px-4 py-2 text-white focus:outline-none"
+                placeholder="Search applications"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label="Search applications"
+                type="search"
+            />
+            <nav className="mb-6 w-full px-6" aria-label="Filter applications by category">
+                <div
+                    ref={categoryListRef}
+                    className="flex flex-wrap justify-center gap-2"
+                    role="tablist"
+                    aria-label="Application categories"
+                >
+                    {categories.map((category) => {
+                        const isActive = category.id === activeCategory;
+                        return (
+                            <button
+                                key={category.id}
+                                type="button"
+                                role="tab"
+                                tabIndex={isActive ? 0 : -1}
+                                aria-selected={isActive}
+                                onClick={() => setActiveCategory(category.id)}
+                                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                                    isActive
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-white/10 text-white/80 hover:bg-white/20'
+                                }`}
+                            >
+                                <span>{category.label}</span>
+                                <span className="rounded-full bg-black/30 px-2 text-xs text-white/70">
+                                    {category.apps.length}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
+            </nav>
+            <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
+                {renderSection('Favorites', favorites)}
+                {renderSection('Recent', recent)}
+                {groupedApps.map((group, index) =>
+                    group.length ? renderSection(`Group ${index + 1}`, group) : null,
+                )}
+                {!hasResults && (
+                    <p className="mt-6 text-center text-sm text-white/70">
+                        No applications match your search.
+                    </p>
+                )}
             </div>
-        );
-    }
-}
+        </div>
+    );
+};
 
 export default AllApplications;
-

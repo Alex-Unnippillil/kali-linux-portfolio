@@ -4,6 +4,12 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+  buildCategoryConfigs,
+  isCategoryId,
+  type CategoryDefinition,
+  type CategoryConfig as SharedCategoryConfig,
+} from '../../lib/appCategories';
 
 type AppMeta = {
   id: string;
@@ -13,113 +19,10 @@ type AppMeta = {
   favourite?: boolean;
 };
 
-type CategorySource =
-  | { type: 'all' }
-  | { type: 'favorites' }
-  | { type: 'recent' }
-  | { type: 'ids'; appIds: readonly string[] };
-
-type CategoryDefinitionBase = {
-  id: string;
-  label: string;
-  icon: string;
-} & CategorySource;
-
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
-
-const CATEGORY_DEFINITIONS = [
-  {
-    id: 'all',
-    label: 'All Applications',
-    icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
-    type: 'all',
-  },
-  {
-    id: 'favorites',
-    label: 'Favorites',
-    icon: '/themes/Yaru/status/projects.svg',
-    type: 'favorites',
-  },
-  {
-    id: 'recent',
-    label: 'Recent',
-    icon: '/themes/Yaru/status/process-working-symbolic.svg',
-    type: 'recent',
-  },
-  {
-    id: 'information-gathering',
-    label: 'Information Gathering',
-    icon: '/themes/Yaru/apps/radar-symbolic.svg',
-    type: 'ids',
-    appIds: ['nmap-nse', 'reconng', 'kismet', 'wireshark'],
-  },
-  {
-    id: 'vulnerability-analysis',
-    label: 'Vulnerability Analysis',
-    icon: '/themes/Yaru/apps/nessus.svg',
-    type: 'ids',
-    appIds: ['nessus', 'openvas', 'nikto'],
-  },
-  {
-    id: 'web-app-analysis',
-    label: 'Web App Analysis',
-    icon: '/themes/Yaru/apps/http.svg',
-    type: 'ids',
-    appIds: ['http', 'beef', 'metasploit'],
-  },
-  {
-    id: 'password-attacks',
-    label: 'Password Attacks',
-    icon: '/themes/Yaru/apps/john.svg',
-    type: 'ids',
-    appIds: ['john', 'hashcat', 'hydra'],
-  },
-  {
-    id: 'wireless-attacks',
-    label: 'Wireless Attacks',
-    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
-    type: 'ids',
-    appIds: ['kismet', 'reaver', 'wireshark'],
-  },
-  {
-    id: 'exploitation-tools',
-    label: 'Exploitation Tools',
-    icon: '/themes/Yaru/apps/metasploit.svg',
-    type: 'ids',
-    appIds: ['metasploit', 'security-tools', 'beef'],
-  },
-  {
-    id: 'sniffing-spoofing',
-    label: 'Sniffing & Spoofing',
-    icon: '/themes/Yaru/apps/ettercap.svg',
-    type: 'ids',
-    appIds: ['dsniff', 'ettercap', 'wireshark'],
-  },
-  {
-    id: 'post-exploitation',
-    label: 'Post Exploitation',
-    icon: '/themes/Yaru/apps/msf-post.svg',
-    type: 'ids',
-    appIds: ['msf-post', 'mimikatz', 'volatility'],
-  },
-  {
-    id: 'forensics-reporting',
-    label: 'Forensics & Reporting',
-    icon: '/themes/Yaru/apps/autopsy.svg',
-    type: 'ids',
-    appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
-  },
- ] as const satisfies readonly CategoryDefinitionBase[];
-
-type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
-const isCategoryId = (
-  value: string,
-): value is CategoryDefinition['id'] =>
-  CATEGORY_DEFINITIONS.some(cat => cat.id === value);
-
-type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
+type CategoryConfig = SharedCategoryConfig<AppMeta>;
 
 
 const readRecentAppIds = (): string[] => {
@@ -172,35 +75,14 @@ const WhiskerMenu: React.FC = () => {
       .map(appId => mapById.get(appId))
       .filter((app): app is AppMeta => Boolean(app));
   }, [allApps, recentIds]);
-  const categoryConfigs = useMemo<CategoryConfig[]>(() => {
-    const mapById = new Map(allApps.map(app => [app.id, app] as const));
-
-    return CATEGORY_DEFINITIONS.map((definition) => {
-      let appsForCategory: AppMeta[] = [];
-      switch (definition.type) {
-        case 'all':
-          appsForCategory = allApps;
-          break;
-        case 'favorites':
-          appsForCategory = favoriteApps;
-          break;
-        case 'recent':
-          appsForCategory = recentApps;
-          break;
-        case 'ids':
-          appsForCategory = definition.appIds
-            .map(appId => mapById.get(appId))
-            .filter((app): app is AppMeta => Boolean(app));
-          break;
-        default:
-          appsForCategory = allApps;
-      }
-      return {
-        ...definition,
-        apps: appsForCategory,
-      } as CategoryConfig;
-    });
-  }, [allApps, favoriteApps, recentApps]);
+  const categoryConfigs = useMemo<CategoryConfig[]>(
+    () =>
+      buildCategoryConfigs(allApps, {
+        favoriteIds: favoriteApps.map(app => app.id),
+        recentIds,
+      }),
+    [allApps, favoriteApps, recentIds],
+  );
 
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);
