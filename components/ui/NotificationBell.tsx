@@ -243,7 +243,7 @@ const NotificationBell: React.FC = () => {
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey shadow-none transition-colors hover:border-interactive-border-hover hover:bg-interactive-hover hover:text-white hover:shadow-interactive-hover focus-visible:border-interactive-border-hover focus-visible:bg-interactive-hover focus-visible:text-white focus-visible:shadow-interactive-hover active:border-interactive-border-active active:bg-interactive-active active:shadow-interactive-active"
       >
         <svg
           aria-hidden="true"
@@ -269,9 +269,9 @@ const NotificationBell: React.FC = () => {
           aria-modal="false"
           aria-labelledby={headingId}
           tabIndex={-1}
-          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
+          className="absolute right-0 z-50 mt-2 max-h-96 w-72 overflow-hidden rounded-lg border border-interactive-border bg-interactive-surface text-white shadow-interactive backdrop-blur"
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+          <div className="flex items-center justify-between border-b border-interactive-border px-4 py-2">
             <h2 id={headingId} className="text-sm font-semibold text-white">
               Notifications
             </h2>
@@ -279,7 +279,7 @@ const NotificationBell: React.FC = () => {
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className="rounded-md px-2 py-1 text-xs font-medium text-ubb-orange transition-colors hover:bg-interactive-hover focus-visible:bg-interactive-hover active:bg-interactive-active disabled:cursor-not-allowed disabled:text-white/40"
             >
               Dismiss all
             </button>
@@ -302,7 +302,7 @@ const NotificationBell: React.FC = () => {
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-interactive-hover focus-visible:bg-interactive-hover active:bg-interactive-active"
                       >
                         <span className="flex items-center gap-2">
                           {group.metadata.label}

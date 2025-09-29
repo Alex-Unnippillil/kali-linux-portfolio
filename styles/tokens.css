@@ -39,6 +39,41 @@
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
 
+  /* Interactive surfaces */
+  --interactive-surface: color-mix(in srgb, var(--color-surface) 85%, var(--color-text) 15%);
+  --interactive-surface-hover: color-mix(
+    in srgb,
+    var(--color-surface) 70%,
+    var(--color-primary) 30%
+  );
+  --interactive-surface-active: color-mix(
+    in srgb,
+    var(--color-surface) 65%,
+    var(--color-primary) 35%
+  );
+  --interactive-border: color-mix(in srgb, var(--color-border) 70%, transparent 30%);
+  --interactive-border-hover: color-mix(
+    in srgb,
+    var(--color-primary) 35%,
+    var(--color-border) 65%
+  );
+  --interactive-border-active: color-mix(
+    in srgb,
+    var(--color-primary) 55%,
+    var(--color-border) 45%
+  );
+  --interactive-shadow: 0 2px 8px color-mix(in srgb, var(--color-inverse), transparent 85%);
+  --interactive-shadow-hover: 0 4px 14px color-mix(
+    in srgb,
+    var(--color-inverse),
+    transparent 75%
+  );
+  --interactive-shadow-active: inset 0 2px 6px color-mix(
+    in srgb,
+    var(--color-inverse),
+    transparent 70%
+  );
+
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
   --game-color-success: #15803d;

@@ -86,13 +86,8 @@ export default function AppGrid({ openApp }) {
         {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
           <div
             ref={ref}
-            style={{
-              ...style,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: 12,
-            }}
+            style={style}
+            className="flex h-full w-full items-center justify-center p-3"
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onFocus={onFocus}
@@ -114,7 +109,8 @@ export default function AppGrid({ openApp }) {
   return (
     <div className="flex flex-col items-center h-full">
       <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+        className="mb-6 mt-4 w-2/3 rounded-md border border-interactive-border bg-interactive-surface px-4 py-2 text-white shadow-interactive transition-colors focus-visible:border-interactive-border-hover focus-visible:bg-interactive-hover focus-visible:shadow-interactive-hover md:w-1/3"
+        aria-label="Search apps"
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}

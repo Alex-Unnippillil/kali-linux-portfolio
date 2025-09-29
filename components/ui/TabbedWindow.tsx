@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import clsx from 'clsx';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -168,13 +169,16 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className="flex flex-shrink-0 overflow-x-auto border-b border-interactive-border bg-interactive-surface text-sm text-white">
         {tabs.map((t, i) => (
           <div
             key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
+            className={clsx(
+              'flex cursor-pointer select-none items-center gap-1.5 rounded-t-md border border-transparent px-3 py-1 transition-colors',
+              t.id === activeId
+                ? 'border-interactive-border-hover bg-interactive-hover text-white shadow-interactive-hover'
+                : 'text-white/80 hover:border-interactive-border-hover hover:bg-interactive-hover hover:text-white',
+            )}
             draggable
             onDragStart={handleDragStart(i)}
             onDragOver={handleDragOver(i)}
@@ -184,7 +188,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="p-0.5"
+                className="rounded p-0.5 text-white/70 transition-colors hover:bg-interactive-hover hover:text-white focus-visible:bg-interactive-hover focus-visible:text-white active:bg-interactive-active"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);
@@ -198,7 +202,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="ml-1 rounded-md border border-transparent px-2 py-1 text-white/80 transition-colors hover:border-interactive-border-hover hover:bg-interactive-hover hover:text-white focus-visible:border-interactive-border-hover focus-visible:bg-interactive-hover focus-visible:text-white active:border-interactive-border-active active:bg-interactive-active"
             onClick={addTab}
             aria-label="New Tab"
           >
