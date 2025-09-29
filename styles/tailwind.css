@@ -18,6 +18,12 @@
   .accent-border {
     border-color: color-mix(in srgb, var(--color-accent), transparent 45%);
   }
+  .border-card {
+    border: 1px solid var(--border-card);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
 }
 
 @layer base {

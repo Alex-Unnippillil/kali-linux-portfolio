@@ -21,6 +21,8 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
+  --border-card: color-mix(in srgb, var(--color-border) 70%, var(--color-text) 30%);
+  --shadow-card: var(--shadow-2);
   accent-color: var(--color-control-accent);
 }
 
