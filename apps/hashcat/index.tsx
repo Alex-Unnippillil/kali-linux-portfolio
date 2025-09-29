@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
+import type {
+  BenchmarkPresetConfig,
+  BenchmarkStartPayload,
+  BenchmarkWorkerOutgoingMessage,
+} from './worker-types';
 
 interface Preset {
   value: string;
@@ -27,6 +32,71 @@ const defaultRuleSets: RuleSets = {
   best64: ['c', 'u', 'l', 'r', 'd', 'p', 't', 's'],
   quick: ['l', 'u', 'c', 'd'],
 };
+
+const benchmarkPresets: BenchmarkPresetConfig[] = [
+  {
+    key: 'quick-audit',
+    label: 'Quick Audit',
+    description: 'Short dictionary sweep for safe demos and walkthroughs.',
+    durationMs: 15000,
+    steps: 40,
+    speedRange: [2100, 2800],
+    recoveredHashes: 1,
+    sampleLogs: [
+      'Loaded curated wordlist (52,360 candidates)',
+      'GPU0 applying best64 ruleset',
+      'GPU0 queue depth stable, monitoring temps',
+    ],
+    scenario: 'Quick audit',
+  },
+  {
+    key: 'mask-check',
+    label: 'Mask Stress Test',
+    description: 'Moderate mask benchmark to validate keyspace planning.',
+    durationMs: 25000,
+    steps: 50,
+    speedRange: [3200, 4200],
+    recoveredHashes: 1,
+    sampleLogs: [
+      'Enumerating ?l?l?d?d combinations',
+      'GPU0: mask scheduler adjusting chunk size',
+      'Rule cache warmed, continuing sweep',
+    ],
+    scenario: 'Mask evaluation',
+  },
+  {
+    key: 'hybrid-sweep',
+    label: 'Hybrid Sweep',
+    description: 'Combines dictionary + mask combos for realistic hybrid runs.',
+    durationMs: 35000,
+    steps: 60,
+    speedRange: [3600, 5200],
+    recoveredHashes: 2,
+    sampleLogs: [
+      'Loading base dictionary with appended masks',
+      'GPU0 switching to combinator stage',
+      'Heuristic: promoting successful rule combinations',
+    ],
+    scenario: 'Hybrid sweep',
+  },
+  {
+    key: 'extreme',
+    label: 'Extreme Stress (Heavy)',
+    description:
+      'Extended simulation that mimics intensive GPU benchmarking. Disabled unless explicitly allowed.',
+    durationMs: 60000,
+    steps: 80,
+    speedRange: [4200, 6000],
+    recoveredHashes: 3,
+    sampleLogs: [
+      'GPU0 fans ramped to 80% duty cycle',
+      'Scheduler throttled to maintain safe temperatures',
+      'Long-run stability checkpoint passed',
+    ],
+    scenario: 'Extreme stress',
+    heavy: true,
+  },
+];
 
 const Hashcat: React.FC = () => {
   const [attackMode, setAttackMode] = useState('0');
@@ -76,56 +146,127 @@ const Hashcat: React.FC = () => {
 
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [eta, setEta] = useState('00:00');
+  const [eta, setEta] = useState('--:--');
   const [recovered, setRecovered] = useState(0);
-  const total = 1;
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentSpeed, setCurrentSpeed] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
+  const [benchmarkSummary, setBenchmarkSummary] = useState(
+    'Select a preset and start a benchmark to view simulated performance.',
+  );
+  const workerRef = useRef<Worker | null>(null);
 
-  const stopInterval = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+  const [allowHeavyPresets, setAllowHeavyPresets] = useState(false);
+  const [selectedPresetKey, setSelectedPresetKey] = useState(
+    benchmarkPresets[0].key,
+  );
+
+  const selectedPreset = useMemo(
+    () =>
+      benchmarkPresets.find((preset) => preset.key === selectedPresetKey) ||
+      benchmarkPresets[0],
+    [selectedPresetKey],
+  );
+  const total = selectedPreset.recoveredHashes;
+  const startDisabled = !running && selectedPreset.heavy && !allowHeavyPresets;
+  const presetSelectId = 'hashcat-benchmark-preset';
+  const heavyToggleId = 'hashcat-heavy-toggle';
+
+  useEffect(() => {
+    if (!allowHeavyPresets && selectedPreset.heavy) {
+      const fallback = benchmarkPresets.find((preset) => !preset.heavy);
+      if (fallback) {
+        setSelectedPresetKey(fallback.key);
+      }
     }
-  };
+  }, [allowHeavyPresets, selectedPreset]);
+
+  const handleWorkerMessage = useCallback(
+    ({ data }: MessageEvent<BenchmarkWorkerOutgoingMessage>) => {
+      if (data.type === 'progress') {
+        setProgress(data.progress);
+        setEta(data.eta);
+        setCurrentSpeed(data.speed);
+        setRecovered(data.recovered);
+        setLogs((prev) =>
+          [...prev.slice(-19), `${data.scenario}: ${data.log}`],
+        );
+        return;
+      }
+
+      if (data.type === 'complete') {
+        setProgress(100);
+        setEta('00:00');
+        setRunning(false);
+        setRecovered(data.recovered);
+        setBenchmarkSummary(data.summary);
+        setLogs((prev) => [...prev.slice(-19), `${data.scenario}: completed`]);
+        return;
+      }
+
+      if (data.type === 'stopped') {
+        setRunning(false);
+        setEta('00:00');
+        setBenchmarkSummary(`Benchmark for ${data.scenario} stopped.`);
+        setLogs((prev) => [...prev.slice(-19), `${data.scenario}: stop acknowledged`]);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+      return;
+    }
+    const worker = new Worker(
+      new URL('../../workers/hashcatBenchmark.worker.ts', import.meta.url),
+    );
+    workerRef.current = worker;
+    worker.onmessage = handleWorkerMessage;
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, [handleWorkerMessage]);
 
   const start = () => {
+    if (running) return;
+    if (selectedPreset.heavy && !allowHeavyPresets) {
+      setBenchmarkSummary('Enable heavy presets to run this scenario.');
+      return;
+    }
+    if (!workerRef.current) {
+      setBenchmarkSummary('Web Workers are unavailable in this environment.');
+      return;
+    }
+
+    const payload: BenchmarkStartPayload = {
+      scenario: selectedPreset.scenario,
+      durationMs: selectedPreset.durationMs,
+      steps: selectedPreset.steps,
+      speedRange: selectedPreset.speedRange,
+      recoveredHashes: selectedPreset.recoveredHashes,
+      sampleLogs: selectedPreset.sampleLogs,
+    };
+
     setRunning(true);
     setProgress(0);
     setRecovered(0);
-    setEta('00:00');
-    setLogs([]);
-    stopInterval();
-    intervalRef.current = setInterval(() => {
-      setProgress((prev) => {
-        const next = Math.min(prev + Math.random() * 5, 100);
-        const remaining = (100 - next) * 0.6; // total ~60s
-        const mins = Math.floor(remaining / 60);
-        const secs = Math.floor(remaining % 60);
-        setEta(`${mins.toString().padStart(2, '0')}:${secs
-          .toString()
-          .padStart(2, '0')}`);
-        const currentSpeed = 1000 + Math.random() * 500;
-        setLogs((l) =>
-          [...l.slice(-19), `Progress ${next.toFixed(1)}% @ ${currentSpeed.toFixed(0)} H/s`]
-        );
-        if (next >= 100) {
-          setRecovered(total);
-          setRunning(false);
-          stopInterval();
-          setLogs((l) => [...l, 'Cracking complete']);
-        }
-        return next;
-      });
-    }, 500);
+    setCurrentSpeed(0);
+    setEta('--:--');
+    setLogs([`Starting ${selectedPreset.scenario} preset`]);
+    setBenchmarkSummary(`Benchmark running: ${selectedPreset.label}`);
+    workerRef.current.postMessage({ type: 'start', payload });
   };
 
   const stop = () => {
+    if (!running) return;
     setRunning(false);
-    stopInterval();
+    setBenchmarkSummary(`Stop requested for ${selectedPreset.scenario} benchmark.`);
+    setEta('00:00');
+    setCurrentSpeed(0);
+    setLogs((prev) => [...prev.slice(-19), 'Stop requested']);
+    workerRef.current?.postMessage({ type: 'stop' });
   };
-
-  useEffect(() => () => stopInterval(), []);
 
   const showMask = attackMode === '3' || attackMode === '6' || attackMode === '7';
 
@@ -306,14 +447,68 @@ const Hashcat: React.FC = () => {
         setRuleSet={setRuleSet}
       />
 
-      <div>
-        <button
-          type="button"
-          onClick={running ? stop : start}
-          className="px-4 py-2 bg-green-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500"
-        >
-          {running ? 'Stop' : 'Start'}
-        </button>
+      <div className="space-y-2">
+        <div>
+          <label className="block mb-1" htmlFor={presetSelectId}>
+            Benchmark Preset
+          </label>
+          <select
+            id={presetSelectId}
+            value={selectedPresetKey}
+            onChange={(e) => setSelectedPresetKey(e.target.value)}
+            className="text-black p-2 rounded w-full"
+          >
+            {benchmarkPresets.map((preset) => (
+              <option
+                key={preset.key}
+                value={preset.key}
+                disabled={preset.heavy && !allowHeavyPresets}
+              >
+                {preset.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-gray-300 mt-1">{selectedPreset.description}</p>
+          <p className="text-xs text-gray-400">
+            Est. duration: {(selectedPreset.durationMs / 1000).toFixed(0)}s · Target
+            recoveries: {selectedPreset.recoveredHashes}
+          </p>
+          {selectedPreset.heavy && !allowHeavyPresets && (
+            <p className="text-xs text-amber-300 mt-1">
+              Heavy presets are gated by default. Toggle the safety switch below to
+              enable them.
+            </p>
+          )}
+        </div>
+        <label className="flex items-center gap-2 text-sm" htmlFor={heavyToggleId}>
+          <input
+            id={heavyToggleId}
+            type="checkbox"
+            checked={allowHeavyPresets}
+            onChange={(e) => setAllowHeavyPresets(e.target.checked)}
+          />
+          Allow intensive GPU-sized benchmarks
+        </label>
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={running ? stop : start}
+            disabled={startDisabled}
+            className={`px-4 py-2 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 ${
+              running
+                ? 'bg-red-600 hover:bg-red-500'
+                : 'bg-green-600 hover:bg-green-500'
+            } ${startDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {running ? 'Stop Benchmark' : 'Start Benchmark'}
+          </button>
+          <p className="text-sm text-gray-300" data-testid="benchmark-summary">
+            {benchmarkSummary}
+          </p>
+          <p className="text-xs text-gray-400">
+            Current speed: {currentSpeed ? `${currentSpeed} MH/s` : '--'}
+          </p>
+        </div>
       </div>
 
       <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
