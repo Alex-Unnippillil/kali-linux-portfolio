@@ -3,9 +3,9 @@ import history from './task-history.json';
 
 const statuses = ['Queued', 'Running', 'Completed'];
 const colors = {
-  Queued: 'fill-blue-500',
-  Running: 'fill-yellow-500',
-  Completed: 'fill-green-500',
+  Queued: 'var(--chart-status-queued)',
+  Running: 'var(--chart-status-running)',
+  Completed: 'var(--chart-status-completed)',
 };
 
 const TaskRunChart = () => {
@@ -35,25 +35,39 @@ const TaskRunChart = () => {
               y1={y}
               x2={width}
               y2={y}
-              className="stroke-gray-600"
+              stroke="var(--chart-grid)"
               strokeWidth="0.5"
             />
             <text
               x="0"
               y={y - 1}
-              className="fill-white text-[8px]"
+              className="text-[8px]"
+              fill="var(--chart-label)"
             >
               {s}
             </text>
           </g>
         );
       })}
-      <polyline points={points} fill="none" stroke="white" strokeWidth="1" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke="var(--chart-line)"
+        strokeWidth="1"
+      />
       {history.map((d, i) => {
         const x = i * 20 + 10;
         const y =
           height - (statuses.indexOf(d.status) / (statuses.length - 1)) * height;
-        return <circle key={d.time} cx={x} cy={y} r="2" className={colors[d.status]} />;
+        return (
+          <circle
+            key={d.time}
+            cx={x}
+            cy={y}
+            r="2"
+            fill={colors[d.status]}
+          />
+        );
       })}
     </svg>
   );

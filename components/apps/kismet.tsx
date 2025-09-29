@@ -95,8 +95,11 @@ const ChannelChart = ({ data }) => {
       {channels.map((c) => (
         <div key={c} className="flex flex-col items-center">
           <div
-            className="bg-blue-600 w-4"
-            style={{ height: `${(data[c] / max) * 100}%` }}
+            className="w-4 rounded"
+            style={{
+              height: `${(data[c] / max) * 100}%`,
+              backgroundColor: 'var(--chart-series-1)',
+            }}
           />
           <span className="text-xs mt-1">{c}</span>
         </div>
@@ -124,10 +127,10 @@ const TimeChart = ({ data }) => {
     <svg
       width={width}
       height={height}
-      className="bg-gray-900"
+      style={{ backgroundColor: 'var(--chart-surface)' }}
       aria-label="Time chart"
     >
-      <path d={points} stroke="#0f0" fill="none" />
+      <path d={points} stroke="var(--chart-line)" fill="none" />
     </svg>
   );
 };
@@ -136,6 +139,12 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   const [networks, setNetworks] = useState([]);
   const [channels, setChannels] = useState({});
   const [times, setTimes] = useState({});
+
+  const controlStyle = {
+    backgroundColor: 'var(--theme-control-background)',
+    color: 'var(--theme-control-text)',
+    border: `1px solid var(--theme-border-subtle)`,
+  };
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -151,13 +160,21 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   };
 
   return (
-    <div className="p-4 text-white space-y-4">
+    <div
+      className="p-4 space-y-4"
+      style={{
+        backgroundColor: 'var(--theme-color-background)',
+        color: 'var(--theme-color-text)',
+        borderRadius: 'var(--radius-lg)',
+      }}
+    >
       <input
         type="file"
         accept=".pcap"
         onChange={handleFile}
         aria-label="pcap file"
-        className="block"
+        className="block rounded border px-2 py-1"
+        style={controlStyle}
       />
 
       {networks.length > 0 && (
@@ -172,12 +189,18 @@ const KismetApp = ({ onNetworkDiscovered }) => {
               </tr>
             </thead>
             <tbody>
-              {networks.map((n) => (
-                <tr key={n.bssid} className="odd:bg-gray-800">
-                  <td className="pr-2">{n.ssid || '(hidden)'}</td>
-                  <td className="pr-2">{n.bssid}</td>
-                  <td className="pr-2">{n.channel ?? '-'}</td>
-                  <td>{n.frames}</td>
+              {networks.map((n, index) => (
+                <tr
+                  key={n.bssid}
+                  style={{
+                    backgroundColor:
+                      index % 2 === 0 ? 'transparent' : 'var(--table-row-alt)',
+                  }}
+                >
+                  <td className="pr-2 py-1">{n.ssid || '(hidden)'}</td>
+                  <td className="pr-2 py-1">{n.bssid}</td>
+                  <td className="pr-2 py-1">{n.channel ?? '-'}</td>
+                  <td className="py-1">{n.frames}</td>
                 </tr>
               ))}
             </tbody>

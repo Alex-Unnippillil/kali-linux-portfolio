@@ -28,6 +28,48 @@
   --kali-bg: rgba(15, 19, 23, 0.85);
   --kali-blue: #1793d1;
 
+  /* High contrast palette anchors */
+  --color-hc-background: #000000;
+  --color-hc-text: #ffffff;
+  --color-hc-accent: #ffd800;
+
+  /* Theme token indirection */
+  --theme-color-background: var(--color-bg);
+  --theme-color-surface: var(--kali-panel, rgba(26, 31, 38, 0.9));
+  --theme-color-text: var(--color-text);
+  --theme-color-accent: var(--color-primary);
+  --theme-color-on-accent: var(--color-inverse, #0f1317);
+  --theme-border-subtle: rgba(255, 255, 255, 0.16);
+  --theme-muted-text: rgba(245, 245, 245, 0.72);
+  --theme-control-background: #ffffff;
+  --theme-control-text: #0f1317;
+
+  /* Chart & data visualization tokens */
+  --chart-grid: rgba(245, 245, 245, 0.2);
+  --chart-line: var(--color-primary);
+  --chart-series-1: #377eb8;
+  --chart-series-2: #4daf4a;
+  --chart-series-3: #e41a1c;
+  --chart-series-4: #984ea3;
+  --chart-series-5: #ff7f00;
+  --chart-status-queued: #3b82f6;
+  --chart-status-running: #facc15;
+  --chart-status-completed: #22c55e;
+  --chart-label: var(--theme-color-text);
+  --chart-surface: rgba(12, 15, 18, 0.85);
+  --chart-cpu-line: #00ff00;
+  --chart-mem-line: #ffd700;
+  --chart-fps-line: #00ffff;
+  --chart-net-line: #ff00ff;
+
+  /* Data states */
+  --severity-low: #10b981;
+  --severity-medium: #f59e0b;
+  --severity-high: #f97316;
+  --severity-critical: #ef4444;
+  --severity-text: var(--theme-color-text);
+  --table-row-alt: rgba(255, 255, 255, 0.06);
+
   /* Kali theme tokens */
   --kali-blue: #1793d1;
   --kali-blue-dark: #0f6fa1;
@@ -84,19 +126,53 @@
 
 /* High contrast theme */
 .high-contrast {
-  --color-bg: #000000;
-  --color-text: #ffffff;
+  --color-bg: var(--color-hc-background);
+  --color-text: var(--color-hc-text);
+  --color-primary: var(--color-hc-accent);
+  --color-accent: var(--color-hc-accent);
+  --color-secondary: var(--color-hc-background);
   --color-ub-grey: #000000;
   --color-ub-cool-grey: #000000;
   --color-ubt-grey: #ffffff;
   --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
+  --color-ub-orange: var(--color-hc-accent);
   --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
-  --game-color-secondary: #ffff00;
+  --color-ub-border-orange: var(--color-hc-accent);
+  --game-color-secondary: var(--color-hc-accent);
   --game-color-success: #00ffff;
-  --game-color-warning: #ff00ff;
+  --game-color-warning: #ff66ff;
   --game-color-danger: #ff0000;
+  --theme-color-background: var(--color-hc-background);
+  --theme-color-surface: #000000;
+  --theme-color-text: var(--color-hc-text);
+  --theme-color-accent: var(--color-hc-accent);
+  --theme-color-on-accent: #000000;
+  --theme-border-subtle: var(--color-hc-text);
+  --theme-muted-text: var(--color-hc-text);
+  --theme-control-background: #000000;
+  --theme-control-text: var(--color-hc-text);
+  --chart-grid: var(--color-hc-text);
+  --chart-line: var(--color-hc-accent);
+  --chart-series-1: var(--color-hc-accent);
+  --chart-series-2: #00ffff;
+  --chart-series-3: #ff66ff;
+  --chart-series-4: #ffffff;
+  --chart-series-5: #ff8800;
+  --chart-status-queued: var(--color-hc-accent);
+  --chart-status-running: #00ffff;
+  --chart-status-completed: #ffffff;
+  --chart-label: var(--color-hc-text);
+  --chart-surface: #000000;
+  --chart-cpu-line: var(--color-hc-accent);
+  --chart-mem-line: #00ffff;
+  --chart-fps-line: #ff66ff;
+  --chart-net-line: #ffffff;
+  --severity-low: #00ffff;
+  --severity-medium: #ffff5a;
+  --severity-high: #ff66ff;
+  --severity-critical: #ffffff;
+  --severity-text: #000000;
+  --table-row-alt: rgba(255, 255, 255, 0.2);
 }
 
 /* Dyslexia-friendly fonts */
@@ -127,14 +203,23 @@
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {
-    --color-bg: #000000;
-    --color-text: #ffffff;
+    --color-bg: var(--color-hc-background);
+    --color-text: var(--color-hc-text);
+    --color-primary: var(--color-hc-accent);
+    --color-accent: var(--color-hc-accent);
     --color-ub-grey: #000000;
     --color-ub-cool-grey: #000000;
     --color-ubt-grey: #ffffff;
     --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
+    --color-ub-orange: var(--color-hc-accent);
     --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-ub-border-orange: var(--color-hc-accent);
+    --theme-color-background: var(--color-hc-background);
+    --theme-color-text: var(--color-hc-text);
+    --theme-color-accent: var(--color-hc-accent);
+    --theme-color-on-accent: #000000;
+    --theme-control-background: #000000;
+    --theme-control-text: var(--color-hc-text);
+    --chart-grid: var(--color-hc-text);
   }
 }
