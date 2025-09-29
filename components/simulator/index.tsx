@@ -1,17 +1,38 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import type {
   SimulatorParserRequest,
   SimulatorParserResponse,
   ParsedLine,
 } from '../../workers/simulatorParser.worker';
+import ErrorFixSuggestions from '@/components/ui/ErrorFixSuggestions';
+import { detectErrorCodes } from '@/utils/errorFixes';
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
 
-const samples: Record<string,string> = {
-  sample1: 'user:root\nuid:0\nstatus:ok',
-  sample2: 'error:failed\ncode:42\nstatus:bad',
+const samples: Record<string, string> = {
+  'Interface down (NET-042)': [
+    'timestamp:2024-03-02T10:14:00Z',
+    'status:error',
+    'code:NET-042',
+    'interface:wlan0',
+    'detail:Interface reported DOWN during capture',
+  ].join('\n'),
+  'Stale SSH host (AUTH-013)': [
+    'timestamp:2024-03-04T08:11:21Z',
+    'status:error',
+    'code:AUTH-013',
+    'target:kali.lab.internal',
+    'detail:Host key verification failed',
+  ].join('\n'),
+  'Volatile journal (LOG-200)': [
+    'timestamp:2024-03-06T17:45:09Z',
+    'status:warn',
+    'code:LOG-200',
+    'service:systemd-journald',
+    'detail:Runtime directory detected; persistence disabled',
+  ].join('\n'),
 };
 
 const Simulator: React.FC = () => {
@@ -27,6 +48,16 @@ const Simulator: React.FC = () => {
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
+  const errorCodes = useMemo(() => {
+    const codes: string[] = [];
+    parsed.forEach((entry) => {
+      if (entry.key.toLowerCase().includes('code')) {
+        codes.push(entry.value);
+      }
+    });
+    detectErrorCodes(fixtureText).forEach((code) => codes.push(code));
+    return Array.from(new Set(codes));
+  }, [parsed, fixtureText]);
 
   useEffect(() => {
     const worker = new Worker(
@@ -81,6 +112,10 @@ const Simulator: React.FC = () => {
   const copyCommand = async () => {
     try { await navigator.clipboard.writeText(command); } catch {}
   };
+
+  const handleRunFix = useCallback((cmd: string) => {
+    setCommand(cmd);
+  }, [setCommand]);
 
   const filtered = useCallback(() => {
     const rows = filter
@@ -159,9 +194,11 @@ const Simulator: React.FC = () => {
 
   return (
     <div className="space-y-4" aria-label="Simulator">
-      <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
-        <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
+      <div className="flex items-center">
+        <label className="flex items-center space-x-2 font-semibold">
+          <input id="labmode" aria-labelledby="labmode-label" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
+          <span id="labmode-label">Lab Mode</span>
+        </label>
       </div>
       {!labMode && (
         <div className="bg-yellow-100 text-yellow-800 p-2" role="alert">
@@ -180,16 +217,25 @@ const Simulator: React.FC = () => {
         <input type="file" accept=".txt,.json" onChange={onFile} aria-label="Load file" />
       </div>
       {fixtureText && (
-        <div className="border rounded" aria-label="Results">
-          <div className="flex border-b" role="tablist">
-            {tabs.map(t => (
-              <button key={t.id} role="tab" className={`px-2 py-1 ${activeTab===t.id ? 'bg-gray-200':''}`} onClick={()=>setActiveTab(t.id)}>
-                {t.title}
-              </button>
-            ))}
+        <>
+          <div className="border rounded" aria-label="Results">
+            <div className="flex border-b" role="tablist">
+              {tabs.map(t => (
+                <button key={t.id} role="tab" className={`px-2 py-1 ${activeTab===t.id ? 'bg-gray-200':''}`} onClick={()=>setActiveTab(t.id)}>
+                  {t.title}
+                </button>
+              ))}
+            </div>
+            <div>{tabs.find(t=>t.id===activeTab)?.content}</div>
           </div>
-          <div>{tabs.find(t=>t.id===activeTab)?.content}</div>
-        </div>
+          {errorCodes.length > 0 && (
+            <ErrorFixSuggestions
+              codes={errorCodes}
+              onRunCommand={handleRunFix}
+              source="simulator"
+            />
+          )}
+        </>
       )}
       {progress > 0 && progress < 1 && (
         <div aria-label="Parsing progress" className="space-y-1">

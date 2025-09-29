@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import ErrorFixSuggestions from '@/components/ui/ErrorFixSuggestions';
+import { detectErrorCodes } from '@/utils/errorFixes';
 
 export interface LogEntry {
   id: number;
@@ -22,6 +24,14 @@ export default function LogPane({ logs }: { logs: LogEntry[] }) {
       .map((log) => `[${log.level.toUpperCase()}] ${log.message}`)
       .join('\n');
     navigator.clipboard.writeText(text);
+  };
+
+  const runCommand = (command: string) => {
+    try {
+      navigator.clipboard.writeText(command);
+    } catch {
+      // ignore clipboard errors
+    }
   };
 
   const downloadAll = () => {
@@ -67,27 +77,41 @@ export default function LogPane({ logs }: { logs: LogEntry[] }) {
       </div>
       {!collapsed && (
         <ul className="max-h-40 overflow-auto">
-          {logs.map((log) => (
-            <li
-              key={log.id}
-              className="flex items-start gap-2 px-2 py-1 border-b border-gray-700 last:border-0"
-            >
-              <span
-                className={`${levelColors[log.level]} text-white px-1 rounded text-[10px] font-bold`}
+          {logs.map((log) => {
+            const codes = detectErrorCodes(log.message);
+            return (
+              <li
+                key={log.id}
+                className="flex flex-col gap-2 px-2 py-1 border-b border-gray-700 last:border-0"
               >
-                {log.level.toUpperCase()}
-              </span>
-              <span className="flex-1 break-all whitespace-pre-wrap">{log.message}</span>
-              <button
-                type="button"
-                aria-label="Copy log line"
-                className="text-xs underline"
-                onClick={() => navigator.clipboard.writeText(log.message)}
-              >
-                Copy
-              </button>
-            </li>
-          ))}
+                <div className="flex items-start gap-2">
+                  <span
+                    className={`${levelColors[log.level]} text-white px-1 rounded text-[10px] font-bold`}
+                  >
+                    {log.level.toUpperCase()}
+                  </span>
+                  <span className="flex-1 break-all whitespace-pre-wrap">{log.message}</span>
+                  <button
+                    type="button"
+                    aria-label="Copy log line"
+                    className="text-xs underline"
+                    onClick={() => navigator.clipboard.writeText(log.message)}
+                  >
+                    Copy
+                  </button>
+                </div>
+                {codes.length > 0 && (
+                  <ErrorFixSuggestions
+                    codes={codes}
+                    onRunCommand={runCommand}
+                    source="ettercap-logs"
+                    size="compact"
+                    className="ml-6"
+                  />
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
