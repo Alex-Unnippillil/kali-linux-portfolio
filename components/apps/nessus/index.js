@@ -180,43 +180,54 @@ const Nessus = () => {
 
   if (!token) {
     return (
-      <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
-        <form onSubmit={login} className="space-y-2 p-4 w-64">
-          <label htmlFor="nessus-url" className="block text-sm">
-            Nessus URL
-          </label>
-          <input
-            id="nessus-url"
-            className="w-full p-2 rounded text-black"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-            placeholder="https://nessus:8834"
-          />
-          <label htmlFor="nessus-username" className="block text-sm">
-            Username
-          </label>
-          <input
-            id="nessus-username"
-            className="w-full p-2 rounded text-black"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-          />
-          <label htmlFor="nessus-password" className="block text-sm">
-            Password
-          </label>
-          <input
-            id="nessus-password"
-            type="password"
-            className="w-full p-2 rounded text-black"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-          />
+        <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
+          <form onSubmit={login} className="space-y-2 p-4 w-64">
+            <label htmlFor="nessus-url" className="block text-sm" id="nessus-url-label">
+              Nessus URL
+            </label>
+            <input
+              id="nessus-url"
+              className="w-full p-2 rounded text-black"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              aria-invalid={error ? 'true' : undefined}
+              aria-describedby={error ? 'nessus-error' : undefined}
+              aria-labelledby="nessus-url-label"
+              placeholder="https://nessus:8834"
+            />
+            <label
+              htmlFor="nessus-username"
+              className="block text-sm"
+              id="nessus-username-label"
+            >
+              Username
+            </label>
+            <input
+              id="nessus-username"
+              className="w-full p-2 rounded text-black"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              aria-invalid={error ? 'true' : undefined}
+              aria-describedby={error ? 'nessus-error' : undefined}
+              aria-labelledby="nessus-username-label"
+            />
+            <label
+              htmlFor="nessus-password"
+              className="block text-sm"
+              id="nessus-password-label"
+            >
+              Password
+            </label>
+            <input
+              id="nessus-password"
+              type="password"
+              className="w-full p-2 rounded text-black"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              aria-invalid={error ? 'true' : undefined}
+              aria-describedby={error ? 'nessus-error' : undefined}
+              aria-labelledby="nessus-password-label"
+            />
           <button type="submit" className="w-full bg-blue-600 py-2 rounded">
             Login
           </button>
@@ -235,7 +246,11 @@ const Nessus = () => {
         </button>
       </div>
       <div className="mb-4">
-        <label htmlFor="nessus-upload" className="block text-sm mb-1">
+        <label
+          htmlFor="nessus-upload"
+          className="block text-sm mb-1"
+          id="nessus-upload-label"
+        >
           Upload Nessus XML
         </label>
         <input
@@ -244,8 +259,13 @@ const Nessus = () => {
           accept=".nessus,.xml"
           onChange={handleFile}
           className="text-black mb-2"
+          aria-describedby={parseError ? 'nessus-upload-error' : undefined}
+          aria-invalid={parseError ? 'true' : undefined}
+          aria-labelledby="nessus-upload-label"
         />
-        {parseError && <FormError>{parseError}</FormError>}
+        {parseError && (
+          <FormError id="nessus-upload-error">{parseError}</FormError>
+        )}
         {findings.length > 0 && (
           <div className="mt-2">
             <button
@@ -286,6 +306,7 @@ const Nessus = () => {
                               value={feedbackText}
                               onChange={(e) => setFeedbackText(e.target.value)}
                               placeholder="Reason"
+                              aria-label="Reason for marking the finding as a false positive"
                             />
                             <div className="flex space-x-2">
                               <button
@@ -325,19 +346,21 @@ const Nessus = () => {
       <ScanComparison />
       <PluginScoreHeatmap findings={findings} />
       {error && <FormError className="mb-2">{error}</FormError>}
-      <form onSubmit={addJob} className="mb-4 space-x-2">
-        <input
-          className="p-1 rounded text-black"
-          placeholder="Scan ID"
-          value={newJob.scanId}
-          onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
-        />
-        <input
-          className="p-1 rounded text-black"
-          placeholder="Schedule"
-          value={newJob.schedule}
-          onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
-        />
+        <form onSubmit={addJob} className="mb-4 space-x-2">
+          <input
+            className="p-1 rounded text-black"
+            placeholder="Scan ID"
+            value={newJob.scanId}
+            onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
+            aria-label="Scan ID"
+          />
+          <input
+            className="p-1 rounded text-black"
+            placeholder="Schedule"
+            value={newJob.schedule}
+            onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
+            aria-label="Schedule"
+          />
         <button type="submit" className="bg-blue-600 px-2 py-1 rounded">
           Add Job
         </button>
@@ -369,13 +392,14 @@ const Nessus = () => {
               </button>
             </div>
             {feedbackId === scan.id && (
-              <form onSubmit={submitFeedback} className="mt-2 space-y-1">
-                <input
-                  className="w-full p-1 rounded text-black"
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  placeholder="Reason"
-                />
+                <form onSubmit={submitFeedback} className="mt-2 space-y-1">
+                  <input
+                    className="w-full p-1 rounded text-black"
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="Reason"
+                    aria-label="Reason for marking the finding as a false positive"
+                  />
                 <div className="flex space-x-2">
                   <button
                     type="submit"

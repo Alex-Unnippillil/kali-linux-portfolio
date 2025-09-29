@@ -1,34 +1,60 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState, useId } from 'react';
 import FormError from '../components/ui/FormError';
 
 const protocols = ['ssh', 'ftp', 'http', 'smtp'];
+
+type HydraField = 'target' | 'protocol' | 'wordlist';
+
+interface HydraError {
+  field: HydraField;
+  message: string;
+}
 
 const HydraPreview: React.FC = () => {
   const [step, setStep] = useState(0);
   const [target, setTarget] = useState('');
   const [protocol, setProtocol] = useState(protocols[0]);
   const [wordlist, setWordlist] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<HydraError | null>(null);
+  const idBase = useId();
+  const { errorIds, labelIds } = useMemo(
+    () => {
+      const sanitizedBase = idBase.replace(/:/g, '');
+      return {
+        errorIds: {
+          target: `hydra-error-${sanitizedBase}-target`,
+          protocol: `hydra-error-${sanitizedBase}-protocol`,
+          wordlist: `hydra-error-${sanitizedBase}-wordlist`,
+        } satisfies Record<HydraField, string>,
+        labelIds: {
+          target: `hydra-label-${sanitizedBase}-target`,
+          protocol: `hydra-label-${sanitizedBase}-protocol`,
+          wordlist: `hydra-label-${sanitizedBase}-wordlist`,
+        } satisfies Record<HydraField, string>,
+      };
+    },
+    [idBase]
+  );
 
   const next = () => {
     if (step === 0 && !target.trim()) {
-      setError('Target is required');
+      setError({ field: 'target', message: 'Enter a target host.' });
       return;
     }
     if (step === 1 && !protocol) {
-      setError('Protocol is required');
+      setError({ field: 'protocol', message: 'Choose a protocol.' });
       return;
     }
     if (step === 2 && !wordlist.trim()) {
-      setError('Wordlist is required');
+      setError({ field: 'wordlist', message: 'Provide a wordlist path.' });
       return;
     }
-    setError('');
+    setError(null);
     setStep(step + 1);
   };
 
   const back = () => {
-    setError('');
+    setError(null);
     setStep(step - 1);
   };
 
@@ -37,10 +63,18 @@ const HydraPreview: React.FC = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md rounded bg-white p-6 shadow-md">
-        {error && <FormError className="mb-4 mt-0">{error}</FormError>}
+        {error && (
+          <FormError id={errorIds[error.field]} className="mb-4 mt-0">
+            {error.message}
+          </FormError>
+        )}
         {step === 0 && (
           <div>
-            <label htmlFor="target" className="mb-2 block text-sm font-medium">
+            <label
+              htmlFor="target"
+              className="mb-2 block text-sm font-medium"
+              id={labelIds.target}
+            >
               Target Host
             </label>
             <input
@@ -50,12 +84,19 @@ const HydraPreview: React.FC = () => {
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               placeholder="example.com or 192.168.1.1"
+              aria-invalid={error?.field === 'target' || undefined}
+              aria-describedby={error?.field === 'target' ? errorIds.target : undefined}
+              aria-labelledby={labelIds.target}
             />
           </div>
         )}
         {step === 1 && (
           <div>
-            <label htmlFor="protocol" className="mb-2 block text-sm font-medium">
+            <label
+              htmlFor="protocol"
+              className="mb-2 block text-sm font-medium"
+              id={labelIds.protocol}
+            >
               Protocol
             </label>
             <select
@@ -63,6 +104,9 @@ const HydraPreview: React.FC = () => {
               className="mb-4 w-full rounded border p-2"
               value={protocol}
               onChange={(e) => setProtocol(e.target.value)}
+              aria-invalid={error?.field === 'protocol' || undefined}
+              aria-describedby={error?.field === 'protocol' ? errorIds.protocol : undefined}
+              aria-labelledby={labelIds.protocol}
             >
               {protocols.map((p) => (
                 <option key={p} value={p}>
@@ -74,7 +118,11 @@ const HydraPreview: React.FC = () => {
         )}
         {step === 2 && (
           <div>
-            <label htmlFor="wordlist" className="mb-2 block text-sm font-medium">
+            <label
+              htmlFor="wordlist"
+              className="mb-2 block text-sm font-medium"
+              id={labelIds.wordlist}
+            >
               Wordlist Path
             </label>
             <input
@@ -84,6 +132,9 @@ const HydraPreview: React.FC = () => {
               value={wordlist}
               onChange={(e) => setWordlist(e.target.value)}
               placeholder="/usr/share/wordlists/rockyou.txt"
+              aria-invalid={error?.field === 'wordlist' || undefined}
+              aria-describedby={error?.field === 'wordlist' ? errorIds.wordlist : undefined}
+              aria-labelledby={labelIds.wordlist}
             />
           </div>
         )}

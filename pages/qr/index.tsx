@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useId } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
 import Tabs from '../../components/Tabs';
@@ -16,6 +16,23 @@ const tabs = [
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
+
+type FieldName =
+  | 'text'
+  | 'url'
+  | 'ssid'
+  | 'wifiPassword'
+  | 'vName'
+  | 'vOrg'
+  | 'vPhone'
+  | 'vEmail';
+
+type LabelField = FieldName | 'wifiType';
+
+interface QRError {
+  message: string;
+  field?: FieldName;
+}
 
 const QRPage: React.FC = () => {
   const [active, setActive] = useState<TabId>('text');
@@ -33,29 +50,102 @@ const QRPage: React.FC = () => {
   const [fileName, setFileName] = useState('qr');
   const [scanResult, setScanResult] = useState('');
   const [batch, setBatch] = useState<string[]>([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<QRError | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const idBase = useId();
+  const { errorIds, labelIds } = useMemo(() => {
+    const sanitizedBase = idBase.replace(/:/g, '');
+    return {
+      errorIds: {
+        general: `qr-error-${sanitizedBase}-general`,
+        text: `qr-error-${sanitizedBase}-text`,
+        url: `qr-error-${sanitizedBase}-url`,
+        ssid: `qr-error-${sanitizedBase}-ssid`,
+        wifiPassword: `qr-error-${sanitizedBase}-wifi-password`,
+        vName: `qr-error-${sanitizedBase}-vname`,
+        vOrg: `qr-error-${sanitizedBase}-vorg`,
+        vPhone: `qr-error-${sanitizedBase}-vphone`,
+        vEmail: `qr-error-${sanitizedBase}-vemail`,
+      } satisfies Record<'general' | FieldName, string>,
+      labelIds: {
+        text: `qr-label-${sanitizedBase}-text`,
+        url: `qr-label-${sanitizedBase}-url`,
+        ssid: `qr-label-${sanitizedBase}-ssid`,
+        wifiPassword: `qr-label-${sanitizedBase}-wifi-password`,
+        wifiType: `qr-label-${sanitizedBase}-wifi-type`,
+        vName: `qr-label-${sanitizedBase}-vname`,
+        vOrg: `qr-label-${sanitizedBase}-vorg`,
+        vPhone: `qr-label-${sanitizedBase}-vphone`,
+        vEmail: `qr-label-${sanitizedBase}-vemail`,
+      } satisfies Record<LabelField, string>,
+    };
+  }, [idBase]);
 
   const generateQr = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     let data = '';
     let name = 'qr';
     switch (active) {
       case 'text':
-        data = text;
+        data = text.trim();
+        if (!data) {
+          setError({ field: 'text', message: 'Enter text to encode.' });
+          setQrPng('');
+          setQrSvg('');
+          return;
+        }
         name = 'text';
         break;
       case 'url':
-        data = url;
+        data = url.trim();
+        if (!data) {
+          setError({ field: 'url', message: 'Add a URL to encode.' });
+          setQrPng('');
+          setQrSvg('');
+          return;
+        }
+        try {
+          const parsedUrl = new URL(data);
+          if (!parsedUrl.protocol || !parsedUrl.hostname) {
+            throw new Error('Invalid URL');
+          }
+        } catch {
+          setError({ field: 'url', message: 'Use a valid URL.' });
+          setQrPng('');
+          setQrSvg('');
+          return;
+        }
         name = 'url';
         break;
       case 'wifi':
-        data = `WIFI:T:${wifiType};S:${ssid};P:${wifiPassword};;`;
+        if (!ssid.trim()) {
+          setError({ field: 'ssid', message: 'Enter the Wi-Fi network name.' });
+          setQrPng('');
+          setQrSvg('');
+          return;
+        }
+        if (wifiType !== 'nopass' && !wifiPassword.trim()) {
+          setError({ field: 'wifiPassword', message: 'Add the Wi-Fi password.' });
+          setQrPng('');
+          setQrSvg('');
+          return;
+        }
+        data = `WIFI:T:${wifiType};S:${ssid.trim()};P:${
+          wifiType === 'nopass' ? '' : wifiPassword.trim()
+        };;`;
         name = 'wifi';
         break;
       case 'vcard': {
-        const parts = vName.trim().split(' ');
+        const trimmedName = vName.trim();
+        if (!trimmedName) {
+          setError({ field: 'vName', message: 'Add the contact name.' });
+          setQrPng('');
+          setQrSvg('');
+          return;
+        }
+        const parts = trimmedName.split(' ');
         const first = parts.shift() || '';
         const last = parts.pop() || '';
         const middle = parts.join(' ');
@@ -63,22 +153,26 @@ const QRPage: React.FC = () => {
           'BEGIN:VCARD',
           'VERSION:3.0',
           `N:${last};${first};${middle};;`,
-          `FN:${vName}`,
+          `FN:${trimmedName}`,
         ];
-        if (vOrg) lines.push(`ORG:${vOrg}`);
-        if (vPhone) lines.push(`TEL;TYPE=CELL:${vPhone}`);
-        if (vEmail) lines.push(`EMAIL:${vEmail}`);
+        if (vOrg) lines.push(`ORG:${vOrg.trim()}`);
+        if (vPhone) lines.push(`TEL;TYPE=CELL:${vPhone.trim()}`);
+        if (vEmail) {
+          const trimmedEmail = vEmail.trim();
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(trimmedEmail)) {
+            setError({ field: 'vEmail', message: 'Use a valid email address.' });
+            setQrPng('');
+            setQrSvg('');
+            return;
+          }
+          lines.push(`EMAIL:${trimmedEmail}`);
+        }
         lines.push('END:VCARD');
         data = lines.join('\n');
         name = 'vcard';
         break;
       }
-    }
-    if (!data) {
-      setError('Please fill in required fields');
-      setQrPng('');
-      setQrSvg('');
-      return;
     }
     try {
       const png = await QRCode.toDataURL(data);
@@ -86,9 +180,9 @@ const QRPage: React.FC = () => {
       setQrPng(png);
       setQrSvg(svg);
       setFileName(name);
-      setError('');
+      setError(null);
     } catch {
-      setError('Failed to generate QR code');
+      setError({ message: 'Could not generate the QR code.' });
       setQrPng('');
       setQrSvg('');
     }
@@ -118,7 +212,7 @@ const QRPage: React.FC = () => {
     loadScans().then(setBatch);
     const startScanner = async () => {
       if (!navigator.mediaDevices) {
-        setError('Camera API not supported');
+        setError({ message: 'Camera API is not supported in this browser.' });
         return;
       }
       try {
@@ -139,15 +233,15 @@ const QRPage: React.FC = () => {
               setBatch((prev) => [...prev, text]);
             }
             if (err && !(err instanceof NotFoundException)) {
-              setError('Failed to read QR code');
+              setError({ message: 'Could not read the QR code.' });
             }
           });
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
-          setError('Camera access was denied');
+          setError({ message: 'Camera access was denied.' });
         } else {
-          setError('Could not start camera');
+          setError({ message: 'Could not start the camera.' });
         }
       }
     };
@@ -198,7 +292,11 @@ const QRPage: React.FC = () => {
         />
         {active === 'text' && (
           <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm" htmlFor="qr-text">
+            <label
+              className="block text-sm"
+              htmlFor="qr-text"
+              id={labelIds.text}
+            >
               Text
             </label>
             <input
@@ -207,6 +305,9 @@ const QRPage: React.FC = () => {
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="w-full rounded border p-2"
+              aria-invalid={error?.field === 'text' || undefined}
+              aria-describedby={error?.field === 'text' ? errorIds.text : undefined}
+              aria-labelledby={labelIds.text}
             />
             <button
               type="submit"
@@ -218,7 +319,11 @@ const QRPage: React.FC = () => {
         )}
         {active === 'url' && (
           <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm" htmlFor="qr-url">
+            <label
+              className="block text-sm"
+              htmlFor="qr-url"
+              id={labelIds.url}
+            >
               URL
             </label>
             <input
@@ -227,6 +332,9 @@ const QRPage: React.FC = () => {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="w-full rounded border p-2"
+              aria-invalid={error?.field === 'url' || undefined}
+              aria-describedby={error?.field === 'url' ? errorIds.url : undefined}
+              aria-labelledby={labelIds.url}
             />
             <button
               type="submit"
@@ -238,36 +346,60 @@ const QRPage: React.FC = () => {
         )}
         {active === 'wifi' && (
           <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm">
+            <label
+              className="block text-sm"
+              htmlFor="qr-wifi-ssid"
+              id={labelIds.ssid}
+            >
               SSID
-              <input
-                type="text"
-                value={ssid}
-                onChange={(e) => setSsid(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="qr-wifi-ssid"
+              type="text"
+              value={ssid}
+              onChange={(e) => setSsid(e.target.value)}
+              className="w-full rounded border p-2"
+              aria-invalid={error?.field === 'ssid' || undefined}
+              aria-describedby={error?.field === 'ssid' ? errorIds.ssid : undefined}
+              aria-labelledby={labelIds.ssid}
+            />
+            <label
+              className="block text-sm"
+              htmlFor="qr-wifi-password"
+              id={labelIds.wifiPassword}
+            >
               Password
-              <input
-                type="text"
-                value={wifiPassword}
-                onChange={(e) => setWifiPassword(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="qr-wifi-password"
+              type="text"
+              value={wifiPassword}
+              onChange={(e) => setWifiPassword(e.target.value)}
+              className="w-full rounded border p-2"
+              aria-invalid={error?.field === 'wifiPassword' || undefined}
+              aria-describedby={
+                error?.field === 'wifiPassword' ? errorIds.wifiPassword : undefined
+              }
+              aria-labelledby={labelIds.wifiPassword}
+            />
+            <label
+              className="block text-sm"
+              htmlFor="qr-wifi-type"
+              id={labelIds.wifiType}
+            >
               Encryption
-              <select
-                value={wifiType}
-                onChange={(e) => setWifiType(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              >
-                <option value="WPA">WPA/WPA2</option>
-                <option value="WEP">WEP</option>
-                <option value="nopass">None</option>
-              </select>
             </label>
+            <select
+              id="qr-wifi-type"
+              value={wifiType}
+              onChange={(e) => setWifiType(e.target.value)}
+              className="w-full rounded border p-2"
+              aria-labelledby={labelIds.wifiType}
+            >
+              <option value="WPA">WPA/WPA2</option>
+              <option value="WEP">WEP</option>
+              <option value="nopass">None</option>
+            </select>
             <button
               type="submit"
               className="w-full rounded bg-blue-600 p-2 text-white"
@@ -278,42 +410,70 @@ const QRPage: React.FC = () => {
         )}
         {active === 'vcard' && (
           <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm">
+            <label
+              className="block text-sm"
+              htmlFor="qr-vcard-name"
+              id={labelIds.vName}
+            >
               Full Name
-              <input
-                type="text"
-                value={vName}
-                onChange={(e) => setVName(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="qr-vcard-name"
+              type="text"
+              value={vName}
+              onChange={(e) => setVName(e.target.value)}
+              className="w-full rounded border p-2"
+              aria-invalid={error?.field === 'vName' || undefined}
+              aria-describedby={error?.field === 'vName' ? errorIds.vName : undefined}
+              aria-labelledby={labelIds.vName}
+            />
+            <label
+              className="block text-sm"
+              htmlFor="qr-vcard-org"
+              id={labelIds.vOrg}
+            >
               Organization
-              <input
-                type="text"
-                value={vOrg}
-                onChange={(e) => setVOrg(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="qr-vcard-org"
+              type="text"
+              value={vOrg}
+              onChange={(e) => setVOrg(e.target.value)}
+              className="w-full rounded border p-2"
+              aria-labelledby={labelIds.vOrg}
+            />
+            <label
+              className="block text-sm"
+              htmlFor="qr-vcard-phone"
+              id={labelIds.vPhone}
+            >
               Phone
-              <input
-                type="tel"
-                value={vPhone}
-                onChange={(e) => setVPhone(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="qr-vcard-phone"
+              type="tel"
+              value={vPhone}
+              onChange={(e) => setVPhone(e.target.value)}
+              className="w-full rounded border p-2"
+              aria-labelledby={labelIds.vPhone}
+            />
+            <label
+              className="block text-sm"
+              htmlFor="qr-vcard-email"
+              id={labelIds.vEmail}
+            >
               Email
-              <input
-                type="email"
-                value={vEmail}
-                onChange={(e) => setVEmail(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
+            <input
+              id="qr-vcard-email"
+              type="email"
+              value={vEmail}
+              onChange={(e) => setVEmail(e.target.value)}
+              className="w-full rounded border p-2"
+              aria-invalid={error?.field === 'vEmail' || undefined}
+              aria-describedby={error?.field === 'vEmail' ? errorIds.vEmail : undefined}
+              aria-labelledby={labelIds.vEmail}
+            />
             <button
               type="submit"
               className="w-full rounded bg-blue-600 p-2 text-white"
@@ -322,7 +482,14 @@ const QRPage: React.FC = () => {
             </button>
           </form>
         )}
-        {error && <FormError className="mt-2">{error}</FormError>}
+        {error && (
+          <FormError
+            id={error.field ? errorIds[error.field] : errorIds.general}
+            className="mt-2"
+          >
+            {error.message}
+          </FormError>
+        )}
         {qrPng && (
           <div className="mt-4 flex flex-col items-center gap-2">
             <Image
@@ -351,7 +518,11 @@ const QRPage: React.FC = () => {
         )}
       </div>
       <div className="w-full max-w-md">
-        <video ref={videoRef} className="h-48 w-full rounded border" />
+        <video
+          ref={videoRef}
+          className="h-48 w-full rounded border"
+          aria-label="Camera preview"
+        />
         {scanResult && (
           <p className="mt-2 text-center text-sm">Decoded: {scanResult}</p>
         )}
