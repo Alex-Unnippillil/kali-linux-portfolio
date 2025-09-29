@@ -13,8 +13,13 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import {
+  isResourceMonitorEnabled,
+  RESOURCE_MONITOR_ENV_FLAG,
+} from "../resource-monitor/feature";
 
 export default function Settings() {
+  const resourceMonitorEnabled = isResourceMonitorEnabled;
   const {
     accent,
     setAccent,
@@ -163,6 +168,7 @@ export default function Settings() {
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Toggle Kali Gradient Wallpaper"
               />
               Kali Gradient Wallpaper
             </label>
@@ -307,6 +313,35 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+          <div className="mx-4 my-6 rounded border border-gray-900 bg-black/30 p-4 text-sm text-ubt-grey">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Resource Monitor for debugging
+            </h3>
+            <p>
+              The Resource Monitor is available automatically when running{' '}
+              <code className="mx-1 rounded bg-black/40 px-1 py-0.5 text-white">
+                yarn dev
+              </code>
+              . To surface it in staging or demo builds, set{' '}
+              <code className="mx-1 rounded bg-black/40 px-1 py-0.5 text-white">
+                {`${RESOURCE_MONITOR_ENV_FLAG}=true`}
+              </code>{' '}
+              before starting the app.
+            </p>
+            <p className="mt-2 text-xs text-ubt-grey/80">
+              Without the flag the monitor is hidden from menus so production
+              builds stay lightweight.
+            </p>
+            <p
+              className={`mt-3 text-xs font-semibold ${
+                resourceMonitorEnabled ? "text-green-300" : "text-ubt-grey/60"
+              }`}
+            >
+              {resourceMonitorEnabled
+                ? "This build has the monitor enabled."
+                : "This build currently hides the monitor."}
+            </p>
           </div>
         </>
       )}
