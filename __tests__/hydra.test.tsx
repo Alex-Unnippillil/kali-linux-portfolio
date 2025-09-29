@@ -2,6 +2,10 @@ import React from 'react';
 import { render, fireEvent, screen, act } from '@testing-library/react';
 import HydraApp from '../components/apps/hydra';
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 describe('Hydra wordlists', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -39,9 +43,39 @@ describe('Hydra target validation', () => {
 
     fireEvent.change(targetInput, { target: { value: 'not a host' } });
     expect(runBtn).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Enter a valid hostname or IPv4 address.'
+    );
 
     fireEvent.change(targetInput, { target: { value: '1.2.3.4' } });
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(runBtn).not.toBeDisabled();
+  });
+
+  it('blocks mismatched port and protocol combinations', () => {
+    render(<HydraApp />);
+    const targetInput = screen.getByPlaceholderText('192.168.0.1');
+    fireEvent.change(screen.getByLabelText('Service'), {
+      target: { value: 'http-get' },
+    });
+    fireEvent.change(targetInput, { target: { value: '1.2.3.4:22' } });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /Port 22 is not allowed for HTTP GET/
+    );
+    expect(screen.getByText('Run Hydra')).toBeDisabled();
+  });
+
+  it('accepts recognized port and protocol combinations', () => {
+    render(<HydraApp />);
+    const targetInput = screen.getByPlaceholderText('192.168.0.1');
+    fireEvent.change(screen.getByLabelText('Service'), {
+      target: { value: 'http-get' },
+    });
+    fireEvent.change(targetInput, { target: { value: '1.2.3.4:80' } });
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('Run Hydra')).not.toBeDisabled();
   });
 });
 
