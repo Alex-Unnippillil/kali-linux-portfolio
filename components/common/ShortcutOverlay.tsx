@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import QaInspectorOverlay from './QaInspectorOverlay';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -54,60 +55,71 @@ const ShortcutOverlay: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (!open) return null;
-
-  const keyCounts = shortcuts.reduce<Map<string, number>>((map, s) => {
-    map.set(s.keys, (map.get(s.keys) || 0) + 1);
-    return map;
-  }, new Map());
-  const conflicts = new Set(
-    Array.from(keyCounts.entries())
-      .filter(([, count]) => count > 1)
-      .map(([key]) => key)
+  const keyCounts = useMemo(
+    () =>
+      shortcuts.reduce<Map<string, number>>((map, s) => {
+        map.set(s.keys, (map.get(s.keys) || 0) + 1);
+        return map;
+      }, new Map()),
+    [shortcuts]
+  );
+  const conflicts = useMemo(
+    () =>
+      new Set(
+        Array.from(keyCounts.entries())
+          .filter(([, count]) => count > 1)
+          .map(([key]) => key)
+      ),
+    [keyCounts]
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="max-w-lg w-full space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="text-sm underline"
-          >
-            Close
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={handleExport}
-          className="px-2 py-1 bg-gray-700 rounded text-sm"
+    <>
+      <QaInspectorOverlay />
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
+          role="dialog"
+          aria-modal="true"
         >
-          Export JSON
-        </button>
-        <ul className="space-y-1">
-          {shortcuts.map((s, i) => (
-            <li
-              key={i}
-              data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
-              className={
-                conflicts.has(s.keys)
-                  ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
-                  : 'flex justify-between px-2 py-1'
-              }
+          <div className="max-w-lg w-full space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-sm underline"
+              >
+                Close
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="px-2 py-1 bg-gray-700 rounded text-sm"
             >
-              <span className="font-mono mr-4">{s.keys}</span>
-              <span className="flex-1">{s.description}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+              Export JSON
+            </button>
+            <ul className="space-y-1">
+              {shortcuts.map((s, i) => (
+                <li
+                  key={i}
+                  data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
+                  className={
+                    conflicts.has(s.keys)
+                      ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
+                      : 'flex justify-between px-2 py-1'
+                  }
+                >
+                  <span className="font-mono mr-4">{s.keys}</span>
+                  <span className="flex-1">{s.description}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
