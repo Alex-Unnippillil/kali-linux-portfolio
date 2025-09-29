@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import Progress from '../../../apps/hydra/components/Progress';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -665,6 +666,11 @@ const HydraApp = () => {
         account lockout.
       </p>
       <AttemptTimeline attempts={timeline} />
+      <Progress
+        attempts={timeline}
+        totalAttempts={totalAttempts}
+        lockoutThreshold={LOCKOUT_THRESHOLD}
+      />
       {timeline.length > 0 && (
         <table className="mt-4 w-full text-sm">
           <thead>
