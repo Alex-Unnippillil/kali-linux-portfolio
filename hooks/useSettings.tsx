@@ -25,6 +25,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { isTelemetryEnabled, telemetryStore } from '../lib/telemetryStore';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -123,6 +124,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const telemetryEnabled = isTelemetryEnabled();
+  const reducedMotionRef = useRef(reducedMotion);
+  const highContrastRef = useRef(highContrast);
+  const largeHitAreasRef = useRef(largeHitAreas);
+  const pongSpinRef = useRef(pongSpin);
+  const allowNetworkRef = useRef(allowNetwork);
+  const hapticsRef = useRef(haptics);
 
   useEffect(() => {
     (async () => {
@@ -169,6 +177,72 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveUseKaliWallpaper(useKaliWallpaper);
   }, [useKaliWallpaper]);
+
+  useEffect(() => {
+    if (!telemetryEnabled) return;
+    if (reducedMotionRef.current === reducedMotion) return;
+    telemetryStore.logFeatureFlag('settings.reducedMotion', reducedMotion, {
+      previousValue: reducedMotionRef.current,
+      origin: 'settings',
+      source: 'SettingsProvider',
+    });
+    reducedMotionRef.current = reducedMotion;
+  }, [reducedMotion, telemetryEnabled]);
+
+  useEffect(() => {
+    if (!telemetryEnabled) return;
+    if (highContrastRef.current === highContrast) return;
+    telemetryStore.logFeatureFlag('settings.highContrast', highContrast, {
+      previousValue: highContrastRef.current,
+      origin: 'settings',
+      source: 'SettingsProvider',
+    });
+    highContrastRef.current = highContrast;
+  }, [highContrast, telemetryEnabled]);
+
+  useEffect(() => {
+    if (!telemetryEnabled) return;
+    if (largeHitAreasRef.current === largeHitAreas) return;
+    telemetryStore.logFeatureFlag('settings.largeHitAreas', largeHitAreas, {
+      previousValue: largeHitAreasRef.current,
+      origin: 'settings',
+      source: 'SettingsProvider',
+    });
+    largeHitAreasRef.current = largeHitAreas;
+  }, [largeHitAreas, telemetryEnabled]);
+
+  useEffect(() => {
+    if (!telemetryEnabled) return;
+    if (pongSpinRef.current === pongSpin) return;
+    telemetryStore.logFeatureFlag('settings.pongSpin', pongSpin, {
+      previousValue: pongSpinRef.current,
+      origin: 'settings',
+      source: 'SettingsProvider',
+    });
+    pongSpinRef.current = pongSpin;
+  }, [pongSpin, telemetryEnabled]);
+
+  useEffect(() => {
+    if (!telemetryEnabled) return;
+    if (allowNetworkRef.current === allowNetwork) return;
+    telemetryStore.logFeatureFlag('settings.allowNetwork', allowNetwork, {
+      previousValue: allowNetworkRef.current,
+      origin: 'settings',
+      source: 'SettingsProvider',
+    });
+    allowNetworkRef.current = allowNetwork;
+  }, [allowNetwork, telemetryEnabled]);
+
+  useEffect(() => {
+    if (!telemetryEnabled) return;
+    if (hapticsRef.current === haptics) return;
+    telemetryStore.logFeatureFlag('settings.haptics', haptics, {
+      previousValue: hapticsRef.current,
+      origin: 'settings',
+      source: 'SettingsProvider',
+    });
+    hapticsRef.current = haptics;
+  }, [haptics, telemetryEnabled]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {

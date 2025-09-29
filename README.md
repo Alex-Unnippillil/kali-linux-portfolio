@@ -100,12 +100,19 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+### Telemetry console overlay
+
+- Set `NEXT_PUBLIC_ENABLE_TELEMETRY_CONSOLE=true` in `.env.local` to enable the developer console.
+- Open the overlay with **Ctrl+Shift+L** or from **Settings → Telemetry Console (dev)**.
+- The console captures toast notifications, error boundary catches, and feature flag toggles from settings/environment.
+- Filter the log by type, severity, or search keywords and clear all or filtered entries when finished debugging.
+
 ---
 
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.
-- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
+- `<SpeedInsights />` is rendered in [`pages/_app.tsx`](./pages/_app.tsx) alongside `<Analytics />`.
 - Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
 - No metrics are collected in development mode; ad blockers or network filters can block the script.
 
@@ -138,7 +145,7 @@ File System (OPFS) so players can store per-game profiles.
 
 ```
 pages/
-  _app.jsx               # global providers (Legal banner, GA init, Vercel Analytics)
+  _app.tsx               # global providers (Legal banner, GA init, Vercel Analytics)
   _document.jsx
   index.jsx              # mounts <Ubuntu />
   api/                   # (dev/server) stub routes for demo-only features
@@ -215,6 +222,7 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
 | `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
+| `NEXT_PUBLIC_ENABLE_TELEMETRY_CONSOLE` | Enable the in-app telemetry console overlay for developers. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |

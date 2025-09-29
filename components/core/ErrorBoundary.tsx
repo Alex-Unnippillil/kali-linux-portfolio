@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { createLogger } from '../../lib/logger';
+import { telemetryStore } from '../../lib/telemetryStore';
 
 interface Props {
   children: ReactNode;
@@ -23,6 +24,12 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
     log.error('ErrorBoundary caught an error', { error, errorInfo });
+    telemetryStore.logError('Error boundary captured an error', {
+      error,
+      componentStack: errorInfo?.componentStack,
+      source: 'ErrorBoundary',
+      tags: ['error-boundary'],
+    });
   }
 
   componentDidUpdate(prevProps: Props) {
