@@ -1,5 +1,6 @@
 import React from 'react'
-import Image from 'next/image'
+
+import SmartImage from '../util-components/SmartImage'
 
 const bootMessages = [
     'Securing environment',
@@ -32,7 +33,7 @@ function BootingScreen(props) {
                     <span className="text-xs uppercase tracking-[0.5em] text-slate-400">Initializing workspace</span>
                     <div className="relative">
                         <div className="absolute -inset-6 rounded-full bg-sky-500/20 blur-3xl" aria-hidden />
-                        <Image
+                        <SmartImage
                             width={360}
                             height={360}
                             className="w-48 md:w-64"
@@ -55,7 +56,7 @@ function BootingScreen(props) {
                     >
                         {props.isShutDown ? (
                             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-900 transition group-hover:bg-white">
-                                <Image width={32} height={32} src="/themes/Yaru/status/power-button.svg" alt="Power button" sizes="32px" priority />
+                                <SmartImage width={32} height={32} src="/themes/Yaru/status/power-button.svg" alt="Power button" sizes="32px" priority />
                             </div>
                         ) : (
                             <div className="relative flex h-14 w-14 items-center justify-center">

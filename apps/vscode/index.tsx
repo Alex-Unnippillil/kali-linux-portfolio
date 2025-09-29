@@ -1,10 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
+import SmartImage from '../../components/util-components/SmartImage';
 
 export default function VsCode() {
   return (
@@ -56,7 +56,7 @@ export default function VsCode() {
             onLoad={() => {}}
           />
           <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
-            <Image
+            <SmartImage
               src="/themes/Yaru/system/view-app-grid-symbolic.svg"
               alt="Open Folder"
               width={64}

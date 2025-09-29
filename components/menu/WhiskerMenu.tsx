@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import Image from 'next/image';
+
+import SmartImage from '../util-components/SmartImage';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
@@ -375,7 +376,7 @@ const WhiskerMenu: React.FC = () => {
         onClick={toggleMenu}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
-        <Image
+        <SmartImage
           src="/themes/Yaru/status/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
@@ -432,7 +433,7 @@ const WhiskerMenu: React.FC = () => {
                 >
                   <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
                   <span className="flex items-center gap-2">
-                    <Image
+                    <SmartImage
                       src={cat.icon}
                       alt=""
                       width={20}
@@ -466,7 +467,7 @@ const WhiskerMenu: React.FC = () => {
                     className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
                     aria-label={`Open ${app.title}`}
                   >
-                    <Image
+                    <SmartImage
                       src={app.icon}
                       alt=""
                       width={24}
@@ -538,7 +539,7 @@ const WhiskerMenu: React.FC = () => {
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">
-                            <Image
+                            <SmartImage
                               src={app.icon}
                               alt=""
                               width={28}

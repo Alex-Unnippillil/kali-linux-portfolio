@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
@@ -9,6 +8,7 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import SmartImage from '../../util-components/SmartImage';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -68,7 +68,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
           }
         >
-          <Image
+          <SmartImage
             className="w-3 md:w-4 rounded border border-gray-600"
             alt={section.alt}
             src={section.icon}
@@ -169,7 +169,7 @@ function About() {
   return (
     <>
       <div className="w-20 md:w-28 my-4 full">
-        <Image
+        <SmartImage
           className="w-full rounded border border-gray-600"
           src="/images/logos/bitmoji.png"
           alt="Alex Unnippillil Logo"
@@ -355,6 +355,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        aria-label={`Filter ${title} badges`}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (

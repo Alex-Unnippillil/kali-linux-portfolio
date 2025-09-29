@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import SmartImage from '../../../components/util-components/SmartImage';
 
 export default function BackgroundSlideshow() {
   const { setWallpaper } = useSettings();
@@ -57,8 +57,8 @@ export default function BackgroundSlideshow() {
     <div className="p-4 space-y-4 text-ubt-grey">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {available.map((file) => (
-          <label key={file} className="flex flex-col items-center cursor-pointer">
-            <Image
+          <label key={file} className="flex flex-col items-center cursor-pointer" aria-label={`Toggle ${file} wallpaper`}>
+            <SmartImage
               src={`/images/wallpapers/${file}`}
               alt={file}
               width={96}
@@ -70,6 +70,7 @@ export default function BackgroundSlideshow() {
               type="checkbox"
               checked={selected.includes(file)}
               onChange={() => toggle(file)}
+              aria-label={`Include ${file} in slideshow`}
             />
           </label>
         ))}
@@ -83,6 +84,7 @@ export default function BackgroundSlideshow() {
           value={Math.round(intervalMs / 1000)}
           onChange={(e) => setIntervalMs(Number(e.target.value) * 1000)}
           className="w-20 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+          aria-label="Slideshow interval in seconds"
         />
       </div>
       <button

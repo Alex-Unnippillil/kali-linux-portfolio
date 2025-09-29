@@ -1,5 +1,6 @@
-import Image from 'next/image';
 import { ModuleMetadata } from '../modules/metadata';
+
+import SmartImage from './util-components/SmartImage';
 
 interface ModuleCardProps {
   module: ModuleMetadata;
@@ -42,13 +43,13 @@ export default function ModuleCard({
         <p className="text-sm">{highlight(module.description, query)}</p>
       </div>
       <div className="flex flex-col gap-2 items-center">
-        <Image
+        <SmartImage
           src="/themes/Yaru/status/about.svg"
           alt="Details"
           width={24}
           height={24}
         />
-        <Image
+        <SmartImage
           src="/themes/Yaru/status/download.svg"
           alt="Run"
           width={24}

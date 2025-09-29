@@ -1,8 +1,8 @@
-import Image from 'next/image';
+import SmartImage from './util-components/SmartImage';
 
 export function CloseIcon() {
   return (
-    <Image
+    <SmartImage
       src="/themes/Yaru/window/window-close-symbolic.svg"
       alt="Close"
       width={16}
@@ -13,7 +13,7 @@ export function CloseIcon() {
 
 export function MinimizeIcon() {
   return (
-    <Image
+    <SmartImage
       src="/themes/Yaru/window/window-minimize-symbolic.svg"
       alt="Minimize"
       width={16}
@@ -24,7 +24,7 @@ export function MinimizeIcon() {
 
 export function MaximizeIcon() {
   return (
-    <Image
+    <SmartImage
       src="/themes/Yaru/window/window-maximize-symbolic.svg"
       alt="Maximize"
       width={16}
@@ -35,7 +35,7 @@ export function MaximizeIcon() {
 
 export function RestoreIcon() {
   return (
-    <Image
+    <SmartImage
       src="/themes/Yaru/window/window-restore-symbolic.svg"
       alt="Restore"
       width={16}
@@ -46,7 +46,7 @@ export function RestoreIcon() {
 
 export function PinIcon() {
   return (
-    <Image
+    <SmartImage
       src="/themes/Yaru/window/window-pin-symbolic.svg"
       alt="Pin"
       width={16}

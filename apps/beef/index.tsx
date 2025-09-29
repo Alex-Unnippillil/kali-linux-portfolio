@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import BeefApp from '../../components/apps/beef';
+import SmartImage from '../../components/util-components/SmartImage';
 
 type Severity = 'Low' | 'Medium' | 'High';
 
@@ -29,7 +29,7 @@ const BeefPage: React.FC = () => {
     <div className="bg-ub-cool-grey text-white h-full w-full flex flex-col">
       <header className="flex items-center justify-between p-4">
         <div className="flex items-center gap-2">
-          <Image
+          <SmartImage
             src="/themes/Yaru/apps/beef.svg"
             alt="BeEF badge"
             width={48}

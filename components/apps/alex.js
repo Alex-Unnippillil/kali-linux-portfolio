@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
-import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../GitHubStars';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
 import ActivityCalendar from 'react-activity-calendar';
+import SmartImage from '../util-components/SmartImage';
 
 export class AboutAlex extends Component {
 
@@ -69,7 +69,7 @@ export class AboutAlex extends Component {
                         onFocus={this.changeScreen}
                         className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
                     >
-                        <Image
+                        <SmartImage
                             className=" w-3 md:w-4"
                             alt={section.alt}
                             src={section.icon}
@@ -117,7 +117,7 @@ function About() {
     return (
         <>
             <div className="w-20 md:w-28 my-4 full">
-                <Image
+                <SmartImage
                     className="w-full"
                     src="/images/logos/bitmoji.png"
                     alt="Alex Unnippillil Logo"
@@ -307,6 +307,7 @@ const SkillSection = ({ title, badges }) => {
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        aria-label={`Filter ${title} badges`}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (

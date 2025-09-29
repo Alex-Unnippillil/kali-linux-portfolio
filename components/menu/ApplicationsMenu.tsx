@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+
+import SmartImage from '../util-components/SmartImage';
 
 export type KaliCategory = {
   id: string;
@@ -66,7 +67,7 @@ const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryId, label }) => {
   }, [categoryId]);
 
   return (
-    <Image
+    <SmartImage
       src={src}
       alt={`${label} category icon`}
       width={20}
