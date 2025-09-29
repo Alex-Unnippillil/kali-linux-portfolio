@@ -1,17 +1,1 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <rect x="2" y="2" width="60" height="60" stroke="#ffffff" stroke-width="2" fill="none"/>
-  <g stroke="#ffffff" stroke-width="2">
-    <line x1="14" y1="2" x2="14" y2="62"/>
-    <line x1="26" y1="2" x2="26" y2="62"/>
-    <line x1="38" y1="2" x2="38" y2="62"/>
-    <line x1="50" y1="2" x2="50" y2="62"/>
-    <line x1="2" y1="14" x2="62" y2="14"/>
-    <line x1="2" y1="26" x2="62" y2="26"/>
-    <line x1="2" y1="38" x2="62" y2="38"/>
-    <line x1="2" y1="50" x2="62" y2="50"/>
-  </g>
-  <rect x="14" y="26" width="12" height="12" fill="#4caf50"/>
-  <rect x="26" y="38" width="12" height="12" fill="#4caf50"/>
-  <rect x="38" y="14" width="12" height="12" fill="#4caf50"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#2e3436" d="M0 0h64v64H0z"/><path fill="none" stroke="#fff" stroke-width="2" d="M2 2h60v60H2z"/><g stroke="#fff" stroke-width="2"><path d="M14 2v60M26 2v60M38 2v60M50 2v60M2 14h60M2 26h60M2 38h60M2 50h60"/></g><path fill="#4caf50" d="M14 26h12v12H14zM26 38h12v12H26zM38 14h12v12H38z"/></svg>

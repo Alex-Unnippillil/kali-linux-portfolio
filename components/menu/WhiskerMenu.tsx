@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { Icon, type IconName } from '../ui/Icon';
 
 type AppMeta = {
   id: string;
@@ -22,7 +23,7 @@ type CategorySource =
 type CategoryDefinitionBase = {
   id: string;
   label: string;
-  icon: string;
+  icon: IconName;
 } & CategorySource;
 
 const TRANSITION_DURATION = 180;
@@ -33,85 +34,85 @@ const CATEGORY_DEFINITIONS = [
   {
     id: 'all',
     label: 'All Applications',
-    icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
+    icon: 'view-app-grid-symbolic',
     type: 'all',
   },
   {
     id: 'favorites',
     label: 'Favorites',
-    icon: '/themes/Yaru/status/projects.svg',
+    icon: 'projects',
     type: 'favorites',
   },
   {
     id: 'recent',
     label: 'Recent',
-    icon: '/themes/Yaru/status/process-working-symbolic.svg',
+    icon: 'process-working-symbolic',
     type: 'recent',
   },
   {
     id: 'information-gathering',
     label: 'Information Gathering',
-    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    icon: 'radar-symbolic',
     type: 'ids',
     appIds: ['nmap-nse', 'reconng', 'kismet', 'wireshark'],
   },
   {
     id: 'vulnerability-analysis',
     label: 'Vulnerability Analysis',
-    icon: '/themes/Yaru/apps/nessus.svg',
+    icon: 'nessus',
     type: 'ids',
     appIds: ['nessus', 'openvas', 'nikto'],
   },
   {
     id: 'web-app-analysis',
     label: 'Web App Analysis',
-    icon: '/themes/Yaru/apps/http.svg',
+    icon: 'http',
     type: 'ids',
     appIds: ['http', 'beef', 'metasploit'],
   },
   {
     id: 'password-attacks',
     label: 'Password Attacks',
-    icon: '/themes/Yaru/apps/john.svg',
+    icon: 'john',
     type: 'ids',
     appIds: ['john', 'hashcat', 'hydra'],
   },
   {
     id: 'wireless-attacks',
     label: 'Wireless Attacks',
-    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
+    icon: 'network-wireless-signal-good-symbolic',
     type: 'ids',
     appIds: ['kismet', 'reaver', 'wireshark'],
   },
   {
     id: 'exploitation-tools',
     label: 'Exploitation Tools',
-    icon: '/themes/Yaru/apps/metasploit.svg',
+    icon: 'metasploit',
     type: 'ids',
     appIds: ['metasploit', 'security-tools', 'beef'],
   },
   {
     id: 'sniffing-spoofing',
     label: 'Sniffing & Spoofing',
-    icon: '/themes/Yaru/apps/ettercap.svg',
+    icon: 'ettercap',
     type: 'ids',
     appIds: ['dsniff', 'ettercap', 'wireshark'],
   },
   {
     id: 'post-exploitation',
     label: 'Post Exploitation',
-    icon: '/themes/Yaru/apps/msf-post.svg',
+    icon: 'msf-post',
     type: 'ids',
     appIds: ['msf-post', 'mimikatz', 'volatility'],
   },
   {
     id: 'forensics-reporting',
     label: 'Forensics & Reporting',
-    icon: '/themes/Yaru/apps/autopsy.svg',
+    icon: 'autopsy',
     type: 'ids',
     appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
   },
- ] as const satisfies readonly CategoryDefinitionBase[];
+] as const satisfies readonly CategoryDefinitionBase[];
 
 type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
 const isCategoryId = (
@@ -375,13 +376,7 @@ const WhiskerMenu: React.FC = () => {
         onClick={toggleMenu}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
-        <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
-        />
+        <Icon name="decompiler-symbolic" label="Menu" size={16} className="mr-1 inline" />
         Applications
       </button>
       {isVisible && (
@@ -432,13 +427,11 @@ const WhiskerMenu: React.FC = () => {
                 >
                   <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
                   <span className="flex items-center gap-2">
-                    <Image
-                      src={cat.icon}
-                      alt=""
-                      width={20}
-                      height={20}
+                    <Icon
+                      name={cat.icon}
+                      size={20}
                       className="h-5 w-5 opacity-80 group-hover:opacity-100"
-                      sizes="20px"
+                      aria-hidden
                     />
                     <span>{cat.label}</span>
                   </span>

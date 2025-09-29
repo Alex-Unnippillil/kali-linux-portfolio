@@ -1,13 +1,1 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <line x1="16" y1="56" x2="48" y2="56" stroke="#ffffff" stroke-width="4"/>
-  <line x1="24" y1="56" x2="24" y2="8" stroke="#ffffff" stroke-width="4"/>
-  <line x1="24" y1="8" x2="40" y2="8" stroke="#ffffff" stroke-width="4"/>
-  <line x1="40" y1="8" x2="40" y2="16" stroke="#ffffff" stroke-width="4"/>
-  <circle cx="40" cy="22" r="6" stroke="#ffffff" stroke-width="4" fill="none"/>
-  <line x1="40" y1="28" x2="40" y2="40" stroke="#ffffff" stroke-width="4"/>
-  <line x1="40" y1="32" x2="34" y2="36" stroke="#ffffff" stroke-width="4"/>
-  <line x1="40" y1="32" x2="46" y2="36" stroke="#ffffff" stroke-width="4"/>
-  <line x1="40" y1="40" x2="34" y2="48" stroke="#ffffff" stroke-width="4"/>
-  <line x1="40" y1="40" x2="46" y2="48" stroke="#ffffff" stroke-width="4"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#2e3436" d="M0 0h64v64H0z"/><path stroke="#fff" stroke-width="4" d="M16 56h32M24 56V8M24 8h16M40 8v8"/><circle cx="40" cy="22" r="6" fill="none" stroke="#fff" stroke-width="4"/><path stroke="#fff" stroke-width="4" d="M40 28v12M40 32l-6 4M40 32l6 4M40 40l-6 8M40 40l6 8"/></svg>

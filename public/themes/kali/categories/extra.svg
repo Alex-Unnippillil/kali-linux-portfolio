@@ -1,3 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <polygon points="16 4 19.5 12 28 12 21 17 24 26 16 20.5 8 26 11 17 4 12 12.5 12" />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#38bdf8" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 32 32"><path d="m16 4 3.5 8H28l-7 5 3 9-8-5.5L8 26l3-9-7-5h8.5z"/></svg>
