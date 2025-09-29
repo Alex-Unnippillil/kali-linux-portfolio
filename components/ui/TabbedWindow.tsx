@@ -184,14 +184,17 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="p-0.5"
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-kali-control/20 active:bg-kali-control/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);
                 }}
                 aria-label="Close Tab"
               >
-                ×
+                <span aria-hidden="true" className="text-base leading-none">
+                  ×
+                </span>
               </button>
             )}
           </div>
