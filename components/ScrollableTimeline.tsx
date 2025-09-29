@@ -3,6 +3,7 @@ import React, {
   useMemo,
   useRef,
   useEffect,
+  useCallback,
 } from 'react';
 import rawMilestones from '../data/milestones.json';
 
@@ -27,6 +28,33 @@ const ScrollableTimeline: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
 
+  const monthFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { month: 'long' }),
+    [],
+  );
+
+  const formatMonthName = useCallback(
+    (year: string, month: string) =>
+      monthFormatter.format(new Date(Number(year), Number(month) - 1, 1)),
+    [monthFormatter],
+  );
+
+  const getTimeRangeLabel = useCallback(
+    (year: string, items: GroupedMilestone[]) => {
+      if (!items.length) return year;
+      const sorted = [...items].sort((a, b) => a.month.localeCompare(b.month));
+      const firstLabel = formatMonthName(year, sorted[0].month);
+      const lastLabel = formatMonthName(
+        year,
+        sorted[sorted.length - 1].month,
+      );
+      return firstLabel === lastLabel
+        ? `${firstLabel} ${year}`
+        : `${firstLabel} to ${lastLabel} ${year}`;
+    },
+    [formatMonthName],
+  );
+
   const milestonesByYear = useMemo(() => {
     return milestones.reduce<Record<string, GroupedMilestone[]>>((acc, m) => {
       const [year, month] = m.date.split('-');
@@ -46,7 +74,7 @@ const ScrollableTimeline: React.FC = () => {
   useEffect(() => {
     const container = containerRef.current as HTMLElement | null;
     if (container && 'scrollTo' in container) {
-      (container as any).scrollTo({ left: 0 });
+      (container as any).scrollTo({ top: 0, left: 0 });
     }
   }, [view, selectedYear]);
 
@@ -77,6 +105,8 @@ const ScrollableTimeline: React.FC = () => {
     </ul>
   );
 
+  const resolvedSelectedYear = selectedYear ?? '';
+
   return (
     <div>
       <div className="flex justify-between mb-4">
@@ -98,16 +128,24 @@ const ScrollableTimeline: React.FC = () => {
       </div>
       <div
         ref={containerRef}
-        className="overflow-x-auto snap-x snap-mandatory focus:outline-none"
+        className="relative max-h-[70vh] overflow-y-auto focus:outline-none px-4"
         aria-labelledby="timeline-heading"
       >
         <h3 id="timeline-heading" className="sr-only">
           Timeline
         </h3>
-        <ol className="flex space-x-6">
+        <ol className="space-y-12 pb-10">
           {view === 'year'
             ? years.map((year, index) => {
-                const first = milestonesByYear[year][0];
+                const milestonesForYear = [...milestonesByYear[year]].sort(
+                  (a, b) => a.month.localeCompare(b.month),
+                );
+                const first = milestonesForYear[0];
+                if (!first) {
+                  return null;
+                }
+                const headerId = `timeline-section-${year}`;
+                const rangeId = `timeline-range-${year}`;
                 return (
                   <li
                     key={year}
@@ -115,56 +153,99 @@ const ScrollableTimeline: React.FC = () => {
                       itemRefs.current[index] = el;
                     }}
                     tabIndex={-1}
-                    className="snap-center flex-shrink-0 w-64 p-4 bg-gray-800 rounded-lg focus:outline-none"
+                    role="group"
+                    aria-labelledby={`${headerId} ${rangeId}`}
+                    className="relative border-t border-gray-700/60 first:border-t-0 pt-10 first:pt-4 focus:outline-none"
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setView('month');
-                        setSelectedYear(year);
-                      }}
-                      className="text-left w-full focus:outline-none"
+                    <span id={rangeId} className="sr-only">
+                      {`Milestones from ${getTimeRangeLabel(year, milestonesForYear)}`}
+                    </span>
+                    <header
+                      id={headerId}
+                      className="sticky top-0 z-10 -mx-4 px-4 py-3 bg-gray-900/80 backdrop-blur border-b border-gray-700/60 flex items-center justify-between"
                     >
-                      <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
-                      <img
-                        src={first.image}
-                        alt={first.title}
-                        className="w-full h-32 object-cover mb-2 rounded"
-                      />
-                      <p className="text-sm md:text-base mb-2">{first.title}</p>
-                      {renderTags(first.tags)}
-                    </button>
+                      <span className="text-ubt-blue font-bold text-lg">{year}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setView('month');
+                          setSelectedYear(year);
+                        }}
+                        className="text-sm text-ubt-blue underline focus:outline-none"
+                      >
+                        View monthly milestones
+                      </button>
+                    </header>
+                    <article className="mt-4 bg-gray-800 rounded-lg p-4 focus-within:outline-none">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setView('month');
+                          setSelectedYear(year);
+                        }}
+                        className="block text-left w-full focus:outline-none"
+                      >
+                        <div className="text-xs uppercase tracking-widest text-gray-400 mb-1">
+                          {formatMonthName(year, first.month)} {year}
+                        </div>
+                        <img
+                          src={first.image}
+                          alt={first.title}
+                          className="w-full h-32 object-cover mb-2 rounded"
+                        />
+                        <p className="text-sm md:text-base mb-2">{first.title}</p>
+                        {renderTags(first.tags)}
+                      </button>
+                    </article>
                   </li>
                 );
               })
-            : monthItems.map((m, index) => (
-                <li
-                  key={`${selectedYear}-${m.month}`}
-                  ref={(el) => {
-                    itemRefs.current[index] = el;
-                  }}
-                  tabIndex={-1}
-                  className="snap-center flex-shrink-0 w-64 p-4 bg-gray-800 rounded-lg focus:outline-none"
-                >
-                  <div className="text-ubt-blue font-bold text-lg mb-2">
-                    {selectedYear}-{m.month}
-                  </div>
-                  <a
-                    href={m.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mb-2"
+            : monthItems.map((m, index) => {
+                const headerId = `timeline-section-${resolvedSelectedYear}-${m.month}`;
+                const rangeId = `timeline-range-${resolvedSelectedYear}-${m.month}`;
+                const monthLabel = `${formatMonthName(
+                  resolvedSelectedYear,
+                  m.month,
+                )} ${resolvedSelectedYear}`;
+                return (
+                  <li
+                    key={`${resolvedSelectedYear}-${m.month}`}
+                    ref={(el) => {
+                      itemRefs.current[index] = el;
+                    }}
+                    tabIndex={-1}
+                    role="group"
+                    aria-labelledby={`${headerId} ${rangeId}`}
+                    className="relative border-t border-gray-700/60 first:border-t-0 pt-10 first:pt-4 focus:outline-none"
                   >
-                    <img
-                      src={m.image}
-                      alt={m.title}
-                      className="w-full h-32 object-cover mb-2 rounded"
-                    />
-                    <p className="text-sm md:text-base">{m.title}</p>
-                  </a>
-                  {renderTags(m.tags)}
-                </li>
-              ))}
+                    <span id={rangeId} className="sr-only">
+                      {`Milestone from ${monthLabel}`}
+                    </span>
+                    <header
+                      id={headerId}
+                      className="sticky top-0 z-10 -mx-4 px-4 py-3 bg-gray-900/80 backdrop-blur border-b border-gray-700/60"
+                    >
+                      <span className="text-ubt-blue font-bold text-lg">{monthLabel}</span>
+                    </header>
+                    <article className="mt-4 bg-gray-800 rounded-lg p-4">
+                      <a
+                        href={m.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mb-2 focus:outline-none"
+                      >
+                        <img
+                          src={m.image}
+                          alt={m.title}
+                          className="w-full h-32 object-cover mb-2 rounded"
+                        />
+                        <p className="text-sm md:text-base">{m.title}</p>
+                      </a>
+                      {renderTags(m.tags)}
+                    </article>
+                  </li>
+                );
+              })}
         </ol>
       </div>
     </div>
