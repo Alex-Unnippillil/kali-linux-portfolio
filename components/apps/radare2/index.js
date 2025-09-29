@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import HexEditor from "./HexEditor";
+import HexView from "../../../apps/radare2/components/HexView";
 import {
   loadNotes,
   saveNotes,
@@ -181,7 +181,13 @@ const Radare2 = ({ initialData = {} }) => {
         <GraphView blocks={blocks} theme={theme} />
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          <HexEditor hex={hex} theme={theme} />
+          <HexView
+            hex={hex}
+            theme={theme}
+            file={file}
+            baseAddress={disasm[0]?.addr}
+            onBookmarkSelect={scrollToAddr}
+          />
           <div
             ref={disasmRef}
             className="overflow-auto rounded max-h-64 p-1.5 font-mono"

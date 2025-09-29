@@ -6,6 +6,8 @@ import {
   loadNotes,
   saveBookmarks,
   loadBookmarks,
+  saveHexBookmarks,
+  loadHexBookmarks,
   extractStrings,
 } from '../components/apps/radare2/utils';
 
@@ -50,6 +52,11 @@ describe('Radare2 utilities', () => {
     saveBookmarks('b.bin', bmB);
     expect(loadBookmarks('a.bin')).toEqual(bmA);
     expect(loadBookmarks('b.bin')).toEqual(bmB);
+  });
+
+  test('persists hex bookmarks across storage layers', async () => {
+    await saveHexBookmarks('hex.bin', [1, 32, 255]);
+    expect(await loadHexBookmarks('hex.bin')).toEqual([1, 32, 255]);
   });
 
   test('extracts ASCII and UTF-16 strings', () => {

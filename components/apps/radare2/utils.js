@@ -87,6 +87,41 @@ export const extractStrings = (hex, baseAddr = '0x0') => {
 
 const NOTES_PREFIX = 'r2-notes-';
 const BOOKMARK_PREFIX = 'r2-bookmarks-';
+const HEX_BOOKMARK_PREFIX = 'r2-hex-bookmarks-';
+
+const readOpfsJson = async (key) => {
+  try {
+    if (
+      typeof navigator === 'undefined' ||
+      typeof navigator.storage?.getDirectory !== 'function'
+    )
+      return null;
+    const dir = await navigator.storage.getDirectory();
+    const fileHandle = await dir.getFileHandle(key, { create: false });
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    return JSON.parse(text);
+  } catch (error) {
+    return null;
+  }
+};
+
+const writeOpfsJson = async (key, value) => {
+  try {
+    if (
+      typeof navigator === 'undefined' ||
+      typeof navigator.storage?.getDirectory !== 'function'
+    )
+      return;
+    const dir = await navigator.storage.getDirectory();
+    const fileHandle = await dir.getFileHandle(key, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(value));
+    await writable.close();
+  } catch (error) {
+    /* ignore persistence errors */
+  }
+};
 
 export const loadNotes = (file) => {
   try {
@@ -112,4 +147,37 @@ export const loadBookmarks = (file) => {
 
 export const saveBookmarks = (file, bookmarks) => {
   localStorage.setItem(BOOKMARK_PREFIX + file, JSON.stringify(bookmarks));
+};
+
+export const loadHexBookmarks = async (file) => {
+  if (typeof window === 'undefined') return [];
+  const key = HEX_BOOKMARK_PREFIX + file;
+  const opfs = await readOpfsJson(key);
+  if (Array.isArray(opfs)) {
+    try {
+      localStorage.setItem(key, JSON.stringify(opfs));
+    } catch (error) {
+      /* ignore */
+    }
+    return opfs.map((n) => Number(n) || 0);
+  }
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((n) => Number(n) || 0) : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+export const saveHexBookmarks = async (file, bookmarks) => {
+  if (typeof window === 'undefined') return;
+  const key = HEX_BOOKMARK_PREFIX + file;
+  try {
+    localStorage.setItem(key, JSON.stringify(bookmarks));
+  } catch (error) {
+    /* ignore persistence errors */
+  }
+  await writeOpfsJson(key, bookmarks);
 };
