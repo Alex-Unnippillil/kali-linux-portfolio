@@ -52,12 +52,17 @@ const HostSection: React.FC<{ host: Host }> = ({ host }) => {
           ))}
         </div>
       )}
-      <textarea
-        className="w-full p-1 rounded text-black"
-        placeholder="Annotations"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
+        <label htmlFor={`nmap-report-note-${host.address}`} className="sr-only" id={`nmap-report-note-label-${host.address}`}>
+          Annotations for {host.address}
+        </label>
+        <textarea
+          id={`nmap-report-note-${host.address}`}
+          className="w-full p-1 rounded text-black"
+          placeholder="Annotations"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          aria-labelledby={`nmap-report-note-label-${host.address}`}
+        />
     </div>
   );
 };

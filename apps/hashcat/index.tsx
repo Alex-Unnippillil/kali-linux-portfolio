@@ -191,15 +191,19 @@ const Hashcat: React.FC = () => {
         </div>
       </div>
 
-      {showMask && (
-        <div>
-          <label className="block mb-1">Mask</label>
-          <input
-            type="text"
-            value={mask}
-            onChange={(e) => setMask(e.target.value)}
-            className="text-black p-1 w-full font-mono mb-2"
-          />
+        {showMask && (
+          <div>
+            <label className="block mb-1" htmlFor="hashcat-mask-input">
+              Mask
+            </label>
+            <input
+              id="hashcat-mask-input"
+              type="text"
+              value={mask}
+              onChange={(e) => setMask(e.target.value)}
+              className="text-black p-1 w-full font-mono mb-2"
+              aria-label="Mask pattern"
+            />
           <div className="space-x-2">
             {['?l', '?u', '?d', '?s', '?a'].map((t) => (
               <button
@@ -224,16 +228,20 @@ const Hashcat: React.FC = () => {
         </div>
       )}
 
-      <div>
-        <label className="block mb-1">Hash</label>
-        <div className="flex space-x-2">
-          <input
-            type={showHash ? 'text' : 'password'}
-            value={hashInput}
-            onChange={(e) => setHashInput(e.target.value)}
-            className="text-black p-1 w-full font-mono"
-            placeholder="Paste hash here"
-          />
+        <div>
+          <label className="block mb-1" htmlFor="hashcat-hash-input">
+            Hash
+          </label>
+          <div className="flex space-x-2">
+            <input
+              id="hashcat-hash-input"
+              type={showHash ? 'text' : 'password'}
+              value={hashInput}
+              onChange={(e) => setHashInput(e.target.value)}
+              className="text-black p-1 w-full font-mono"
+              placeholder="Paste hash here"
+              aria-label="Hash value"
+            />
           <button
             type="button"
             onClick={() => setShowHash((s) => !s)}
@@ -245,16 +253,20 @@ const Hashcat: React.FC = () => {
         <div className="mt-1 text-sm">Detected: {hashType}</div>
       </div>
 
-      <div>
-        <label className="block mb-1">Dictionaries</label>
-        <div className="flex space-x-2 mb-2">
-          <input
-            type="text"
-            value={dictInput}
-            onChange={(e) => setDictInput(e.target.value)}
-            className="text-black p-1 flex-1"
-            placeholder="rockyou.txt"
-          />
+        <div>
+          <label className="block mb-1" htmlFor="hashcat-dictionary-input">
+            Dictionaries
+          </label>
+          <div className="flex space-x-2 mb-2">
+            <input
+              id="hashcat-dictionary-input"
+              type="text"
+              value={dictInput}
+              onChange={(e) => setDictInput(e.target.value)}
+              className="text-black p-1 flex-1"
+              placeholder="rockyou.txt"
+              aria-label="Dictionary path"
+            />
           <button
             type="button"
             onClick={addDictionary}

@@ -190,19 +190,20 @@ const JohnApp: React.FC = () => {
             aria-label="Wordlist"
           />
         )}
-        {mode === 'incremental' && (
-          <label className="flex items-center gap-2">
-            Length:
-            <input
-              type="number"
-              min={1}
-              max={5}
-              value={incLength}
-              onChange={(e) => setIncLength(parseInt(e.target.value, 10) || 1)}
-              className="w-16 text-black px-1 py-0.5 rounded"
-            />
-          </label>
-        )}
+          {mode === 'incremental' && (
+            <label className="flex items-center gap-2">
+              Length:
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={incLength}
+                onChange={(e) => setIncLength(parseInt(e.target.value, 10) || 1)}
+                className="w-16 text-black px-1 py-0.5 rounded"
+                aria-label="Incremental length"
+              />
+            </label>
+          )}
         <button
           type="button"
           onClick={start}

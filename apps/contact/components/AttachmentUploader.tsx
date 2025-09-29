@@ -50,12 +50,17 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
 
   return (
     <div className="mt-3">
+      <label htmlFor="contact-attachments" className="sr-only" id="contact-attachments-label">
+        Attach files
+      </label>
       <input
         ref={inputRef}
+        id="contact-attachments"
         type="file"
         multiple
         onChange={handleChange}
         className="text-sm"
+        aria-labelledby="contact-attachments-label"
       />
     </div>
   );

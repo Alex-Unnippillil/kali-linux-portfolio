@@ -324,10 +324,14 @@ export default function Calculator() {
           <span>Expression</span>
           <span>Result</span>
         </div>
+        <label htmlFor="display" className="sr-only" id="calculator-display-label">
+          Calculator display
+        </label>
         <input
           id="display"
           className="display w-full bg-transparent text-right text-3xl font-semibold tracking-wide text-white placeholder:text-slate-600 focus:outline-none"
           placeholder="0"
+          aria-labelledby="calculator-display-label"
         />
       </div>
 

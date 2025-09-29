@@ -141,7 +141,11 @@ const ContactApp: React.FC = () => {
       </p>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
-          <label htmlFor="contact-name" className="mb-[6px] block text-sm">
+          <label
+            htmlFor="contact-name"
+            className="mb-[6px] block text-sm"
+            id="contact-name-label"
+          >
             Name
           </label>
           <div className="relative">
@@ -151,6 +155,7 @@ const ContactApp: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              aria-labelledby="contact-name-label"
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -169,7 +174,11 @@ const ContactApp: React.FC = () => {
           </div>
         </div>
         <div>
-          <label htmlFor="contact-email" className="mb-[6px] block text-sm">
+          <label
+            htmlFor="contact-email"
+            className="mb-[6px] block text-sm"
+            id="contact-email-label"
+          >
             Email
           </label>
           <div className="relative">
@@ -182,6 +191,7 @@ const ContactApp: React.FC = () => {
               required
               aria-invalid={!!emailError}
               aria-describedby={emailError ? "contact-email-error" : undefined}
+              aria-labelledby="contact-email-label"
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -205,7 +215,11 @@ const ContactApp: React.FC = () => {
           )}
         </div>
         <div>
-          <label htmlFor="contact-message" className="mb-[6px] block text-sm">
+          <label
+            htmlFor="contact-message"
+            className="mb-[6px] block text-sm"
+            id="contact-message-label"
+          >
             Message
           </label>
           <div className="relative">
@@ -218,6 +232,7 @@ const ContactApp: React.FC = () => {
               required
               aria-invalid={!!messageError}
               aria-describedby={messageError ? "contact-message-error" : undefined}
+              aria-labelledby="contact-message-label"
             />
             <svg
               className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
@@ -241,12 +256,10 @@ const ContactApp: React.FC = () => {
           )}
         </div>
         <input
-          type="text"
+          type="hidden"
           value={honeypot}
           onChange={(e) => setHoneypot(e.target.value)}
-          className="hidden"
-          tabIndex={-1}
-          autoComplete="off"
+          aria-hidden="true"
         />
         {error && <FormError>{error}</FormError>}
         <button
