@@ -156,7 +156,7 @@ class AllApplications extends React.Component {
         if (!apps.length) return null;
         return (
             <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
+                <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white/70">
                     {title}
                 </h2>
                 <div className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
