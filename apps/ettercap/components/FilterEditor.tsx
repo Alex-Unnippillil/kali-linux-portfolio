@@ -85,11 +85,16 @@ export default function FilterEditor() {
           Save
         </button>
       </div>
-      <textarea
-        className="w-full h-32 border p-2 font-mono"
-        value={filterText}
-        onChange={(e) => setFilterText(e.target.value)}
-      />
+        <label htmlFor="ettercap-filter-text" className="sr-only" id="ettercap-filter-text-label">
+          Filter source
+        </label>
+        <textarea
+          id="ettercap-filter-text"
+          className="w-full h-32 border p-2 font-mono"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          aria-labelledby="ettercap-filter-text-label"
+        />
       <div className="grid grid-cols-2 gap-4">
         <div>
           <h3 className="font-bold mb-2">Before</h3>

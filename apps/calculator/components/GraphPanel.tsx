@@ -324,6 +324,14 @@ export default function GraphPanel({
     };
   }, []);
 
-  return <canvas ref={canvasRef} width={width} height={height} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
+      role="img"
+      aria-label="Graph panel"
+    />
+  );
 }
 

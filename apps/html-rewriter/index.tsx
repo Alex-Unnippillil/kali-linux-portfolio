@@ -56,22 +56,30 @@ const HtmlRewriterApp: React.FC = () => {
     <div className="h-full w-full overflow-auto bg-gray-900 p-4 text-white space-y-4">
       <h1 className="text-2xl">HTML Rewriter</h1>
       <div className="flex gap-4 flex-col md:flex-row">
-        <div className="flex-1 flex flex-col">
-          <label className="mb-1">Rewrite Rules (JSON)</label>
-          <textarea
-            className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
-            value={ruleText}
-            onChange={(e) => setRuleText(e.target.value)}
-          />
-          {error && <p className="text-red-400 mt-1">{error}</p>}
-        </div>
-        <div className="flex-1 flex flex-col">
-          <label className="mb-1">Sample HTML</label>
-          <textarea
-            className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
-            value={html}
-            onChange={(e) => setHtml(e.target.value)}
-          />
+          <div className="flex-1 flex flex-col">
+            <label className="mb-1" htmlFor="html-rewriter-rules">
+              Rewrite Rules (JSON)
+            </label>
+            <textarea
+              id="html-rewriter-rules"
+              className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
+              value={ruleText}
+              onChange={(e) => setRuleText(e.target.value)}
+              aria-label="Rewrite rules in JSON"
+            />
+            {error && <p className="text-red-400 mt-1">{error}</p>}
+          </div>
+          <div className="flex-1 flex flex-col">
+            <label className="mb-1" htmlFor="html-rewriter-sample">
+              Sample HTML
+            </label>
+            <textarea
+              id="html-rewriter-sample"
+              className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
+              value={html}
+              onChange={(e) => setHtml(e.target.value)}
+              aria-label="Sample HTML"
+            />
         </div>
       </div>
       <div>

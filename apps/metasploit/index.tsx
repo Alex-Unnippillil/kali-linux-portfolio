@@ -133,14 +133,19 @@ const MetasploitPage: React.FC = () => {
 
   return (
     <div className="flex h-full">
-      <div className="w-1/3 border-r overflow-auto p-2">
-        <input
-          type="text"
-          placeholder="Search modules"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full p-1 mb-2 border rounded"
-        />
+        <div className="w-1/3 border-r overflow-auto p-2">
+          <label htmlFor="metasploit-search" className="sr-only" id="metasploit-search-label">
+            Search modules
+          </label>
+          <input
+            id="metasploit-search"
+            type="text"
+            placeholder="Search modules"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full p-1 mb-2 border rounded"
+            aria-labelledby="metasploit-search-label"
+          />
         <div className="flex flex-wrap gap-1 mb-2">
           <button
             onClick={() => setTag('')}
@@ -190,16 +195,25 @@ const MetasploitPage: React.FC = () => {
             className="h-1 bg-gray-400 cursor-row-resize"
             onMouseDown={() => (dragging.current = true)}
           />
-          <div
-            style={{ height: `calc(${100 - split}% - 2px)` }}
-            className="overflow-auto p-2 space-y-2"
-          >
-            <h3 className="font-semibold">Generate Payload</h3>
-            <input
-              type="text"
-              placeholder="Payload options..."
-              className="border p-1 w-full"
-            />
+            <div
+              style={{ height: `calc(${100 - split}% - 2px)` }}
+              className="overflow-auto p-2 space-y-2"
+            >
+              <h3 className="font-semibold">Generate Payload</h3>
+              <label
+                htmlFor="metasploit-payload-options"
+                className="sr-only"
+                id="metasploit-payload-options-label"
+              >
+                Payload options
+              </label>
+              <input
+                id="metasploit-payload-options"
+                type="text"
+                placeholder="Payload options..."
+                className="border p-1 w-full"
+                aria-labelledby="metasploit-payload-options-label"
+              />
             <button
               onClick={handleGenerate}
               className="px-2 py-1 bg-blue-500 text-white rounded"

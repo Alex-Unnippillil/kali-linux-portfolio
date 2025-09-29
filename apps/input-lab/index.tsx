@@ -73,15 +73,19 @@ export default function InputLab() {
     <div className="min-h-screen bg-gray-900 p-4 text-white">
       <h1 className="mb-4 text-2xl">Input Lab</h1>
       <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-        <div>
-          <label htmlFor="input-lab-text" className="mb-1 block text-sm font-medium">
-            Text
-          </label>
-          <input
-            id="input-lab-text"
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+          <div>
+            <label
+              htmlFor="input-lab-text"
+              className="mb-1 block text-sm font-medium"
+              id="input-lab-text-label"
+            >
+              Text
+            </label>
+            <input
+              id="input-lab-text"
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
             onCompositionStart={(e) =>
               logEvent('compositionstart', { data: e.data })
             }
@@ -106,9 +110,10 @@ export default function InputLab() {
                 handleCaret(e);
               }
             }}
-            onClick={handleCaret}
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
-          />
+              onClick={handleCaret}
+              className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+              aria-labelledby="input-lab-text-label"
+            />
           {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
         </div>
       </form>
