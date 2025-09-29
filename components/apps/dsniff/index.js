@@ -1,4 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
@@ -148,8 +155,8 @@ const TimelineItem = ({ log, prefersReduced }) => {
   );
 };
 
-const Credential = ({ cred }) => {
-  const [show, setShow] = useState(false);
+const Credential = ({ cred, autoReveal = false }) => {
+  const [show, setShow] = useState(autoReveal);
   const hidden = cred.password && !show;
   return (
     <span className="mr-2 inline-flex items-center">
@@ -171,8 +178,21 @@ const Credential = ({ cred }) => {
   );
 };
 
-const SessionTile = ({ session, onView }) => (
-  <div className="flex bg-ub-grey rounded overflow-hidden">
+const SelectionContext = createContext(null);
+
+const useDsniffSelection = () => {
+  const ctx = useContext(SelectionContext);
+  if (!ctx)
+    throw new Error('useDsniffSelection must be used within SelectionContext');
+  return ctx;
+};
+
+const SessionTile = ({ session, onView, isActive }) => (
+  <div
+    className={`flex bg-ub-grey rounded overflow-hidden ${
+      isActive ? 'ring-2 ring-ubt-blue' : ''
+    }`}
+  >
     <div
       className={`w-1 ${protocolColors[session.protocol] || 'bg-gray-500'}`}
     />
@@ -210,6 +230,103 @@ const SessionTile = ({ session, onView }) => (
   </div>
 );
 
+const HostDetailPanel = ({ domainSummary, pcapSummary }) => {
+  const { selectedEntity } = useDsniffSelection();
+
+  const detail = useMemo(() => {
+    if (!selectedEntity) return null;
+
+    if (selectedEntity.type === 'domain') {
+      const host = domainSummary.find((d) => d.domain === selectedEntity.id);
+      if (!host) return null;
+      const sessions = pcapSummary
+        .map((pkt, idx) => ({ ...pkt, idx }))
+        .filter((pkt) => pkt.dst === host.domain);
+      return { host, sessions };
+    }
+
+    if (selectedEntity.type === 'session') {
+      const session = pcapSummary[selectedEntity.id];
+      if (!session) return null;
+      const host =
+        domainSummary.find((d) => d.domain === session.dst) || {
+          domain: session.dst,
+          urls: [],
+          credentials: [],
+          risk: 'Unknown',
+        };
+      const sessions = pcapSummary
+        .map((pkt, idx) => ({ ...pkt, idx }))
+        .filter((pkt) => pkt.dst === host.domain || pkt.idx === selectedEntity.id);
+      if (!sessions.length) sessions.push({ ...session, idx: selectedEntity.id });
+      return { host, sessions };
+    }
+
+    return null;
+  }, [domainSummary, pcapSummary, selectedEntity]);
+
+  if (!detail)
+    return (
+      <aside
+        className="md:w-1/3 bg-black p-3 mt-3 md:mt-0 border border-ub-grey"
+        data-testid="credential-detail-panel"
+      >
+        <h3 className="font-bold text-sm mb-2">Captured credentials</h3>
+        <p className="text-xs text-gray-300">
+          Select a host or session to inspect captured credentials.
+        </p>
+      </aside>
+    );
+
+  const { host, sessions } = detail;
+
+  return (
+    <aside
+      className="md:w-1/3 bg-black p-3 mt-3 md:mt-0 border border-ub-grey"
+      data-testid="credential-detail-panel"
+    >
+      <h3 className="font-bold text-sm mb-2">
+        Credentials for {host.domain}
+      </h3>
+      <p className="text-xs text-gray-300 mb-2">Risk level: {host.risk}</p>
+      <div className="mb-3">
+        <h4 className="text-xs font-semibold text-green-400 mb-1">
+          Credentials
+        </h4>
+        {host.credentials.length ? (
+          <div className="flex flex-wrap text-xs">
+            {host.credentials.map((cred, idx) => (
+              <Credential cred={cred} key={`${host.domain}-${idx}`} autoReveal />
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">No credentials captured.</p>
+        )}
+      </div>
+      <div>
+        <h4 className="text-xs font-semibold text-green-400 mb-1">
+          Related sessions
+        </h4>
+        {sessions.length ? (
+          <ul className="text-xs space-y-1">
+            {sessions.map((session) => (
+              <li key={`${session.dst}-${session.info}-${session.idx}`}>
+                <span className="text-gray-300">{session.protocol}</span>{' '}
+                <span className="text-white">{session.src}</span>
+                <span className="text-gray-500"> → </span>
+                <span className="text-white">{session.dst}</span>
+                <div className="text-green-400">{session.info}</div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-gray-400">No related sessions found.</p>
+        )}
+      </div>
+    </aside>
+  );
+};
+
 const Dsniff = () => {
   const [urlsnarfLogs, setUrlsnarfLogs] = useState([]);
   const [arpspoofLogs, setArpspoofLogs] = useState([]);
@@ -219,7 +336,7 @@ const Dsniff = () => {
   const [newField, setNewField] = useState('host');
   const [newValue, setNewValue] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
-  const [selectedPacket, setSelectedPacket] = useState(null);
+  const [selectedEntity, setSelectedEntity] = useState(null);
   const [domainSummary, setDomainSummary] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [protocolFilter, setProtocolFilter] = useState([]);
@@ -235,9 +352,17 @@ const Dsniff = () => {
     }
   };
 
+  const selectionValue = useMemo(
+    () => ({ selectedEntity, selectEntity: setSelectedEntity }),
+    [selectedEntity],
+  );
+
+  const selectedSessionIndex =
+    selectedEntity?.type === 'session' ? selectedEntity.id : null;
+
   const copySelectedPacket = () => {
-    if (selectedPacket !== null && navigator.clipboard) {
-      const pkt = pcapSummary[selectedPacket];
+    if (selectedSessionIndex !== null && navigator.clipboard) {
+      const pkt = pcapSummary[selectedSessionIndex];
       const text = `${pkt.src}\t${pkt.dst}\t${pkt.protocol}\t${pkt.info}`;
       navigator.clipboard.writeText(text);
     }
@@ -349,7 +474,8 @@ const Dsniff = () => {
   });
 
   return (
-    <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
+    <SelectionContext.Provider value={selectionValue}>
+      <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
       <div className="mb-2 flex items-center justify-between">
         <h1 className="text-lg">dsniff</h1>
         <button
@@ -450,7 +576,12 @@ const Dsniff = () => {
         <h2 className="font-bold mb-2 text-sm">PCAP credential leakage demo</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-2">
           {pcapSummary.map((pkt, i) => (
-            <SessionTile key={`tile-${i}`} session={pkt} onView={() => setSelectedPacket(i)} />
+            <SessionTile
+              key={`tile-${i}`}
+              session={pkt}
+              onView={() => setSelectedEntity({ type: 'session', id: i })}
+              isActive={selectedSessionIndex === i}
+            />
           ))}
         </div>
         <table className="w-full text-left text-xs mb-2">
@@ -467,17 +598,19 @@ const Dsniff = () => {
               <tr
                 key={i}
                 tabIndex={0}
-                onClick={() => setSelectedPacket(i)}
+                onClick={() => setSelectedEntity({ type: 'session', id: i })}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') setSelectedPacket(i);
+                  if (e.key === 'Enter' || e.key === ' ')
+                    setSelectedEntity({ type: 'session', id: i });
                 }}
                 className={`cursor-pointer ${
-                  selectedPacket === i
+                  selectedSessionIndex === i
                     ? 'bg-ubt-blue'
                     : i % 2 === 0
                     ? 'bg-black'
                     : 'bg-ub-grey'
                 }`}
+                data-testid={`session-row-${i}`}
               >
                 <td className="pr-2 text-white">{pkt.src}</td>
                 <td className="pr-2 text-white">{pkt.dst}</td>
@@ -489,7 +622,7 @@ const Dsniff = () => {
         </table>
         <button
           onClick={copySelectedPacket}
-          disabled={selectedPacket === null}
+          disabled={selectedSessionIndex === null}
           className="mb-2 px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
         >
           Copy selected row
@@ -507,36 +640,66 @@ const Dsniff = () => {
         <h2 className="font-bold mb-2 text-sm">
           Parsed credentials/URLs by domain
         </h2>
-        <table className="w-full text-left text-xs mb-2">
-          <thead>
-            <tr className="text-green-400">
-              <th className="pr-2">Domain</th>
-              <th className="pr-2">URLs</th>
-              <th className="pr-2">Credentials</th>
-              <th>Risk</th>
-            </tr>
-          </thead>
-          <tbody>
-            {domainSummary.map((d) => (
-              <tr key={d.domain} className="odd:bg-black even:bg-ub-grey">
-                <td className="pr-2 text-white">{d.domain}</td>
-                <td className="pr-2 text-green-400">{d.urls.join(', ')}</td>
-                <td className="pr-2 text-white">
-                  {d.credentials.length ? (
-                    <div className="flex flex-col">
-                      {d.credentials.map((c, i) => (
-                        <Credential cred={c} key={i} />
-                      ))}
-                    </div>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className={riskColors[d.risk]}>{d.risk}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="md:flex md:gap-4">
+          <div className="md:w-2/3 overflow-hidden">
+            <table className="w-full text-left text-xs mb-2">
+              <thead>
+                <tr className="text-green-400">
+                  <th className="pr-2">Host</th>
+                  <th className="pr-2">URLs</th>
+                  <th className="pr-2">Credentials</th>
+                  <th>Risk</th>
+                </tr>
+              </thead>
+              <tbody>
+                {domainSummary.map((d) => {
+                  const isActive =
+                    selectedEntity?.type === 'domain' &&
+                    selectedEntity.id === d.domain;
+                  return (
+                    <tr
+                      key={d.domain}
+                      tabIndex={0}
+                      onClick={() =>
+                        setSelectedEntity({ type: 'domain', id: d.domain })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ')
+                          setSelectedEntity({ type: 'domain', id: d.domain });
+                      }}
+                      aria-selected={isActive}
+                      className={`cursor-pointer odd:bg-black even:bg-ub-grey focus:outline-none ${
+                        isActive ? 'ring-2 ring-ubt-blue' : ''
+                      }`}
+                      data-testid={`domain-row-${d.domain}`}
+                    >
+                      <td className="pr-2 text-white">{d.domain}</td>
+                      <td className="pr-2 text-green-400">
+                        {d.urls.length ? d.urls.join(', ') : '—'}
+                      </td>
+                      <td className="pr-2 text-white">
+                        {d.credentials.length ? (
+                          <div className="flex flex-col">
+                            {d.credentials.map((c, i) => (
+                              <Credential cred={c} key={i} />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">None</span>
+                        )}
+                      </td>
+                      <td className={riskColors[d.risk]}>{d.risk}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <HostDetailPanel
+            domainSummary={domainSummary}
+            pcapSummary={pcapSummary}
+          />
+        </div>
       </div>
       <div className="mb-4" data-testid="capture-timeline">
         <h2 className="font-bold mb-2 text-sm">Capture timeline</h2>
@@ -660,7 +823,8 @@ const Dsniff = () => {
           <div>No data</div>
         )}
       </div>
-    </div>
+      </div>
+    </SelectionContext.Provider>
   );
 };
 
