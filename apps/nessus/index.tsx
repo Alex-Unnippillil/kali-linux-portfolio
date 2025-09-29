@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useRouter } from 'next/router';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
@@ -9,6 +10,8 @@ import FiltersDrawer from './components/FiltersDrawer';
 import { Plugin, Severity, Scan, Finding, severities } from './types';
 
 const Nessus: React.FC = () => {
+  const router = useRouter();
+  const hydratedFromQuery = useRef(false);
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [severityFilters, setSeverityFilters] = useState<Record<Severity, boolean>>({
@@ -36,13 +39,30 @@ const Nessus: React.FC = () => {
   const chartRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const PAGE_SIZE = 50;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [page, setPage] = useState(1);
+  const [pluginsLoaded, setPluginsLoaded] = useState(false);
+
+  const buildSeverityState = (enabled: Severity[]) =>
+    severities.reduce(
+      (acc, sev) => ({
+        ...acc,
+        [sev]: enabled.includes(sev),
+      }),
+      {} as Record<Severity, boolean>,
+    );
+
+  const getSingleValue = (value: string | string[] | undefined) => {
+    if (Array.isArray(value)) return value[0];
+    return value;
+  };
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
       try {
         const res = await fetch('/demo-data/nessus/plugins.json');
         const json: Plugin[] = await res.json();
+        if (!active) return;
         setPlugins(json);
         const tagSet = new Set<string>();
         for (const p of json) {
@@ -51,9 +71,16 @@ const Nessus: React.FC = () => {
         setTags(Array.from(tagSet));
       } catch {
         // ignore fetch errors
+      } finally {
+        if (active) {
+          setPluginsLoaded(true);
+        }
       }
     };
     load();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -120,13 +147,17 @@ const Nessus: React.FC = () => {
     ]);
   };
 
-  const toggleSeverity = (sev: Severity) =>
+  const toggleSeverity = (sev: Severity) => {
     setSeverityFilters((f) => ({ ...f, [sev]: !f[sev] }));
+    setPage(1);
+  };
 
-  const toggleTag = (tag: string) =>
+  const toggleTag = (tag: string) => {
     setTagFilters((t) =>
       t.includes(tag) ? t.filter((x) => x !== tag) : [...t, tag],
     );
+    setPage(1);
+  };
 
   const filtered = useMemo(
     () =>
@@ -140,14 +171,82 @@ const Nessus: React.FC = () => {
   );
 
   useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [filtered]);
+    if (!router.isReady || hydratedFromQuery.current) return;
+
+    const severityParam = getSingleValue(router.query.sev);
+    if (typeof severityParam === 'string') {
+      const requested = Array.from(
+        new Set(
+          severityParam
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s): s is Severity => severities.includes(s as Severity)),
+        ),
+      );
+      if (requested.length > 0 && requested.length <= severities.length) {
+        setSeverityFilters(buildSeverityState(requested));
+      }
+    }
+
+    const tagParam = getSingleValue(router.query.tags);
+    if (typeof tagParam === 'string') {
+      const parsedTags = Array.from(
+        new Set(
+          tagParam
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        ),
+      );
+      if (parsedTags.length > 0) {
+        setTagFilters(parsedTags);
+      }
+    }
+
+    const pageParam = getSingleValue(router.query.page);
+    if (typeof pageParam === 'string') {
+      const parsed = Number.parseInt(pageParam, 10);
+      if (!Number.isNaN(parsed) && parsed > 1) {
+        setPage(parsed);
+      }
+    }
+
+    hydratedFromQuery.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
+
+  useEffect(() => {
+    if (!hydratedFromQuery.current) return;
+    const params = new URLSearchParams();
+    const activeSeverities = severities.filter((sev) => severityFilters[sev]);
+    if (activeSeverities.length > 0 && activeSeverities.length < severities.length) {
+      params.set('sev', activeSeverities.join(','));
+    }
+    if (tagFilters.length > 0) {
+      const sortedTags = [...new Set(tagFilters)].sort();
+      params.set('tags', sortedTags.join(','));
+    }
+    if (page > 1) {
+      params.set('page', String(page));
+    }
+    const qs = params.toString();
+    const url = qs ? `${router.pathname}?${qs}` : router.pathname;
+    router.replace(url, undefined, { shallow: true });
+  }, [page, router, severityFilters, tagFilters]);
+
+  const visibleCount = page * PAGE_SIZE;
+
+  useEffect(() => {
+    if (!pluginsLoaded) return;
+    const maxPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE) || 1);
+    setPage((current) => Math.min(current, maxPage));
+  }, [filtered.length, pluginsLoaded]);
 
   const handleScroll = () => {
     const el = listRef.current;
     if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 16) {
-      setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
+    if (visibleCount < filtered.length && el.scrollTop + el.clientHeight >= el.scrollHeight - 16) {
+      setPage((current) => current + 1);
     }
   };
 
