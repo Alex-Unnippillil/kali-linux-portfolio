@@ -54,6 +54,20 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn test --coverage
 
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - name: Run Lighthouse CLS budget
+        run: yarn lhci autorun --config=./lighthouserc.json
+
   security:
     runs-on: ubuntu-latest
     needs: install
