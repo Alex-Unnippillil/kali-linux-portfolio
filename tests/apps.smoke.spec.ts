@@ -29,3 +29,10 @@ for (const route of routes) {
     await expect(page.locator('main')).toBeVisible();
   });
 }
+
+test('settings privacy tab exposes data portability actions', async ({ page }) => {
+  await page.goto('/apps/settings');
+  await page.getByRole('tab', { name: 'Privacy' }).click();
+  await expect(page.getByRole('button', { name: 'Export Settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Import Settings' })).toBeVisible();
+});

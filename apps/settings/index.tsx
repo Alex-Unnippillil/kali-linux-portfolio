@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, ChangeEvent } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
   defaults,
   exportSettings as exportSettingsData,
-  importSettings as importSettingsData,
+  parseSettings,
+  applySettingsFromData,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
@@ -30,6 +31,12 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    largeHitAreas,
+    setLargeHitAreas,
+    pongSpin,
+    setPongSpin,
+    allowNetwork,
+    setAllowNetwork,
     haptics,
     setHaptics,
     theme,
@@ -45,6 +52,7 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
+
   const wallpapers = [
     "wall-1",
     "wall-2",
@@ -59,7 +67,74 @@ export default function Settings() {
   const changeBackground = (name: string) => setWallpaper(name);
   const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
 
-  const handleExport = async () => {
+  const getCurrentSettings = useCallback(
+    () => ({
+      accent,
+      wallpaper,
+      useKaliWallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+    }),
+    [
+      accent,
+      wallpaper,
+      useKaliWallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+    ]
+  );
+
+  const syncState = useCallback(
+    (next: Record<string, unknown>) => {
+      if (next.accent !== undefined) setAccent(next.accent as string);
+      if (next.wallpaper !== undefined) setWallpaper(next.wallpaper as string);
+      if (next.useKaliWallpaper !== undefined)
+        setUseKaliWallpaper(Boolean(next.useKaliWallpaper));
+      if (next.density !== undefined) setDensity(next.density as any);
+      if (next.reducedMotion !== undefined)
+        setReducedMotion(Boolean(next.reducedMotion));
+      if (next.fontScale !== undefined) setFontScale(Number(next.fontScale));
+      if (next.highContrast !== undefined)
+        setHighContrast(Boolean(next.highContrast));
+      if (next.largeHitAreas !== undefined)
+        setLargeHitAreas(Boolean(next.largeHitAreas));
+      if (next.pongSpin !== undefined) setPongSpin(Boolean(next.pongSpin));
+      if (next.allowNetwork !== undefined)
+        setAllowNetwork(Boolean(next.allowNetwork));
+      if (next.haptics !== undefined) setHaptics(Boolean(next.haptics));
+      if (next.theme !== undefined) setTheme(next.theme as string);
+    },
+    [
+      setAccent,
+      setWallpaper,
+      setUseKaliWallpaper,
+      setDensity,
+      setReducedMotion,
+      setFontScale,
+      setHighContrast,
+      setLargeHitAreas,
+      setPongSpin,
+      setAllowNetwork,
+      setHaptics,
+      setTheme,
+    ]
+  );
+
+  const handleExport = useCallback(async () => {
     const data = await exportSettingsData();
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -68,26 +143,65 @@ export default function Settings() {
     a.download = "settings.json";
     a.click();
     URL.revokeObjectURL(url);
-  };
+  }, []);
 
-  const handleImport = async (file: File) => {
-    const text = await file.text();
-    await importSettingsData(text);
+  const handleImport = useCallback(
+    async (file: File) => {
+      const text = await file.text();
+      const result = parseSettings(text);
+      if (!result?.success) {
+        window.alert("The selected file is not a valid settings export.");
+        return;
+      }
+
+      const nextSettings = result.data as Record<string, unknown>;
+      const currentSettings = getCurrentSettings();
+      const hasDifferences = (
+        Object.keys(nextSettings) as Array<keyof typeof currentSettings>
+      ).some(
+        (key) =>
+          nextSettings[key] !== undefined &&
+          currentSettings[key] !== nextSettings[key]
+      );
+
+      if (hasDifferences) {
+        const confirmed = window.confirm(
+          "Importing will overwrite your current desktop preferences. Continue?"
+        );
+        if (!confirmed) return;
+      }
+
+      await applySettingsFromData(nextSettings);
+      syncState(nextSettings);
+      window.alert("Settings imported successfully.");
+    },
+    [getCurrentSettings, syncState]
+  );
+
+  const handleImportSelection = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        await handleImport(file);
+      } catch (error) {
+        console.error("Failed to import settings", error);
+        window.alert("An unexpected error occurred while importing settings.");
+      } finally {
+        event.target.value = "";
+      }
+    },
+    [handleImport]
+  );
+
+  const handleExportClick = useCallback(async () => {
     try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
-    } catch (err) {
-      console.error("Invalid settings", err);
+      await handleExport();
+    } catch (error) {
+      console.error("Failed to export settings", error);
+      window.alert("Unable to export settings. Please try again.");
     }
-  };
+  }, [handleExport]);
 
   const handleReset = async () => {
     if (
@@ -102,8 +216,13 @@ export default function Settings() {
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
+    setUseKaliWallpaper(defaults.useKaliWallpaper);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setLargeHitAreas(defaults.largeHitAreas);
+    setPongSpin(defaults.pongSpin);
+    setAllowNetwork(defaults.allowNetwork);
+    setHaptics(defaults.haptics);
     setTheme("default");
   };
 
@@ -128,8 +247,9 @@ export default function Settings() {
             )}
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Theme:</label>
+            <label htmlFor="settings-theme-select" className="mr-2 text-ubt-grey">Theme:</label>
             <select
+              id="settings-theme-select"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -156,14 +276,19 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex justify-center my-4 items-center">
+            <input
+              id="settings-use-kali-wallpaper"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Kali gradient wallpaper"
+            />
+            <label
+              htmlFor="settings-use-kali-wallpaper"
+              className="text-ubt-grey cursor-pointer"
+            >
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -296,7 +421,7 @@ export default function Settings() {
         <>
           <div className="flex justify-center my-4 space-x-4">
             <button
-              onClick={handleExport}
+              onClick={handleExportClick}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Export Settings
@@ -315,11 +440,7 @@ export default function Settings() {
           accept="application/json"
           ref={fileInputRef}
           aria-label="Import settings file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handleImport(file);
-            e.target.value = "";
-          }}
+          onChange={handleImportSelection}
           className="hidden"
         />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
