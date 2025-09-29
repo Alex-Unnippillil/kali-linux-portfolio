@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import Button from './Button';
+
 interface ToastProps {
   message: string;
   actionLabel?: string;
@@ -36,12 +38,13 @@ const Toast: React.FC<ToastProps> = ({
     >
       <span>{message}</span>
       {onAction && actionLabel && (
-        <button
+        <Button
           onClick={onAction}
-          className="ml-4 underline focus:outline-none"
+          variant="link"
+          className="ml-4"
         >
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -1,5 +1,7 @@
 import React from 'react';
 
+import Button from './Button';
+
 interface Segment {
   name: string;
 }
@@ -14,13 +16,14 @@ const Breadcrumbs: React.FC<Props> = ({ path, onNavigate }) => {
     <nav className="flex items-center space-x-1 text-white" aria-label="Breadcrumb">
       {path.map((seg, idx) => (
         <React.Fragment key={idx}>
-          <button
+          <Button
             type="button"
+            variant="link"
+            className="px-0 py-0 text-white hover:text-ubt-grey"
             onClick={() => onNavigate(idx)}
-            className="hover:underline focus:outline-none"
           >
             {seg.name || '/'}
-          </button>
+          </Button>
           {idx < path.length - 1 && <span>/</span>}
         </React.Fragment>
       ))}

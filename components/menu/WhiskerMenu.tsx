@@ -1,9 +1,11 @@
 'use client';
 
+import clsx from 'clsx';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import Button from '../ui/Button';
 
 type AppMeta = {
   id: string;
@@ -369,11 +371,12 @@ const WhiskerMenu: React.FC = () => {
 
   return (
     <div className="relative inline-flex">
-      <button
+      <Button
         ref={buttonRef}
         type="button"
+        variant="ghost"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="border-0 border-b-2 border-transparent rounded-none py-1 pl-3 pr-3 text-ubt-grey transition duration-100 ease-in-out hover:bg-transparent hover:text-white focus-visible:ring-offset-transparent"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -383,7 +386,7 @@ const WhiskerMenu: React.FC = () => {
           className="inline mr-1"
         />
         Applications
-      </button>
+      </Button>
       {isVisible && (
         <div
           ref={menuRef}
@@ -412,17 +415,19 @@ const WhiskerMenu: React.FC = () => {
               onKeyDown={handleCategoryKeyDown}
             >
               {categoryConfigs.map((cat, index) => (
-                <button
+                <Button
                   key={cat.id}
                   ref={(el) => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  variant="ghost"
+                  className={clsx(
+                    'group flex w-full items-center gap-3 rounded-md border-0 px-3 py-2 text-left text-sm transition focus-visible:ring-offset-[#0f1724]',
                     category === cat.id
                       ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
-                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
-                  }`}
+                      : 'text-gray-300 hover:bg-[#152133] hover:text-white',
+                  )}
                   role="option"
                   aria-selected={category === cat.id}
                   onClick={() => {
@@ -442,7 +447,7 @@ const WhiskerMenu: React.FC = () => {
                     />
                     <span>{cat.label}</span>
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
             <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
@@ -459,11 +464,12 @@ const WhiskerMenu: React.FC = () => {
             <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 {favoriteApps.slice(0, 6).map((app) => (
-                  <button
+                  <Button
                     key={app.id}
                     type="button"
+                    variant="ghost"
                     onClick={() => openSelectedApp(app.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border-0 bg-[#122136] p-0 text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:ring-offset-[#0f1a29]"
                     aria-label={`Open ${app.title}`}
                   >
                     <Image
@@ -474,7 +480,7 @@ const WhiskerMenu: React.FC = () => {
                       className="h-6 w-6"
                       sizes="24px"
                     />
-                  </button>
+                  </Button>
                 ))}
               </div>
               <div className="relative">
@@ -520,13 +526,16 @@ const WhiskerMenu: React.FC = () => {
                 <ul className="space-y-1">
                   {currentApps.map((app, idx) => (
                     <li key={app.id}>
-                      <button
+                      <Button
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        variant="ghost"
+                        className={clsx(
+                          'flex w-full items-center justify-between gap-3 rounded-lg border-0 px-3 py-2 text-left text-sm transition focus-visible:ring-offset-[#0f1a29] disabled:cursor-not-allowed',
                           idx === highlight
                             ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
-                            : 'text-gray-200 hover:bg-[#142132]'
-                        } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                            : 'text-gray-200 hover:bg-[#142132]',
+                          app.disabled && 'opacity-60',
+                        )}
                         aria-label={app.title}
                         disabled={app.disabled}
                         onClick={() => {
@@ -564,7 +573,7 @@ const WhiskerMenu: React.FC = () => {
                         >
                           <polyline points="9 18 15 12 9 6" />
                         </svg>
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
