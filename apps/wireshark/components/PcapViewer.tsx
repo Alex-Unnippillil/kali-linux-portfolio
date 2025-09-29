@@ -1,14 +1,29 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
-
+import PacketTimeline from './PacketTimeline';
+import {
+  TimelineProvider,
+  createTimelineStore,
+  useTimelineActions,
+  useTimelineSelector,
+} from './timelineStore';
+import type { TimelineStore } from './timelineStore';
 
 interface PcapViewerProps {
   showLegend?: boolean;
+  initialPackets?: PacketInput[];
+  timelineStore?: TimelineStore;
 }
 
 const protocolColors: Record<string, string> = {
@@ -16,6 +31,9 @@ const protocolColors: Record<string, string> = {
   UDP: 'bg-green-900',
   ICMP: 'bg-yellow-800',
 };
+
+const ROW_HEIGHT = 28;
+const OVERSCAN = 12;
 
 const samples = [
   { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
@@ -28,8 +46,9 @@ const toHex = (bytes: Uint8Array) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
 
-interface Packet {
+interface PacketInput {
   timestamp: string;
+  timestampSeconds?: number;
   src: string;
   dest: string;
   protocol: number;
@@ -39,10 +58,53 @@ interface Packet {
   dport?: number;
 }
 
+interface Packet extends PacketInput {
+  timestampSeconds: number;
+}
+
 interface Layer {
   name: string;
   fields: Record<string, string>;
 }
+
+const normalizePacket = (pkt: PacketInput): Packet => ({
+  ...pkt,
+  timestampSeconds:
+    pkt.timestampSeconds ?? Number.parseFloat(pkt.timestamp) ?? 0,
+});
+
+const normalizePackets = (pkts: PacketInput[]): Packet[] =>
+  pkts
+    .map(normalizePacket)
+    .sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+
+const findLowerBound = (packets: Packet[], value: number) => {
+  let low = 0;
+  let high = packets.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (packets[mid].timestampSeconds < value) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  return low;
+};
+
+const findUpperBound = (packets: Packet[], value: number) => {
+  let low = 0;
+  let high = packets.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (packets[mid].timestampSeconds <= value) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  return low;
+};
 
 // Basic Ethernet + IPv4 parser
 const parseEthernetIpv4 = (data: Uint8Array) => {
@@ -87,8 +149,10 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
     if (offset + capLen > view.byteLength) break;
     const data = new Uint8Array(buf.slice(offset, offset + capLen));
     const meta: any = parseEthernetIpv4(data);
+    const tsFloat = tsSec + tsUsec / 1e6;
     packets.push({
       timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
+      timestampSeconds: tsFloat,
       src: meta.src,
       dest: meta.dest,
       protocol: meta.protocol,
@@ -144,9 +208,10 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
       const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
       const meta: any = parseEthernetIpv4(data);
       const res = ifaces[ifaceId]?.tsres ?? 1e-6;
-      const timestamp = ((tsHigh * 2 ** 32 + tsLow) * res).toFixed(6);
+      const tsValue = (tsHigh * 2 ** 32 + tsLow) * res;
       packets.push({
-        timestamp,
+        timestamp: tsValue.toFixed(6),
+        timestampSeconds: tsValue,
         src: meta.src,
         dest: meta.dest,
         protocol: meta.protocol,
@@ -174,7 +239,8 @@ const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
     // Ignore errors and use JS parser
   }
   const magic = new DataView(buf).getUint32(0, false);
-  return magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
+  const packets = magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
+  return normalizePackets(packets);
 };
 
 const decodePacketLayers = (pkt: Packet): Layer[] => {
@@ -234,8 +300,15 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
-const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+const PcapViewerInner: React.FC<PcapViewerProps> = ({
+  showLegend = true,
+  initialPackets = [],
+}) => {
+  const actions = useTimelineActions();
+  const timeWindow = useTimelineSelector((state) => state.window);
+  const [packets, setPackets] = useState<Packet[]>(() =>
+    normalizePackets(initialPackets)
+  );
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
@@ -246,6 +319,14 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(320);
+
+  useEffect(() => {
+    setPackets(normalizePackets(initialPackets));
+  }, [initialPackets]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -272,6 +353,109 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.history.replaceState(null, '', url.toString());
   }, [filter]);
 
+  useEffect(() => {
+    if (!packets.length) {
+      actions.setDomain([0, 0]);
+      actions.resetWindow();
+      return;
+    }
+    const first = packets[0].timestampSeconds;
+    const last = packets[packets.length - 1].timestampSeconds;
+    const safeLast = last <= first ? first + 1e-6 : last;
+    actions.setDomain([first, safeLast]);
+    actions.resetWindow();
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+    setScrollTop(0);
+    setSelected(null);
+  }, [packets, actions]);
+
+  const filtered = useMemo(() => {
+    if (!filter) return packets;
+    const term = filter.toLowerCase();
+    return packets.filter((p) => {
+      const proto = protocolName(p.protocol).toLowerCase();
+      return (
+        p.src.toLowerCase().includes(term) ||
+        p.dest.toLowerCase().includes(term) ||
+        proto.includes(term) ||
+        (p.info || '').toLowerCase().includes(term)
+      );
+    });
+  }, [packets, filter]);
+
+  const [visibleStart, visibleEnd] = useMemo(() => {
+    if (!filtered.length) return [0, 0];
+    const [start, end] = timeWindow;
+    if (end <= start) {
+      return [0, filtered.length];
+    }
+    const lower = findLowerBound(filtered, start);
+    const upper = findUpperBound(filtered, end);
+    return [lower, Math.max(lower, upper)];
+  }, [filtered, timeWindow]);
+
+  useEffect(() => {
+    if (
+      selected !== null &&
+      (selected < visibleStart || selected >= visibleEnd)
+    ) {
+      setSelected(null);
+    }
+  }, [selected, visibleStart, visibleEnd]);
+
+  const packetsInWindow = useMemo(
+    () => filtered.slice(visibleStart, visibleEnd),
+    [filtered, visibleStart, visibleEnd]
+  );
+
+  const totalRows = packetsInWindow.length;
+
+  const updateViewportHeight = useCallback(() => {
+    if (scrollRef.current) {
+      setViewportHeight(scrollRef.current.clientHeight || 320);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateViewportHeight();
+    if (!scrollRef.current) return;
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(() => updateViewportHeight());
+    observer.observe(scrollRef.current);
+    return () => observer.disconnect();
+  }, [updateViewportHeight]);
+
+  useEffect(() => () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+    }
+  }, []);
+
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const nextTop = target.scrollTop;
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    rafRef.current = requestAnimationFrame(() => {
+      setScrollTop(nextTop);
+      rafRef.current = null;
+    });
+  }, []);
+
+  const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+  const endRow = Math.min(
+    totalRows,
+    Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN
+  );
+  const visibleRows = packetsInWindow.slice(startRow, endRow);
+  const paddingTop = startRow * ROW_HEIGHT;
+  const paddingBottom = Math.max(0, (totalRows - endRow) * ROW_HEIGHT);
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -288,17 +472,6 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setPackets(pkts);
     setSelected(null);
   };
-
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -334,6 +507,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       </div>
       {packets.length > 0 && (
         <>
+          <PacketTimeline packets={packets} />
           <div className="flex items-center space-x-2">
             <FilterHelper value={filter} onChange={setFilter} />
             <button
@@ -369,9 +543,13 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               ))}
             </div>
           )}
-          <div className="flex flex-1 overflow-hidden space-x-2">
-            <div className="overflow-auto flex-1">
-              <table className="text-xs w-full font-mono">
+          <div className="flex flex-1 overflow-hidden space-x-2 min-h-0">
+            <div
+              className="overflow-auto flex-1"
+              ref={scrollRef}
+              onScroll={handleScroll}
+            >
+              <table className="text-xs w-full font-mono table-fixed">
                 <thead>
                   <tr className="bg-gray-800">
                     {columns.map((col) => (
@@ -397,50 +575,75 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((pkt, i) => (
-                    <tr
-                      key={i}
-                      className={`cursor-pointer hover:bg-gray-700 ${
-                        selected === i
-                          ? 'outline outline-2 outline-white'
-                          : protocolColors[
-                              protocolName(pkt.protocol).toString()
-                            ] || ''
-                      }`}
-                      onClick={() => setSelected(i)}
-                    >
-                      {columns.map((col) => {
-                        let val = '';
-                        switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
-                            break;
-                          case 'Source':
-                            val = pkt.src;
-                            break;
-                          case 'Destination':
-                            val = pkt.dest;
-                            break;
-                          case 'Protocol':
-                            val = protocolName(pkt.protocol);
-                            break;
-                          case 'Info':
-                            val = pkt.info;
-                            break;
-                        }
-                        return (
-                          <td key={col} className="px-1 whitespace-nowrap">
-                            {val}
-                          </td>
-                        );
-                      })}
+                  {paddingTop > 0 && (
+                    <tr>
+                      <td colSpan={columns.length} style={{ height: `${paddingTop}px` }} />
                     </tr>
-                  ))}
+                  )}
+                  {visibleRows.map((pkt, rowIndex) => {
+                    const absoluteIndex = visibleStart + startRow + rowIndex;
+                    const protocolClass =
+                      protocolColors[protocolName(pkt.protocol).toString()] || '';
+                    const isSelected = selected === absoluteIndex;
+                    return (
+                      <tr
+                        key={`${pkt.timestamp}-${absoluteIndex}`}
+                        data-testid="packet-row"
+                        className={`cursor-pointer hover:bg-gray-700 ${
+                          isSelected
+                            ? 'outline outline-2 outline-white'
+                            : protocolClass
+                        }`}
+                        style={{ height: `${ROW_HEIGHT}px` }}
+                        onClick={() => setSelected(absoluteIndex)}
+                      >
+                        {columns.map((col) => {
+                          let val = '';
+                          switch (col) {
+                            case 'Time':
+                              val = pkt.timestamp;
+                              break;
+                            case 'Source':
+                              val = pkt.src;
+                              break;
+                            case 'Destination':
+                              val = pkt.dest;
+                              break;
+                            case 'Protocol':
+                              val = protocolName(pkt.protocol);
+                              break;
+                            case 'Info':
+                              val = pkt.info;
+                              break;
+                            default:
+                              val = '';
+                          }
+                          return (
+                            <td
+                              key={col}
+                              className="px-1 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
+                              title={val}
+                            >
+                              {val}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                  {paddingBottom > 0 && (
+                    <tr>
+                      <td
+                        colSpan={columns.length}
+                        style={{ height: `${paddingBottom}px` }}
+                      />
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
-            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
+            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1 min-h-0">
+              {selected !== null && filtered[selected] ? (
                 <>
                   {decodePacketLayers(filtered[selected]).map((layer, i) => (
                     <LayerView key={i} name={layer.name} fields={layer.fields} />
@@ -455,6 +658,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
         </>
       )}
     </div>
+  );
+};
+
+const PcapViewer: React.FC<PcapViewerProps> = ({ timelineStore, ...rest }) => {
+  const store = useMemo(
+    () => timelineStore ?? createTimelineStore(),
+    [timelineStore]
+  );
+  return (
+    <TimelineProvider store={store}>
+      <PcapViewerInner {...rest} />
+    </TimelineProvider>
   );
 };
 
