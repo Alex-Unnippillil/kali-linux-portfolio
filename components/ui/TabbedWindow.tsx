@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import DelayedTooltip from './DelayedTooltip';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -168,33 +169,55 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto" role="tablist">
         {tabs.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
-            draggable
-            onDragStart={handleDragStart(i)}
-            onDragOver={handleDragOver(i)}
-            onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
-          >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
-              <button
-                className="p-0.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
+          <DelayedTooltip key={t.id} content={<span className="block max-w-xs break-words">{t.title}</span>}>
+            {(tooltipProps) => (
+              <div
+                ref={(node) => {
+                  tooltipProps.ref(node);
                 }}
-                aria-label="Close Tab"
+                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
+                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+                }`}
+                draggable
+                onDragStart={handleDragStart(i)}
+                onDragOver={handleDragOver(i)}
+                onDrop={handleDrop(i)}
+                onClick={() => setActive(t.id)}
+                onMouseEnter={(event) => {
+                  tooltipProps.onMouseEnter(event);
+                }}
+                onMouseLeave={(event) => {
+                  tooltipProps.onMouseLeave(event);
+                }}
+                onFocus={(event) => {
+                  tooltipProps.onFocus(event);
+                  setActive(t.id);
+                }}
+                onBlur={(event) => {
+                  tooltipProps.onBlur(event);
+                }}
+                role="tab"
+                tabIndex={t.id === activeId ? 0 : -1}
+                aria-selected={t.id === activeId}
               >
-                ×
-              </button>
+                <span className="max-w-[150px] whitespace-nowrap">{middleEllipsis(t.title)}</span>
+                {t.closable !== false && tabs.length > 1 && (
+                  <button
+                    className="p-0.5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(t.id);
+                    }}
+                    aria-label="Close Tab"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             )}
-          </div>
+          </DelayedTooltip>
         ))}
         {onNewTab && (
           <button
