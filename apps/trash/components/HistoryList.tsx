@@ -19,7 +19,7 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
           onClick={() => {
             if (window.confirm('Restore all windows?')) onRestoreAll();
           }}
-          className="border border-black bg-black bg-opacity-50 px-2 py-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+          className="border border-black bg-black bg-opacity-50 px-2 py-1 rounded hover:bg-opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
         >
           Restore All
         </button>

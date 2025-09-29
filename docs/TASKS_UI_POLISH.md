@@ -177,6 +177,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 41. **Keyboard-first navigation**
     - **Accept:** Full desktop and app grid operable by keyboard (Tab, Arrow, Enter, Escape), with visible focus.
     - **Where:** focus management in desktop and window components.
+    - **Dev note:** Use `:focus-visible` (or the `.focus-visible` polyfill class) for custom focus treatments so pointer clicks do not suppress keyboard-visible rings.
 
 42. **ARIA for window chrome**
     - **Accept:** Titlebar buttons have `aria-label`s, window has `role="dialog"` or `region"` with descriptive `aria-labelledby`.

@@ -56,7 +56,7 @@ export default function GuideOverlay({ onClose }) {
             type="button"
             onClick={prev}
             disabled={step === 0}
-            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 focus:outline-none focus:ring"
+            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 focus-visible:outline-none focus-visible:ring"
           >
             Prev
           </button>
@@ -65,7 +65,7 @@ export default function GuideOverlay({ onClose }) {
             type="button"
             onClick={next}
             disabled={step === STEPS.length - 1}
-            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 focus:outline-none focus:ring"
+            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 focus-visible:outline-none focus-visible:ring"
           >
             Next
           </button>
@@ -89,7 +89,7 @@ export default function GuideOverlay({ onClose }) {
           </a>
           <button
             onClick={handleClose}
-            className="px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+            className="px-3 py-1 bg-gray-700 rounded focus-visible:outline-none focus-visible:ring"
           >
             Close
           </button>

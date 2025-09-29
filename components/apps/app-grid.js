@@ -114,7 +114,7 @@ export default function AppGrid({ openApp }) {
   return (
     <div className="flex flex-col items-center h-full">
       <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus-visible:outline-none"
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}

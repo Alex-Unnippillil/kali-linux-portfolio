@@ -80,7 +80,7 @@ const SubnetCalculator = () => {
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">IPv4 address</span>
             <input
               id="subnet-calculator-ipv4-address"
-              className="rounded-md border border-slate-600 bg-black/40 px-3 py-2 font-mono text-white focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="rounded-md border border-slate-600 bg-black/40 px-3 py-2 font-mono text-white focus-visible:border-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               aria-label="IPv4 address"
               inputMode="numeric"
               placeholder="e.g. 10.0.0.42"
@@ -96,7 +96,7 @@ const SubnetCalculator = () => {
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">CIDR prefix</span>
             <input
               id="subnet-calculator-cidr-prefix"
-              className="rounded-md border border-slate-600 bg-black/40 px-3 py-2 font-mono text-white focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="rounded-md border border-slate-600 bg-black/40 px-3 py-2 font-mono text-white focus-visible:border-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               aria-label="CIDR prefix"
               type="number"
               min={0}

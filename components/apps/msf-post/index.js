@@ -76,7 +76,7 @@ const TreeNode = ({ name, node, onSelect, depth }) => {
       <li>
         <button
           onClick={() => onSelect(node.module)}
-          className="text-left hover:underline focus:outline-none h-8 flex items-center w-full"
+          className="text-left hover:underline focus-visible:outline-none h-8 flex items-center w-full"
           style={{ paddingLeft: indent }}
         >
           {name}

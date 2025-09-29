@@ -423,7 +423,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                     <button
                         type="button"
                         onClick={() => handleMonthChange(-1)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                         aria-label="Previous month"
                     >
                         ‹
@@ -431,7 +431,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                     <button
                         type="button"
                         onClick={() => handleMonthChange(1)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                         aria-label="Next month"
                     >
                         ›
@@ -475,7 +475,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                                             type="button"
                                             onClick={handleDayClick}
                                             onKeyDown={(event) => handleDayKeyDown(event, date)}
-                                            className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                                            className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                                                 inCurrentMonth ? 'text-white' : 'text-white/35'
                                             } ${
                                                 isToday
@@ -500,14 +500,14 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                 <button
                     type="button"
                     onClick={handleToday}
-                    className="rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    className="rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-950 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                 >
                     Today
                 </button>
                 <button
                     type="button"
                     onClick={handleClose}
-                    className="rounded-full border border-white/20 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                    className="rounded-full border border-white/20 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                 >
                     Close
                 </button>
@@ -531,7 +531,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                 type="button"
                 ref={buttonRef}
                 onClick={handleToggle}
-                className="group flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-left text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:border-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                className="group flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-left text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:border-white/20 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 aria-controls={popoverId}

@@ -70,7 +70,7 @@ const AppsPage = () => {
                 >
                   <Link
                     href={`/apps/${app.id}`}
-                    className="flex h-full w-full flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
+                    className="flex h-full w-full flex-col items-center rounded border p-4 text-center focus-visible:outline-none focus-visible:ring"
                     aria-label={app.title}
                     onFocus={onFocus}
                     onBlur={onBlur}

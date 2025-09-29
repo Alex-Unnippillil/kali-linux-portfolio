@@ -418,7 +418,7 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
                     category === cat.id
                       ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
                       : 'text-gray-300 hover:bg-[#152133] hover:text-white'
@@ -485,7 +485,7 @@ const WhiskerMenu: React.FC = () => {
                   </svg>
                 </span>
                 <input
-                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus-visible:border-[#53b9ff] focus-visible:outline-none focus-visible:ring-0"
                   placeholder="Search applications"
                   aria-label="Search applications"
                   value={query}

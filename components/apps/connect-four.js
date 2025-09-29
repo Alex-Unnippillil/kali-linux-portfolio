@@ -308,7 +308,7 @@ export default function ConnectFour() {
                 <button
                   key={`${rIdx}-${cIdx}`}
                   aria-label={`cell-${rIdx}-${cIdx}`}
-                  className="w-10 h-10 rounded-full flex items-center justify-center focus:outline-none bg-gray-700"
+                  className="w-10 h-10 rounded-full flex items-center justify-center focus-visible:outline-none bg-gray-700"
                   style={
                     hoverCol === cIdx && !winner
                       ? { backgroundColor: getColor(scores[cIdx]) }
