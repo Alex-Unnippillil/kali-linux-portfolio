@@ -148,6 +148,7 @@ const withPWA = withPWAInit({
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
+    importScripts: ['/sw-background-sync.js'],
     additionalManifestEntries: [
       { url: '/', revision: null },
       { url: '/feeds', revision: null },

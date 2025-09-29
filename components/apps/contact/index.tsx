@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
@@ -9,6 +9,11 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import {
+  listContactDrafts,
+  deleteContactDraft,
+  type ContactDraftRecord,
+} from '../../../services/contactDraftStorage';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -29,6 +34,15 @@ const errorMap: Record<string, string> = {
 
 };
 
+export interface ContactFormResult {
+  success: boolean;
+  error?: string;
+  code?: string;
+  queued?: boolean;
+  id?: string;
+  queuedAt?: number;
+}
+
 export const processContactForm = async (
   data: {
     name: string;
@@ -39,7 +53,7 @@ export const processContactForm = async (
     recaptchaToken: string;
   },
   fetchImpl: typeof fetch = fetch,
-) => {
+): Promise<ContactFormResult> => {
   try {
     const parsed = contactSchema.parse(data);
     const res = await fetchImpl('/api/contact', {
@@ -56,6 +70,19 @@ export const processContactForm = async (
         recaptchaToken: parsed.recaptchaToken,
       }),
     });
+    if (res.status === 202) {
+      const body = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        queued?: boolean;
+        queuedAt?: number;
+      };
+      return {
+        success: false,
+        queued: true,
+        id: body?.id,
+        queuedAt: body?.queuedAt,
+      };
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       return {
@@ -66,6 +93,9 @@ export const processContactForm = async (
     }
     return { success: true };
   } catch {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return { success: false, queued: true };
+    }
     return { success: false, error: 'Submission failed' };
   }
 };
@@ -147,13 +177,17 @@ const ContactApp: React.FC = () => {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [banner, setBanner] = useState<
-    { type: 'success' | 'error'; message: string } | null
+    { type: 'success' | 'error' | 'info'; message: string } | null
   >(null);
   const [submitting, setSubmitting] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [queuedDrafts, setQueuedDrafts] = useState<ContactDraftRecord[]>([]);
+  const [showQueuedPrompt, setShowQueuedPrompt] = useState(false);
+
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -171,6 +205,148 @@ const ContactApp: React.FC = () => {
       setFallback(true);
     }
   }, []);
+
+  const refreshQueuedDrafts = useCallback(
+    async (forcePrompt = false) => {
+      const drafts = await listContactDrafts();
+      if (!mountedRef.current) return;
+      const sortedDrafts = drafts
+        .filter((draft): draft is ContactDraftRecord => Boolean(draft))
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      setQueuedDrafts(sortedDrafts);
+      if (!sortedDrafts.length) {
+        setShowQueuedPrompt(false);
+        return;
+      }
+      if (forcePrompt) {
+        setShowQueuedPrompt(true);
+        return;
+      }
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        setShowQueuedPrompt(true);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return () => undefined;
+    mountedRef.current = true;
+    void refreshQueuedDrafts();
+
+    const handleSwMessage = (event: MessageEvent) => {
+      const data = event.data as
+        | {
+            source?: string;
+            type?: string;
+            id?: string;
+            reason?: string;
+          }
+        | undefined;
+      if (!data || data.source !== 'contact-draft-queue') return;
+      if (!mountedRef.current) return;
+
+      if (data.type === 'CONTACT_DRAFT_SENT') {
+        setBanner({ type: 'success', message: 'Queued message sent successfully.' });
+      } else if (data.type === 'CONTACT_DRAFT_FAILED') {
+        setBanner({
+          type: 'error',
+          message: 'Queued message could not be sent automatically. Restore or resend manually.',
+        });
+        setShowQueuedPrompt(true);
+      } else if (data.type === 'CONTACT_DRAFT_QUEUED') {
+        setBanner({
+          type: 'info',
+          message: 'Offline: your message was saved and will send once you reconnect.',
+        });
+        setShowQueuedPrompt(true);
+      } else if (data.type === 'CONTACT_DRAFT_REMOVED') {
+        // no-op
+      }
+      void refreshQueuedDrafts(true);
+    };
+
+    const handleOnline = () => {
+      void refreshQueuedDrafts(true);
+    };
+
+    navigator.serviceWorker?.addEventListener('message', handleSwMessage);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      mountedRef.current = false;
+      navigator.serviceWorker?.removeEventListener('message', handleSwMessage);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [refreshQueuedDrafts]);
+
+  const latestQueuedDraft = useMemo(
+    () => (queuedDrafts.length ? queuedDrafts[0] : null),
+    [queuedDrafts],
+  );
+
+  const restoreQueuedDraft = useCallback(
+    (draft?: ContactDraftRecord | null) => {
+      const target = draft ?? latestQueuedDraft;
+      if (!target) return;
+      setName(target.payload?.name ?? '');
+      setEmail(target.payload?.email ?? '');
+      setMessage(target.payload?.message ?? '');
+      setBanner({ type: 'info', message: 'Draft restored. Review and submit when ready.' });
+      setShowQueuedPrompt(false);
+    },
+    [latestQueuedDraft],
+  );
+
+  const submitQueuedDraft = useCallback(
+    async (draft?: ContactDraftRecord | null) => {
+      const target = draft ?? latestQueuedDraft;
+      if (!target) return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setBanner({
+          type: 'info',
+          message: 'You are offline. Stay online to submit queued drafts or restore them for edits.',
+        });
+        setShowQueuedPrompt(true);
+        return;
+      }
+      setSubmitting(true);
+      setError('');
+      try {
+        const result = await processContactForm(target.payload);
+        if (result.success) {
+          await deleteContactDraft(target.id);
+          setBanner({ type: 'success', message: 'Queued message sent.' });
+          await refreshQueuedDrafts();
+        } else if (result.queued) {
+          setBanner({
+            type: 'info',
+            message: 'Connection dropped during resend. The draft remains in the queue.',
+          });
+          await refreshQueuedDrafts(true);
+        } else {
+          const msg = result.error || 'Failed to send queued draft.';
+          setBanner({ type: 'error', message: msg });
+          await refreshQueuedDrafts(true);
+        }
+      } catch {
+        setBanner({ type: 'error', message: 'Failed to send queued draft.' });
+        await refreshQueuedDrafts(true);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [latestQueuedDraft, refreshQueuedDrafts],
+  );
+
+  const dismissQueuePrompt = useCallback(() => {
+    setShowQueuedPrompt(false);
+  }, []);
+
+  const formatTimestamp = useCallback(
+    (value: number) => new Date(value).toLocaleString(),
+    [],
+  );
 
   useEffect(() => {
     void writeDraft({ name, email, message });
@@ -245,6 +421,12 @@ const ContactApp: React.FC = () => {
       await uploadAttachments(attachments);
       setAttachments([]);
       void deleteDraft();
+    } else if (result.queued) {
+      setBanner({
+        type: 'info',
+        message: 'Offline detected. Your message was saved and will resend automatically when online.',
+      });
+      await refreshQueuedDrafts(true);
     } else {
       const msg = result.error || 'Submission failed';
       setError(msg);
@@ -266,10 +448,52 @@ const ContactApp: React.FC = () => {
       {banner && (
         <div
           className={`mb-6 rounded p-3 text-sm ${
-            banner.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            banner.type === 'success'
+              ? 'bg-green-600'
+              : banner.type === 'info'
+              ? 'bg-blue-600'
+              : 'bg-red-600'
           }`}
         >
           {banner.message}
+        </div>
+      )}
+      {showQueuedPrompt && latestQueuedDraft && (
+        <div className="mb-6 rounded border border-blue-500/60 bg-blue-900/30 p-4 text-sm">
+          <p>
+            You have {queuedDrafts.length} queued contact draft
+            {queuedDrafts.length > 1 ? 's' : ''}. Latest saved{' '}
+            {formatTimestamp(latestQueuedDraft.updatedAt || latestQueuedDraft.createdAt)}.
+          </p>
+          {latestQueuedDraft.lastError && (
+            <p className="mt-2 text-xs text-blue-100/80">
+              Last send attempt: {latestQueuedDraft.lastError.replace(/_/g, ' ')}.
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded border border-blue-400 px-3 py-2 text-xs font-medium text-blue-100 transition hover:bg-blue-800"
+              onClick={() => restoreQueuedDraft(latestQueuedDraft)}
+            >
+              Restore latest draft
+            </button>
+            <button
+              type="button"
+              className="rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={submitting}
+              onClick={() => submitQueuedDraft(latestQueuedDraft)}
+            >
+              Submit queued draft
+            </button>
+            <button
+              type="button"
+              className="rounded border border-transparent px-3 py-2 text-xs text-blue-100 underline-offset-2 hover:underline"
+              onClick={dismissQueuePrompt}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
       {fallback && (
@@ -307,9 +531,11 @@ const ContactApp: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
             required
             placeholder=" "
+            aria-labelledby="contact-name-label"
           />
           <label
             htmlFor="contact-name"
+            id="contact-name-label"
             className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Name
@@ -326,9 +552,11 @@ const ContactApp: React.FC = () => {
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
             placeholder=" "
+            aria-labelledby="contact-email-label"
           />
           <label
             htmlFor="contact-email"
+            id="contact-email-label"
             className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Email
@@ -350,9 +578,11 @@ const ContactApp: React.FC = () => {
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
             placeholder=" "
+            aria-labelledby="contact-message-label"
           />
           <label
             htmlFor="contact-message"
+            id="contact-message-label"
             className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Message
@@ -374,14 +604,15 @@ const ContactApp: React.FC = () => {
             setAttachments((prev) => prev.filter((_, idx) => idx !== i))
           }
         />
-        <input
-          type="text"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
-          className="hidden"
-          tabIndex={-1}
-          autoComplete="off"
-        />
+          <input
+            type="text"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            className="hidden"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-label="Leave this field empty"
+          />
         {error && <FormError className="mt-3">{error}</FormError>}
         <button
           type="submit"
