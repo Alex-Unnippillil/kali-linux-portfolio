@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
-import pciProfile from './templates/pci.json';
-import hipaaProfile from './templates/hipaa.json';
-
-const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
+import { loadTemplate, preloadTemplates } from './data-loader';
 
 const CardIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -191,6 +188,9 @@ const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
   const [profile, setProfile] = useState('PCI');
+  const [policy, setPolicy] = useState(null);
+  const [policyLoading, setPolicyLoading] = useState(true);
+  const [policyError, setPolicyError] = useState(null);
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryUrl, setSummaryUrl] = useState(null);
@@ -237,6 +237,31 @@ const OpenVASApp = () => {
     return () => workerRef.current?.terminate();
     // runScan is stable
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPolicyLoading(true);
+    setPolicyError(null);
+    loadTemplate(profile)
+      .then((data) => {
+        if (cancelled) return;
+        setPolicy(data || null);
+        setPolicyLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPolicy(null);
+        setPolicyError(err);
+        setPolicyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile]);
+
+  useEffect(() => {
+    preloadTemplates(profileTabs.map((p) => p.id));
   }, []);
 
   const generateSummary = (data) => {
@@ -341,7 +366,11 @@ const OpenVASApp = () => {
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
       <TaskOverview />
-      <PolicySettings policy={templates[profile]} />
+      <PolicySettings
+        policy={policy}
+        loading={policyLoading}
+        error={policyError}
+      />
       {hostReports.length > 0 && (
         <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 mb-4">
           {hostReports.map((h) => (
@@ -375,12 +404,14 @@ const OpenVASApp = () => {
         <input
           className="flex-1 p-2 rounded text-black"
           placeholder="Target (e.g. 192.168.1.1)"
+          aria-label="Scan target"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
         />
         <input
           className="flex-1 p-2 rounded text-black"
           placeholder="Group (e.g. Servers)"
+          aria-label="Scan group"
           value={group}
           onChange={(e) => setGroup(e.target.value)}
         />
@@ -515,6 +546,7 @@ const OpenVASApp = () => {
               <button
                 type="button"
                 onClick={() => setSelected(f)}
+                aria-label={`View details for ${f.description}`}
                 className="w-full text-left focus:outline-none"
               >
                 <div className="flex items-center justify-between">
