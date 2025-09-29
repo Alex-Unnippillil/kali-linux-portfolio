@@ -14,6 +14,7 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import Button from './Button';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -235,15 +236,16 @@ const NotificationBell: React.FC = () => {
 
   return (
     <div className="relative">
-      <button
+      <Button
         type="button"
         ref={buttonRef}
+        variant="ghost"
         aria-label="Open notifications"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative mx-1 flex h-9 w-9 items-center justify-center border-0 bg-transparent text-ubt-grey transition hover:bg-white hover:bg-opacity-10 focus-visible:ring-offset-0 focus-visible:ring-offset-transparent"
       >
         <svg
           aria-hidden="true"
@@ -260,7 +262,7 @@ const NotificationBell: React.FC = () => {
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
-      </button>
+      </Button>
       {isOpen && (
         <div
           ref={panelRef}
@@ -275,14 +277,15 @@ const NotificationBell: React.FC = () => {
             <h2 id={headingId} className="text-sm font-semibold text-white">
               Notifications
             </h2>
-            <button
+            <Button
               type="button"
+              variant="link"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className="text-xs font-medium"
             >
               Dismiss all
-            </button>
+            </Button>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
@@ -297,12 +300,13 @@ const NotificationBell: React.FC = () => {
                   const contentId = `${panelId}-${group.priority}-group`;
                   return (
                     <section key={group.priority} className="border-b border-white/10 last:border-b-0">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                        className="flex w-full items-center justify-between border-0 px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus-visible:ring-offset-ub-dark-grey"
                       >
                         <span className="flex items-center gap-2">
                           {group.metadata.label}
@@ -322,7 +326,7 @@ const NotificationBell: React.FC = () => {
                         >
                           <path d="M7 5l6 5-6 5V5z" />
                         </svg>
-                      </button>
+                      </Button>
                       <div
                         id={contentId}
                         role="region"
