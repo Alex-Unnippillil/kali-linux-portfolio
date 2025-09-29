@@ -75,6 +75,7 @@ export class Desktop extends Component {
         this.iconDimensions = { width: 96, height: 88 };
         this.iconGridSpacing = { row: 112, column: 128 };
         this.desktopPadding = { top: 64, right: 24, bottom: 120, left: 24 };
+        this.iconKeyListenerAttached = false;
     }
 
     createEmptyWorkspaceState = () => ({
@@ -301,6 +302,16 @@ export class Desktop extends Component {
         const offsetY = event.clientY - rect.top;
         container.setPointerCapture?.(event.pointerId);
         this.preventNextIconClick = false;
+        let startPosition = null;
+        const positions = this.state.desktop_icon_positions || {};
+        if (positions[appId]) {
+            startPosition = { ...positions[appId] };
+        } else if (typeof window !== 'undefined') {
+            const style = window.getComputedStyle(container);
+            const left = parseFloat(style.left) || 0;
+            const top = parseFloat(style.top) || 0;
+            startPosition = { x: left, y: top };
+        }
         this.iconDragState = {
             id: appId,
             pointerId: event.pointerId,
@@ -310,8 +321,11 @@ export class Desktop extends Component {
             startY: event.clientY,
             moved: false,
             container,
+            startPosition,
+            lastPosition: startPosition,
         };
         this.setState({ draggingIconId: appId });
+        this.attachIconKeyboardListeners();
     };
 
     handleIconPointerMove = (event) => {
@@ -328,24 +342,32 @@ export class Desktop extends Component {
         }
         event.preventDefault();
         const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
+        dragState.lastPosition = position;
         this.updateIconPosition(dragState.id, position.x, position.y, false);
     };
 
     handleIconPointerUp = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
-        this.iconDragState.container?.releasePointerCapture?.(event.pointerId);
         const dragState = this.iconDragState;
         const moved = dragState.moved;
         this.iconDragState = null;
+        dragState.container?.releasePointerCapture?.(event.pointerId);
+        this.detachIconKeyboardListeners();
         if (moved) {
             event.preventDefault();
             event.stopPropagation();
-            const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
+            const position = this.resolveDropPosition(event, dragState);
             this.preventNextIconClick = true;
             this.updateIconPosition(dragState.id, position.x, position.y, true);
         } else {
             this.setState({ draggingIconId: null });
         }
+    };
+
+    handleIconPointerCancel = (event) => {
+        if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
+        event.preventDefault();
+        this.cancelIconDrag(true);
     };
 
     handleIconClickCapture = (event) => {
@@ -477,11 +499,69 @@ export class Desktop extends Component {
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.realignIconPositions);
+        this.detachIconKeyboardListeners();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
         }
     }
+
+    attachIconKeyboardListeners = () => {
+        if (this.iconKeyListenerAttached || typeof document === 'undefined') return;
+        document.addEventListener('keydown', this.handleIconKeyboardCancel, true);
+        this.iconKeyListenerAttached = true;
+    };
+
+    detachIconKeyboardListeners = () => {
+        if (!this.iconKeyListenerAttached || typeof document === 'undefined') return;
+        document.removeEventListener('keydown', this.handleIconKeyboardCancel, true);
+        this.iconKeyListenerAttached = false;
+    };
+
+    handleIconKeyboardCancel = (event) => {
+        if (!this.iconDragState) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.cancelIconDrag(true);
+        }
+    };
+
+    cancelIconDrag = (revert = false) => {
+        const dragState = this.iconDragState;
+        if (!dragState) return;
+
+        dragState.container?.releasePointerCapture?.(dragState.pointerId);
+        this.iconDragState = null;
+        this.detachIconKeyboardListeners();
+
+        if (revert && dragState.startPosition) {
+            const original = this.clampIconPosition(dragState.startPosition.x, dragState.startPosition.y);
+            this.setState((prevState) => {
+                const current = prevState.desktop_icon_positions || {};
+                const previous = current[dragState.id];
+                if (previous && previous.x === original.x && previous.y === original.y && prevState.draggingIconId === null) {
+                    return { draggingIconId: null };
+                }
+                return {
+                    desktop_icon_positions: { ...current, [dragState.id]: original },
+                    draggingIconId: null,
+                };
+            });
+        } else {
+            this.setState({ draggingIconId: null });
+        }
+
+        this.preventNextIconClick = false;
+    };
+
+    resolveDropPosition = (event, dragState) => {
+        const hasValidCoordinates = Number.isFinite(event?.clientX) && Number.isFinite(event?.clientY);
+        if (hasValidCoordinates) {
+            return this.calculateIconPosition(event.clientX, event.clientY, dragState);
+        }
+        return dragState?.lastPosition || dragState?.startPosition || { x: 0, y: 0 };
+    };
 
     checkForNewFolders = () => {
         const stored = safeLocalStorage?.getItem('new_folders');
@@ -843,7 +923,7 @@ export class Desktop extends Component {
                     onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
                     onPointerMove={this.handleIconPointerMove}
                     onPointerUp={this.handleIconPointerUp}
-                    onPointerCancel={this.handleIconPointerUp}
+                    onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
                 >
                     <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
