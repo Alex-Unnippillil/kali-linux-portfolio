@@ -91,7 +91,7 @@ export default function AppGrid({ openApp }) {
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              padding: 12,
+              padding: 16,
             }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
@@ -116,6 +116,7 @@ export default function AppGrid({ openApp }) {
       <input
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
+        aria-label="Search applications"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
