@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { submitContactAction } from '@/app/actions/contact';
 import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
@@ -26,8 +27,13 @@ const errorMap: Record<string, string> = {
   invalid_recaptcha: 'Captcha verification failed. Please try again.',
   recaptcha_disabled:
     'Captcha service is not configured. Please use the options above.',
-
+  server_not_configured:
+    'Server unavailable. Please use the options above.',
+  server_unavailable: 'Server unavailable. Please use the options above.',
 };
+
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+let disableServerAction = isStaticExport;
 
 export const processContactForm = async (
   data: {
@@ -40,8 +46,40 @@ export const processContactForm = async (
   },
   fetchImpl: typeof fetch = fetch,
 ) => {
+  let parsed: typeof data;
   try {
-    const parsed = contactSchema.parse(data);
+    parsed = contactSchema.parse(data);
+  } catch {
+    return { success: false, error: 'Submission failed', via: 'client' as const };
+  }
+
+  if (!disableServerAction) {
+    try {
+      const serverResult = await submitContactAction(parsed);
+      if (serverResult) {
+        if (!serverResult.success && serverResult.code === 'server_unavailable') {
+          disableServerAction = true;
+        } else {
+          if (!serverResult.success && serverResult.code === 'server_not_configured') {
+            disableServerAction = true;
+          }
+          return {
+            success: serverResult.success,
+            error:
+              serverResult.success
+                ? undefined
+                : errorMap[serverResult.code as string] || 'Submission failed',
+            code: serverResult.code,
+            via: 'server' as const,
+          };
+        }
+      }
+    } catch {
+      disableServerAction = true;
+    }
+  }
+
+  try {
     const res = await fetchImpl('/api/contact', {
       method: 'POST',
       headers: {
@@ -62,11 +100,12 @@ export const processContactForm = async (
         success: false,
         error: errorMap[body.code as string] || 'Submission failed',
         code: body.code as string,
+        via: 'client' as const,
       };
     }
-    return { success: true };
+    return { success: true, via: 'client' as const };
   } catch {
-    return { success: false, error: 'Submission failed' };
+    return { success: false, error: 'Submission failed', via: 'client' as const };
   }
 };
 
