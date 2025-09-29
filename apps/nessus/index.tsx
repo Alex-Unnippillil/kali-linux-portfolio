@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
 import FindingCard from './components/FindingCard';
 import FiltersDrawer from './components/FiltersDrawer';
 import { Plugin, Severity, Scan, Finding, severities } from './types';
+import useNearViewportData from '@/hooks/useNearViewportData';
 
 const Nessus: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
@@ -38,40 +39,7 @@ const Nessus: React.FC = () => {
   const PAGE_SIZE = 50;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/demo-data/nessus/plugins.json');
-        const json: Plugin[] = await res.json();
-        setPlugins(json);
-        const tagSet = new Set<string>();
-        for (const p of json) {
-          p.tags?.forEach((t) => tagSet.add(t));
-        }
-        setTags(Array.from(tagSet));
-      } catch {
-        // ignore fetch errors
-      }
-    };
-    load();
-  }, []);
-
-  useEffect(() => {
-    const loadScans = async () => {
-      try {
-        const [a, b] = await Promise.all([
-          fetch('/demo-data/nessus/scanA.json').then((r) => r.json()),
-          fetch('/demo-data/nessus/scanB.json').then((r) => r.json()),
-        ]);
-        compareScans(a, b);
-      } catch {
-        // ignore
-      }
-    };
-    loadScans();
-  }, []);
-
-  const compareScans = (a: Scan, b: Scan) => {
+  const compareScans = useCallback((a: Scan, b: Scan) => {
     const mapA = new Map(a.findings.map((f) => [f.plugin, f.severity] as const));
     const mapB = new Map(b.findings.map((f) => [f.plugin, f.severity] as const));
     const added: Finding[] = [];
@@ -118,7 +86,42 @@ const Nessus: React.FC = () => {
       Object.values(countsA).reduce((a, b) => a + b, 0),
       Object.values(countsB).reduce((a, b) => a + b, 0),
     ]);
-  };
+  }, []);
+
+  const loadPlugins = useCallback(async () => {
+    try {
+      const res = await fetch('/demo-data/nessus/plugins.json');
+      const json: Plugin[] = await res.json();
+      setPlugins(json);
+      const tagSet = new Set<string>();
+      for (const p of json) {
+        p.tags?.forEach((t) => tagSet.add(t));
+      }
+      setTags(Array.from(tagSet));
+    } catch {
+      // ignore fetch errors
+    }
+  }, []);
+
+  const loadScans = useCallback(async () => {
+    try {
+      const [a, b] = await Promise.all([
+        fetch('/demo-data/nessus/scanA.json').then((r) => r.json()),
+        fetch('/demo-data/nessus/scanB.json').then((r) => r.json()),
+      ]);
+      compareScans(a, b);
+    } catch {
+      // ignore
+    }
+  }, [compareScans]);
+
+  const { ref: viewportRef, hasTriggered } = useNearViewportData<HTMLDivElement>(
+    useCallback(() => {
+      void loadPlugins();
+      void loadScans();
+    }, [loadPlugins, loadScans]),
+    { rootMargin: '35%' },
+  );
 
   const toggleSeverity = (sev: Severity) =>
     setSeverityFilters((f) => ({ ...f, [sev]: !f[sev] }));
@@ -165,7 +168,7 @@ const Nessus: React.FC = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
+    <div ref={viewportRef} className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
       <h1 className="text-2xl">Nessus Demo</h1>
 
       <section>
@@ -177,21 +180,27 @@ const Nessus: React.FC = () => {
         >
           Filters
         </button>
-        <ul
-          ref={listRef}
-          onScroll={handleScroll}
-          className="space-y-2 max-h-96 overflow-auto"
-        >
-          {filtered.slice(0, visibleCount).map((p) => (
-            <li key={p.id}>
-              <FindingCard plugin={p} />
-            </li>
-          ))}
-        </ul>
-        {visibleCount < filtered.length && (
-          <div className="mt-2 text-center text-sm text-gray-400">
-            Scroll to load more...
-          </div>
+        {plugins.length === 0 && !hasTriggered ? (
+          <div className="text-sm text-gray-400">Preloading plugin feed…</div>
+        ) : (
+          <>
+            <ul
+              ref={listRef}
+              onScroll={handleScroll}
+              className="space-y-2 max-h-96 overflow-auto"
+            >
+              {filtered.slice(0, visibleCount).map((p) => (
+                <li key={p.id}>
+                  <FindingCard plugin={p} />
+                </li>
+              ))}
+            </ul>
+            {visibleCount < filtered.length && (
+              <div className="mt-2 text-center text-sm text-gray-400">
+                Scroll to load more...
+              </div>
+            )}
+          </>
         )}
       </section>
 

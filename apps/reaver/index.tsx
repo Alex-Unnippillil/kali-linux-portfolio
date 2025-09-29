@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
@@ -8,6 +8,7 @@ import RouterProfiles, {
 } from './components/RouterProfiles';
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
+import useNearViewportData from '@/hooks/useNearViewportData';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -81,12 +82,22 @@ const ReaverPanel: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetch('/demo-data/reaver/routers.json')
-      .then((r) => r.json())
-      .then(setRouters)
-      .catch(() => setRouters([]));
+  const loadRouters = useCallback(async () => {
+    try {
+      const response = await fetch('/demo-data/reaver/routers.json');
+      const data: RouterMeta[] = await response.json();
+      setRouters(data);
+    } catch {
+      setRouters([]);
+    }
   }, []);
+
+  const { ref: viewportRef, hasTriggered } = useNearViewportData<HTMLDivElement>(
+    useCallback(() => {
+      void loadRouters();
+    }, [loadRouters]),
+    { rootMargin: '30%' },
+  );
 
   useEffect(() => {
     if (!running) return;
@@ -202,7 +213,10 @@ const ReaverPanel: React.FC = () => {
   const timeRemaining = (TOTAL_PINS - attempts) / rate + lockRemaining;
 
   return (
-    <div className="p-4 bg-gray-900 text-white h-full overflow-y-auto">
+    <div
+      ref={viewportRef}
+      className="p-4 bg-gray-900 text-white h-full overflow-y-auto"
+    >
       <h1 className="text-2xl mb-4">Reaver WPS Simulator</h1>
       <p className="text-sm text-yellow-300 mb-4">
         Educational simulation. No real Wi-Fi traffic is generated.
@@ -248,18 +262,19 @@ const ReaverPanel: React.FC = () => {
         <h2 className="text-lg mb-2">PIN Brute-force Simulator</h2>
         <RouterProfiles onChange={setProfile} />
         <div className="flex items-center gap-4 mb-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <label htmlFor="rate" className="text-sm">
-              Attempts/sec
-            </label>
-            <input
-              id="rate"
-              type="number"
-              min="1"
-              value={rate}
-              onChange={(e) => setRate(Number(e.target.value) || 1)}
-              className="w-20 p-1 bg-gray-800 rounded text-white"
-            />
+            <div className="flex items-center gap-2">
+              <label id="rate-label" htmlFor="rate" className="text-sm">
+                Attempts/sec
+              </label>
+              <input
+                id="rate"
+                type="number"
+                min="1"
+                value={rate}
+                onChange={(e) => setRate(Number(e.target.value) || 1)}
+                className="w-20 p-1 bg-gray-800 rounded text-white"
+                aria-labelledby="rate-label"
+              />
             <button
               type="button"
               onClick={running ? stop : start}
@@ -329,11 +344,16 @@ const ReaverPanel: React.FC = () => {
         <h2 className="text-lg mb-2">Router Metadata</h2>
         {routers.length > 0 ? (
           <>
-            <select
-              className="mb-2 p-2 rounded bg-gray-800 text-white"
-              value={routerIdx}
-              onChange={(e) => setRouterIdx(Number(e.target.value))}
-            >
+            <label htmlFor="router-metadata" className="sr-only">
+              Router metadata selector
+            </label>
+              <select
+                className="mb-2 p-2 rounded bg-gray-800 text-white"
+                id="router-metadata"
+                aria-label="Router metadata selector"
+                value={routerIdx}
+                onChange={(e) => setRouterIdx(Number(e.target.value))}
+              >
               {routers.map((r, i) => (
                 <option key={r.model} value={i}>
                   {r.model}
@@ -343,7 +363,9 @@ const ReaverPanel: React.FC = () => {
             <p className="text-sm">{routers[routerIdx]?.notes}</p>
           </>
         ) : (
-          <p className="text-sm">No router metadata loaded.</p>
+          <p className="text-sm text-gray-400">
+            {hasTriggered ? 'No router metadata loaded.' : 'Preparing router metadata…'}
+          </p>
         )}
       </div>
     </div>

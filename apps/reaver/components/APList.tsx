@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import useNearViewportData from '@/hooks/useNearViewportData';
 
 export interface AccessPoint {
   ssid: string;
@@ -47,27 +48,46 @@ const statusIcon = (status: AccessPoint['wps']) => {
 const APList: React.FC = () => {
   const [aps, setAps] = useState<AccessPoint[]>([]);
 
-  useEffect(() => {
-    fetch('/demo-data/reaver/aps.json')
-      .then((r) => r.json())
-      .then(setAps)
-      .catch(() => setAps([]));
+  const loadAps = useCallback(async () => {
+    try {
+      const response = await fetch('/demo-data/reaver/aps.json');
+      const data: AccessPoint[] = await response.json();
+      setAps(data);
+    } catch {
+      setAps([]);
+    }
   }, []);
 
+  const { ref: viewportRef, hasTriggered } = useNearViewportData<HTMLDivElement>(
+    useCallback(() => {
+      void loadAps();
+    }, [loadAps]),
+    { rootMargin: '35%' },
+  );
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-      {aps.map((ap) => (
-        <div
-          key={ap.bssid}
-          className="flex items-center justify-between bg-gray-800 rounded p-3"
-        >
-          <div>
-            <div className="font-semibold">{ap.ssid}</div>
-            <div className="text-xs font-mono text-gray-400">{ap.bssid}</div>
-          </div>
-          {statusIcon(ap.wps)}
+    <div
+      ref={viewportRef}
+      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4"
+    >
+      {aps.length === 0 && !hasTriggered ? (
+        <div className="col-span-full text-sm text-gray-400">
+          Preparing access point scan…
         </div>
-      ))}
+      ) : (
+        aps.map((ap) => (
+          <div
+            key={ap.bssid}
+            className="flex items-center justify-between bg-gray-800 rounded p-3"
+          >
+            <div>
+              <div className="font-semibold">{ap.ssid}</div>
+              <div className="text-xs font-mono text-gray-400">{ap.bssid}</div>
+            </div>
+            {statusIcon(ap.wps)}
+          </div>
+        ))
+      )}
     </div>
   );
 };
