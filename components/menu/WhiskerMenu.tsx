@@ -1,9 +1,11 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useMenuNavigation } from '../../hooks/useMenuNavigation';
 
 type AppMeta = {
   id: string;
@@ -147,12 +149,9 @@ const WhiskerMenu: React.FC = () => {
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
-  const [highlight, setHighlight] = useState(0);
-  const [categoryHighlight, setCategoryHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
-  const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -216,6 +215,55 @@ const WhiskerMenu: React.FC = () => {
     return list;
   }, [currentCategory, query]);
 
+  const categoryIndex = useMemo(() => {
+    return categoryConfigs.findIndex(cat => cat.id === category);
+  }, [category, categoryConfigs]);
+
+  const openSelectedApp = useCallback(
+    (id: string) => {
+      window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+      setIsOpen(false);
+    },
+    [],
+  );
+
+  const categoryNavigation = useMenuNavigation({
+    itemCount: categoryConfigs.length,
+    initialIndex: categoryIndex >= 0 ? categoryIndex : 0,
+    hoverDelay: 140,
+    onActiveChange: (index) => {
+      const next = categoryConfigs[index];
+      if (next && next.id !== category) {
+        setCategory(next.id);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (categoryIndex >= 0) {
+      categoryNavigation.setActiveIndex(categoryIndex);
+    }
+  }, [categoryIndex, categoryNavigation]);
+
+  const appNavigation = useMenuNavigation({
+    itemCount: currentApps.length,
+    hoverDelay: 110,
+    isItemDisabled: (index) => Boolean(currentApps[index]?.disabled),
+    onActivate: (index) => {
+      const app = currentApps[index];
+      if (app && !app.disabled) {
+        openSelectedApp(app.id);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (!isVisible) return;
+    if (currentApps.length > 0) {
+      appNavigation.setActiveIndex(0);
+    }
+  }, [appNavigation, currentApps, isVisible]);
+
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
     if (storedCategory && isCategoryId(storedCategory)) {
@@ -226,22 +274,6 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     safeLocalStorage?.setItem(CATEGORY_STORAGE_KEY, currentCategory.id);
   }, [currentCategory.id]);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    setHighlight(0);
-  }, [isVisible, category, query]);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    const index = categoryConfigs.findIndex(cat => cat.id === currentCategory.id);
-    setCategoryHighlight(index === -1 ? 0 : index);
-  }, [isVisible, currentCategory.id, categoryConfigs]);
-
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setIsOpen(false);
-  };
 
   useEffect(() => {
     if (!isOpen && isVisible) {
@@ -300,19 +332,21 @@ const WhiskerMenu: React.FC = () => {
         hideMenu();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        appNavigation.moveActiveIndex(1, { focus: true });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlight(h => Math.max(h - 1, 0));
+        appNavigation.moveActiveIndex(-1, { focus: true });
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const app = currentApps[highlight];
-        if (app) openSelectedApp(app.id);
+        const app = currentApps[appNavigation.activeIndex];
+        if (app && !app.disabled) {
+          openSelectedApp(app.id);
+        }
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [appNavigation, currentApps, hideMenu, isVisible, openSelectedApp, toggleMenu]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -331,41 +365,6 @@ const WhiskerMenu: React.FC = () => {
       clearTimeout(hideTimer.current);
     }
   }, []);
-
-  const focusCategoryButton = (index: number) => {
-    const btn = categoryButtonRefs.current[index];
-    if (btn) {
-      btn.focus();
-    }
-  };
-
-  const handleCategoryNavigation = (direction: 1 | -1) => {
-    setCategoryHighlight((current) => {
-      const nextIndex = (current + direction + categoryConfigs.length) % categoryConfigs.length;
-      const nextCategory = categoryConfigs[nextIndex];
-      if (nextCategory) {
-        setCategory(nextCategory.id);
-        focusCategoryButton(nextIndex);
-      }
-      return nextIndex;
-    });
-  };
-
-  const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      handleCategoryNavigation(1);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      handleCategoryNavigation(-1);
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      const selected = categoryConfigs[categoryHighlight];
-      if (selected) {
-        setCategory(selected.id);
-      }
-    }
-  };
 
   return (
     <div className="relative inline-flex">
@@ -405,45 +404,46 @@ const WhiskerMenu: React.FC = () => {
             </div>
             <div
               ref={categoryListRef}
-              className="flex max-h-[32vh] flex-1 flex-col gap-1 overflow-y-auto px-3 py-3 sm:max-h-full sm:px-2"
-              role="listbox"
-              aria-label="Application categories"
-              tabIndex={0}
-              onKeyDown={handleCategoryKeyDown}
+              {...categoryNavigation.getListProps<HTMLDivElement>({
+                className: 'flex max-h-[32vh] flex-1 flex-col gap-1 overflow-y-auto px-3 py-3 sm:max-h-full sm:px-2',
+                role: 'listbox',
+                'aria-label': 'Application categories',
+              })}
+              style={{ '--menu-hover-bg': 'transparent', '--menu-active-bg': 'transparent' } as CSSProperties}
             >
-              {categoryConfigs.map((cat, index) => (
-                <button
-                  key={cat.id}
-                  ref={(el) => {
-                    categoryButtonRefs.current[index] = el;
-                  }}
-                  type="button"
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
-                    category === cat.id
-                      ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
-                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
-                  }`}
-                  role="option"
-                  aria-selected={category === cat.id}
-                  onClick={() => {
-                    setCategory(cat.id);
-                    setCategoryHighlight(index);
-                  }}
-                >
-                  <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
-                  <span className="flex items-center gap-2">
-                    <Image
-                      src={cat.icon}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="h-5 w-5 opacity-80 group-hover:opacity-100"
-                      sizes="20px"
-                    />
-                    <span>{cat.label}</span>
-                  </span>
-                </button>
-              ))}
+              {categoryConfigs.map((cat, index) => {
+                const isSelected = category === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    {...categoryNavigation.getItemProps<HTMLButtonElement>(index, {
+                      className: `group items-center justify-start rounded-md px-3 py-2 text-left text-sm transition focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                        isSelected
+                          ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
+                          : 'text-gray-300 hover:bg-[#152133] hover:text-white'
+                      }`,
+                      role: 'option',
+                      'aria-selected': isSelected,
+                      onClick: () => setCategory(cat.id),
+                    })}
+                    ref={(node) => categoryNavigation.registerItem(index, node)}
+                    type="button"
+                  >
+                    <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="flex items-center gap-2">
+                      <Image
+                        src={cat.icon}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 opacity-80 group-hover:opacity-100"
+                        sizes="20px"
+                      />
+                      <span>{cat.label}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
               <div className="flex items-center gap-2">
@@ -494,7 +494,16 @@ const WhiskerMenu: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-2">
+            <div
+              className="flex-1 overflow-y-auto px-3 py-3 sm:px-2"
+              data-menu-surface
+              style={{
+                '--menu-hover-bg': 'rgba(20, 33, 50, 0.85)',
+                '--menu-active-bg': '#162438',
+                '--menu-active-color': 'rgb(255 255 255)',
+                '--menu-ring-color': 'rgba(83, 185, 255, 0.8)',
+              } as CSSProperties}
+            >
               {currentApps.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
@@ -517,24 +526,29 @@ const WhiskerMenu: React.FC = () => {
                   <p>No applications match your search.</p>
                 </div>
               ) : (
-                <ul className="space-y-1">
+                <ul
+                  {...appNavigation.getListProps<HTMLUListElement>({
+                    className: 'space-y-1',
+                    role: 'listbox',
+                    'aria-label': 'Application results',
+                  })}
+                >
                   {currentApps.map((app, idx) => (
                     <li key={app.id}>
                       <button
+                        {...appNavigation.getItemProps<HTMLButtonElement>(idx, {
+                          className:
+                            'items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] hover:bg-[#142132]',
+                          'aria-label': app.title,
+                          disabled: app.disabled,
+                          onClick: () => {
+                            if (!app.disabled) {
+                              openSelectedApp(app.id);
+                            }
+                          },
+                        })}
+                        ref={(node) => appNavigation.registerItem(idx, node)}
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
-                          idx === highlight
-                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
-                            : 'text-gray-200 hover:bg-[#142132]'
-                        } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
-                        aria-label={app.title}
-                        disabled={app.disabled}
-                        onClick={() => {
-                          if (!app.disabled) {
-                            openSelectedApp(app.id);
-                          }
-                        }}
-                        onMouseEnter={() => setHighlight(idx)}
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">

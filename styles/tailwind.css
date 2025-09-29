@@ -1,5 +1,42 @@
 @tailwind base;
 @tailwind components;
+
+@layer components {
+  [data-menu-surface] {
+    --menu-hover-bg: rgba(100, 116, 139, 0.25);
+    --menu-active-bg: rgba(71, 85, 105, 0.35);
+    --menu-active-color: rgb(255 255 255);
+    --menu-ring-color: rgba(125, 211, 252, 0.9);
+  }
+
+  [data-menu-list] {
+    @apply outline-none;
+  }
+
+  [data-menu-item] {
+    @apply flex w-full select-none items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition duration-150 ease-out;
+    outline: none;
+    background-color: transparent;
+  }
+
+  [data-menu-item]:not([data-disabled='true']):hover {
+    background-color: var(--menu-hover-bg);
+  }
+
+  [data-menu-item][data-state='active'] {
+    background-color: var(--menu-active-bg);
+    color: var(--menu-active-color);
+  }
+
+  [data-menu-item][data-disabled='true'] {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  [data-menu-item]:focus-visible {
+    box-shadow: 0 0 0 2px var(--menu-ring-color);
+  }
+}
+
 @tailwind utilities;
 
 @layer utilities {

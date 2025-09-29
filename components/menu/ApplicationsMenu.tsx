@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { useMenuNavigation } from '../../hooks/useMenuNavigation';
 
 export type KaliCategory = {
   id: string;
@@ -86,21 +88,53 @@ type ApplicationsMenuProps = {
   onSelect: (id: string) => void;
 };
 
+const surfaceStyle = {
+  '--menu-hover-bg': 'rgba(55, 65, 81, 0.55)',
+  '--menu-active-bg': 'rgb(55, 65, 81)',
+  '--menu-ring-color': 'rgba(56, 189, 248, 0.85)',
+} as CSSProperties;
+
 const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onSelect }) => {
+  const navigation = useMenuNavigation({
+    itemCount: KALI_CATEGORIES.length,
+    hoverDelay: 120,
+    onActivate: (index) => {
+      const category = KALI_CATEGORIES[index];
+      if (category) {
+        onSelect(category.id);
+      }
+    },
+  });
+
+  const activeIndexFromCategory = useMemo(() => {
+    return KALI_CATEGORIES.findIndex((category) => category.id === activeCategory);
+  }, [activeCategory]);
+
+  useEffect(() => {
+    if (activeIndexFromCategory >= 0) {
+      navigation.setActiveIndex(activeIndexFromCategory);
+    }
+  }, [activeIndexFromCategory, navigation]);
+
   return (
-    <nav aria-label="Kali application categories">
-      <ul className="space-y-1">
-        {KALI_CATEGORIES.map((category) => {
-          const isActive = category.id === activeCategory;
+    <nav aria-label="Kali application categories" data-menu-surface style={surfaceStyle}>
+      <ul
+        className="space-y-1"
+        {...navigation.getListProps<HTMLUListElement>({ 'aria-label': 'Kali application categories' })}
+      >
+        {KALI_CATEGORIES.map((category, index) => {
+          const isSelected = category.id === activeCategory;
           return (
             <li key={category.id}>
               <button
+                {...navigation.getItemProps<HTMLButtonElement>(index, {
+                  className: 'font-medium',
+                  onClick: () => onSelect(category.id),
+                  'aria-pressed': isSelected,
+                })}
+                ref={(node) => navigation.registerItem(index, node)}
                 type="button"
-                onClick={() => onSelect(category.id)}
-                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                  isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
-                }`}
-                aria-pressed={isActive}
+                data-selected={isSelected ? 'true' : undefined}
               >
                 <CategoryIcon categoryId={category.id} label={category.label} />
                 <span className="text-sm font-medium">{category.label}</span>
