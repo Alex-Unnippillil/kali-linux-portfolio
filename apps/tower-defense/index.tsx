@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import GameLayout from "../../components/apps/GameLayout";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
@@ -161,8 +162,17 @@ const TowerDefense = () => {
     });
   };
 
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
+  const handleCanvasPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const canvas = e.currentTarget;
+    if (typeof canvas.setPointerCapture === "function") {
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore capture errors from detached nodes
+      }
+    }
+    const rect = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
     const key = `${x},${y}`;
@@ -179,8 +189,9 @@ const TowerDefense = () => {
     setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
   };
 
-  const handleCanvasMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
+  const handleCanvasPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
     const idx = towers.findIndex((t) => t.x === x && t.y === y);
@@ -188,6 +199,19 @@ const TowerDefense = () => {
   };
 
   const handleCanvasLeave = () => setHovered(null);
+
+  const handleCanvasPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = e.currentTarget;
+    if (typeof canvas.releasePointerCapture === "function") {
+      try {
+        if (canvas.hasPointerCapture?.(e.pointerId)) {
+          canvas.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // capture may already be released
+      }
+    }
+  };
 
   useEffect(() => {
     if (path.length >= 2) {
@@ -491,9 +515,11 @@ const TowerDefense = () => {
             width={CANVAS_SIZE}
             height={CANVAS_SIZE}
             className="bg-black"
-            onClick={handleCanvasClick}
-            onMouseMove={handleCanvasMove}
-            onMouseLeave={handleCanvasLeave}
+            onPointerDown={handleCanvasPointerDown}
+            onPointerMove={handleCanvasPointerMove}
+            onPointerLeave={handleCanvasLeave}
+            onPointerUp={handleCanvasPointerUp}
+            onPointerCancel={handleCanvasPointerUp}
           />
           {selected !== null && (
             <div className="ml-2 flex flex-col space-y-1 items-center">

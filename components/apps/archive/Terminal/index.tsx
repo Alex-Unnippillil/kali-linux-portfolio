@@ -591,14 +591,29 @@ const Terminal = forwardRef<any, any>((props, ref) => {
   }, []);
 
   const startResize = useCallback(
-    (idx: number, e: React.MouseEvent) => {
+    (idx: number, e: React.PointerEvent<HTMLDivElement>) => {
+      if (!containerRef.current) return;
+      e.preventDefault();
       startYRef.current = e.clientY;
       startHeightsRef.current = [...paneHeights];
       resizingRef.current = idx;
-      const onMove = (ev: MouseEvent) => {
-        if (resizingRef.current === null || !containerRef.current) return;
+      const handle = e.currentTarget;
+      const pointerId = e.pointerId;
+
+      if (typeof handle.setPointerCapture === 'function') {
+        try {
+          handle.setPointerCapture(pointerId);
+        } catch {
+          // ignore if capture fails
+        }
+      }
+
+      const onMove = (ev: PointerEvent) => {
+        if (resizingRef.current === null || ev.pointerId !== pointerId) return;
+        const container = containerRef.current;
+        if (!container) return;
         const deltaY = ev.clientY - startYRef.current;
-        const totalHeight = containerRef.current.getBoundingClientRect().height;
+        const totalHeight = container.getBoundingClientRect().height;
         const percent = (deltaY / totalHeight) * 100;
         const i = resizingRef.current;
         const newHeights = [...startHeightsRef.current];
@@ -609,13 +624,27 @@ const Terminal = forwardRef<any, any>((props, ref) => {
         );
         setPaneHeights(newHeights);
       };
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
+
+      const finish = (ev: PointerEvent) => {
+        if (ev.pointerId !== pointerId) return;
+        if (typeof handle.releasePointerCapture === 'function') {
+          try {
+            if (handle.hasPointerCapture?.(pointerId)) {
+              handle.releasePointerCapture(pointerId);
+            }
+          } catch {
+            // capture already released
+          }
+        }
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', finish);
+        handle.removeEventListener('pointercancel', finish);
         resizingRef.current = null;
       };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', finish);
+      handle.addEventListener('pointercancel', finish);
     },
     [paneHeights],
   );
@@ -652,7 +681,7 @@ const Terminal = forwardRef<any, any>((props, ref) => {
           {idx < panes.length - 1 && (
             <div
               className="h-1 bg-gray-700 cursor-row-resize"
-              onMouseDown={(e) => startResize(idx, e)}
+              onPointerDown={(e) => startResize(idx, e)}
             />
           )}
         </React.Fragment>

@@ -125,26 +125,59 @@ function addNote(content = '') {
 }
 
 function enableDrag(el, note) {
-  let offsetX, offsetY;
-  function onMouseDown(e) {
+  let offsetX = 0;
+  let offsetY = 0;
+  let activePointer = null;
+
+  el.style.touchAction = 'none';
+
+  function onPointerDown(e) {
     if (['TEXTAREA', 'INPUT', 'BUTTON'].includes(e.target.tagName)) return;
+    e.preventDefault();
+    activePointer = e.pointerId;
     offsetX = e.clientX - el.offsetLeft;
     offsetY = e.clientY - el.offsetTop;
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    if (typeof el.setPointerCapture === 'function') {
+      try {
+        el.setPointerCapture(activePointer);
+      } catch (err) {
+        if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+          console.warn('Failed to capture pointer', err);
+        }
+      }
+    }
+    el.addEventListener('pointermove', onPointerMove);
+    el.addEventListener('pointerup', onPointerUp);
+    el.addEventListener('pointercancel', onPointerUp);
   }
-  function onMouseMove(e) {
+
+  function onPointerMove(e) {
+    if (activePointer !== e.pointerId) return;
     note.x = e.clientX - offsetX;
     note.y = e.clientY - offsetY;
     el.style.left = note.x + 'px';
     el.style.top = note.y + 'px';
   }
-  function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
+
+  function onPointerUp(e) {
+    if (activePointer !== e.pointerId) return;
+    if (typeof el.releasePointerCapture === 'function') {
+      try {
+        el.releasePointerCapture(activePointer);
+      } catch (err) {
+        if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+          console.warn('Failed to release pointer', err);
+        }
+      }
+    }
+    el.removeEventListener('pointermove', onPointerMove);
+    el.removeEventListener('pointerup', onPointerUp);
+    el.removeEventListener('pointercancel', onPointerUp);
+    activePointer = null;
     void saveNotes();
   }
-  el.addEventListener('mousedown', onMouseDown);
+
+  el.addEventListener('pointerdown', onPointerDown);
 }
 async function init() {
   try {
