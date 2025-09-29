@@ -15,6 +15,9 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  meteredOverride: 'auto',
+  backgroundSyncThrottle: false,
+  connectedNetworkId: 'wired',
 };
 
 export async function getAccent() {
@@ -135,6 +138,43 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getMeteredOverride() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.meteredOverride;
+  return window.localStorage.getItem('metered-override') || DEFAULT_SETTINGS.meteredOverride;
+}
+
+export async function setMeteredOverride(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('metered-override', value);
+}
+
+export async function getBackgroundSyncThrottle() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.backgroundSyncThrottle;
+  return window.localStorage.getItem('background-sync-throttle') === 'true';
+}
+
+export async function setBackgroundSyncThrottle(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('background-sync-throttle', value ? 'true' : 'false');
+}
+
+export async function getConnectedNetworkId() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.connectedNetworkId;
+  const stored = window.localStorage.getItem('status-connected-network');
+  if (!stored) return DEFAULT_SETTINGS.connectedNetworkId;
+  try {
+    const parsed = JSON.parse(stored);
+    return typeof parsed === 'string' ? parsed : DEFAULT_SETTINGS.connectedNetworkId;
+  } catch {
+    return DEFAULT_SETTINGS.connectedNetworkId;
+  }
+}
+
+export async function setConnectedNetworkId(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('status-connected-network', JSON.stringify(value));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +190,9 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('metered-override');
+  window.localStorage.removeItem('background-sync-throttle');
+  window.localStorage.removeItem('status-connected-network');
 }
 
 export async function exportSettings() {
@@ -165,6 +208,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    meteredOverride,
+    backgroundSyncThrottle,
+    connectedNetworkId,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +223,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getMeteredOverride(),
+    getBackgroundSyncThrottle(),
+    getConnectedNetworkId(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -191,6 +240,9 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    meteredOverride,
+    backgroundSyncThrottle,
+    connectedNetworkId,
     theme,
   });
 }
@@ -217,6 +269,9 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    meteredOverride,
+    backgroundSyncThrottle,
+    connectedNetworkId,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +285,9 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (meteredOverride !== undefined) await setMeteredOverride(meteredOverride);
+  if (backgroundSyncThrottle !== undefined) await setBackgroundSyncThrottle(backgroundSyncThrottle);
+  if (connectedNetworkId !== undefined) await setConnectedNetworkId(connectedNetworkId);
 }
 
 export const defaults = DEFAULT_SETTINGS;

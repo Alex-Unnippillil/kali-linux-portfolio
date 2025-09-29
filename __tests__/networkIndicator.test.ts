@@ -55,6 +55,8 @@ describe("getConnectionSummary", () => {
       online: false,
       wifiEnabled: true,
       network: wifiNetwork,
+      metered: false,
+      throttled: false,
     });
 
     expect(summary.state).toBe("offline");
@@ -68,6 +70,8 @@ describe("getConnectionSummary", () => {
       online: true,
       wifiEnabled: false,
       network: wifiNetwork,
+      metered: false,
+      throttled: false,
     });
 
     expect(summary.state).toBe("disabled");
@@ -81,6 +85,8 @@ describe("getConnectionSummary", () => {
       online: true,
       wifiEnabled: true,
       network: wifiNetwork,
+      metered: false,
+      throttled: false,
     });
 
     expect(summary.state).toBe("blocked");
@@ -103,10 +109,27 @@ describe("getConnectionSummary", () => {
       online: true,
       wifiEnabled: true,
       network: wiredNetwork,
+      metered: false,
+      throttled: false,
     });
 
     expect(summary.state).toBe("connected");
     expect(summary.label).toBe("Wired connection");
     expect(summary.meta).toBe("Connected • 1.0 Gbps");
+  });
+  it("highlights metered data when throttling is enabled", () => {
+    const summary = getConnectionSummary({
+      allowNetwork: true,
+      online: true,
+      wifiEnabled: true,
+      network: wifiNetwork,
+      metered: true,
+      throttled: true,
+    });
+
+    expect(summary.label).toBe("Metered connection");
+    expect(summary.meta).toContain("Metered data policy");
+    expect(summary.meta).toContain("Background sync throttled");
+    expect(summary.tooltip).toContain("Metered");
   });
 });

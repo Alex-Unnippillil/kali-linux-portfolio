@@ -1,10 +1,49 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { useMeteredConnection } from '../../hooks/useMeteredConnection';
+import { getNetworkById } from '../../data/networkProfiles';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        useKaliWallpaper,
+        setUseKaliWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+        connectedNetworkId,
+        meteredOverride,
+        setMeteredOverride,
+        backgroundSyncThrottle,
+        setBackgroundSyncThrottle,
+    } = useSettings();
+    const { report, effectiveMetered, loading, describeState, refresh } = useMeteredConnection();
+    const connectedNetwork = getNetworkById(connectedNetworkId);
+    const overrideOptions = [
+        { value: 'auto', label: 'Follow NetworkManager' },
+        { value: 'force-metered', label: 'Force metered' },
+        { value: 'force-unmetered', label: 'Force unmetered' },
+    ];
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -180,6 +219,64 @@ export function Settings() {
                     />
                     Allow Network Requests
                 </label>
+            </div>
+            <div className="mx-auto my-6 w-11/12 max-w-xl rounded-lg border border-ubt-cool-grey/40 bg-black/30 p-4 text-left">
+                <div className="mb-3">
+                    <h3 className="text-lg font-semibold text-white">Metered connection policy</h3>
+                    <p className="mt-1 text-sm text-ubt-grey/80">
+                        {connectedNetwork ? `Connected to ${connectedNetwork.name}` : 'No active connection selected.'}
+                    </p>
+                    <p className="text-xs uppercase tracking-wide text-ubt-grey/60">{`NetworkManager ${describeState}`}</p>
+                </div>
+                <div className="mb-3 rounded border border-ubt-cool-grey/40 bg-black/40 p-3 text-sm text-ubt-grey/80">
+                    <p className="font-semibold text-white">
+                        {loading ? 'Querying NetworkManager…' : effectiveMetered ? 'Metered data policy active' : 'Unmetered connection'}
+                    </p>
+                    <p className="mt-1 text-sm text-ubt-grey/70">
+                        {report ? report.summary : 'Polling NetworkManager for metered state.'}
+                    </p>
+                    {report?.reason && (
+                        <p className="mt-1 text-xs text-ubt-grey/60">{report.reason}</p>
+                    )}
+                </div>
+                <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-ubt-grey">
+                    Override behaviour
+                    <select
+                        value={meteredOverride}
+                        onChange={(event) => setMeteredOverride(event.target.value)}
+                        className="mt-1 w-full rounded border border-ubt-cool-grey bg-black/40 p-2 text-sm text-white"
+                    >
+                        {overrideOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                <label className="mb-2 flex items-center justify-between text-sm text-ubt-grey">
+                    <span>Throttle background sync (systemd)</span>
+                    <input
+                        type="checkbox"
+                        checked={backgroundSyncThrottle}
+                        onChange={(event) => setBackgroundSyncThrottle(event.target.checked)}
+                        disabled={!effectiveMetered}
+                        className="ml-2"
+                    />
+                </label>
+                <p className="text-xs text-ubt-grey/70">
+                    {effectiveMetered
+                        ? backgroundSyncThrottle
+                            ? 'Simulated systemd --user overrides are delaying telemetry, sync, and timer units while the connection remains metered.'
+                            : 'Enable throttling to apply simulated systemd drop-ins that defer telemetry and background sync when on metered data.'
+                        : 'Throttling becomes available when the active connection is detected or forced to metered.'}
+                </p>
+                <button
+                    type="button"
+                    onClick={refresh}
+                    className="mt-3 rounded border border-ubt-cool-grey px-3 py-1 text-sm text-white transition hover:bg-white/10"
+                >
+                    Re-query NetworkManager
+                </button>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">

@@ -22,10 +22,17 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getMeteredOverride as loadMeteredOverride,
+  setMeteredOverride as saveMeteredOverride,
+  getBackgroundSyncThrottle as loadBackgroundSyncThrottle,
+  setBackgroundSyncThrottle as saveBackgroundSyncThrottle,
+  getConnectedNetworkId as loadConnectedNetworkId,
+  setConnectedNetworkId as saveConnectedNetworkId,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+export type MeteredOverride = 'auto' | 'force-metered' | 'force-unmetered';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -67,6 +74,9 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  connectedNetworkId: string;
+  meteredOverride: MeteredOverride;
+  backgroundSyncThrottle: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +89,9 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setConnectedNetworkId: (value: string) => void;
+  setMeteredOverride: (value: MeteredOverride) => void;
+  setBackgroundSyncThrottle: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +108,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  connectedNetworkId: defaults.connectedNetworkId,
+  meteredOverride: defaults.meteredOverride as MeteredOverride,
+  backgroundSyncThrottle: defaults.backgroundSyncThrottle,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +123,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setConnectedNetworkId: () => {},
+  setMeteredOverride: () => {},
+  setBackgroundSyncThrottle: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,6 +141,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [connectedNetworkId, setConnectedNetworkId] = useState<string>(defaults.connectedNetworkId);
+  const [meteredOverride, setMeteredOverride] = useState<MeteredOverride>(
+    defaults.meteredOverride as MeteredOverride,
+  );
+  const [backgroundSyncThrottle, setBackgroundSyncThrottle] = useState<boolean>(
+    defaults.backgroundSyncThrottle,
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -138,6 +164,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setConnectedNetworkId(await loadConnectedNetworkId());
+      setMeteredOverride((await loadMeteredOverride()) as MeteredOverride);
+      setBackgroundSyncThrottle(await loadBackgroundSyncThrottle());
     })();
   }, []);
 
@@ -250,6 +279,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveConnectedNetworkId(connectedNetworkId);
+  }, [connectedNetworkId]);
+
+  useEffect(() => {
+    saveMeteredOverride(meteredOverride);
+  }, [meteredOverride]);
+
+  useEffect(() => {
+    saveBackgroundSyncThrottle(backgroundSyncThrottle);
+  }, [backgroundSyncThrottle]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +309,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        connectedNetworkId,
+        meteredOverride,
+        backgroundSyncThrottle,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +324,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setConnectedNetworkId,
+        setMeteredOverride,
+        setBackgroundSyncThrottle,
       }}
     >
       {children}

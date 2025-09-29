@@ -4,66 +4,19 @@ import type { FC, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
+import { useSettings } from "../../hooks/useSettings";
+import { useMeteredConnection } from "../../hooks/useMeteredConnection";
+import {
+  NETWORKS,
+  SIGNAL_LABEL,
+  hasSecureLabel,
+  isValidNetworkId,
+  getNetworkById,
+  type SignalStrength,
+  type NetworkProfile as Network,
+} from "../../data/networkProfiles";
 
-type NetworkType = "wired" | "wifi";
-type SignalStrength = "excellent" | "good" | "fair" | "weak";
-
-interface Network {
-  id: string;
-  name: string;
-  type: NetworkType;
-  strength?: SignalStrength;
-  secure?: boolean;
-  details: string;
-}
-
-const NETWORKS: Network[] = [
-  {
-    id: "wired",
-    name: "Wired connection",
-    type: "wired",
-    details: "Connected • 1.0 Gbps",
-  },
-  {
-    id: "homelab",
-    name: "HomeLab 5G",
-    type: "wifi",
-    strength: "excellent",
-    secure: true,
-    details: "Auto-connect • WPA2",
-  },
-  {
-    id: "redteam",
-    name: "Red Team Ops",
-    type: "wifi",
-    strength: "good",
-    secure: true,
-    details: "Hidden SSID • WPA3",
-  },
-  {
-    id: "espresso",
-    name: "Espresso Bar",
-    type: "wifi",
-    strength: "fair",
-    secure: false,
-    details: "Captive portal",
-  },
-  {
-    id: "pineapple",
-    name: "Pineapple Lab",
-    type: "wifi",
-    strength: "weak",
-    secure: true,
-    details: "WEP • Legacy",
-  },
-];
-
-const SIGNAL_LABEL: Record<SignalStrength, string> = {
-  excellent: "Excellent",
-  good: "Good",
-  fair: "Fair",
-  weak: "Weak",
-};
+export { hasSecureLabel } from "../../data/networkProfiles";
 
 const SIGNAL_STRENGTH_LEVEL: Record<SignalStrength, number> = {
   weak: 1,
@@ -71,15 +24,9 @@ const SIGNAL_STRENGTH_LEVEL: Record<SignalStrength, number> = {
   good: 3,
   excellent: 4,
 };
-
-export const hasSecureLabel = (network: Network) =>
-  network.type === "wifi" && network.secure ? "Secured" : network.type === "wifi" ? "Open" : "Active";
-
+ 
 const classNames = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(" ");
-
-const isValidNetworkId = (value: unknown): value is string =>
-  typeof value === "string" && NETWORKS.some((network) => network.id === value);
 
 interface ConnectionSummary {
   state: "offline" | "disabled" | "connected" | "blocked";
@@ -95,11 +42,15 @@ export const getConnectionSummary = ({
   online,
   wifiEnabled,
   network,
+  metered,
+  throttled,
 }: {
   allowNetwork: boolean;
   online: boolean;
   wifiEnabled: boolean;
   network: Network;
+  metered: boolean;
+  throttled: boolean;
 }): ConnectionSummary => {
   if (!online) {
     return {
@@ -124,34 +75,48 @@ export const getConnectionSummary = ({
     network.type === "wifi"
       ? [secureLabel, network.details].filter(Boolean).join(" • ")
       : network.details;
+  const metaParts = [networkMeta];
+  if (metered) {
+    metaParts.push("Metered data policy");
+    if (throttled) {
+      metaParts.push("Background sync throttled");
+    }
+  }
+  const meta = metaParts.filter(Boolean).join(" • ");
 
   if (!allowNetwork) {
     return {
       state: "blocked",
-      label: "Requests blocked",
+      label: metered ? "Metered (blocked)" : "Requests blocked",
       description: network.name,
-      meta: networkMeta,
-      tooltip: `Connected to ${network.name} • Requests blocked`,
-      notice: "Remote requests are blocked by privacy controls.",
+      meta,
+      tooltip: `Connected to ${network.name} • Requests blocked${
+        metered ? " • Metered" : ""
+      }`,
+      notice: metered
+        ? throttled
+          ? "Metered policy active. systemd background sync units are throttled until the metered override is disabled."
+          : "Remote requests are blocked by privacy controls. Metered policy is active, so background sync remains paused."
+        : "Remote requests are blocked by privacy controls.",
     };
   }
 
   if (network.type === "wired") {
     return {
       state: "connected",
-      label: "Wired connection",
+      label: metered ? "Metered connection" : "Wired connection",
       description: network.name,
-      meta: network.details,
-      tooltip: `${network.name} connected`,
+      meta,
+      tooltip: `${network.name} connected${metered ? " • Metered" : ""}`,
     };
   }
 
   return {
     state: "connected",
-    label: "Connected",
+    label: metered ? "Metered connection" : "Connected",
     description: network.name,
-    meta: networkMeta,
-    tooltip: `Connected to ${network.name} (${secureLabel})`,
+    meta,
+    tooltip: `Connected to ${network.name} (${secureLabel})${metered ? " • Metered" : ""}`,
   };
 };
 
@@ -253,24 +218,42 @@ interface NetworkIndicatorProps {
 }
 
 const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online }) => {
-
   const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
     "status-wifi-enabled",
     true,
     (value): value is boolean => typeof value === "boolean",
   );
-  const [connectedId, setConnectedId] = usePersistentState<string>(
-    "status-connected-network",
-    () => NETWORKS[0].id,
-    isValidNetworkId,
-  );
+  const { connectedNetworkId, setConnectedNetworkId } = useSettings();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const connectedId = isValidNetworkId(connectedNetworkId) ? connectedNetworkId : NETWORKS[0].id;
+
+  useEffect(() => {
+    if (!isValidNetworkId(connectedNetworkId)) {
+      setConnectedNetworkId(NETWORKS[0].id);
+    }
+  }, [connectedNetworkId, setConnectedNetworkId]);
 
   const connectedNetwork = useMemo(
-    () => NETWORKS.find((network) => network.id === connectedId) ?? NETWORKS[0],
+    () => getNetworkById(connectedId) ?? NETWORKS[0],
     [connectedId],
   );
+  const {
+    report,
+    loading,
+    error,
+    effectiveMetered,
+    override,
+    setOverride,
+    describeState,
+    backgroundSyncThrottle,
+    setBackgroundSyncThrottle,
+  } = useMeteredConnection();
+  const overrideOptions = [
+    { value: "auto", label: "Auto" },
+    { value: "force-metered", label: "Force metered" },
+    { value: "force-unmetered", label: "Force unmetered" },
+  ] as const;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -298,13 +281,28 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
 
   useEffect(() => {
     if (!wifiEnabled && connectedNetwork.type === "wifi") {
-      setConnectedId("wired");
+      setConnectedNetworkId("wired");
     }
-  }, [wifiEnabled, connectedNetwork.type, setConnectedId]);
+  }, [wifiEnabled, connectedNetwork.type, setConnectedNetworkId]);
 
   const summary = useMemo(
-    () => getConnectionSummary({ allowNetwork, online, wifiEnabled, network: connectedNetwork }),
-    [allowNetwork, online, wifiEnabled, connectedNetwork],
+    () =>
+      getConnectionSummary({
+        allowNetwork,
+        online,
+        wifiEnabled,
+        network: connectedNetwork,
+        metered: effectiveMetered,
+        throttled: backgroundSyncThrottle,
+      }),
+    [
+      allowNetwork,
+      online,
+      wifiEnabled,
+      connectedNetwork,
+      effectiveMetered,
+      backgroundSyncThrottle,
+    ],
   );
 
   const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
@@ -320,7 +318,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     if (network.type === "wifi" && !wifiEnabled) {
       setWifiEnabled(true);
     }
-    setConnectedId(network.id);
+    setConnectedNetworkId(network.id);
   };
 
   return (
@@ -340,6 +338,9 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
           {!allowNetwork && (
             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
           )}
+          {effectiveMetered && (
+            <span className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
+          )}
         </span>
       </button>
       {open && (
@@ -358,6 +359,61 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
             </div>
             <p className="mt-1 text-[11px] text-gray-300">{summary.description}</p>
             {summary.meta && <p className="mt-1 text-[11px] text-gray-400">{summary.meta}</p>}
+          </div>
+          <div className="mb-3 rounded bg-black bg-opacity-20 p-3">
+            <div className="flex items-center justify-between text-[11px] text-gray-200">
+              <span className="uppercase">Metered policy</span>
+              <span className="font-semibold text-white">
+                {loading ? "Querying…" : effectiveMetered ? "Active" : "Not metered"}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-gray-300">
+              {report ? report.summary : "Requesting metered state from NetworkManager…"}
+            </p>
+            <p className="mt-1 text-[11px] text-gray-400">{`NM reports ${describeState}`}</p>
+            {error && (
+              <div className="mt-2 rounded border border-red-500/40 bg-red-900/30 p-2 text-[11px] text-red-200">
+                {error}
+              </div>
+            )}
+            <div className="mt-2">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-gray-200">Override</span>
+              <div className="flex flex-wrap gap-1">
+                {overrideOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={classNames(
+                      "rounded px-2 py-1 text-[11px] transition",
+                      override === option.value
+                        ? "bg-ub-blue bg-opacity-80 text-white"
+                        : "bg-white bg-opacity-10 text-gray-200 hover:bg-opacity-20",
+                    )}
+                    aria-pressed={override === option.value}
+                    onClick={() => setOverride(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="mt-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
+              <span className="text-white normal-case">Throttle background sync</span>
+              <input
+                type="checkbox"
+                checked={backgroundSyncThrottle}
+                disabled={!effectiveMetered}
+                onChange={(event) => setBackgroundSyncThrottle(event.target.checked)}
+                aria-disabled={!effectiveMetered}
+              />
+            </label>
+            <p className="mt-1 text-[11px] text-gray-400">
+              {effectiveMetered
+                ? backgroundSyncThrottle
+                  ? "Simulating systemd --user overrides to delay telemetry and sync units."
+                  : "Toggle to simulate scaling back systemd timers while on metered data."
+                : "Enable metered mode to allow throttling background sync."}
+            </p>
           </div>
           {summary.notice && (
             <div className="mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-[11px] text-red-200">
