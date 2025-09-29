@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import { useVirtualList } from '../../../hooks/useVirtualList';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -97,7 +98,10 @@ const suiteTools = [
 ];
 
 
-const LogRow = ({ log, prefersReduced }) => {
+const LOG_ROW_HEIGHT = 36;
+const LOG_COLUMN_TEMPLATE = '96px 80px minmax(0, 160px) minmax(0, 1fr)';
+
+const LogRow = ({ log, prefersReduced, index }) => {
   const rowRef = useRef(null);
 
   useEffect(() => {
@@ -108,24 +112,45 @@ const LogRow = ({ log, prefersReduced }) => {
     requestAnimationFrame(() => {
       el.style.opacity = '1';
     });
-  }, [prefersReduced]);
+    return () => {
+      if (!el) return;
+      el.style.opacity = '';
+      el.style.transition = '';
+    };
+  }, [prefersReduced, log.raw]);
 
   return (
-    <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
-      <td className="pr-2 text-gray-400 whitespace-nowrap">{log.timestamp}</td>
-      <td className="pr-2 text-green-400">
-
+    <div
+      ref={rowRef}
+      role="row"
+      aria-rowindex={index + 1}
+      className={`${index % 2 === 0 ? 'bg-black' : 'bg-ub-grey'} grid font-mono`}
+      style={{
+        gridTemplateColumns: LOG_COLUMN_TEMPLATE,
+        minHeight: LOG_ROW_HEIGHT,
+        alignItems: 'center',
+        padding: '4px 8px',
+      }}
+    >
+      <span role="cell" className="pr-2 text-gray-400 whitespace-nowrap">
+        {log.timestamp}
+      </span>
+      <span role="cell" className="pr-2 text-green-400">
         <abbr
           title={protocolInfo[log.protocol] || log.protocol}
-          className="underline decoration-dotted cursor-help"
+          className="underline decoration-dotted cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
           tabIndex={0}
         >
           {log.protocol}
         </abbr>
-      </td>
-      <td className="px-2 py-[6px] text-white">{log.host}</td>
-      <td className="px-2 py-[6px] text-green-400">{log.details}</td>
-    </tr>
+      </span>
+      <span role="cell" className="px-2 text-white break-words">
+        {log.host}
+      </span>
+      <span role="cell" className="px-2 text-green-400 break-words">
+        {log.details}
+      </span>
+    </div>
   );
 };
 
@@ -223,6 +248,8 @@ const Dsniff = () => {
   const [domainSummary, setDomainSummary] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [protocolFilter, setProtocolFilter] = useState([]);
+  const logContainerRef = useRef(null);
+  const logDescriptionId = useId();
 
   const { summary: pcapSummary, remediation } = pcapFixture;
 
@@ -347,6 +374,21 @@ const Dsniff = () => {
       protocolFilter.length === 0 || protocolFilter.includes(log.protocol);
     return searchMatch && filterMatch && protocolMatch;
   });
+  const virtualRange = useVirtualList({
+    itemCount: filteredLogs.length,
+    itemHeight: LOG_ROW_HEIGHT,
+    overscan: 6,
+    containerRef: logContainerRef,
+  });
+  const visibleLogs = useMemo(
+    () => filteredLogs.slice(virtualRange.start, virtualRange.end),
+    [filteredLogs, virtualRange.start, virtualRange.end]
+  );
+
+  useEffect(() => {
+    const container = logContainerRef.current;
+    if (container) container.scrollTop = 0;
+  }, [activeTab, search, filters, protocolFilter]);
 
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
@@ -583,30 +625,32 @@ const Dsniff = () => {
           </button>
         ))}
       </div>
-      <div className="mb-2">
-        <input
-          className="w-full text-black p-1"
-          placeholder="Search logs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <div className="mb-2">
-        <div className="flex space-x-2 mb-2">
-          <select
-            value={newField}
+        <div className="mb-2">
+          <input
+            className="w-full text-black p-1"
+            placeholder="Search logs"
+            aria-label="Search logs"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="mb-2">
+          <div className="flex space-x-2 mb-2">
+            <select
+              value={newField}
             onChange={(e) => setNewField(e.target.value)}
             className="text-black"
           >
             <option value="host">host</option>
             <option value="protocol">protocol</option>
           </select>
-          <input
-            className="flex-1 text-black p-1"
-            placeholder="Value"
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-          />
+            <input
+              className="flex-1 text-black p-1"
+              placeholder="Value"
+              aria-label="Filter value"
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+            />
           <button
             className="bg-ub-blue text-white px-2"
             onClick={addFilter}
@@ -631,34 +675,46 @@ const Dsniff = () => {
           ))}
         </div>
       </div>
-      <div
-        className="bg-black text-green-400 p-2 h-40 overflow-auto font-mono"
-        aria-live="polite"
-        role="log"
-      >
-        {filteredLogs.length ? (
-          <table className="w-full text-left text-sm font-mono">
-            <thead>
-              <tr className="text-gray-400">
-                <th className="pr-2">Time</th>
-                <th className="pr-2">Protocol</th>
-                <th className="pr-2">Host</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((log, i) => (
-                <LogRow
-                  key={`${log.raw}-${i}`}
-                  log={log}
-                  prefersReduced={prefersReduced}
-                />
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div>No data</div>
-        )}
+      <div className="bg-black text-green-400 p-2 h-40 font-mono flex flex-col">
+        <p id={logDescriptionId} className="sr-only">
+          Filtered network activity log with columns for timestamp, protocol, host, and details.
+        </p>
+        <div
+          className="grid text-gray-400 text-xs uppercase tracking-wide pb-1 border-b border-ub-grey"
+          style={{ gridTemplateColumns: LOG_COLUMN_TEMPLATE }}
+          role="row"
+          aria-hidden="true"
+        >
+          <span className="pr-2">Time</span>
+          <span className="pr-2">Protocol</span>
+          <span className="px-2">Host</span>
+          <span className="px-2">Details</span>
+        </div>
+        <div
+          ref={logContainerRef}
+          className="flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+          aria-live="polite"
+          role="log"
+          aria-describedby={logDescriptionId}
+          tabIndex={0}
+        >
+          {filteredLogs.length ? (
+            <div style={{ height: virtualRange.totalHeight, position: 'relative' }}>
+              <div style={{ transform: `translateY(${virtualRange.offset}px)` }}>
+                {visibleLogs.map((log, i) => (
+                  <LogRow
+                    key={`${log.raw}-${virtualRange.start + i}`}
+                    log={log}
+                    prefersReduced={prefersReduced}
+                    index={virtualRange.start + i}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-2 text-sm text-white">No data</div>
+          )}
+        </div>
       </div>
     </div>
   );
