@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-interface ToastProps {
+export interface ToastProps {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
   onClose?: () => void;
   duration?: number;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -14,6 +16,8 @@ const Toast: React.FC<ToastProps> = ({
   onAction,
   onClose,
   duration = 6000,
+  className,
+  style,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
@@ -32,7 +36,10 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out z-[1000] pointer-events-auto ${
+        visible ? 'translate-y-0' : '-translate-y-full'
+      } ${className ?? ''}`}
+      style={style}
     >
       <span>{message}</span>
       {onAction && actionLabel && (
