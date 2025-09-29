@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -17,6 +17,10 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Meta from '../components/SEO/Meta';
+import { useRouter } from 'next/router';
+import apps from '../apps.config';
+import { createRegistryMap } from '../lib/appRegistry';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -25,9 +29,84 @@ const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
 });
 
+const SITE_ORIGIN = 'https://unnippillil.com';
+const SITE_NAME = 'Alex Unnippillil Portfolio';
+const DEFAULT_META = {
+  title: "Alex Unnippillil's Portfolio",
+  description:
+    'Desktop-inspired portfolio showcasing security tool simulations, utilities, and retro games.',
+  image: `${SITE_ORIGIN}/images/logos/logo_1200.png`,
+  url: SITE_ORIGIN,
+  type: 'website',
+};
+
+const appList = Array.isArray(apps) ? apps : [];
+const registryMetadata = createRegistryMap(appList);
+
+const normalizePath = (value) => {
+  if (!value) return '/';
+  const [pathWithoutQuery] = value.split(/[?#]/);
+  if (!pathWithoutQuery) return '/';
+  if (pathWithoutQuery === '/') return '/';
+  return pathWithoutQuery.replace(/\/$/, '');
+};
+
+const toAbsoluteUrl = (value) => {
+  if (!value) return DEFAULT_META.url;
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  const normalized = value.startsWith('/') ? value : `/${value}`;
+  return `${SITE_ORIGIN}${normalized}`;
+};
+
+const resolveRouteMeta = (path) => {
+  const baseMeta = {
+    ...DEFAULT_META,
+    url: toAbsoluteUrl(path === '/' ? '/' : path),
+  };
+
+  if (path === '/' || path === '') {
+    return DEFAULT_META;
+  }
+
+  if (path === '/apps') {
+    return {
+      ...baseMeta,
+      title: `Apps Catalog | ${SITE_NAME}`,
+      description: 'Browse the full catalog of Kali-inspired desktop apps, tools, and games.',
+    };
+  }
+
+  if (path.startsWith('/apps/')) {
+    const appId = decodeURIComponent(path.replace(/^\/apps\//, ''));
+    const meta = registryMetadata[appId];
+    if (meta) {
+      const url = toAbsoluteUrl(meta.path ?? path);
+      const image = meta.icon ? toAbsoluteUrl(meta.icon) : DEFAULT_META.image;
+      return {
+        title: `${meta.title} | ${SITE_NAME}`,
+        description: meta.description,
+        image,
+        url,
+        type: 'website',
+      };
+    }
+  }
+
+  return baseMeta;
+};
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const router = useRouter();
+
+  const normalizedPath = useMemo(
+    () => normalizePath(router.asPath || router.pathname),
+    [router.asPath, router.pathname],
+  );
+
+  const meta = useMemo(() => resolveRouteMeta(normalizedPath), [normalizedPath]);
 
 
   useEffect(() => {
@@ -149,6 +228,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      <Meta {...meta} />
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a

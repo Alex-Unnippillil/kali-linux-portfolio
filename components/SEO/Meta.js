@@ -1,67 +1,103 @@
-import React from 'react'
 import Head from 'next/head';
 import { getCspNonce } from '../../utils/csp';
 
-export default function Meta() {
-    const nonce = getCspNonce();
-    return (
-        <Head>
-            {/* Primary Meta Tags */}
-             <title>Alex Unnippillil&apos;s Portfolio </title>
-            <meta charSet="utf-8" />
-            <meta name="title" content="Alex Patel Portfolio - Computer Engineering Student" />
-            <meta name="description"
-                content="Alex Unnippillil Personal Portfolio Website" />
-            <meta name="author" content="Alex Unnippillil" />
-            <meta name="keywords"
-                content="Alex Unnippillil, Unnippillil's portfolio, linux, kali portfolio, alex unnippillil portfolio, alex computer, alex unnippillil, alex linux, alex unnippillil kali portfolio" />
-            <meta name="robots" content="index, follow" />
-            <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
-            <meta name="language" content="English" />
-            <meta name="category" content="16" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <meta name="theme-color" content="#0f1317" />
+const SITE_NAME = "Alex Unnippillil Portfolio";
+const SITE_ORIGIN = 'https://unnippillil.com';
+const DEFAULT_META = {
+  title: "Alex Unnippillil's Portfolio",
+  description: 'Desktop-inspired portfolio showcasing security tool simulations, utilities, and retro games.',
+  image: `${SITE_ORIGIN}/images/logos/logo_1200.png`,
+  url: SITE_ORIGIN,
+  type: 'website',
+};
+const DEFAULT_KEYWORDS = [
+  'Alex Unnippillil',
+  "Unnippillil's portfolio",
+  'linux desktop portfolio',
+  'kali linux portfolio',
+  'security tool simulations',
+];
 
-            {/* Search Engine */}
-            <meta name="image" content="images/logos/fevicon.png" />
-            {/* Schema.org for Google */}
-            <meta itemProp="name" content="Alex Unnippillil Portfolio " />
-            <meta itemProp="description"
-                content="Alex Unnippillil Personal Portfolio Website" />
-            <meta itemProp="image" content="images/logos/fevicon.png" />
-            {/* Twitter */}
-            <meta name="twitter:card" content="summary" />
-            <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website" />
-            <meta name="twitter:description"
-                content="Alex Unnippillil Personal Portfolio Website" />
-            <meta name="twitter:site" content="alexunnippillil" />
-            <meta name="twitter:creator" content="unnippillil" />
-            <meta name="twitter:image:src" content="images/logos/logo_1024.png" />
-            {/* Open Graph general (Facebook, Pinterest & Google+) */}
-            <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website " />
-            <meta name="og:description"
-                content="Alex Unnippillil Personal Portfolio Website. ." />
-            <meta name="og:image" content="https://unnippillil.com/images/logos/logo_1200.png" />
-            <meta name="og:url" content="https://unnippillil.com/" />
-            <meta name="og:site_name" content="Alex Unnippillil Personal Portfolio" />
-            <meta name="og:locale" content="en_CA" />
-            <meta name="og:type" content="website" />
+const toAbsoluteUrl = (value) => {
+  if (!value) return DEFAULT_META.image;
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  const normalized = value.startsWith('/') ? value : `/${value}`;
+  return `${SITE_ORIGIN}${normalized}`;
+};
 
-            <link rel="canonical" href="https://unnippillil.com/" />
-            <link rel="icon" href="images/logos/fevicon.svg" />
-            <link rel="apple-touch-icon" href="images/logos/logo.png" />
-            <script
-                type="application/ld+json"
-                nonce={nonce}
-                dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        "@context": "https://schema.org",
-                        "@type": "Person",
-                        name: "Alex Unnippillil",
-                        url: "https://unnippillil.com/",
-                    }),
-                }}
-            />
-        </Head>
-    )
+export default function Meta({
+  title,
+  description,
+  image,
+  url,
+  type,
+  keywords,
+  twitterCard = 'summary_large_image',
+  twitterSite = 'alexunnippillil',
+  twitterCreator = 'unnippillil',
+} = {}) {
+  const nonce = getCspNonce();
+  const metaTitle = title ?? DEFAULT_META.title;
+  const metaDescription = description ?? DEFAULT_META.description;
+  const metaImage = toAbsoluteUrl(image ?? DEFAULT_META.image);
+  const metaUrl = url ? toAbsoluteUrl(url) : DEFAULT_META.url;
+  const metaType = type ?? DEFAULT_META.type;
+  const metaKeywords = (keywords && keywords.length ? keywords : DEFAULT_KEYWORDS).join(', ');
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: 'Alex Unnippillil',
+    url: SITE_ORIGIN,
+    description: metaDescription,
+  };
+
+  return (
+    <Head>
+      <title>{metaTitle}</title>
+      <meta charSet="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <meta name="robots" content="index, follow" />
+      <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
+      <meta name="language" content="English" />
+      <meta name="author" content="Alex Unnippillil" />
+      <meta name="theme-color" content="#0f1317" />
+
+      <meta name="title" content={metaTitle} />
+      <meta name="description" content={metaDescription} />
+      <meta name="keywords" content={metaKeywords} />
+      <meta name="image" content={metaImage} />
+
+      <meta itemProp="name" content={metaTitle} />
+      <meta itemProp="description" content={metaDescription} />
+      <meta itemProp="image" content={metaImage} />
+
+      <meta property="og:title" content={metaTitle} />
+      <meta property="og:description" content={metaDescription} />
+      <meta property="og:image" content={metaImage} />
+      <meta property="og:url" content={metaUrl} />
+      <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:type" content={metaType} />
+      <meta property="og:locale" content="en_CA" />
+
+      <meta name="twitter:card" content={twitterCard} />
+      <meta name="twitter:title" content={metaTitle} />
+      <meta name="twitter:description" content={metaDescription} />
+      <meta name="twitter:site" content={twitterSite} />
+      <meta name="twitter:creator" content={twitterCreator} />
+      <meta name="twitter:image" content={metaImage} />
+
+      <link rel="canonical" href={metaUrl} />
+      <link rel="icon" href="/images/logos/fevicon.svg" />
+      <link rel="apple-touch-icon" href="/images/logos/logo.png" />
+
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+    </Head>
+  );
 }
