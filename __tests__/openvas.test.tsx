@@ -1,8 +1,22 @@
 import React from 'react';
-import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  fireEvent,
+  screen,
+  waitFor,
+  act,
+  within,
+} from '@testing-library/react';
 import OpenVASApp from '../components/apps/openvas';
 
 describe('OpenVASApp', () => {
+  beforeAll(() => {
+    Object.defineProperty(window.HTMLElement.prototype, 'scrollTo', {
+      value: jest.fn(),
+      writable: true,
+    });
+  });
+
   beforeEach(() => {
     global.fetch = jest.fn(() =>
       Promise.resolve({
@@ -98,7 +112,8 @@ describe('OpenVASApp', () => {
     render(<OpenVASApp />);
     fireEvent.click(screen.getByText('Outdated banner exposes software version'));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText(/Remediation/)).toBeInTheDocument();
+    const remediationLabels = screen.getAllByText(/Remediation/);
+    expect(remediationLabels.length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText('Close'));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -132,6 +147,37 @@ describe('OpenVASApp', () => {
 
     await act(async () => {
       resolvers.forEach((r) => r());
+    });
+  });
+
+  it('supports keyboard navigation in findings list', async () => {
+    render(<OpenVASApp />);
+    const list = screen.getByRole('list', { name: 'Scan findings' });
+    const buttons = within(list).getAllByRole('button');
+    const firstButton = buttons[0];
+
+    firstButton.focus();
+    fireEvent.keyDown(firstButton, { key: 'Enter' });
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Close'));
+
+    fireEvent.keyDown(firstButton, { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(buttons[1]);
+    });
+  });
+
+  it('filters findings by severity without breaking virtualization', () => {
+    render(<OpenVASApp />);
+    fireEvent.click(screen.getByRole('button', { name: 'High' }));
+    return waitFor(() => {
+      expect(
+        screen.queryByText('Outdated banner exposes software version')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText('Remote code execution vulnerability detected')
+      ).toBeInTheDocument();
     });
   });
 });
