@@ -384,6 +384,11 @@ add, reorder, or delete moods; selections persist in the browser's Origin Privat
 System so your choices restore on load. The last mood played is remembered, and
 play/pause and track controls include keyboard hotkeys.
 
+### Desktop Shell
+
+- The header now surfaces a compact profile badge—avatar and role—shared with the About Alex app via `data/profile.ts`, so the desktop and profile page stay in sync.
+- Resetting desktop preferences presents an accessible confirmation dialog and only clears appearance/accessibility settings while leaving cached app data intact; each reset is captured through the analytics helper for telemetry.
+
 ### Terminal Commands
 - `clear` – clears the terminal display.
 - `help` – lists available commands.
