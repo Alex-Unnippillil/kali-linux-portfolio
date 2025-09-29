@@ -27,7 +27,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             >
               {unlocked.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
                 </option>
               ))}
             </select>

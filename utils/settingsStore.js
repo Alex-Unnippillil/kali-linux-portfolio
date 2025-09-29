@@ -39,8 +39,13 @@ export async function setWallpaper(wallpaper) {
 
 export async function getUseKaliWallpaper() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.useKaliWallpaper;
-  const stored = window.localStorage.getItem('use-kali-wallpaper');
-  return stored === null ? DEFAULT_SETTINGS.useKaliWallpaper : stored === 'true';
+  try {
+    const stored = window.localStorage.getItem('use-kali-wallpaper');
+    return stored === null ? DEFAULT_SETTINGS.useKaliWallpaper : stored === 'true';
+  } catch (error) {
+    console.warn('Failed to read use-kali-wallpaper flag, falling back to default', error);
+    return DEFAULT_SETTINGS.useKaliWallpaper;
+  }
 }
 
 export async function setUseKaliWallpaper(value) {

@@ -2,6 +2,39 @@ import { renderHook, act } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import { getTheme, getUnlockedThemes, setTheme } from '../utils/theme';
 
+const originalLocalStorage = window.localStorage;
+
+const createLocalStorageMock = () => {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear: () => store.clear(),
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  } as Storage;
+};
+
+beforeAll(() => {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: createLocalStorageMock(),
+  });
+});
+
+afterAll(() => {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: originalLocalStorage,
+  });
+});
 
 describe('theme persistence and unlocking', () => {
   beforeEach(() => {
@@ -23,7 +56,7 @@ describe('theme persistence and unlocking', () => {
 
   test('themes unlock at score milestones', () => {
     const unlocked = getUnlockedThemes(600);
-    expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
+    expect(unlocked).toEqual(expect.arrayContaining(['kali', 'neon', 'dark']));
     expect(unlocked).not.toContain('matrix');
   });
 
@@ -32,6 +65,12 @@ describe('theme persistence and unlocking', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('matrix');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  test('migrates legacy default theme slug to kali', () => {
+    window.localStorage.setItem('app:theme', 'default');
+    expect(getTheme()).toBe('kali');
+    expect(window.localStorage.getItem('app:theme')).toBe('kali');
   });
 
   test('updates CSS variables without reload', () => {
@@ -43,7 +82,7 @@ describe('theme persistence and unlocking', () => {
     `;
     document.head.appendChild(style);
 
-    setTheme('default');
+    setTheme('kali');
     expect(
       getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
     ).toBe('white');
@@ -67,6 +106,6 @@ describe('theme persistence and unlocking', () => {
     // simulate light mode preference
     // @ts-ignore
     window.matchMedia = jest.fn().mockReturnValue({ matches: false });
-    expect(getTheme()).toBe('default');
+    expect(getTheme()).toBe('kali');
   });
 });

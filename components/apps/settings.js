@@ -76,7 +76,7 @@ export function Settings() {
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
                 >
-                    <option value="default">Default</option>
+                    <option value="kali">Kali</option>
                     <option value="dark">Dark</option>
                     <option value="neon">Neon</option>
                     <option value="matrix">Matrix</option>
@@ -277,7 +277,7 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
-                        setTheme('default');
+                        setTheme('kali');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
