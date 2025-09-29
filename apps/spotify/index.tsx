@@ -5,6 +5,7 @@ import usePersistentState from "../../hooks/usePersistentState";
 import CrossfadePlayer from "./utils/crossfade";
 import Visualizer from "./Visualizer";
 import Lyrics from "./Lyrics";
+import createGameLoop from "../../utils/animation";
 
 interface Track {
   title: string;
@@ -109,13 +110,12 @@ const SpotifyApp = () => {
   }, [current, queue, setRecent, crossfade]);
 
   useEffect(() => {
-    let raf: number;
-    const tick = () => {
-      setProgress(playerRef.current?.getCurrentTime() ?? 0);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const loop = createGameLoop({
+      update: () => {
+        setProgress(playerRef.current?.getCurrentTime() ?? 0);
+      },
+    });
+    return () => loop.stop();
   }, []);
 
   const next = () => {
@@ -160,6 +160,7 @@ const SpotifyApp = () => {
             title="Previous"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
+            aria-label="Play previous track"
           >
             ⏮
           </button>
@@ -168,6 +169,7 @@ const SpotifyApp = () => {
             title="Play/Pause"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
+            aria-label="Toggle playback"
           >
             ⏯
           </button>
@@ -176,6 +178,7 @@ const SpotifyApp = () => {
             title="Next"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
+            aria-label="Play next track"
           >
             ⏭
           </button>
@@ -189,6 +192,7 @@ const SpotifyApp = () => {
               max={12}
               value={crossfade}
               onChange={(e) => setCrossfade(Number(e.target.value))}
+              aria-label="Crossfade duration"
             />
           </label>
           <label className="flex items-center space-x-1">
@@ -196,12 +200,14 @@ const SpotifyApp = () => {
               type="checkbox"
               checked={gapless}
               onChange={(e) => setGapless(e.target.checked)}
+              aria-label="Toggle gapless playback"
             />
             <span>Gapless</span>
           </label>
           <button
             onClick={() => setMini(!mini)}
             className="border px-2 py-1 rounded"
+            aria-label={mini ? 'Switch to full player' : 'Switch to mini player'}
           >
             {mini ? "Full" : "Mini"}
           </button>
@@ -220,6 +226,7 @@ const SpotifyApp = () => {
           }}
           className="w-full h-1 mb-2"
           disabled={!queue.length}
+          aria-label="Track progress"
         />
       )}
       {currentTrack && (
@@ -249,6 +256,7 @@ const SpotifyApp = () => {
               className="w-full h-40 text-black p-1"
               value={playlistText}
               onChange={(e) => setPlaylistText(e.target.value)}
+              aria-label="Playlist JSON definition"
             />
             <button
               onClick={loadPlaylist}
