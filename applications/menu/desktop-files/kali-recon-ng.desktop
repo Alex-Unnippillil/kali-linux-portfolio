@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Recon-ng (Simulated)
+GenericName=Web Recon Framework
+Comment=Simulated Recon-ng workspace builder with preloaded modules
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/reconng
+Icon=kali-recon-ng
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-web-scanning;kali-reconnaissance;
+Keywords=osint;web recon;recon-ng;modules;
+X-Kali-Package=recon-ng
+X-Kali-Simulation=true
+X-Portfolio-App=reconng
+

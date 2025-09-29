@@ -1,0 +1,297 @@
+{
+  "version": "2024.3",
+  "reference": "https://www.kali.org/docs/general-use/menu/",
+  "categories": [
+    {
+      "id": "kali-usual-applications",
+      "name": "Usual Applications",
+      "translations": {
+        "es": "Aplicaciones habituales",
+        "fr": "Applications habituelles",
+        "de": "Übliche Anwendungen",
+        "pt": "Aplicações habituais",
+        "zh_CN": "常用程序"
+      },
+      "children": []
+    },
+    {
+      "id": "kali-reconnaissance",
+      "name": "01 - Reconnaissance",
+      "translations": {
+        "es": "01 - Reconocimiento",
+        "fr": "01 - Reconnaissance",
+        "de": "01 - Erkennung",
+        "pt": "01 - Reconhecimento",
+        "zh_CN": "01 - 侦察"
+      },
+      "children": [
+        {
+          "id": "kali-identity-information",
+          "name": "• Identity Information",
+          "translations": {
+            "es": "• Información de Identidad",
+            "fr": "• Informations d'identité",
+            "de": "• Identitätsinformationen",
+            "pt": "• Informações de Identidade",
+            "zh_CN": "• 身份信息"
+          }
+        },
+        {
+          "id": "kali-network-information",
+          "name": "• Network Information",
+          "translations": {
+            "es": "• Información de Red",
+            "fr": "• Informations sur le réseau",
+            "de": "• Netzwerk-Informationen",
+            "pt": "• Informações de Rede",
+            "zh_CN": "• 网络信息"
+          }
+        },
+        {
+          "id": "kali-web-scanning",
+          "name": "• Web Scanning",
+          "translations": {
+            "es": "• Escaneo Web",
+            "fr": "• Analyse Web",
+            "de": "• Web-Scannen",
+            "pt": "• Varredura Web",
+            "zh_CN": "• 网络扫描"
+          }
+        },
+        {
+          "id": "kali-web-vulnerability-scanning",
+          "name": "• Web Vulnerability Scanning",
+          "translations": {
+            "es": "• Escaneo de Vulnerabilidades Web",
+            "fr": "• Analyse de Vulnérabilités Web",
+            "de": "• Web-Schwachstellen-Scannen",
+            "pt": "• Varredura de Vulnerabilidades Web",
+            "zh_CN": "• Web 漏洞扫描"
+          }
+        },
+        {
+          "id": "kali-wifi-credential-access",
+          "name": "• WiFi",
+          "translations": {
+            "es": "• WiFi",
+            "fr": "• WiFi",
+            "de": "• WiFi",
+            "pt": "• WiFi",
+            "zh_CN": "• WiFi"
+          }
+        }
+      ]
+    },
+    {
+      "id": "kali-initial-access",
+      "name": "03 - Initial Access",
+      "translations": {
+        "es": "03 - Acceso Inicial",
+        "fr": "03 - Accès Initial",
+        "de": "03 - Erster Zugriff",
+        "pt": "03 - Acesso Inicial",
+        "zh_CN": "03 - 初始访问"
+      },
+      "children": []
+    },
+    {
+      "id": "kali-execution",
+      "name": "04 - Execution",
+      "translations": {
+        "es": "04 - Ejecución",
+        "fr": "04 - Exécution",
+        "de": "04 - Ausführung",
+        "pt": "04 - Execução",
+        "zh_CN": "04 - 执行"
+      },
+      "children": []
+    },
+    {
+      "id": "kali-privilege-escalation",
+      "name": "06 - Privilege Escalation",
+      "translations": {
+        "es": "06 - Escalada de Privilegios",
+        "fr": "06 - Escalade de Privilèges",
+        "de": "06 - Privilegien Erweiterung",
+        "pt": "06 - Elevação de Privilégios",
+        "zh_CN": "06 - 权限提升"
+      },
+      "children": []
+    },
+    {
+      "id": "kali-credential-access",
+      "name": "08 - Credential Access",
+      "translations": {
+        "es": "08 - Acceso a Credenciales",
+        "fr": "08 - Accès aux Identifiants",
+        "de": "08 - Zugriff auf Zugangsdaten",
+        "pt": "08 - Acesso a Credenciais",
+        "zh_CN": "08 - 凭证访问"
+      },
+      "children": [
+        {
+          "id": "kali-os-credential-dumping",
+          "name": "• OS Credential Dumping",
+          "translations": {
+            "es": "• Extracción de Credenciales del SO",
+            "fr": "• Dumping des identifiants du OS",
+            "de": "• Betriebssystem-Zugangsdatenextraktion",
+            "pt": "• Extração de Credenciais do SO",
+            "zh_CN": "• 操作系统凭据转储"
+          }
+        },
+        {
+          "id": "kali-brute-force",
+          "name": "• Brute Force",
+          "translations": {
+            "es": "• Fuerza Bruta",
+            "fr": "• Attaque par force brute",
+            "de": "• Brute-Force-Angriff",
+            "pt": "• Força Bruta",
+            "zh_CN": "• 暴力破解"
+          }
+        },
+        {
+          "id": "kali-password-cracking",
+          "name": "• Password Cracking",
+          "translations": {
+            "es": "• Descifrado de Contraseñas",
+            "fr": "• Craquage de Mots de Passe",
+            "de": "• Passwort-Knacken",
+            "pt": "• Quebra de Senhas",
+            "zh_CN": "• 破解密码"
+          }
+        },
+        {
+          "id": "kali-pass-the-hash",
+          "name": "• Pass-the-Hash",
+          "translations": {
+            "es": "• Pass-the-Hash",
+            "fr": "• Pass-the-Hash",
+            "de": "• Pass-the-Hash",
+            "pt": "• Pass-the-Hash",
+            "zh_CN": "• Pass-the-Hash"
+          }
+        }
+      ]
+    },
+    {
+      "id": "kali-discovery",
+      "name": "09 - Discovery",
+      "translations": {
+        "es": "09 - Descubrimiento",
+        "fr": "09 - Découverte",
+        "de": "09 - Entdeckung",
+        "pt": "09 - Descoberta",
+        "zh_CN": "09 - 发现"
+      },
+      "children": [
+        {
+          "id": "kali-network-service-discovery",
+          "name": "• Network Service Discovery",
+          "translations": {
+            "es": "• Descubrimiento de Servicios de Red",
+            "fr": "• Découverte de Services Réseau",
+            "de": "• Netzwerkdienst-Erkennung",
+            "pt": "• Descoberta de Serviços de Rede",
+            "zh_CN": "• 网络服务发现"
+          }
+        },
+        {
+          "id": "kali-network-sniffing",
+          "name": "• Network Sniffing",
+          "translations": {
+            "es": "• Sniffing de Red",
+            "fr": "• Sniffing de Réseau",
+            "de": "• Netzwerk-Sniffing",
+            "pt": "• Sniffing de Rede",
+            "zh_CN": "• 网络嗅探"
+          }
+        }
+      ]
+    },
+    {
+      "id": "kali-collection",
+      "name": "11 - Collection",
+      "translations": {
+        "es": "11 - Recopilación",
+        "fr": "11 - Collecte",
+        "de": "11 - Sammlung",
+        "pt": "11 - Coleta",
+        "zh_CN": "11 - 收集"
+      },
+      "children": []
+    },
+    {
+      "id": "kali-command-and-control",
+      "name": "12 - Command and Control",
+      "translations": {
+        "es": "12 - Comando y Control",
+        "fr": "12 - Commandement et Contrôle",
+        "de": "12 - Befehl und Kontrolle",
+        "pt": "12 - Comando e Controle",
+        "zh_CN": "12 - 指挥控制"
+      },
+      "children": [
+        {
+          "id": "kali-non-application-layer-protocol",
+          "name": "• Non-Application Layer Protocol",
+          "translations": {
+            "es": "• Protocolo fuera de Capa de Aplicación",
+            "fr": "• Protocole Non-Couche Application",
+            "de": "• Nicht-Anwendungsschicht-Protokoll",
+            "pt": "• Protocolo fora da camada de aplicação",
+            "zh_CN": "• 非应用层协议"
+          }
+        }
+      ]
+    },
+    {
+      "id": "kali-exfiltration",
+      "name": "13 - Exfiltration",
+      "translations": {
+        "es": "13 - Exfiltración",
+        "fr": "13 - Exfiltration",
+        "de": "13 - Exfiltration",
+        "pt": "13 - Exfiltração",
+        "zh_CN": "13 - 渗漏"
+      },
+      "children": []
+    },
+    {
+      "id": "kali-forensics",
+      "name": "15 - Forensics",
+      "translations": {
+        "es": "15 - Análisis forense",
+        "fr": "15 - Criminalistique",
+        "de": "15 - Forensik",
+        "pt": "15 - Análise forense",
+        "zh_CN": "15 - 数字取证"
+      },
+      "children": [
+        {
+          "id": "kali-digital-forensics",
+          "name": "• Digital Forensics",
+          "translations": {
+            "es": "• Análisis forense digital",
+            "fr": "• Criminalistique Numérique",
+            "de": "• Digitale Forensik",
+            "pt": "• Análise forense digital",
+            "zh_CN": "• 数字取证"
+          }
+        },
+        {
+          "id": "kali-sleuth-kit-suite",
+          "name": "• Sleuth Kit Suite",
+          "translations": {
+            "es": "• Kits de forensia",
+            "fr": "• Suites Criminalistique",
+            "de": "• Forensik-Werkzeugsammlungen",
+            "pt": "• Kits forenses",
+            "zh_CN": "• 数字取证套件"
+          }
+        }
+      ]
+    }
+  ]
+}

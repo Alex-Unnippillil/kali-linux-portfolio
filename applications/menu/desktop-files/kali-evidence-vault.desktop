@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Evidence Vault (Simulated)
+GenericName=Case Evidence Organizer
+Comment=Guided evidence tagging and chain of custody simulator
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/evidence-vault
+Icon=folder-documents
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-collection;kali-forensics;
+Keywords=evidence;chain of custody;case management;vault;
+X-Kali-Simulation=true
+X-Portfolio-App=evidence-vault
+

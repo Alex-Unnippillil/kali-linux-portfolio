@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Reaver (Simulated)
+GenericName=WPS Credential Tester
+Comment=Simulation of a Reaver WPS audit with defensive tips
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/reaver
+Icon=kali-reaver
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-wifi-credential-access;kali-credential-access;kali-reconnaissance;
+Keywords=wps;wifi;reaver;wireless cracking;
+X-Kali-Package=reaver
+X-Kali-Simulation=true
+X-Portfolio-App=reaver
+

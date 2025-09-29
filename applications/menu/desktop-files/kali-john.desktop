@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=John the Ripper (Simulated)
+GenericName=Password Cracker
+Comment=Portfolio walk-through of John the Ripper cracking workflows
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/john
+Icon=kali-john
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-password-cracking;kali-credential-access;
+Keywords=password cracker;john the ripper;hash cracking;wordlist;
+X-Kali-Package=john
+X-Kali-Simulation=true
+X-Portfolio-App=john
+

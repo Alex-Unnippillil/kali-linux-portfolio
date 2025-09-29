@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Netcat (Simulated)
+GenericName=Network Swiss Army Knife
+Comment=Simulated netcat sessions highlighting command and control patterns
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/netcat
+Icon=kali-netcat
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-non-application-layer-protocol;kali-command-and-control;kali-exfiltration;
+Keywords=netcat;nc;reverse shell;tunneling;
+X-Kali-Package=netcat-traditional
+X-Kali-Simulation=true
+X-Portfolio-App=netcat
+

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Files (Simulated)
+GenericName=File Manager
+Comment=Opens the Kali portfolio file explorer simulation
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/file-explorer
+Icon=system-file-manager
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=Utility;FileManager;kali-usual-applications;
+Keywords=files;file manager;browser;explorer;
+X-Kali-Simulation=true
+X-Portfolio-App=file-explorer
+

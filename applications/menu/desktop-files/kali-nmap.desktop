@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Nmap (Simulated)
+GenericName=Network Scanner
+Comment=Portfolio simulator for the Nmap network mapper
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/nmap-nse
+Icon=kali-nmap
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-network-information;kali-network-service-discovery;kali-reconnaissance;kali-discovery;
+Keywords=port scan;network mapper;nmap;nse;inventory;
+X-Kali-Package=nmap
+X-Kali-Simulation=true
+X-Portfolio-App=nmap-nse
+
+
