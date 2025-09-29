@@ -79,10 +79,10 @@ export default class Navbar extends PureComponent {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
                                 <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex h-14 w-full items-center justify-between bg-slate-950/80 px-3 text-ubt-grey shadow-lg backdrop-blur-md"
+                                        className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex h-auto w-full flex-wrap items-center gap-2 bg-slate-950/80 px-3 py-2 text-ubt-grey shadow-lg backdrop-blur-md sm:h-14 sm:flex-nowrap sm:gap-3 sm:py-0"
                                         style={{ minHeight: NAVBAR_HEIGHT }}
                                 >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <div className="flex min-w-0 flex-1 basis-full items-center gap-2 text-xs md:text-sm sm:basis-auto">
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
@@ -93,28 +93,30 @@ export default class Navbar extends PureComponent {
                                                 )}
                                                 <PerformanceGraph />
                                         </div>
-                                        <div
-                                                className={
-                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
-                                                }
-                                        >
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                        <div className="flex basis-full items-center justify-between gap-2 sm:basis-auto sm:justify-end sm:gap-3">
+                                                <div
+                                                        className={
+                                                                'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
+                                                        }
+                                                >
+                                                        <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                                </div>
+                                                <button
+                                                        type="button"
+                                                        id="status-bar"
+                                                        aria-label="System status"
+                                                        onClick={this.handleStatusToggle}
+                                                        className={
+                                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                        }
+                                                >
+                                                        <Status />
+                                                        <QuickSettings open={this.state.status_card} />
+                                                </button>
                                         </div>
-                                        <button
-                                                type="button"
-                                                id="status-bar"
-                                                aria-label="System status"
-                                                onClick={this.handleStatusToggle}
-                                                className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                }
-                                        >
-                                                <Status />
-                                                <QuickSettings open={this.state.status_card} />
-                                        </button>
-				</div>
-			);
-		}
+                                </div>
+                        );
+                }
 
 
 }
