@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
+import inspectHeader from './profileDetection';
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
@@ -28,6 +29,50 @@ const heuristicColors = {
   informational: 'bg-blue-600',
   suspicious: 'bg-yellow-600',
   malicious: 'bg-red-600',
+};
+
+const confidenceColors = {
+  high: 'text-green-400',
+  medium: 'text-yellow-300',
+  low: 'text-orange-300',
+  none: 'text-gray-400',
+};
+
+const formatFileSize = (size) => {
+  if (typeof size !== 'number' || Number.isNaN(size)) {
+    return '';
+  }
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const HEADER_SLICE_LIMIT = 8192;
+
+const readSampleChunk = async (file, limit = HEADER_SLICE_LIMIT) => {
+  const chunk = file.slice(0, limit);
+  if (typeof chunk.arrayBuffer === 'function') {
+    return chunk.arrayBuffer();
+  }
+  if (typeof Response !== 'undefined') {
+    return new Response(chunk).arrayBuffer();
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(reader.result);
+      } else {
+        resolve(reader.result?.buffer);
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(chunk);
+  });
 };
 
 const glossary = {
@@ -124,6 +169,9 @@ const VolatilityApp = () => {
   const [activeTab, setActiveTab] = useState('pstree');
   const [selectedPid, setSelectedPid] = useState(null);
   const [finding, setFinding] = useState(null);
+  const [profileInsights, setProfileInsights] = useState(null);
+  const [profileError, setProfileError] = useState('');
+  const [profileProcessing, setProfileProcessing] = useState(false);
   const workerRef = useRef(null);
 
   useEffect(() => {
@@ -134,6 +182,43 @@ const VolatilityApp = () => {
     }
     return () => workerRef.current?.terminate();
   }, []);
+
+  const handleSampleUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setProfileProcessing(true);
+    setProfileError('');
+    try {
+      const timer =
+        typeof performance !== 'undefined' && typeof performance.now === 'function'
+          ? () => performance.now()
+          : () => Date.now();
+      const start = timer();
+      const buffer = await readSampleChunk(file);
+      const inspection = inspectHeader(buffer);
+      const duration = Math.round(timer() - start);
+      if (duration > 500) {
+        console.warn(`Header inspection exceeded 500 ms budget: ${duration} ms`);
+      }
+      setProfileInsights({
+        ...inspection,
+        fileName: file.name,
+        fileSize: file.size,
+        duration,
+      });
+    } catch (error) {
+      console.error('Unable to inspect header', error);
+      setProfileInsights(null);
+      setProfileError('Unable to inspect the memory sample header.');
+    } finally {
+      setProfileProcessing(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
 
   const analyze = async () => {
     setLoading(true);
@@ -171,7 +256,100 @@ const VolatilityApp = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
-      <div className="p-4 space-y-2">
+      <div className="p-4 space-y-4 border-b border-gray-800 bg-gray-900">
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold">Memory sample inspector</h2>
+          <p className="text-xs text-gray-400">
+            Upload a small slice of a memory image to infer the most likely Volatility profile. Only the first {Math.round(
+              HEADER_SLICE_LIMIT / 1024
+            )}{' '}
+            KB are scanned to keep parsing under the 500 ms budget.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <label htmlFor="volatility-sample" className="font-semibold text-gray-200">
+              Memory sample
+            </label>
+            <input
+              id="volatility-sample"
+              type="file"
+              accept=".raw,.bin,.mem,.img,.lime"
+              className="text-xs text-gray-200"
+              onChange={handleSampleUpload}
+              disabled={profileProcessing}
+              aria-label="Upload memory sample"
+            />
+            {profileProcessing && <span className="text-[11px] text-gray-400">Inspecting…</span>}
+          </div>
+          {profileError && (
+            <p className="text-xs text-red-400" role="alert">
+              {profileError}
+            </p>
+          )}
+          {profileInsights && (
+            <div className="space-y-2 bg-gray-950 border border-gray-800 rounded p-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-gray-400">Detected profile:</span>{' '}
+                  <span className="font-semibold">
+                    {profileInsights.profile ? profileInsights.profile.label : 'No direct match'}
+                  </span>
+                </div>
+                <div className="text-gray-400">
+                  <span className="font-semibold text-gray-300">Runtime:</span> {profileInsights.duration} ms
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-400">Confidence:</span>{' '}
+                <span
+                  className={`${
+                    confidenceColors[profileInsights.confidence.level] || 'text-gray-400'
+                  } font-semibold`}
+                >
+                  {profileInsights.confidence.level.toUpperCase()}
+                </span>
+                {profileInsights.confidence.score > 0 && (
+                  <span className="text-gray-500"> ({Math.round(profileInsights.confidence.score * 100)}%)</span>
+                )}
+              </div>
+              {profileInsights.family && (
+                <p className="text-[11px] text-gray-400 capitalize">
+                  Family hint: {profileInsights.family}
+                </p>
+              )}
+              {profileInsights.note && (
+                <p className="text-[11px] text-gray-300 leading-relaxed">{profileInsights.note}</p>
+              )}
+              <p className="text-[11px] text-gray-500">
+                File: {profileInsights.fileName}{' '}
+                {typeof profileInsights.fileSize === 'number'
+                  ? `(${formatFileSize(profileInsights.fileSize)})`
+                  : ''}
+              </p>
+              {profileInsights.suggestions && profileInsights.suggestions.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[11px] text-yellow-300">Suggested alternatives:</p>
+                  <ul className="text-[11px] list-disc list-inside text-gray-200 space-y-0.5">
+                    {profileInsights.suggestions.map((suggestion) => (
+                      <li key={suggestion.slug}>
+                        {suggestion.label}{' '}
+                        <span className="text-gray-500">
+                          ({Math.round(suggestion.confidence * 100)}% match)
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p
+                className={`text-[11px] ${
+                  profileInsights.duration > 500 ? 'text-red-400' : 'text-green-400'
+                }`}
+              >
+                Header inspection {profileInsights.duration > 500 ? 'exceeded' : 'completed within'} the 500 ms target.
+              </p>
+            </div>
+          )}
+        </div>
         <button
           onClick={analyze}
           disabled={loading}
