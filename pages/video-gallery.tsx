@@ -1,5 +1,6 @@
-import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
+
+import SmartImage from '../components/util-components/SmartImage';
 
 interface Video {
   id: string;
@@ -39,12 +40,17 @@ const VideoGallery: React.FC = () => {
 
   return (
     <main className="p-4">
+      <label htmlFor="video-search" className="sr-only">
+        Search videos
+      </label>
       <input
+        id="video-search"
         type="text"
         placeholder="Search videos..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="mb-4 w-full max-w-md px-4 py-2 border rounded"
+        aria-label="Search videos"
       />
       {playing && (
         <div className="mb-4 w-full max-w-2xl aspect-video">
@@ -67,7 +73,7 @@ const VideoGallery: React.FC = () => {
             className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
             onClick={() => setPlaying(video.id)}
           >
-            <Image
+            <SmartImage
               src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
               alt={video.title}
               width={480}

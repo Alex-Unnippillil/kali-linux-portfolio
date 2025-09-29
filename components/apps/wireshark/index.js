@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import SmartImage from '../../util-components/SmartImage';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
 import { protocolName, getRowColor, matchesDisplayFilter } from './utils';
@@ -225,7 +225,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
             className="flex items-center justify-between bg-gray-800 rounded p-2"
           >
             <div className="flex items-center space-x-2">
-              <Image
+              <SmartImage
                 src={
                   iface.type === 'wired'
                     ? '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
@@ -302,11 +302,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
         <datalist id="bpf-suggestions">
-          <option value="tcp" />
-          <option value="udp" />
-          <option value="icmp" />
-          <option value="port 80" />
-          <option value="host 10.0.0.1" />
+          <option value="tcp">tcp</option>
+          <option value="udp">udp</option>
+          <option value="icmp">icmp</option>
+          <option value="port 80">port 80</option>
+          <option value="host 10.0.0.1">host 10.0.0.1</option>
         </datalist>
         <a
           href="https://www.wireshark.org/docs/dfref/"

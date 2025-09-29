@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import Image from 'next/image';
+
+import SmartImage from '../util-components/SmartImage';
 
 const certBadges = [
   {
@@ -262,7 +263,7 @@ const Certs = () => {
         {filtered.map((badge) => (
           <div key={badge.href} className="m-2 text-center w-28">
             <a href={badge.href} target="_blank" rel="noopener noreferrer">
-              <Image
+              <SmartImage
                 src={badge.src}
                 alt={badge.alt}
                 className="mx-auto"

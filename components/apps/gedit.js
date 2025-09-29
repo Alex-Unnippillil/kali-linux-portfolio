@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
+import SmartImage from '../util-components/SmartImage';
 
 export class Gedit extends Component {
 
@@ -153,18 +153,27 @@ export class Gedit extends Component {
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
                     <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
                     <div className="relative">
-                        <input id="sender-name" value={this.state.name} onChange={this.handleChange('name')} onBlur={this.handleBlur('name')} aria-invalid={nameInvalid} aria-describedby="name-status" className={`w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent ${nameInvalid ? 'border border-red-500' : nameValid ? 'border border-emerald-500' : ''}`} placeholder="Your Email / Name :" spellCheck="false" autoComplete="off" type="text" />
+                        <label htmlFor="sender-name" className="sr-only">
+                            Your email or name
+                        </label>
+                        <input id="sender-name" value={this.state.name} onChange={this.handleChange('name')} onBlur={this.handleBlur('name')} aria-invalid={nameInvalid} aria-describedby="name-status" className={`w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent ${nameInvalid ? 'border border-red-500' : nameValid ? 'border border-emerald-500' : ''}`} placeholder="Your Email / Name :" spellCheck="false" autoComplete="off" type="text" aria-label="Your email or name" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold light text-sm text-ubt-gedit-blue">1</span>
                         <p id="name-status" className={`text-xs mt-1 ${nameInvalid ? 'text-red-400' : nameValid ? 'text-emerald-400' : 'sr-only'}`} aria-live="polite">
                             {nameInvalid ? 'Name must not be empty' : nameValid ? 'Looks good' : ''}
                         </p>
                     </div>
                     <div className="relative">
-                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
+                        <label htmlFor="sender-subject" className="sr-only">
+                            Subject
+                        </label>
+                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" aria-label="Subject" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold  text-sm text-ubt-gedit-blue">2</span>
                     </div>
                     <div className="relative flex-grow">
-                        <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} onBlur={this.handleBlur('message')} aria-invalid={messageInvalid} aria-describedby="message-status" className={`w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent ${messageInvalid ? 'border border-red-500' : messageValid ? 'border border-emerald-500' : ''}`} placeholder="Message" spellCheck="false" autoComplete="none" type="text" />
+                        <label htmlFor="sender-message" className="sr-only">
+                            Message
+                        </label>
+                        <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} onBlur={this.handleBlur('message')} aria-invalid={messageInvalid} aria-describedby="message-status" className={`w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent ${messageInvalid ? 'border border-red-500' : messageValid ? 'border border-emerald-500' : ''}`} placeholder="Message" spellCheck="false" autoComplete="none" type="text" aria-label="Message" />
                         <span className="absolute left-1 top-1 font-bold  text-sm text-ubt-gedit-blue">3</span>
                         <p id="message-status" className={`text-xs mt-1 ${messageInvalid ? 'text-red-400' : messageValid ? 'text-emerald-400' : 'sr-only'}`} aria-live="polite">
                             {messageInvalid ? 'Message must not be empty' : messageValid ? 'Looks good' : ''}
@@ -175,7 +184,7 @@ export class Gedit extends Component {
                     this.state.location &&
                     <div className="bg-ub-gedit-dark border-t border-b border-ubt-gedit-blue p-2">
                         <h2 className="font-bold text-sm mb-1">Your Local Time</h2>
-                        <Image
+                        <SmartImage
                             src={`https://staticmap.openstreetmap.de/staticmap.php?center=${this.state.location.latitude},${this.state.location.longitude}&zoom=3&size=300x150&markers=${this.state.location.latitude},${this.state.location.longitude},red-dot`}
                             alt="Map showing your approximate location"
                             className="w-full rounded"
@@ -192,7 +201,7 @@ export class Gedit extends Component {
                             {this.state.showProgress ? (
                                 <ProgressBar progress={this.state.progress} />
                             ) : (
-                                <Image
+                                <SmartImage
                                     className="w-8 motion-safe:animate-spin"
                                     src="/themes/Yaru/status/process-working-symbolic.svg"
                                     alt="Ubuntu Process Symbol"

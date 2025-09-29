@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import GhidraApp from '../../../components/apps/ghidra';
+import SmartImage from '../../../components/util-components/SmartImage';
 
 export default function DemoRunner() {
   const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;
@@ -32,13 +32,13 @@ export default function DemoRunner() {
   if (!enabled) {
     return (
       <div className="flex flex-col items-center space-y-4">
-        <Image
+        <SmartImage
           src="/themes/Yaru/apps/ghidra.svg"
           width={256}
           height={256}
           alt="Ghidra screenshot 1"
         />
-        <Image
+        <SmartImage
           src="/themes/Yaru/apps/ghidra.svg"
           width={256}
           height={256}

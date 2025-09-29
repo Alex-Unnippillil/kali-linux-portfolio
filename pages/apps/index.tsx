@@ -1,5 +1,4 @@
-import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import DelayedTooltip from '../../components/ui/DelayedTooltip';
 import AppTooltipContent from '../../components/ui/AppTooltipContent';
@@ -7,11 +6,13 @@ import {
   buildAppMetadata,
   loadAppRegistry,
 } from '../../lib/appRegistry';
+import type { AppEntry, AppMetadata } from '../../lib/appRegistry';
+import SmartImage from '../../components/util-components/SmartImage';
 
 const AppsPage = () => {
-  const [apps, setApps] = useState([]);
+  const [apps, setApps] = useState<AppEntry[]>([]);
   const [query, setQuery] = useState('');
-  const [metadata, setMetadata] = useState({});
+  const [metadata, setMetadata] = useState<Record<string, AppMetadata>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -45,9 +46,10 @@ const AppsPage = () => {
         id="app-search"
         type="search"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
         placeholder="Search apps"
         className="mb-4 w-full rounded border p-2"
+        aria-label="Search apps"
       />
       <div
         id="app-grid"
@@ -76,7 +78,7 @@ const AppsPage = () => {
                     onBlur={onBlur}
                   >
                     {app.icon && (
-                      <Image
+                      <SmartImage
                         src={app.icon}
                         alt=""
                         width={64}

@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
-import Image from 'next/image'
+
+import SmartImage from '../util-components/SmartImage'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -78,7 +79,7 @@ export class UbuntuApp extends Component {
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >
-                <Image
+                <SmartImage
                     width={48}
                     height={48}
                     className="mb-1"

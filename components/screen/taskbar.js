@@ -1,5 +1,6 @@
 import React from 'react';
-import Image from 'next/image';
+
+import SmartImage from '../util-components/SmartImage';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
@@ -53,7 +54,7 @@ export default function Taskbar(props) {
                                 gap: '0.5rem',
                             }}
                         >
-                            <Image
+                            <SmartImage
                                 width={32}
                                 height={32}
                                 style={{

@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
+import SmartImage from "../util-components/SmartImage";
 
 const ICONS = {
   muted: "/themes/Yaru/status/audio-volume-muted-symbolic.svg",
@@ -116,7 +116,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
         onClick={handleToggle}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Image
+        <SmartImage
           width={16}
           height={16}
           src={ICONS[level]}

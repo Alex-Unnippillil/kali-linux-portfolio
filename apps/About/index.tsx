@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import AboutApp from '../../components/apps/About';
+import SmartImage from '../../components/util-components/SmartImage';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -34,7 +34,7 @@ export default function AboutPage() {
     <div className="min-h-screen w-full bg-[var(--kali-bg)] text-sm">
       <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
         <section className="flex items-center mb-8">
-          <Image
+          <SmartImage
             src="/images/logos/bitmoji.png"
             alt="Alex Unnippillil"
             width={128}
