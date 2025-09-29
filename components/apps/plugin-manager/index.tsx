@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Diagnostics from '../../../apps/plugin-manager/components/Diagnostics';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -7,6 +8,8 @@ interface PluginManifest {
   id: string;
   sandbox: 'worker' | 'iframe';
   code: string;
+  name?: string;
+  peerDependencies?: Record<string, string>;
 }
 
 export default function PluginManager() {
@@ -120,6 +123,8 @@ export default function PluginManager() {
     URL.revokeObjectURL(url);
   };
 
+  const installedManifests = useMemo(() => Object.values(installed), [installed]);
+
   return (
     <div className="p-4 text-white">
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
@@ -159,6 +164,7 @@ export default function PluginManager() {
           </button>
         </div>
       )}
+      <Diagnostics manifests={installedManifests} />
     </div>
   );
 }

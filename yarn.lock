@@ -3700,6 +3700,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/semver@npm:^7":
+  version: 7.7.1
+  resolution: "@types/semver@npm:7.7.1"
+  checksum: 10c0/c938aef3bf79a73f0f3f6037c16e2e759ff40c54122ddf0b2583703393d8d3127130823facb880e694caa324eb6845628186aac1997ee8b31dc2d18fafe26268
+  languageName: node
+  linkType: hard
+
 "@types/stack-utils@npm:^2.0.3":
   version: 2.0.3
   resolution: "@types/stack-utils@npm:2.0.3"
@@ -13880,6 +13887,7 @@ __metadata:
     "@types/react-dom": "npm:19.1.9"
     "@types/react-transition-group": "npm:^4"
     "@types/seedrandom": "npm:^3"
+    "@types/semver": "npm:^7"
     "@types/three": "npm:^0.179.0"
     "@types/web-bluetooth": "npm:^0.0.21"
     "@types/wicg-file-system-access": "npm:^2023.10.6"
@@ -13955,6 +13963,7 @@ __metadata:
     react-window: "npm:^2.0.2"
     rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
+    semver: "npm:^7.7.2"
     sharp: "npm:^0.34.3"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
