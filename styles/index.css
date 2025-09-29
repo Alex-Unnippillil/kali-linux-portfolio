@@ -16,10 +16,11 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
-a:focus-visible,
-button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
-    outline-offset: 2px;
+a.focus-ring-target:focus-visible,
+button.focus-ring-target:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color) !important;
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: var(--focus-ring-glow);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -507,13 +508,6 @@ textarea,
 pre {
     font-family: monospace;
     line-height: 1.2;
-}
-
-/* Visible focus rings for copy buttons and text areas */
-button:focus-visible,
-textarea:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color);
-    outline-offset: 2px;
 }
 
 /* Enable scroll snapping for gallery containers */

@@ -77,9 +77,12 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
-  /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
-  --focus-outline-width: 2px;
+
+  /* Focus ring */
+  --focus-ring-color: var(--color-accent, #1793d1);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-glow: 0 0 0 4px color-mix(in srgb, var(--focus-ring-color) 35%, transparent);
 }
 
 /* High contrast theme */
@@ -97,6 +100,8 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --focus-ring-color: #ffff00;
+  --focus-ring-glow: 0 0 0 4px rgba(255, 255, 0, 0.45);
 }
 
 /* Dyslexia-friendly fonts */

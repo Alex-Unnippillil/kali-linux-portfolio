@@ -44,7 +44,7 @@ export default function Taskbar(props) {
                             data-active={isActive ? 'true' : 'false'}
                             aria-pressed={isActive}
                             onClick={() => handleClick(app)}
-                            className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center justify-center rounded-lg transition-colors hover:bg-white hover:bg-opacity-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
+                            className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}focus-ring-target relative flex items-center justify-center rounded-lg transition-colors hover:bg-white hover:bg-opacity-10`}
                             style={{
                                 minHeight: 'var(--shell-hit-target, 2.5rem)',
                                 minWidth: 'var(--shell-hit-target, 2.5rem)',
