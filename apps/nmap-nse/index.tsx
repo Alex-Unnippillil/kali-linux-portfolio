@@ -3,14 +3,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
 
-interface Script {
+interface ScriptMeta {
   name: string;
   description: string;
   example: string;
-  tag: string;
 }
 
-type ScriptData = Record<string, Omit<Script, 'tag'>[]>;
+interface ScriptWithCategory extends ScriptMeta {
+  category: string;
+}
+
+type ScriptCatalog = Record<string, ScriptMeta[]>;
 
 /**
  * Nmap NSE playground with a script browser on the left and
@@ -18,10 +21,10 @@ type ScriptData = Record<string, Omit<Script, 'tag'>[]>;
  * purely for learning/demo purposes.
  */
 const NmapNSE: React.FC = () => {
-  const [data, setData] = useState<Script[]>([]);
-  const [activeTag, setActiveTag] = useState('');
+  const [catalog, setCatalog] = useState<ScriptCatalog>({});
+  const [activeCategory, setActiveCategory] = useState('');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Script | null>(null);
+  const [selected, setSelected] = useState<ScriptWithCategory | null>(null);
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
   );
@@ -31,11 +34,8 @@ const NmapNSE: React.FC = () => {
     const load = async () => {
       try {
         const res = await fetch('/demo-data/nmap/scripts.json');
-        const json: ScriptData = await res.json();
-        const flat = Object.entries(json).flatMap(([tag, scripts]) =>
-          scripts.map((s) => ({ ...s, tag }))
-        );
-        setData(flat);
+        const json: ScriptCatalog = await res.json();
+        setCatalog(json);
       } catch {
         /* ignore */
       }
@@ -43,19 +43,51 @@ const NmapNSE: React.FC = () => {
     load();
   }, []);
 
-  const tags = useMemo(() => Array.from(new Set(data.map((s) => s.tag))), [
-    data,
-  ]);
-
-  const scripts = useMemo(
+  const categories = useMemo(
     () =>
-      data.filter(
-        (s) =>
-          (!activeTag || s.tag === activeTag) &&
-          s.name.toLowerCase().includes(search.toLowerCase())
-      ),
-    [activeTag, data, search]
+      Object.keys(catalog).sort((a, b) => a.localeCompare(b, undefined, {
+        sensitivity: 'base',
+      })),
+    [catalog]
   );
+
+  const filteredGroups = useMemo(() => {
+    const query = search.toLowerCase();
+    return Object.entries(catalog).reduce((acc, [category, scripts]) => {
+      if (activeCategory && category !== activeCategory) {
+        return acc;
+      }
+      const filtered = scripts.filter((script) =>
+        script.name.toLowerCase().includes(query)
+      );
+      if (filtered.length) {
+        acc[category] = filtered;
+      }
+      return acc;
+    }, {} as Record<string, ScriptMeta[]>);
+  }, [activeCategory, catalog, search]);
+
+  const flatFilteredScripts = useMemo(
+    () =>
+      Object.entries(filteredGroups).flatMap(([category, scripts]) =>
+        scripts.map<ScriptWithCategory>((script) => ({
+          ...script,
+          category,
+        }))
+      ),
+    [filteredGroups]
+  );
+
+  useEffect(() => {
+    if (!selected) return;
+    const stillVisible = flatFilteredScripts.some(
+      (script) =>
+        script.name === selected.name && script.category === selected.category
+    );
+    if (!stillVisible) {
+      setSelected(null);
+    }
+  }, [flatFilteredScripts, selected]);
 
   const run = () => {
     if (!selected) return;
@@ -80,8 +112,8 @@ const NmapNSE: React.FC = () => {
     share(JSON.stringify(result, null, 2), 'Nmap NSE Result');
   };
 
-  const severityColor = (tag: string) => {
-    switch (tag) {
+  const severityColor = (category: string) => {
+    switch (category) {
       case 'vuln':
         return 'border-red-500';
       case 'safe':
@@ -126,17 +158,26 @@ const NmapNSE: React.FC = () => {
         {/* script browser */}
         <aside className="w-1/3 border-r border-gray-700 flex flex-col">
           <div className="sticky top-0 p-2 bg-gray-900 z-10 flex flex-wrap items-center gap-2">
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                className={`h-6 px-2 rounded-full text-xs capitalize bg-gray-700 hover:bg-gray-600 flex items-center ${
-                  activeTag === tag ? 'bg-blue-600' : ''
-                }`}
-                onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
-              >
-                {tag}
-              </button>
-            ))}
+            {categories.map((category) => {
+              const count = catalog[category]?.length ?? 0;
+              const active = activeCategory === category;
+              return (
+                <button
+                  key={category}
+                  className={`h-6 px-2 rounded-full text-xs capitalize bg-gray-700 hover:bg-gray-600 flex items-center ${
+                    active ? 'bg-blue-600' : ''
+                  }`}
+                  onClick={() =>
+                    setActiveCategory(active ? '' : category)
+                  }
+                  type="button"
+                  aria-pressed={active}
+                  aria-label={`Filter by ${category} (${count})`}
+                >
+                  {category} ({count})
+                </button>
+              );
+            })}
             <input
               type="text"
               value={search}
@@ -152,19 +193,56 @@ const NmapNSE: React.FC = () => {
               Run
             </button>
           </div>
-          <div className="overflow-y-auto flex-1 p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {scripts.map((s) => (
-              <button
-                key={s.name}
-                onClick={() => setSelected(s)}
-                className={`w-full text-left px-2 py-1 rounded font-mono text-sm hover:bg-gray-800 ${
-                  selected?.name === s.name ? 'bg-gray-800' : 'bg-gray-700'
-                }`}
-              >
-                {s.name}
-              </button>
+          <div className="overflow-y-auto flex-1 p-2 space-y-4">
+            {Object.entries(filteredGroups).map(([category, scripts]) => (
+              <section key={category} aria-label={`${category} scripts`}>
+                <h2 className="text-sm uppercase tracking-wide text-gray-400 mb-1">
+                  {category}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {scripts.map((script) => {
+                    const isActive =
+                      selected?.name === script.name &&
+                      selected.category === category;
+                    return (
+                      <button
+                        key={script.name}
+                        onClick={() =>
+                          setSelected({ ...script, category })
+                        }
+                        className={`w-full text-left px-2 py-1 rounded font-mono text-sm hover:bg-gray-800 ${
+                          isActive ? 'bg-gray-800' : 'bg-gray-700'
+                        }`}
+                        type="button"
+                      >
+                        {script.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             ))}
+            {flatFilteredScripts.length === 0 && (
+              <p className="text-sm text-gray-300">No scripts found.</p>
+            )}
           </div>
+          {selected && (
+            <div
+              className={`m-2 mt-0 p-3 rounded border-l-4 ${
+                severityColor(selected.category)
+              } bg-gray-800`}
+              data-testid="script-help-panel"
+            >
+              <h2 className="font-mono text-lg mb-1">{selected.name}</h2>
+              <p className="text-sm mb-2 text-gray-200">{selected.description}</p>
+              <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+                Sample output
+              </h3>
+              <pre className="bg-black text-green-400 rounded p-2 overflow-auto font-mono leading-[1.2]">
+                {selected.example}
+              </pre>
+            </div>
+          )}
         </aside>
 
         {/* details */}
@@ -173,14 +251,14 @@ const NmapNSE: React.FC = () => {
             <div>
               <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
               <p className="mb-4">{selected.description}</p>
-              <p className="mb-2 text-sm">Tag: {selected.tag}</p>
-              <CollapsibleSection title="Sample Output" tag={selected.tag}>
+              <p className="mb-2 text-sm">Category: {selected.category}</p>
+              <CollapsibleSection title="Sample Output" tag={selected.category}>
                 <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
                   {selected.example}
                 </pre>
               </CollapsibleSection>
               {result && (
-                <CollapsibleSection title="Result" tag={selected.tag}>
+                <CollapsibleSection title="Result" tag={selected.category}>
                   <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
                     {JSON.stringify(result, null, 2)}
                   </pre>
