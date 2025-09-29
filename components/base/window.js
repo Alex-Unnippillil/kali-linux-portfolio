@@ -1,11 +1,9 @@
 "use client";
 
 import React, { Component } from 'react';
-import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
-import useDocPiP from '../../hooks/useDocPiP';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -13,6 +11,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { WindowChrome, WINDOW_CHROME_HANDLE_CLASS } from '../ui/WindowChrome';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -628,7 +627,7 @@ export class Window extends Component {
                 <Draggable
                     nodeRef={this.windowRef}
                     axis="both"
-                    handle=".bg-ub-window-title"
+                    handle={`.${WINDOW_CHROME_HANDLE_CLASS}`}
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
@@ -669,21 +668,25 @@ export class Window extends Component {
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar
+                        <WindowChrome
+                            windowId={this.id}
                             title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
-                            id={this.id}
+                            isMaximized={this.state.maximized}
                             allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            onMinimize={this.minimizeWindow}
+                            onMaximize={this.maximizeWindow}
+                            onClose={this.closeWindow}
+                            pipRenderer={() =>
+                                this.props.screen(
+                                    this.props.addFolder,
+                                    this.props.openApp,
+                                    this.props.context,
+                                )
+                            }
+                            onTitleKeyDown={this.handleTitleBarKeyDown}
+                            onTitleBlur={this.releaseGrab}
+                            onTitlePointerDown={this.focusWindow}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -699,23 +702,6 @@ export class Window extends Component {
 }
 
 export default Window
-
-// Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
-    return (
-        <div
-            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
-            tabIndex={0}
-            role="button"
-            aria-grabbed={grabbed}
-            onKeyDown={onKeyDown}
-            onBlur={onBlur}
-            onPointerDown={onPointerDown}
-        >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
-        </div>
-    )
-}
 
 // Window's Borders
 export class WindowYBorder extends Component {
@@ -755,100 +741,6 @@ export class WindowXBorder extends Component {
                 ></div>
             )
         }
-    }
-
-// Window's Edit Buttons
-export function WindowEditButtons(props) {
-    const { togglePin } = useDocPiP(props.pip || (() => null));
-    const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
-    return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
-            {pipSupported && props.pip && (
-                <button
-                    type="button"
-                    aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                    onClick={togglePin}
-                >
-                    <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-4 w-4 inline"
-                        width={16}
-                        height={16}
-                        sizes="16px"
-                    />
-                </button>
-            )}
-            <button
-                type="button"
-                aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.minimize}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
-            {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
-            )}
-            <button
-                type="button"
-                id={`close-${props.id}`}
-                aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.close}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
-        </div>
-    )
 }
 
 // Window's Main Screen
