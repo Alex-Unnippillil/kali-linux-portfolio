@@ -11,32 +11,53 @@ type AppTooltipContentProps = {
 
 const AppTooltipContent: React.FC<AppTooltipContentProps> = ({ meta }) => {
   if (!meta) {
-    return <span className="text-xs text-gray-200">Metadata unavailable.</span>;
+    return (
+      <div className="text-xs text-gray-200" role="presentation">
+        Metadata unavailable.
+      </div>
+    );
   }
 
+  const { title, description, path, keyboard } = meta;
+
   return (
-    <div className="space-y-2">
-      {meta.title ? (
-        <p className="text-sm font-semibold text-white">{meta.title}</p>
-      ) : null}
-      {meta.description ? (
-        <p className="text-xs leading-relaxed text-gray-200">{meta.description}</p>
-      ) : null}
-      {meta.path ? (
-        <p className="text-[11px] text-gray-300">
-          <span className="font-semibold text-gray-100">Path:</span>{' '}
-          <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] text-ubt-grey">
-            {meta.path}
-          </code>
+    <div className="flex flex-col gap-2 text-left">
+      {title ? (
+        <p className="text-sm font-semibold text-white" data-testid="tooltip-title">
+          {title}
         </p>
       ) : null}
-      {meta.keyboard?.length ? (
-        <ul className="list-disc space-y-1 pl-4 text-[11px] text-gray-200">
-          {meta.keyboard.map((hint) => (
-            <li key={hint}>{hint}</li>
-          ))}
-        </ul>
+      {description ? (
+        <p className="text-xs leading-relaxed text-gray-200" data-testid="tooltip-description">
+          {description}
+        </p>
       ) : null}
+      {(path || keyboard?.length) && (
+        <dl className="space-y-1 text-[11px] text-gray-200" data-testid="tooltip-meta">
+          {path ? (
+            <div>
+              <dt className="font-semibold text-gray-100">Path</dt>
+              <dd>
+                <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] text-ubt-grey">
+                  {path}
+                </code>
+              </dd>
+            </div>
+          ) : null}
+          {keyboard?.length ? (
+            <div>
+              <dt className="font-semibold text-gray-100">Shortcuts</dt>
+              <dd>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {keyboard.map((hint) => (
+                    <li key={hint}>{hint}</li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      )}
     </div>
   );
 };
