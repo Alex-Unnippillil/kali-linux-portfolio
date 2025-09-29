@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Nikto (Simulated)
+GenericName=Web Vulnerability Scanner
+Comment=Simulated Nikto HTTP scanner with curated findings
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/nikto
+Icon=kali-nikto
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-web-vulnerability-scanning;kali-reconnaissance;
+Keywords=web scanner;nikto;http audit;owasp;
+X-Kali-Package=nikto
+X-Kali-Simulation=true
+X-Portfolio-App=nikto
+

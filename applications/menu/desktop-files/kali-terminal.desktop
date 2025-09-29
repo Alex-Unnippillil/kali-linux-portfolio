@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Terminal (Simulated)
+GenericName=Command Shell
+Comment=Launches the Kali portfolio terminal simulator
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/terminal
+Icon=utilities-terminal
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=System;Utility;kali-usual-applications;
+Keywords=terminal;shell;console;command line;
+X-Kali-Simulation=true
+X-Portfolio-App=terminal
+

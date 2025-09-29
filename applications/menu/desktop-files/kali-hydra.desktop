@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Hydra (Simulated)
+GenericName=Network Login Cracker
+Comment=Guided Hydra credential testing lab with safe targets
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/hydra
+Icon=kali-hydra
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-brute-force;kali-credential-access;
+Keywords=password spray;hydra;brute force;login cracker;
+X-Kali-Package=hydra
+X-Kali-Simulation=true
+X-Portfolio-App=hydra
+

@@ -1,0 +1,45 @@
+<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+  "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
+
+<Menu>
+  <Name>Xfce</Name>
+
+  <DefaultAppDirs/>
+  <DefaultDirectoryDirs/>
+  <DefaultMergeDirs/>
+
+  <Include>
+    <Category>X-Xfce-Toplevel</Category>
+  </Include>
+
+  <Layout>
+    <Filename>xfce4-run.desktop</Filename>
+    <Separator/>
+    <Filename>xfce4-terminal-emulator.desktop</Filename>
+    <Filename>xfce4-file-manager.desktop</Filename>
+    <Filename>xfce4-mail-reader.desktop</Filename>
+    <Filename>xfce4-web-browser.desktop</Filename>
+    <Separator/>
+    <Menuname>Settings</Menuname>
+    <Menuname>Usual Applications</Menuname>
+    <Menuname>Kali Linux</Menuname>
+    <Separator/>
+    <Merge type="all"/>
+    <Separator/>
+    <Filename>xfce4-about.desktop</Filename>
+    <Filename>xfce4-session-logout.desktop</Filename>
+  </Layout>
+
+  <Menu>
+    <Name>Usual Applications</Name>
+    <Directory>usual-apps.directory</Directory>
+    <MergeFile>applications.menu</MergeFile>
+  </Menu>
+
+  <Menu>
+    <Name>Kali Linux</Name>
+    <Directory>kali-menu.directory</Directory>
+    <MergeFile>kali-applications.menu</MergeFile>
+  </Menu>
+</Menu>
+

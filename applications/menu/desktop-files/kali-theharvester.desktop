@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=theHarvester (Simulated)
+GenericName=OSINT Enumerator
+Comment=Simulated theHarvester OSINT runs with exportable reports
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/theharvester
+Icon=kali-theharvester
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-identity-information;kali-reconnaissance;
+Keywords=osint;email harvest;theharvester;enumeration;
+X-Kali-Package=theharvester
+X-Kali-Simulation=true
+X-Portfolio-App=theharvester
+

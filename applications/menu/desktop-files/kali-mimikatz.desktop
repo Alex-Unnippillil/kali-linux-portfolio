@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Mimikatz (Simulated)
+GenericName=Credential Access Toolkit
+Comment=Portfolio demonstration of Mimikatz credential dumping techniques
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/mimikatz
+Icon=kali-mimikatz
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-pass-the-hash;kali-os-credential-dumping;kali-credential-access;
+Keywords=credential dumping;mimikatz;pass the hash;windows;
+X-Kali-Package=mimikatz
+X-Kali-Simulation=true
+X-Portfolio-App=mimikatz
+

@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Volatility (Simulated)
+GenericName=Memory Forensics Toolkit
+Comment=Portfolio labs covering Volatility memory analysis pipelines
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/volatility
+Icon=kali-volatility
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-digital-forensics;kali-forensics;kali-collection;
+Keywords=memory forensics;volatility;ram dump;analysis;
+X-Kali-Package=volatility3
+X-Kali-Simulation=true
+X-Portfolio-App=volatility
+
+

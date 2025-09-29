@@ -1,0 +1,83 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: kali-linux-portfolio\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Usual Applications"
+msgstr "常用程序"
+
+msgid "01 - Reconnaissance"
+msgstr "01 - 侦察"
+
+msgid "• Identity Information"
+msgstr "• 身份信息"
+
+msgid "• Network Information"
+msgstr "• 网络信息"
+
+msgid "• Web Scanning"
+msgstr "• 网络扫描"
+
+msgid "• Web Vulnerability Scanning"
+msgstr "• Web 漏洞扫描"
+
+msgid "• WiFi"
+msgstr "• WiFi"
+
+msgid "03 - Initial Access"
+msgstr "03 - 初始访问"
+
+msgid "04 - Execution"
+msgstr "04 - 执行"
+
+msgid "06 - Privilege Escalation"
+msgstr "06 - 权限提升"
+
+msgid "08 - Credential Access"
+msgstr "08 - 凭证访问"
+
+msgid "• OS Credential Dumping"
+msgstr "• 操作系统凭据转储"
+
+msgid "• Brute Force"
+msgstr "• 暴力破解"
+
+msgid "• Password Cracking"
+msgstr "• 破解密码"
+
+msgid "• Pass-the-Hash"
+msgstr "• Pass-the-Hash"
+
+msgid "09 - Discovery"
+msgstr "09 - 发现"
+
+msgid "• Network Service Discovery"
+msgstr "• 网络服务发现"
+
+msgid "• Network Sniffing"
+msgstr "• 网络嗅探"
+
+msgid "11 - Collection"
+msgstr "11 - 收集"
+
+msgid "12 - Command and Control"
+msgstr "12 - 指挥控制"
+
+msgid "• Non-Application Layer Protocol"
+msgstr "• 非应用层协议"
+
+msgid "13 - Exfiltration"
+msgstr "13 - 渗漏"
+
+msgid "15 - Forensics"
+msgstr "15 - 数字取证"
+
+msgid "• Digital Forensics"
+msgstr "• 数字取证"
+
+msgid "• Sleuth Kit Suite"
+msgstr "• 数字取证套件"
+

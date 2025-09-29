@@ -1,0 +1,688 @@
+{
+  "generatedAt": "2025-09-29T03:01:27.484Z",
+  "desktopFiles": 16,
+  "hierarchyVersion": "2024.3",
+  "reference": "https://www.kali.org/docs/general-use/menu/",
+  "apps": [
+    {
+      "id": "kali-autopsy",
+      "file": "kali-autopsy.desktop",
+      "name": "Autopsy (Simulated)",
+      "genericName": "Digital Forensics Suite",
+      "comment": "Simulated Autopsy case explorer with walk-through datasets",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/autopsy",
+      "icon": "kali-autopsy",
+      "portfolioApp": "autopsy",
+      "package": "autopsy",
+      "keywords": [
+        "forensics",
+        "autopsy",
+        "sleuth kit",
+        "case manager"
+      ],
+      "categories": [
+        {
+          "id": "kali-collection",
+          "name": "11 - Collection",
+          "children": []
+        },
+        {
+          "id": "kali-forensics",
+          "name": "15 - Forensics",
+          "children": [
+            {
+              "id": "kali-digital-forensics",
+              "name": "• Digital Forensics"
+            },
+            {
+              "id": "kali-sleuth-kit-suite",
+              "name": "• Sleuth Kit Suite"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-evidence-vault",
+      "file": "kali-evidence-vault.desktop",
+      "name": "Evidence Vault (Simulated)",
+      "genericName": "Case Evidence Organizer",
+      "comment": "Guided evidence tagging and chain of custody simulator",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/evidence-vault",
+      "icon": "folder-documents",
+      "portfolioApp": "evidence-vault",
+      "package": null,
+      "keywords": [
+        "evidence",
+        "chain of custody",
+        "case management",
+        "vault"
+      ],
+      "categories": [
+        {
+          "id": "kali-collection",
+          "name": "11 - Collection",
+          "children": []
+        },
+        {
+          "id": "kali-forensics",
+          "name": "15 - Forensics",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "kali-files",
+      "file": "kali-files.desktop",
+      "name": "Files (Simulated)",
+      "genericName": "File Manager",
+      "comment": "Opens the Kali portfolio file explorer simulation",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/file-explorer",
+      "icon": "system-file-manager",
+      "portfolioApp": "file-explorer",
+      "package": null,
+      "keywords": [
+        "files",
+        "file manager",
+        "browser",
+        "explorer"
+      ],
+      "categories": [
+        {
+          "id": "kali-usual-applications",
+          "name": "Usual Applications",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "kali-hydra",
+      "file": "kali-hydra.desktop",
+      "name": "Hydra (Simulated)",
+      "genericName": "Network Login Cracker",
+      "comment": "Guided Hydra credential testing lab with safe targets",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/hydra",
+      "icon": "kali-hydra",
+      "portfolioApp": "hydra",
+      "package": "hydra",
+      "keywords": [
+        "password spray",
+        "hydra",
+        "brute force",
+        "login cracker"
+      ],
+      "categories": [
+        {
+          "id": "kali-credential-access",
+          "name": "08 - Credential Access",
+          "children": [
+            {
+              "id": "kali-brute-force",
+              "name": "• Brute Force"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-john",
+      "file": "kali-john.desktop",
+      "name": "John the Ripper (Simulated)",
+      "genericName": "Password Cracker",
+      "comment": "Portfolio walk-through of John the Ripper cracking workflows",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/john",
+      "icon": "kali-john",
+      "portfolioApp": "john",
+      "package": "john",
+      "keywords": [
+        "password cracker",
+        "john the ripper",
+        "hash cracking",
+        "wordlist"
+      ],
+      "categories": [
+        {
+          "id": "kali-credential-access",
+          "name": "08 - Credential Access",
+          "children": [
+            {
+              "id": "kali-password-cracking",
+              "name": "• Password Cracking"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-metasploit-framework",
+      "file": "kali-metasploit-framework.desktop",
+      "name": "Metasploit Framework (Simulated)",
+      "genericName": "Exploit Development Platform",
+      "comment": "Metasploit simulation with safe modules and reporting",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/metasploit",
+      "icon": "kali-metasploit-framework",
+      "portfolioApp": "metasploit",
+      "package": "metasploit-framework",
+      "keywords": [
+        "metasploit",
+        "msfconsole",
+        "exploit dev",
+        "payloads"
+      ],
+      "categories": [
+        {
+          "id": "kali-initial-access",
+          "name": "03 - Initial Access",
+          "children": []
+        },
+        {
+          "id": "kali-execution",
+          "name": "04 - Execution",
+          "children": []
+        },
+        {
+          "id": "kali-privilege-escalation",
+          "name": "06 - Privilege Escalation",
+          "children": []
+        },
+        {
+          "id": "kali-command-and-control",
+          "name": "12 - Command and Control",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "kali-mimikatz",
+      "file": "kali-mimikatz.desktop",
+      "name": "Mimikatz (Simulated)",
+      "genericName": "Credential Access Toolkit",
+      "comment": "Portfolio demonstration of Mimikatz credential dumping techniques",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/mimikatz",
+      "icon": "kali-mimikatz",
+      "portfolioApp": "mimikatz",
+      "package": "mimikatz",
+      "keywords": [
+        "credential dumping",
+        "mimikatz",
+        "pass the hash",
+        "windows"
+      ],
+      "categories": [
+        {
+          "id": "kali-credential-access",
+          "name": "08 - Credential Access",
+          "children": [
+            {
+              "id": "kali-os-credential-dumping",
+              "name": "• OS Credential Dumping"
+            },
+            {
+              "id": "kali-pass-the-hash",
+              "name": "• Pass-the-Hash"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-netcat",
+      "file": "kali-netcat.desktop",
+      "name": "Netcat (Simulated)",
+      "genericName": "Network Swiss Army Knife",
+      "comment": "Simulated netcat sessions highlighting command and control patterns",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/netcat",
+      "icon": "kali-netcat",
+      "portfolioApp": "netcat",
+      "package": "netcat-traditional",
+      "keywords": [
+        "netcat",
+        "nc",
+        "reverse shell",
+        "tunneling"
+      ],
+      "categories": [
+        {
+          "id": "kali-command-and-control",
+          "name": "12 - Command and Control",
+          "children": [
+            {
+              "id": "kali-non-application-layer-protocol",
+              "name": "• Non-Application Layer Protocol"
+            }
+          ]
+        },
+        {
+          "id": "kali-exfiltration",
+          "name": "13 - Exfiltration",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "kali-nikto",
+      "file": "kali-nikto.desktop",
+      "name": "Nikto (Simulated)",
+      "genericName": "Web Vulnerability Scanner",
+      "comment": "Simulated Nikto HTTP scanner with curated findings",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/nikto",
+      "icon": "kali-nikto",
+      "portfolioApp": "nikto",
+      "package": "nikto",
+      "keywords": [
+        "web scanner",
+        "nikto",
+        "http audit",
+        "owasp"
+      ],
+      "categories": [
+        {
+          "id": "kali-reconnaissance",
+          "name": "01 - Reconnaissance",
+          "children": [
+            {
+              "id": "kali-web-vulnerability-scanning",
+              "name": "• Web Vulnerability Scanning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-nmap",
+      "file": "kali-nmap.desktop",
+      "name": "Nmap (Simulated)",
+      "genericName": "Network Scanner",
+      "comment": "Portfolio simulator for the Nmap network mapper",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/nmap-nse",
+      "icon": "kali-nmap",
+      "portfolioApp": "nmap-nse",
+      "package": "nmap",
+      "keywords": [
+        "port scan",
+        "network mapper",
+        "nmap",
+        "nse",
+        "inventory"
+      ],
+      "categories": [
+        {
+          "id": "kali-reconnaissance",
+          "name": "01 - Reconnaissance",
+          "children": [
+            {
+              "id": "kali-network-information",
+              "name": "• Network Information"
+            }
+          ]
+        },
+        {
+          "id": "kali-discovery",
+          "name": "09 - Discovery",
+          "children": [
+            {
+              "id": "kali-network-service-discovery",
+              "name": "• Network Service Discovery"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-reaver",
+      "file": "kali-reaver.desktop",
+      "name": "Reaver (Simulated)",
+      "genericName": "WPS Credential Tester",
+      "comment": "Simulation of a Reaver WPS audit with defensive tips",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/reaver",
+      "icon": "kali-reaver",
+      "portfolioApp": "reaver",
+      "package": "reaver",
+      "keywords": [
+        "wps",
+        "wifi",
+        "reaver",
+        "wireless cracking"
+      ],
+      "categories": [
+        {
+          "id": "kali-reconnaissance",
+          "name": "01 - Reconnaissance",
+          "children": [
+            {
+              "id": "kali-wifi-credential-access",
+              "name": "• WiFi"
+            }
+          ]
+        },
+        {
+          "id": "kali-credential-access",
+          "name": "08 - Credential Access",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "kali-recon-ng",
+      "file": "kali-recon-ng.desktop",
+      "name": "Recon-ng (Simulated)",
+      "genericName": "Web Recon Framework",
+      "comment": "Simulated Recon-ng workspace builder with preloaded modules",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/reconng",
+      "icon": "kali-recon-ng",
+      "portfolioApp": "reconng",
+      "package": "recon-ng",
+      "keywords": [
+        "osint",
+        "web recon",
+        "recon-ng",
+        "modules"
+      ],
+      "categories": [
+        {
+          "id": "kali-reconnaissance",
+          "name": "01 - Reconnaissance",
+          "children": [
+            {
+              "id": "kali-web-scanning",
+              "name": "• Web Scanning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-terminal",
+      "file": "kali-terminal.desktop",
+      "name": "Terminal (Simulated)",
+      "genericName": "Command Shell",
+      "comment": "Launches the Kali portfolio terminal simulator",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/terminal",
+      "icon": "utilities-terminal",
+      "portfolioApp": "terminal",
+      "package": null,
+      "keywords": [
+        "terminal",
+        "shell",
+        "console",
+        "command line"
+      ],
+      "categories": [
+        {
+          "id": "kali-usual-applications",
+          "name": "Usual Applications",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "kali-theharvester",
+      "file": "kali-theharvester.desktop",
+      "name": "theHarvester (Simulated)",
+      "genericName": "OSINT Enumerator",
+      "comment": "Simulated theHarvester OSINT runs with exportable reports",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/theharvester",
+      "icon": "kali-theharvester",
+      "portfolioApp": "theharvester",
+      "package": "theharvester",
+      "keywords": [
+        "osint",
+        "email harvest",
+        "theharvester",
+        "enumeration"
+      ],
+      "categories": [
+        {
+          "id": "kali-reconnaissance",
+          "name": "01 - Reconnaissance",
+          "children": [
+            {
+              "id": "kali-identity-information",
+              "name": "• Identity Information"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-volatility",
+      "file": "kali-volatility.desktop",
+      "name": "Volatility (Simulated)",
+      "genericName": "Memory Forensics Toolkit",
+      "comment": "Portfolio labs covering Volatility memory analysis pipelines",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/volatility",
+      "icon": "kali-volatility",
+      "portfolioApp": "volatility",
+      "package": "volatility3",
+      "keywords": [
+        "memory forensics",
+        "volatility",
+        "ram dump",
+        "analysis"
+      ],
+      "categories": [
+        {
+          "id": "kali-collection",
+          "name": "11 - Collection",
+          "children": []
+        },
+        {
+          "id": "kali-forensics",
+          "name": "15 - Forensics",
+          "children": [
+            {
+              "id": "kali-digital-forensics",
+              "name": "• Digital Forensics"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kali-wireshark",
+      "file": "kali-wireshark.desktop",
+      "name": "Wireshark (Simulated)",
+      "genericName": "Network Protocol Analyzer",
+      "comment": "Packet capture simulations showcasing Wireshark workflows",
+      "exec": "/usr/bin/env xdg-open https://unnippillil.com/apps/wireshark",
+      "icon": "org.wireshark.Wireshark",
+      "portfolioApp": "wireshark",
+      "package": "wireshark",
+      "keywords": [
+        "packet capture",
+        "wireshark",
+        "sniffer",
+        "pcap"
+      ],
+      "categories": [
+        {
+          "id": "kali-discovery",
+          "name": "09 - Discovery",
+          "children": [
+            {
+              "id": "kali-network-sniffing",
+              "name": "• Network Sniffing"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "kali-usual-applications",
+      "name": "Usual Applications",
+      "appCount": 2,
+      "apps": [
+        "kali-files",
+        "kali-terminal"
+      ],
+      "children": []
+    },
+    {
+      "id": "kali-reconnaissance",
+      "name": "01 - Reconnaissance",
+      "appCount": 5,
+      "apps": [
+        "kali-nikto",
+        "kali-nmap",
+        "kali-reaver",
+        "kali-recon-ng",
+        "kali-theharvester"
+      ],
+      "children": [
+        {
+          "id": "kali-identity-information",
+          "name": "• Identity Information"
+        },
+        {
+          "id": "kali-network-information",
+          "name": "• Network Information"
+        },
+        {
+          "id": "kali-web-scanning",
+          "name": "• Web Scanning"
+        },
+        {
+          "id": "kali-web-vulnerability-scanning",
+          "name": "• Web Vulnerability Scanning"
+        },
+        {
+          "id": "kali-wifi-credential-access",
+          "name": "• WiFi"
+        }
+      ]
+    },
+    {
+      "id": "kali-initial-access",
+      "name": "03 - Initial Access",
+      "appCount": 1,
+      "apps": [
+        "kali-metasploit-framework"
+      ],
+      "children": []
+    },
+    {
+      "id": "kali-execution",
+      "name": "04 - Execution",
+      "appCount": 1,
+      "apps": [
+        "kali-metasploit-framework"
+      ],
+      "children": []
+    },
+    {
+      "id": "kali-privilege-escalation",
+      "name": "06 - Privilege Escalation",
+      "appCount": 1,
+      "apps": [
+        "kali-metasploit-framework"
+      ],
+      "children": []
+    },
+    {
+      "id": "kali-credential-access",
+      "name": "08 - Credential Access",
+      "appCount": 4,
+      "apps": [
+        "kali-hydra",
+        "kali-john",
+        "kali-mimikatz",
+        "kali-reaver"
+      ],
+      "children": [
+        {
+          "id": "kali-os-credential-dumping",
+          "name": "• OS Credential Dumping"
+        },
+        {
+          "id": "kali-brute-force",
+          "name": "• Brute Force"
+        },
+        {
+          "id": "kali-password-cracking",
+          "name": "• Password Cracking"
+        },
+        {
+          "id": "kali-pass-the-hash",
+          "name": "• Pass-the-Hash"
+        }
+      ]
+    },
+    {
+      "id": "kali-discovery",
+      "name": "09 - Discovery",
+      "appCount": 2,
+      "apps": [
+        "kali-nmap",
+        "kali-wireshark"
+      ],
+      "children": [
+        {
+          "id": "kali-network-service-discovery",
+          "name": "• Network Service Discovery"
+        },
+        {
+          "id": "kali-network-sniffing",
+          "name": "• Network Sniffing"
+        }
+      ]
+    },
+    {
+      "id": "kali-collection",
+      "name": "11 - Collection",
+      "appCount": 3,
+      "apps": [
+        "kali-autopsy",
+        "kali-evidence-vault",
+        "kali-volatility"
+      ],
+      "children": []
+    },
+    {
+      "id": "kali-command-and-control",
+      "name": "12 - Command and Control",
+      "appCount": 2,
+      "apps": [
+        "kali-metasploit-framework",
+        "kali-netcat"
+      ],
+      "children": [
+        {
+          "id": "kali-non-application-layer-protocol",
+          "name": "• Non-Application Layer Protocol"
+        }
+      ]
+    },
+    {
+      "id": "kali-exfiltration",
+      "name": "13 - Exfiltration",
+      "appCount": 1,
+      "apps": [
+        "kali-netcat"
+      ],
+      "children": []
+    },
+    {
+      "id": "kali-forensics",
+      "name": "15 - Forensics",
+      "appCount": 3,
+      "apps": [
+        "kali-autopsy",
+        "kali-evidence-vault",
+        "kali-volatility"
+      ],
+      "children": [
+        {
+          "id": "kali-digital-forensics",
+          "name": "• Digital Forensics"
+        },
+        {
+          "id": "kali-sleuth-kit-suite",
+          "name": "• Sleuth Kit Suite"
+        }
+      ]
+    }
+  ],
+  "missingCategories": []
+}
