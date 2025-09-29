@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { focusRing } from '../../styles/theme';
 
 interface ToastProps {
   message: string;
@@ -38,7 +39,7 @@ const Toast: React.FC<ToastProps> = ({
       {onAction && actionLabel && (
         <button
           onClick={onAction}
-          className="ml-4 underline focus:outline-none"
+          className={`ml-4 underline ${focusRing.tight}`}
         >
           {actionLabel}
         </button>

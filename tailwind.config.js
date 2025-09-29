@@ -54,6 +54,16 @@ module.exports = {
           backdrop: 'var(--kali-bg)',
         },
       },
+      ringColor: {
+        'kali-focus': 'var(--color-focus-ring)',
+      },
+      ringOffsetColor: {
+        'kali-surface': 'var(--color-surface)',
+        'kali-backdrop': 'var(--kali-bg)',
+      },
+      ringWidth: {
+        3: '3px',
+      },
       boxShadow: {
         'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
       },

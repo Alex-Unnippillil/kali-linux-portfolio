@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import { focusRing } from '../styles/theme';
 
 interface Module {
   id: string;
@@ -54,6 +55,8 @@ const PopularModules: React.FC = () => {
         l.message.toLowerCase().includes(logFilter.toLowerCase())
       )
     : [];
+  const searchId = 'popular-modules-search';
+  const logFilterId = 'popular-modules-log-filter';
   const copyLogs = () => {
     const text = filteredLog.map((l) => l.message).join('\n');
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -188,7 +191,7 @@ const PopularModules: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           onClick={handleUpdate}
-          className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className={`px-2 py-1 text-sm rounded bg-gray-700 ${focusRing.default}`}
         >
           Update Modules
         </button>
@@ -199,16 +202,18 @@ const PopularModules: React.FC = () => {
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
       <input
+        id={searchId}
         type="text"
         placeholder="Search modules"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full p-2 text-black rounded"
+        aria-label="Search modules"
       />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
-          className={`px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+          className={`px-2 py-1 text-sm rounded ${focusRing.default} ${
             filter === '' ? 'bg-blue-600' : 'bg-gray-700'
           }`}
         >
@@ -218,7 +223,7 @@ const PopularModules: React.FC = () => {
           <button
             key={t}
             onClick={() => setFilter(t)}
-            className={`px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+            className={`px-2 py-1 text-sm rounded ${focusRing.default} ${
               filter === t ? 'bg-blue-600' : 'bg-gray-700'
             }`}
           >
@@ -231,7 +236,7 @@ const PopularModules: React.FC = () => {
           <button
             key={m.id}
             onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className={`p-3 text-left bg-ub-grey rounded border border-gray-700 ${focusRing.default}`}
           >
             <h3 className="font-semibold">{m.name}</h3>
             <p className="text-sm text-gray-300">{m.description}</p>
@@ -276,26 +281,28 @@ const PopularModules: React.FC = () => {
             <button
               type="button"
               onClick={copyCommand}
-              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className={`px-2 py-1 text-sm rounded bg-gray-700 ${focusRing.default}`}
             >
               Copy
             </button>
           </div>
           <div className="space-y-1">
-            <label className="block text-sm">
+            <label className="block text-sm" htmlFor={logFilterId}>
               Filter logs
               <input
+                id={logFilterId}
                 placeholder="Filter logs"
                 type="text"
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
                 className="w-full p-1 mt-1 text-black rounded"
+                aria-label="Filter logs"
               />
             </label>
             <button
               type="button"
               onClick={copyLogs}
-              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className={`px-2 py-1 text-sm rounded bg-gray-700 ${focusRing.default}`}
             >
               Copy Logs
             </button>
