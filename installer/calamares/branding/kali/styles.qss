@@ -1,0 +1,53 @@
+/* Shared button styling to guarantee touch-friendly controls across the Calamares session */
+QPushButton, QToolButton {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 18px;
+    border-radius: 10px;
+    border: 2px solid #2684ff;
+    background-color: #0f1c2b;
+    color: #ffffff;
+}
+
+QPushButton:hover, QToolButton:hover {
+    background-color: #16304a;
+}
+
+QPushButton:pressed, QToolButton:pressed {
+    background-color: #0a1522;
+    border-color: #1a5fbf;
+}
+
+QPushButton:disabled, QToolButton:disabled {
+    background-color: #1c1f26;
+    border-color: #3a4a63;
+    color: #757f91;
+}
+
+/* Primary action variant */
+QPushButton[highlighted="true"] {
+    background-color: #2684ff;
+    border-color: #1a5fbf;
+    color: #ffffff;
+}
+
+QPushButton[highlighted="true"]:hover {
+    background-color: #3a9bff;
+}
+
+QPushButton[highlighted="true"]:pressed {
+    background-color: #1f6ccc;
+}
+
+/* Flat/secondary buttons keep tap target but use subtle chrome */
+QPushButton[flat="true"], QToolButton[flat="true"] {
+    background-color: transparent;
+    border-color: transparent;
+    color: #d1d5db;
+    padding: 8px 16px;
+}
+
+QPushButton[flat="true"]:hover, QToolButton[flat="true"]:hover {
+    background-color: rgba(38, 132, 255, 0.12);
+    border-color: transparent;
+}
