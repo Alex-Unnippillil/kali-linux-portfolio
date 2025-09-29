@@ -28,6 +28,7 @@ import {
     clampWindowTopPosition,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import resolveAppPath from '../../utils/resolveAppPath';
 
 
 export class Desktop extends Component {
@@ -1246,6 +1247,7 @@ export class Desktop extends Component {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
 
+            const prefetchRoute = app.disabled ? null : resolveAppPath(app);
             const props = {
                 name: app.title,
                 id: app.id,
@@ -1253,6 +1255,7 @@ export class Desktop extends Component {
                 openApp: this.openApp,
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
+                prefetchRoute,
             };
 
             const position = positions[appId] || this.computeGridPosition(index);

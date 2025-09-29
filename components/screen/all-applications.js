@@ -1,6 +1,7 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import resolveAppPath from '../../utils/resolveAppPath';
 
 const FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
@@ -123,6 +124,7 @@ class AllApplications extends React.Component {
 
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
+        const prefetchRoute = app.disabled ? null : resolveAppPath(app);
         return (
             <div key={app.id} className="relative flex w-full justify-center">
                 <button
@@ -147,6 +149,7 @@ class AllApplications extends React.Component {
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
                     prefetch={app.screen?.prefetch}
+                    prefetchRoute={prefetchRoute}
                 />
             </div>
         );
