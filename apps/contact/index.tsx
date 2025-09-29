@@ -10,6 +10,8 @@ import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
 
 const DRAFT_KEY = "contact-draft";
+const LAST_SUBMIT_KEY = "contact-last-submit";
+const RATE_LIMIT_WINDOW_MS = 45_000;
 const EMAIL = "alex.unnippillil@hotmail.com";
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
@@ -27,7 +29,7 @@ const ContactApp: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [honeypot, setHoneypot] = useState("");
+  const [honeytoken, setHoneytoken] = useState("");
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
@@ -59,6 +61,16 @@ const ContactApp: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    if (honeytoken.trim().length > 0) {
+      setToast("Message sent");
+      setName("");
+      setEmail("");
+      setMessage("");
+      setHoneytoken("");
+      localStorage.removeItem(DRAFT_KEY);
+      trackEvent("contact_submit_bot_blocked", { method: "form" });
+      return;
+    }
     setSubmitting(true);
     setError("");
     setEmailError("");
@@ -82,6 +94,25 @@ const ContactApp: React.FC = () => {
       return;
     }
 
+    const now = Date.now();
+    let lastSubmission = 0;
+    try {
+      lastSubmission = Number(localStorage.getItem(LAST_SUBMIT_KEY) || "0");
+    } catch {
+      lastSubmission = 0;
+    }
+    if (Number.isFinite(lastSubmission) && lastSubmission > 0) {
+      const elapsed = now - lastSubmission;
+      if (elapsed < RATE_LIMIT_WINDOW_MS) {
+        const waitSeconds = Math.ceil((RATE_LIMIT_WINDOW_MS - elapsed) / 1000);
+        const waitMessage = `Please wait ${waitSeconds}s before sending another message.`;
+        setError(waitMessage);
+        setSubmitting(false);
+        trackEvent("contact_submit_rate_limited", { method: "form" });
+        return;
+      }
+    }
+
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
     if (!recaptchaToken) {
@@ -96,7 +127,7 @@ const ContactApp: React.FC = () => {
         name,
         email,
         message,
-        honeypot,
+        honeypot: honeytoken,
         csrfToken,
         recaptchaToken,
       });
@@ -105,9 +136,18 @@ const ContactApp: React.FC = () => {
         setName("");
         setEmail("");
         setMessage("");
-        setHoneypot("");
+        setHoneytoken("");
         localStorage.removeItem(DRAFT_KEY);
-        trackEvent("contact_submit", { method: "form" });
+        try {
+          localStorage.setItem(LAST_SUBMIT_KEY, now.toString());
+        } catch {
+          /* ignore */
+        }
+        if (result.ignored) {
+          trackEvent("contact_submit_bot_blocked", { method: "form" });
+        } else {
+          trackEvent("contact_submit", { method: "form" });
+        }
       } else {
         setError(result.error || "Submission failed");
         trackEvent("contact_submit_error", { method: "form" });
@@ -242,8 +282,10 @@ const ContactApp: React.FC = () => {
         </div>
         <input
           type="text"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
+          name="company"
+          aria-hidden="true"
+          value={honeytoken}
+          onChange={(e) => setHoneytoken(e.target.value)}
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
