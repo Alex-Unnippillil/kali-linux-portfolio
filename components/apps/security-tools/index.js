@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import LabMode from '../../LabMode';
 import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
@@ -20,6 +20,7 @@ export default function SecurityTools() {
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [fixtureData, setFixtureData] = useState([]);
+  const queryInputRef = useRef(null);
 
   // Logs, rules and fixtures
   const [suricata, setSuricata] = useState([]);
@@ -53,6 +54,12 @@ export default function SecurityTools() {
     }
   }, []);
 
+  useEffect(() => {
+    if (authorized && queryInputRef.current) {
+      queryInputRef.current.focus();
+    }
+  }, [authorized]);
+
   const acceptLab = () => {
     try {
       localStorage.setItem('security-tools-lab-ok', 'true');
@@ -75,12 +82,139 @@ export default function SecurityTools() {
       )
     : [];
   const yaraMatch = lower && sampleText.toLowerCase().includes(lower);
-  const hasResults =
-    suricataResults.length ||
-    zeekResults.length ||
-    sigmaResults.length ||
-    mitreResults.length ||
-    (yaraMatch ? 1 : 0);
+  const visibleSections = useMemo(() => {
+    const sections = [];
+
+    if (suricataResults.length > 0) {
+      sections.push({
+        id: 'suricata',
+        label: 'Suricata',
+        content: (
+          <>
+            <h3 className="text-sm font-bold">Suricata</h3>
+            {suricataResults.map((log, i) => (
+              <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
+                {JSON.stringify(log, null, 2)}
+              </pre>
+            ))}
+          </>
+        ),
+      });
+    }
+
+    if (zeekResults.length > 0) {
+      sections.push({
+        id: 'zeek',
+        label: 'Zeek',
+        content: (
+          <>
+            <h3 className="text-sm font-bold">Zeek</h3>
+            {zeekResults.map((log, i) => (
+              <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
+                {JSON.stringify(log, null, 2)}
+              </pre>
+            ))}
+          </>
+        ),
+      });
+    }
+
+    if (sigmaResults.length > 0) {
+      sections.push({
+        id: 'sigma',
+        label: 'Sigma',
+        content: (
+          <>
+            <h3 className="text-sm font-bold">Sigma</h3>
+            {sigmaResults.map(rule => (
+              <div key={rule.id} className="mb-2">
+                <h4 className="font-bold">{rule.title}</h4>
+                <pre className="bg-black p-1 overflow-auto">
+                  {JSON.stringify(rule, null, 2)}
+                </pre>
+              </div>
+            ))}
+          </>
+        ),
+      });
+    }
+
+    if (mitreResults.length > 0) {
+      sections.push({
+        id: 'mitre',
+        label: 'MITRE ATT&CK',
+        content: (
+          <>
+            <h3 className="text-sm font-bold">MITRE ATT&CK</h3>
+            <ul className="list-disc list-inside">
+              {mitreResults.map(tech => (
+                <li key={tech.id}>
+                  {tech.id} - {tech.name} ({tech.tactic})
+                </li>
+              ))}
+            </ul>
+          </>
+        ),
+      });
+    }
+
+    if (yaraMatch) {
+      sections.push({
+        id: 'yara',
+        label: 'YARA Sample',
+        content: (
+          <>
+            <h3 className="text-sm font-bold">YARA Sample</h3>
+            <div>Sample text contains &quot;{query}&quot;</div>
+          </>
+        ),
+      });
+    }
+
+    return sections;
+  }, [query, suricataResults, zeekResults, sigmaResults, mitreResults, yaraMatch]);
+  const hasResults = visibleSections.length > 0;
+  const [highlightedResultId, setHighlightedResultId] = useState(null);
+
+  useEffect(() => {
+    if (!query || !hasResults) {
+      if (highlightedResultId !== null) {
+        setHighlightedResultId(null);
+      }
+      return;
+    }
+
+    if (highlightedResultId && visibleSections.some(section => section.id === highlightedResultId)) {
+      return;
+    }
+
+    setHighlightedResultId(visibleSections[0].id);
+  }, [query, hasResults, visibleSections, highlightedResultId]);
+
+  const handleSearchKeyDown = event => {
+    if (!query || !hasResults) {
+      return;
+    }
+
+    const currentIndex = visibleSections.findIndex(section => section.id === highlightedResultId);
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % visibleSections.length;
+      setHighlightedResultId(visibleSections[nextIndex].id);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      const prevIndex = currentIndex === -1 ? visibleSections.length - 1 : (currentIndex - 1 + visibleSections.length) % visibleSections.length;
+      setHighlightedResultId(visibleSections[prevIndex].id);
+    } else if (event.key === 'Enter') {
+      if (currentIndex !== -1) {
+        event.preventDefault();
+        setActive(visibleSections[currentIndex].id);
+        setQuery('');
+        setHighlightedResultId(null);
+      }
+    }
+  };
 
   const tabButton = (t) => (
     <button
@@ -131,67 +265,38 @@ export default function SecurityTools() {
       <div className="w-full h-full bg-ub-dark text-white p-2 overflow-auto flex">
         <div className="flex-1 pr-2">
           <input
+            ref={queryInputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search all tools"
             className="w-full mb-2 p-1 text-black text-xs"
+            aria-controls={query ? 'security-tools-results' : undefined}
+            aria-expanded={Boolean(query)}
           />
           {query ? (
-            <div className="text-xs">
-          {suricataResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">Suricata</h3>
-              {suricataResults.map((log, i) => (
-                <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
-                  {JSON.stringify(log, null, 2)}
-                </pre>
-              ))}
+            <div id="security-tools-results" role="listbox" aria-label="Search results" className="text-xs">
+              {hasResults ? (
+                visibleSections.map(section => {
+                  const isHighlighted = section.id === highlightedResultId;
+                  return (
+                    <div
+                      key={section.id}
+                      role="option"
+                      aria-selected={isHighlighted}
+                      className={`mb-2 rounded border border-transparent p-1 ${
+                        isHighlighted ? 'bg-ub-warm-grey bg-opacity-20 ring-2 ring-amber-400 border-amber-400' : ''
+                      }`}
+                    >
+                      {section.content}
+                    </div>
+                  );
+                })
+              ) : (
+                <div>No results found.</div>
+              )}
             </div>
-          )}
-          {zeekResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">Zeek</h3>
-              {zeekResults.map((log, i) => (
-                <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
-                  {JSON.stringify(log, null, 2)}
-                </pre>
-              ))}
-            </div>
-          )}
-          {sigmaResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">Sigma</h3>
-              {sigmaResults.map(rule => (
-                <div key={rule.id} className="mb-2">
-                  <h4 className="font-bold">{rule.title}</h4>
-                  <pre className="bg-black p-1 overflow-auto">
-                    {JSON.stringify(rule, null, 2)}
-                  </pre>
-                </div>
-              ))}
-            </div>
-          )}
-          {mitreResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">MITRE ATT&CK</h3>
-              <ul className="list-disc list-inside">
-                {mitreResults.map(tech => (
-                  <li key={tech.id}>
-                    {tech.id} - {tech.name} ({tech.tactic})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {yaraMatch && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">YARA Sample</h3>
-              <div>Sample text contains &quot;{query}&quot;</div>
-            </div>
-          )}
-            {!hasResults && <div>No results found.</div>}
-          </div>
-        ) : (
+          ) : (
           <>
             <p className="text-xs mb-2">All tools are static demos using local fixtures. No external network activity occurs.</p>
             <div className="mb-2 flex flex-wrap">{tabs.map(tabButton)}</div>
