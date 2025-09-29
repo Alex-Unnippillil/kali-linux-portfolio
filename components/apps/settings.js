@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import useFocusTrap from '../../hooks/useFocusTrap';
+import { logEvent } from '../../utils/analytics';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -8,6 +10,63 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const confirmDialogRef = useRef(null);
+    const confirmButtonRef = useRef(null);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
+
+    useFocusTrap(confirmDialogRef, showConfirm);
+
+    useEffect(() => {
+        if (showConfirm && confirmButtonRef.current) {
+            confirmButtonRef.current.focus();
+        }
+    }, [showConfirm]);
+
+    useEffect(() => {
+        if (!showConfirm) return;
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                if (!isResetting) {
+                    setShowConfirm(false);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showConfirm, isResetting]);
+
+    const closeDialog = useCallback(() => {
+        if (!isResetting) {
+            setShowConfirm(false);
+        }
+    }, [isResetting]);
+
+    const handleConfirmReset = useCallback(async () => {
+        setIsResetting(true);
+        try {
+            await resetSettings();
+            setAccent(defaults.accent);
+            setWallpaper(defaults.wallpaper);
+            setUseKaliWallpaper(defaults.useKaliWallpaper);
+            setDensity(defaults.density);
+            setReducedMotion(defaults.reducedMotion);
+            setLargeHitAreas(defaults.largeHitAreas);
+            setFontScale(defaults.fontScale);
+            setHighContrast(defaults.highContrast);
+            setAllowNetwork(defaults.allowNetwork);
+            setHaptics(defaults.haptics);
+            setPongSpin(defaults.pongSpin);
+            setTheme('default');
+            logEvent({ category: 'Settings', action: 'reset', label: 'desktop-preferences' });
+        } finally {
+            setIsResetting(false);
+            setShowConfirm(false);
+        }
+    }, [setAccent, setWallpaper, setUseKaliWallpaper, setDensity, setReducedMotion, setLargeHitAreas, setFontScale, setHighContrast, setAllowNetwork, setHaptics, setPongSpin, setTheme]);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -70,8 +129,9 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-theme-select">Theme:</label>
                 <select
+                    id="settings-theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -83,12 +143,14 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-kali-wallpaper">
                     <input
+                        id="settings-kali-wallpaper"
                         type="checkbox"
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -99,7 +161,7 @@ export function Settings() {
                 </p>
             )}
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
+                <span className="mr-2 text-ubt-grey" id="settings-accent-label">Accent:</span>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
                     {ACCENT_OPTIONS.map((c) => (
                         <button
@@ -115,8 +177,9 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-density">Density:</label>
                 <select
+                    id="settings-density"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -126,79 +189,93 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
-                <input
-                    type="range"
-                    min="0.75"
-                    max="1.5"
-                    step="0.05"
-                    value={fontScale}
-                    onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                    className="ubuntu-slider"
-                />
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-font-scale">Font Size:</label>
+                    <input
+                        id="settings-font-scale"
+                        type="range"
+                        min="0.75"
+                        max="1.5"
+                        step="0.05"
+                        value={fontScale}
+                        onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                        className="ubuntu-slider"
+                        aria-label="Adjust font size"
+                    />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-reduced-motion">
                     <input
+                        id="settings-reduced-motion"
                         type="checkbox"
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle reduced motion"
                     />
                     Reduced Motion
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-large-hit-areas">
                     <input
+                        id="settings-large-hit-areas"
                         type="checkbox"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle large hit areas"
                     />
                     Large Hit Areas
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-high-contrast">
                     <input
+                        id="settings-high-contrast"
                         type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle high contrast"
                     />
                     High Contrast
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-allow-network">
                     <input
+                        id="settings-allow-network"
                         type="checkbox"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle network requests"
                     />
                     Allow Network Requests
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-haptics">
                     <input
+                        id="settings-haptics"
                         type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle haptics"
                     />
                     Haptics
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-pong-spin">
                     <input
+                        id="settings-pong-spin"
                         type="checkbox"
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle pong spin"
                     />
                     Pong Spin
                 </label>
@@ -268,17 +345,7 @@ export function Settings() {
                     Import Settings
                 </button>
                 <button
-                    onClick={async () => {
-                        await resetSettings();
-                        setAccent(defaults.accent);
-                        setWallpaper(defaults.wallpaper);
-                        setDensity(defaults.density);
-                        setReducedMotion(defaults.reducedMotion);
-                        setLargeHitAreas(defaults.largeHitAreas);
-                        setFontScale(defaults.fontScale);
-                        setHighContrast(defaults.highContrast);
-                        setTheme('default');
-                    }}
+                    onClick={() => setShowConfirm(true)}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop
@@ -288,6 +355,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
@@ -309,6 +377,53 @@ export function Settings() {
                 }}
                 className="hidden"
             />
+            {showConfirm && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                    onClick={closeDialog}
+                >
+                    <div
+                        ref={confirmDialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="legacy-reset-dialog-title"
+                        aria-describedby="legacy-reset-dialog-description"
+                        aria-busy={isResetting}
+                        className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900/95 p-6 text-white shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2 id="legacy-reset-dialog-title" className="text-lg font-semibold text-white">
+                            Reset desktop preferences?
+                        </h2>
+                        <p id="legacy-reset-dialog-description" className="mt-2 text-sm text-white/70">
+                            This restores wallpapers, themes, and accessibility toggles to their defaults while leaving your
+                            projects, scores, and cached data intact.
+                        </p>
+                        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+                                onClick={closeDialog}
+                                disabled={isResetting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                ref={confirmButtonRef}
+                                className="rounded-md bg-ub-orange px-4 py-2 text-sm font-semibold text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70 disabled:cursor-wait disabled:opacity-70"
+                                onClick={handleConfirmReset}
+                                disabled={isResetting}
+                            >
+                                {isResetting ? 'Resetting…' : 'Reset preferences'}
+                            </button>
+                        </div>
+                        <span className="sr-only" aria-live="polite">
+                            {isResetting ? 'Resetting preferences' : ''}
+                        </span>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

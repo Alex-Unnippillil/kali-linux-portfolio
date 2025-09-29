@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -13,6 +13,8 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import useFocusTrap from "../../hooks/useFocusTrap";
+import { logEvent } from "../../utils/analytics";
 
 export default function Settings() {
   const {
@@ -34,8 +36,13 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    setLargeHitAreas,
+    setAllowNetwork,
+    setPongSpin,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const confirmDialogRef = useRef<HTMLDivElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -58,6 +65,33 @@ export default function Settings() {
 
   const changeBackground = (name: string) => setWallpaper(name);
   const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
+
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  useFocusTrap(confirmDialogRef, showResetConfirm);
+
+  useEffect(() => {
+    if (showResetConfirm) {
+      confirmButtonRef.current?.focus();
+    }
+  }, [showResetConfirm]);
+
+  useEffect(() => {
+    if (!showResetConfirm) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (!isResetting) {
+          setShowResetConfirm(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showResetConfirm, isResetting]);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -89,22 +123,31 @@ export default function Settings() {
     }
   };
 
-  const handleReset = async () => {
-    if (
-      !window.confirm(
-        "Reset desktop to default settings? This will clear all saved data."
-      )
-    )
-      return;
-    await resetSettings();
-    window.localStorage.clear();
-    setAccent(defaults.accent);
-    setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
-    setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
-    setHighContrast(defaults.highContrast);
-    setTheme("default");
+  const handleResetConfirm = async () => {
+    setIsResetting(true);
+    try {
+      await resetSettings();
+      setAccent(defaults.accent);
+      setWallpaper(defaults.wallpaper);
+      setUseKaliWallpaper(defaults.useKaliWallpaper);
+      setDensity(defaults.density as any);
+      setReducedMotion(defaults.reducedMotion);
+      setFontScale(defaults.fontScale);
+      setHighContrast(defaults.highContrast);
+      setHaptics(defaults.haptics);
+      setLargeHitAreas(defaults.largeHitAreas);
+      setAllowNetwork(defaults.allowNetwork);
+      setPongSpin(defaults.pongSpin);
+      setTheme("default");
+      logEvent({
+        category: "Settings",
+        action: "reset",
+        label: "desktop-preferences",
+      });
+    } finally {
+      setIsResetting(false);
+      setShowResetConfirm(false);
+    }
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -128,8 +171,11 @@ export default function Settings() {
             )}
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Theme:</label>
+            <label className="mr-2 text-ubt-grey" htmlFor="desktop-theme-select">
+              Theme:
+            </label>
             <select
+              id="desktop-theme-select"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -141,8 +187,15 @@ export default function Settings() {
             </select>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+            <span className="mr-2 text-ubt-grey" id="desktop-accent-label">
+              Accent:
+            </span>
+            <div
+              aria-label="Accent color picker"
+              role="radiogroup"
+              aria-labelledby="desktop-accent-label"
+              className="flex gap-2"
+            >
               {ACCENT_OPTIONS.map((c) => (
                 <button
                   key={c}
@@ -157,12 +210,17 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
+            <label
+              className="mr-2 text-ubt-grey flex items-center"
+              htmlFor="desktop-kali-wallpaper"
+            >
               <input
+                id="desktop-kali-wallpaper"
                 type="checkbox"
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Toggle Kali gradient wallpaper"
               />
               Kali Gradient Wallpaper
             </label>
@@ -223,7 +281,7 @@ export default function Settings() {
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
-              onClick={handleReset}
+              onClick={() => setShowResetConfirm(true)}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Reset Desktop
@@ -248,8 +306,11 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Density:</label>
+            <label className="mr-2 text-ubt-grey" htmlFor="desktop-density">
+              Density:
+            </label>
             <select
+              id="desktop-density"
               value={density}
               onChange={(e) => setDensity(e.target.value as any)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -322,6 +383,55 @@ export default function Settings() {
           }}
           className="hidden"
         />
+      {showResetConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => {
+            if (!isResetting) setShowResetConfirm(false);
+          }}
+        >
+          <div
+            ref={confirmDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-dialog-title"
+            aria-describedby="reset-dialog-description"
+            aria-busy={isResetting}
+            className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900/95 p-6 text-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="reset-dialog-title" className="text-lg font-semibold text-white">
+              Reset desktop preferences?
+            </h2>
+            <p id="reset-dialog-description" className="mt-2 text-sm text-white/70">
+              This action restores wallpapers, themes, and accessibility toggles to their
+              defaults. Your app data, documents, and cached scores stay untouched.
+            </p>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={isResetting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                ref={confirmButtonRef}
+                className="rounded-md bg-ub-orange px-4 py-2 text-sm font-semibold text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70 disabled:cursor-wait disabled:opacity-70"
+                onClick={handleResetConfirm}
+                disabled={isResetting}
+              >
+                {isResetting ? "Resetting…" : "Reset preferences"}
+              </button>
+            </div>
+            <span className="sr-only" aria-live="polite">
+              {isResetting ? "Resetting preferences" : ""}
+            </span>
+          </div>
+        </div>
+      )}
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );

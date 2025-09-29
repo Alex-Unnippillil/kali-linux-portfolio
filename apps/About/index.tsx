@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import AboutApp from '../../components/apps/About';
+import profile from '../../data/profile';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -35,16 +36,16 @@ export default function AboutPage() {
       <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
         <section className="flex items-center mb-8">
           <Image
-            src="/images/logos/bitmoji.png"
-            alt="Alex Unnippillil"
+            src={profile.avatar}
+            alt={profile.name}
             width={128}
             height={128}
             className="w-32 h-32 rounded-full"
             priority
           />
           <div className="ml-4 flex-1 space-y-1.5">
-            <h1 className="text-xl font-bold">Alex Unnippillil</h1>
-            <p className="text-gray-200">Cybersecurity Specialist</p>
+            <h1 className="text-xl font-bold">{profile.name}</h1>
+            <p className="text-gray-200">{profile.role}</p>
           </div>
           <div className="ml-4 flex gap-3">
             <a

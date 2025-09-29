@@ -1,7 +1,25 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
-import { getTheme, setTheme } from './theme';
+import { getTheme, setTheme, THEME_KEY } from './theme';
+
+const LOCAL_STORAGE_PREFERENCES = [
+  'density',
+  'reduced-motion',
+  'font-scale',
+  'high-contrast',
+  'large-hit-areas',
+  'pong-spin',
+  'allow-network',
+  'haptics',
+  'use-kali-wallpaper',
+  'qs-theme',
+  'qs-sound',
+  'qs-online',
+  'qs-reduce-motion',
+  'system-volume',
+  THEME_KEY,
+];
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -141,15 +159,15 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
-  window.localStorage.removeItem('use-kali-wallpaper');
+  LOCAL_STORAGE_PREFERENCES.forEach((key) => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Failed to clear preference key', key, error);
+      }
+    }
+  });
 }
 
 export async function exportSettings() {
