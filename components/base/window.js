@@ -65,6 +65,11 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    emitSnapState = (snap) => {
+        if (typeof window === 'undefined' || !this.id) return;
+        window.dispatchEvent(new CustomEvent('window-snap-state', { detail: { id: this.id, snap } }));
+    };
+
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
@@ -280,14 +285,18 @@ export class Window extends Component {
                 node.style.transform = `translate(${x},${y})`;
             }
         }
+        const afterUpdate = () => {
+            this.resizeBoundries();
+            this.emitSnapState(null);
+        };
         if (this.state.lastSize) {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, afterUpdate);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, afterUpdate);
         }
     }
 
@@ -312,7 +321,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.emitSnapState(position);
+        });
     }
 
     setInertBackground = () => {
