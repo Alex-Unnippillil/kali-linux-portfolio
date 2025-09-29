@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import apps from '../../apps.config';
 
 // Load the actual VSCode app lazily so no editor dependencies are required
-const VsCode = dynamic(() => import('../../apps/vscode'), { ssr: false });
+const VsCode = dynamic(() => import('../../apps/vscode'));
 
 // Simple fuzzy match: returns true if query characters appear in order
 function fuzzyMatch(text, query) {

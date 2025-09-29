@@ -1,6 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const InputLab = dynamic(() => import('../../apps/input-lab'), { ssr: false });
+const InputLab = dynamic(() => import('../../apps/input-lab'));
 
 export default function InputLabPage() {
   return <InputLab />;

@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const FirefoxApp = dynamic(() => import('../../apps/firefox'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const FirefoxApp = dynamic(() => import('../../apps/firefox'));
 
 export default FirefoxApp;

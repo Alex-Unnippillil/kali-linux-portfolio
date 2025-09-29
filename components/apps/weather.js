@@ -1,11 +1,8 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
 // Dynamically load the full Weather application. This remains the default
 // export so existing imports continue to work.
-const WeatherApp = dynamic(() => import('../../apps/weather'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const WeatherApp = dynamic(() => import('../../apps/weather'));
 
 /**
  * A provider agnostic weather fetcher with basic service worker caching.

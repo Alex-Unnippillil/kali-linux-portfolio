@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Wireshark = dynamic(() => import('../../apps/wireshark'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const Wireshark = dynamic(() => import('../../apps/wireshark'));
 
 export default function WiresharkPage() {
   return <Wireshark />;

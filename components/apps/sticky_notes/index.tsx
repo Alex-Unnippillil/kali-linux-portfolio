@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const StickyNotes = dynamic(() => import('../../../apps/sticky_notes'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const StickyNotes = dynamic(() => import('../../../apps/sticky_notes'));
 
 export default StickyNotes;

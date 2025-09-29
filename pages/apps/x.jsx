@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const PageX = dynamic(() => import('../../apps/x'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const PageX = dynamic(() => import('../../apps/x'));
 
 export default PageX;

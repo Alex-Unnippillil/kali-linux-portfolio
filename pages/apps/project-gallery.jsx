@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const ProjectGalleryApp = dynamic(() => import('../../apps/project-gallery/pages'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const ProjectGalleryApp = dynamic(() => import('../../apps/project-gallery/pages'));
 
 export default ProjectGalleryApp;

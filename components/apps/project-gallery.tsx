@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -21,7 +21,7 @@ interface Props {
   openApp?: (id: string) => void;
 }
 
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+const Editor = dynamic(() => import('@monaco-editor/react'));
 
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';

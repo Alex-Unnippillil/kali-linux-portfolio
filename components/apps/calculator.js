@@ -1,10 +1,7 @@
 import '../../utils/decimal';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Calculator = dynamic(() => import('../../apps/calculator'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const Calculator = dynamic(() => import('../../apps/calculator'));
 
 export default Calculator;
 

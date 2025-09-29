@@ -1,11 +1,10 @@
 "use client";
 
 import React, { Component } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
 const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
-    { ssr: false }
 );
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';

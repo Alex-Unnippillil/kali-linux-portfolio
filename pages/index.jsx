@@ -1,4 +1,4 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
 
@@ -9,7 +9,6 @@ const Ubuntu = dynamic(
       throw err;
     }),
   {
-    ssr: false,
     loading: () => null,
   }
 );
@@ -20,7 +19,6 @@ const InstallButton = dynamic(
       throw err;
     }),
   {
-    ssr: false,
     loading: () => null,
   }
 );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 
 interface ModuleDef {
@@ -19,9 +19,8 @@ const MODULES: Record<string, ModuleDef> = {
 const moduleNames = Object.keys(MODULES);
 const WORKSPACES = ['default', 'testing', 'production'];
 
-const ForceGraph2D = dynamic(
-  () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
-  { ssr: false },
+const ForceGraph2D = dynamic(() =>
+  import('react-force-graph').then((mod) => mod.ForceGraph2D),
 );
 
 const ModulePlanner: React.FC = () => {

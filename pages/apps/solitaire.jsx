@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const PageSolitaire = dynamic(() => import('../../apps/solitaire'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const PageSolitaire = dynamic(() => import('../../apps/solitaire'));
 
 export default PageSolitaire;

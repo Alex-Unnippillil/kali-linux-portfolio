@@ -4,20 +4,17 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
 
-const CytoscapeComponent = dynamic(
-  async () => {
-    const cytoscape = (await import('cytoscape')).default;
-    const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
-    cytoscape.use(coseBilkent);
-    return (await import('react-cytoscapejs')).default;
-  },
-  { ssr: false },
-);
+const CytoscapeComponent = dynamic(async () => {
+  const cytoscape = (await import('cytoscape')).default;
+  const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
+  cytoscape.use(coseBilkent);
+  return (await import('react-cytoscapejs')).default;
+});
 
 // Built-in modules with simple schemas and canned demo data. Each schema defines
 // the expected input type, a demo generator for offline usage, and an optional

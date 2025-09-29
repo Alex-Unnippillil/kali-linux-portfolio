@@ -1,4 +1,4 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
 const WeatherApp = dynamic(
   () =>
@@ -6,10 +6,6 @@ const WeatherApp = dynamic(
       console.error('Failed to load Weather app', err);
       throw err;
     }),
-  {
-    ssr: false,
-    loading: () => <p>Loading...</p>,
-  }
 );
 
 export default WeatherApp;

@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const QRApp = dynamic(() => import('../../apps/qr'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const QRApp = dynamic(() => import('../../apps/qr'));
 
 export default function QRPage() {
   return <QRApp />;

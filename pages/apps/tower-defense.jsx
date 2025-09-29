@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const TowerDefense = dynamic(() => import('../../apps/tower-defense'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const TowerDefense = dynamic(() => import('../../apps/tower-defense'));
 
 export default TowerDefense;

@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const QuoteApp = dynamic(() => import('../../../apps/quote'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const QuoteApp = dynamic(() => import('../../../apps/quote'));
 
 export default QuoteApp;
 

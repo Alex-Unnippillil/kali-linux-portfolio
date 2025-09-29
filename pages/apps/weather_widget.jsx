@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const WeatherWidget = dynamic(() => import('../../apps/weather_widget'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const WeatherWidget = dynamic(() => import('../../apps/weather_widget'));
 
 // Display stored unit preference and the browser's location consent status.
 export default function WeatherWidgetPage() {

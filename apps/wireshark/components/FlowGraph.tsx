@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useRef } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import { toPng } from 'html-to-image';
 import type cytoscape from 'cytoscape';
 
@@ -10,15 +10,12 @@ interface CytoscapeComponentProps {
   cy: (cy: cytoscape.Core) => void;
 }
 
-const CytoscapeComponent = dynamic(
-  async () => {
-    const cytoscape = (await import('cytoscape')).default;
-    const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
-    cytoscape.use(coseBilkent);
-    return (await import('react-cytoscapejs')).default;
-  },
-  { ssr: false }
-) as React.ComponentType<CytoscapeComponentProps>;
+const CytoscapeComponent = dynamic(async () => {
+  const cytoscape = (await import('cytoscape')).default;
+  const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
+  cytoscape.use(coseBilkent);
+  return (await import('react-cytoscapejs')).default;
+}) as React.ComponentType<CytoscapeComponentProps>;
 
 interface Packet {
   src: string;
