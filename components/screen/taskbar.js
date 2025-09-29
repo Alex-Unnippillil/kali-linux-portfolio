@@ -2,6 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 
 export default function Taskbar(props) {
+    const { historyOpen = false, onHistoryToggle, historyButtonRef } = props;
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
 
     const handleClick = (app) => {
@@ -13,6 +14,12 @@ export default function Taskbar(props) {
         } else {
             props.openApp(id);
         }
+    };
+
+    const handleHistoryClick = (event) => {
+        if (typeof onHistoryToggle !== 'function') return;
+        const trigger = event?.detail === 0 ? 'keyboard' : 'pointer';
+        onHistoryToggle(trigger);
     };
 
     return (
@@ -29,6 +36,33 @@ export default function Taskbar(props) {
                 className="flex items-center overflow-x-auto"
                 style={{ gap: 'var(--shell-taskbar-gap, 0.5rem)' }}
             >
+                <button
+                    type="button"
+                    ref={historyButtonRef ?? null}
+                    onClick={handleHistoryClick}
+                    aria-label={historyOpen ? 'Hide session history' : 'Show session history'}
+                    aria-pressed={historyOpen}
+                    data-active={historyOpen ? 'true' : 'false'}
+                    className={`${historyOpen ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center justify-center rounded-lg transition-colors hover:bg-white hover:bg-opacity-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
+                    style={{
+                        minHeight: 'var(--shell-hit-target, 2.5rem)',
+                        minWidth: 'var(--shell-hit-target, 2.5rem)',
+                        paddingInline: 'calc(var(--shell-taskbar-padding-x, 0.75rem) * 0.55)',
+                    }}
+                >
+                    <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="text-white/90"
+                    >
+                        <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" opacity="0.85" />
+                        <path d="M12 7.5V12l3 1.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M8.5 5.5l-2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
+                    </svg>
+                </button>
                 {runningApps.map(app => {
                     const isMinimized = Boolean(props.minimized_windows[app.id]);
                     const isFocused = Boolean(props.focused_windows[app.id]);

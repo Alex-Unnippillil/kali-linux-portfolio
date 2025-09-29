@@ -18,12 +18,15 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import SessionHistoryDrawer from '../desktop/SessionHistoryDrawer';
+import { insertHistoryEntry } from '../desktop/history';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useSession from '../../hooks/useSession';
 import {
     clampWindowTopPosition,
     measureWindowTopOffset,
@@ -31,8 +34,8 @@ import {
 
 
 export class Desktop extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
@@ -44,6 +47,7 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        const history = Array.isArray(props?.session?.history) ? props.session.history : [];
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -72,12 +76,17 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            session_history: history,
+            showHistoryDrawer: false,
+            historyDrawerKeyboard: false,
         }
 
         this.desktopRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
+        this.historyToggleRef = React.createRef();
+        this.historyLastTrigger = null;
 
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
@@ -800,7 +809,7 @@ export class Desktop extends Component {
                     };
                 });
                 this.setWorkspaceState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    session.windows.forEach(({ id }) => this.openApp(id, undefined, { skipHistory: true }));
                 });
             } else {
                 this.openApp('about-alex');
@@ -951,6 +960,49 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    openHistoryDrawer = (source = 'pointer') => {
+        this.historyLastTrigger = source;
+        this.setState({ showHistoryDrawer: true, historyDrawerKeyboard: source === 'keyboard' });
+    }
+
+    closeHistoryDrawer = (callback, options = {}) => {
+        const { restoreFocus = true } = options;
+        const lastTrigger = this.historyLastTrigger;
+        this.setState({ showHistoryDrawer: false, historyDrawerKeyboard: false }, () => {
+            if (restoreFocus && lastTrigger === 'keyboard' && this.historyToggleRef?.current) {
+                this.historyToggleRef.current.focus();
+            }
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+        this.historyLastTrigger = null;
+    }
+
+    toggleHistoryDrawer = (source = 'pointer') => {
+        if (this.state.showHistoryDrawer) {
+            this.closeHistoryDrawer();
+        } else {
+            this.openHistoryDrawer(source);
+        }
+    }
+
+    handleHistoryJump = (entry) => {
+        if (!entry || typeof entry !== 'object') return;
+        const targetWorkspace = typeof entry.workspace === 'number' ? entry.workspace : this.state.activeWorkspace;
+        const activate = () => {
+            if (targetWorkspace !== this.state.activeWorkspace) {
+                this.switchWorkspace(targetWorkspace);
+            }
+            this.openApp(entry.appId, undefined, { skipHistory: true });
+        };
+        if (this.state.showHistoryDrawer) {
+            this.closeHistoryDrawer(activate, { restoreFocus: false });
+        } else {
+            activate();
+        }
+    }
+
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
@@ -960,6 +1012,9 @@ export class Desktop extends Component {
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
+        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            this.toggleHistoryDrawer('keyboard');
         }
         else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
@@ -1347,6 +1402,25 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    recordHistoryEvent = (action, appId, options = {}) => {
+        if (!appId) return;
+        const { skipHistory = false, timestamp } = options;
+        if (skipHistory) return;
+        const entryTimestamp = typeof timestamp === 'number' ? timestamp : Date.now();
+        const appMeta = apps.find((app) => app.id === appId) || {};
+        const entry = {
+            id: `${action}-${appId}-${entryTimestamp}`,
+            appId,
+            title: appMeta.title || appId,
+            action,
+            timestamp: entryTimestamp,
+            workspace: this.state.activeWorkspace,
+        };
+        this.setState((prevState) => ({
+            session_history: insertHistoryEntry(prevState.session_history, entry),
+        }), this.saveSession);
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
@@ -1358,7 +1432,8 @@ export class Desktop extends Component {
             return { id, x: nextX, y: nextY };
         });
 
-        const nextSession = { ...this.props.session, windows };
+        const baseSession = this.props.session || {};
+        const nextSession = { ...baseSession, windows, history: this.state.session_history || [] };
         if ('dock' in nextSession) {
             delete nextSession.dock;
         }
@@ -1413,7 +1488,9 @@ export class Desktop extends Component {
         }
     }
 
-    openApp = (objId, params) => {
+    openApp = (objId, params, options = {}) => {
+        const skipHistory = Boolean(options && options.skipHistory);
+        const customTimestamp = typeof options?.timestamp === 'number' ? options.timestamp : undefined;
         const context = params && typeof params === 'object'
             ? {
                 ...params,
@@ -1508,6 +1585,7 @@ export class Desktop extends Component {
                     this.setState(nextState, () => {
                         this.focus(objId);
                         this.saveSession();
+                        this.recordHistoryEvent('open', objId, { skipHistory, timestamp: customTimestamp });
                     });
                     const stack = this.getActiveStack();
                     if (!stack.includes(objId)) {
@@ -1565,11 +1643,14 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
-
-        const window_context = { ...this.state.window_context };
-        delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        this.setWorkspaceState({ closed_windows, favourite_apps }, () => {
+            const window_context = { ...this.state.window_context };
+            delete window_context[objId];
+            this.setState({ closed_windows, favourite_apps, window_context }, () => {
+                this.saveSession();
+                this.recordHistoryEvent('close', objId);
+            });
+        });
     }
 
     pinApp = (id) => {
@@ -1770,6 +1851,17 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    historyOpen={this.state.showHistoryDrawer}
+                    onHistoryToggle={this.toggleHistoryDrawer}
+                    historyButtonRef={this.historyToggleRef}
+                />
+
+                <SessionHistoryDrawer
+                    open={this.state.showHistoryDrawer}
+                    entries={this.state.session_history || []}
+                    onClose={() => this.closeHistoryDrawer()}
+                    onJump={this.handleHistoryJump}
+                    autoFocus={this.state.historyDrawerKeyboard}
                 />
 
                 {/* Desktop Apps */}
@@ -1844,5 +1936,14 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { session, setSession, resetSession } = useSession();
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            session={session}
+            setSession={setSession}
+            clearSession={resetSession}
+        />
+    );
 }

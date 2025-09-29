@@ -1,5 +1,9 @@
 import usePersistentState from './usePersistentState';
 import { defaults } from '../utils/settingsStore';
+import {
+  DesktopHistoryEntry,
+  isDesktopHistoryEntry,
+} from '../components/desktop/history';
 
 export interface SessionWindow {
   id: string;
@@ -11,12 +15,14 @@ export interface DesktopSession {
   windows: SessionWindow[];
   wallpaper: string;
   dock: string[];
+  history: DesktopHistoryEntry[];
 }
 
 const initialSession: DesktopSession = {
   windows: [],
   wallpaper: defaults.wallpaper,
   dock: [],
+  history: [],
 };
 
 function isSession(value: unknown): value is DesktopSession {
@@ -25,7 +31,9 @@ function isSession(value: unknown): value is DesktopSession {
   return (
     Array.isArray(s.windows) &&
     typeof s.wallpaper === 'string' &&
-    Array.isArray(s.dock)
+    Array.isArray(s.dock) &&
+    Array.isArray((s as DesktopSession).history) &&
+    (s.history as unknown[]).every((entry) => isDesktopHistoryEntry(entry))
   );
 }
 
