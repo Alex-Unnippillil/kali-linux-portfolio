@@ -7369,7 +7369,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fflate@npm:^0.8.1, fflate@npm:~0.8.2":
+"fflate@npm:^0.8.1, fflate@npm:^0.8.2, fflate@npm:~0.8.2":
   version: 0.8.2
   resolution: "fflate@npm:0.8.2"
   checksum: 10c0/03448d630c0a583abea594835a9fdb2aaf7d67787055a761515bf4ed862913cfd693b4c4ffd5c3f3b355a70cf1e19033e9ae5aedcca103188aaff91b8bd6e293
@@ -13910,6 +13910,7 @@ __metadata:
     fake-indexeddb: "npm:^6.1.0"
     fast-glob: "npm:^3.3.3"
     fast-xml-parser: "npm:^4.3.5"
+    fflate: "npm:^0.8.2"
     figlet: "npm:^1.8.2"
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
