@@ -6,7 +6,7 @@ export const hashTypes = [
   {
     id: '0',
     name: 'MD5',
-    description: 'Raw MD5',
+    summary: 'Raw MD5',
     regex: /^[a-f0-9]{32}$/i,
     example: '5f4dcc3b5aa765d61d8327deb882cf99',
     output: 'password',
@@ -15,7 +15,7 @@ export const hashTypes = [
   {
     id: '100',
     name: 'SHA1',
-    description: 'SHA-1',
+    summary: 'SHA-1',
     regex: /^[a-f0-9]{40}$/i,
     example: '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8',
     output: 'password',
@@ -24,7 +24,7 @@ export const hashTypes = [
   {
     id: '1400',
     name: 'SHA256',
-    description: 'SHA-256',
+    summary: 'SHA-256',
     regex: /^[a-f0-9]{64}$/i,
     example:
       '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
@@ -34,7 +34,7 @@ export const hashTypes = [
   {
     id: '3200',
     name: 'bcrypt',
-    description: 'bcrypt $2*$',
+    summary: 'bcrypt $2*$',
     regex: /^\$2[aby]\$.{56}$/,
     example:
       '$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -332,6 +332,8 @@ function HashcatApp() {
         </label>
         <input
           id="hash-input"
+          type="text"
+          aria-label="Hash value"
           className="text-black px-2 py-1"
           value={hashInput}
           onChange={handleHashChange}
@@ -343,6 +345,8 @@ function HashcatApp() {
         </label>
         <input
           id="hash-filter"
+          type="text"
+          aria-label="Filter hash modes"
           className="text-black px-2 py-1"
           value={hashFilter}
           onChange={(e) => setHashFilter(e.target.value)}
@@ -361,7 +365,7 @@ function HashcatApp() {
           {filteredHashTypes.length ? (
             filteredHashTypes.map((h) => (
               <option key={h.id} value={h.id}>
-                {h.id} - {h.name} ({h.description})
+                {h.id} - {h.name} ({h.summary})
               </option>
             ))
           ) : (
@@ -393,13 +397,20 @@ function HashcatApp() {
           </label>
           <input
             id="mask-input"
+            type="text"
+            aria-label="Mask pattern"
             className="text-black px-2 py-1 w-full"
             value={mask}
             onChange={(e) => setMask(e.target.value)}
           />
           <div className="space-x-2 mt-1">
             {['?l', '?u', '?d', '?s', '?a'].map((t) => (
-              <button key={t} onClick={() => appendMask(t)}>
+              <button
+                key={t}
+                type="button"
+                onClick={() => appendMask(t)}
+                aria-label={`Add ${t} to mask`}
+              >
                 {t}
               </button>
             ))}
@@ -434,11 +445,13 @@ function HashcatApp() {
         </pre>
       </div>
       <div>Detected: {selectedHash}</div>
-      <div>Description: {selected.description}</div>
+      <div>Summary: {selected.summary}</div>
       <div>Example hash: {selected.example}</div>
       <div>Expected output: {selected.output}</div>
       <div>Description: {selected.description}</div>
-      <button onClick={runBenchmark}>Run Benchmark</button>
+      <button type="button" onClick={runBenchmark}>
+        Run Benchmark
+      </button>
       {benchmark && (
         <div data-testid="benchmark-output">{benchmark}</div>
       )}
@@ -481,11 +494,13 @@ function HashcatApp() {
         </label>
         <input
           id="word-pattern"
+          type="text"
+          aria-label="Wordlist pattern"
           className="text-black px-2 py-1"
           value={pattern}
           onChange={(e) => setPattern(e.target.value)}
         />
-        <button className="ml-2" onClick={createWordlist}>
+        <button className="ml-2" type="button" onClick={createWordlist}>
           Generate
         </button>
         {wordlistUrl && (
@@ -514,6 +529,7 @@ function HashcatApp() {
           </code>
           <button
             className="ml-2"
+            type="button"
             onClick={() => {
               if (navigator?.clipboard?.writeText) {
                 navigator.clipboard.writeText(
@@ -543,9 +559,13 @@ function HashcatApp() {
       <Gauge value={gpuUsage} />
       <div className="text-xs">Note: real hashcat requires a compatible GPU.</div>
       {!isCracking ? (
-        <button onClick={startCracking}>Start Cracking</button>
+        <button type="button" onClick={startCracking}>
+          Start Cracking
+        </button>
       ) : (
-        <button onClick={() => cancelCracking()}>Cancel</button>
+        <button type="button" onClick={() => cancelCracking()}>
+          Cancel
+        </button>
       )}
       <ProgressGauge
         progress={progress}
