@@ -10,6 +10,22 @@ const thresholds: Record<string, number> = {
   minor: 50,
 };
 
+test('global skip links focus key desktop regions', async ({ page }) => {
+  await page.goto('http://localhost:3000/');
+
+  const skipDesktop = page.getByRole('link', { name: 'Skip to desktop' });
+  await expect(skipDesktop).toBeVisible();
+  await skipDesktop.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#desktop')).toBeFocused();
+
+  const skipDock = page.getByRole('link', { name: 'Skip to dock' });
+  await expect(skipDock).toBeVisible();
+  await skipDock.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#desktop-dock')).toBeFocused();
+});
+
 const urls = [
   '/',
   '/apps',

@@ -147,13 +147,30 @@ function MyApp(props) {
     };
   }, []);
 
+  const skipLinkClass =
+    'sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black';
+
+  const focusSkipTarget = (targetId) => () => {
+    if (typeof document === 'undefined') return;
+    const target = document.getElementById(targetId);
+    if (target && typeof target.focus === 'function') {
+      target.focus();
+    }
+  };
+
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
+        <a href="#desktop" className={skipLinkClass} onClick={focusSkipTarget('desktop')}>
+          Skip to desktop
+        </a>
+        <a href="#desktop-dock" className={skipLinkClass} onClick={focusSkipTarget('desktop-dock')}>
+          Skip to dock
+        </a>
         <a
           href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+          className={skipLinkClass}
         >
           Skip to app grid
         </a>
