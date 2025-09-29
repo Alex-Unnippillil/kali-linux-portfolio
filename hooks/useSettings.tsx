@@ -24,6 +24,15 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
+import {
+  hexToRgba,
+  makeAccessibleSurface,
+  makeBorderAccent,
+  makeMutedAccent,
+  parseColor,
+  pickAccessibleTextColor,
+  shadeColor,
+} from '../utils/color';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
@@ -33,25 +42,10 @@ export const ACCENT_OPTIONS = [
   '#e53e3e', // red
   '#d97706', // orange
   '#38a169', // green
-  '#805ad5', // purple
+  '#7c3aed', // purple
   '#ed64a6', // pink
 ];
 
-// Utility to lighten or darken a hex color by a percentage
-const shadeColor = (color: string, percent: number): string => {
-  const f = parseInt(color.slice(1), 16);
-  const t = percent < 0 ? 0 : 255;
-  const p = Math.abs(percent);
-  const R = f >> 16;
-  const G = (f >> 8) & 0x00ff;
-  const B = f & 0x0000ff;
-  const newR = Math.round((t - R) * p) + R;
-  const newG = Math.round((t - G) * p) + G;
-  const newB = Math.round((t - B) * p) + B;
-  return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
-    .toString(16)
-    .slice(1)}`;
-};
 
 interface SettingsContextValue {
   accent: string;
@@ -146,18 +140,39 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const root = document.documentElement;
+    const computed = window.getComputedStyle(root);
+    const background = parseColor(computed.getPropertyValue('--color-bg') || '#0f1317');
+    const textColor = parseColor(computed.getPropertyValue('--color-text') || '#f5f5f5');
+    const onAccent = pickAccessibleTextColor(accent, textColor, background);
+    const accentSurface = makeAccessibleSurface(accent, background, textColor);
+    const accentBorder = makeBorderAccent(accent, background);
+    const accentMuted = makeMutedAccent(accent, background);
+    const accentStrong = shadeColor(accent, -0.25);
+    const accentGlow = hexToRgba(accent, 0.35);
+    const kaliBlueDark = shadeColor(accent, -0.2);
     const vars: Record<string, string> = {
       '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
+      '--color-ub-border-orange': accentBorder,
       '--color-primary': accent,
       '--color-accent': accent,
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--color-on-accent': onAccent,
+      '--accent-base': accent,
+      '--accent-strong': accentStrong,
+      '--accent-surface': accentSurface,
+      '--accent-border': accentBorder,
+      '--accent-muted': accentMuted,
+      '--accent-glow': accentGlow,
+      '--accent-contrast': onAccent,
+      '--kali-blue': accent,
+      '--kali-blue-dark': kaliBlueDark,
+      '--kali-blue-glow': accentGlow,
     };
     Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
+      root.style.setProperty(key, value);
     });
     saveAccent(accent);
   }, [accent]);

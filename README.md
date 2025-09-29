@@ -459,8 +459,10 @@ play/pause and track controls include keyboard hotkeys.
 
 - **`components/base/window.js`** - draggable, focusable window with header controls; integrates with desktop z-index.
 - **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
+- **`components/AccentPicker.tsx`** - accessible accent selector that previews contrast and writes user choices back to settings.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
 - **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper and other preferences with persistence.
+- **`styles/tokens.css`** - CSS custom properties for spacing, motion and the accent palette (`--accent-*` tokens). Accent updates compute `--color-on-accent` so UI controls stay WCAG AA compliant.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
 - **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).

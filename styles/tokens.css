@@ -28,6 +28,21 @@
   --kali-bg: rgba(15, 19, 23, 0.85);
   --kali-blue: #1793d1;
 
+  /* Accent palette */
+  --accent-base: #1793d1;
+  --accent-strong: #0f6fa1;
+  --accent-surface: #102635;
+  --accent-border: #0f4f75;
+  --accent-muted: #0c1c27;
+  --accent-glow: rgba(23, 147, 209, 0.35);
+  --accent-contrast: #0f1317;
+  --color-primary: var(--accent-base);
+  --color-accent: var(--accent-base);
+  --color-focus-ring: var(--accent-base);
+  --color-selection: var(--accent-base);
+  --color-control-accent: var(--accent-base);
+  --color-on-accent: var(--accent-contrast);
+
   /* Kali theme tokens */
   --kali-blue: #1793d1;
   --kali-blue-dark: #0f6fa1;
@@ -97,6 +112,14 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --accent-base: #ffff00;
+  --accent-strong: #ffcc00;
+  --accent-surface: #262600;
+  --accent-border: #b39b00;
+  --accent-muted: #1a1a00;
+  --accent-glow: rgba(255, 255, 0, 0.45);
+  --accent-contrast: #000000;
+  --color-on-accent: var(--accent-contrast);
 }
 
 /* Dyslexia-friendly fonts */
@@ -136,5 +159,13 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --accent-base: #ffff00;
+    --accent-strong: #ffcc00;
+    --accent-surface: #262600;
+    --accent-border: #b39b00;
+    --accent-muted: #1a1a00;
+    --accent-glow: rgba(255, 255, 0, 0.45);
+    --accent-contrast: #000000;
+    --color-on-accent: var(--accent-contrast);
   }
 }
