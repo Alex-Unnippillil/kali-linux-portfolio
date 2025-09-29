@@ -1,12 +1,20 @@
 "use client";
 
+import QRCode from "qrcode";
 import type { FC, MouseEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
 
 type NetworkType = "wired" | "wifi";
 type SignalStrength = "excellent" | "good" | "fair" | "weak";
+
+interface NetworkCredentials {
+  ssid: string;
+  password?: string;
+  security?: string;
+  hidden?: boolean;
+}
 
 interface Network {
   id: string;
@@ -15,6 +23,7 @@ interface Network {
   strength?: SignalStrength;
   secure?: boolean;
   details: string;
+  credentials?: NetworkCredentials;
 }
 
 const NETWORKS: Network[] = [
@@ -31,6 +40,11 @@ const NETWORKS: Network[] = [
     strength: "excellent",
     secure: true,
     details: "Auto-connect • WPA2",
+    credentials: {
+      ssid: "HomeLab 5G",
+      password: "k@l1-l@b-5g!",
+      security: "WPA2",
+    },
   },
   {
     id: "redteam",
@@ -39,6 +53,12 @@ const NETWORKS: Network[] = [
     strength: "good",
     secure: true,
     details: "Hidden SSID • WPA3",
+    credentials: {
+      ssid: "Red Team Ops",
+      password: "Sup3rS3cret!",
+      security: "WPA3",
+      hidden: true,
+    },
   },
   {
     id: "espresso",
@@ -47,6 +67,10 @@ const NETWORKS: Network[] = [
     strength: "fair",
     secure: false,
     details: "Captive portal",
+    credentials: {
+      ssid: "Espresso Bar",
+      security: "None",
+    },
   },
   {
     id: "pineapple",
@@ -55,6 +79,11 @@ const NETWORKS: Network[] = [
     strength: "weak",
     secure: true,
     details: "WEP • Legacy",
+    credentials: {
+      ssid: "Pineapple Lab",
+      password: "LegacyLab",
+      security: "WEP",
+    },
   },
 ];
 
@@ -80,6 +109,106 @@ const classNames = (...classes: Array<string | false | null | undefined>) =>
 
 const isValidNetworkId = (value: unknown): value is string =>
   typeof value === "string" && NETWORKS.some((network) => network.id === value);
+
+type ShareLogAction =
+  | "open"
+  | "confirm"
+  | "qr-generated"
+  | "nfc-success"
+  | "nfc-failure"
+  | "error"
+  | "close";
+
+interface ShareLogEntry {
+  timestamp: string;
+  action: ShareLogAction;
+  networkId: string;
+  provider?: "nfcap" | "kdeconnect";
+  details?: string;
+}
+
+const isShareLogEntryArray = (value: unknown): value is ShareLogEntry[] =>
+  Array.isArray(value) &&
+  value.every(
+    (entry) =>
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof (entry as ShareLogEntry).timestamp === "string" &&
+      typeof (entry as ShareLogEntry).action === "string" &&
+      typeof (entry as ShareLogEntry).networkId === "string",
+  );
+
+const maskSecret = (secret?: string) => {
+  if (!secret) return "Not required";
+  return "•".repeat(Math.max(secret.length, 8));
+};
+
+const createWifiPayload = (network: Network) => {
+  const credentials = network.credentials;
+  const ssid = credentials?.ssid ?? network.name;
+  const params = new URLSearchParams();
+  params.set("ssid", ssid);
+  if (credentials?.password) {
+    params.set("password", credentials.password);
+  }
+  if (credentials?.security) {
+    params.set("security", credentials.security);
+  }
+  if (credentials?.hidden) {
+    params.set("hidden", "true");
+  }
+  params.set("source", "kali-desktop-ui");
+  return `wifi://?${params.toString()}`;
+};
+
+type ShareStatus =
+  | { state: "idle" }
+  | { state: "pending" }
+  | { state: "ready"; qr: string; payload: string }
+  | { state: "error"; message: string };
+
+declare global {
+  interface Window {
+    nfcap?: {
+      supported?: boolean;
+      push: (payload: string) => Promise<void>;
+    };
+    kdeconnect?: {
+      isAvailable?: boolean;
+      share: (payload: string, options?: unknown) => Promise<void>;
+    };
+  }
+}
+
+const pushToNfc = async (payload: string) => {
+  if (typeof window === "undefined") {
+    return { attempted: false as const };
+  }
+
+  let provider: "nfcap" | "kdeconnect" | undefined;
+  try {
+    if (window.nfcap?.push && window.nfcap.supported !== false) {
+      provider = "nfcap";
+      await window.nfcap.push(payload);
+      return { attempted: true as const, provider, success: true as const };
+    }
+
+    if (window.kdeconnect?.share && window.kdeconnect.isAvailable !== false) {
+      provider = "kdeconnect";
+      await window.kdeconnect.share(payload, { type: "text/plain" });
+      return { attempted: true as const, provider, success: true as const };
+    }
+  } catch (error) {
+    return {
+      attempted: true as const,
+      provider: provider ?? (window.nfcap?.push ? ("nfcap" as const) : ("kdeconnect" as const)),
+      success: false as const,
+      message: error instanceof Error ? error.message : "Unknown NFC error",
+    };
+  }
+
+  return { attempted: false as const };
+};
 
 interface ConnectionSummary {
   state: "offline" | "disabled" | "connected" | "blocked";
@@ -266,6 +395,16 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
   );
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [shareTarget, setShareTarget] = useState<Network | null>(null);
+  const [shareStatus, setShareStatus] = useState<ShareStatus>({ state: "idle" });
+  const [shareConfirmed, setShareConfirmed] = useState(false);
+  const [nfcStatus, setNfcStatus] = useState<string | null>(null);
+  const [showLogs, setShowLogs] = useState(false);
+  const [shareLogs, setShareLogs] = usePersistentState<ShareLogEntry[]>(
+    "status-network-share-log",
+    [],
+    isShareLogEntryArray,
+  );
 
   const connectedNetwork = useMemo(
     () => NETWORKS.find((network) => network.id === connectedId) ?? NETWORKS[0],
@@ -323,6 +462,99 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     setConnectedId(network.id);
   };
 
+  const appendShareLog = useCallback(
+    (entry: Omit<ShareLogEntry, "timestamp">) => {
+      setShareLogs((prev) => {
+        const nextEntry: ShareLogEntry = {
+          ...entry,
+          timestamp: new Date().toISOString(),
+        };
+        const trimmed = prev.slice(-49);
+        return [...trimmed, nextEntry];
+      });
+    },
+    [setShareLogs],
+  );
+
+  const closeShare = useCallback(() => {
+    if (shareTarget) {
+      appendShareLog({ action: "close", networkId: shareTarget.id, details: "Share modal dismissed" });
+    }
+    setShareTarget(null);
+    setShareStatus({ state: "idle" });
+    setShareConfirmed(false);
+    setNfcStatus(null);
+  }, [appendShareLog, shareTarget]);
+
+  const handleShare = useCallback(
+    (network: Network) => {
+      setShareTarget(network);
+      setShareStatus({ state: "idle" });
+      setShareConfirmed(false);
+      setNfcStatus(null);
+      appendShareLog({ action: "open", networkId: network.id, details: "Share modal opened" });
+    },
+    [appendShareLog],
+  );
+
+  useEffect(() => {
+    if (!shareTarget) return undefined;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeShare();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeShare, shareTarget]);
+
+  const handleConfirmShare = useCallback(async () => {
+    if (!shareTarget) return;
+
+    setShareConfirmed(true);
+    setShareStatus({ state: "pending" });
+    appendShareLog({ action: "confirm", networkId: shareTarget.id, details: "User confirmed sharing" });
+
+    const payload = createWifiPayload(shareTarget);
+
+    try {
+      const qr = await QRCode.toDataURL(payload, { width: 220, margin: 1 });
+      setShareStatus({ state: "ready", qr, payload });
+      appendShareLog({ action: "qr-generated", networkId: shareTarget.id, details: "QR code generated" });
+
+      const nfcResult = await pushToNfc(payload);
+      if (nfcResult.attempted) {
+        if (nfcResult.success) {
+          appendShareLog({
+            action: "nfc-success",
+            networkId: shareTarget.id,
+            provider: nfcResult.provider,
+            details: "NFC payload pushed",
+          });
+          setNfcStatus(`NFC push sent via ${nfcResult.provider}.`);
+        } else {
+          appendShareLog({
+            action: "nfc-failure",
+            networkId: shareTarget.id,
+            provider: nfcResult.provider,
+            details: nfcResult.message ?? "Unknown NFC failure",
+          });
+          setNfcStatus(nfcResult.message ?? "NFC push failed.");
+        }
+      } else {
+        setNfcStatus("NFC push not available on this device.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to generate QR code";
+      setShareStatus({ state: "error", message });
+      appendShareLog({ action: "error", networkId: shareTarget.id, details: message });
+    }
+  }, [appendShareLog, shareTarget]);
+
   return (
     <div ref={rootRef} className={classNames("relative flex items-center", className)}>
       <button
@@ -374,43 +606,166 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
             />
           </label>
           <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-200">Available networks</div>
-          <ul className="space-y-1" role="group" aria-label="Available networks">
+          <ul className="space-y-2" role="group" aria-label="Available networks">
             {NETWORKS.map((network) => {
               const connected = connectedId === network.id;
               const disabled = network.type === "wifi" && !wifiEnabled;
               return (
                 <li key={network.id}>
-                  <button
-                    type="button"
-                    className={classNames(
-                      "w-full rounded px-2 py-2 text-left transition",
-                      connected ? "bg-ub-blue bg-opacity-60" : "hover:bg-white hover:bg-opacity-10",
-                      disabled && "cursor-not-allowed opacity-60",
-                    )}
-                    onClick={() => !disabled && handleConnect(network)}
-                    disabled={disabled}
-                    aria-pressed={connected}
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-white">{network.name}</span>
-                      {network.type === "wifi" && network.strength && (
-                        <span className="text-[11px] text-gray-200">{SIGNAL_LABEL[network.strength]}</span>
+                  <div className="flex items-start gap-2">
+                    <button
+                      type="button"
+                      className={classNames(
+                        "flex-1 rounded px-2 py-2 text-left transition",
+                        connected ? "bg-ub-blue bg-opacity-60" : "hover:bg-white hover:bg-opacity-10",
+                        disabled && "cursor-not-allowed opacity-60",
                       )}
-                    </div>
-                    <div className="text-[11px] text-gray-300">
-                      {connected
-                        ? network.details
-                        : network.type === "wifi"
-                        ? `${hasSecureLabel(network)}${
-                            network.strength ? ` • ${SIGNAL_LABEL[network.strength]}` : ""
-                          }`
-                        : network.details}
-                    </div>
-                  </button>
+                      onClick={() => !disabled && handleConnect(network)}
+                      disabled={disabled}
+                      aria-pressed={connected}
+                    >
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-white">{network.name}</span>
+                        {network.type === "wifi" && network.strength && (
+                          <span className="text-[11px] text-gray-200">{SIGNAL_LABEL[network.strength]}</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-gray-300">
+                        {connected
+                          ? network.details
+                          : network.type === "wifi"
+                          ? `${hasSecureLabel(network)}${
+                              network.strength ? ` • ${SIGNAL_LABEL[network.strength]}` : ""
+                            }`
+                          : network.details}
+                      </div>
+                    </button>
+                    {network.type === "wifi" && (
+                      <button
+                        type="button"
+                        className="h-full min-h-[2.75rem] rounded border border-white/20 px-2 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                        onClick={() => handleShare(network)}
+                        aria-label={`Share ${network.name}`}
+                      >
+                        Share
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}
           </ul>
+          <button
+            type="button"
+            className="mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-300 transition hover:border-white/40 hover:text-white"
+            onClick={() => setShowLogs((prev) => !prev)}
+            aria-expanded={showLogs}
+          >
+            {showLogs ? "Hide share activity" : "Show share activity"}
+          </button>
+          {showLogs && (
+            <div className="mt-2 max-h-32 overflow-y-auto rounded border border-white/10 bg-black/30 p-2 text-[11px] text-gray-200">
+              {shareLogs.length === 0 ? (
+                <p>No share activity recorded yet.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {shareLogs
+                    .slice()
+                    .reverse()
+                    .map((entry, index) => (
+                      <li key={`${entry.timestamp}-${index}`} className="leading-snug">
+                        <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
+                        <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
+                        {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
+                        {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {shareTarget && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          role="presentation"
+          onClick={closeShare}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Share ${shareTarget.name}`}
+            className="w-full max-w-md rounded-lg border border-white/20 bg-ub-cool-grey p-5 text-sm text-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold">Share {shareTarget.name}</h2>
+                <p className="mt-1 text-[11px] uppercase tracking-wide text-red-200">
+                  Privacy warning: credentials stay hidden until you confirm. All share actions are logged locally for review.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                onClick={closeShare}
+                aria-label="Close share dialog"
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-2 rounded border border-white/15 bg-black/30 p-3 text-[13px]">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">SSID</span>
+                <span className="font-medium text-white">{shareTarget.credentials?.ssid ?? shareTarget.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">Security</span>
+                <span className="text-white">{shareTarget.credentials?.security ?? "Unknown"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">Password</span>
+                <span className="font-mono text-white">
+                  {shareConfirmed
+                    ? shareTarget.credentials?.password ?? "Not required"
+                    : maskSecret(shareTarget.credentials?.password)}
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              {!shareConfirmed && (
+                <button
+                  type="button"
+                  className="w-full rounded bg-ub-blue px-3 py-2 text-sm font-semibold text-white transition hover:bg-ub-blue/80"
+                  onClick={handleConfirmShare}
+                >
+                  Reveal &amp; Generate QR
+                </button>
+              )}
+              {shareConfirmed && shareStatus.state === "pending" && (
+                <div className="rounded border border-white/10 bg-black/40 px-3 py-2 text-center text-[13px] text-gray-200">
+                  Generating secure QR code…
+                </div>
+              )}
+              {shareStatus.state === "ready" && (
+                <div className="space-y-2 text-center">
+                  <img
+                    src={shareStatus.qr}
+                    alt={`Wi-Fi share code for ${shareTarget.name}`}
+                    className="mx-auto h-40 w-40 rounded bg-white p-2"
+                  />
+                  <p className="text-[11px] text-gray-300">Payload: {shareStatus.payload}</p>
+                  {nfcStatus && <p className="text-[11px] text-gray-200">{nfcStatus}</p>}
+                </div>
+              )}
+              {shareStatus.state === "error" && (
+                <div className="rounded border border-red-500/60 bg-red-900/40 px-3 py-2 text-[13px] text-red-100">
+                  {shareStatus.message}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
