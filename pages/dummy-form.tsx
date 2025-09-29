@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import FormError from '../components/ui/FormError';
+import FormHint from '../components/ui/FormHint';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -12,6 +13,14 @@ const DummyForm: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [recovered, setRecovered] = useState(false);
+  const [activeHint, setActiveHint] = useState<string | null>(null);
+  const hintBaseId = useId();
+  const nameHintId = `${hintBaseId}-name`;
+  const emailHintId = `${hintBaseId}-email`;
+  const messageHintId = `${hintBaseId}-message`;
+  const nameLabelId = `${hintBaseId}-name-label`;
+  const emailLabelId = `${hintBaseId}-email-label`;
+  const messageLabelId = `${hintBaseId}-message-label`;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -92,29 +101,95 @@ const DummyForm: React.FC = () => {
         {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
         {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
-        <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
-        <input
-          id="name"
-          className="mb-4 w-full rounded border p-2"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <label className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
-        <input
-          id="email"
-          className="mb-4 w-full rounded border p-2"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <label className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
-        <textarea
-          id="message"
-          className="mb-4 w-full rounded border p-2"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-        />
+        <div className="mb-4">
+          <label
+            className="mb-2 block text-sm font-medium"
+            htmlFor="name"
+            id={nameLabelId}
+          >
+            Name
+          </label>
+          <div className="relative">
+            <input
+              id="name"
+              className="w-full rounded border p-2"
+              type="text"
+              value={name}
+              onFocus={() => setActiveHint(nameHintId)}
+              onBlur={() => setActiveHint((current) => (current === nameHintId ? null : current))}
+              aria-describedby={activeHint === nameHintId ? nameHintId : undefined}
+              aria-labelledby={nameLabelId}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <FormHint
+              id={nameHintId}
+              visible={activeHint === nameHintId}
+              placement="right"
+              panelClassName="bg-white text-gray-700 border-gray-200 shadow-lg"
+            >
+              Share your full name so we know how to address you when we reply.
+            </FormHint>
+          </div>
+        </div>
+        <div className="mb-4">
+          <label
+            className="mb-2 block text-sm font-medium"
+            htmlFor="email"
+            id={emailLabelId}
+          >
+            Email
+          </label>
+          <div className="relative">
+            <input
+              id="email"
+              className="w-full rounded border p-2"
+              type="email"
+              value={email}
+              onFocus={() => setActiveHint(emailHintId)}
+              onBlur={() => setActiveHint((current) => (current === emailHintId ? null : current))}
+              aria-describedby={activeHint === emailHintId ? emailHintId : undefined}
+              aria-labelledby={emailLabelId}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <FormHint
+              id={emailHintId}
+              visible={activeHint === emailHintId}
+              placement="right"
+              panelClassName="bg-white text-gray-700 border-gray-200 shadow-lg"
+            >
+              Use the email where you&apos;d like to receive a confirmation.
+            </FormHint>
+          </div>
+        </div>
+        <div className="mb-4">
+          <label
+            className="mb-2 block text-sm font-medium"
+            htmlFor="message"
+            id={messageLabelId}
+          >
+            Message
+          </label>
+          <div className="relative">
+            <textarea
+              id="message"
+              className="w-full rounded border p-2"
+              value={message}
+              onFocus={() => setActiveHint(messageHintId)}
+              onBlur={() => setActiveHint((current) => (current === messageHintId ? null : current))}
+              aria-describedby={activeHint === messageHintId ? messageHintId : undefined}
+              aria-labelledby={messageLabelId}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <FormHint
+              id={messageHintId}
+              visible={activeHint === messageHintId}
+              placement="right"
+              panelClassName="bg-white text-gray-700 border-gray-200 shadow-lg"
+            >
+              Include context, links, or questions so we can respond accurately.
+            </FormHint>
+          </div>
+        </div>
         <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
         <p className="mt-4 text-xs text-gray-500">
           This form posts to a dummy endpoint. No data is stored. By submitting, you consent to this temporary processing of your information.
