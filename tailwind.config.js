@@ -1,4 +1,5 @@
 const plugin = require('tailwindcss/plugin');
+const spacingScale = require('./styles/spacing-scale.json');
 
 module.exports = {
   darkMode: 'class',
@@ -11,6 +12,7 @@ module.exports = {
   ],
   theme: {
     extend: {
+      spacing: spacingScale,
       screens: {
         '3xl': '1920px',
       },
