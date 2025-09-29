@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
+import { useSettings } from '../hooks/useSettings';
 
 export default function TweetEmbed({ id }) {
   const [html, setHtml] = useState(null);
   const [error, setError] = useState(false);
+  const [allowOnce, setAllowOnce] = useState(false);
+  const { allowEmbeds, setAllowEmbeds } = useSettings();
+  const hasConsent = allowEmbeds || allowOnce;
 
   useEffect(() => {
+    if (!hasConsent) {
+      setHtml(null);
+      setError(false);
+      return undefined;
+    }
     let active = true;
     setHtml(null);
     setError(false);
@@ -26,9 +35,10 @@ export default function TweetEmbed({ id }) {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, hasConsent]);
 
   useEffect(() => {
+    if (!hasConsent) return undefined;
     const hook = (node) => {
       if (node.tagName === 'A') {
         node.setAttribute('target', '_blank');
@@ -39,10 +49,47 @@ export default function TweetEmbed({ id }) {
     return () => {
       DOMPurify.removeHook('afterSanitizeAttributes', hook);
     };
-  }, []);
+  }, [hasConsent]);
+
+  useEffect(() => {
+    setAllowOnce(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!allowEmbeds) {
+      setAllowOnce(false);
+    }
+  }, [allowEmbeds]);
 
   if (error) {
     return <div className="p-4 text-center">Unable to load tweet.</div>;
+  }
+
+  if (!hasConsent) {
+    return (
+      <div className="rounded border border-ubt-cool-grey bg-ub-cool-grey/40 p-4 text-sm text-ubt-grey">
+        <p className="mb-3 font-medium">Embedded tweet blocked</p>
+        <p className="mb-4">
+          Tweets load third-party scripts. Enable embeds to view this content or load it once for this session.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="rounded bg-ub-orange px-3 py-1 text-black transition hover:bg-ub-orange/80"
+            onClick={() => setAllowEmbeds(true)}
+          >
+            Always allow embeds
+          </button>
+          <button
+            type="button"
+            className="rounded border border-ubt-grey px-3 py-1 text-ubt-grey transition hover:bg-ub-grey/60"
+            onClick={() => setAllowOnce(true)}
+          >
+            Load once
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!html) {

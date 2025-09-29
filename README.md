@@ -220,6 +220,15 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
+---
+
+## Embedded media consent
+
+- Third-party embeds (for example StackBlitz or Twitter) are blocked until a visitor opts in.
+- A global banner and per-embed prompts let visitors enable all embeds or load a single item once without persisting consent.
+- Preferences live in `localStorage` under `allow-embeds` and can be managed inside the desktop **Settings** app via **Allow Embedded Media**.
+- See [`docs/embed-consent.md`](./docs/embed-consent.md) or visit `/docs/embed-consent` in the running app for implementation notes.
+
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
 ---
