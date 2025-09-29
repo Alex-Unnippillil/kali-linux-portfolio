@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  createContext,
+  useContext,
+} from 'react';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -39,9 +46,15 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   className = '',
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
-  const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
+  const initialActiveId = initialTabs[0]?.id || '';
+  const [activeId, setActiveId] = useState<string>(initialActiveId);
+  const initialFocusedIndex = initialTabs.findIndex((tab) => tab.id === initialActiveId);
+  const [focusedIndex, setFocusedIndex] = useState<number>(() =>
+    initialFocusedIndex === -1 ? 0 : initialFocusedIndex,
+  );
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -71,6 +84,27 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     [],
   );
 
+  const focusElement = useCallback((index: number) => {
+    const node = tabRefs.current[index];
+    if (!node) return;
+    if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        node.focus();
+      });
+    } else {
+      node.focus();
+    }
+  }, []);
+
+  const focusTabAt = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= tabs.length) return;
+      setFocusedIndex(index);
+      focusElement(index);
+    },
+    [focusElement, tabs.length],
+  );
+
   const closeTab = useCallback(
     (id: string) => {
       updateTabs((prev) => {
@@ -98,6 +132,21 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     updateTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
+
+  useEffect(() => {
+    if (tabs.length === 0) return;
+    const nextIndex = tabs.findIndex((tab) => tab.id === activeId);
+    if (nextIndex !== -1) {
+      setFocusedIndex((prev) => (prev !== nextIndex ? nextIndex : prev));
+      focusElement(nextIndex);
+      return;
+    }
+    setFocusedIndex((prev) => {
+      const bounded = Math.min(prev, tabs.length - 1);
+      focusElement(bounded);
+      return bounded;
+    });
+  }, [activeId, focusElement, tabs]);
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
@@ -146,19 +195,37 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       });
       return;
     }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+  };
+
+  const handleTabKeyDown = (index: number) => (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx =
-          e.key === 'ArrowLeft'
-            ? (idx - 1 + prev.length) % prev.length
-            : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
+      const nextIndex = (index - 1 + tabs.length) % tabs.length;
+      focusTabAt(nextIndex);
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const nextIndex = (index + 1) % tabs.length;
+      focusTabAt(nextIndex);
+      return;
+    }
+    if (e.key === 'Home') {
+      e.preventDefault();
+      focusTabAt(0);
+      return;
+    }
+    if (e.key === 'End') {
+      e.preventDefault();
+      focusTabAt(tabs.length - 1);
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const nextTab = tabs[index];
+      if (nextTab) {
+        setActive(nextTab.id);
+      }
     }
   };
 
@@ -168,18 +235,29 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto" role="tablist">
         {tabs.map((t, i) => (
           <div
             key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
+            ref={(el) => {
+              tabRefs.current[i] = el;
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue ${
               t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
             }`}
             draggable
             onDragStart={handleDragStart(i)}
             onDragOver={handleDragOver(i)}
             onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
+            onClick={() => {
+              setFocusedIndex(i);
+              setActive(t.id);
+            }}
+            onFocus={() => setFocusedIndex(i)}
+            onKeyDown={handleTabKeyDown(i)}
+            tabIndex={focusedIndex === i ? 0 : -1}
+            role="tab"
+            aria-selected={t.id === activeId}
           >
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
