@@ -95,7 +95,7 @@ const PongInner = () => {
       [sound],
     );
 
-  const controls = useRef(useGameControls(canvasRef));
+  const controls = useRef(useGameControls(canvasRef, 'pong'));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -663,11 +663,13 @@ const PongInner = () => {
   }, [offerSDP]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
-      <canvas
-        ref={canvasRef}
-        className="bg-black w-full h-full touch-none"
-      />
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+        <canvas
+          ref={canvasRef}
+          className="bg-black w-full h-full touch-none"
+          role="img"
+          aria-label="Pong playfield"
+        />
       {mode === 'practice' ? (
         <div className="mt-2 font-mono text-center" aria-live="polite" role="status">
           Rally: {rally} (Best: {highScore})

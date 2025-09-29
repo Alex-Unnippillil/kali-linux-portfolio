@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
+import gamepad from '../../utils/gamepad';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -713,16 +714,6 @@ const Pacman = () => {
     const loop = () => {
       if (statusRef.current === 'Playing' && !pausedRef.current) {
         stepRef.current();
-        // simple gamepad polling
-        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-        if (pads) {
-          for (const pad of pads) {
-            if (!pad) continue;
-            const [ax, ay] = pad.axes;
-            if (Math.abs(ax) > 0.3) pacRef.current.nextDir = { x: ax > 0 ? 1 : -1, y: 0 };
-            if (Math.abs(ay) > 0.3) pacRef.current.nextDir = { x: 0, y: ay > 0 ? 1 : -1 };
-          }
-        }
       }
       draw();
       id = requestAnimationFrame(loop);
@@ -738,6 +729,32 @@ const Pacman = () => {
       if (id) cancelAnimationFrame(id);
     };
   }, [loading, error, draw, reset, setPaused, setSoundEnabled]);
+
+  useEffect(() => {
+    const map = {
+      buttons: {
+        left: { axis: 0, direction: 'negative', threshold: 0.35 },
+        right: { axis: 0, direction: 'positive', threshold: 0.35 },
+        up: { axis: 1, direction: 'negative', threshold: 0.35 },
+        down: { axis: 1, direction: 'positive', threshold: 0.35 },
+      },
+    };
+    gamepad.setActionMap('pacman', map, {
+      label: 'Pac-Man',
+      persist: true,
+      deadzone: 0.25,
+    });
+    const unsubscribe = gamepad.subscribeToActions('pacman', (state) => {
+      if (!state.connected) return;
+      if (state.buttons.left) pacRef.current.nextDir = { x: -1, y: 0 };
+      else if (state.buttons.right) pacRef.current.nextDir = { x: 1, y: 0 };
+      else if (state.buttons.up) pacRef.current.nextDir = { x: 0, y: -1 };
+      else if (state.buttons.down) pacRef.current.nextDir = { x: 0, y: 1 };
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
 
   if (loading) {
@@ -781,29 +798,30 @@ const Pacman = () => {
   return (
 
   <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <div className="mb-2 w-full max-w-xs">
-        <input
-          type="text"
-          placeholder="Search level..."
-          className="w-full px-2 py-1 text-black"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setHighlight(0);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') {
-              e.preventDefault();
-              setHighlight((h) => Math.min(h + 1, filteredLevels.length - 1));
-            } else if (e.key === 'ArrowUp') {
-              e.preventDefault();
-              setHighlight((h) => Math.max(h - 1, 0));
-            } else if (e.key === 'Enter') {
-              const sel = filteredLevels[highlight];
-              if (sel) loadLevel(sel.index);
-            }
-          }}
-        />
+        <div className="mb-2 w-full max-w-xs">
+          <input
+            type="text"
+            placeholder="Search level..."
+            className="w-full px-2 py-1 text-black"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setHighlight(0);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlight((h) => Math.min(h + 1, filteredLevels.length - 1));
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlight((h) => Math.max(h - 1, 0));
+              } else if (e.key === 'Enter') {
+                const sel = filteredLevels[highlight];
+                if (sel) loadLevel(sel.index);
+              }
+            }}
+            aria-label="Search levels"
+          />
         <ul className="max-h-40 overflow-y-auto bg-white text-black border border-gray-300">
           {filteredLevels.length === 0 && (
             <li className="px-2 py-1">No levels found</li>
@@ -828,17 +846,19 @@ const Pacman = () => {
         setGameSpeed={setGameSpeed}
       />
 
-      <div
-        className="relative"
-        style={{ width: WIDTH * scale, height: HEIGHT * scale }}
-      >
-        <canvas
-          ref={canvasRef}
-          width={WIDTH}
-          height={HEIGHT}
-          className="bg-black"
-          style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
-        />
+        <div
+          className="relative"
+          style={{ width: WIDTH * scale, height: HEIGHT * scale }}
+        >
+          <canvas
+            ref={canvasRef}
+            width={WIDTH}
+            height={HEIGHT}
+            className="bg-black"
+            style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
+            role="img"
+            aria-label="Pac-Man maze"
+          />
         <div className="absolute top-0 left-0 w-full text-xs bg-black bg-opacity-75 px-1 flex justify-between">
           <span>Score: {score}</span>
           <span>Pellets: {pelletCount}</span>

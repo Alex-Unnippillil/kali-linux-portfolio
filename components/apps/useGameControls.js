@@ -28,7 +28,11 @@ const useGameControls = (arg, gameId = 'default') => {
     hyperspace: false,
     joystick: { x: 0, y: 0, active: false, startX: 0, startY: 0 },
   });
-  const gamepad = useGamepad();
+  const gamepad = useGamepad(gameId, {
+    deadzone: 0.35,
+    label: `Gamepad: ${gameId}`,
+    persist: true,
+  });
   const padTime = useRef(0);
 
   // keyboard controls for directional games

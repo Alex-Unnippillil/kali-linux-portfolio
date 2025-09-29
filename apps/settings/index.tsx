@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import GamepadConfigurator from "./components/GamepadConfigurator";
 
 export default function Settings() {
   const {
@@ -40,6 +41,7 @@ export default function Settings() {
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "controls", label: "Controls" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
@@ -156,14 +158,16 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex justify-center my-4 items-center text-ubt-grey">
+            <input
+              id="toggle-kali-wallpaper"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-labelledby="toggle-kali-wallpaper-label"
+            />
+            <label id="toggle-kali-wallpaper-label" htmlFor="toggle-kali-wallpaper">
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -310,6 +314,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "controls" && <GamepadConfigurator />}
         <input
           type="file"
           accept="application/json"

@@ -316,7 +316,7 @@ const Snake = () => {
     const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
     if (curr.x + x === 0 && curr.y + y === 0) return;
     queue.push({ x, y });
-  });
+  }, 'snake');
 
   useEffect(() => {
     if (gameOver && score > highScore) {
@@ -404,6 +404,7 @@ const Snake = () => {
             className="bg-gray-800 border border-gray-700 w-full h-full"
             tabIndex={0}
             aria-label="Snake game board"
+            role="img"
           />
           {gameOver && (
             <div
@@ -449,15 +450,16 @@ const Snake = () => {
         </div>
         <div className="mt-2 flex items-center space-x-2">
           <label htmlFor="speed">Speed</label>
-          <input
-            id="speed"
-            type="range"
-            min="50"
-            max="300"
-            step="10"
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-          />
+            <input
+              id="speed"
+              type="range"
+              min="50"
+              max="300"
+              step="10"
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              aria-label="Snake speed"
+            />
         </div>
         <div className="mt-2 flex items-center space-x-2">
           <label htmlFor="replay">Replay</label>
