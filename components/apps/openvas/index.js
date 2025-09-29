@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from 'react';
+import VirtualList from 'rc-virtual-list';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
@@ -204,6 +211,7 @@ const OpenVASApp = () => {
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
   const sessionRef = useRef({});
+  const findingsListRef = useRef(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -319,6 +327,42 @@ const OpenVASApp = () => {
     severity === 'All'
       ? filteredFindings
       : filteredFindings.filter((f) => f.severity === severity.toLowerCase());
+
+  const findingHeights = useMemo(
+    () =>
+      displayFindings.map((finding) => {
+        let base = 112;
+        if (finding.description?.length > 120) base += 16;
+        if (finding.remediation) base += 20;
+        if (finding.cvss !== undefined || finding.epss !== undefined) base += 16;
+        return base;
+      }),
+    [displayFindings]
+  );
+
+  const estimatedFindingHeight = useMemo(() => {
+    if (!findingHeights.length) return 120;
+    const total = findingHeights.reduce((sum, size) => sum + size, 0);
+    return Math.round(total / findingHeights.length);
+  }, [findingHeights]);
+
+  const findingsListHeight = useMemo(() => {
+    const total = findingHeights.reduce((sum, size) => sum + size, 0);
+    if (!total) return 0;
+    return Math.min(380, Math.max(total, 180));
+  }, [findingHeights]);
+
+  const focusFindingRow = useCallback(
+    (index) => {
+      if (index < 0 || index >= displayFindings.length) return;
+      findingsListRef.current?.scrollTo({ index });
+      requestAnimationFrame(() => {
+        const target = document.getElementById(`openvas-finding-${index}`);
+        target?.focus();
+      });
+    },
+    [displayFindings.length]
+  );
 
   const severityCounts = findings.reduce((acc, f) => {
     acc[f.severity] = (acc[f.severity] || 0) + 1;
@@ -504,36 +548,88 @@ const OpenVASApp = () => {
           </div>
         </div>
       )}
-      {displayFindings.length > 0 && (
-        <ul className="mb-4 space-y-2">
-          {displayFindings.map((f, idx) => (
-            <li
-              key={idx}
-              role="listitem"
-              className={`p-2 rounded ${severityColors[f.severity]} text-white`}
-            >
-              <button
-                type="button"
-                onClick={() => setSelected(f)}
-                className="w-full text-left focus:outline-none"
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
-                  />
-                  <div className="flex gap-1 ml-2">
-                    <span className="px-1 py-0.5 bg-red-700 rounded text-xs">
-                      CVSS {f.cvss}
-                    </span>
-                    <span className="px-1 py-0.5 bg-blue-700 rounded text-xs">
-                      EPSS {(f.epss * 100).toFixed(1)}%
-                    </span>
-                  </div>
+      {displayFindings.length > 0 && findingsListHeight > 0 && (
+        <div className="mb-4">
+          <div
+            className="sticky top-0 z-10 bg-ub-cool-grey text-sm font-semibold py-2"
+            role="heading"
+            aria-level={3}
+          >
+            Findings ({displayFindings.length})
+          </div>
+          <VirtualList
+            ref={findingsListRef}
+            data={displayFindings}
+            height={findingsListHeight}
+            itemHeight={estimatedFindingHeight}
+            itemKey={(item, index) => `${item.description}-${index}`}
+            innerProps={{ role: 'list', 'aria-label': 'Scan findings' }}
+            virtual={displayFindings.length * estimatedFindingHeight > findingsListHeight}
+            overscan={5}
+          >
+            {(finding, index) => {
+              const handleKeyDown = (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setSelected(finding);
+                }
+                if (event.key === 'ArrowDown') {
+                  event.preventDefault();
+                  focusFindingRow(index + 1);
+                }
+                if (event.key === 'ArrowUp') {
+                  event.preventDefault();
+                  focusFindingRow(index - 1);
+                }
+              };
+
+              return (
+                <div key={`${finding.description}-${index}`} role="listitem" className="px-2 py-1">
+                  <button
+                    type="button"
+                    id={`openvas-finding-${index}`}
+                    onClick={() => setSelected(finding)}
+                    onKeyDown={handleKeyDown}
+                    className={`w-full text-left focus:outline-none p-3 rounded ${severityColors[finding.severity]} text-white`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="font-semibold"
+                        aria-label={`${finding.severity} severity finding`}
+                        dangerouslySetInnerHTML={{
+                          __html: escapeHtml(finding.description),
+                        }}
+                      />
+                      <span className="text-xs bg-black/30 rounded px-2 py-0.5">
+                        {finding.severity.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-sm mt-1">
+                      Impact: {finding.impact}, Likelihood: {finding.likelihood}
+                    </div>
+                    {finding.remediation && (
+                      <div className="text-xs mt-1">
+                        <span className="font-semibold">Remediation:</span> {finding.remediation}
+                      </div>
+                    )}
+                    <div className="flex gap-2 mt-2 text-xs">
+                      {finding.cvss !== undefined && (
+                        <span className="px-2 py-0.5 bg-black/30 rounded">
+                          CVSS {finding.cvss}
+                        </span>
+                      )}
+                      {finding.epss !== undefined && (
+                        <span className="px-2 py-0.5 bg-black/30 rounded">
+                          EPSS {(finding.epss * 100).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                  </button>
                 </div>
-              </button>
-            </li>
-          ))}
-        </ul>
+              );
+            }}
+          </VirtualList>
+        </div>
       )}
       {activeHost && (
         <div

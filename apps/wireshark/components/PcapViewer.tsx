@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import VirtualList, { ListRef } from 'rc-virtual-list';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
@@ -9,6 +16,7 @@ import LayerView from './LayerView';
 
 interface PcapViewerProps {
   showLegend?: boolean;
+  initialPackets?: Packet[];
 }
 
 const protocolColors: Record<string, string> = {
@@ -16,6 +24,7 @@ const protocolColors: Record<string, string> = {
   UDP: 'bg-green-900',
   ICMP: 'bg-yellow-800',
 };
+
 
 const samples = [
   { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
@@ -28,7 +37,7 @@ const toHex = (bytes: Uint8Array) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
 
-interface Packet {
+export interface Packet {
   timestamp: string;
   src: string;
   dest: string;
@@ -234,8 +243,8 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
-const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true, initialPackets = [] }) => {
+  const [packets, setPackets] = useState<Packet[]>(initialPackets);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
@@ -246,6 +255,23 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const packetListRef = useRef<ListRef>(null);
+
+  const gridTemplate = useMemo(
+    () =>
+      columns
+        .map((col) => {
+          if (col === 'Time') return 'minmax(140px, 1.2fr)';
+          if (col === 'Info') return 'minmax(240px, 2fr)';
+          return 'minmax(180px, 1fr)';
+        })
+        .join(' '),
+    [columns]
+  );
+
+  useEffect(() => {
+    setPackets(initialPackets);
+  }, [initialPackets]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -289,16 +315,59 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const filtered = useMemo(
+    () =>
+      packets.filter((p) => {
+        if (!filter) return true;
+        const term = filter.toLowerCase();
+        return (
+          p.src.toLowerCase().includes(term) ||
+          p.dest.toLowerCase().includes(term) ||
+          protocolName(p.protocol).toLowerCase().includes(term) ||
+          (p.info || '').toLowerCase().includes(term)
+        );
+      }),
+    [packets, filter]
+  );
+
+  const packetHeights = useMemo(
+    () =>
+      filtered.map((pkt) => {
+        const infoLength = (pkt.info || '').length;
+        const extraLines = Math.max(0, Math.ceil(infoLength / 60) - 1);
+        return 44 + extraLines * 18;
+      }),
+    [filtered]
+  );
+
+  const estimatedPacketHeight = useMemo(() => {
+    if (!packetHeights.length) return 48;
+    const total = packetHeights.reduce((sum, size) => sum + size, 0);
+    return Math.round(total / packetHeights.length);
+  }, [packetHeights]);
+
+  const packetListHeight = useMemo(() => {
+    const total = packetHeights.reduce((sum, size) => sum + size, 0);
+    if (!total) return 0;
+    return Math.min(420, Math.max(total, 220));
+  }, [packetHeights]);
+
+  const focusPacketRow = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= filtered.length) return;
+      packetListRef.current?.scrollTo({ index });
+      requestAnimationFrame(() => {
+        document.getElementById(`pcap-row-${index}`)?.focus();
+      });
+    },
+    [filtered.length]
+  );
+
+  useEffect(() => {
+    if (selected !== null && selected >= filtered.length) {
+      setSelected(filtered.length ? Math.max(0, filtered.length - 1) : null);
+    }
+  }, [filtered.length, selected]);
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -370,82 +439,144 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             </div>
           )}
           <div className="flex flex-1 overflow-hidden space-x-2">
-            <div className="overflow-auto flex-1">
-              <table className="text-xs w-full font-mono">
-                <thead>
-                  <tr className="bg-gray-800">
-                    {columns.map((col) => (
-                      <th
-                        key={col}
-                        draggable
-                        onDragStart={() => setDragCol(col)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => {
-                          if (!dragCol || dragCol === col) return;
-                          const updated = [...columns];
-                          const from = updated.indexOf(dragCol);
-                          const to = updated.indexOf(col);
-                          updated.splice(from, 1);
-                          updated.splice(to, 0, dragCol);
-                          setColumns(updated);
+            <div
+              className="flex-1 min-h-0 flex flex-col text-xs font-mono"
+              role="grid"
+              aria-label="Packet list"
+              aria-rowcount={filtered.length + 1}
+            >
+              <div
+                className="sticky top-0 z-20 bg-gray-800 grid font-semibold uppercase tracking-wide"
+                style={{ gridTemplateColumns: gridTemplate }}
+                role="row"
+              >
+                {columns.map((col) => (
+                  <div
+                    key={col}
+                    role="columnheader"
+                    draggable
+                    onDragStart={() => setDragCol(col)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragEnd={() => setDragCol(null)}
+                    onDrop={() => {
+                      if (!dragCol || dragCol === col) return;
+                      setColumns((prev) => {
+                        const updated = [...prev];
+                        const from = updated.indexOf(dragCol);
+                        const to = updated.indexOf(col);
+                        updated.splice(from, 1);
+                        updated.splice(to, 0, dragCol);
+                        return updated;
+                      });
+                      setDragCol(null);
+                    }}
+                    aria-grabbed={dragCol === col}
+                    className="px-2 py-2 cursor-move select-none"
+                  >
+                    {col}
+                  </div>
+                ))}
+              </div>
+              {packetListHeight > 0 ? (
+                <VirtualList
+                  ref={packetListRef}
+                  data={filtered}
+                  height={packetListHeight}
+                  itemHeight={estimatedPacketHeight}
+                  itemKey={(item, index) => `${item.timestamp}-${index}`}
+                  innerProps={{ role: 'rowgroup' }}
+                  virtual={filtered.length * estimatedPacketHeight > packetListHeight}
+                  overscan={8}
+                >
+                  {(pkt, index) => {
+                    const protocolLabel = protocolName(pkt.protocol);
+                    const colorClass =
+                      protocolColors[protocolLabel.toUpperCase()] || '';
+                    const isSelected = selected === index;
+
+                    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelected(index);
+                      }
+                      if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        focusPacketRow(index + 1);
+                      }
+                      if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        focusPacketRow(index - 1);
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={`${pkt.timestamp}-${index}`}
+                        id={`pcap-row-${index}`}
+                        role="row"
+                        aria-rowindex={index + 2}
+                        aria-selected={isSelected}
+                        tabIndex={0}
+                        onClick={() => setSelected(index)}
+                        onKeyDown={handleKeyDown}
+                        className={`grid cursor-pointer hover:bg-gray-700 ${
+                          isSelected ? 'outline outline-2 outline-white' : colorClass
+                        }`}
+                        style={{
+                          gridTemplateColumns: gridTemplate,
+                          alignItems: 'center',
+                          padding: '0.25rem 0.5rem',
+                          gap: '0.5rem',
                         }}
-                        className="px-1 text-left cursor-move"
                       >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((pkt, i) => (
-                    <tr
-                      key={i}
-                      className={`cursor-pointer hover:bg-gray-700 ${
-                        selected === i
-                          ? 'outline outline-2 outline-white'
-                          : protocolColors[
-                              protocolName(pkt.protocol).toString()
-                            ] || ''
-                      }`}
-                      onClick={() => setSelected(i)}
-                    >
-                      {columns.map((col) => {
-                        let val = '';
-                        switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
-                            break;
-                          case 'Source':
-                            val = pkt.src;
-                            break;
-                          case 'Destination':
-                            val = pkt.dest;
-                            break;
-                          case 'Protocol':
-                            val = protocolName(pkt.protocol);
-                            break;
-                          case 'Info':
-                            val = pkt.info;
-                            break;
-                        }
-                        return (
-                          <td key={col} className="px-1 whitespace-nowrap">
-                            {val}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        {columns.map((col) => {
+                          let val = '';
+                          switch (col) {
+                            case 'Time':
+                              val = pkt.timestamp;
+                              break;
+                            case 'Source':
+                              val = pkt.src;
+                              break;
+                            case 'Destination':
+                              val = pkt.dest;
+                              break;
+                            case 'Protocol':
+                              val = protocolLabel;
+                              break;
+                            case 'Info':
+                              val = pkt.info;
+                              break;
+                          }
+                          return (
+                            <div key={col} role="gridcell" className="px-1 truncate">
+                              {val}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
+                </VirtualList>
+              ) : (
+                <div className="p-4 text-sm text-gray-300">
+                  No packets match the current filter.
+                </div>
+              )}
             </div>
-            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
+            <div
+              className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1"
+              role="region"
+              aria-label="Packet details"
+            >
+              {selected !== null && filtered[selected] ? (
                 <>
                   {decodePacketLayers(filtered[selected]).map((layer, i) => (
                     <LayerView key={i} name={layer.name} fields={layer.fields} />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400 break-words whitespace-pre-wrap">
+                    {toHex(filtered[selected].data)}
+                  </pre>
                 </>
               ) : (
                 'Select a packet'
