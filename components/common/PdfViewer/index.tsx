@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useRovingTabIndex from '../../../hooks/useRovingTabIndex';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
@@ -16,7 +16,10 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   const [thumbs, setThumbs] = useState<HTMLCanvasElement[]>([]);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<number[]>([]);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const thumbListRef = useRef<HTMLDivElement | null>(null);
+  const viewerRef = useRef<HTMLDivElement | null>(null);
 
   useRovingTabIndex(
     thumbListRef as React.RefObject<HTMLElement>,
@@ -53,8 +56,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
       await pg
         .render({ canvasContext: canvas.getContext('2d')!, viewport, canvas })
         .promise;
-
-
     };
     render();
   }, [pdf, page]);
@@ -80,32 +81,150 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
     loadThumbs();
   }, [pdf]);
 
-  const search = async () => {
+  const goToPage = useCallback(
+    (nextPage: number) => {
+      if (!pdf) return;
+      setPage((prev) => {
+        const target = Math.min(Math.max(nextPage, 1), pdf.numPages);
+        return prev === target ? prev : target;
+      });
+    },
+    [pdf],
+  );
+
+  const handleNextPage = useCallback(() => {
     if (!pdf) return;
-    const found: number[] = [];
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const pg = await pdf.getPage(i);
-      const textContent = await pg.getTextContent();
-      const text = (textContent.items as TextItem[])
-        .map((it) => it.str)
-        .join(' ');
-      if (text.toLowerCase().includes(query.toLowerCase())) found.push(i);
+    goToPage(page + 1);
+  }, [goToPage, page, pdf]);
+
+  const handlePreviousPage = useCallback(() => {
+    if (!pdf) return;
+    goToPage(page - 1);
+  }, [goToPage, page, pdf]);
+
+  const normalizedQuery = useMemo(() => query.trim(), [query]);
+
+  const search = useCallback(async () => {
+    if (!pdf) return;
+    if (!normalizedQuery) {
+      setMatches([]);
+      setStatusMessage('Enter a term to search the document.');
+      return;
     }
-    setMatches(found);
-    if (found[0]) setPage(found[0]);
-  };
+    setIsSearching(true);
+    setStatusMessage(`Searching for "${normalizedQuery}"…`);
+    try {
+      const found: number[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const pg = await pdf.getPage(i);
+        const textContent = await pg.getTextContent();
+        const text = (textContent.items as TextItem[])
+          .map((it) => it.str)
+          .join(' ');
+        if (text.toLowerCase().includes(normalizedQuery.toLowerCase())) found.push(i);
+      }
+      setMatches(found);
+      if (found[0]) goToPage(found[0]);
+      setStatusMessage(
+        found.length
+          ? `Found ${found.length} match${found.length === 1 ? '' : 'es'} on page${
+              found.length === 1 ? '' : 's'
+            } ${found.join(', ')}.`
+          : `No matches for "${normalizedQuery}".`,
+      );
+    } finally {
+      setIsSearching(false);
+    }
+  }, [goToPage, normalizedQuery, pdf]);
+
+  useEffect(() => {
+    if (!pdf) return;
+    setPage((prev) => Math.min(Math.max(prev, 1), pdf.numPages));
+  }, [pdf]);
+
+  const handleShortcutKey = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.altKey && event.key === 'ArrowRight') {
+        event.preventDefault();
+        handleNextPage();
+      } else if (event.altKey && event.key === 'ArrowLeft') {
+        event.preventDefault();
+        handlePreviousPage();
+      } else if (event.altKey && event.key === 'Enter') {
+        event.preventDefault();
+        search();
+      }
+    },
+    [handleNextPage, handlePreviousPage, search],
+  );
+
+  const shortcutHelpId = 'pdf-viewer-shortcuts';
 
   return (
-    <div>
-      <div className="flex gap-2 mb-2">
+    <div
+      ref={viewerRef}
+      role="region"
+      aria-label="PDF viewer"
+      aria-describedby={shortcutHelpId}
+      tabIndex={0}
+      className="focus:outline-none"
+      onKeyDown={handleShortcutKey}
+    >
+      <div className="flex flex-wrap items-center gap-2 mb-2" role="toolbar" aria-label="PDF controls">
+        <button
+          type="button"
+          onClick={handlePreviousPage}
+          disabled={!pdf || page <= 1}
+          aria-label="Go to previous page (Alt + ArrowLeft)"
+          title="Alt + ArrowLeft"
+          className="rounded border border-slate-500 px-2 py-1 text-sm disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          onClick={handleNextPage}
+          disabled={!pdf || (pdf && page >= pdf.numPages)}
+          aria-label="Go to next page (Alt + ArrowRight)"
+          title="Alt + ArrowRight"
+          className="rounded border border-slate-500 px-2 py-1 text-sm disabled:opacity-50"
+        >
+          Next
+        </button>
+        <span aria-live="polite" className="text-sm text-slate-400">
+          Page {page}
+          {pdf ? ` of ${pdf.numPages}` : ''}
+        </span>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"
+          onKeyDown={(event) => {
+            if (event.altKey && event.key === 'Enter') {
+              event.preventDefault();
+              search();
+            }
+          }}
+          aria-label="Search text"
+          className="rounded border border-slate-500 px-2 py-1 text-sm"
         />
-        <button onClick={search}>Search</button>
+        <button
+          type="button"
+          onClick={search}
+          aria-label="Search document (Alt + Enter)"
+          title="Alt + Enter"
+          className="rounded border border-slate-500 px-2 py-1 text-sm"
+          disabled={!pdf || isSearching}
+        >
+          {isSearching ? 'Searching…' : 'Search'}
+        </button>
       </div>
-      <canvas ref={canvasRef} data-testid="pdf-canvas" />
+      <canvas
+        ref={canvasRef}
+        role="img"
+        aria-label={`Page ${page} preview`}
+        data-testid="pdf-canvas"
+      />
       <div
         className="flex gap-2 overflow-x-auto mt-2"
         role="listbox"
@@ -118,6 +237,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
             role="option"
             tabIndex={page === i + 1 ? 0 : -1}
             aria-selected={page === i + 1}
+            aria-label={`Page ${i + 1}`}
             data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
             onFocus={() => setPage(i + 1)}
@@ -129,8 +249,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
           />
         ))}
       </div>
+      <div id={shortcutHelpId} className="mt-2 text-xs text-slate-400">
+        Shortcuts: Alt + ArrowLeft (previous page), Alt + ArrowRight (next page), Alt + Enter (search from the field).
+      </div>
+      <div
+        className="mt-2"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="search-status"
+      >
+        <span className="sr-only">Search status:</span>
+        <span>{statusMessage}</span>
+      </div>
       {matches.length > 0 && (
-        <div data-testid="search-results">
+        <div data-testid="search-results" aria-label="Search results">
           {matches.map((m) => (
             <div key={m}>Page {m}</div>
           ))}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PdfViewer from '../components/common/PdfViewer';
 
@@ -25,18 +25,39 @@ describe('PdfViewer', () => {
     const canvas = await screen.findByTestId('pdf-canvas');
     expect(canvas).toBeInTheDocument();
     await user.type(screen.getByPlaceholderText(/search/i), 'hello');
-    await user.click(screen.getByText('Search'));
+    await user.click(screen.getByRole('button', { name: /search document/i }));
     expect(await screen.findByText('Page 1')).toBeInTheDocument();
+    expect(screen.getByTestId('search-status')).toHaveTextContent(
+      /found 3 matches/i,
+    );
   });
 
   it('supports keyboard navigation through thumbnails', async () => {
     const user = userEvent.setup();
     render(<PdfViewer url="/sample.pdf" />);
     const options = await screen.findAllByRole('option');
-    options[0].focus();
+    await act(async () => {
+      options[0].focus();
+    });
     await user.keyboard('{ArrowRight}');
     const updated = await screen.findAllByRole('option');
     expect(updated[1]).toHaveFocus();
     expect(updated[1]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('exposes shortcuts for paging and search', async () => {
+    const user = userEvent.setup();
+    render(<PdfViewer url="/sample.pdf" />);
+    const region = await screen.findByRole('region', { name: /pdf viewer/i });
+    region.focus();
+    await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
+    expect(await screen.findByText(/Page 2/)).toBeInTheDocument();
+    await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+    expect(await screen.findByText(/Page 1/)).toBeInTheDocument();
+    const searchField = screen.getByPlaceholderText(/search/i);
+    searchField.focus();
+    await user.type(searchField, 'world');
+    await user.keyboard('{Alt>}{Enter}{/Alt}');
+    expect(screen.getByTestId('search-status')).toHaveTextContent(/found 3 matches/i);
   });
 });

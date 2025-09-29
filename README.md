@@ -100,6 +100,13 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Keyboard Shortcuts
+
+The document viewer and media player surface inline help text and respond to the following shortcuts:
+
+- **PDF Viewer** – `Alt` + `ArrowLeft` moves to the previous page, `Alt` + `ArrowRight` advances to the next page, and `Alt` + `Enter` runs a document search.
+- **Video Player** – `Space` toggles play/pause, `ArrowLeft`/`ArrowRight` seek by five seconds, and `C` toggles captions when tracks are available.
+
 ---
 
 ## Speed Insights
