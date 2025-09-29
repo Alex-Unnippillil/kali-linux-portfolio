@@ -4,7 +4,12 @@ import { NotificationsContext } from '../components/common/NotificationCenter';
 export type {
   AppNotification,
   PushNotificationInput,
+  NotificationPriority,
 } from '../components/common/NotificationCenter';
+export type {
+  ClassificationResult,
+  NotificationHints,
+} from '../utils/notifications/ruleEngine';
 
 export const useNotifications = () => {
   const ctx = useContext(NotificationsContext);

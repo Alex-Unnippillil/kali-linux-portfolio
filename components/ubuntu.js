@@ -5,6 +5,7 @@ import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
+import Layout from './desktop/Layout';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
@@ -114,21 +115,21 @@ export default class Ubuntu extends Component {
 	};
 
 	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
-					unLockScreen={this.unLockScreen}
-				/>
+        return (
+                <Layout id="monitor-screen">
+                                <LockScreen
+                                        isLocked={this.state.screen_locked}
+                                        bgImgName={this.state.bg_image_name}
+                                        unLockScreen={this.unLockScreen}
+                                />
 				<BootingScreen
 					visible={this.state.booting_screen}
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                </Layout>
+        );
 	}
 }
