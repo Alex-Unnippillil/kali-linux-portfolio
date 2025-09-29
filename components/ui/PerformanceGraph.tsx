@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import createGameLoop from '../../utils/animation';
 
 const SAMPLE_INTERVAL = 1000;
 const MAX_POINTS = 32;
@@ -52,59 +53,69 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   const [points, setPoints] = useState<number[]>(() =>
     Array.from({ length: MAX_POINTS }, (_, index) => 0.32 + (index % 3) * 0.04)
   );
-  const timeoutRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const loopRef = useRef<ReturnType<typeof createGameLoop> | null>(null);
   const lastSampleRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
+  const prefersReducedMotionRef = useRef(prefersReducedMotion);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
 
-    if (prefersReducedMotion) {
-      setPoints(prev => prev.map(() => 0.28));
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-      if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current);
-      }
-      return undefined;
+    const loop = createGameLoop({
+      autoStart: false,
+      update: ({ timestamp }) => {
+        if (prefersReducedMotionRef.current) {
+          return;
+        }
+
+        const last = lastSampleRef.current;
+        if (timestamp - last < SAMPLE_INTERVAL) {
+          return;
+        }
+
+        const delta = timestamp - last;
+        lastSampleRef.current = timestamp;
+        setPoints(prev => {
+          const next = prev.slice(-MAX_POINTS + 1);
+          next.push(normaliseDelta(delta));
+          return next;
+        });
+      },
+    });
+
+    loopRef.current = loop;
+
+    if (!prefersReducedMotionRef.current) {
+      lastSampleRef.current = typeof performance !== 'undefined' ? performance.now() : 0;
+      loop.start();
     }
 
-    let cancelled = false;
-
-    const captureSample = (time: number) => {
-      if (cancelled) return;
-
-      const delta = time - lastSampleRef.current;
-      lastSampleRef.current = time;
-      setPoints(prev => {
-        const next = prev.slice(-MAX_POINTS + 1);
-        next.push(normaliseDelta(delta));
-        return next;
-      });
-
-      scheduleNext();
-    };
-
-    const scheduleNext = () => {
-      timeoutRef.current = window.setTimeout(() => {
-        frameRef.current = requestAnimationFrame(captureSample);
-      }, SAMPLE_INTERVAL);
-    };
-
-    frameRef.current = requestAnimationFrame(captureSample);
-
     return () => {
-      cancelled = true;
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-      if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current);
-      }
+      loop.stop();
+      loopRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    prefersReducedMotionRef.current = prefersReducedMotion;
+
+    if (prefersReducedMotion) {
+      setPoints(prev => prev.map(() => 0.28));
+      loopRef.current?.pause();
+      return;
+    }
+
+    lastSampleRef.current = typeof performance !== 'undefined' ? performance.now() : 0;
+    const loop = loopRef.current;
+    if (!loop) {
+      return;
+    }
+    if (!loop.isRunning()) {
+      loop.start();
+    } else {
+      loop.resume();
+    }
   }, [prefersReducedMotion]);
 
   const path = useMemo(() => {

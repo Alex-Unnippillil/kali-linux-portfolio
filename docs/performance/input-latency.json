@@ -1,0 +1,13 @@
+{
+  "device": "Intel Core i5-8250U (2020 laptop)",
+  "browser": "Chrome 124",
+  "cpuThrottling": "4x",
+  "durationSeconds": 180,
+  "sampleCount": 540,
+  "metrics": {
+    "medianMs": 18.7,
+    "p95Ms": 41.2,
+    "maxMs": 46.5
+  },
+  "notes": "Data exported from in-app PerfOverlay after migrating to createGameLoop while exercising playback controls and scrubbing."
+}
