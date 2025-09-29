@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selectors = [
@@ -12,10 +12,67 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(selectors.join(',')));
 }
 
+function detectKeyboardSupport(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    if (typeof window.matchMedia === 'function') {
+      const hoverQuery = window.matchMedia('(any-hover: hover)');
+      if (hoverQuery.matches) return true;
+      const finePointerQuery = window.matchMedia('(any-pointer: fine)');
+      if (finePointerQuery.matches) return true;
+    }
+  } catch (error) {
+    // ignore matchMedia errors
+  }
+  if (typeof navigator !== 'undefined' && 'keyboard' in navigator) {
+    return true;
+  }
+  return false;
+}
+
 export default function useFocusTrap(ref: React.RefObject<HTMLElement>, active: boolean = true) {
+  const [keyboardAvailable, setKeyboardAvailable] = useState<boolean>(() => detectKeyboardSupport());
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const queries = ['(any-hover: hover)', '(any-pointer: fine)']
+      .map((query) => {
+        try {
+          return window.matchMedia(query);
+        } catch (error) {
+          return null;
+        }
+      })
+      .filter(Boolean) as MediaQueryList[];
+
+    if (!queries.length) return;
+
+    const update = () => {
+      setKeyboardAvailable(detectKeyboardSupport());
+    };
+
+    queries.forEach((mediaQuery) => {
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', update);
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener(update);
+      }
+    });
+
+    return () => {
+      queries.forEach((mediaQuery) => {
+        if (typeof mediaQuery.removeEventListener === 'function') {
+          mediaQuery.removeEventListener('change', update);
+        } else if (typeof mediaQuery.removeListener === 'function') {
+          mediaQuery.removeListener(update);
+        }
+      });
+    };
+  }, []);
+
   useEffect(() => {
     const node = ref.current;
-    if (!node || !active) return;
+    if (!node || !active || !keyboardAvailable) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
@@ -51,5 +108,5 @@ export default function useFocusTrap(ref: React.RefObject<HTMLElement>, active: 
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('focusin', handleFocus);
     };
-  }, [ref, active]);
+  }, [ref, active, keyboardAvailable]);
 }

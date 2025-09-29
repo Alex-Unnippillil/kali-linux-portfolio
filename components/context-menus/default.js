@@ -20,7 +20,11 @@ function DefaultMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? " block " : " hidden ") + " cursor-default context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm shadow-xl overflow-y-auto backdrop-blur-md"}
+            style={{
+                width: 'min(14rem, calc(100vw - 1.5rem))',
+                maxHeight: 'calc(100vh - 2rem)',
+            }}
         >
 
             <Devider />

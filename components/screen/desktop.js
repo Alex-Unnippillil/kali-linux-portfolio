@@ -28,6 +28,7 @@ import {
     clampWindowTopPosition,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import TouchContextMenuTrigger from '../../utils/touchContextMenuTrigger';
 
 
 export class Desktop extends Component {
@@ -89,7 +90,60 @@ export class Desktop extends Component {
 
         this.gestureState = { pointer: null, overview: null };
 
+        this.taskbarClickSuppress = new Set();
+        this.taskbarClickSuppressTimers = new Map();
+        this.touchContextMenu = new TouchContextMenuTrigger({
+            getDelay: this.getTouchContextMenuDelay,
+            moveTolerance: 16,
+            onTrigger: this.handleTouchContextMenuTrigger,
+        });
     }
+
+    getTouchContextMenuDelay = () => {
+        const defaultDelay = 600;
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return defaultDelay;
+        }
+        try {
+            const root = document.documentElement;
+            if (!root) return defaultDelay;
+            const computed = window.getComputedStyle(root);
+            const raw = computed.getPropertyValue('--context-menu-touch-delay')
+                || root.style.getPropertyValue('--context-menu-touch-delay');
+            if (!raw) return defaultDelay;
+            const value = parseFloat(raw);
+            if (Number.isFinite(value) && value >= 0) {
+                return Math.max(250, value);
+            }
+        } catch (error) {
+            return defaultDelay;
+        }
+        return defaultDelay;
+    };
+
+    handleTouchContextMenuTrigger = ({ target, pageX, pageY, meta }) => {
+        if (!target || !target.isConnected) {
+            return;
+        }
+
+        const syntheticEvent = {
+            preventDefault: () => { },
+            target,
+            pageX,
+            pageY,
+        };
+
+        if (meta && meta.context === 'app') {
+            this.preventNextIconClick = true;
+        }
+
+        if (meta && meta.context === 'taskbar' && meta.appId) {
+            this.addTaskbarClickSuppression(meta.appId);
+        }
+
+        this.checkContextMenu(syntheticEvent);
+    };
+
 
     createEmptyWorkspaceState = () => ({
         focused_windows: {},
@@ -630,6 +684,7 @@ export class Desktop extends Component {
     };
 
     handleIconPointerDown = (event, appId) => {
+        this.touchContextMenu?.begin?.(event, { context: 'app', appId });
         if (event.button !== 0) return;
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
@@ -664,6 +719,7 @@ export class Desktop extends Component {
     };
 
     handleIconPointerMove = (event) => {
+        this.touchContextMenu?.move?.(event);
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         const dragState = this.iconDragState;
         const deltaX = event.clientX - dragState.startX;
@@ -682,6 +738,10 @@ export class Desktop extends Component {
     };
 
     handleIconPointerUp = (event) => {
+        const meta = this.touchContextMenu?.end?.(event);
+        if (meta && meta.context === 'app') {
+            this.preventNextIconClick = true;
+        }
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         const dragState = this.iconDragState;
         const moved = dragState.moved;
@@ -700,9 +760,66 @@ export class Desktop extends Component {
     };
 
     handleIconPointerCancel = (event) => {
+        this.touchContextMenu?.cancel?.(event);
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         event.preventDefault();
         this.cancelIconDrag(true);
+    };
+
+    addTaskbarClickSuppression = (appId) => {
+        if (!appId) return;
+        this.taskbarClickSuppress.add(appId);
+        const existing = this.taskbarClickSuppressTimers.get(appId);
+        if (existing) {
+            clearTimeout(existing);
+        }
+        const timer = setTimeout(() => {
+            this.taskbarClickSuppress.delete(appId);
+            this.taskbarClickSuppressTimers.delete(appId);
+        }, 700);
+        this.taskbarClickSuppressTimers.set(appId, timer);
+    };
+
+    clearTaskbarClickSuppression = (appId) => {
+        if (!appId) return;
+        const existing = this.taskbarClickSuppressTimers.get(appId);
+        if (existing) {
+            clearTimeout(existing);
+            this.taskbarClickSuppressTimers.delete(appId);
+        }
+        this.taskbarClickSuppress.delete(appId);
+    };
+
+    handleTaskbarPointerDown = (event, appId) => {
+        this.touchContextMenu?.begin?.(event, { context: 'taskbar', appId });
+    };
+
+    handleTaskbarPointerMove = (event) => {
+        this.touchContextMenu?.move?.(event);
+    };
+
+    handleTaskbarPointerUp = (event, appId) => {
+        const meta = this.touchContextMenu?.end?.(event);
+        if (meta && meta.context === 'taskbar' && meta.appId) {
+            this.addTaskbarClickSuppression(meta.appId);
+        } else if (appId && this.taskbarClickSuppress.has(appId)) {
+            this.addTaskbarClickSuppression(appId);
+        }
+    };
+
+    handleTaskbarPointerCancel = (event, appId) => {
+        this.touchContextMenu?.cancel?.(event);
+        if (appId) {
+            this.clearTaskbarClickSuppression(appId);
+        }
+    };
+
+    handleTaskbarClickCapture = (event, appId) => {
+        if (this.taskbarClickSuppress.has(appId)) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.clearTaskbarClickSuppression(appId);
+        }
     };
 
     handleIconClickCapture = (event) => {
@@ -842,6 +959,12 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.touchContextMenu?.dispose?.();
+        if (this.taskbarClickSuppressTimers) {
+            this.taskbarClickSuppressTimers.forEach((timer) => clearTimeout(timer));
+            this.taskbarClickSuppressTimers.clear();
+        }
+        this.taskbarClickSuppress?.clear?.();
     }
 
     attachIconKeyboardListeners = () => {
@@ -1126,6 +1249,11 @@ export class Desktop extends Component {
             menus[key] = false;
         });
         this.setState({ context_menus: menus, context_app: null });
+        if (this.taskbarClickSuppressTimers) {
+            this.taskbarClickSuppressTimers.forEach((timer) => clearTimeout(timer));
+            this.taskbarClickSuppressTimers.clear();
+        }
+        this.taskbarClickSuppress?.clear?.();
     }
 
     getMenuPosition = (e) => {
@@ -1770,6 +1898,11 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    onAppPointerDown={this.handleTaskbarPointerDown}
+                    onAppPointerMove={this.handleTaskbarPointerMove}
+                    onAppPointerUp={this.handleTaskbarPointerUp}
+                    onAppPointerCancel={this.handleTaskbarPointerCancel}
+                    onAppClickCapture={this.handleTaskbarClickCapture}
                 />
 
                 {/* Desktop Apps */}

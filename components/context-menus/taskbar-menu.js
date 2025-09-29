@@ -30,7 +30,11 @@ function TaskbarMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
+            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm shadow-xl overflow-y-auto backdrop-blur-md'}
+            style={{
+                width: 'min(12rem, calc(100vw - 1.5rem))',
+                maxHeight: 'calc(100vh - 2rem)',
+            }}
         >
             <button
                 type="button"
