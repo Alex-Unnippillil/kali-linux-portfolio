@@ -1,4 +1,5 @@
 import React from 'react';
+import { focusRing } from '../../styles/theme';
 
 export type PlacesMenuItem = {
   id: string;
@@ -63,7 +64,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
               <button
                 type="button"
                 onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
+                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 ${focusRing.default}`}
               >
                 <img
                   src={src}

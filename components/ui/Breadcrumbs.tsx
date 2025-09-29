@@ -1,4 +1,5 @@
 import React from 'react';
+import { focusRing } from '../../styles/theme';
 
 interface Segment {
   name: string;
@@ -17,7 +18,7 @@ const Breadcrumbs: React.FC<Props> = ({ path, onNavigate }) => {
           <button
             type="button"
             onClick={() => onNavigate(idx)}
-            className="hover:underline focus:outline-none"
+            className={`hover:underline ${focusRing.tight}`}
           >
             {seg.name || '/'}
           </button>

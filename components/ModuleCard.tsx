@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { focusRing } from '../styles/theme';
 import { ModuleMetadata } from '../modules/metadata';
 
 interface ModuleCardProps {
@@ -33,7 +34,7 @@ export default function ModuleCard({
   return (
     <button
       onClick={() => onSelect(module)}
-      className={`w-full text-left border rounded p-3 flex items-start justify-between hover:bg-gray-50 focus:outline-none ${
+      className={`w-full text-left border rounded p-3 flex items-start justify-between hover:bg-gray-50 ${focusRing.default} ${
         selected ? 'bg-gray-100' : ''
       }`}
     >

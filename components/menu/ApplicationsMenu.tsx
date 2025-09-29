@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { focusRing } from '../../styles/theme';
 
 export type KaliCategory = {
   id: string;
@@ -97,7 +98,7 @@ const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onS
               <button
                 type="button"
                 onClick={() => onSelect(category.id)}
-                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
+                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition ${focusRing.default} ${
                   isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
                 }`}
                 aria-pressed={isActive}
