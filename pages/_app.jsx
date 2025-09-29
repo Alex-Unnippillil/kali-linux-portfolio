@@ -11,6 +11,7 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import { LocalizationProvider } from '../hooks/useLocalization';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
@@ -149,6 +150,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -157,25 +159,27 @@ function MyApp(props) {
         >
           Skip to app grid
         </a>
-        <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+        <LocalizationProvider>
+          <SettingsProvider>
+            <NotificationCenter>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(e) => {
+                    if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                    const evt = e;
+                    if (evt.metadata?.email) delete evt.metadata.email;
+                    return e;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
-        </SettingsProvider>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </SettingsProvider>
+        </LocalizationProvider>
       </div>
     </ErrorBoundary>
 
