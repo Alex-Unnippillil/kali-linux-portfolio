@@ -70,6 +70,9 @@ const collectChangedFiles = () => {
     .forEach((file) => files.add(file));
 
   return Array.from(files).filter((file) => {
+    if (file.split(path.sep).includes('node_modules')) {
+      return false;
+    }
     const ext = path.extname(file);
     return ESLINT_FILE_EXTENSIONS.has(ext);
   });
