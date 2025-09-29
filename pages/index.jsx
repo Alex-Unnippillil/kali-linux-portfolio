@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
-import BetaBadge from '../components/BetaBadge';
+import BetaBadge from '../components/util-components/BetaBadge';
 
 const Ubuntu = dynamic(
   () =>
