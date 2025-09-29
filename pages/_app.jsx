@@ -17,6 +17,9 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { FocusRingProvider } from '../components/ui/a11y/FocusRing';
+import { LiveRegionProvider, useLiveRegion } from '../components/ui/a11y/LiveRegion';
+import { TooltipControllerProvider } from '../components/ui/a11y/TooltipController';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -24,6 +27,86 @@ const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+
+function GlobalA11yAnnouncements() {
+  const { announce } = useLiveRegion({ politeness: 'polite' });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const update = (message) => announce(message);
+
+    const handleCopy = () => update('Copied to clipboard');
+    const handleCut = () => update('Cut to clipboard');
+    const handlePaste = () => update('Pasted from clipboard');
+
+    window.addEventListener('copy', handleCopy);
+    window.addEventListener('cut', handleCut);
+    window.addEventListener('paste', handlePaste);
+
+    const clipboard = navigator?.clipboard;
+    const originalWrite = clipboard?.writeText?.bind(clipboard);
+    const originalRead = clipboard?.readText?.bind(clipboard);
+
+    if (clipboard && originalWrite) {
+      clipboard.writeText = async (text) => {
+        update('Copied to clipboard');
+        return originalWrite(text);
+      };
+    }
+
+    if (clipboard && originalRead) {
+      clipboard.readText = async () => {
+        const text = await originalRead();
+        update('Pasted from clipboard');
+        return text;
+      };
+    }
+
+    const OriginalNotification = window.Notification;
+    if (OriginalNotification) {
+      const WrappedNotification = function (title, options) {
+        update(`${title}${options?.body ? ` ${options.body}` : ''}`);
+        return new OriginalNotification(title, options);
+      };
+      WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
+        OriginalNotification,
+      );
+      Object.defineProperty(WrappedNotification, 'permission', {
+        get: () => OriginalNotification.permission,
+      });
+      WrappedNotification.prototype = OriginalNotification.prototype;
+      window.Notification = WrappedNotification;
+
+      return () => {
+        window.removeEventListener('copy', handleCopy);
+        window.removeEventListener('cut', handleCut);
+        window.removeEventListener('paste', handlePaste);
+
+        if (clipboard) {
+          if (originalWrite) clipboard.writeText = originalWrite;
+          if (originalRead) clipboard.readText = originalRead;
+        }
+
+        window.Notification = OriginalNotification;
+      };
+    }
+
+    return () => {
+      window.removeEventListener('copy', handleCopy);
+      window.removeEventListener('cut', handleCut);
+      window.removeEventListener('paste', handlePaste);
+
+      if (clipboard) {
+        if (originalWrite) clipboard.writeText = originalWrite;
+        if (originalRead) clipboard.readText = originalRead;
+      }
+    };
+  }, [announce]);
+
+  return null;
+}
 
 
 function MyApp(props) {
@@ -81,101 +164,41 @@ function MyApp(props) {
     }
   }, []);
 
-  useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return;
-
-    const update = (message) => {
-      liveRegion.textContent = '';
-      setTimeout(() => {
-        liveRegion.textContent = message;
-      }, 100);
-    };
-
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
-
-    window.addEventListener('copy', handleCopy);
-    window.addEventListener('cut', handleCut);
-    window.addEventListener('paste', handlePaste);
-
-    const { clipboard } = navigator;
-    const originalWrite = clipboard?.writeText?.bind(clipboard);
-    const originalRead = clipboard?.readText?.bind(clipboard);
-    if (originalWrite) {
-      clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
-        return originalWrite(text);
-      };
-    }
-    if (originalRead) {
-      clipboard.readText = async () => {
-        const text = await originalRead();
-        update('Pasted from clipboard');
-        return text;
-      };
-    }
-
-    const OriginalNotification = window.Notification;
-    if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
-        return new OriginalNotification(title, options);
-      };
-      WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
-        OriginalNotification,
-      );
-      Object.defineProperty(WrappedNotification, 'permission', {
-        get: () => OriginalNotification.permission,
-      });
-      WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification;
-    }
-
-    return () => {
-      window.removeEventListener('copy', handleCopy);
-      window.removeEventListener('cut', handleCut);
-      window.removeEventListener('paste', handlePaste);
-      if (clipboard) {
-        if (originalWrite) clipboard.writeText = originalWrite;
-        if (originalRead) clipboard.readText = originalRead;
-      }
-      if (OriginalNotification) {
-        window.Notification = OriginalNotification;
-      }
-    };
-  }, []);
-
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
-        <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
-        >
-          Skip to app grid
-        </a>
-        <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+        <FocusRingProvider>
+          <LiveRegionProvider>
+            <TooltipControllerProvider>
+              <a
+                href="#app-grid"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+              >
+                Skip to app grid
+              </a>
+              <SettingsProvider>
+                <NotificationCenter>
+                  <PipPortalProvider>
+                    <GlobalA11yAnnouncements />
+                    <Component {...pageProps} />
+                    <ShortcutOverlay />
+                    <Analytics
+                      beforeSend={(e) => {
+                        if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                        const evt = e;
+                        if (evt.metadata?.email) delete evt.metadata.email;
+                        return e;
+                      }}
+                    />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
-        </SettingsProvider>
+                    {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+                  </PipPortalProvider>
+                </NotificationCenter>
+              </SettingsProvider>
+            </TooltipControllerProvider>
+          </LiveRegionProvider>
+        </FocusRingProvider>
       </div>
     </ErrorBoundary>
 
