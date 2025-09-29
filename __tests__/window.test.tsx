@@ -1,6 +1,12 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
+
+const computeSnappedHeightPercent = () => {
+  const availableHeight = window.innerHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET;
+  return (availableHeight / window.innerHeight) * 100;
+};
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -201,7 +207,7 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
     expect(ref.current!.state.width).toBeCloseTo(50);
-    const expectedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
   });
@@ -244,7 +250,7 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('right');
     expect(ref.current!.state.width).toBeCloseTo(50);
-    const expectedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, 0px)`);
   });
@@ -328,7 +334,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     expect(ref.current!.state.snapped).toBe('left');
-    const snappedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const snappedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
 
     const keyboardEvent = {
@@ -390,7 +396,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     expect(ref.current!.state.snapped).toBe('left');
-    const snappedHeight = ((window.innerHeight - 28) / window.innerHeight) * 100;
+    const snappedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
 
     act(() => {
