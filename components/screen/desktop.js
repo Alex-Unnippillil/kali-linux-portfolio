@@ -23,6 +23,10 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import {
+    clampWindowTopPosition,
+    measureWindowTopOffset,
+} from '../../utils/windowLayout';
 
 export class Desktop extends Component {
     constructor() {
@@ -678,8 +682,12 @@ export class Desktop extends Component {
             const session = this.props.session || {};
             const positions = {};
             if (session.windows && session.windows.length) {
+                const safeTopOffset = measureWindowTopOffset();
                 session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                    positions[id] = {
+                        x,
+                        y: clampWindowTopPosition(y, safeTopOffset),
+                    };
                 });
                 this.setWorkspaceState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
@@ -1096,6 +1104,7 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
+        const safeTopOffset = measureWindowTopOffset();
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
@@ -1116,7 +1125,7 @@ export class Desktop extends Component {
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
-                    initialY: pos ? pos.y : undefined,
+                    initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
@@ -1134,19 +1143,24 @@ export class Desktop extends Component {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
+        const safeTopOffset = measureWindowTopOffset();
+        const nextX = snap(x);
+        const nextY = clampWindowTopPosition(snap(y), safeTopOffset);
         this.setWorkspaceState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
+            window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), this.saveSession);
     }
 
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const safeTopOffset = measureWindowTopOffset();
+        const windows = openWindows.map(id => {
+            const position = this.state.window_positions[id] || {};
+            const nextX = typeof position.x === 'number' ? position.x : 60;
+            const nextY = clampWindowTopPosition(position.y, safeTopOffset);
+            return { id, x: nextX, y: nextY };
+        });
         const nextSession = { ...this.props.session, windows };
         if ('dock' in nextSession) {
             delete nextSession.dock;
