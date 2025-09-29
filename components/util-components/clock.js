@@ -210,6 +210,26 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
 
     const weeks = useMemo(() => (isOpen ? buildCalendar(viewDate) : []), [isOpen, viewDate])
 
+    const friendlyDateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            }),
+        []
+    )
+
+    const friendlyTimeFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12
+            }),
+        [hour12]
+    )
+
     const timeFormatter = useMemo(
         () =>
             new Intl.DateTimeFormat(undefined, {
@@ -303,6 +323,10 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
         [currentTime, onlyDay, onlyTime, timeFormatter]
     )
 
+    const friendlyDateLabel = useMemo(() => (currentTime ? friendlyDateFormatter.format(currentTime) : ''), [currentTime, friendlyDateFormatter])
+
+    const friendlyTimeLabel = useMemo(() => (currentTime ? friendlyTimeFormatter.format(currentTime) : ''), [currentTime, friendlyTimeFormatter])
+
     if (!currentTime) {
         return <span suppressHydrationWarning></span>
     }
@@ -343,17 +367,19 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                     role="dialog"
                     aria-modal="false"
                     aria-label="Calendar"
-                    className="absolute right-0 z-50 mt-3 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-slate-950/85 p-4 text-sm text-white shadow-2xl ring-1 ring-white/20 backdrop-blur-xl"
+                    className="absolute right-0 z-50 mt-3 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
                 >
-                    <div className="mb-3 flex items-center justify-between rounded-2xl bg-white/5 px-3 py-2 shadow-inner">
-                        <div className="text-sm font-semibold tracking-tight" aria-live="polite" id={headingId}>
-                            {headingLabel}
+                    <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
+                        <div className="flex flex-col" aria-live="polite" id={headingId}>
+                            <span className="text-[0.65rem] uppercase tracking-[0.22em] text-cyan-200/70">{friendlyDateLabel}</span>
+                            <span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
+                            <span className="text-xs font-medium tracking-tight text-white/60">{friendlyTimeLabel}</span>
                         </div>
                         <div className="flex items-center gap-1">
                             <button
                                 type="button"
                                 onClick={() => handleMonthChange(-1)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg transition-colors hover:border-white/30 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                                 aria-label="Previous month"
                             >
                                 ‹
@@ -361,7 +387,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                             <button
                                 type="button"
                                 onClick={() => handleMonthChange(1)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg transition-colors hover:border-white/30 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                                 aria-label="Next month"
                             >
                                 ›
@@ -375,11 +401,11 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                     >
                         <thead>
                             <tr role="row">
-                                <th scope="col" className="w-12 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/40" aria-label="Week">
+                                <th scope="col" className="w-12 pb-2 text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/30" aria-label="Week">
                                     Wk
                                 </th>
                                 {DAYS.map((day) => (
-                                    <th key={day} scope="col" className="pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/60">
+                                    <th key={day} scope="col" className="pb-2 text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/60">
                                         {day}
                                     </th>
                                 ))}
@@ -388,7 +414,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                         <tbody>
                             {weeks.map((week) => (
                                 <tr key={`week-${week.days[0].date.toISOString()}`} role="row">
-                                    <th scope="row" className="py-1 text-[0.65rem] font-semibold text-white/40" aria-label={`Week ${week.weekNumber}`}>
+                                    <th scope="row" className="py-1 text-[0.65rem] font-semibold text-white/35" aria-label={`Week ${week.weekNumber}`}>
                                         {week.weekNumber}
                                     </th>
                                     {week.days.map(({ date, inCurrentMonth }) => {
@@ -405,13 +431,13 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                                                     type="button"
                                                     onClick={handleDayClick}
                                                     onKeyDown={(event) => handleDayKeyDown(event, date)}
-                                                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                                                    className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                                                         inCurrentMonth ? 'text-white' : 'text-white/35'
                                                     } ${
                                                         isToday
-                                                            ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-slate-950 shadow-lg ring-1 ring-white/70'
+                                                            ? 'bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 text-slate-950 shadow-lg ring-1 ring-white/60'
                                                             : isFocused
-                                                                ? 'bg-white/20 text-white'
+                                                                ? 'bg-white/20 text-white shadow-inner'
                                                                 : 'hover:bg-white/10'
                                                     }`}
                                                     tabIndex={isFocused ? 0 : -1}
@@ -430,14 +456,14 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                         <button
                             type="button"
                             onClick={handleToday}
-                            className="rounded-full bg-cyan-500/80 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                            className="rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                         >
                             Today
                         </button>
                         <button
                             type="button"
                             onClick={handleClose}
-                            className="rounded-full border border-white/20 px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.2em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                            className="rounded-full border border-white/20 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                         >
                             Close
                         </button>
