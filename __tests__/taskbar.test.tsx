@@ -18,6 +18,8 @@ describe('Taskbar', () => {
         focused_windows={{ app1: true }}
         openApp={openApp}
         minimize={minimize}
+        historyOpen={false}
+        onHistoryToggle={() => {}}
       />
     );
     const button = screen.getByRole('button', { name: /app one/i });
@@ -40,6 +42,8 @@ describe('Taskbar', () => {
         focused_windows={{ app1: false }}
         openApp={openApp}
         minimize={minimize}
+        historyOpen={false}
+        onHistoryToggle={() => {}}
       />
     );
     const button = screen.getByRole('button', { name: /app one/i });
