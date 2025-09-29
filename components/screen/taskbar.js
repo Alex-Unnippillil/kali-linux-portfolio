@@ -3,6 +3,9 @@ import Image from 'next/image';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const openCommandPalette = typeof props.onOpenCommandPalette === 'function'
+        ? props.onOpenCommandPalette
+        : () => { };
 
     const handleClick = (app) => {
         const id = app.id;
@@ -25,66 +28,82 @@ export default function Taskbar(props) {
                 paddingInline: 'var(--shell-taskbar-padding-x, 0.75rem)',
             }}
         >
-            <div
-                className="flex items-center overflow-x-auto"
-                style={{ gap: 'var(--shell-taskbar-gap, 0.5rem)' }}
-            >
-                {runningApps.map(app => {
-                    const isMinimized = Boolean(props.minimized_windows[app.id]);
-                    const isFocused = Boolean(props.focused_windows[app.id]);
-                    const isActive = !isMinimized;
+            <div className="flex w-full items-center justify-start gap-3">
+                <button
+                    type="button"
+                    onClick={openCommandPalette}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white/90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 hover:bg-white/10"
+                    style={{ minHeight: 'var(--shell-hit-target, 2.5rem)' }}
+                    aria-label="Open command palette"
+                >
+                    <span>Command Palette</span>
+                    <span className="hidden sm:flex items-center gap-1 text-[0.7rem] text-white/70">
+                        <kbd className="rounded bg-white/10 px-1 py-0.5">Ctrl</kbd>
+                        <span>+</span>
+                        <kbd className="rounded bg-white/10 px-1 py-0.5">K</kbd>
+                    </span>
+                </button>
+                <div
+                    className="flex flex-1 items-center overflow-x-auto"
+                    style={{ gap: 'var(--shell-taskbar-gap, 0.5rem)' }}
+                >
+                    {runningApps.map(app => {
+                        const isMinimized = Boolean(props.minimized_windows[app.id]);
+                        const isFocused = Boolean(props.focused_windows[app.id]);
+                        const isActive = !isMinimized;
 
-                    return (
-                        <button
-                            key={app.id}
-                            type="button"
-                            aria-label={app.title}
-                            data-context="taskbar"
-                            data-app-id={app.id}
-                            data-active={isActive ? 'true' : 'false'}
-                            aria-pressed={isActive}
-                            onClick={() => handleClick(app)}
-                            className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center justify-center rounded-lg transition-colors hover:bg-white hover:bg-opacity-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
-                            style={{
-                                minHeight: 'var(--shell-hit-target, 2.5rem)',
-                                minWidth: 'var(--shell-hit-target, 2.5rem)',
-                                paddingInline: 'calc(var(--shell-taskbar-padding-x, 0.75rem) * 0.75)',
-                                fontSize: 'var(--shell-taskbar-font-size, 0.875rem)',
-                                gap: '0.5rem',
-                            }}
-                        >
-                            <Image
-                                width={32}
-                                height={32}
+                        return (
+                            <button
+                                key={app.id}
+                                type="button"
+                                aria-label={app.title}
+                                data-context="taskbar"
+                                data-app-id={app.id}
+                                data-active={isActive ? 'true' : 'false'}
+                                aria-pressed={isActive}
+                                onClick={() => handleClick(app)}
+                                className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center justify-center rounded-lg transition-colors hover:bg-white hover:bg-opacity-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
                                 style={{
-                                    width: 'var(--shell-taskbar-icon, 1.5rem)',
-                                    height: 'var(--shell-taskbar-icon, 1.5rem)',
+                                    minHeight: 'var(--shell-hit-target, 2.5rem)',
+                                    minWidth: 'var(--shell-hit-target, 2.5rem)',
+                                    paddingInline: 'calc(var(--shell-taskbar-padding-x, 0.75rem) * 0.75)',
+                                    fontSize: 'var(--shell-taskbar-font-size, 0.875rem)',
+                                    gap: '0.5rem',
                                 }}
-                                src={app.icon.replace('./', '/')}
-                                alt=""
-                                sizes="(max-width: 768px) 32px, 40px"
-                            />
-                            <span
-                                className="text-white whitespace-nowrap"
-                                style={{ fontSize: 'var(--shell-taskbar-font-size, 0.875rem)' }}
                             >
-                                {app.title}
-                            </span>
-                            {isActive && (
-                                <span
-                                    aria-hidden="true"
-                                    data-testid="running-indicator"
-                                    className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded"
+                                <Image
+                                    width={32}
+                                    height={32}
                                     style={{
-                                        width: '0.5rem',
-                                        height: '0.25rem',
-                                        background: 'currentColor',
+                                        width: 'var(--shell-taskbar-icon, 1.5rem)',
+                                        height: 'var(--shell-taskbar-icon, 1.5rem)',
                                     }}
+                                    src={app.icon.replace('./', '/')}
+                                    alt=""
+                                    sizes="(max-width: 768px) 32px, 40px"
                                 />
-                            )}
-                        </button>
-                    );
-                })}
+                                <span
+                                    className="text-white whitespace-nowrap"
+                                    style={{ fontSize: 'var(--shell-taskbar-font-size, 0.875rem)' }}
+                                >
+                                    {app.title}
+                                </span>
+                                {isActive && (
+                                    <span
+                                        aria-hidden="true"
+                                        data-testid="running-indicator"
+                                        className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded"
+                                        style={{
+                                            width: '0.5rem',
+                                            height: '0.25rem',
+                                            background: 'currentColor',
+                                        }}
+                                    />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
