@@ -3,6 +3,13 @@ import Image from 'next/image';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const {
+        onAppPointerDown,
+        onAppPointerMove,
+        onAppPointerUp,
+        onAppPointerCancel,
+        onAppClickCapture,
+    } = props;
 
     const handleClick = (app) => {
         const id = app.id;
@@ -43,6 +50,11 @@ export default function Taskbar(props) {
                             data-app-id={app.id}
                             data-active={isActive ? 'true' : 'false'}
                             aria-pressed={isActive}
+                            onPointerDown={(event) => onAppPointerDown?.(event, app.id)}
+                            onPointerMove={(event) => onAppPointerMove?.(event, app.id)}
+                            onPointerUp={(event) => onAppPointerUp?.(event, app.id)}
+                            onPointerCancel={(event) => onAppPointerCancel?.(event, app.id)}
+                            onClickCapture={(event) => onAppClickCapture?.(event, app.id)}
                             onClick={() => handleClick(app)}
                             className={`${isFocused && isActive ? 'bg-white bg-opacity-20 ' : ''}relative flex items-center justify-center rounded-lg transition-colors hover:bg-white hover:bg-opacity-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
                             style={{
