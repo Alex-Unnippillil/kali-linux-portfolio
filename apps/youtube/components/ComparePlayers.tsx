@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { loadYouTubeIframeApi } from '../utils/loadIframeApi';
 
 function parseVideoId(input: string): string {
   try {
@@ -26,16 +27,25 @@ const ComparePlayers = () => {
   const [rightPlayer, setRightPlayer] = useState<any>(null);
   const [ready, setReady] = useState(false);
 
+  const shouldLoadApi = leftId !== '' || rightId !== '';
+
   useEffect(() => {
-    if (window.YT) {
-      setReady(true);
-      return;
+    if (!shouldLoadApi) {
+      setReady(false);
+      return () => {};
     }
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    window.onYouTubeIframeAPIReady = () => setReady(true);
-    document.body.appendChild(tag);
-  }, []);
+
+    if (typeof window === 'undefined') {
+      return () => {};
+    }
+
+    if ((window as any).YT?.Player) {
+      setReady(true);
+      return () => {};
+    }
+
+    return loadYouTubeIframeApi(() => setReady(true));
+  }, [shouldLoadApi]);
 
   useEffect(() => {
     if (!ready || !leftId || !leftDiv.current) return;
@@ -80,18 +90,26 @@ const ComparePlayers = () => {
   return (
     <div className="p-4 text-white">
       <div className="mb-4 flex gap-2">
-        <input
-          className="w-full rounded bg-gray-800 p-2"
-          placeholder="Left video ID or URL"
-          value={leftId}
-          onChange={(e) => setLeftId(parseVideoId(e.target.value))}
-        />
-        <input
-          className="w-full rounded bg-gray-800 p-2"
-          placeholder="Right video ID or URL"
-          value={rightId}
-          onChange={(e) => setRightId(parseVideoId(e.target.value))}
-        />
+        <label className="w-full">
+          <span className="sr-only">Left video ID or URL</span>
+          <input
+            className="w-full rounded bg-gray-800 p-2"
+            placeholder="Left video ID or URL"
+            aria-label="Left video ID or URL"
+            value={leftId}
+            onChange={(e) => setLeftId(parseVideoId(e.target.value))}
+          />
+        </label>
+        <label className="w-full">
+          <span className="sr-only">Right video ID or URL</span>
+          <input
+            className="w-full rounded bg-gray-800 p-2"
+            placeholder="Right video ID or URL"
+            aria-label="Right video ID or URL"
+            value={rightId}
+            onChange={(e) => setRightId(parseVideoId(e.target.value))}
+          />
+        </label>
       </div>
       <div className="flex flex-col gap-4 md:flex-row">
         <div className="flex-1">

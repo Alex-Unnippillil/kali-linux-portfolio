@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import copyToClipboard from '../../../utils/clipboard';
+import { loadYouTubeIframeApi } from '../utils/loadIframeApi';
 
 function extractVideoId(input: string): string {
   try {
@@ -23,18 +24,22 @@ export default function ClipMaker() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (window.YT && window.YT.Player) {
-      setReady(true);
-      return;
+    if (!videoId) {
+      setReady(false);
+      return () => {};
     }
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.body.appendChild(tag);
-    window.onYouTubeIframeAPIReady = () => setReady(true);
-    return () => {
-      delete (window as any).onYouTubeIframeAPIReady;
-    };
-  }, []);
+
+    if (typeof window === 'undefined') {
+      return () => {};
+    }
+
+    if ((window as any).YT?.Player) {
+      setReady(true);
+      return () => {};
+    }
+
+    return loadYouTubeIframeApi(() => setReady(true));
+  }, [videoId]);
 
   useEffect(() => {
     if (!ready || !containerRef.current || !videoId) return;
@@ -71,12 +76,16 @@ export default function ClipMaker() {
 
   return (
     <div className="space-y-2 p-4 text-white">
-      <input
-        value={videoId}
-        onChange={(e) => setVideoId(extractVideoId(e.target.value))}
-        placeholder="YouTube URL or ID"
-        className="w-full rounded bg-gray-800 p-2 text-black focus:text-white"
-      />
+      <label className="block">
+        <span className="sr-only">YouTube URL or ID</span>
+        <input
+          aria-label="YouTube URL or ID"
+          value={videoId}
+          onChange={(e) => setVideoId(extractVideoId(e.target.value))}
+          placeholder="YouTube URL or ID"
+          className="w-full rounded bg-gray-800 p-2 text-black focus:text-white"
+        />
+      </label>
       <div ref={containerRef} className="aspect-video w-full bg-black" />
       <div className="flex gap-2">
         <button onClick={markStart} className="rounded bg-gray-700 px-2 py-1">

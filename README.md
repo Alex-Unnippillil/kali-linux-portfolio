@@ -257,6 +257,15 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `open.spotify.com` | Spotify embeds |
 | `vercel.live` | Vercel toolbar |
 
+### Functional cookies
+
+Only two functional cookies are set by the portfolio and both are scoped to specific features:
+
+| Cookie | Scope | Purpose |
+| --- | --- | --- |
+| `csrfToken` | `/api/contact` | HttpOnly CSRF token issued when the contact form requests a token. It is validated against the `x-csrf-token` header on form submission. |
+| `third_party_cookie_test` | Client-side check in `ExternalFrame` | Non-persistent probe to detect whether the browser blocks third-party cookies before embedding remote tooling. |
+
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
 - Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
