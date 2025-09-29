@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
+import SimulationNotice from '../../components/apps/common/SimulationNotice';
 import Toast from '../../components/ui/Toast';
 
 interface Module {
@@ -132,7 +133,19 @@ const MetasploitPage: React.FC = () => {
   );
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full flex-col">
+      <SimulationNotice
+        baseI18nKey="apps.metasploit.notice"
+        className="mb-4"
+        messages={{
+          title: 'Metasploit Simulation',
+          description:
+            'This Metasploit workspace is a guided simulation for practicing workflows only. Modules and payloads do not target live systems.',
+          sandbox:
+            'Generated payloads and console output are based on sandboxed datasets with no outbound network activity.',
+        }}
+      />
+      <div className="flex flex-1 overflow-hidden">
         <div className="w-1/3 border-r overflow-auto p-2">
           <label htmlFor="metasploit-search" className="sr-only" id="metasploit-search-label">
             Search modules
@@ -146,55 +159,55 @@ const MetasploitPage: React.FC = () => {
             className="w-full p-1 mb-2 border rounded"
             aria-labelledby="metasploit-search-label"
           />
-        <div className="flex flex-wrap gap-1 mb-2">
-          <button
-            onClick={() => setTag('')}
-            className={`px-2 py-0.5 text-xs rounded ${
-              tag === '' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-            }`}
-          >
-            All
-          </button>
-          {allTags.map((t) => (
+          <div className="flex flex-wrap gap-1 mb-2">
             <button
-              key={t}
-              onClick={() => setTag(t)}
+              onClick={() => setTag('')}
               className={`px-2 py-0.5 text-xs rounded ${
-                tag === t ? 'bg-blue-600 text-white' : 'bg-gray-200'
+                tag === '' ? 'bg-blue-600 text-white' : 'bg-gray-200'
               }`}
             >
-              {t}
+              All
             </button>
-          ))}
-        </div>
-        {renderTree(tree)}
-      </div>
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-auto p-4">
-          {selected ? (
-            <div>
-              <h2 className="font-bold mb-2 flex items-center">
-                {selected.name}
-                <span
-                  className={`ml-2 text-xs text-white px-2 py-0.5 rounded ${typeColors[selected.type] || 'bg-gray-500'}`}
-                >
-                  {selected.type}
-                </span>
-              </h2>
-              <p className="whitespace-pre-wrap">{selected.description}</p>
-            </div>
-          ) : (
-            <p>Select a module to view details</p>
-          )}
-        </div>
-        <div ref={splitRef} className="h-96 border-t flex flex-col">
-          <div style={{ height: `calc(${split}% - 2px)` }} className="overflow-auto">
-            <MetasploitApp />
+            {allTags.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTag(t)}
+                className={`px-2 py-0.5 text-xs rounded ${
+                  tag === t ? 'bg-blue-600 text-white' : 'bg-gray-200'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
           </div>
-          <div
-            className="h-1 bg-gray-400 cursor-row-resize"
-            onMouseDown={() => (dragging.current = true)}
-          />
+          {renderTree(tree)}
+        </div>
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-auto p-4">
+            {selected ? (
+              <div>
+                <h2 className="font-bold mb-2 flex items-center">
+                  {selected.name}
+                  <span
+                    className={`ml-2 text-xs text-white px-2 py-0.5 rounded ${typeColors[selected.type] || 'bg-gray-500'}`}
+                  >
+                    {selected.type}
+                  </span>
+                </h2>
+                <p className="whitespace-pre-wrap">{selected.description}</p>
+              </div>
+            ) : (
+              <p>Select a module to view details</p>
+            )}
+          </div>
+          <div ref={splitRef} className="h-96 border-t flex flex-col">
+            <div style={{ height: `calc(${split}% - 2px)` }} className="overflow-auto">
+              <MetasploitApp />
+            </div>
+            <div
+              className="h-1 bg-gray-400 cursor-row-resize"
+              onMouseDown={() => (dragging.current = true)}
+            />
             <div
               style={{ height: `calc(${100 - split}% - 2px)` }}
               className="overflow-auto p-2 space-y-2"
@@ -214,12 +227,13 @@ const MetasploitPage: React.FC = () => {
                 className="border p-1 w-full"
                 aria-labelledby="metasploit-payload-options-label"
               />
-            <button
-              onClick={handleGenerate}
-              className="px-2 py-1 bg-blue-500 text-white rounded"
-            >
-              Generate
-            </button>
+              <button
+                onClick={handleGenerate}
+                className="px-2 py-1 bg-blue-500 text-white rounded"
+              >
+                Generate
+              </button>
+            </div>
           </div>
         </div>
       </div>

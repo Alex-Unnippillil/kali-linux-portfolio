@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import SimulationNotice from '../../components/apps/common/SimulationNotice';
 import AuditSimulator from './components/AuditSimulator';
 
 interface HashItem {
@@ -155,7 +156,16 @@ const JohnApp: React.FC = () => {
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col gap-4">
-      <p className="text-xs text-yellow-300">Demo only – simulated cracking.</p>
+      <SimulationNotice
+        baseI18nKey="apps.john.notice"
+        messages={{
+          title: "John the Ripper Simulation",
+          description:
+            'This John the Ripper lab is a controlled simulation to teach auditing techniques without attacking actual credentials.',
+          sandbox:
+            'Password lists, hashes, and cracking results are generated from sandboxed demo content and never leave this environment.',
+        }}
+      />
       <div className="flex flex-wrap gap-4 items-center">
         <div className="flex gap-2">
           {modes.map((m) => (

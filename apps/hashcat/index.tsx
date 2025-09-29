@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
+import SimulationNotice from '../../components/apps/common/SimulationNotice';
 
 interface Preset {
   value: string;
@@ -170,6 +171,16 @@ const Hashcat: React.FC = () => {
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
+      <SimulationNotice
+        baseI18nKey="apps.hashcat.notice"
+        messages={{
+          title: 'Hashcat Simulation',
+          description:
+            'This Hashcat dashboard is an educational simulation intended to explore cracking concepts without processing live credentials.',
+          sandbox:
+            'Hashes, rules, and results stay inside sandboxed demo data so no external systems or personal data are touched.',
+        }}
+      />
       <h1 className="text-2xl">Hashcat Simulator</h1>
 
       <div>

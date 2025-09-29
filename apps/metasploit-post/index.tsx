@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
+import SimulationNotice from '../../components/apps/common/SimulationNotice';
 import modules from './modules.json';
 import privTree from './priv-esc.json';
 import RemediationTable from './components/RemediationTable';
@@ -280,6 +281,17 @@ const MetasploitPost: React.FC = () => {
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
+      <SimulationNotice
+        baseI18nKey="apps.metasploitPost.notice"
+        className="mb-4"
+        messages={{
+          title: 'Metasploit Post-Exploitation Simulation',
+          description:
+            'Post-exploitation modules shown here are simulated to demonstrate analysis and reporting workflows only.',
+          sandbox:
+            'Evidence, credentials, and host details are fictional and remain within this sandboxed environment.',
+        }}
+      />
       <h1 className="text-xl mb-4">Metasploit Post Modules</h1>
       <div className="flex space-x-4 mb-4">
         {tabs.map((t) => (
