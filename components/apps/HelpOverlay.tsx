@@ -1,10 +1,12 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import InputRemap from "./Games/common/input-remap/InputRemap";
 import useInputMapping from "./Games/common/input-remap/useInputMapping";
+import OnboardingOverlay from "../ui/OnboardingOverlay";
 
 interface HelpOverlayProps {
   gameId: string;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 interface Instruction {
@@ -166,90 +168,44 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
 };
 
-const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
+const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, open, onOpenChange }) => {
   const info = GAME_INSTRUCTIONS[gameId];
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const prevFocus = useRef<HTMLElement | null>(null);
-  const noop = () => null;
-
-  useEffect(() => {
-    if (!overlayRef.current) return;
-    prevFocus.current = document.activeElement as HTMLElement | null;
-    const selectors =
-      'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
-    const focusables = Array.from(
-      overlayRef.current.querySelectorAll<HTMLElement>(selectors),
-    );
-    focusables[0]?.focus();
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Tab" && focusables.length > 0) {
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    const node = overlayRef.current;
-    node.addEventListener("keydown", handleKey);
-    return () => {
-      node.removeEventListener("keydown", handleKey);
-      prevFocus.current?.focus();
-    };
-  }, [onClose]);
 
   if (!info) return null;
   return (
-    <div
-      ref={overlayRef}
-      className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
-      role="dialog"
-      aria-modal="true"
+    <OnboardingOverlay
+      storageKey={`game:${gameId}`}
+      title={`${gameId} Help`}
+      description="Controls, objectives, and accessibility notes for this mini-game."
+      open={open}
+      onOpenChange={onOpenChange}
+      dismissLabel="Let's play"
+      footer="Press ? to re-open this panel without leaving the game."
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
-        <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
-        <p className="mb-2">
-          <strong>Objective:</strong> {info.objective}
-        </p>
-        {info.actions ? (
-          <>
-            <p>
-              <strong>Controls:</strong>{" "}
-              {Object.entries(mapping)
-                .map(([a, k]) => `${a}: ${k}`)
-                .join(", ")}
-            </p>
-            <div className="mt-2">
-              <InputRemap
-                mapping={mapping}
-                setKey={setKey as (action: string, key: string) => string | null}
-                actions={info.actions}
-              />
-            </div>
-          </>
-        ) : (
+      <p>
+        <strong>Objective:</strong> {info.objective}
+      </p>
+      {info.actions ? (
+        <div className="space-y-3">
           <p>
-            <strong>Controls:</strong> {info.controls}
+            <strong>Controls:</strong>{" "}
+            {Object.entries(mapping)
+              .map(([action, key]) => `${action}: ${key}`)
+              .join(", ")}
           </p>
-        )}
-        <button
-          onClick={onClose}
-          className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
-        >
-          Close
-        </button>
-      </div>
-    </div>
+          <InputRemap
+            mapping={mapping}
+            setKey={setKey as (action: string, key: string) => string | null}
+            actions={info.actions}
+          />
+        </div>
+      ) : (
+        <p>
+          <strong>Controls:</strong> {info.controls}
+        </p>
+      )}
+    </OnboardingOverlay>
   );
 };
 
