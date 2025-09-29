@@ -29,6 +29,58 @@ type CategoryDefinitionBase = {
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+const MAX_RECENT_COUNT = 12;
+
+const computeFuzzyScore = (text: string, rawQuery: string): number | null => {
+  const query = rawQuery.trim().toLowerCase();
+  const value = text.toLowerCase();
+  if (!query) return 0;
+
+  let lastIndex = -1;
+  let score = 0;
+
+  for (const char of query) {
+    const index = value.indexOf(char, lastIndex + 1);
+    if (index === -1) {
+      return null;
+    }
+    const gap = index - lastIndex - 1;
+    score += gap * 2;
+    if (index === lastIndex + 1) {
+      score -= 1;
+    }
+    lastIndex = index;
+  }
+
+  score += value.length - query.length;
+  if (value.startsWith(query)) {
+    score -= 3;
+  }
+
+  return score;
+};
+
+const fuzzyFilterApps = (appsToFilter: AppMeta[], query: string): AppMeta[] => {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return appsToFilter;
+  }
+
+  const scored = appsToFilter
+    .map(app => ({
+      app,
+      score: computeFuzzyScore(app.title, trimmed),
+    }))
+    .filter((entry): entry is { app: AppMeta; score: number } => entry.score !== null)
+    .sort((a, b) => {
+      if (a.score === b.score) {
+        return a.app.title.localeCompare(b.app.title);
+      }
+      return a.score - b.score;
+    });
+
+  return scored.map(entry => entry.app);
+};
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -158,6 +210,10 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const resultButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const rovingSourceRef = useRef<'keyboard' | 'pointer' | 'none'>('none');
 
 
   const allApps: AppMeta[] = apps as any;
@@ -213,12 +269,8 @@ const WhiskerMenu: React.FC = () => {
   }, [category, categoryConfigs]);
 
   const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
-    }
-    return list;
+    const list = currentCategory?.apps ?? [];
+    return fuzzyFilterApps(list, query);
   }, [currentCategory, query]);
 
   useEffect(() => {
@@ -234,19 +286,31 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     if (!isVisible) return;
-    setHighlight(0);
-  }, [isVisible, category, query]);
-
-  useEffect(() => {
-    if (!isVisible) return;
     const index = categoryConfigs.findIndex(cat => cat.id === currentCategory.id);
     setCategoryHighlight(index === -1 ? 0 : index);
   }, [isVisible, currentCategory.id, categoryConfigs]);
 
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setIsOpen(false);
-  };
+  const updateRecentHistory = useCallback((id: string) => {
+    setRecentIds(prev => {
+      const deduped = prev.filter(existing => existing !== id);
+      const next = [id, ...deduped].slice(0, MAX_RECENT_COUNT);
+      try {
+        safeLocalStorage?.setItem(RECENT_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore write errors (e.g. private mode)
+      }
+      return next;
+    });
+  }, []);
+
+  const openSelectedApp = useCallback(
+    (id: string) => {
+      updateRecentHistory(id);
+      window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+      setIsOpen(false);
+    },
+    [updateRecentHistory],
+  );
 
   useEffect(() => {
     if (!isOpen && isVisible) {
@@ -272,11 +336,17 @@ const WhiskerMenu: React.FC = () => {
   }, [isOpen, isVisible]);
 
   const showMenu = useCallback(() => {
+    if (typeof document !== 'undefined') {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+    }
+    rovingSourceRef.current = 'none';
     setIsVisible(true);
     requestAnimationFrame(() => setIsOpen(true));
   }, []);
 
   const hideMenu = useCallback(() => {
+    setQuery('');
+    rovingSourceRef.current = 'none';
     setIsOpen(false);
   }, []);
 
@@ -290,9 +360,13 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        toggleMenu();
+        if (isOpen || isVisible) {
+          hideMenu();
+        } else {
+          showMenu();
+        }
         return;
       }
       if (!isVisible) return;
@@ -304,11 +378,15 @@ const WhiskerMenu: React.FC = () => {
       if (e.key === 'Escape') {
         hideMenu();
       } else if (e.key === 'ArrowDown') {
+        if (!currentApps.length) return;
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        rovingSourceRef.current = 'keyboard';
+        setHighlight(h => (currentApps.length ? (h + 1) % currentApps.length : 0));
       } else if (e.key === 'ArrowUp') {
+        if (!currentApps.length) return;
         e.preventDefault();
-        setHighlight(h => Math.max(h - 1, 0));
+        rovingSourceRef.current = 'keyboard';
+        setHighlight(h => (currentApps.length ? (h - 1 + currentApps.length) % currentApps.length : 0));
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const app = currentApps[highlight];
@@ -317,7 +395,7 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [currentApps, highlight, hideMenu, isOpen, isVisible, showMenu, toggleMenu]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -372,6 +450,130 @@ const WhiskerMenu: React.FC = () => {
     }
   };
 
+  const focusResultButton = useCallback((index: number) => {
+    const btn = resultButtonRefs.current[index];
+    if (btn) {
+      btn.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    resultButtonRefs.current = resultButtonRefs.current.slice(0, currentApps.length);
+  }, [currentApps.length]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const input = searchInputRef.current;
+    if (input) {
+      requestAnimationFrame(() => input.focus());
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    setHighlight(prev => {
+      if (!currentApps.length) {
+        return 0;
+      }
+      if (prev < 0) return 0;
+      if (prev >= currentApps.length) return currentApps.length - 1;
+      return prev;
+    });
+  }, [currentApps.length, isVisible]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    if (!currentApps.length) return;
+    if (highlight < 0 || highlight >= currentApps.length) return;
+    if (rovingSourceRef.current !== 'keyboard') return;
+    focusResultButton(highlight);
+  }, [currentApps.length, focusResultButton, highlight, isVisible]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    rovingSourceRef.current = 'none';
+    setHighlight(0);
+  }, [category, query, isVisible]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (typeof document === 'undefined') return;
+    const menuEl = menuRef.current;
+    if (!menuEl) return;
+
+    const handleTrapKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(
+        menuEl.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter(element => element.offsetParent !== null);
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (!active || active === first || !menuEl.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    menuEl.addEventListener('keydown', handleTrapKeyDown);
+    return () => {
+      menuEl.removeEventListener('keydown', handleTrapKeyDown);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    if (typeof document === 'undefined') return;
+    const { body } = document;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = 'hidden';
+    return () => {
+      body.style.overflow = previousOverflow;
+    };
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (isVisible) return;
+    const previousFocus = previousFocusRef.current;
+    previousFocusRef.current = null;
+    previousFocus?.focus();
+  }, [isVisible]);
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      if (!currentApps.length) return;
+      event.preventDefault();
+      rovingSourceRef.current = 'keyboard';
+      setHighlight(h => (currentApps.length ? (h + 1) % currentApps.length : 0));
+    } else if (event.key === 'ArrowUp') {
+      if (!currentApps.length) return;
+      event.preventDefault();
+      rovingSourceRef.current = 'keyboard';
+      setHighlight(h => (currentApps.length ? (h - 1 + currentApps.length) % currentApps.length : 0));
+    } else if (event.key === 'Enter') {
+      if (!currentApps.length) return;
+      event.preventDefault();
+      const app = currentApps[highlight];
+      if (app) {
+        openSelectedApp(app.id);
+      }
+    }
+  };
+
   return (
     <div className="relative inline-flex">
       <button
@@ -390,23 +592,29 @@ const WhiskerMenu: React.FC = () => {
         Applications
       </button>
       {isVisible && (
-        <div
-          ref={menuRef}
-          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
-            isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
-          }`}
-          style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
-          tabIndex={-1}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              hideMenu();
-            }
-          }}
-        >
-          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
-            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
-              <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
-              Categories
+        <>
+          <div
+            className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ${
+              isOpen ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
+            aria-hidden="true"
+            onClick={hideMenu}
+          />
+          <div
+            ref={menuRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Application launcher"
+            className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
+              isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
+            }`}
+            style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
+          >
+            <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
+              <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
+                <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
+                Categories
             </div>
             <div
               ref={categoryListRef}
@@ -501,12 +709,13 @@ const WhiskerMenu: React.FC = () => {
                   </svg>
                 </span>
                 <input
+                  ref={searchInputRef}
                   className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
                   placeholder="Search applications"
                   aria-label="Search applications"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  autoFocus
+                  onKeyDown={handleSearchKeyDown}
                 />
               </div>
             </div>
@@ -533,24 +742,38 @@ const WhiskerMenu: React.FC = () => {
                   <p>No applications match your search.</p>
                 </div>
               ) : (
-                <ul className="space-y-1">
+                <ul className="space-y-1" role="listbox" aria-label="Application results">
                   {currentApps.map((app, idx) => (
                     <li key={app.id}>
                       <button
                         type="button"
+                        ref={(el) => {
+                          resultButtonRefs.current[idx] = el;
+                        }}
                         className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
                           idx === highlight
                             ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
                             : 'text-gray-200 hover:bg-[#142132]'
                         } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                         aria-label={app.title}
+                        role="option"
+                        tabIndex={idx === highlight ? 0 : -1}
+                        aria-selected={idx === highlight}
                         disabled={app.disabled}
                         onClick={() => {
                           if (!app.disabled) {
                             openSelectedApp(app.id);
                           }
                         }}
-                        onMouseEnter={() => setHighlight(idx)}
+                        onMouseEnter={() => {
+                          rovingSourceRef.current = 'pointer';
+                          setHighlight(idx);
+                        }}
+                        onFocus={() => {
+                          if (rovingSourceRef.current === 'pointer') return;
+                          rovingSourceRef.current = 'keyboard';
+                          setHighlight(idx);
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">
@@ -587,7 +810,8 @@ const WhiskerMenu: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
