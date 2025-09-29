@@ -1,5 +1,6 @@
 import React from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
+import Skeleton from '@/components/base/Skeleton';
 import { logEvent } from './analytics';
 
 export const createDynamicApp = (id, title) =>
@@ -21,19 +22,12 @@ export const createDynamicApp = (id, title) =>
       }
     },
     {
-      ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${title}...`}
-        </div>
-      ),
+      loading: () => <Skeleton label={`Loading ${title}`} />,
     }
   );
 
 export const createDisplay = (Component) => {
-  const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
-    ssr: false,
-  });
+  const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }));
   const Display = (addFolder, openApp, context) => {
     const extraProps =
       context && typeof context === 'object' ? context : undefined;

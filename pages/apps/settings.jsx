@@ -1,6 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const SettingsApp = dynamic(() => import('../../apps/settings'), { ssr: false });
+const SettingsApp = dynamic(() => import('../../apps/settings'));
 
 export default function SettingsPage() {
   return <SettingsApp />;

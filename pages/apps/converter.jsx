@@ -1,9 +1,6 @@
-import dynamic from "next/dynamic";
+import dynamic from "@/utils/dynamic";
 
-const Converter = dynamic(() => import("../../apps/converter"), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const Converter = dynamic(() => import("../../apps/converter"));
 
 export default function ConverterPage() {
   return <Converter />;

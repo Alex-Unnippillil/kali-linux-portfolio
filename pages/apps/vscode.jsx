@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const VSCode = dynamic(() => import('../../apps/vscode'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const VSCode = dynamic(() => import('../../apps/vscode'));
 
 export default function VSCodePage() {
   return <VSCode />;

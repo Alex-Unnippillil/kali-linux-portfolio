@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Simon = dynamic(() => import('../../apps/simon'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const Simon = dynamic(() => import('../../apps/simon'));
 
 export default function SimonPage() {
   return <Simon />;

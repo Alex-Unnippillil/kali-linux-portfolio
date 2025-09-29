@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Pinball = dynamic(() => import('../../apps/pinball'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const Pinball = dynamic(() => import('../../apps/pinball'));
 
 export default Pinball;

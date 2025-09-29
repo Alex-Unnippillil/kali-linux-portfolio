@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const BlackjackTrainer = dynamic(() => import('../../../games/blackjack/trainer'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const BlackjackTrainer = dynamic(() => import('../../../games/blackjack/trainer'));
 
 export default function BlackjackTrainerPage() {
   return <BlackjackTrainer />;

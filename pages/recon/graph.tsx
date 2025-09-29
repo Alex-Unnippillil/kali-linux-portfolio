@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
 interface CytoscapeNode {
   data: { id: string; label: string };
@@ -30,9 +30,8 @@ interface GraphLink {
   target: string;
 }
 
-const ForceGraph2D = dynamic(
-  () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
-  { ssr: false },
+const ForceGraph2D = dynamic(() =>
+  import('react-force-graph').then((mod) => mod.ForceGraph2D),
 );
 
 const ReconGraph: React.FC = () => {

@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const SubnetCalculator = dynamic(() => import('../../apps/subnet-calculator'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const SubnetCalculator = dynamic(() => import('../../apps/subnet-calculator'));
 
 export default function SubnetCalculatorPage() {
   return <SubnetCalculator />;

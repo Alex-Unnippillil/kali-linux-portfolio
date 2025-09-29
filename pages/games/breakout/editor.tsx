@@ -1,9 +1,6 @@
-import dynamic from "next/dynamic";
+import dynamic from "@/utils/dynamic";
 
-const BreakoutEditor = dynamic(() => import("../../../games/breakout/editor"), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const BreakoutEditor = dynamic(() => import("../../../games/breakout/editor"));
 
 export default function BreakoutEditorPage() {
   return <BreakoutEditor />;

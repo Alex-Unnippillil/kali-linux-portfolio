@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const ConnectFour = dynamic(() => import('../../apps/connect-four'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const ConnectFour = dynamic(() => import('../../apps/connect-four'));
 
 export default ConnectFour;
