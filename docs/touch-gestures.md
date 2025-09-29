@@ -23,6 +23,11 @@ Two touch gestures are available when the shell detects a coarse pointer:
 
 Both gestures rely on low-latency thresholds and ignore slow drags to avoid conflicting with window moves.
 
+## Desktop cheat sheet
+
+- Press <kbd>Shift</kbd>+<kbd>?</kbd> to open the desktop cheat sheet overlay sourced from `data/desktop/interactionGuides.ts`.
+- The overlay documents both keyboard shortcuts and the touch gestures listed above so updates only require editing the metadata file.
+
 ## Convertible testing notes
 
 Testing used Chrome DevTools' device emulation to toggle `pointer: coarse`, adjust viewport sizes, and simulate three-finger gestures. Validate on hardware by:
