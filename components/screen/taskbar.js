@@ -27,7 +27,7 @@ export default function Taskbar(props) {
         >
             <div
                 className="flex items-center overflow-x-auto"
-                style={{ gap: 'var(--shell-taskbar-gap, 0.5rem)' }}
+                style={{ gap: 'var(--shell-taskbar-gap, var(--space-2, 0.5rem))' }}
             >
                 {runningApps.map(app => {
                     const isMinimized = Boolean(props.minimized_windows[app.id]);
@@ -50,7 +50,7 @@ export default function Taskbar(props) {
                                 minWidth: 'var(--shell-hit-target, 2.5rem)',
                                 paddingInline: 'calc(var(--shell-taskbar-padding-x, 0.75rem) * 0.75)',
                                 fontSize: 'var(--shell-taskbar-font-size, 0.875rem)',
-                                gap: '0.5rem',
+                                gap: 'var(--space-2, 0.5rem)',
                             }}
                         >
                             <Image

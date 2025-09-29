@@ -171,28 +171,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [useKaliWallpaper]);
 
   useEffect(() => {
-    const spacing: Record<Density, Record<string, string>> = {
-      regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
-      },
-      compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
-      },
-    };
-    const vars = spacing[density];
-    Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
-    });
     saveDensity(density);
   }, [density]);
 
@@ -202,7 +180,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    document.documentElement.style.setProperty('--user-font-scale', fontScale.toString());
     saveFontScale(fontScale);
   }, [fontScale]);
 
