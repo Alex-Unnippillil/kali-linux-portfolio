@@ -339,7 +339,7 @@ const Battleship = () => {
       if (cx < 0 || cy < 0 || cx >= BOARD_SIZE || cy >= BOARD_SIZE) return c;
       return cy * BOARD_SIZE + cx;
     });
-  });
+  }, 'battleship');
 
   useEffect(() => {
     const handleKey = (e) => {

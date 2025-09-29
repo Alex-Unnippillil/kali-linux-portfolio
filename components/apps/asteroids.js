@@ -16,6 +16,7 @@ import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import useOPFS from '../../hooks/useOPFS';
+import gamepad from '../../utils/gamepad';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -110,7 +111,7 @@ const Asteroids = () => {
   const requestRef = useRef();
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-  const controlsRef = useRef(useGameControls(canvasRef));
+  const controlsRef = useRef(useGameControls(canvasRef, 'asteroids'));
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
@@ -333,15 +334,24 @@ const Asteroids = () => {
 
     // Gamepad support
     const padState = { turn: 0, thrust: 0, fire: false, hyperspace: false };
-    function pollGamepad() {
-      const pad = navigator.getGamepads ? navigator.getGamepads()[0] : null;
-      if (pad) {
-        padState.turn = pad.axes[0] || 0;
-        padState.thrust = pad.axes[1] < -0.2 ? -pad.axes[1] : 0;
-        padState.fire = pad.buttons[0].pressed;
-        padState.hyperspace = pad.buttons[1].pressed;
-      }
+    const currentMap = gamepad.getActionMap('asteroids') || {};
+    const additions = { axes: {}, buttons: {} };
+    if (!currentMap.axes?.turn) additions.axes.turn = { index: 0, deadzone: 0.2 };
+    if (!currentMap.axes?.thrust) additions.axes.thrust = { index: 1, deadzone: 0.2, invert: true };
+    if (!currentMap.buttons?.hyperspace)
+      additions.buttons.hyperspace = { index: 1, threshold: 0.5 };
+    if (!Object.keys(additions.axes).length) delete additions.axes;
+    if (!Object.keys(additions.buttons).length) delete additions.buttons;
+    if (additions.axes || additions.buttons) {
+      gamepad.updateActionMap('asteroids', additions);
     }
+    const unsubscribePad = gamepad.subscribeToActions('asteroids', (state) => {
+      padState.turn = state.axes.turn ?? state.axes.moveX ?? 0;
+      const thrustVal = state.axes.thrust ?? -(state.axes.moveY ?? 0);
+      padState.thrust = thrustVal > 0 ? thrustVal : 0;
+      padState.fire = state.buttons.fire ?? false;
+      padState.hyperspace = state.buttons.hyperspace ?? false;
+    });
 
     function hyperspace() {
       ship.x = rand() * canvas.width;
@@ -454,7 +464,6 @@ const Asteroids = () => {
         requestRef.current = requestAnimationFrame(update);
         return;
       }
-      pollGamepad();
       const { keys, joystick, fire, hyperspace: hyper } = controlsRef.current;
       const map = getMapping('asteroids', DEFAULT_MAP);
       const turn =
@@ -796,6 +805,7 @@ const Asteroids = () => {
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', handleDebugToggle);
       window.removeEventListener('keydown', handleInventoryUse);
+      unsubscribePad();
     }
 
     requestRef.current = requestAnimationFrame(update);
@@ -843,7 +853,12 @@ const Asteroids = () => {
           ))}
         </div>
       )}
-      <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+        <canvas
+          ref={canvasRef}
+          className="bg-black w-full h-full touch-none"
+          role="img"
+          aria-label="Asteroids playfield"
+        />
       <div aria-live="polite" className="sr-only">
         {liveText}
       </div>

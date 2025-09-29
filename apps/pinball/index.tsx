@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Engine, Render, World, Bodies, Body, Runner, Events } from "matter-js";
 import { useTiltSensor } from "./tilt";
+import gamepad from "../../utils/gamepad";
 
 const themes: Record<string, { bg: string; flipper: string }> = {
   classic: { bg: "#0b3d91", flipper: "#ffd700" },
@@ -233,21 +234,30 @@ export default function Pinball() {
   }, [theme, power, bounce, tilt, tryNudge]);
 
   useEffect(() => {
-    let raf: number;
-    let lastPressed = false;
-    const poll = () => {
-      const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
-      if (gp) {
-        const pressed = gp.buttons[5]?.pressed || gp.axes[1] < -0.8;
-        if (pressed && !lastPressed) {
-          tryNudge();
-        }
-        lastPressed = pressed;
-      }
-      raf = requestAnimationFrame(poll);
+    const map = {
+      buttons: {
+        nudge: [
+          { index: 5, threshold: 0.5 },
+          { axis: 1, direction: "negative", threshold: 0.8 },
+        ],
+      },
     };
-    raf = requestAnimationFrame(poll);
-    return () => cancelAnimationFrame(raf);
+    gamepad.setActionMap("pinball", map, {
+      label: "Pinball",
+      persist: true,
+      deadzone: 0.25,
+    });
+    let lastPressed = false;
+    const unsubscribe = gamepad.subscribeToActions("pinball", (state) => {
+      const pressed = state.buttons.nudge ?? false;
+      if (pressed && !lastPressed) {
+        tryNudge();
+      }
+      lastPressed = pressed;
+    });
+    return () => {
+      unsubscribe();
+    };
   }, [tryNudge]);
 
   useEffect(() => {
@@ -276,6 +286,7 @@ export default function Pinball() {
             step="0.1"
             value={power}
             onChange={(e) => setPower(parseFloat(e.target.value))}
+            aria-label="Adjust flipper power"
           />
         </label>
         <label className="flex flex-col text-xs">
@@ -287,6 +298,7 @@ export default function Pinball() {
             step="0.1"
             value={bounce}
             onChange={(e) => setBounce(parseFloat(e.target.value))}
+            aria-label="Adjust bumper bounce"
           />
         </label>
         <label className="flex flex-col text-xs">
@@ -294,6 +306,7 @@ export default function Pinball() {
           <select
             value={theme}
             onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
+            aria-label="Select pinball theme"
           >
             {Object.keys(themes).map((t) => (
               <option key={t} value={t}>
@@ -304,7 +317,14 @@ export default function Pinball() {
         </label>
       </div>
       <div className="relative">
-        <canvas ref={canvasRef} width={400} height={600} className="border" />
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={600}
+          className="border"
+          role="img"
+          aria-label="Pinball table"
+        />
         <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white font-mono text-xl">
           {score.toString().padStart(6, "0")}
         </div>

@@ -202,7 +202,7 @@ const move = ({ x, y }) => {
   }
 };
 
-  useGameControls(move);
+  useGameControls(move, 'sokoban');
 
   useEffect(() => {
     if (!checkWin(state.board)) saveProgress(levelIndex, state);
@@ -314,13 +314,25 @@ const move = ({ x, y }) => {
 
   return (
     <GameLayout stage={levelIndex + 1}>
-      <canvas ref={canvasRef} className="mx-auto bg-gray-700" />
-      <div className="mt-2 flex flex-wrap items-center justify-center space-x-2">
-        <select value={levelIndex} onChange={(e) => setLevelIndex(Number(e.target.value))}>
-          {levels.map((_, i) => (
-            <option key={i} value={i}>{`Level ${i + 1}`}</option>
-          ))}
-        </select>
+        <canvas
+          ref={canvasRef}
+          className="mx-auto bg-gray-700"
+          role="img"
+          aria-label="Sokoban warehouse"
+        />
+        <div className="mt-2 flex flex-wrap items-center justify-center space-x-2">
+          <label htmlFor="sokoban-level-select" className="sr-only">
+            Select level
+          </label>
+          <select
+            id="sokoban-level-select"
+            value={levelIndex}
+            onChange={(e) => setLevelIndex(Number(e.target.value))}
+          >
+            {levels.map((_, i) => (
+              <option key={i} value={i}>{`Level ${i + 1}`}</option>
+            ))}
+          </select>
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={undo}>
           Undo
         </button>
@@ -336,10 +348,15 @@ const move = ({ x, y }) => {
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={() => setSound((s) => !s)}>
           {sound ? 'Sound On' : 'Sound Off'}
         </button>
-        <button className="px-2 py-1 bg-gray-700 rounded" onClick={exportLevels}>
-          Export
-        </button>
-        <input type="file" accept=".txt,.json" onChange={handleFile} />
+          <button className="px-2 py-1 bg-gray-700 rounded" onClick={exportLevels}>
+            Export
+          </button>
+          <input
+            type="file"
+            accept=".txt,.json"
+            onChange={handleFile}
+            aria-label="Import custom Sokoban levels"
+          />
         <input
           type="range"
           min="0"

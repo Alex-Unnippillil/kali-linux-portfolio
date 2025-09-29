@@ -5,6 +5,7 @@ import Phaser from 'phaser';
 import { GameState } from './gameLogic';
 import usePersistedState from '../../hooks/usePersistedState';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import gamepad, { type ButtonEvent } from '../../utils/gamepad';
 
 type Action = 'left' | 'right' | 'jump';
 
@@ -104,25 +105,19 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     };
   }, [waiting, setKeyMap]);
 
-  // Gamepad remapping polling when waiting
+  // Gamepad remapping when waiting
   useEffect(() => {
     if (!waiting || waiting.device !== 'pad') return;
-    // poll at 100ms intervals instead of every frame to reduce CPU
-    const interval = setInterval(() => {
-      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-      for (const gp of pads) {
-        if (!gp) continue;
-        for (let i = 0; i < gp.buttons.length; i++) {
-          if (gp.buttons[i].pressed) {
-            setPadMap((prev) => ({ ...prev, [waiting.action]: i }));
-            setWaiting(null);
-            return;
-          }
-        }
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  }, [waiting, setPadMap]);
+    const handleButton = (event: ButtonEvent) => {
+      if (!event.pressed) return;
+      setPadMap((prev) => ({ ...prev, [waiting.action]: event.index }));
+      setWaiting(null);
+    };
+    gamepad.on('button', handleButton);
+    return () => {
+      gamepad.off('button', handleButton);
+    };
+  }, [waiting, setPadMap, setWaiting]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -428,6 +423,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             onClick={() => setWaiting({ device: 'key', action: 'left' })}
             className="ml-1 border px-1"
+            aria-label="Remap keyboard key for move left"
           >
             {keyMap.left}
           </button>
@@ -437,6 +433,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             onClick={() => setWaiting({ device: 'key', action: 'right' })}
             className="ml-1 border px-1"
+            aria-label="Remap keyboard key for move right"
           >
             {keyMap.right}
           </button>
@@ -446,6 +443,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             onClick={() => setWaiting({ device: 'key', action: 'jump' })}
             className="ml-1 border px-1"
+            aria-label="Remap keyboard key for jump"
           >
             {keyMap.jump}
           </button>
@@ -456,6 +454,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             onClick={() => setWaiting({ device: 'pad', action: 'left' })}
             className="ml-1 border px-1"
+            aria-label="Remap gamepad button for move left"
           >
             {padMap.left}
           </button>
@@ -465,6 +464,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             onClick={() => setWaiting({ device: 'pad', action: 'right' })}
             className="ml-1 border px-1"
+            aria-label="Remap gamepad button for move right"
           >
             {padMap.right}
           </button>
@@ -474,6 +474,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             onClick={() => setWaiting({ device: 'pad', action: 'jump' })}
             className="ml-1 border px-1"
+            aria-label="Remap gamepad button for jump"
           >
             {padMap.jump}
           </button>
@@ -487,6 +488,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
             value={bufferWindow}
             onChange={(e) => setBufferWindow(Number(e.target.value))}
             className="mx-1"
+            aria-label="Adjust jump buffer"
           />
           {bufferWindow}ms
         </div>
