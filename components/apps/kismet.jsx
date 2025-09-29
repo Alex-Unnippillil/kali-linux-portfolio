@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import vendors from './kismet/oui.json';
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -63,7 +64,7 @@ const parsePcap = (arrayBuffer, onNetwork) => {
     const info = parseMgmtFrame(frame);
     const key = info.bssid || info.ssid;
     if (!networks[key]) {
-      networks[key] = { ...info, frames: 0 };
+      networks[key] = { ...info, frames: 0, signal: null };
       onNetwork?.({
         ssid: info.ssid,
         bssid: info.bssid,
@@ -83,6 +84,339 @@ const parsePcap = (arrayBuffer, onNetwork) => {
     channelCounts,
     timeCounts,
   };
+};
+
+const EMPTY_CAPTURE = Object.freeze([]);
+
+const getVendorName = (mac) => {
+  if (!mac) return 'Unknown vendor';
+  const prefix = mac.slice(0, 8).toUpperCase();
+  return vendors[prefix] || 'Unknown vendor';
+};
+
+const formatRssi = (signal) => {
+  if (typeof signal === 'number' && !Number.isNaN(signal)) {
+    return `${signal} dBm`;
+  }
+  return 'N/A';
+};
+
+const fallbackCopyText = (text) => {
+  if (typeof document === 'undefined') return false;
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    let success = false;
+    if (typeof document.execCommand === 'function') {
+      success = document.execCommand('copy');
+    }
+    document.body.removeChild(textarea);
+    return success;
+  } catch (err) {
+    console.warn('Fallback copy failed', err);
+    return false;
+  }
+};
+
+const aggregateCaptureRecords = (records = []) => {
+  if (!records.length) {
+    return { networks: [], channelCounts: {}, timeCounts: {} };
+  }
+
+  const networkMap = new Map();
+  const channelCounts = {};
+
+  records.forEach((record, index) => {
+    const {
+      ssid = '',
+      bssid = '',
+      channel,
+      signal,
+    } = record || {};
+    const key = bssid || `${ssid || 'network'}-${index}`;
+    if (!networkMap.has(key)) {
+      networkMap.set(key, {
+        ssid,
+        bssid,
+        channel,
+        frames: 0,
+        signalSamples: [],
+      });
+    }
+    const entry = networkMap.get(key);
+    entry.frames += 1;
+    if (typeof signal === 'number' && !Number.isNaN(signal)) {
+      entry.signalSamples.push(signal);
+    }
+    if (channel != null) {
+      channelCounts[channel] = (channelCounts[channel] || 0) + 1;
+    }
+  });
+
+  const networks = Array.from(networkMap.values()).map((entry) => ({
+    ssid: entry.ssid,
+    bssid: entry.bssid,
+    channel: entry.channel,
+    frames: entry.frames,
+    signal:
+      entry.signalSamples.length > 0
+        ? Math.round(
+            entry.signalSamples.reduce((sum, value) => sum + value, 0) /
+              entry.signalSamples.length,
+          )
+        : null,
+  }));
+
+  return {
+    networks,
+    channelCounts,
+    timeCounts: {},
+  };
+};
+
+const buildTooltipId = (value, index) => {
+  const safeValue = (value || `network-${index}`)
+    .toString()
+    .replace(/[^a-zA-Z0-9_-]/g, '-');
+  return `network-tooltip-${safeValue}`;
+};
+
+const COPY_LABELS = {
+  mac: 'MAC address',
+  vendor: 'Vendor',
+  rssi: 'RSSI',
+};
+
+const CopyButton = ({ label, state, onCopy }) => (
+  <button
+    type="button"
+    onClick={onCopy}
+    aria-label={`Copy ${label}`}
+    className="relative inline-flex h-7 w-20 items-center justify-center overflow-hidden rounded border border-cyan-500/40 bg-black/30 text-[11px] uppercase tracking-wide text-cyan-200 transition hover:bg-cyan-500/20 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+  >
+    <span
+      className={`transition-opacity duration-150 ${
+        state === 'idle' ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
+      Copy
+    </span>
+    <span
+      aria-hidden="true"
+      className={`absolute inset-0 flex items-center justify-center text-[10px] font-semibold transition-opacity duration-150 ${
+        state === 'copied'
+          ? 'opacity-100 text-emerald-400'
+          : state === 'error'
+          ? 'opacity-100 text-red-400'
+          : 'opacity-0'
+      }`}
+    >
+      {state === 'error' ? 'Error' : 'Copied'}
+    </span>
+  </button>
+);
+
+const NetworkTooltip = ({
+  id,
+  mac,
+  vendor,
+  rssi,
+  onMouseEnter,
+  onMouseLeave,
+}) => {
+  const [copyState, setCopyState] = useState({
+    mac: 'idle',
+    vendor: 'idle',
+    rssi: 'idle',
+  });
+  const [liveMessage, setLiveMessage] = useState('');
+  const timersRef = useRef({});
+
+  useEffect(() => () => {
+    Object.values(timersRef.current).forEach((timer) => {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    });
+  }, []);
+
+  const scheduleReset = (key) => {
+    if (timersRef.current[key]) {
+      window.clearTimeout(timersRef.current[key]);
+    }
+    timersRef.current[key] = window.setTimeout(() => {
+      setCopyState((prev) => ({ ...prev, [key]: 'idle' }));
+      setLiveMessage('');
+      delete timersRef.current[key];
+    }, 1600);
+  };
+
+  const updateState = (key, nextState) => {
+    setCopyState((prev) => ({ ...prev, [key]: nextState }));
+    if (nextState === 'copied') {
+      setLiveMessage(`${COPY_LABELS[key]} copied to clipboard`);
+    } else if (nextState === 'error') {
+      setLiveMessage(`Unable to copy ${COPY_LABELS[key]}`);
+    }
+    if (nextState !== 'idle') {
+      scheduleReset(key);
+    }
+  };
+
+  const copyValue = (key, value) => {
+    const text = value ?? 'N/A';
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => updateState(key, 'copied'))
+        .catch(() => updateState(key, 'error'));
+      return;
+    }
+
+    window.setTimeout(() => {
+      const success = fallbackCopyText(text);
+      updateState(key, success ? 'copied' : 'error');
+    }, 0);
+  };
+
+  const rows = useMemo(
+    () => [
+      {
+        key: 'mac',
+        label: 'MAC',
+        display: mac || 'Unknown',
+        value: mac || 'Unknown',
+      },
+      {
+        key: 'vendor',
+        label: 'Vendor',
+        display: vendor || 'Unknown vendor',
+        value: vendor || 'Unknown vendor',
+      },
+      {
+        key: 'rssi',
+        label: 'RSSI',
+        display: rssi || 'N/A',
+        value: rssi || 'N/A',
+      },
+    ],
+    [mac, vendor, rssi],
+  );
+
+  return (
+    <div
+      id={id}
+      role="tooltip"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className="pointer-events-auto absolute left-0 top-full z-30 mt-2 w-64 min-h-[9rem] rounded-md border border-cyan-400/40 bg-gray-900/95 p-3 text-xs text-white shadow-2xl"
+    >
+      <p className="text-sm font-semibold text-cyan-300">Network details</p>
+      <dl className="mt-2 space-y-2 text-[11px]">
+        {rows.map(({ key, label, display, value }) => (
+          <div key={key} className="flex items-center gap-3">
+            <div className="flex-1">
+              <dt className="text-[10px] uppercase tracking-wide text-cyan-200/70">
+                {label}
+              </dt>
+              <dd className="truncate text-white" title={display}>
+                {display}
+              </dd>
+            </div>
+            <CopyButton
+              label={COPY_LABELS[key]}
+              state={copyState[key]}
+              onCopy={() => copyValue(key, value)}
+            />
+          </div>
+        ))}
+      </dl>
+      <div className="sr-only" aria-live="polite">
+        {liveMessage}
+      </div>
+    </div>
+  );
+};
+
+const NetworkRow = ({ network, index }) => {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+  const tooltipId = useMemo(
+    () => buildTooltipId(network.bssid || network.ssid, index),
+    [network.bssid, network.ssid, index],
+  );
+  const vendor = useMemo(() => getVendorName(network.bssid), [network.bssid]);
+  const rssiDisplay = useMemo(() => formatRssi(network.signal), [network.signal]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKey = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [open]);
+
+  const handleBlur = () => {
+    window.setTimeout(() => {
+      if (!wrapperRef.current) return;
+      const active = document.activeElement;
+      if (active && wrapperRef.current.contains(active)) {
+        return;
+      }
+      setOpen(false);
+    }, 0);
+  };
+
+  return (
+    <tr className="odd:bg-gray-800">
+      <td className="pr-2">{network.ssid || '(hidden)'}</td>
+      <td className="pr-2">{network.bssid || '-'}</td>
+      <td className="pr-2">{network.channel ?? '-'}</td>
+      <td className="pr-2">{network.frames}</td>
+      <td className="relative">
+        <div
+          ref={wrapperRef}
+          className="relative inline-flex items-center"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+          onFocus={() => setOpen(true)}
+          onBlur={handleBlur}
+        >
+          <button
+            type="button"
+            onClick={() => setOpen((prev) => !prev)}
+            aria-haspopup="true"
+            aria-expanded={open}
+            aria-controls={tooltipId}
+            aria-label={`Show network details for ${
+              network.ssid || network.bssid || 'unknown network'
+            }`}
+            className="rounded border border-cyan-500/40 px-2 py-1 text-[11px] uppercase tracking-wide text-cyan-300 transition hover:bg-cyan-500/10 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+          >
+            Details
+          </button>
+          {open ? (
+            <NetworkTooltip
+              id={tooltipId}
+              mac={network.bssid}
+              vendor={vendor}
+              rssi={rssiDisplay}
+              onMouseEnter={() => setOpen(true)}
+              onMouseLeave={() => setOpen(false)}
+            />
+          ) : null}
+        </div>
+      </td>
+    </tr>
+  );
 };
 
 const ChannelChart = ({ data }) => {
@@ -132,10 +466,19 @@ const TimeChart = ({ data }) => {
   );
 };
 
-const KismetApp = ({ onNetworkDiscovered }) => {
+const KismetApp = ({ onNetworkDiscovered, initialCapture }) => {
+  const capture = initialCapture ?? EMPTY_CAPTURE;
   const [networks, setNetworks] = useState([]);
   const [channels, setChannels] = useState({});
   const [times, setTimes] = useState({});
+
+  useEffect(() => {
+    if (!capture.length) return;
+    const aggregated = aggregateCaptureRecords(capture);
+    setNetworks(aggregated.networks);
+    setChannels(aggregated.channelCounts);
+    setTimes(aggregated.timeCounts);
+  }, [capture]);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -145,7 +488,15 @@ const KismetApp = ({ onNetworkDiscovered }) => {
       buffer,
       onNetworkDiscovered,
     );
-    setNetworks(networks);
+    setNetworks(
+      networks.map((network) => ({
+        ...network,
+        signal:
+          typeof network.signal === 'number' && !Number.isNaN(network.signal)
+            ? Math.round(network.signal)
+            : null,
+      })),
+    );
     setChannels(channelCounts);
     setTimes(timeCounts);
   };
@@ -168,17 +519,13 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                 <th className="pr-2">SSID</th>
                 <th className="pr-2">BSSID</th>
                 <th className="pr-2">Channel</th>
-                <th>Frames</th>
+                <th className="pr-2">Frames</th>
+                <th className="pr-2">Details</th>
               </tr>
             </thead>
             <tbody>
-              {networks.map((n) => (
-                <tr key={n.bssid} className="odd:bg-gray-800">
-                  <td className="pr-2">{n.ssid || '(hidden)'}</td>
-                  <td className="pr-2">{n.bssid}</td>
-                  <td className="pr-2">{n.channel ?? '-'}</td>
-                  <td>{n.frames}</td>
-                </tr>
+              {networks.map((network, index) => (
+                <NetworkRow key={network.bssid || `${network.ssid}-${index}`} network={network} index={index} />
               ))}
             </tbody>
           </table>
@@ -199,4 +546,3 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 };
 
 export default KismetApp;
-
