@@ -33,10 +33,45 @@ describe('Dsniff component', () => {
   });
   it('obfuscates credentials by default and reveals on click', async () => {
     render(<Dsniff />);
-    expect(await screen.findByText('***')).toBeInTheDocument();
-    const showBtn = screen.getByText('Show');
+    const hostRow = await screen.findByTestId('domain-row-192.168.0.10');
+    expect(within(hostRow).getByText('***')).toBeInTheDocument();
+    const showBtn = within(hostRow).getByText('Show');
     fireEvent.click(showBtn);
-    expect(await screen.findByText('demo123')).toBeInTheDocument();
+    expect(within(hostRow).getByText('demo123')).toBeInTheDocument();
+  });
+
+  it('reveals credentials in the detail panel after a single host click', async () => {
+    render(<Dsniff />);
+    const hostRow = await screen.findByTestId('domain-row-192.168.0.10');
+    fireEvent.click(hostRow);
+
+    const detailPanel = await screen.findByTestId('credential-detail-panel');
+    expect(
+      within(detailPanel).getByText(/Credentials for 192\.168\.0\.10/i),
+    ).toBeInTheDocument();
+    expect(await within(detailPanel).findByText('demo123')).toBeInTheDocument();
+  });
+
+  it('maintains selection when switching between protocol tabs', async () => {
+    render(<Dsniff />);
+    const hostRow = await screen.findByTestId('domain-row-192.168.0.10');
+    fireEvent.click(hostRow);
+
+    fireEvent.click(screen.getByRole('button', { name: /^arpspoof$/i }));
+    let detailPanel = await screen.findByTestId('credential-detail-panel');
+    expect(
+      within(detailPanel).getByRole('heading', {
+        name: /credentials for 192\.168\.0\.10/i,
+      }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^urlsnarf$/i }));
+    detailPanel = await screen.findByTestId('credential-detail-panel');
+    expect(
+      within(detailPanel).getByRole('heading', {
+        name: /credentials for 192\.168\.0\.10/i,
+      }),
+    ).toBeInTheDocument();
   });
 });
 
