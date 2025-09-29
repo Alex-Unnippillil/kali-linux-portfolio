@@ -5,6 +5,18 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import {
+  ClassificationResult,
+  NotificationHints,
+  NotificationPriority,
+  classifyNotification,
+} from '../../utils/notifications/ruleEngine';
+
+export type {
+  ClassificationResult,
+  NotificationHints,
+  NotificationPriority,
+} from '../../utils/notifications/ruleEngine';
 
 export interface AppNotification {
   id: string;
@@ -13,6 +25,9 @@ export interface AppNotification {
   body?: string;
   timestamp: number;
   read: boolean;
+  priority: NotificationPriority;
+  hints?: NotificationHints;
+  classification: ClassificationResult;
 }
 
 export interface PushNotificationInput {
@@ -20,6 +35,8 @@ export interface PushNotificationInput {
   title: string;
   body?: string;
   timestamp?: number;
+  priority?: NotificationPriority;
+  hints?: NotificationHints;
 }
 
 interface NotificationsContextValue {
@@ -36,6 +53,13 @@ export const NotificationsContext = createContext<NotificationsContextValue | nu
 
 const createId = () => `ntf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const PRIORITY_WEIGHT: Record<NotificationPriority, number> = {
+  critical: 0,
+  high: 1,
+  normal: 2,
+  low: 3,
+};
+
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
@@ -44,6 +68,13 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
     const timestamp = input.timestamp ?? Date.now();
+    const classification = classifyNotification({
+      appId: input.appId,
+      title: input.title,
+      body: input.body,
+      priority: input.priority,
+      hints: input.hints,
+    });
     setNotificationsByApp(prev => {
       const list = prev[input.appId] ?? [];
       const nextNotification: AppNotification = {
@@ -53,6 +84,9 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         body: input.body,
         timestamp,
         read: false,
+        priority: classification.priority,
+        hints: input.hints,
+        classification,
       };
 
       return {
@@ -120,7 +154,11 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const notifications = useMemo(() =>
     Object.values(notificationsByApp)
       .flat()
-      .sort((a, b) => b.timestamp - a.timestamp),
+      .sort((a, b) => {
+        const priorityDiff = PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+        return b.timestamp - a.timestamp;
+      }),
   [notificationsByApp]);
 
   const unreadCount = useMemo(
