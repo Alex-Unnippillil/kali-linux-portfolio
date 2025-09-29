@@ -373,21 +373,21 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="px-4 py-2 outline-none transition duration-100 ease-in-out border-b-2 border-transparent"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}
-          className="inline mr-1"
+          className="mr-2 inline"
         />
         Applications
       </button>
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
+          className={`absolute top-full left-1/2 mt-4 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-2 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
@@ -399,13 +399,13 @@ const WhiskerMenu: React.FC = () => {
           }}
         >
           <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
-            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
+            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-4 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
               <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
               Categories
             </div>
             <div
               ref={categoryListRef}
-              className="flex max-h-[32vh] flex-1 flex-col gap-1 overflow-y-auto px-3 py-3 sm:max-h-full sm:px-2"
+              className="flex max-h-[32vh] flex-1 flex-col gap-2 overflow-y-auto px-4 py-4 sm:max-h-full"
               role="listbox"
               aria-label="Application categories"
               tabIndex={0}
@@ -418,7 +418,7 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  className={`group flex items-center gap-4 rounded-md px-4 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
                     category === cat.id
                       ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
                       : 'text-gray-300 hover:bg-[#152133] hover:text-white'
@@ -445,7 +445,7 @@ const WhiskerMenu: React.FC = () => {
                 </button>
               ))}
             </div>
-            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
+            <div className="border-t border-[#1d2a3c] px-4 py-4 text-sm text-gray-400">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
                 <div>
@@ -456,8 +456,8 @@ const WhiskerMenu: React.FC = () => {
             </div>
           </div>
           <div className="flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
-            <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
-              <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-6">
+              <div className="mb-4 flex flex-wrap items-center gap-4">
                 {favoriteApps.slice(0, 6).map((app) => (
                   <button
                     key={app.id}
@@ -478,14 +478,14 @@ const WhiskerMenu: React.FC = () => {
                 ))}
               </div>
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" />
                     <line x1="20" y1="20" x2="16.65" y2="16.65" />
                   </svg>
                 </span>
                 <input
-                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-10 pr-4 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
                   placeholder="Search applications"
                   aria-label="Search applications"
                   value={query}
@@ -494,9 +494,9 @@ const WhiskerMenu: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-2">
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
               {currentApps.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
+                <div className="flex h-full flex-col items-center justify-center gap-4 text-sm text-gray-500">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
                     <svg
                       width="24"
@@ -517,12 +517,12 @@ const WhiskerMenu: React.FC = () => {
                   <p>No applications match your search.</p>
                 </div>
               ) : (
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                   {currentApps.map((app, idx) => (
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        className={`flex w-full items-center justify-between gap-4 rounded-lg px-4 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
                           idx === highlight
                             ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
                             : 'text-gray-200 hover:bg-[#142132]'
@@ -536,7 +536,7 @@ const WhiskerMenu: React.FC = () => {
                         }}
                         onMouseEnter={() => setHighlight(idx)}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#121f33]">
                             <Image
                               src={app.icon}
