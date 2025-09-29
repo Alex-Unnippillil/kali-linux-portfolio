@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
@@ -18,6 +19,17 @@ const areWorkspacesEqual = (next, prev) => {
 };
 
 export default class Navbar extends PureComponent {
+        static propTypes = {
+                statusBarRef: PropTypes.oneOfType([
+                        PropTypes.func,
+                        PropTypes.shape({ current: PropTypes.any })
+                ])
+        };
+
+        static defaultProps = {
+                statusBarRef: null
+        };
+
         constructor() {
                 super();
                 this.state = {
@@ -77,6 +89,7 @@ export default class Navbar extends PureComponent {
 
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
+                        const { statusBarRef } = this.props;
                         return (
                                 <div className="main-navbar-vp absolute top-0 right-0 z-50 flex w-screen items-center justify-between bg-slate-950/80 px-3 py-2 text-ubt-grey shadow-lg backdrop-blur-md">
                                         <div className="flex items-center gap-2 text-xs md:text-sm">
@@ -102,6 +115,7 @@ export default class Navbar extends PureComponent {
                                                 id="status-bar"
                                                 aria-label="System status"
                                                 onClick={this.handleStatusToggle}
+                                                ref={statusBarRef}
                                                 className={
                                                         'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                 }

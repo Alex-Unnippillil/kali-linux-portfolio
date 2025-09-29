@@ -11,6 +11,8 @@ import { safeLocalStorage } from '../utils/safeStorage';
 export default class Ubuntu extends Component {
 	constructor() {
 		super();
+                this.bootScreenTimeout = null;
+                this.statusBarRef = React.createRef();
 		this.state = {
 			screen_locked: false,
 			bg_image_name: 'wall-2',
@@ -24,37 +26,44 @@ export default class Ubuntu extends Component {
 	}
 
 	setTimeOutBootScreen = () => {
-		setTimeout(() => {
+		if (this.bootScreenTimeout) {
+			clearTimeout(this.bootScreenTimeout);
+		}
+
+		this.bootScreenTimeout = setTimeout(() => {
 			this.setState({ booting_screen: false });
+			this.bootScreenTimeout = null;
 		}, 2000);
 	};
 
 	getLocalData = () => {
 		// Get Previously selected Background Image
-                let bg_image_name = safeLocalStorage?.getItem('bg-image');
+		let bg_image_name = safeLocalStorage?.getItem('bg-image');
 		if (bg_image_name !== null && bg_image_name !== undefined) {
 			this.setState({ bg_image_name });
 		}
 
-                let booting_screen = safeLocalStorage?.getItem('booting_screen');
-		if (booting_screen !== null && booting_screen !== undefined) {
-			// user has visited site before
-			this.setState({ booting_screen: false });
-		} else {
-			// user is visiting site for the first time
-                        safeLocalStorage?.setItem('booting_screen', false);
-			this.setTimeOutBootScreen();
-		}
-
 		// get shutdown state
-                let shut_down = safeLocalStorage?.getItem('shut-down');
-		if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
-		else {
+		let shut_down = safeLocalStorage?.getItem('shut-down');
+		if (shut_down !== null && shut_down !== undefined && shut_down === 'true') {
+			this.shutDown();
+		} else {
 			// Get previous lock screen state
-                        let screen_locked = safeLocalStorage?.getItem('screen-locked');
+			let screen_locked = safeLocalStorage?.getItem('screen-locked');
 			if (screen_locked !== null && screen_locked !== undefined) {
 				this.setState({ screen_locked: screen_locked === 'true' ? true : false });
 			}
+
+			safeLocalStorage?.removeItem('booting_screen');
+
+			// Always show boot screen briefly on load
+			this.setTimeOutBootScreen();
+		}
+	};
+
+	componentWillUnmount = () => {
+		if (this.bootScreenTimeout) {
+			clearTimeout(this.bootScreenTimeout);
 		}
 	};
 
@@ -66,9 +75,7 @@ export default class Ubuntu extends Component {
 			action: `Set Screen to Locked`
 		});
 
-                const statusBar = document.getElementById('status-bar');
-                // Consider using a React ref if the status bar element lives within this component tree
-                statusBar?.blur();
+                this.blurStatusBar();
 		setTimeout(() => {
 			this.setState({ screen_locked: true });
 		}, 100); // waiting for all windows to close (transition-duration)
@@ -98,12 +105,15 @@ export default class Ubuntu extends Component {
 			action: `Switched off the Ubuntu`
 		});
 
-                const statusBar = document.getElementById('status-bar');
-                // Consider using a React ref if the status bar element lives within this component tree
-                statusBar?.blur();
-		this.setState({ shutDownScreen: true });
+                this.blurStatusBar();
+                this.setState({ shutDownScreen: true });
                 safeLocalStorage?.setItem('shut-down', true);
-	};
+        };
+
+        blurStatusBar = () => {
+                const statusBarNode = this.statusBarRef?.current;
+                statusBarNode?.blur?.();
+        };
 
 	turnOn = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -126,7 +136,7 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Navbar statusBarRef={this.statusBarRef} lockScreen={this.lockScreen} shutDown={this.shutDown} />
 				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
 			</div>
 		);
