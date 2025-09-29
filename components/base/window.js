@@ -6,6 +6,11 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import {
+    clampWindowTopPosition,
+    DEFAULT_WINDOW_TOP_OFFSET,
+    measureWindowTopOffset,
+} from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
@@ -22,15 +27,16 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
-const computeSnapRegions = (viewportWidth, viewportHeight) => {
+const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
     const halfWidth = viewportWidth / 2;
-    const availableHeight = Math.max(0, viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET);
-    const topOffset = DESKTOP_TOP_PADDING;
-    const topHeight = Math.min(availableHeight, viewportHeight / 2);
+    const safeTop = Math.max(topInset, DEFAULT_WINDOW_TOP_OFFSET);
+    const availableHeight = Math.max(0, viewportHeight - safeTop - SNAP_BOTTOM_INSET);
+    const topHeight = Math.min(availableHeight, Math.max(viewportHeight / 2, 0));
     return {
-        left: { left: 0, top: topOffset, width: halfWidth, height: availableHeight },
-        right: { left: viewportWidth - halfWidth, top: topOffset, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: topOffset, width: viewportWidth, height: topHeight },
+        left: { left: 0, top: safeTop, width: halfWidth, height: availableHeight },
+        right: { left: viewportWidth - halfWidth, top: safeTop, width: halfWidth, height: availableHeight },
+        top: { left: 0, top: safeTop, width: viewportWidth, height: topHeight },
+
     };
 };
 
@@ -40,10 +46,14 @@ export class Window extends Component {
         this.id = null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        const initialTopInset = typeof window !== 'undefined'
+            ? measureWindowTopOffset()
+            : DEFAULT_WINDOW_TOP_OFFSET;
         this.startX =
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? WINDOW_TOP_INSET;
+        this.startY = clampWindowTopPosition(props.initialY, initialTopInset);
+
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || (isPortrait ? 90 : 60),
@@ -54,6 +64,7 @@ export class Window extends Component {
                 height: 100,
                 width: 100
             },
+            safeAreaTop: initialTopInset,
             snapPreview: null,
             snapPosition: null,
             snapped: null,
@@ -119,19 +130,24 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const topInset = typeof window !== 'undefined'
+            ? measureWindowTopOffset()
+            : DEFAULT_WINDOW_TOP_OFFSET;
         const windowHeightPx = viewportHeight * (this.state.height / 100.0);
-        const availableVertical = Math.max(
-            0,
-            viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET - windowHeightPx
-        );
+        const windowWidthPx = viewportWidth * (this.state.width / 100.0);
+        const availableVertical = Math.max(viewportHeight - topInset - SNAP_BOTTOM_INSET, 0);
+        const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
+        const maxTop = Math.max(availableVertical - windowHeightPx, 0);
 
         this.setState({
             parentSize: {
-                height: availableVertical,
-                width: viewportWidth - (viewportWidth * (this.state.width / 100.0))
-            }
+                height: maxTop,
+                width: availableHorizontal,
+            },
+            safeAreaTop: topInset,
+
         }, () => {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
@@ -266,12 +282,16 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - DESKTOP_TOP_PADDING);
-        node.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        node.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const snappedX = this.snapToGrid(rect.x);
+        const relativeY = rect.y - topInset;
+        const snappedRelativeY = this.snapToGrid(relativeY);
+        const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
+        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
+            this.props.onPositionChange(snappedX, absoluteY);
         }
     }
 
@@ -301,8 +321,9 @@ export class Window extends Component {
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
-        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
         const region = regions[position];
         if (!region) return;
         const { width, height } = this.state;
@@ -345,10 +366,12 @@ export class Window extends Component {
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
-        const regions = computeSnapRegions(viewportWidth, viewportHeight);
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
 
         let candidate = null;
-        if (rect.top <= DESKTOP_TOP_PADDING + verticalThreshold && regions.top.height > 0) {
+        if (rect.top <= topInset + verticalThreshold && regions.top.height > 0) {
+
             candidate = { position: 'top', preview: regions.top };
         } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
@@ -378,8 +401,9 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
+        const topBound = this.state.safeAreaTop ?? 0;
         const maxX = this.state.parentSize.width;
-        const maxY = this.state.parentSize.height;
+        const maxY = topBound + this.state.parentSize.height;
 
         const resist = (pos, min, max) => {
             if (pos < min) return min;
@@ -390,7 +414,7 @@ export class Window extends Component {
         }
 
         x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
+        y = resist(y, topBound, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
@@ -612,7 +636,12 @@ export class Window extends Component {
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    bounds={{
+                        left: 0,
+                        top: this.state.safeAreaTop,
+                        right: this.state.parentSize.width,
+                        bottom: this.state.safeAreaTop + this.state.parentSize.height,
+                    }}
                 >
                     <div
                         ref={this.windowRef}
