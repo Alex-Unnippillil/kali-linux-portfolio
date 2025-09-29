@@ -1,12 +1,27 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import Auth from './components/Auth';
 
-const HTTPBuilder: React.FC = () => {
+export const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
-  const command = `curl -X ${method} ${url}`.trim();
+  const [authHeader, setAuthHeader] = useState<string | null>(null);
+
+  const command = useMemo(() => {
+    const parts = ['curl', '-X', method];
+
+    if (url.trim()) {
+      parts.push(url.trim());
+    }
+
+    if (authHeader) {
+      parts.push(`-H "${authHeader}"`);
+    }
+
+    return parts.join(' ');
+  }, [authHeader, method, url]);
 
   return (
     <div className="h-full bg-gray-900 p-4 text-white overflow-auto">
@@ -23,7 +38,7 @@ const HTTPBuilder: React.FC = () => {
         </a>
         .
       </p>
-      <form onSubmit={(e) => e.preventDefault()} className="mb-4 space-y-4">
+      <form onSubmit={(e) => e.preventDefault()} className="mb-4 space-y-6">
         <div>
           <label htmlFor="http-method" className="mb-1 block text-sm font-medium">
             Method
@@ -52,6 +67,7 @@ const HTTPBuilder: React.FC = () => {
             onChange={(e) => setUrl(e.target.value)}
           />
         </div>
+        <Auth onSanitizedHeaderChange={setAuthHeader} />
       </form>
       <div>
         <h2 className="mb-2 text-lg">Command Preview</h2>
