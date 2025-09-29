@@ -4,11 +4,15 @@ export interface ModuleOption {
   description: string;
 }
 
+export type ModuleBadge = 'beta' | 'popular';
+
 export interface ModuleMetadata {
   name: string;
   description: string;
   tags: string[];
   options: ModuleOption[];
+  /** Optional badge to surface module status in the UI. */
+  badge?: ModuleBadge;
 }
 
 const MODULES: Record<string, ModuleMetadata> = {
@@ -16,6 +20,7 @@ const MODULES: Record<string, ModuleMetadata> = {
     name: 'getsystem',
     description: 'Attempt to elevate your privilege to that of local system.',
     tags: ['privilege', 'elevation'],
+    badge: 'popular',
     options: [
       {
         name: 'SESSION',
@@ -57,6 +62,7 @@ const MODULES: Record<string, ModuleMetadata> = {
     name: 'hashdump',
     description: 'Dump password hashes from the SAM database.',
     tags: ['credentials', 'dump'],
+    badge: 'beta',
     options: [
       {
         name: 'SESSION',
