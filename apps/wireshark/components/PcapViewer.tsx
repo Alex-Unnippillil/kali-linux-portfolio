@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
-import FilterHelper from './FilterHelper';
+import FilterBuilder from './FilterBuilder';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
 
@@ -38,6 +44,149 @@ interface Packet {
   sport?: number;
   dport?: number;
 }
+
+type ComparisonOperator =
+  | '=='
+  | '!='
+  | 'contains'
+  | '!contains'
+  | '>='
+  | '<='
+  | '>'
+  | '<';
+
+interface ParsedFilter {
+  expression: string;
+  clauses: string[][];
+  predicate: (pkt: Packet) => boolean;
+}
+
+const comparisonRegex =
+  /^(?<field>[a-z0-9_.]+)\s*(?<op>==|!=|>=|<=|>|<|contains|!contains)\s*(?<value>.+)$/i;
+
+const fieldResolvers: Record<string, (pkt: Packet) => Array<string | number>> = {
+  'ip.addr': (pkt) => [pkt.src, pkt.dest],
+  'ip.src': (pkt) => [pkt.src],
+  'ip.dst': (pkt) => [pkt.dest],
+  'tcp.port': (pkt) => [pkt.sport ?? '', pkt.dport ?? ''],
+  'udp.port': (pkt) => [pkt.sport ?? '', pkt.dport ?? ''],
+  protocol: (pkt) => [protocolName(pkt.protocol)],
+  info: (pkt) => [pkt.info],
+  'frame.len': (pkt) => [pkt.data?.length ?? 0],
+};
+
+const normalizeValue = (value: string) => {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+};
+
+const evaluateComparison = (
+  values: Array<string | number>,
+  operator: ComparisonOperator,
+  expectedRaw: string
+) => {
+  const expected = normalizeValue(expectedRaw);
+  const numericExpected = Number(expected);
+  const expectedIsNumber = !Number.isNaN(numericExpected);
+  return values.some((value) => {
+    if (value === undefined || value === null) return false;
+    const candidate = typeof value === 'number' ? value : value.toString();
+    switch (operator) {
+      case 'contains':
+        return candidate.toLowerCase().includes(expected.toLowerCase());
+      case '!contains':
+        return !candidate.toLowerCase().includes(expected.toLowerCase());
+      case '==':
+        return candidate.toString().toLowerCase() === expected.toLowerCase();
+      case '!=':
+        return candidate.toString().toLowerCase() !== expected.toLowerCase();
+      case '>=':
+        return expectedIsNumber && Number(candidate) >= numericExpected;
+      case '<=':
+        return expectedIsNumber && Number(candidate) <= numericExpected;
+      case '>':
+        return expectedIsNumber && Number(candidate) > numericExpected;
+      case '<':
+        return expectedIsNumber && Number(candidate) < numericExpected;
+      default:
+        return false;
+    }
+  });
+};
+
+const defaultHaystack = (pkt: Packet) => [
+  pkt.src,
+  pkt.dest,
+  protocolName(pkt.protocol),
+  pkt.info ?? '',
+  pkt.sport?.toString() ?? '',
+  pkt.dport?.toString() ?? '',
+];
+
+const evaluateTerm = (pkt: Packet, term: string) => {
+  const match = term.match(comparisonRegex);
+  if (match?.groups) {
+    const field = match.groups.field.toLowerCase();
+    const op = match.groups.op as ComparisonOperator;
+    const value = match.groups.value;
+    const resolver = fieldResolvers[field];
+    if (resolver) {
+      return evaluateComparison(resolver(pkt), op, value);
+    }
+  }
+  const needle = term.trim().toLowerCase();
+  if (!needle) return true;
+  return defaultHaystack(pkt).some((part) =>
+    part.toString().toLowerCase().includes(needle)
+  );
+};
+
+const compileFilter = (expression: string): ParsedFilter => {
+  const trimmed = expression.trim();
+  if (!trimmed) {
+    return {
+      expression: '',
+      clauses: [],
+      predicate: () => true,
+    };
+  }
+  const clauses = trimmed
+    .split(/\s+\|\|\s+/)
+    .map((clause) =>
+      clause
+        .split(/\s+&&\s+/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+    )
+    .filter((clause) => clause.length > 0);
+
+  const predicate = (pkt: Packet) => {
+    if (!clauses.length) {
+      return evaluateTerm(pkt, trimmed);
+    }
+    return clauses.some((terms) => terms.every((term) => evaluateTerm(pkt, term)));
+  };
+
+  return { expression: trimmed, clauses, predicate };
+};
+
+const useParsedFilter = (expression: string) => {
+  const cacheRef = useRef<{ expression: string; parsed: ParsedFilter }>();
+  return useMemo(() => {
+    if (cacheRef.current?.expression === expression) {
+      return cacheRef.current.parsed;
+    }
+    const parsed = compileFilter(expression);
+    cacheRef.current = { expression, parsed };
+    return parsed;
+  }, [expression]);
+};
 
 interface Layer {
   name: string;
@@ -289,16 +438,16 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const parsedFilter = useParsedFilter(filter);
+
+  const filtered = useMemo(
+    () => packets.filter((p) => parsedFilter.predicate(p)),
+    [packets, parsedFilter]
+  );
+
+  const handleFilterChange = useCallback((value: string) => {
+    setFilter(value);
+  }, []);
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -335,7 +484,11 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       {packets.length > 0 && (
         <>
           <div className="flex items-center space-x-2">
-            <FilterHelper value={filter} onChange={setFilter} />
+            <FilterBuilder
+              value={filter}
+              onChange={handleFilterChange}
+              onApply={handleFilterChange}
+            />
             <button
               onClick={() => navigator.clipboard.writeText(filter)}
               className="px-2 py-1 bg-gray-700 rounded text-xs"
