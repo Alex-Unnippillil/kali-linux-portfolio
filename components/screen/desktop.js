@@ -960,11 +960,23 @@ export class Desktop extends Component {
         }
     }
 
+    openNewInstance = (objId) => {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('open-app-instance', { detail: objId }));
+        }
+        this.openApp(objId, { requestNewInstance: true });
+    }
+
     openApp = (objId, params) => {
-        const context = params && typeof params === 'object'
+        const baseParams = params && typeof params === 'object' ? { ...params } : undefined;
+        const requestNewInstance = Boolean(baseParams?.requestNewInstance);
+        if (baseParams) {
+            delete baseParams.requestNewInstance;
+        }
+        const context = baseParams && Object.keys(baseParams).length > 0
             ? {
-                ...params,
-                ...(params.path && !params.initialPath ? { initialPath: params.path } : {}),
+                ...baseParams,
+                ...(baseParams.path && !baseParams.initialPath ? { initialPath: baseParams.path } : {}),
             }
             : undefined;
         const contextState = context
@@ -982,7 +994,7 @@ export class Desktop extends Component {
         if (this.state.disabled_apps[objId]) return;
 
         // if app is already open, focus it instead of spawning a new window
-        if (this.state.closed_windows[objId] === false) {
+        if (this.state.closed_windows[objId] === false && !requestNewInstance) {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
@@ -1316,6 +1328,8 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    closeApp={this.closeApp}
+                    openNewInstance={this.openNewInstance}
                 />
 
                 {/* Desktop Apps */}
