@@ -275,6 +275,56 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
   };
 
+  const renameCurrentDir = useCallback(
+    async (nextName) => {
+      const trimmed = (nextName || '').trim();
+      if (!trimmed) return;
+      if (path.length <= 1) return;
+      const current = path[path.length - 1];
+      if (!current) return;
+      if (current.name === trimmed) return;
+
+      const parent = path.length > 1 ? path[path.length - 2] : null;
+      let updatedHandle = current.handle;
+      let renamed = false;
+
+      if (parent?.handle) {
+        try {
+          if (typeof current.handle?.move === 'function') {
+            await current.handle.move(parent.handle, trimmed);
+            updatedHandle = await parent.handle.getDirectoryHandle(trimmed, { create: false });
+            renamed = true;
+          } else if (typeof parent.handle?.renameEntry === 'function') {
+            await parent.handle.renameEntry(current.name, trimmed);
+            updatedHandle = await parent.handle.getDirectoryHandle(trimmed, { create: false });
+            renamed = true;
+          }
+        } catch (error) {
+          console.error(error);
+          setLocationError(`Unable to rename folder to ${trimmed}`);
+          return;
+        }
+      }
+
+      setPath((prev) =>
+        prev.map((seg, idx) =>
+          idx === prev.length - 1 ? { ...seg, name: trimmed, handle: updatedHandle } : seg
+        )
+      );
+      if (updatedHandle) setDirHandle(updatedHandle);
+      try {
+        await readDir(updatedHandle);
+        setLocationError(null);
+      } catch (error) {
+        console.error(error);
+        if (renamed) {
+          setLocationError(`Unable to refresh ${trimmed}`);
+        }
+      }
+    },
+    [path, readDir]
+  );
+
   const saveFile = async () => {
     if (!currentFile) return;
     try {
@@ -359,7 +409,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Back
           </button>
         )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
+        <Breadcrumbs path={path} onNavigate={navigateTo} onRename={renameCurrentDir} />
         {locationError && (
           <div className="text-xs text-red-300" role="status">
             {locationError}
