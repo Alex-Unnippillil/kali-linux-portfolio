@@ -35,7 +35,7 @@ export default function WorkspaceSwitcher({
   return (
     <nav
       aria-label="Workspace switcher"
-      className="flex items-center gap-1 rounded-full bg-black/50 px-1 py-0.5"
+      className="flex items-center overflow-hidden rounded-md border border-white/10 bg-[#1e2430]"
     >
       {workspaces.map((workspace, index) => {
         const isActive = workspace.id === activeWorkspace;
@@ -48,15 +48,19 @@ export default function WorkspaceSwitcher({
             aria-pressed={isActive}
             aria-label={formatAriaLabel(workspace)}
             onClick={() => onSelect(workspace.id)}
-            className={`min-w-[28px] rounded-full px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-black ${
-              isActive
-                ? "bg-[var(--kali-blue)] text-black"
-                : "bg-transparent text-white/80 hover:bg-white/10"
-            }`}
+            className={`relative flex h-8 min-w-[2.25rem] items-center justify-center px-3 text-xs font-medium text-white/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161b25] ${
+              index > 0 ? "border-l border-white/10" : ""
+            } ${isActive ? "text-white" : "hover:text-white"}`}
           >
             <span>{index + 1}</span>
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-[var(--kali-blue)] transition-opacity ${
+                isActive ? "opacity-100" : "opacity-0"
+              }`}
+            />
             {workspace.openWindows > 0 && !isActive && (
-              <span className="ml-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-white/10 px-1 text-[10px] text-white/80">
+              <span className="pointer-events-none absolute -top-1 right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-white/10 px-1 text-[10px] text-white/80">
                 {workspace.openWindows}
               </span>
             )}
