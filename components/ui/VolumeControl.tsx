@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { typography } from "@/styles/theme";
 import usePersistentState from "../../hooks/usePersistentState";
 
 const ICONS = {
@@ -128,14 +129,18 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
+          className={`absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-white shadow-lg ${typography.caption}`}
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={handleWheel}
         >
-          <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
+          <div
+            className={`mb-2 flex items-center justify-between uppercase tracking-wide text-gray-200 ${typography.label}`}
+          >
             <span>Volume</span>
-            <span className="font-semibold text-white">{formatPercent(volume)}</span>
+            <span className={`font-semibold text-white ${typography.bodySm}`}>
+              {formatPercent(volume)}
+            </span>
           </div>
           <input
             ref={sliderRef}

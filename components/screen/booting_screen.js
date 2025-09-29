@@ -1,5 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
+import { typography, typeClassName } from '@/styles/theme'
 
 const bootMessages = [
     'Securing environment',
@@ -29,7 +30,7 @@ function BootingScreen(props) {
                 </div>
 
                 <div className="relative flex flex-col items-center gap-6 px-6 text-center">
-                    <span className="text-xs uppercase tracking-[0.5em] text-slate-400">Initializing workspace</span>
+                    <span className={`uppercase tracking-[0.5em] text-slate-400 ${typography.label}`}>Initializing workspace</span>
                     <div className="relative">
                         <div className="absolute -inset-6 rounded-full bg-sky-500/20 blur-3xl" aria-hidden />
                         <Image
@@ -42,7 +43,7 @@ function BootingScreen(props) {
                             priority
                         />
                     </div>
-                    <span className="text-4xl font-semibold tracking-[0.35em] text-sky-200 md:text-5xl">KALI</span>
+                    <span className={`font-semibold tracking-[0.35em] text-sky-200 ${typeClassName('2xl')} md:${typeClassName('3xl')}`}>KALI</span>
                 </div>
 
                 <div className="relative flex flex-col items-center gap-6 px-6">
@@ -66,7 +67,7 @@ function BootingScreen(props) {
                         )}
                     </button>
 
-                    <ul className="flex flex-col gap-2 text-sm text-slate-300">
+                    <ul className={`flex flex-col gap-2 text-slate-300 ${typography.bodySm}`}>
                         {bootMessages.map((message) => (
                             <li key={message} className="flex items-center gap-3">
                                 <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite]" aria-hidden />
@@ -76,7 +77,7 @@ function BootingScreen(props) {
                     </ul>
                 </div>
 
-                <div className="relative mb-6 flex gap-4 text-xs uppercase tracking-[0.4em] text-slate-500">
+                <div className={`relative mb-6 flex gap-4 uppercase tracking-[0.4em] text-slate-500 ${typography.label}`}>
                     <a className="transition hover:text-slate-200" href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">
                         LinkedIn
                     </a>

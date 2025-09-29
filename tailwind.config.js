@@ -1,4 +1,5 @@
 const plugin = require('tailwindcss/plugin');
+const { typeRamp, typeRampVars } = require('./styles/type-scale');
 
 module.exports = {
   darkMode: 'class',
@@ -60,6 +61,15 @@ module.exports = {
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
       },
+      fontSize: Object.fromEntries(
+        Object.entries(typeRamp).map(([token]) => [
+          `ramp-${token}`,
+          [
+            `var(--font-size-${token})`,
+            { lineHeight: `var(--line-height-${token})` },
+          ],
+        ]),
+      ),
       minWidth: {
         '0': '0',
         '1/4': '25%',
@@ -116,7 +126,10 @@ module.exports = {
     },
   },
   plugins: [
-    plugin(function ({ addUtilities }) {
+    plugin(function ({ addUtilities, addBase }) {
+      addBase({
+        ':root': typeRampVars,
+      });
       const cols = {};
       for (let i = 1; i <= 12; i++) {
         const width = `${(i / 12) * 100}%`;

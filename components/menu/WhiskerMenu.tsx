@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
+import { typography, typeClassName } from '@/styles/theme';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
@@ -399,7 +400,9 @@ const WhiskerMenu: React.FC = () => {
           }}
         >
           <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
-            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
+            <div
+              className={`flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 uppercase tracking-[0.2em] text-[#4aa8ff] ${typography.label}`}
+            >
               <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
               Categories
             </div>
@@ -418,7 +421,7 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  className={`group flex items-center gap-3 rounded-md px-3 py-2 text-left ${typography.bodySm} transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
                     category === cat.id
                       ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
                       : 'text-gray-300 hover:bg-[#152133] hover:text-white'
@@ -430,7 +433,11 @@ const WhiskerMenu: React.FC = () => {
                     setCategoryHighlight(index);
                   }}
                 >
-                  <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
+                  <span
+                    className={`w-8 font-mono uppercase tracking-[0.2em] text-[#4aa8ff] ${typeClassName('2xs')}`}
+                  >
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
                   <span className="flex items-center gap-2">
                     <Image
                       src={cat.icon}
@@ -445,12 +452,16 @@ const WhiskerMenu: React.FC = () => {
                 </button>
               ))}
             </div>
-            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
+            <div className={`border-t border-[#1d2a3c] px-4 py-3 text-gray-400 ${typography.bodySm}`}>
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
+                <span
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] font-semibold uppercase text-[#53b9ff] ${typography.bodySm}`}
+                >
+                  k
+                </span>
                 <div>
-                  <p className="text-sm font-semibold text-white">kali</p>
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
+                  <p className={`font-semibold text-white ${typography.bodySm}`}>kali</p>
+                  <p className={`uppercase tracking-[0.3em] text-gray-500 ${typography.label}`}>User Session</p>
                 </div>
               </div>
             </div>
@@ -485,7 +496,7 @@ const WhiskerMenu: React.FC = () => {
                   </svg>
                 </span>
                 <input
-                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  className={`h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0 ${typography.bodySm}`}
                   placeholder="Search applications"
                   aria-label="Search applications"
                   value={query}
@@ -496,7 +507,7 @@ const WhiskerMenu: React.FC = () => {
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-2">
               {currentApps.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
+                <div className={`flex h-full flex-col items-center justify-center gap-3 text-gray-500 ${typography.bodySm}`}>
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
                     <svg
                       width="24"
@@ -522,11 +533,11 @@ const WhiskerMenu: React.FC = () => {
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
-                          idx === highlight
-                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
-                            : 'text-gray-200 hover:bg-[#142132]'
-                        } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left ${typography.bodySm} transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        idx === highlight
+                          ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
+                          : 'text-gray-200 hover:bg-[#142132]'
+                      } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                         aria-label={app.title}
                         disabled={app.disabled}
                         onClick={() => {
@@ -548,8 +559,8 @@ const WhiskerMenu: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <p className="font-medium text-[15px]">{app.title}</p>
-                            <p className="text-xs uppercase tracking-[0.25em] text-[#4aa8ff]">Application</p>
+                            <p className={`font-medium ${typography.body}`}>{app.title}</p>
+                            <p className={`uppercase tracking-[0.25em] text-[#4aa8ff] ${typography.label}`}>Application</p>
                           </div>
                         </div>
                         <svg

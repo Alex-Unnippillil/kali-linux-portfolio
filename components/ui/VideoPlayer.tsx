@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { typography } from "@/styles/theme";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 
 interface VideoPlayerProps {
@@ -105,15 +106,34 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
             alignItems: "center",
           }}
         >
-          <button onClick={() => send({ type: "toggle" })}>Play/Pause</button>
-          <button onClick={() => send({ type: "seek", delta: -5 })}>-5s</button>
-          <button onClick={() => send({ type: "seek", delta: 5 })}>+5s</button>
+          <button
+            type="button"
+            onClick={() => send({ type: "toggle" })}
+            aria-label="Toggle playback"
+          >
+            Play/Pause
+          </button>
+          <button
+            type="button"
+            onClick={() => send({ type: "seek", delta: -5 })}
+            aria-label="Seek backward five seconds"
+          >
+            -5s
+          </button>
+          <button
+            type="button"
+            onClick={() => send({ type: "seek", delta: 5 })}
+            aria-label="Seek forward five seconds"
+          >
+            +5s
+          </button>
           <input
             type="range"
             min={0}
             max={1}
             step={0.05}
             value={vol}
+            aria-label="Volume"
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               setVol(v);
@@ -129,12 +149,20 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        aria-label="Video player"
+        className="w-full h-auto"
+      />
       {pipSupported && (
         <button
           type="button"
           onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-label={isPip ? "Exit picture-in-picture" : "Enter picture-in-picture"}
+          className={`absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-white ${typography.caption}`}
         >
           {isPip ? "Exit PiP" : "PiP"}
         </button>
@@ -143,7 +171,8 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <button
           type="button"
           onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-label="Open document picture-in-picture controls"
+          className={`absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-white ${typography.caption}`}
         >
           Doc-PiP
         </button>

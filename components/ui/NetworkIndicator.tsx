@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { typography, typographyMono, typeClassName } from "@/styles/theme";
 import usePersistentState from "../../hooks/usePersistentState";
 
 type NetworkType = "wired" | "wifi";
@@ -576,28 +577,34 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"
+          className={`absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-white shadow-lg ${typography.caption}`}
           role="menu"
           aria-label="Network menu"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Network</div>
+          <div className={`mb-3 uppercase tracking-wide text-gray-200 ${typography.label}`}>
+            Network
+          </div>
           <div className="mb-3 rounded bg-black bg-opacity-20 p-3">
-            <div className="flex items-center justify-between text-[11px] text-gray-200">
+            <div className={`flex items-center justify-between text-gray-200 ${typography.label}`}>
               <span className="uppercase">Status</span>
-              <span className="font-semibold text-white">{summary.label}</span>
+              <span className={`font-semibold text-white ${typography.bodySm}`}>{summary.label}</span>
             </div>
-            <p className="mt-1 text-[11px] text-gray-300">{summary.description}</p>
-            {summary.meta && <p className="mt-1 text-[11px] text-gray-400">{summary.meta}</p>}
+            <p className={`mt-1 text-gray-300 ${typography.label}`}>{summary.description}</p>
+            {summary.meta && (
+              <p className={`mt-1 text-gray-400 ${typography.label}`}>{summary.meta}</p>
+            )}
           </div>
           {summary.notice && (
-            <div className="mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-[11px] text-red-200">
+            <div className={`mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-red-200 ${typography.label}`}>
               {summary.notice}
             </div>
           )}
-          <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span className="text-white normal-case">Wi-Fi</span>
+          <label
+            className={`mb-3 flex items-center justify-between uppercase tracking-wide text-gray-200 ${typography.label}`}
+          >
+            <span className={`text-white normal-case ${typography.bodySm}`}>Wi-Fi</span>
             <input
               type="checkbox"
               checked={wifiEnabled}
@@ -605,7 +612,9 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
               aria-label={wifiEnabled ? "Disable Wi-Fi" : "Enable Wi-Fi"}
             />
           </label>
-          <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-200">Available networks</div>
+          <div className={`mb-2 uppercase tracking-wide text-gray-200 ${typography.label}`}>
+            Available networks
+          </div>
           <ul className="space-y-2" role="group" aria-label="Available networks">
             {NETWORKS.map((network) => {
               const connected = connectedId === network.id;
@@ -624,13 +633,15 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                       disabled={disabled}
                       aria-pressed={connected}
                     >
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-white">{network.name}</span>
+                      <div className={`flex items-center justify-between ${typography.bodySm}`}>
+                        <span className={`font-medium text-white ${typography.bodySm}`}>{network.name}</span>
                         {network.type === "wifi" && network.strength && (
-                          <span className="text-[11px] text-gray-200">{SIGNAL_LABEL[network.strength]}</span>
+                          <span className={`text-gray-200 ${typography.label}`}>
+                            {SIGNAL_LABEL[network.strength]}
+                          </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-gray-300">
+                      <div className={`text-gray-300 ${typography.label}`}>
                         {connected
                           ? network.details
                           : network.type === "wifi"
@@ -643,7 +654,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                     {network.type === "wifi" && (
                       <button
                         type="button"
-                        className="h-full min-h-[2.75rem] rounded border border-white/20 px-2 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                        className={`h-full min-h-[2.75rem] rounded border border-white/20 px-2 uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white ${typography.label}`}
                         onClick={() => handleShare(network)}
                         aria-label={`Share ${network.name}`}
                       >
@@ -657,14 +668,14 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
           </ul>
           <button
             type="button"
-            className="mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-300 transition hover:border-white/40 hover:text-white"
+            className={`mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 uppercase tracking-wide text-gray-300 transition hover:border-white/40 hover:text-white ${typography.label}`}
             onClick={() => setShowLogs((prev) => !prev)}
             aria-expanded={showLogs}
           >
             {showLogs ? "Hide share activity" : "Show share activity"}
           </button>
           {showLogs && (
-            <div className="mt-2 max-h-32 overflow-y-auto rounded border border-white/10 bg-black/30 p-2 text-[11px] text-gray-200">
+            <div className={`mt-2 max-h-32 overflow-y-auto rounded border border-white/10 bg-black/30 p-2 text-gray-200 ${typography.label}`}>
               {shareLogs.length === 0 ? (
                 <p>No share activity recorded yet.</p>
               ) : (
@@ -696,37 +707,41 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
             role="dialog"
             aria-modal="true"
             aria-label={`Share ${shareTarget.name}`}
-            className="w-full max-w-md rounded-lg border border-white/20 bg-ub-cool-grey p-5 text-sm text-white shadow-xl"
+            className={`w-full max-w-md rounded-lg border border-white/20 bg-ub-cool-grey p-5 text-white shadow-xl ${typography.bodySm}`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-base font-semibold">Share {shareTarget.name}</h2>
-                <p className="mt-1 text-[11px] uppercase tracking-wide text-red-200">
+                <h2 className={`font-semibold ${typography.titleSm}`}>Share {shareTarget.name}</h2>
+                <p className={`mt-1 uppercase tracking-wide text-red-200 ${typography.label}`}>
                   Privacy warning: credentials stay hidden until you confirm. All share actions are logged locally for review.
                 </p>
               </div>
               <button
                 type="button"
-                className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                className={`rounded border border-white/20 px-2 py-1 uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white ${typography.label}`}
                 onClick={closeShare}
                 aria-label="Close share dialog"
               >
                 Close
               </button>
             </div>
-            <div className="mt-4 space-y-2 rounded border border-white/15 bg-black/30 p-3 text-[13px]">
+            <div className={`mt-4 space-y-2 rounded border border-white/15 bg-black/30 p-3 ${typography.bodySm}`}>
               <div className="flex items-center justify-between">
                 <span className="text-gray-300">SSID</span>
-                <span className="font-medium text-white">{shareTarget.credentials?.ssid ?? shareTarget.name}</span>
+                <span className={`font-medium text-white ${typography.bodySm}`}>
+                  {shareTarget.credentials?.ssid ?? shareTarget.name}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-300">Security</span>
-                <span className="text-white">{shareTarget.credentials?.security ?? "Unknown"}</span>
+                <span className={`text-white ${typography.bodySm}`}>
+                  {shareTarget.credentials?.security ?? "Unknown"}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-300">Password</span>
-                <span className="font-mono text-white">
+                <span className={`font-mono text-white ${typographyMono.body}`}>
                   {shareConfirmed
                     ? shareTarget.credentials?.password ?? "Not required"
                     : maskSecret(shareTarget.credentials?.password)}
@@ -737,14 +752,14 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
               {!shareConfirmed && (
                 <button
                   type="button"
-                  className="w-full rounded bg-ub-blue px-3 py-2 text-sm font-semibold text-white transition hover:bg-ub-blue/80"
+                  className={`w-full rounded bg-ub-blue px-3 py-2 font-semibold text-white transition hover:bg-ub-blue/80 ${typography.bodySm}`}
                   onClick={handleConfirmShare}
                 >
                   Reveal &amp; Generate QR
                 </button>
               )}
               {shareConfirmed && shareStatus.state === "pending" && (
-                <div className="rounded border border-white/10 bg-black/40 px-3 py-2 text-center text-[13px] text-gray-200">
+                <div className={`rounded border border-white/10 bg-black/40 px-3 py-2 text-center text-gray-200 ${typography.bodySm}`}>
                   Generating secure QR code…
                 </div>
               )}
@@ -755,12 +770,12 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                     alt={`Wi-Fi share code for ${shareTarget.name}`}
                     className="mx-auto h-40 w-40 rounded bg-white p-2"
                   />
-                  <p className="text-[11px] text-gray-300">Payload: {shareStatus.payload}</p>
-                  {nfcStatus && <p className="text-[11px] text-gray-200">{nfcStatus}</p>}
+                  <p className={`text-gray-300 ${typography.label}`}>Payload: {shareStatus.payload}</p>
+                  {nfcStatus && <p className={`text-gray-200 ${typography.label}`}>{nfcStatus}</p>}
                 </div>
               )}
               {shareStatus.state === "error" && (
-                <div className="rounded border border-red-500/60 bg-red-900/40 px-3 py-2 text-[13px] text-red-100">
+                <div className={`rounded border border-red-500/60 bg-red-900/40 px-3 py-2 text-red-100 ${typography.bodySm}`}>
                   {shareStatus.message}
                 </div>
               )}

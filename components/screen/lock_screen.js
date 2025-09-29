@@ -2,6 +2,7 @@ import React from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import { typography, typeClassName } from '@/styles/theme';
 
 export default function LockScreen(props) {
 
@@ -30,13 +31,13 @@ export default function LockScreen(props) {
                 />
             )}
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
-                <div className=" text-7xl">
+                <div className={` ${typography.display}`}>
                     <Clock onlyTime={true} />
                 </div>
-                <div className="mt-4 text-xl font-medium">
+                <div className={`mt-4 font-medium ${typeClassName('xl')}`}>
                     <Clock onlyDay={true} />
                 </div>
-                <div className=" mt-16 text-base">
+                <div className={` mt-16 ${typography.body}`}>
                     Click or Press a key to unlock
                 </div>
             </div>

@@ -2,6 +2,7 @@
 
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
+import { typography } from '@/styles/theme';
 
 const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
@@ -1704,7 +1705,7 @@ export class Desktop extends Component {
         };
 
         return (
-            <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
+            <div className={`absolute rounded-md top-1/2 left-1/2 text-center text-white font-light bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50 ${typography.bodySm}`}>
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
                     <input

@@ -14,6 +14,7 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import { typography, typeClassName } from '@/styles/theme';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -256,7 +257,9 @@ const NotificationBell: React.FC = () => {
           <path d="M7 12a3 3 0 006 0H7z" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
+          <span
+            className={`absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center font-semibold leading-5 text-white ${typeClassName('2xs')}`}
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -272,21 +275,21 @@ const NotificationBell: React.FC = () => {
           className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
         >
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-            <h2 id={headingId} className="text-sm font-semibold text-white">
+            <h2 id={headingId} className={`font-semibold text-white ${typography.body}`}>
               Notifications
             </h2>
             <button
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className={`font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50 ${typography.caption}`}
             >
               Dismiss all
             </button>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
+              <p className={`px-4 py-6 text-center text-ubt-grey text-opacity-80 ${typography.bodySm}`}>
                 You&apos;re all caught up.
               </p>
             ) : (
@@ -302,12 +305,12 @@ const NotificationBell: React.FC = () => {
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                        className={`flex w-full items-center justify-between px-4 py-2 text-left font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange ${typography.bodySm}`}
                       >
                         <span className="flex items-center gap-2">
                           {group.metadata.label}
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClass}`}
+                            className={`rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${group.metadata.badgeClass} ${typeClassName('2xs')}`}
                             title={group.metadata.description}
                           >
                             {group.notifications.length}
@@ -334,12 +337,12 @@ const NotificationBell: React.FC = () => {
                           {group.notifications.map(notification => (
                             <li
                               key={notification.id}
-                              className={`border-l-2 px-4 py-3 text-sm text-white ${notification.metadata.accentClass}`}
+                              className={`border-l-2 px-4 py-3 text-white ${notification.metadata.accentClass} ${typography.bodySm}`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-medium">{notification.title}</p>
                                 <span
-                                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClass}`}
+                                  className={`shrink-0 rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${notification.metadata.badgeClass} ${typeClassName('2xs')}`}
                                   title={
                                     notification.classification.matchedRuleId
                                       ? `Priority ${notification.metadata.label} (${notification.classification.source}: ${notification.classification.matchedRuleId})`
@@ -350,11 +353,13 @@ const NotificationBell: React.FC = () => {
                                 </span>
                               </div>
                               {notification.body && (
-                                <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
+                                <p className={`mt-1 whitespace-pre-line text-ubt-grey text-opacity-80 ${typography.caption}`}>
                                   {notification.body}
                                 </p>
                               )}
-                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+                              <div
+                                className={`mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 uppercase tracking-wide text-ubt-grey text-opacity-70 ${typeClassName('2xs')}`}
+                              >
                                 <span>{notification.appId}</span>
                                 <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
                               </div>

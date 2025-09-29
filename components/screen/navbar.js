@@ -6,6 +6,7 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import { typography, typeClassName } from '@/styles/theme';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -82,7 +83,7 @@ export default class Navbar extends PureComponent {
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex h-14 w-full items-center justify-between bg-slate-950/80 px-3 text-ubt-grey shadow-lg backdrop-blur-md"
                                         style={{ minHeight: NAVBAR_HEIGHT }}
                                 >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <div className={`flex items-center gap-2 ${typography.bodySm} md:${typeClassName('md')}`}>
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
@@ -94,9 +95,7 @@ export default class Navbar extends PureComponent {
                                                 <PerformanceGraph />
                                         </div>
                                         <div
-                                                className={
-                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
-                                                }
+                                                className={`rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10 ${typography.caption}`}
                                         >
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} />
                                         </div>
@@ -105,9 +104,7 @@ export default class Navbar extends PureComponent {
                                                 id="status-bar"
                                                 aria-label="System status"
                                                 onClick={this.handleStatusToggle}
-                                                className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                }
+                                                className={`relative rounded-full border border-transparent px-3 py-1 font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${typography.caption}`}
                                         >
                                                 <Status />
                                                 <QuickSettings open={this.state.status_card} />
