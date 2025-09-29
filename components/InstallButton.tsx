@@ -1,32 +1,77 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { trackEvent } from '@/lib/analytics-client';
-import { showA2HS } from '@/src/pwa/a2hs';
+
+type InstallOutcome = 'accepted' | 'dismissed';
+
+interface BeforeInstallPromptEvent extends Event {
+  readonly userChoice: Promise<{ outcome: InstallOutcome; platform: string }>;
+  prompt(): Promise<void>;
+  preventDefault(): void;
+}
 
 const InstallButton: React.FC = () => {
-  const [visible, setVisible] = useState(false);
+  const [installPromptEvent, setInstallPromptEvent] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [isPrompting, setIsPrompting] = useState(false);
 
   useEffect(() => {
-    const handler = () => setVisible(true);
-    (window as any).addEventListener('a2hs:available', handler);
-    return () => (window as any).removeEventListener('a2hs:available', handler);
+    if (typeof window === 'undefined') return;
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      const promptEvent = event as BeforeInstallPromptEvent;
+      promptEvent.preventDefault();
+      setInstallPromptEvent(promptEvent);
+      setIsPrompting(false);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
-  const handleInstall = async () => {
-    const shown = await showA2HS();
-    if (shown) {
-      trackEvent('cta_click', { location: 'install_button' });
-      setVisible(false);
-    }
-  };
+  const handleInstall = useCallback(async () => {
+    if (!installPromptEvent || isPrompting) return;
 
-  if (!visible) return null;
+    const promptEvent = installPromptEvent;
+    setIsPrompting(true);
+
+    try {
+      await promptEvent.prompt();
+      const choiceResult = await promptEvent.userChoice;
+      trackEvent('cta_click', {
+        location: 'install_button',
+        outcome: choiceResult.outcome,
+      });
+    } catch (error) {
+      console.error('Failed to trigger install prompt', error);
+    } finally {
+      setIsPrompting(false);
+      setInstallPromptEvent(null);
+    }
+  }, [installPromptEvent, isPrompting]);
+
+  const isAvailable = Boolean(installPromptEvent);
+
+  const title = isAvailable
+    ? 'Install this portfolio as a Progressive Web App.'
+    : 'Install is available once your browser signals readiness for Progressive Web Apps.';
 
   return (
     <button
-      onClick={handleInstall}
-      className="fixed bottom-4 right-4 bg-ubt-blue text-white px-3 py-1 rounded"
+      type="button"
+      onClick={isAvailable ? handleInstall : undefined}
+      disabled={!isAvailable || isPrompting}
+      title={title}
+      className={`fixed bottom-4 right-4 px-3 py-1 rounded text-white transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ubt-blue ${
+        isAvailable && !isPrompting
+          ? 'bg-ubt-blue hover:bg-ubt-blue/90'
+          : 'bg-ubt-blue/60 cursor-not-allowed'
+      }`}
+      aria-disabled={!isAvailable || isPrompting}
     >
       Install
     </button>
