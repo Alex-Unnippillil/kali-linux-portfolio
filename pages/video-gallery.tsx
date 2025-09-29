@@ -1,5 +1,6 @@
 import Image from 'next/image';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import YouTube from '../components/media/YouTube';
 
 interface Video {
   id: string;
@@ -37,25 +38,33 @@ const VideoGallery: React.FC = () => {
     v.title.toLowerCase().includes(query.toLowerCase())
   );
 
+  const selectedVideo = useMemo(
+    () => (playing ? videos.find((video) => video.id === playing) ?? null : null),
+    [playing, videos],
+  );
+
   return (
     <main className="p-4">
-      <input
-        type="text"
-        placeholder="Search videos..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="mb-4 w-full max-w-md px-4 py-2 border rounded"
-      />
+      <label className="mb-4 block max-w-md">
+        <span className="sr-only">Search videos</span>
+        <input
+          type="text"
+          placeholder="Search videos..."
+          aria-label="Search videos"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full rounded border px-4 py-2"
+        />
+      </label>
       {playing && (
-        <div className="mb-4 w-full max-w-2xl aspect-video">
-          <iframe
-            title="Selected video"
-            className="w-full h-full"
-            src={`https://www.youtube-nocookie.com/embed/${playing}`}
-            sandbox="allow-scripts allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            referrerPolicy="no-referrer"
-            allowFullScreen
+        <div className="mb-4 w-full max-w-2xl">
+          <YouTube
+            key={playing}
+            videoId={playing}
+            title={selectedVideo?.title ?? 'YouTube video'}
+            className="h-full w-full"
+            aspectRatio="16 / 9"
+            autoPlay
           />
         </div>
       )}
