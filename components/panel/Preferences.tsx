@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
 
@@ -18,7 +18,7 @@ export default function Preferences() {
 
   const [active, setActive] = useState<TabId>("display");
 
-  const isCoarsePointer = () => {
+  const isCoarsePointer = useCallback(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return false;
     }
@@ -27,28 +27,34 @@ export default function Preferences() {
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  const resolveNumberSetting = (key: string, touchDefault: number, desktopDefault: number) => {
-    if (typeof window === "undefined") return desktopDefault;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
-    if (stored !== null) {
-      const parsed = parseInt(stored, 10);
-      return Number.isNaN(parsed) ? desktopDefault : parsed;
-    }
-    return isCoarsePointer() ? touchDefault : desktopDefault;
-  };
+  const resolveNumberSetting = useCallback(
+    (key: string, touchDefault: number, desktopDefault: number) => {
+      if (typeof window === "undefined") return desktopDefault;
+      const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
+      if (stored !== null) {
+        const parsed = parseInt(stored, 10);
+        return Number.isNaN(parsed) ? desktopDefault : parsed;
+      }
+      return isCoarsePointer() ? touchDefault : desktopDefault;
+    },
+    [isCoarsePointer],
+  );
 
-  const resolveBooleanSetting = (key: string, touchDefault: boolean, desktopDefault: boolean) => {
-    if (typeof window === "undefined") return desktopDefault;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
-    if (stored !== null) {
-      return stored === "true";
-    }
-    return isCoarsePointer() ? touchDefault : desktopDefault;
-  };
+  const resolveBooleanSetting = useCallback(
+    (key: string, touchDefault: boolean, desktopDefault: boolean) => {
+      if (typeof window === "undefined") return desktopDefault;
+      const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
+      if (stored !== null) {
+        return stored === "true";
+      }
+      return isCoarsePointer() ? touchDefault : desktopDefault;
+    },
+    [isCoarsePointer],
+  );
 
-  const resolveOrientationSetting = () => {
+  const resolveOrientationSetting = useCallback(() => {
     if (typeof window === "undefined") {
       return isCoarsePointer() ? "horizontal" : "horizontal";
     }
@@ -57,7 +63,7 @@ export default function Preferences() {
       return stored;
     }
     return isCoarsePointer() ? "horizontal" : "horizontal";
-  };
+  }, [isCoarsePointer]);
 
   const [size, setSize] = useState(() => resolveNumberSetting("size", 40, 24));
   const [length, setLength] = useState(() => resolveNumberSetting("length", 100, 100));
@@ -112,7 +118,7 @@ export default function Preferences() {
         media.removeListener(handleChange);
       }
     };
-  }, []);
+  }, [resolveBooleanSetting, resolveNumberSetting, resolveOrientationSetting]);
 
   return (
     <div>
@@ -136,14 +142,12 @@ export default function Preferences() {
                 <option value="vertical">Vertical</option>
               </select>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-ubt-grey">Autohide</span>
-              <ToggleSwitch
-                checked={autohide}
-                onChange={setAutohide}
-                ariaLabel="Autohide panel"
-              />
-            </div>
+            <ToggleSwitch
+              checked={autohide}
+              onChange={setAutohide}
+              label="Autohide"
+              containerClassName="w-full justify-between"
+            />
           </div>
         )}
         {active === "measurements" && (
