@@ -653,8 +653,14 @@ const ChessGame = () => {
 
   const handleClick = (e) => {
     const rect = e.target.getBoundingClientRect();
-    const file = Math.floor(((e.clientX - rect.left) / SIZE) * 8);
-    const rank = 7 - Math.floor(((e.clientY - rect.top) / SIZE) * 8);
+    const file = Math.min(
+      7,
+      Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * 8)),
+    );
+    const rank = Math.min(
+      7,
+      Math.max(0, 7 - Math.floor(((e.clientY - rect.top) / rect.height) * 8)),
+    );
     const sq = rank * 16 + file;
     handleSquare(sq);
   };
@@ -806,19 +812,26 @@ const ChessGame = () => {
       : "";
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
-      <div className="flex gap-4">
-        <div className="flex flex-col items-center">
-          <canvas
-            ref={canvasRef}
-            width={SIZE}
-            height={SIZE}
-            onClick={handleClick}
-            onKeyDown={handleKey}
-            tabIndex={0}
-            aria-label="Chess board"
-            className="border border-gray-600"
-          />
+    <div className="flex h-full w-full flex-col bg-ub-cool-grey p-0 text-white select-none">
+      <div className="flex flex-1 flex-col gap-4 overflow-hidden px-3 pt-3 lg:flex-row lg:items-start">
+        <div className="flex flex-col items-center gap-3 lg:flex-1 lg:items-start">
+          <div className="flex w-full justify-center lg:justify-start">
+            <div
+              className="w-full"
+              style={{ maxWidth: "min(90vw, 20rem)" }}
+            >
+              <canvas
+                ref={canvasRef}
+                width={SIZE}
+                height={SIZE}
+                onClick={handleClick}
+                onKeyDown={handleKey}
+                tabIndex={0}
+                aria-label="Chess board"
+                className="h-auto w-full border border-gray-600"
+              />
+            </div>
+          </div>
           <input
             type="file"
             accept=".pgn"
@@ -827,7 +840,61 @@ const ChessGame = () => {
             className="hidden"
             aria-label="PGN file input"
           />
-          <div className="mt-2 flex flex-wrap gap-2 justify-center">
+        </div>
+        <div className="flex min-h-0 w-full flex-col gap-2 text-sm font-mono lg:w-56">
+          <div
+            className={`p-1 text-center font-bold ${statusClass}`}
+            aria-live="polite"
+          >
+            {status}
+          </div>
+          <div className="w-full" aria-label="Evaluation">
+            <div
+              className="h-4 bg-gray-700"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={evalPercent.toFixed(0)}
+            >
+              <div
+                className={`h-full ${displayEval >= 0 ? "bg-green-600" : "bg-red-600"}`}
+                style={{ width: `${evalPercent}%` }}
+              />
+            </div>
+            <div className="mt-1" aria-live="polite">
+              Eval: {(evalScore / 100).toFixed(2)}
+            </div>
+          </div>
+          <div>ELO: {elo}</div>
+          {analysisMoves.length > 0 && (
+            <div className="w-full" aria-label="Suggested moves">
+              <div>Suggested moves:</div>
+              <ol className="ml-4 list-decimal">
+                {analysisMoves.map((m, idx) => (
+                  <li key={idx}>
+                    {m.san} ({(m.evaluation / 100).toFixed(2)})
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          <div className="flex-1" />
+        </div>
+      </div>
+      <div
+        className="mt-auto w-full border-t border-gray-700 bg-ub-cool-grey/95"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+      >
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-3 pt-3">
+          <ol
+            className="max-h-40 overflow-y-auto rounded border border-gray-700 bg-gray-900 p-2 text-sm font-mono"
+            aria-label="Move history"
+          >
+            {moveLines.map((line, idx) => (
+              <li key={idx}>{line}</li>
+            ))}
+          </ol>
+          <div className="flex flex-wrap justify-center gap-2">
             <button className="px-2 py-1 bg-gray-700" onClick={reset}>
               Reset
             </button>
@@ -864,58 +931,12 @@ const ChessGame = () => {
             <button className="px-2 py-1 bg-gray-700" onClick={loadPGN}>
               Load PGN
             </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={copyMoves}>
+              Copy Moves
+            </button>
           </div>
-        </div>
-        <div className="w-40 flex flex-col text-sm font-mono">
-          <div
-            className={`mb-2 p-1 text-center font-bold ${statusClass}`}
-            aria-live="polite"
-          >
-            {status}
-          </div>
-          <div className="w-full" aria-label="Evaluation">
-            <div
-              className="h-4 bg-gray-700"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={evalPercent.toFixed(0)}
-            >
-              <div
-                className={`h-full ${displayEval >= 0 ? "bg-green-600" : "bg-red-600"}`}
-                style={{ width: `${evalPercent}%` }}
-              />
-            </div>
-            <div className="mt-1" aria-live="polite">
-              Eval: {(evalScore / 100).toFixed(2)}
-            </div>
-          </div>
-          <div className="mt-1">ELO: {elo}</div>
-          {analysisMoves.length > 0 && (
-            <div className="mt-2 w-full" aria-label="Suggested moves">
-              <div>Suggested moves:</div>
-              <ol className="list-decimal ml-4">
-                {analysisMoves.map((m, idx) => (
-                  <li key={idx}>
-                    {m.san} ({(m.evaluation / 100).toFixed(2)})
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-          <ol
-            className="mt-2 flex-1 overflow-y-auto bg-gray-800 p-2"
-            aria-label="Move history"
-          >
-            {moveLines.map((line, idx) => (
-              <li key={idx}>{line}</li>
-            ))}
-          </ol>
-          <button className="mt-2 px-2 py-1 bg-gray-700" onClick={copyMoves}>
-            Copy Moves
-          </button>
-          <div className="mt-1 text-xs break-words">
-            PGN: {chessRef.current.pgn()}
+          <div className="rounded border border-gray-700 bg-gray-900 p-2 text-xs">
+            <div className="break-words">PGN: {chessRef.current.pgn()}</div>
           </div>
         </div>
       </div>
