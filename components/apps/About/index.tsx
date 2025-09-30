@@ -9,9 +9,20 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import { SettingsContext } from '../../../hooks/useSettings';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
+type AboutState = {
+  screen: React.ReactNode;
+  active_screen: string;
+  navbar: boolean;
+  prefersReducedMotion: boolean;
+};
+
+class AboutAlex extends Component<unknown, AboutState> {
   screens: Record<string, React.ReactNode> = {};
+  static contextType = SettingsContext;
+  declare context: React.ContextType<typeof SettingsContext>;
+  private motionMediaQuery?: MediaQueryList;
 
   constructor(props: unknown) {
     super(props);
@@ -19,6 +30,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       screen: <></>,
       active_screen: 'about',
       navbar: false,
+      prefersReducedMotion: false,
     };
   }
 
@@ -38,7 +50,24 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     }
 
     this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
+
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      this.motionMediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const prefersReduced = this.motionMediaQuery.matches;
+      if (prefersReduced !== this.state.prefersReducedMotion) {
+        this.setState({ prefersReducedMotion: prefersReduced });
+      }
+      this.motionMediaQuery.addEventListener('change', this.handleMotionPreferenceChange);
+    }
   }
+
+  componentWillUnmount() {
+    this.motionMediaQuery?.removeEventListener('change', this.handleMotionPreferenceChange);
+  }
+
+  handleMotionPreferenceChange = (event: MediaQueryListEvent) => {
+    this.setState({ prefersReducedMotion: event.matches });
+  };
 
   changeScreen = (e: any) => {
     const screen = e.id || e.target.id;
@@ -108,6 +137,14 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       url: 'https://unnippillil.com',
     };
     const nonce = getCspNonce();
+    const prefersReducedMotion = this.context?.reducedMotion || this.state.prefersReducedMotion;
+    const navOverlayClasses = [
+      this.state.navbar ? 'visible z-30' : 'invisible',
+      !prefersReducedMotion && this.state.navbar ? 'animateShow' : '',
+      'md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20',
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     return (
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
@@ -135,10 +172,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
           <div className=" w-3.5 border-t border-white" />
           <div
-            className={
-              (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
-            }
+            className={navOverlayClasses}
             role="tablist"
             aria-orientation="vertical"
             onKeyDown={this.handleNavKeyDown}
@@ -348,14 +382,15 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   const filteredBadges = badges.filter((b) => b.alt.toLowerCase().includes(filter.toLowerCase()));
   return (
     <div className="px-2 w-full">
-      <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <div className="text-sm text-center md:text-base font-bold">{title}</div>
+        <input
+          type="text"
+          placeholder="Filter..."
+          aria-label="Filter skills"
+          className="mt-2 w-full px-2 py-1 rounded text-black"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
           <img

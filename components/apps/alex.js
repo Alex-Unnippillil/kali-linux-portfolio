@@ -6,8 +6,11 @@ import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
 import ActivityCalendar from 'react-activity-calendar';
+import { SettingsContext } from '../../hooks/useSettings';
 
 export class AboutAlex extends Component {
+
+    static contextType = SettingsContext;
 
     constructor() {
         super();
@@ -16,7 +19,9 @@ export class AboutAlex extends Component {
             screen: () => { },
             active_screen: "about", // by default 'about' screen is active
             navbar: false,
+            prefersReducedMotion: false,
         }
+        this.motionMediaQuery = null;
     }
 
     componentDidMount() {
@@ -36,6 +41,20 @@ export class AboutAlex extends Component {
 
         // focus last visited screen
         this.changeScreen(document.getElementById(lastVisitedScreen));
+
+        if (typeof window !== "undefined" && window.matchMedia) {
+            this.motionMediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+            if (this.motionMediaQuery.matches !== this.state.prefersReducedMotion) {
+                this.setState({ prefersReducedMotion: this.motionMediaQuery.matches });
+            }
+            this.motionMediaQuery.addEventListener('change', this.handleMotionPreferenceChange);
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.motionMediaQuery) {
+            this.motionMediaQuery.removeEventListener('change', this.handleMotionPreferenceChange);
+        }
     }
 
     changeScreen = (e) => {
@@ -52,6 +71,10 @@ export class AboutAlex extends Component {
             screen: this.screens[screen],
             active_screen: screen
         });
+    }
+
+    handleMotionPreferenceChange = (event) => {
+        this.setState({ prefersReducedMotion: event.matches });
     }
 
     showNavBar = () => {
@@ -85,6 +108,13 @@ export class AboutAlex extends Component {
     }
 
     render() {
+        const prefersReducedMotion = (this.context && this.context.reducedMotion) || this.state.prefersReducedMotion;
+        const navOverlayClasses = [
+            this.state.navbar ? "visible z-30" : "invisible",
+            !prefersReducedMotion && this.state.navbar ? "animateShow" : "",
+            "md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"
+        ].filter(Boolean).join(" ");
+
         return (
             <div className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
                 <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
@@ -94,7 +124,7 @@ export class AboutAlex extends Component {
                     <div className=" w-3.5 border-t border-white"></div>
                     <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
                     <div className=" w-3.5 border-t border-white"></div>
-                    <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
+                    <div className={navOverlayClasses}>
                         {this.renderNavLinks()}
                     </div>
                 </div>
@@ -300,14 +330,15 @@ const SkillSection = ({ title, badges }) => {
 
   return (
     <div className="px-2 w-full">
-      <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <div className="text-sm text-center md:text-base font-bold">{title}</div>
+        <input
+          type="text"
+          placeholder="Filter..."
+          aria-label="Filter skills"
+          className="mt-2 w-full px-2 py-1 rounded text-black"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (
           <img
