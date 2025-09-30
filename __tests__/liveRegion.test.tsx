@@ -4,9 +4,9 @@ import Toast from '../components/ui/Toast';
 import FormError from '../components/ui/FormError';
 
 describe('live region components', () => {
-  it('Toast uses polite live region', () => {
+  it('Toast uses polite live region', async () => {
     const { unmount } = render(<Toast message="Saved" />);
-    const region = screen.getByRole('status');
+    const region = await screen.findByRole('status');
     expect(region).toHaveAttribute('aria-live', 'polite');
     unmount();
   });
