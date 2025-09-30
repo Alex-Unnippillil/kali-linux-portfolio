@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+import { submitDummyForm } from '@/services/forms/dummySubmission';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -68,14 +69,10 @@ const DummyForm: React.FC = () => {
     }
     setError('');
     setSuccess(false);
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/dummy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, message }),
-      });
+    const result = await submitDummyForm({ name, email, message });
+    if (!result.success) {
+      setError('Submission failed. Please try again later.');
+      return;
     }
     setSuccess(true);
     window.localStorage.removeItem(STORAGE_KEY);
