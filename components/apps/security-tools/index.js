@@ -134,6 +134,7 @@ export default function SecurityTools() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search all tools"
+            aria-label="search all tools"
             className="w-full mb-2 p-1 text-black text-xs"
           />
           {query ? (
@@ -200,7 +201,18 @@ export default function SecurityTools() {
               <div>
                 <CommandBuilder
                   doc="Build a curl command. Output is copy-only and not executed."
-                  build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
+                  build={({ target = '', port = '', opts = '' }) => {
+                    const host = target ? target.trim() : '';
+                    const portSegment = port ? `:${port.trim()}` : '';
+                    const segments = ['curl'];
+                    if (opts.trim()) {
+                      segments.push(opts.trim());
+                    }
+                    if (host) {
+                      segments.push(`${host}${portSegment}`);
+                    }
+                    return segments.join(' ');
+                  }}
                 />
               </div>
             )}
@@ -238,9 +250,19 @@ export default function SecurityTools() {
             {active === 'yara' && (
             <div>
               <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
-              <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
+              <textarea
+                value={yaraRule}
+                onChange={e=>setYaraRule(e.target.value)}
+                aria-label="yara rule"
+                className="w-full h-24 text-black p-1"
+              />
               <div className="text-xs mt-2 mb-1">Sample file:</div>
-              <textarea value={sampleText} readOnly className="w-full h-24 text-black p-1" />
+              <textarea
+                value={sampleText}
+                readOnly
+                aria-label="sample text"
+                className="w-full h-24 text-black p-1"
+              />
               <button onClick={runYara} className="mt-2 px-2 py-1 bg-ub-green text-black text-xs">Scan</button>
               {yaraResult && <div className="mt-2 text-xs">{yaraResult}</div>}
             </div>
