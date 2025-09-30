@@ -10,10 +10,13 @@ import { createPortal } from 'react-dom';
 
 type TriggerProps = {
   ref: (node: HTMLElement | null) => void;
-  onMouseEnter: (event: React.MouseEvent<HTMLElement>) => void;
-  onMouseLeave: (event: React.MouseEvent<HTMLElement>) => void;
+  onPointerEnter: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerLeave: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerCancel: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
   onFocus: (event: React.FocusEvent<HTMLElement>) => void;
   onBlur: (event: React.FocusEvent<HTMLElement>) => void;
+  dismiss: () => void;
 };
 
 type DelayedTooltipProps = {
@@ -22,10 +25,55 @@ type DelayedTooltipProps = {
   children: (triggerProps: TriggerProps) => React.ReactElement;
 };
 
+const globalObject: typeof globalThis | undefined =
+  typeof globalThis === 'object' ? globalThis : undefined;
+
 const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+  globalObject && 'window' in globalObject ? useLayoutEffect : useEffect;
 
 const DEFAULT_OFFSET = 8;
+const TOUCH_EXTRA_DELAY = 400;
+
+const prefersCoarsePointer = () => {
+  const root =
+    typeof globalThis !== 'undefined'
+      ? (globalThis as typeof globalThis & {
+          matchMedia?: typeof window.matchMedia;
+        })
+      : undefined;
+  if (root?.matchMedia) {
+    const query = root.matchMedia('(pointer: coarse)');
+    if (query?.matches) {
+      return true;
+    }
+  }
+  if (
+    typeof navigator !== 'undefined' &&
+    typeof navigator.maxTouchPoints === 'number' &&
+    navigator.maxTouchPoints > 0
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const derivePointerType = (
+  event?: React.PointerEvent<HTMLElement>,
+): 'mouse' | 'pen' | 'touch' => {
+  const pointerType =
+    (event?.nativeEvent as PointerEvent | undefined)?.pointerType ??
+    event?.pointerType;
+  if (pointerType === 'touch' || pointerType === 'pen') {
+    return pointerType;
+  }
+  if (pointerType === 'mouse') {
+    return 'mouse';
+  }
+  if (prefersCoarsePointer()) {
+    return 'touch';
+  }
+  return 'mouse';
+};
 
 const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   content,
@@ -38,6 +86,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const timerRef = useRef<number | null>(null);
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+  const pointerTypeRef = useRef<'mouse' | 'pen' | 'touch' | 'keyboard'>('mouse');
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -53,17 +102,30 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
+      clearTimeout(timerRef.current);
       timerRef.current = null;
     }
   }, []);
 
-  const show = useCallback(() => {
-    clearTimer();
-    timerRef.current = window.setTimeout(() => {
-      setVisible(true);
-    }, delay);
-  }, [clearTimer, delay]);
+  const show = useCallback(
+    (pointerType?: 'mouse' | 'pen' | 'touch' | 'keyboard') => {
+      clearTimer();
+      if (pointerType) {
+        pointerTypeRef.current = pointerType;
+      }
+      const activePointerType = pointerTypeRef.current;
+      const effectiveDelay =
+        activePointerType === 'touch' ? delay + TOUCH_EXTRA_DELAY : delay;
+      if (typeof globalThis === 'undefined' || typeof setTimeout === 'undefined') {
+        setVisible(true);
+        return;
+      }
+      timerRef.current = setTimeout(() => {
+        setVisible(true);
+      }, effectiveDelay);
+    },
+    [clearTimer, delay],
+  );
 
   const hide = useCallback(() => {
     clearTimer();
@@ -71,6 +133,17 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   }, [clearTimer]);
 
   useEffect(() => () => clearTimer(), [clearTimer]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleScroll = () => {
+      hide();
+    };
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [hide]);
 
   useIsomorphicLayoutEffect(() => {
     if (!visible || !triggerRef.current || !tooltipRef.current) {
@@ -109,18 +182,25 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     ref: (node) => {
       triggerRef.current = node;
     },
-    onMouseEnter: () => {
-      show();
+    onPointerEnter: (event) => {
+      show(derivePointerType(event));
     },
-    onMouseLeave: () => {
+    onPointerLeave: () => {
       hide();
     },
+    onPointerCancel: () => {
+      hide();
+    },
+    onPointerDown: (event) => {
+      pointerTypeRef.current = derivePointerType(event);
+    },
     onFocus: () => {
-      show();
+      show('keyboard');
     },
     onBlur: () => {
       hide();
     },
+    dismiss: hide,
   };
 
   return (
