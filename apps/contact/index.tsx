@@ -108,6 +108,9 @@ const ContactApp: React.FC = () => {
         setHoneypot("");
         localStorage.removeItem(DRAFT_KEY);
         trackEvent("contact_submit", { method: "form" });
+      } else if (result.queued) {
+        setToast("Offline detected. Your message was saved and will submit automatically when you're online.");
+        trackEvent("contact_submit", { method: "queued" });
       } else {
         setError(result.error || "Submission failed");
         trackEvent("contact_submit_error", { method: "form" });

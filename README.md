@@ -68,6 +68,8 @@ To send text or links directly into the Sticky Notes app:
 - Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
+- Offline contact submissions are intercepted by a background sync helper imported via `public/sw-background-sync.js`.
+  Failed `/api/contact` POSTs are stored in IndexedDB with metadata and retried automatically when the browser reconnects.
 - Future work may use `injectManifest` for finer control.
 
 ---
@@ -99,6 +101,7 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- Follow the offline QA checklist in [`docs/manual-qa-offline.md`](./docs/manual-qa-offline.md) after modifying PWA or contact workflows.
 
 ---
 
