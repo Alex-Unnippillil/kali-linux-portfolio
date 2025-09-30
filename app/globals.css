@@ -1,0 +1,23 @@
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animateShow,
+  .closed-window,
+  .windowFrame,
+  .windowFrame::before {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+    animation: none !important;
+    transition-property: none !important;
+  }
+}
