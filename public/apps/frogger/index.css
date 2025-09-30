@@ -1,2 +1,8 @@
-body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
+body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; min-height:100vh; }
+@supports (height: 100svh) {
+  body { height:100svh; min-height:100svh; }
+}
+@supports (height: 100lvh) {
+  body { height:100lvh; min-height:100lvh; }
+}
 canvas { background:#222; }

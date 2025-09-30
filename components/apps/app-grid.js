@@ -30,6 +30,7 @@ export default function AppGrid({ openApp }) {
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const viewportSmall = 'var(--viewport-height-small, 100vh)';
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -117,9 +118,14 @@ export default function AppGrid({ openApp }) {
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
         value={query}
+        aria-label="Search applications"
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div
+        className="w-full flex-1 outline-none"
+        style={{ height: `calc(${viewportSmall} * 0.7)` }}
+        onKeyDown={handleKeyDown}
+      >
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);

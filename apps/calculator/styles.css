@@ -1,7 +1,8 @@
 body {
   font-family: Arial, sans-serif;
   background: var(--color-bg);
-  height: 100vh;
+  height: var(--viewport-height-small, 100vh);
+  min-height: var(--viewport-height-small, 100vh);
   display: flex;
   align-items: center;
   justify-content: center;

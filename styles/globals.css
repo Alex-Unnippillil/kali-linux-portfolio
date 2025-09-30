@@ -21,7 +21,21 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
+  --viewport-height-small: 100vh;
+  --viewport-height-large: 100vh;
   accent-color: var(--color-control-accent);
+}
+
+@supports (height: 100svh) {
+  :root {
+    --viewport-height-small: 100svh;
+  }
+}
+
+@supports (height: 100lvh) {
+  :root {
+    --viewport-height-large: 100lvh;
+  }
 }
 
 body {
