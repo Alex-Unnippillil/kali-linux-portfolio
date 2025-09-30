@@ -49,7 +49,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
       <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
         {heading}
       </header>
-      <ul className="space-y-1">
+      <ul className="space-y-2">
         {items.map((item) => {
           const kaliIcon = resolveKaliIcon(item.id);
           const src = kaliIcon ?? item.icon;
@@ -63,7 +63,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
               <button
                 type="button"
                 onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
+                className="touch-target flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
               >
                 <img
                   src={src}

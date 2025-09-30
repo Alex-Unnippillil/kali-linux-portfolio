@@ -11,9 +11,15 @@ body{
     color: var(--color-text);
 }
 
-button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
+button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area, .touch-target {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
+}
+
+.touch-target {
+    padding-block: max(0.5rem, var(--touch-padding-block, 0px));
+    padding-inline: max(0.5rem, var(--touch-padding-inline, 0px));
+    border-radius: inherit;
 }
 
 a:focus-visible,

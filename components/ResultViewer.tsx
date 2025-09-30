@@ -52,13 +52,13 @@ export default function ResultViewer({ data }: ViewerProps) {
   return (
     <div className="text-xs" aria-label="result viewer">
       <div role="tablist" className="mb-2 flex">
-        <button role="tab" aria-selected={tab === 'raw'} onClick={() => setTab('raw')} className="px-2 py-1 bg-ub-cool-grey text-white mr-2">
+        <button role="tab" aria-selected={tab === 'raw'} onClick={() => setTab('raw')} className="touch-target px-2 py-1 bg-ub-cool-grey text-white mr-2">
           Raw
         </button>
-        <button role="tab" aria-selected={tab === 'parsed'} onClick={() => setTab('parsed')} className="px-2 py-1 bg-ub-cool-grey text-white mr-2">
+        <button role="tab" aria-selected={tab === 'parsed'} onClick={() => setTab('parsed')} className="touch-target px-2 py-1 bg-ub-cool-grey text-white mr-2">
           Parsed
         </button>
-        <button role="tab" aria-selected={tab === 'chart'} onClick={() => setTab('chart')} className="px-2 py-1 bg-ub-cool-grey text-white">
+        <button role="tab" aria-selected={tab === 'chart'} onClick={() => setTab('chart')} className="touch-target px-2 py-1 bg-ub-cool-grey text-white">
           Chart
         </button>
       </div>
@@ -66,16 +66,22 @@ export default function ResultViewer({ data }: ViewerProps) {
       {tab === 'parsed' && (
         <div>
           <div className="mb-2">
-            <label>
+            <label htmlFor="result-viewer-filter" className="mr-2">
               Filter:
-              <input value={filter} onChange={(e) => setFilter(e.target.value)} className="border p-1 text-black ml-1" />
             </label>
+            <input
+              id="result-viewer-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="border p-1 text-black"
+              aria-label="Filter results"
+            />
             {keys.map((k) => (
-              <button key={k} onClick={() => setSortKey(k)} className="px-2 py-1 bg-ub-cool-grey text-white ml-2">
+              <button key={k} onClick={() => setSortKey(k)} className="touch-target px-2 py-1 bg-ub-cool-grey text-white ml-2">
                 {k}
               </button>
             ))}
-            <button onClick={exportCsv} className="px-2 py-1 bg-ub-green text-black ml-2" type="button">
+            <button onClick={exportCsv} className="touch-target px-2 py-1 bg-ub-green text-black ml-2" type="button">
               CSV
             </button>
           </div>
