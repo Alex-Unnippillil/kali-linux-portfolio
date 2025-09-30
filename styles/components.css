@@ -1,0 +1,162 @@
+/* Shared component interaction tokens and states */
+
+:root {
+  --component-focus-ring-color: var(--color-focus-ring, var(--color-accent, #1793d1));
+  --component-focus-ring-width: var(--focus-outline-width, 2px);
+  --component-focus-ring-offset: 3px;
+  --component-focus-ring-contrast: color-mix(in srgb, var(--color-bg) 65%, transparent);
+  --component-focus-ring-contrast-fallback: rgba(0, 0, 0, 0.55);
+  --component-focus-ring-glow: color-mix(in srgb, var(--component-focus-ring-color) 60%, transparent);
+  --component-focus-ring-glow-fallback: rgba(23, 147, 209, 0.35);
+  --component-pressed-shadow-inner: inset 0 0 0 1px color-mix(in srgb, var(--component-focus-ring-color) 60%, transparent);
+  --component-pressed-shadow-inner-fallback: inset 0 0 0 1px rgba(23, 147, 209, 0.6);
+  --component-pressed-shadow-outer: 0 0 0 calc(var(--component-focus-ring-width) + 1px)
+    color-mix(in srgb, var(--component-focus-ring-color) 22%, transparent);
+  --component-pressed-shadow-outer-fallback: 0 0 0 calc(var(--component-focus-ring-width) + 1px)
+    rgba(23, 147, 209, 0.35);
+  --component-pressed-translate-y: 1px;
+  --component-pressed-filter: brightness(1.08) contrast(1.12);
+  --component-pressed-text-color: var(--color-text);
+}
+
+.high-contrast {
+  --component-focus-ring-color: #ffff00;
+  --component-focus-ring-contrast: rgba(0, 0, 0, 0.85);
+  --component-pressed-shadow-inner: inset 0 0 0 1px #ffff00;
+  --component-pressed-shadow-outer: 0 0 0 calc(var(--component-focus-ring-width) + 2px) rgba(0, 0, 0, 0.85);
+  --component-pressed-filter: brightness(1.05) contrast(1.25);
+  --component-pressed-text-color: #000000;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --component-focus-ring-color:
+      color-mix(in srgb, var(--color-focus-ring, var(--color-accent, #1793d1)) 70%, white 30%);
+    --component-focus-ring-contrast: rgba(0, 0, 0, 0.8);
+    --component-focus-ring-glow:
+      color-mix(in srgb, var(--color-focus-ring, var(--color-accent, #1793d1)) 75%, transparent);
+    --component-pressed-filter: brightness(1.04) contrast(1.2);
+  }
+}
+
+:is(
+    button,
+    [role='button'],
+    input[type='button'],
+    input[type='submit'],
+    input[type='reset'],
+    a[href][role='button'],
+    summary,
+    [data-focus-ring],
+    [data-pressable],
+    [data-interactive],
+    [data-command],
+    [data-toolbar-button],
+    [data-window-action],
+    [data-app-launch],
+    [data-pressed],
+    [aria-pressed],
+    .hit-area,
+    .window-control,
+    .menu-item,
+    .toolbar-button,
+    .dock-item,
+    .app-icon
+  ):not([disabled]) {
+  transition: box-shadow var(--motion-fast, 150ms) ease, transform var(--motion-fast, 150ms) ease,
+    filter var(--motion-fast, 150ms) ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:is(
+    button,
+    [role='button'],
+    input[type='button'],
+    input[type='submit'],
+    input[type='reset'],
+    a[href][role='button'],
+    summary,
+    [data-focus-ring],
+    [data-pressable],
+    [data-interactive],
+    [data-command],
+    [data-toolbar-button],
+    [data-window-action],
+    [data-app-launch],
+    [data-pressed],
+    [aria-pressed],
+    .hit-area,
+    .window-control,
+    .menu-item,
+    .toolbar-button,
+    .dock-item,
+    .app-icon
+  ):not([disabled]):focus-visible {
+  outline: var(--component-focus-ring-width) solid var(--component-focus-ring-color);
+  outline-offset: var(--component-focus-ring-offset);
+  box-shadow: 0 0 0 calc(var(--component-focus-ring-offset) + var(--component-focus-ring-width))
+      var(--component-focus-ring-contrast, var(--component-focus-ring-contrast-fallback)),
+    0 0 0 var(--component-focus-ring-offset)
+      var(--component-focus-ring-glow, var(--component-focus-ring-glow-fallback));
+}
+
+:is(
+    button,
+    [role='button'],
+    input[type='button'],
+    input[type='submit'],
+    input[type='reset'],
+    a[href][role='button'],
+    summary,
+    [data-focus-ring],
+    [data-pressable],
+    [data-interactive],
+    [data-command],
+    [data-toolbar-button],
+    [data-window-action],
+    [data-app-launch],
+    [data-pressed],
+    [aria-pressed],
+    .hit-area,
+    .window-control,
+    .menu-item,
+    .toolbar-button,
+    .dock-item,
+    .app-icon
+  ):not([disabled]):is(:active, [data-pressed='true'], [aria-pressed='true'], [data-state='pressed'], [data-state='on']) {
+  box-shadow: var(--component-pressed-shadow-inner, var(--component-pressed-shadow-inner-fallback)),
+    var(--component-pressed-shadow-outer, var(--component-pressed-shadow-outer-fallback));
+  transform: translateY(var(--component-pressed-translate-y));
+  filter: var(--component-pressed-filter);
+  color: var(--component-pressed-text-color);
+}
+
+:is(
+    button,
+    [role='button'],
+    input[type='button'],
+    input[type='submit'],
+    input[type='reset'],
+    a[href][role='button'],
+    summary,
+    [data-focus-ring],
+    [data-pressable],
+    [data-interactive],
+    [data-command],
+    [data-toolbar-button],
+    [data-window-action],
+    [data-app-launch],
+    [data-pressed],
+    [aria-pressed],
+    .hit-area,
+    .window-control,
+    .menu-item,
+    .toolbar-button,
+    .dock-item,
+    .app-icon
+  )[disabled] {
+  filter: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
