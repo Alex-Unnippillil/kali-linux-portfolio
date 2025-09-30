@@ -135,6 +135,7 @@ export default function SecurityTools() {
             onChange={e => setQuery(e.target.value)}
             placeholder="Search all tools"
             className="w-full mb-2 p-1 text-black text-xs"
+            aria-label="Search demo tool data"
           />
           {query ? (
             <div className="text-xs">
@@ -238,9 +239,19 @@ export default function SecurityTools() {
             {active === 'yara' && (
             <div>
               <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
-              <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
+                <textarea
+                  value={yaraRule}
+                  onChange={e=>setYaraRule(e.target.value)}
+                  className="w-full h-24 text-black p-1"
+                  aria-label="Enter simulated YARA rule"
+                />
               <div className="text-xs mt-2 mb-1">Sample file:</div>
-              <textarea value={sampleText} readOnly className="w-full h-24 text-black p-1" />
+                <textarea
+                  value={sampleText}
+                  readOnly
+                  className="w-full h-24 text-black p-1"
+                  aria-label="Read-only sample text for YARA demo"
+                />
               <button onClick={runYara} className="mt-2 px-2 py-1 bg-ub-green text-black text-xs">Scan</button>
               {yaraResult && <div className="mt-2 text-xs">{yaraResult}</div>}
             </div>
@@ -276,6 +287,7 @@ export default function SecurityTools() {
         )}
         </div>
         <ExplainerPane
+          summary="Quick overview of this lab and its supporting references."
           lines={["Use this lab to explore static security data."]}
           resources={[
             { label: 'NIST SP 800-115', url: 'https://csrc.nist.gov/publications/detail/sp/800-115/final' },
