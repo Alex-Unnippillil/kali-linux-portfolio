@@ -153,6 +153,7 @@ const WhiskerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -326,6 +327,14 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [hideMenu, isVisible]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+  }, [isOpen]);
+
   useEffect(() => () => {
     if (hideTimer.current) {
       clearTimeout(hideTimer.current);
@@ -387,7 +396,7 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
+          className={`absolute top-full left-1/2 mt-3 z-50 grid max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 grid-cols-1 overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:grid-cols-[260px_1fr] sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
@@ -398,7 +407,47 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
+          <div className="border-b border-[#1d2a3c] px-4 py-4 sm:col-span-2 sm:px-5">
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="20" y1="20" x2="16.65" y2="16.65" />
+                </svg>
+              </span>
+              <input
+                ref={searchInputRef}
+                className="h-12 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-base text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                placeholder="Search applications"
+                aria-label="Search applications"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+            </div>
+            {favoriteApps.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {favoriteApps.slice(0, 6).map((app) => (
+                  <button
+                    key={app.id}
+                    type="button"
+                    onClick={() => openSelectedApp(app.id)}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                    aria-label={`Open ${app.title}`}
+                  >
+                    <Image
+                      src={app.icon}
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="h-6 w-6"
+                      sizes="24px"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:overflow-visible">
             <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
               <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
               Categories
@@ -456,44 +505,6 @@ const WhiskerMenu: React.FC = () => {
             </div>
           </div>
           <div className="flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
-            <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                {favoriteApps.slice(0, 6).map((app) => (
-                  <button
-                    key={app.id}
-                    type="button"
-                    onClick={() => openSelectedApp(app.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
-                    aria-label={`Open ${app.title}`}
-                  >
-                    <Image
-                      src={app.icon}
-                      alt=""
-                      width={24}
-                      height={24}
-                      className="h-6 w-6"
-                      sizes="24px"
-                    />
-                  </button>
-                ))}
-              </div>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="20" y1="20" x2="16.65" y2="16.65" />
-                  </svg>
-                </span>
-                <input
-                  className="h-10 w-full rounded-lg border border-transparent bg-[#101c2d] pl-9 pr-3 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
-                  placeholder="Search applications"
-                  aria-label="Search applications"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            </div>
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-2">
               {currentApps.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
@@ -522,11 +533,11 @@ const WhiskerMenu: React.FC = () => {
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
                           idx === highlight
                             ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
                             : 'text-gray-200 hover:bg-[#142132]'
-                        } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                        } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''} min-h-[44px]`}
                         aria-label={app.title}
                         disabled={app.disabled}
                         onClick={() => {
