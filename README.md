@@ -222,6 +222,13 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
+### Feature flag dashboard
+
+- Visit `/admin/flags` to review runtime flag values, rollout percentages, and dependency notes. The page only renders in development builds unless you provide the `ADMIN_READ_KEY` as a `key` query string or `x-admin-key` header.
+- Flag definitions live in [`lib/featureFlags/index.ts`](lib/featureFlags/index.ts) and power the dashboard as well as automated docs. Add new entries there when introducing a toggle.
+- Optional rollout variables ending in `_ROLLOUT` (for example, `FEATURE_TOOL_APIS_ROLLOUT`) clamp to 0–100 and surface in the dashboard for staged releases.
+- See [`docs/operator-handbook.md`](docs/operator-handbook.md) for the operator workflow around flags and rollouts.
+
 ---
 
 ## Security Headers & CSP
