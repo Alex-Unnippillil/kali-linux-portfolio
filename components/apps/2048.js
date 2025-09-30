@@ -192,6 +192,11 @@ const SKINS = {
   neon: neonColors,
 };
 
+const TILE_SIZE = 'clamp(2.75rem, 17vw, 5.5rem)';
+const TILE_GAP = 'clamp(0.35rem, 1.6vw, 0.75rem)';
+const TILE_FONT_SIZE = 'clamp(1.35rem, 6vw, 2.4rem)';
+const TILE_SYMBOL_FONT_SIZE = 'clamp(2.2rem, 9vw, 3.25rem)';
+
 const tileSymbols = {
   2: '●',
   4: '■',
@@ -546,17 +551,21 @@ const Game2048 = () => {
           >
             Undo ({undosLeft})
           </button>
-          <label className="flex items-center space-x-1 px-2">
+          <label className="flex items-center space-x-1 px-2" htmlFor="2048-hard-mode">
             <input
+              id="2048-hard-mode"
               type="checkbox"
+              aria-label="Toggle hard mode"
               checked={hardMode}
               onChange={() => setHardMode(!hardMode)}
             />
             <span>Hard</span>
           </label>
-          <label className="flex items-center space-x-1 px-2">
+          <label className="flex items-center space-x-1 px-2" htmlFor="2048-coach-mode">
             <input
+              id="2048-coach-mode"
               type="checkbox"
+              aria-label="Toggle coach mode"
               checked={coach}
               onChange={() => setCoach(!coach)}
             />
@@ -605,9 +614,17 @@ const Game2048 = () => {
         </div>
         <div className="relative inline-block">
           <div
-            className="grid grid-cols-4 gap-2"
+            className="grid"
             data-combo={combo}
-            style={{ filter: combo ? `hue-rotate(${combo * 45}deg)` : undefined }}
+            style={{
+              '--tile-size': TILE_SIZE,
+              '--tile-gap': TILE_GAP,
+              '--tile-font': TILE_FONT_SIZE,
+              '--tile-symbol-font': TILE_SYMBOL_FONT_SIZE,
+              gridTemplateColumns: 'repeat(4, var(--tile-size))',
+              gap: 'var(--tile-gap)',
+              filter: combo ? `hue-rotate(${combo * 45}deg)` : undefined,
+            }}
           >
             {board.map((row, rIdx) =>
               row.map((cell, cIdx) => {
@@ -616,14 +633,20 @@ const Game2048 = () => {
                 return (
                   <div
                     key={key}
-                    className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+                    className={`relative overflow-hidden flex items-center justify-center font-bold rounded ${
                       cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
                     } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                    style={{
+                      width: 'var(--tile-size)',
+                      height: 'var(--tile-size)',
+                      fontSize: 'var(--tile-font)',
+                    }}
                   >
                     {highContrast && cell !== 0 && (
                       <span
                         aria-hidden="true"
-                        className="absolute inset-0 flex items-center justify-center text-4xl text-white opacity-50 mix-blend-difference pointer-events-none"
+                        className="absolute inset-0 flex items-center justify-center text-white opacity-50 mix-blend-difference pointer-events-none"
+                        style={{ fontSize: 'var(--tile-symbol-font)' }}
                       >
                         {tileSymbols[cell] || ''}
                       </span>
