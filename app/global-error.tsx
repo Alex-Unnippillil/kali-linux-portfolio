@@ -1,32 +1,37 @@
 'use client';
 
-import { useEffect } from 'react';
-import { reportClientError } from '../lib/client-error-reporter';
+import ErrorPageContent from '../components/core/ErrorPageContent';
+import { useCorrelationId } from '../components/core/useCorrelationId';
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
-  useEffect(() => {
-    reportClientError(error, error.stack);
-  }, [error]);
+const BUG_REPORT_BASE = 'https://github.com/Alex-Unnippillil/kali-linux-portfolio/issues/new';
+
+function buildBugReportUrl(correlationId: string) {
+  const url = new URL(BUG_REPORT_BASE);
+  url.searchParams.set('title', 'Bug report');
+  url.searchParams.set(
+    'body',
+    `Please describe what happened.\n\nCorrelation ID: ${correlationId}\n\nSteps to reproduce:\n- `,
+  );
+  url.searchParams.set('labels', 'bug');
+  return url.toString();
+}
+
+export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
+  const { correlationId, isLoading, hasError } = useCorrelationId();
+  const bugReportUrl = correlationId ? buildBugReportUrl(correlationId) : undefined;
 
   return (
-    <html>
+    <html lang="en">
       <body>
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
-          <h2 className="text-xl font-semibold">Something went wrong!</h2>
-          <button
-            type="button"
-            onClick={() => reset()}
-            className="rounded bg-slate-100 px-4 py-2 text-sm hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorPageContent
+          error={error}
+          reset={reset}
+          correlationId={correlationId}
+          bugReportUrl={bugReportUrl}
+          isLoading={isLoading}
+          loadError={hasError}
+          fullScreen
+        />
       </body>
     </html>
   );
