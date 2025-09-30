@@ -179,19 +179,19 @@ function About() {
           priority
         />
       </div>
-      <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-        <div>
+      <div className="mt-4 md:mt-8 text-center px-1">
+        <p className="text-heading-sm">
           My name is <span className="font-bold">Alex Unnippillil</span>,{' '}
-        </div>
-        <div className="font-normal ml-1">
+        </p>
+        <p className="font-normal ml-1 text-body-lg">
           I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span>
-        </div>
+        </p>
       </div>
       <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0" />
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0" />
       </div>
-      <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
+      <ul className="mt-4 text-body-sm w-5/6 md:w-3/4 emoji-list">
         <li className="list-pc">
           I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
           evolving world of tech. I completed four years of a{' '}

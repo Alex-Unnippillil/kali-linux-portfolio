@@ -9,6 +9,8 @@ body{
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    font-size: var(--font-size-body-md);
+    line-height: var(--line-height-body);
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
