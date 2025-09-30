@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import WarningBanner from "../../WarningBanner";
 
 // Demo output for each tab
@@ -41,6 +41,7 @@ const maskSensitive = (line, show) => {
 const MimikatzApp = () => {
   const [active, setActive] = useState("dump");
   const [showSensitive, setShowSensitive] = useState(false);
+  const sensitiveToggleId = useId();
 
   const output = demoOutput[active];
 
@@ -63,7 +64,7 @@ const MimikatzApp = () => {
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
       <WarningBanner>
-        Demo only. No real credentials are used.
+        Demo only. No real credentials.
       </WarningBanner>
       <div className="flex border-b border-gray-700">
         {tabs.map((t) => (
@@ -81,14 +82,16 @@ const MimikatzApp = () => {
       </div>
       <div className="p-2 flex-1 overflow-auto">
         <div className="flex justify-between items-center mb-2 text-xs">
-          <label className="flex items-center gap-1">
+          <div className="flex items-center gap-1">
             <input
+              id={sensitiveToggleId}
               type="checkbox"
               checked={showSensitive}
               onChange={(e) => setShowSensitive(e.target.checked)}
+              aria-label="Show tokens"
             />
-            Show tokens
-          </label>
+            <label htmlFor={sensitiveToggleId}>Show tokens</label>
+          </div>
           <button
             className="bg-gray-700 px-2 py-1 rounded"
             onClick={exportOutput}
@@ -103,11 +106,12 @@ const MimikatzApp = () => {
                 {maskSensitive(line, showSensitive)}
               </span>
               <button
+                type="button"
                 className="ml-2 text-gray-400 hover:text-white"
                 onClick={() => copyLine(line)}
-                aria-label="copy line"
               >
-                📋
+                <span className="sr-only">Copy line</span>
+                <span aria-hidden="true">📋</span>
               </button>
             </div>
           ))}
