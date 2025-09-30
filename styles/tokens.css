@@ -80,6 +80,15 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+  /* Experiment guard */
+  --experiments-enabled: 1;
+}
+
+:root[data-safe-mode='true'] {
+  --motion-fast: 0ms;
+  --motion-medium: 0ms;
+  --motion-slow: 0ms;
+  --experiments-enabled: 0;
 }
 
 /* High contrast theme */

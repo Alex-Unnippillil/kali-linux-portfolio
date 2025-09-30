@@ -5,6 +5,7 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import SafeModeIndicator from '../ui/SafeModeIndicator';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
 const areWorkspacesEqual = (next, prev) => {
@@ -92,6 +93,7 @@ export default class Navbar extends PureComponent {
                                                         />
                                                 )}
                                                 <PerformanceGraph />
+                                                <SafeModeIndicator />
                                         </div>
                                         <div
                                                 className={

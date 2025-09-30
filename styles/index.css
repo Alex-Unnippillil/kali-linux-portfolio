@@ -38,6 +38,15 @@ button:focus-visible {
     scroll-behavior: auto !important;
 }
 
+:root[data-safe-mode='true'] *,
+:root[data-safe-mode='true'] *::before,
+:root[data-safe-mode='true'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {
