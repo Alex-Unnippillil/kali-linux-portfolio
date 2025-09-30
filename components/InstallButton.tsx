@@ -24,12 +24,19 @@ const InstallButton: React.FC = () => {
   if (!visible) return null;
 
   return (
-    <button
-      onClick={handleInstall}
-      className="fixed bottom-4 right-4 bg-ubt-blue text-white px-3 py-1 rounded"
+    <div
+      className="fixed inset-x-0 bottom-0 z-[1000] flex justify-center px-4 pb-4 pointer-events-none"
+      style={{
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
+      }}
     >
-      Install
-    </button>
+      <button
+        onClick={handleInstall}
+        className="pointer-events-auto inline-flex items-center justify-center rounded-full bg-ubt-blue px-6 py-3 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.18)] ring-1 ring-white/10 transition-shadow hover:shadow-[0_5px_14px_rgba(0,0,0,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+      >
+        Install
+      </button>
+    </div>
   );
 };
 
