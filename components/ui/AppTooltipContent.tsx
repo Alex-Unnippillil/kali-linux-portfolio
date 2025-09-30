@@ -7,14 +7,18 @@ type AppTooltipContentProps = {
     path?: string;
     keyboard?: string[];
   } | null;
+  placement?: 'top' | 'bottom';
+  arrowOffset?: number;
 };
 
-const AppTooltipContent: React.FC<AppTooltipContentProps> = ({ meta }) => {
-  if (!meta) {
-    return <span className="text-xs text-gray-200">Metadata unavailable.</span>;
-  }
+const ARROW_OFFSET_FALLBACK = 24;
 
-  return (
+const AppTooltipContent: React.FC<AppTooltipContentProps> = ({
+  meta,
+  placement = 'bottom',
+  arrowOffset = ARROW_OFFSET_FALLBACK,
+}) => {
+  const content = meta ? (
     <div className="space-y-2">
       {meta.title ? (
         <p className="text-sm font-semibold text-white">{meta.title}</p>
@@ -37,6 +41,34 @@ const AppTooltipContent: React.FC<AppTooltipContentProps> = ({ meta }) => {
           ))}
         </ul>
       ) : null}
+    </div>
+  ) : (
+    <span className="text-xs text-gray-200">Metadata unavailable.</span>
+  );
+
+  return (
+    <div
+      data-testid="app-tooltip-content"
+      className="relative text-xs text-white"
+      style={{
+        width: 'min(20rem, calc(100vw - 2rem))',
+        maxWidth: '20rem',
+      }}
+    >
+      <span
+        data-testid="app-tooltip-arrow"
+        aria-hidden="true"
+        className="pointer-events-none absolute h-3 w-3 border border-gray-500/60 bg-ub-grey/95"
+        style={{
+          left: `${arrowOffset}px`,
+          transform: 'translateX(-50%) rotate(45deg)',
+          top: placement === 'bottom' ? '-6px' : undefined,
+          bottom: placement === 'top' ? '-6px' : undefined,
+        }}
+      />
+      <div className="space-y-2 rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-left shadow-xl backdrop-blur">
+        {content}
+      </div>
     </div>
   );
 };
