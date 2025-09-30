@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useId } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
@@ -8,6 +8,7 @@ import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import FormHint from "../../components/ui/FormHint";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -34,6 +35,18 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const [activeHint, setActiveHint] = useState<string | null>(null);
+  const hintBaseId = useId();
+  const nameHintId = `${hintBaseId}-contact-name`;
+  const emailHintId = `${hintBaseId}-contact-email`;
+  const messageHintId = `${hintBaseId}-contact-message`;
+
+  const describe = (
+    ...ids: Array<string | undefined | false>
+  ): string | undefined => {
+    const filtered = ids.filter(Boolean) as string[];
+    return filtered.length ? filtered.join(" ") : undefined;
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -155,6 +168,15 @@ const ContactApp: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              onFocus={() => setActiveHint(nameHintId)}
+              onBlur={() =>
+                setActiveHint((current) =>
+                  current === nameHintId ? null : current,
+                )
+              }
+              aria-describedby={describe(
+                activeHint === nameHintId ? nameHintId : undefined,
+              )}
               aria-labelledby="contact-name-label"
             />
             <svg
@@ -171,6 +193,15 @@ const ContactApp: React.FC = () => {
                 d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25v-1.5A4.5 4.5 0 0 1 9 14.25h6a4.5 4.5 0 0 1 4.5 4.5v1.5"
               />
             </svg>
+            <FormHint
+              id={nameHintId}
+              visible={activeHint === nameHintId}
+              placement="right"
+              className="md:z-20"
+              panelClassName="bg-gray-900/95 text-gray-100 border border-gray-700 shadow-xl"
+            >
+              Let us know who&apos;s reaching out so we can personalise our response.
+            </FormHint>
           </div>
         </div>
         <div>
@@ -190,7 +221,16 @@ const ContactApp: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               aria-invalid={!!emailError}
-              aria-describedby={emailError ? "contact-email-error" : undefined}
+              onFocus={() => setActiveHint(emailHintId)}
+              onBlur={() =>
+                setActiveHint((current) =>
+                  current === emailHintId ? null : current,
+                )
+              }
+              aria-describedby={describe(
+                activeHint === emailHintId ? emailHintId : undefined,
+                emailError ? "contact-email-error" : undefined,
+              )}
               aria-labelledby="contact-email-label"
             />
             <svg
@@ -207,6 +247,16 @@ const ContactApp: React.FC = () => {
                 d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15A2.25 2.25 0 0 1 2.25 17.25V6.75A2.25 2.25 0 0 1 4.5 4.5h15a2.25 2.25 0 0 1 2.25 2.25ZM3 6l9 6 9-6"
               />
             </svg>
+            <FormHint
+              id={emailHintId}
+              visible={activeHint === emailHintId}
+              placement="right"
+              className="md:z-20"
+              panelClassName="bg-gray-900/95 text-gray-100 border border-gray-700 shadow-xl"
+            >
+              Use the address that we should reply to. We never share contact
+              details.
+            </FormHint>
           </div>
           {emailError && (
             <FormError id="contact-email-error" className="mt-2">
@@ -231,7 +281,16 @@ const ContactApp: React.FC = () => {
               onChange={(e) => setMessage(e.target.value)}
               required
               aria-invalid={!!messageError}
-              aria-describedby={messageError ? "contact-message-error" : undefined}
+              onFocus={() => setActiveHint(messageHintId)}
+              onBlur={() =>
+                setActiveHint((current) =>
+                  current === messageHintId ? null : current,
+                )
+              }
+              aria-describedby={describe(
+                activeHint === messageHintId ? messageHintId : undefined,
+                messageError ? "contact-message-error" : undefined,
+              )}
               aria-labelledby="contact-message-label"
             />
             <svg
@@ -248,6 +307,16 @@ const ContactApp: React.FC = () => {
                 d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286a2.25 2.25 0 0 1-1.98 2.193c-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.1 2.1 0 0 1-.825-.242M3.75 7.5c0-1.621 1.152-3.026 2.76-3.235A48.455 48.455 0 0 1 12 3c2.115 0 4.198.137 6.24.402 1.608.209 2.76 1.614 2.76 3.235v6.226c0 1.621-1.152 3.026-2.76 3.235-.577.075-1.157.14-1.74.194V21L12.345 16.845"
               />
             </svg>
+            <FormHint
+              id={messageHintId}
+              visible={activeHint === messageHintId}
+              placement="right"
+              className="md:z-20"
+              panelClassName="bg-gray-900/95 text-gray-100 border border-gray-700 shadow-xl"
+            >
+              Share the context for your question, including timelines or links,
+              so the right teammate can follow up.
+            </FormHint>
           </div>
           {messageError && (
             <FormError id="contact-message-error" className="mt-2">
