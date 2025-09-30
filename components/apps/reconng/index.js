@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
+import ExperimentGate from '../../util-components/ExperimentGate';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -133,7 +134,7 @@ const createWorkspace = (index) => ({
   },
 });
 
-const ReconNG = () => {
+const ReconNGContent = () => {
   const { allowNetwork } = useSettings();
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
@@ -452,7 +453,12 @@ const ReconNG = () => {
             {ws.name}
           </button>
         ))}
-        <button type="button" onClick={addWorkspace} className="px-2 py-1 bg-green-700">
+        <button
+          type="button"
+          onClick={addWorkspace}
+          className="px-2 py-1 bg-green-700"
+          aria-label="Add workspace"
+        >
           +
         </button>
       </div>
@@ -500,6 +506,7 @@ const ReconNG = () => {
               value={selectedModule}
               onChange={(e) => setSelectedModule(e.target.value)}
               className="bg-gray-800 px-2 py-1"
+              aria-label="Module"
             >
               {allModules.map((m) => (
                 <option key={m} value={m}>
@@ -513,15 +520,17 @@ const ReconNG = () => {
               onChange={(e) => setTarget(e.target.value)}
               placeholder="Target"
               className="flex-1 bg-gray-800 px-2 py-1"
+              aria-label="Target"
             />
-            <label className="flex items-center gap-1 text-xs">
-              <input
-                type="checkbox"
-                checked={useLiveData}
-                onChange={(e) => setUseLiveData(e.target.checked)}
-              />
-              Live fetch
-            </label>
+              <label className="flex items-center gap-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={useLiveData}
+                  onChange={(e) => setUseLiveData(e.target.checked)}
+                  aria-label="Use live data"
+                />
+                Live fetch
+              </label>
             <button
               type="button"
               onClick={runModule}
@@ -598,33 +607,38 @@ const ReconNG = () => {
         </>
       )}
       {view === 'reports' && <ReportTemplates />}
-      {view === 'settings' && (
-        <div className="flex-1 overflow-auto">
-          {allModules.map((m) => (
-            <div key={m} className="mb-2">
-              <label className="block mb-1">{`${m} API Key`}</label>
-              <div className="flex">
-                <input
-                  type={showApiKeys[m] ? 'text' : 'password'}
-                  value={apiKeys[m] || ''}
-                  onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
-                  className="flex-1 bg-gray-800 px-2 py-1"
-                  placeholder={`${m} API Key`}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
-                  }
-                  className="ml-2 px-2 py-1 bg-gray-700"
-                >
-                  {showApiKeys[m] ? 'Hide' : 'Show'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        {view === 'settings' && (
+          <div className="flex-1 overflow-auto">
+            {allModules.map((m) => {
+              const safeId = `recon-api-${m.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
+              return (
+                <div key={m} className="mb-2">
+                  <label className="block mb-1" htmlFor={safeId}>{`${m} API Key`}</label>
+                  <div className="flex">
+                    <input
+                      id={safeId}
+                      type={showApiKeys[m] ? 'text' : 'password'}
+                      value={apiKeys[m] || ''}
+                      onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
+                      className="flex-1 bg-gray-800 px-2 py-1"
+                      placeholder={`${m} API Key`}
+                      aria-label={`${m} API Key`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
+                      }
+                      className="ml-2 px-2 py-1 bg-gray-700"
+                    >
+                      {showApiKeys[m] ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       {view === 'marketplace' && (
         <ul className="list-disc pl-5">
           {marketplace.map((m) => (
@@ -671,7 +685,24 @@ const ReconNG = () => {
   );
 };
 
+const ReconGateFallback = () => (
+  <div className="flex h-full flex-col items-center justify-center bg-ub-dark p-6 text-center text-white">
+    <h2 className="text-lg font-semibold">Recon lab disabled</h2>
+    <p className="mt-2 max-w-xl text-xs text-ubt-grey">
+      This workspace relies on the recon-ng experiment. Enable the recon-ng-lab flag to simulate discovery chains or
+      continue with the static intelligence briefs available in the knowledge base.
+    </p>
+  </div>
+);
+
+const ReconNG = () => (
+  <ExperimentGate flag="recon-ng-lab" fallback={<ReconGateFallback />} metadata={{ surface: 'reconng-app' }}>
+    <ReconNGContent />
+  </ExperimentGate>
+);
+
 export default ReconNG;
+export { ReconNGContent };
 
 export const displayReconNG = () => <ReconNG />;
 

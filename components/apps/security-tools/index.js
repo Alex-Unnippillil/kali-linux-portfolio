@@ -4,6 +4,7 @@ import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
+import ExperimentGate from '../../util-components/ExperimentGate';
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -15,7 +16,7 @@ const tabs = [
   { id: 'fixtures', label: 'Fixtures' },
 ];
 
-export default function SecurityTools() {
+function SecurityToolsContent() {
   const [active, setActive] = useState('repeater');
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
@@ -135,6 +136,7 @@ export default function SecurityTools() {
             onChange={e => setQuery(e.target.value)}
             placeholder="Search all tools"
             className="w-full mb-2 p-1 text-black text-xs"
+            aria-label="Search security tools"
           />
           {query ? (
             <div className="text-xs">
@@ -238,9 +240,19 @@ export default function SecurityTools() {
             {active === 'yara' && (
             <div>
               <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
-              <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
+              <textarea
+                value={yaraRule}
+                onChange={e=>setYaraRule(e.target.value)}
+                className="w-full h-24 text-black p-1"
+                aria-label="YARA rule"
+              />
               <div className="text-xs mt-2 mb-1">Sample file:</div>
-              <textarea value={sampleText} readOnly className="w-full h-24 text-black p-1" />
+              <textarea
+                value={sampleText}
+                readOnly
+                className="w-full h-24 text-black p-1"
+                aria-label="Sample file contents"
+              />
               <button onClick={runYara} className="mt-2 px-2 py-1 bg-ub-green text-black text-xs">Scan</button>
               {yaraResult && <div className="mt-2 text-xs">{yaraResult}</div>}
             </div>
@@ -286,3 +298,27 @@ export default function SecurityTools() {
     </LabMode>
   );
 }
+
+const SecurityToolsFallback = () => (
+  <div className="flex h-full flex-col items-center justify-center bg-ub-dark p-6 text-center text-white">
+    <h2 className="text-lg font-semibold">Security lab offline</h2>
+    <p className="mt-2 max-w-xl text-xs text-ubt-grey">
+      Access to the interactive repeater, log explorers, and fixture browser requires the security-tools-lab experiment flag.
+      Request lab credentials or review the static cheat sheets bundled with the desktop instead.
+    </p>
+  </div>
+);
+
+export default function SecurityTools() {
+  return (
+    <ExperimentGate
+      flag="security-tools-lab"
+      fallback={<SecurityToolsFallback />}
+      metadata={{ surface: 'security-tools' }}
+    >
+      <SecurityToolsContent />
+    </ExperimentGate>
+  );
+}
+
+export { SecurityToolsContent };
