@@ -33,37 +33,41 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen w-full bg-[var(--kali-bg)] text-sm">
       <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
-        <section className="flex items-center mb-8">
-          <Image
-            src="/images/logos/bitmoji.png"
-            alt="Alex Unnippillil"
-            width={128}
-            height={128}
-            className="w-32 h-32 rounded-full"
-            priority
-          />
-          <div className="ml-4 flex-1 space-y-1.5">
-            <h1 className="text-xl font-bold">Alex Unnippillil</h1>
-            <p className="text-gray-200">Cybersecurity Specialist</p>
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-center mb-8">
+          <div className="flex items-center sm:items-start gap-4 sm:gap-6 sm:flex-1">
+            <Image
+              src="/images/logos/bitmoji.png"
+              alt="Alex Unnippillil"
+              width={128}
+              height={128}
+              className="w-24 h-24 sm:w-32 sm:h-32 rounded-full"
+              priority
+            />
+            <div className="space-y-1.5 text-center sm:text-left">
+              <h1 className="text-xl font-bold">Alex Unnippillil</h1>
+              <p className="text-gray-200">Cybersecurity Specialist</p>
+            </div>
           </div>
-          <div className="ml-4 flex gap-3">
+          <div className="flex flex-col gap-2 w-full sm:w-auto sm:min-w-[180px]">
             <a
               href="https://github.com/unnippillil"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub"
-              className="text-white"
+              className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 text-white transition hover:bg-white/20 min-h-[44px]"
             >
-              <GitHubIcon className="w-6 h-6" />
+              <GitHubIcon className="w-5 h-5" />
+              <span className="text-sm font-medium">GitHub</span>
             </a>
             <a
               href="https://www.linkedin.com/in/alex-unnippillil"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="LinkedIn"
-              className="text-white"
+              className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 text-white transition hover:bg-white/20 min-h-[44px]"
             >
-              <LinkedInIcon className="w-6 h-6" />
+              <LinkedInIcon className="w-5 h-5" />
+              <span className="text-sm font-medium">LinkedIn</span>
             </a>
           </div>
         </section>
