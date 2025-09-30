@@ -39,7 +39,7 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
     <>
       {prefetch && (
         <Head>
-          <link rel="prefetch" href={src} />
+          <link rel="prefetch" href={src} as="document" importance="low" />
         </Head>
       )}
       <div className="h-full w-full flex flex-col">
@@ -66,6 +66,8 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
             referrerPolicy="no-referrer"
+            loading="lazy"
+            importance="low"
             onLoad={(e) => {
               setLoaded(true);
               onLoadProp?.(e);

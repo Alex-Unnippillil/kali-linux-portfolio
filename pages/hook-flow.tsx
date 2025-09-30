@@ -31,12 +31,17 @@ const HookFlow: React.FC = () => {
         height={120}
         sizes="(max-width: 420px) 100vw, 420px"
         className="mx-auto"
+        loading="lazy"
+        fetchPriority="low"
       />
       <iframe
         title="React Hooks Documentation"
         src="https://react.dev/learn/hooks"
         sandbox="allow-scripts allow-same-origin"
         className="w-full h-96 border"
+        loading="lazy"
+        importance="low"
+        referrerPolicy="no-referrer"
       />
     </main>
   );

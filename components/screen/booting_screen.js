@@ -40,6 +40,7 @@ function BootingScreen(props) {
                             alt="Kali Linux dragon emblem"
                             sizes="(max-width: 768px) 12rem, 16rem"
                             priority
+                            fetchPriority="high"
                         />
                     </div>
                     <span className="text-4xl font-semibold tracking-[0.35em] text-sky-200 md:text-5xl">KALI</span>
@@ -55,7 +56,15 @@ function BootingScreen(props) {
                     >
                         {props.isShutDown ? (
                             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-900 transition group-hover:bg-white">
-                                <Image width={32} height={32} src="/themes/Yaru/status/power-button.svg" alt="Power button" sizes="32px" priority />
+                                <Image
+                                    width={32}
+                                    height={32}
+                                    src="/themes/Yaru/status/power-button.svg"
+                                    alt="Power button"
+                                    sizes="32px"
+                                    loading="lazy"
+                                    fetchPriority="low"
+                                />
                             </div>
                         ) : (
                             <div className="relative flex h-14 w-14 items-center justify-center">

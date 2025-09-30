@@ -83,13 +83,19 @@ const MoodTuner = () => {
   return (
     <div className="h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col">
       <div className="p-2 flex items-center gap-2 bg-black bg-opacity-30">
+        <label htmlFor="mood-slider" className="sr-only">
+          Select playlist mood
+        </label>
         <input
+          id="mood-slider"
           type="range"
           min={0}
           max={Math.max(0, moods.length - 1)}
           value={index >= 0 ? index : 0}
           onChange={(e) => setMood(moods[Number(e.target.value)])}
           className="flex-1"
+          aria-label="Select playlist mood"
+          aria-valuetext={mood || 'No mood selected'}
         />
         <span className="capitalize min-w-[4rem] text-center">{mood}</span>
       </div>
@@ -104,6 +110,8 @@ const MoodTuner = () => {
             frameBorder="0"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
+            importance="low"
+            referrerPolicy="no-referrer"
           />
           <div className="flex justify-center space-x-4 p-2 bg-black bg-opacity-30">
             <button

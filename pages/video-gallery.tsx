@@ -39,12 +39,17 @@ const VideoGallery: React.FC = () => {
 
   return (
     <main className="p-4">
+      <label htmlFor="video-search" className="sr-only">
+        Search videos
+      </label>
       <input
         type="text"
         placeholder="Search videos..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="mb-4 w-full max-w-md px-4 py-2 border rounded"
+        id="video-search"
+        aria-label="Search videos"
       />
       {playing && (
         <div className="mb-4 w-full max-w-2xl aspect-video">
@@ -56,6 +61,8 @@ const VideoGallery: React.FC = () => {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             referrerPolicy="no-referrer"
             allowFullScreen
+            loading="lazy"
+            importance="low"
           />
         </div>
       )}
@@ -74,6 +81,8 @@ const VideoGallery: React.FC = () => {
               height={360}
               sizes="(max-width: 768px) 100vw, 480px"
               className="w-full"
+              loading="lazy"
+              fetchPriority="low"
             />
             <p className="mt-2 text-sm" style={{ maxInlineSize: '60ch' }}>{video.title}</p>
           </button>

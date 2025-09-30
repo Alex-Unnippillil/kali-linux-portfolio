@@ -20,6 +20,8 @@ export default function Beef() {
           className="w-full h-48 border"
           sandbox=""
           srcDoc={targetPage}
+          loading="lazy"
+          importance="low"
         />
       ),
       action: 'Next',
