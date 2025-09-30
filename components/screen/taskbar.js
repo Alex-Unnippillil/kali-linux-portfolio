@@ -2,6 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 
 export default function Taskbar(props) {
+    const { dragActive = false } = props;
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
 
     const handleClick = (app) => {
@@ -20,6 +21,8 @@ export default function Taskbar(props) {
         <div
             className="absolute bottom-0 left-0 z-40 flex w-full items-center justify-start bg-black bg-opacity-50 backdrop-blur-sm"
             role="toolbar"
+            aria-label="Dock"
+            aria-dropeffect={dragActive ? 'move' : undefined}
             style={{
                 minHeight: 'calc(var(--shell-taskbar-height, 2.5rem) + var(--safe-area-bottom, 0px))',
                 paddingTop: '0.35rem',
