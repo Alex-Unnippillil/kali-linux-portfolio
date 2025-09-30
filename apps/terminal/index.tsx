@@ -131,6 +131,49 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
   }, []);
 
+  const updateTypography = useCallback(() => {
+    const container = containerRef.current;
+    const term = termRef.current;
+    const width = container?.clientWidth ?? 0;
+
+    if (container) {
+      const computedFont = width
+        ? Math.max(9.5, Math.min(16, Math.round((width / 72) * 10) / 10))
+        : 12;
+      const lineHeight =
+        computedFont <= 10
+          ? 1.55
+          : computedFont <= 11
+          ? 1.45
+          : computedFont <= 12
+          ? 1.38
+          : 1.32;
+
+      container.style.setProperty(
+        '--terminal-font-size',
+        `${computedFont.toFixed(2)}px`,
+      );
+      container.style.setProperty(
+        '--terminal-line-height',
+        lineHeight.toFixed(2),
+      );
+
+      if (term) {
+        term.options.fontSize = computedFont;
+        if (term.rows > 0) term.refresh(0, term.rows - 1);
+      }
+
+      if (fitRef.current) {
+        const runFit = () => fitRef.current?.fit();
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(runFit);
+        } else {
+          runFit();
+        }
+      }
+    }
+  }, []);
+
   const writeLine = useCallback(
     (text: string) => {
       if (termRef.current) termRef.current.writeln(text);
@@ -192,6 +235,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.runWorker = runWorker;
+
+  const quickActions = [
+    { label: 'ls', command: 'ls', description: 'List demo files' },
+    { label: 'help', command: 'help', description: 'Show command help' },
+    { label: 'history', command: 'history', description: 'Show recent commands' },
+    { label: 'clear', command: 'clear', description: 'Clear the terminal output' },
+    {
+      label: 'cat README.md',
+      command: 'cat README.md',
+      description: 'View the welcome README',
+    },
+    {
+      label: 'open firefox',
+      command: 'open firefox',
+      description: 'Launch the Firefox simulator',
+    },
+  ] as const;
+
+  const runQuickAction = useCallback(
+    (cmd: string) => {
+      const term = termRef.current;
+      if (!term) return;
+      if (commandRef.current.length > 0) {
+        const erase = '\b \b'.repeat(commandRef.current.length);
+        term.write(erase);
+        commandRef.current = '';
+      }
+      term.write(cmd);
+      term.writeln('');
+      commandRef.current = '';
+      void runCommand(cmd);
+      prompt();
+      term.focus();
+      updateOverflow();
+    },
+    [prompt, runCommand, updateOverflow],
+  );
 
   useEffect(() => {
     registryRef.current = {
@@ -323,7 +403,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.loadAddon(fit);
       term.loadAddon(search);
       term.open(containerRef.current!);
-      fit.fit();
+      updateTypography();
       term.focus();
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
@@ -378,10 +458,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      updateTypography,
+    ]);
 
   useEffect(() => {
-    const handleResize = () => fitRef.current?.fit();
+    const handleResize = () => updateTypography();
     let observer: ResizeObserver | undefined;
     if (typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver(handleResize);
@@ -392,7 +482,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       window.removeEventListener('resize', handleResize);
       observer?.disconnect();
     };
-  }, []);
+  }, [updateTypography]);
+
+  useEffect(() => {
+    updateTypography();
+  }, [updateTypography]);
 
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
@@ -420,6 +514,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
+              aria-label="Search terminal commands"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   runCommand(paletteInput);
@@ -481,25 +576,40 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       <div className="flex h-full flex-col">
-        <div className="flex flex-wrap items-center gap-2 bg-gray-800 p-2">
-          <button onClick={handleCopy} aria-label="Copy">
+        <div className="flex flex-col gap-2 bg-gray-900/80 p-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={handleCopy} aria-label="Copy">
             <CopyIcon />
-          </button>
-          <button onClick={handlePaste} aria-label="Paste">
+            </button>
+            <button type="button" onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
-          </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+            >
             <SettingsIcon />
-          </button>
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
+            {quickActions.map((action) => (
+              <button
+                key={action.command}
+                type="button"
+                onClick={() => runQuickAction(action.command)}
+                className="rounded border border-white/10 bg-slate-900/80 px-3 py-1 font-semibold uppercase tracking-wide text-white/80 transition-colors duration-150 hover:border-cyan-400/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                title={action.description}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="relative flex-1 min-h-0">
           <TerminalContainer
             ref={containerRef}
             className="h-full w-full overflow-hidden font-mono"
-            style={{
-              fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
-              lineHeight: 1.4,
-            }}
           />
           {overflow.top && (
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
