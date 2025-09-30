@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-import HelpPanel from '../HelpPanel';
+import HelpPanel from '../util-components/HelpPanel';
 
 // Lazily load the heavy terminal app with session tabs on the client only.
 const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
