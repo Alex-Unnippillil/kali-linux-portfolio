@@ -51,34 +51,53 @@ export default function ResultViewer({ data }: ViewerProps) {
 
   return (
     <div className="text-xs" aria-label="result viewer">
-      <div role="tablist" className="mb-2 flex">
-        <button role="tab" aria-selected={tab === 'raw'} onClick={() => setTab('raw')} className="px-2 py-1 bg-ub-cool-grey text-white mr-2">
+      <div role="tablist" className="mb-2 flex flex-wrap gap-2">
+        <button role="tab" aria-selected={tab === 'raw'} onClick={() => setTab('raw')} className="rounded bg-ub-cool-grey px-2 py-1 text-white" type="button">
           Raw
         </button>
-        <button role="tab" aria-selected={tab === 'parsed'} onClick={() => setTab('parsed')} className="px-2 py-1 bg-ub-cool-grey text-white mr-2">
+        <button role="tab" aria-selected={tab === 'parsed'} onClick={() => setTab('parsed')} className="rounded bg-ub-cool-grey px-2 py-1 text-white" type="button">
           Parsed
         </button>
-        <button role="tab" aria-selected={tab === 'chart'} onClick={() => setTab('chart')} className="px-2 py-1 bg-ub-cool-grey text-white">
+        <button role="tab" aria-selected={tab === 'chart'} onClick={() => setTab('chart')} className="rounded bg-ub-cool-grey px-2 py-1 text-white" type="button">
           Chart
         </button>
       </div>
       {tab === 'raw' && <pre className="bg-black text-white p-1 h-40 overflow-auto">{JSON.stringify(data, null, 2)}</pre>}
       {tab === 'parsed' && (
         <div>
-          <div className="mb-2">
-            <label>
-              Filter:
-              <input value={filter} onChange={(e) => setFilter(e.target.value)} className="border p-1 text-black ml-1" />
-            </label>
-            {keys.map((k) => (
-              <button key={k} onClick={() => setSortKey(k)} className="px-2 py-1 bg-ub-cool-grey text-white ml-2">
-                {k}
+          <details className="mb-2 space-y-2 rounded border border-black/30 bg-black/10 p-2">
+            <summary className="cursor-pointer select-none text-[11px] font-semibold uppercase tracking-wide text-white">
+              Advanced controls
+            </summary>
+            <div className="flex flex-col gap-2">
+              <label className="flex flex-col gap-1 text-[11px] sm:flex-row sm:items-center sm:gap-2">
+                <span>Filter</span>
+                <input
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="w-full flex-1 rounded border border-black/40 bg-white p-1 text-black"
+                  aria-label="Filter rows"
+                />
+              </label>
+              {keys.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {keys.map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => setSortKey(k)}
+                      className={`rounded px-2 py-1 ${sortKey === k ? 'bg-ub-yellow text-black' : 'bg-ub-cool-grey text-white'}`}
+                      type="button"
+                    >
+                      Sort by {k}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button onClick={exportCsv} className="self-start rounded bg-ub-green px-2 py-1 text-black" type="button">
+                Export CSV
               </button>
-            ))}
-            <button onClick={exportCsv} className="px-2 py-1 bg-ub-green text-black ml-2" type="button">
-              CSV
-            </button>
-          </div>
+            </div>
+          </details>
           <div className="overflow-auto max-h-60">
             <table className="w-full text-left">
               <thead>

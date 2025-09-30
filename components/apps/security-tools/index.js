@@ -128,160 +128,179 @@ export default function SecurityTools() {
 
   return (
     <LabMode>
-      <div className="w-full h-full bg-ub-dark text-white p-2 overflow-auto flex">
-        <div className="flex-1 pr-2">
+      <div className="flex h-full w-full flex-col gap-3 overflow-hidden bg-ub-dark p-2 text-white lg:flex-row">
+        <div className="flex-1 space-y-2 overflow-y-auto pr-0 lg:pr-3">
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search all tools"
-            className="w-full mb-2 p-1 text-black text-xs"
+            className="w-full rounded border border-black/20 bg-white p-1 text-xs text-black"
+            aria-label="Search tools"
           />
           {query ? (
-            <div className="text-xs">
-          {suricataResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">Suricata</h3>
-              {suricataResults.map((log, i) => (
-                <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
-                  {JSON.stringify(log, null, 2)}
-                </pre>
-              ))}
-            </div>
-          )}
-          {zeekResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">Zeek</h3>
-              {zeekResults.map((log, i) => (
-                <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
-                  {JSON.stringify(log, null, 2)}
-                </pre>
-              ))}
-            </div>
-          )}
-          {sigmaResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">Sigma</h3>
-              {sigmaResults.map(rule => (
-                <div key={rule.id} className="mb-2">
-                  <h4 className="font-bold">{rule.title}</h4>
-                  <pre className="bg-black p-1 overflow-auto">
-                    {JSON.stringify(rule, null, 2)}
-                  </pre>
+            <div className="space-y-3 text-xs">
+              {suricataResults.length > 0 && (
+                <div className="mb-2">
+                  <h3 className="text-sm font-bold">Suricata</h3>
+                  {suricataResults.map((log, i) => (
+                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1">
+                      {JSON.stringify(log, null, 2)}
+                    </pre>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-          {mitreResults.length > 0 && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">MITRE ATT&CK</h3>
-              <ul className="list-disc list-inside">
-                {mitreResults.map(tech => (
-                  <li key={tech.id}>
-                    {tech.id} - {tech.name} ({tech.tactic})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {yaraMatch && (
-            <div className="mb-2">
-              <h3 className="text-sm font-bold">YARA Sample</h3>
-              <div>Sample text contains &quot;{query}&quot;</div>
-            </div>
-          )}
-            {!hasResults && <div>No results found.</div>}
-          </div>
-        ) : (
-          <>
-            <p className="text-xs mb-2">All tools are static demos using local fixtures. No external network activity occurs.</p>
-            <div className="mb-2 flex flex-wrap">{tabs.map(tabButton)}</div>
-
-            {active === 'repeater' && (
-              <div>
-                <CommandBuilder
-                  doc="Build a curl command. Output is copy-only and not executed."
-                  build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
-                />
-              </div>
-            )}
-
-            {active === 'suricata' && (
-            <div>
-              <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
-              {suricata.map((log, i) => (
-                <pre key={i} className="text-xs bg-black p-1 mb-1 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
-              ))}
-            </div>
-          )}
-
-            {active === 'zeek' && (
-            <div>
-              <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
-              {zeek.map((log, i) => (
-                <pre key={i} className="text-xs bg-black p-1 mb-1 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
-              ))}
-            </div>
-          )}
-
-            {active === 'sigma' && (
-            <div>
-              <p className="text-xs mb-2">Static Sigma rules loaded from fixture.</p>
-              {sigma.map((rule) => (
-                <div key={rule.id} className="mb-2">
-                  <h3 className="text-sm font-bold">{rule.title}</h3>
-                  <pre className="text-xs bg-black p-1 overflow-auto">{JSON.stringify(rule, null, 2)}</pre>
+              )}
+              {zeekResults.length > 0 && (
+                <div className="mb-2">
+                  <h3 className="text-sm font-bold">Zeek</h3>
+                  {zeekResults.map((log, i) => (
+                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1">
+                      {JSON.stringify(log, null, 2)}
+                    </pre>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-
-            {active === 'yara' && (
-            <div>
-              <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
-              <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
-              <div className="text-xs mt-2 mb-1">Sample file:</div>
-              <textarea value={sampleText} readOnly className="w-full h-24 text-black p-1" />
-              <button onClick={runYara} className="mt-2 px-2 py-1 bg-ub-green text-black text-xs">Scan</button>
-              {yaraResult && <div className="mt-2 text-xs">{yaraResult}</div>}
-            </div>
-          )}
-
-            {active === 'mitre' && (
-            <div>
-              <p className="text-xs mb-2">Mini MITRE ATT&CK navigator from static data.</p>
-              {mitre.tactics.map((tac) => (
-                <div key={tac.id} className="mb-2">
-                  <h3 className="text-sm font-bold">{tac.name}</h3>
-                  <ul className="list-disc list-inside text-xs">
-                    {tac.techniques.map((tech) => (
-                      <li key={tech.id}>{tech.id} - {tech.name}</li>
+              )}
+              {sigmaResults.length > 0 && (
+                <div className="mb-2">
+                  <h3 className="text-sm font-bold">Sigma</h3>
+                  {sigmaResults.map(rule => (
+                    <div key={rule.id} className="mb-2">
+                      <h4 className="font-bold">{rule.title}</h4>
+                      <pre className="overflow-x-auto overflow-y-hidden bg-black p-1">
+                        {JSON.stringify(rule, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {mitreResults.length > 0 && (
+                <div className="mb-2">
+                  <h3 className="text-sm font-bold">MITRE ATT&CK</h3>
+                  <ul className="list-disc list-inside">
+                    {mitreResults.map(tech => (
+                      <li key={tech.id}>
+                        {tech.id} - {tech.name} ({tech.tactic})
+                      </li>
                     ))}
                   </ul>
                 </div>
-              ))}
+              )}
+              {yaraMatch && (
+                <div className="mb-2">
+                  <h3 className="text-sm font-bold">YARA Sample</h3>
+                  <div>Sample text contains &quot;{query}&quot;</div>
+                </div>
+              )}
+              {!hasResults && <div>No results found.</div>}
             </div>
-          )}
+          ) : (
+            <>
+              <p className="text-xs mb-2">All tools are static demos. No external traffic.</p>
+              <div className="mb-2 flex flex-wrap gap-2">{tabs.map(tabButton)}</div>
 
-            {active === 'fixtures' && (
-              <div className="flex">
-                <div className="w-1/2 pr-2">
-                  <FixturesLoader onData={setFixtureData} />
+              {active === 'repeater' && (
+                <div>
+                  <CommandBuilder
+                    doc="Build a curl command. Output is copy-only and not executed."
+                    build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
+                  />
                 </div>
-                <div className="w-1/2">
-                  <ResultViewer data={fixtureData} />
+              )}
+
+              {active === 'suricata' && (
+                <div>
+                  <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
+                  {suricata.map((log, i) => (
+                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
+                      {JSON.stringify(log, null, 2)}
+                    </pre>
+                  ))}
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+
+              {active === 'zeek' && (
+                <div>
+                  <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
+                  {zeek.map((log, i) => (
+                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
+                      {JSON.stringify(log, null, 2)}
+                    </pre>
+                  ))}
+                </div>
+              )}
+
+              {active === 'sigma' && (
+                <div>
+                  <p className="text-xs mb-2">Static Sigma rules loaded from fixture.</p>
+                  {sigma.map((rule) => (
+                    <div key={rule.id} className="mb-2">
+                      <h3 className="text-sm font-bold">{rule.title}</h3>
+                      <pre className="overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
+                        {JSON.stringify(rule, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {active === 'yara' && (
+                <div>
+                  <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
+                  <textarea
+                    value={yaraRule}
+                    onChange={e=>setYaraRule(e.target.value)}
+                    className="h-24 w-full p-1 text-black"
+                    aria-label="Edit YARA rule"
+                  />
+                  <div className="text-xs mt-2 mb-1">Sample file:</div>
+                  <textarea
+                    value={sampleText}
+                    readOnly
+                    className="h-24 w-full p-1 text-black"
+                    aria-label="Sample file contents"
+                  />
+                  <button onClick={runYara} className="mt-2 bg-ub-green px-2 py-1 text-xs text-black">Scan</button>
+                  {yaraResult && <div className="mt-2 text-xs">{yaraResult}</div>}
+                </div>
+              )}
+
+              {active === 'mitre' && (
+                <div>
+                  <p className="text-xs mb-2">Mini MITRE ATT&CK navigator from static data.</p>
+                  {mitre.tactics.map((tac) => (
+                    <div key={tac.id} className="mb-2">
+                      <h3 className="text-sm font-bold">{tac.name}</h3>
+                      <ul className="list-disc list-inside text-xs">
+                        {tac.techniques.map((tech) => (
+                          <li key={tech.id}>{tech.id} - {tech.name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {active === 'fixtures' && (
+                <div className="flex flex-col gap-3 lg:flex-row">
+                  <div className="w-full pr-0 lg:w-1/2 lg:pr-2">
+                    <FixturesLoader onData={setFixtureData} />
+                  </div>
+                  <div className="w-full lg:w-1/2">
+                    <ResultViewer data={fixtureData} />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-        <ExplainerPane
-          lines={["Use this lab to explore static security data."]}
-          resources={[
-            { label: 'NIST SP 800-115', url: 'https://csrc.nist.gov/publications/detail/sp/800-115/final' },
-            { label: 'OWASP Testing Guide', url: 'https://owasp.org/www-project-web-security-testing-guide/' },
-          ]}
-        />
+        <div className="min-w-0 flex-shrink-0 overflow-hidden lg:w-64">
+          <ExplainerPane
+            lines={["Use this lab to explore static security data."]}
+            resources={[
+              { label: 'NIST SP 800-115', url: 'https://csrc.nist.gov/publications/detail/sp/800-115/final' },
+              { label: 'OWASP Testing Guide', url: 'https://owasp.org/www-project-web-security-testing-guide/' },
+            ]}
+          />
+        </div>
       </div>
     </LabMode>
   );
