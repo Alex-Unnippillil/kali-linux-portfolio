@@ -1,11 +1,11 @@
 "use client";
 
-import React, { Component } from 'react';
-import NextImage from 'next/image';
+import React, { Component, useMemo } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { ToolbarIconButton, WINDOW_TOOLBAR_ICONS } from '../util-components/ToolbarIcons';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -765,94 +765,108 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
-    const { togglePin } = useDocPiP(props.pip || (() => null));
+    const { togglePin, isPinned } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+
+    const pinLabel = isPinned ? 'Unpin window' : 'Pin window';
+    const minimizeLabel = 'Minimize window';
+    const maximizeLabel = props.isMaximised ? 'Restore window' : 'Maximize window';
+    const closeLabel = 'Close window';
+    const menuLabel = 'Window actions';
+
+    const secondaryActions = useMemo(() => {
+        const actions = [];
+
+        if (pipSupported && props.pip) {
+            actions.push({
+                id: 'pin',
+                label: pinLabel,
+                onSelect: togglePin,
+            });
+        }
+
+        actions.push({
+            id: 'minimize',
+            label: minimizeLabel,
+            onSelect: props.minimize,
+        });
+
+        if (props.allowMaximize) {
+            actions.push({
+                id: 'toggle-maximize',
+                label: maximizeLabel,
+                onSelect: props.maximize,
+            });
+        }
+
+        actions.push({
+            id: 'close',
+            label: closeLabel,
+            onSelect: props.close,
+        });
+
+        return actions;
+    }, [
+        pipSupported,
+        props.pip,
+        pinLabel,
+        togglePin,
+        minimizeLabel,
+        props.minimize,
+        props.allowMaximize,
+        maximizeLabel,
+        props.maximize,
+        closeLabel,
+        props.close,
+    ]);
+
     return (
         <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
             {pipSupported && props.pip && (
-                <button
-                    type="button"
-                    aria-label="Window pin"
+                <ToolbarIconButton
+                    iconSrc={WINDOW_TOOLBAR_ICONS.pin}
+                    iconAlt="Kali window pin"
+                    label={pinLabel}
+                    title={pinLabel}
                     className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                     onClick={togglePin}
-                >
-                    <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-4 w-4 inline"
-                        width={16}
-                        height={16}
-                        sizes="16px"
-                    />
-                </button>
+                    secondaryActions={secondaryActions}
+                    menuLabel={menuLabel}
+                />
             )}
-            <button
-                type="button"
-                aria-label="Window minimize"
+            <ToolbarIconButton
+                iconSrc={WINDOW_TOOLBAR_ICONS.minimize}
+                iconAlt="Kali window minimize"
+                label={minimizeLabel}
+                title={minimizeLabel}
                 className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.minimize}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
+                secondaryActions={secondaryActions}
+                menuLabel={menuLabel}
+            />
             {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
+                <ToolbarIconButton
+                    iconSrc={props.isMaximised ? WINDOW_TOOLBAR_ICONS.restore : WINDOW_TOOLBAR_ICONS.maximize}
+                    iconAlt={props.isMaximised ? 'Kali window restore' : 'Kali window maximize'}
+                    label={maximizeLabel}
+                    title={maximizeLabel}
+                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    onClick={props.maximize}
+                    secondaryActions={secondaryActions}
+                    menuLabel={menuLabel}
+                />
             )}
-            <button
-                type="button"
+            <ToolbarIconButton
+                iconSrc={WINDOW_TOOLBAR_ICONS.close}
+                iconAlt="Kali window close"
+                label={closeLabel}
+                title={closeLabel}
                 id={`close-${props.id}`}
-                aria-label="Window close"
                 className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.close}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
+                secondaryActions={secondaryActions}
+                menuLabel={menuLabel}
+            />
         </div>
     )
 }
