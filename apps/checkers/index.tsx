@@ -235,7 +235,12 @@ export default function CheckersPage() {
     });
   };
 
-  const layoutStyle = useMemo<React.CSSProperties>(
+  type LayoutCSSVariables = {
+    '--panel-height': string;
+    '--board-size': string;
+  };
+
+  const layoutStyle = useMemo<React.CSSProperties & LayoutCSSVariables>(
     () => ({
       '--panel-height': '10rem',
       '--board-size': 'clamp(10rem, min(90vw, calc(100vh - var(--panel-height))), 36rem)',
