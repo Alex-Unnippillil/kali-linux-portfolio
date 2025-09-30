@@ -1,0 +1,82 @@
+[
+  {
+    "id": "process-tree",
+    "term": "Process Tree",
+    "definition": "Hierarchy of running processes captured from the memory snapshot.",
+    "link": "/docs/template-glossary#process-tree",
+    "aliases": ["pstree"],
+    "tags": ["memory", "process"]
+  },
+  {
+    "id": "process-list",
+    "term": "Process List",
+    "definition": "Active processes enumerated from the captured memory image.",
+    "link": "/docs/template-glossary#pslist",
+    "aliases": ["pslist", "processes"],
+    "tags": ["memory", "process"]
+  },
+  {
+    "id": "module-list",
+    "term": "Module List",
+    "definition": "DLLs and modules that are loaded by the selected process.",
+    "link": "/docs/template-glossary#module",
+    "aliases": ["dlllist", "modules"],
+    "tags": ["memory", "modules"]
+  },
+  {
+    "id": "network-connections",
+    "term": "Network Connections",
+    "definition": "Sockets and network endpoints identified within volatile memory.",
+    "link": "/docs/template-glossary#netscan",
+    "aliases": ["netscan", "connections"],
+    "tags": ["network", "memory"]
+  },
+  {
+    "id": "malfind",
+    "term": "Malfind",
+    "definition": "Heuristics that identify injected or hidden code segments.",
+    "link": "/docs/template-glossary#malfind",
+    "aliases": ["malfind"],
+    "tags": ["memory", "malware"]
+  },
+  {
+    "id": "yara-scan",
+    "term": "Yara Scan",
+    "definition": "Pattern-based rules applied to memory pages to highlight suspicious content.",
+    "link": "/docs/template-glossary#yara",
+    "aliases": ["yara", "yarascan"],
+    "tags": ["memory", "yara"]
+  },
+  {
+    "id": "severity",
+    "term": "Severity",
+    "definition": "Classification of a finding's risk such as Critical, High, Medium, or Low.",
+    "link": "/docs/template-glossary#severity",
+    "aliases": ["risk"],
+    "tags": ["reporting"]
+  },
+  {
+    "id": "plugin-family",
+    "term": "Plugin Family",
+    "definition": "Grouping of Nessus plugins by technology, service, or platform.",
+    "link": "/docs/template-glossary#plugin-family",
+    "aliases": ["family"],
+    "tags": ["nessus"]
+  },
+  {
+    "id": "host",
+    "term": "Host",
+    "definition": "Asset that generated the finding, identified by hostname or IP address.",
+    "link": "/docs/template-glossary#host",
+    "aliases": ["asset"],
+    "tags": ["reporting"]
+  },
+  {
+    "id": "finding",
+    "term": "Finding",
+    "definition": "Individual result produced by a scan or analysis workflow.",
+    "link": "/docs/template-glossary#finding",
+    "aliases": ["issue", "result"],
+    "tags": ["reporting"]
+  }
+]
