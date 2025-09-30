@@ -48,10 +48,80 @@ export default function AppGrid({ openApp }) {
   }, [filtered, focusedIndex]);
 
   const getColumnCount = (width) => {
-    if (width >= 1024) return 8;
-    if (width >= 768) return 6;
-    if (width >= 640) return 4;
-    return 3;
+    const base = {
+      columnCount: 2,
+      paddingX: 14,
+      paddingY: 14,
+      minIcon: 72,
+      maxIcon: 112,
+      targetImage: 56,
+      minImage: 48,
+      fontSize: '0.875rem',
+      gap: '0.6rem',
+    };
+
+    if (width >= 640) {
+      Object.assign(base, {
+        columnCount: 4,
+        paddingX: 16,
+        paddingY: 16,
+        minIcon: 76,
+        targetImage: 64,
+        fontSize: '0.8rem',
+        gap: '0.5rem',
+      });
+    }
+
+    if (width >= 768) {
+      Object.assign(base, {
+        columnCount: 6,
+        paddingX: 18,
+        paddingY: 18,
+        minIcon: 80,
+        targetImage: 68,
+      });
+    }
+
+    if (width >= 1024) {
+      Object.assign(base, {
+        columnCount: 8,
+        paddingX: 20,
+        paddingY: 20,
+        minIcon: 84,
+        targetImage: 72,
+        fontSize: '0.85rem',
+        gap: '0.5rem',
+      });
+    }
+
+    const columnWidth = width / base.columnCount;
+    const availableWidth = Math.max(columnWidth - base.paddingX * 2, 0);
+
+    const desiredIconWidth = Math.min(base.maxIcon, Math.max(base.minIcon, availableWidth));
+    const iconWidth = availableWidth > 0 ? Math.min(desiredIconWidth, availableWidth) : desiredIconWidth;
+
+    const maxImageForWidth = Math.max(iconWidth - 24, 36);
+    const targetImage = Math.min(base.targetImage, maxImageForWidth);
+    const imageLowerBound = Math.min(base.minImage, iconWidth);
+    const imageUpperBound = Math.max(32, Math.min(targetImage, iconWidth - 8));
+    const iconImage = Math.max(imageLowerBound, Math.min(imageUpperBound, iconWidth));
+    const iconHeight = iconImage + 48;
+    const rowHeight = iconHeight + base.paddingY * 2;
+
+    return {
+      columnCount: base.columnCount,
+      columnWidth,
+      rowHeight,
+      paddingX: base.paddingX,
+      paddingY: base.paddingY,
+      iconStyle: {
+        '--desktop-icon-width': `${iconWidth}px`,
+        '--desktop-icon-height': `${iconHeight}px`,
+        '--desktop-icon-image': `${iconImage}px`,
+        '--desktop-icon-font-size': base.fontSize,
+        '--desktop-icon-gap': base.gap,
+      },
+    };
   };
 
   const handleKeyDown = useCallback(
@@ -91,7 +161,7 @@ export default function AppGrid({ openApp }) {
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              padding: 12,
+              padding: `${data.layout.paddingY}px ${data.layout.paddingX}px`,
             }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
@@ -103,6 +173,7 @@ export default function AppGrid({ openApp }) {
               icon={app.icon}
               name={app.title}
               displayName={<>{app.nodes}</>}
+              style={data.layout.iconStyle}
               openApp={() => openApp && openApp(app.id)}
             />
           </div>
@@ -116,30 +187,36 @@ export default function AppGrid({ openApp }) {
       <input
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
+        aria-label="Search apps"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
-            const columnCount = getColumnCount(width);
-            columnCountRef.current = columnCount;
-            const rowCount = Math.ceil(filtered.length / columnCount);
+            const layout = getColumnCount(width);
+            columnCountRef.current = layout.columnCount;
+            const rowCount = Math.ceil(filtered.length / layout.columnCount);
             return (
               <Grid
                 gridRef={gridRef}
-                columnCount={columnCount}
-                columnWidth={width / columnCount}
+                columnCount={layout.columnCount}
+                columnWidth={layout.columnWidth}
                 height={height}
                 rowCount={rowCount}
-                rowHeight={112}
+                rowHeight={layout.rowHeight}
                 width={width}
                 className="scroll-smooth"
               >
                 {(props) => (
                   <Cell
                     {...props}
-                    data={{ items: filtered, columnCount, metadata: registryMetadata }}
+                    data={{
+                      items: filtered,
+                      columnCount: layout.columnCount,
+                      metadata: registryMetadata,
+                      layout,
+                    }}
                   />
                 )}
               </Grid>
