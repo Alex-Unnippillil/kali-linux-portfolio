@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import useRovingTabIndex from '../../../hooks/useRovingTabIndex';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
@@ -17,12 +17,24 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<number[]>([]);
   const thumbListRef = useRef<HTMLDivElement | null>(null);
+  const hintId = useId();
 
-  useRovingTabIndex(
-    thumbListRef as React.RefObject<HTMLElement>,
-    thumbs.length > 0,
-    'horizontal',
-  );
+  const { getItemProps, onKeyDown, activeIndex, setActiveIndex } = useRovingTabIndex({
+    itemCount: thumbs.length,
+    orientation: 'horizontal',
+    enabled: thumbs.length > 0,
+    initialIndex: Math.max(0, Math.min(page - 1, thumbs.length - 1)),
+    onActiveChange: (index) => {
+      setPage(index + 1);
+    },
+  });
+
+  useEffect(() => {
+    const desired = Math.max(0, Math.min(page - 1, thumbs.length - 1));
+    if (desired !== activeIndex) {
+      setActiveIndex(desired);
+    }
+  }, [activeIndex, page, setActiveIndex, thumbs.length]);
 
   useEffect(() => {
     let mounted = true;
@@ -102,22 +114,36 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"
+          aria-label="Search document text"
         />
         <button onClick={search}>Search</button>
       </div>
-      <canvas ref={canvasRef} data-testid="pdf-canvas" />
+      <canvas
+        ref={canvasRef}
+        data-testid="pdf-canvas"
+        role="img"
+        aria-label={`Page ${page} preview`}
+      />
       <div
         className="flex gap-2 overflow-x-auto mt-2"
         role="listbox"
         aria-orientation="horizontal"
+        aria-describedby={hintId}
         ref={thumbListRef}
+        onKeyDown={onKeyDown}
       >
+        <p id={hintId} className="sr-only">
+          Use left and right arrow keys to move between page thumbnails. Home selects the first page and End selects the last.
+        </p>
         {thumbs.map((t, i) => (
           <canvas
             key={i + 1}
             role="option"
-            tabIndex={page === i + 1 ? 0 : -1}
+            {...getItemProps(i, {
+              tabIndex: page === i + 1 ? 0 : -1,
+            })}
             aria-selected={page === i + 1}
+            aria-label={`Page ${i + 1}`}
             data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
             onFocus={() => setPage(i + 1)}

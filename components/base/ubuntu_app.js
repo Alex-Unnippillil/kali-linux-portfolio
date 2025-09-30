@@ -5,6 +5,7 @@ export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this.rootRef = React.createRef();
     }
 
     handleDragStart = () => {
@@ -23,6 +24,12 @@ export class UbuntuApp extends Component {
         this.props.openApp(this.props.id);
     }
 
+    focus() {
+        if (this.rootRef && this.rootRef.current) {
+            this.rootRef.current.focus();
+        }
+    }
+
     handlePrefetch = () => {
         if (!this.state.prefetched && typeof this.props.prefetch === 'function') {
             this.props.prefetch();
@@ -39,9 +46,18 @@ export class UbuntuApp extends Component {
             onPointerUp,
             onPointerCancel,
             style,
+            focusProps = {},
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
+
+        const {
+            tabIndex: focusTabIndex,
+            onFocus: focusOnFocus,
+            onMouseEnter: focusOnMouseEnter,
+            onKeyDown: focusOnKeyDown,
+            ...restFocusProps
+        } = focusProps || {};
 
         const combinedStyle = {
             width: 'var(--desktop-icon-width, 6rem)',
@@ -56,6 +72,7 @@ export class UbuntuApp extends Component {
 
         return (
             <div
+                ref={this.rootRef}
                 role="button"
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
@@ -68,15 +85,37 @@ export class UbuntuApp extends Component {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerCancel}
+                {...restFocusProps}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
-                onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onKeyDown={(e) => {
+                    if (typeof focusOnKeyDown === 'function') {
+                        focusOnKeyDown(e);
+                        if (e.defaultPrevented) {
+                            return;
+                        }
+                    }
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.openApp();
+                    }
+                }}
+                tabIndex={this.props.disabled ? -1 : (typeof focusTabIndex === 'number' ? focusTabIndex : 0)}
+                onMouseEnter={(event) => {
+                    this.handlePrefetch();
+                    if (typeof focusOnMouseEnter === 'function') {
+                        focusOnMouseEnter(event);
+                    }
+                }}
+                onFocus={(event) => {
+                    this.handlePrefetch();
+                    if (typeof focusOnFocus === 'function') {
+                        focusOnFocus(event);
+                    }
+                }}
             >
                 <Image
                     width={48}

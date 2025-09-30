@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 const FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
@@ -48,6 +49,86 @@ const chunkApps = (apps, size) => {
         chunks.push(apps.slice(i, i + size));
     }
     return chunks;
+};
+
+const useLauncherColumns = () => {
+    const [columns, setColumns] = useState(3);
+
+    useEffect(() => {
+        const updateColumns = () => {
+            if (typeof window === 'undefined') return;
+            const width = window.innerWidth;
+            if (width >= 1024) {
+                setColumns(8);
+            } else if (width >= 768) {
+                setColumns(6);
+            } else if (width >= 640) {
+                setColumns(4);
+            } else {
+                setColumns(3);
+            }
+        };
+
+        updateColumns();
+        window.addEventListener('resize', updateColumns);
+        return () => {
+            window.removeEventListener('resize', updateColumns);
+        };
+    }, []);
+
+    return columns;
+};
+
+const LauncherSection = ({ title, apps, renderTile }) => {
+    const columns = useLauncherColumns();
+    const hintId = useId();
+    const itemRefs = useRef([]);
+
+    useEffect(() => {
+        itemRefs.current = itemRefs.current.slice(0, apps.length);
+    }, [apps.length]);
+
+    const roving = useRovingTabIndex({
+        itemCount: apps.length,
+        orientation: 'grid',
+        columns,
+        enabled: apps.length > 0,
+        onActiveChange: (index) => {
+            const instance = itemRefs.current[index];
+            if (instance && typeof instance.focus === 'function') {
+                requestAnimationFrame(() => instance.focus());
+            }
+        },
+    });
+
+    if (!apps.length) return null;
+
+    return (
+        <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
+                {title}
+            </h2>
+            <div
+                role="grid"
+                aria-describedby={hintId}
+                aria-roledescription="Launcher grid"
+                className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
+                onKeyDown={roving.onKeyDown}
+            >
+                <p id={hintId} className="sr-only">
+                    Use the arrow keys to move between applications. Home focuses the first app and End focuses the last.
+                </p>
+                {apps.map((app, index) =>
+                    renderTile(app, {
+                        focusProps: roving.getItemProps(index),
+                        ref: (instance) => {
+                            itemRefs.current[index] = instance || null;
+                        },
+                    })
+                )}
+            </div>
+        </section>
+    );
 };
 
 class AllApplications extends React.Component {
@@ -121,7 +202,8 @@ class AllApplications extends React.Component {
         });
     };
 
-    renderAppTile = (app) => {
+    renderAppTile = (app, options = {}) => {
+        const { focusProps, ref } = options;
         const isFavorite = this.state.favorites.includes(app.id);
         return (
             <div key={app.id} className="relative flex w-full justify-center">
@@ -141,12 +223,14 @@ class AllApplications extends React.Component {
                     ★
                 </button>
                 <UbuntuApp
+                    ref={ref}
                     name={app.title}
                     id={app.id}
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
                     prefetch={app.screen?.prefetch}
+                    focusProps={focusProps}
                 />
             </div>
         );
@@ -155,14 +239,12 @@ class AllApplications extends React.Component {
     renderSection = (title, apps) => {
         if (!apps.length) return null;
         return (
-            <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
-                    {title}
-                </h2>
-                <div className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-                    {apps.map((app) => this.renderAppTile(app))}
-                </div>
-            </section>
+            <LauncherSection
+                key={title}
+                title={title}
+                apps={apps}
+                renderTile={(app, opts) => this.renderAppTile(app, opts)}
+            />
         );
     };
 

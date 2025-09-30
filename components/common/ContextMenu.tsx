@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
@@ -26,11 +26,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
-  useRovingTabIndex(
-    menuRef as React.RefObject<HTMLElement>,
-    open,
-    'vertical',
-  );
+
+  const hintId = useId();
+  const { getItemProps, onKeyDown } = useRovingTabIndex({
+    itemCount: open ? items.length : 0,
+    orientation: 'vertical',
+    enabled: open,
+  });
 
   useEffect(() => {
     const node = targetRef.current;
@@ -97,15 +99,20 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       role="menu"
       ref={menuRef}
       aria-hidden={!open}
+      aria-describedby={hintId}
       style={{ left: pos.x, top: pos.y }}
+      onKeyDown={onKeyDown}
       className={(open ? 'block ' : 'hidden ') +
         'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
     >
+      <p id={hintId} className="sr-only">
+        Use the arrow keys to move between menu items. Press Home to focus the first item and End for the last.
+      </p>
       {items.map((item, i) => (
         <button
           key={i}
           role="menuitem"
-          tabIndex={-1}
+          {...getItemProps(i)}
           onClick={() => {
             item.onSelect();
             setOpen(false);
