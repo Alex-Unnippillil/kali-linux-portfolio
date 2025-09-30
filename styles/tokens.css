@@ -52,6 +52,13 @@
   --space-4: 1rem;
   --space-5: 1.5rem;
   --space-6: 2rem;
+  /* Mobile spacing scale (8–16px rhythm) */
+  --space-mobile-1: 0.5rem;
+  --space-mobile-2: 0.75rem;
+  --space-mobile-3: 1rem;
+  --space-mobile-4: 1.25rem;
+  --space-mobile-5: 1.5rem;
+  --space-mobile-6: 2rem;
 
   /* Radius */
   --radius-sm: 2px;
