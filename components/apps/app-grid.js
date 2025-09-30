@@ -51,7 +51,7 @@ export default function AppGrid({ openApp }) {
     if (width >= 1024) return 8;
     if (width >= 768) return 6;
     if (width >= 640) return 4;
-    return 3;
+    return 2;
   };
 
   const handleKeyDown = useCallback(
@@ -81,6 +81,16 @@ export default function AppGrid({ openApp }) {
     if (index >= data.items.length) return null;
     const app = data.items[index];
     const meta = data.metadata[app.id] ?? buildAppMetadata(app);
+    const appStyle = data.isPhone
+      ? {
+          '--desktop-icon-width': '7.25rem',
+          '--desktop-icon-height': '7.25rem',
+          '--desktop-icon-padding': '0.45rem',
+          '--desktop-icon-gap': '0.5rem',
+          '--desktop-icon-image': '3.25rem',
+          '--desktop-icon-font-size': '0.85rem',
+        }
+      : undefined;
     return (
       <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
         {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
@@ -102,8 +112,13 @@ export default function AppGrid({ openApp }) {
               id={app.id}
               icon={app.icon}
               name={app.title}
-              displayName={<>{app.nodes}</>}
+              displayName={
+                <span className="line-clamp-2 break-words leading-tight text-white">
+                  {app.nodes}
+                </span>
+              }
               openApp={() => openApp && openApp(app.id)}
+              style={appStyle}
             />
           </div>
         )}
@@ -116,12 +131,14 @@ export default function AppGrid({ openApp }) {
       <input
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
+        aria-label="Search apps"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
+            const isPhone = width < 640;
             const columnCount = getColumnCount(width);
             columnCountRef.current = columnCount;
             const rowCount = Math.ceil(filtered.length / columnCount);
@@ -132,14 +149,14 @@ export default function AppGrid({ openApp }) {
                 columnWidth={width / columnCount}
                 height={height}
                 rowCount={rowCount}
-                rowHeight={112}
+                rowHeight={isPhone ? 148 : 112}
                 width={width}
                 className="scroll-smooth"
               >
                 {(props) => (
                   <Cell
                     {...props}
-                    data={{ items: filtered, columnCount, metadata: registryMetadata }}
+                    data={{ items: filtered, columnCount, metadata: registryMetadata, isPhone }}
                   />
                 )}
               </Grid>
