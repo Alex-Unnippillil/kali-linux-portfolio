@@ -5,6 +5,7 @@ interface Step {
   title: string;
   command: string;
   output: string;
+  timestamp: string;
 }
 
 const steps: Step[] = [
@@ -13,6 +14,7 @@ const steps: Step[] = [
     command: 'wash -i wlan0mon',
     output: `BSSID              Channel  RSSI  WPS Version  WPS Locked  ESSID
 00:11:22:33:44:55  6        -40   1.0          No          ExampleAP`,
+    timestamp: '08:05',
   },
   {
     title: 'Brute-force the WPS PIN',
@@ -21,6 +23,7 @@ const steps: Step[] = [
 [+] Associated with 00:11:22:33:44:55 (ESSID: ExampleAP)
 [+] Pin cracked in 312 seconds
 [+] WPS PIN: 12345670`,
+    timestamp: '08:20',
   },
   {
     title: 'Retrieve WPA passphrase',
@@ -28,12 +31,14 @@ const steps: Step[] = [
     output: `[+] WPS PIN: 12345670
 [+] WPA PSK: "examplepassword"
 [+] AP SSID: "ExampleAP"`,
+    timestamp: '08:26',
   },
   {
     title: 'Use credentials to connect',
     command: 'wpa_supplicant -i wlan0 -c wpa.conf',
     output: `Successfully initialized wpa_supplicant
 Connection established to ExampleAP`,
+    timestamp: '08:31',
   },
 ];
 
@@ -45,25 +50,56 @@ const WpsAttack = () => {
     <>
       <Meta />
       <main className="bg-ub-cool-grey text-white min-h-screen p-4">
-        <h1 className="text-2xl mb-4">WPS Attack Walkthrough</h1>
-        <ol className="space-y-4">
-          {steps.map((s, idx) => (
-            <li
-              key={s.title}
-              className={`p-4 rounded border ${
-                idx === current ? 'bg-black border-green-400' : 'bg-ub-grey border-gray-600'
-              }`}
-            >
-              <div className="font-bold">{`Step ${idx + 1}: ${s.title}`}</div>
-              {idx === current && (
-                <pre className="bg-ub-black text-green-400 p-2 mt-2 text-sm overflow-auto whitespace-pre-wrap">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="text-2xl font-semibold mb-6">WPS Attack Walkthrough</h1>
+          <ol className="relative border-l border-gray-700 pl-6 sm:pl-8" role="list">
+            {steps.map((s, idx) => {
+              const isCurrent = idx === current;
+              return (
+                <li
+                  key={s.title}
+                  className="relative pb-12 last:pb-0"
+                  aria-current={isCurrent ? 'step' : undefined}
+                >
+                  <span
+                    className={`absolute -left-[9px] sm:-left-[11px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
+                      isCurrent
+                        ? 'border-ub-green bg-ub-green shadow-[0_0_0_4px_rgba(34,197,94,0.25)]'
+                        : 'border-gray-600 bg-ub-grey'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <article
+                    className={`rounded-lg border p-4 transition-colors ${
+                      isCurrent
+                        ? 'bg-black border-ub-green shadow-[0_0_15px_rgba(34,197,94,0.25)]'
+                        : 'bg-ub-grey border-gray-700'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-400">{`Step ${idx + 1}`}</p>
+                        <h2 className="text-lg font-semibold">{s.title}</h2>
+                      </div>
+                      <time
+                        className="text-xs font-mono text-gray-400"
+                        dateTime={`2024-01-01T${s.timestamp}:00`}
+                      >
+                        {s.timestamp}
+                      </time>
+                    </div>
+                    {isCurrent && (
+                      <pre className="bg-ub-black text-green-400 p-3 mt-4 text-sm overflow-auto whitespace-pre-wrap border border-ub-green/30 rounded">
 {`$ ${s.command}
 ${s.output}`}
-                </pre>
-              )}
-            </li>
-          ))}
-        </ol>
+                      </pre>
+                    )}
+                  </article>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
         <div className="flex justify-between mt-4">
           <button
             className="px-4 py-2 bg-gray-700 rounded disabled:opacity-50"
