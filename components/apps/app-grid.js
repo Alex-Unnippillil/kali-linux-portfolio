@@ -153,7 +153,15 @@ export default function AppGrid({ openApp }) {
     const meta = data.metadata[app.id] ?? buildAppMetadata(app);
     return (
       <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
-        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+        {({
+          ref,
+          onPointerDown,
+          onPointerUp,
+          onPointerLeave,
+          onPointerCancel,
+          onFocus,
+          onBlur,
+        }) => (
           <div
             ref={ref}
             style={{
@@ -163,10 +171,6 @@ export default function AppGrid({ openApp }) {
               alignItems: 'center',
               padding: `${data.layout.paddingY}px ${data.layout.paddingX}px`,
             }}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
-            onFocus={onFocus}
-            onBlur={onBlur}
           >
             <UbuntuApp
               id={app.id}
@@ -175,6 +179,12 @@ export default function AppGrid({ openApp }) {
               displayName={<>{app.nodes}</>}
               style={data.layout.iconStyle}
               openApp={() => openApp && openApp(app.id)}
+              onPointerDown={onPointerDown}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerCancel}
+              onPointerLeave={onPointerLeave}
+              onFocus={onFocus}
+              onBlur={onBlur}
             />
           </div>
         )}
@@ -190,6 +200,7 @@ export default function AppGrid({ openApp }) {
         aria-label="Search apps"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search apps"
       />
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
