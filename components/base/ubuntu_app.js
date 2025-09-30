@@ -38,6 +38,9 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerUp,
             onPointerCancel,
+            onPointerLeave,
+            onFocus: onFocusProp,
+            onBlur: onBlurProp,
             style,
         } = this.props;
 
@@ -68,6 +71,7 @@ export class UbuntuApp extends Component {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerCancel}
+                onPointerLeave={onPointerLeave}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
@@ -76,7 +80,17 @@ export class UbuntuApp extends Component {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onFocus={(event) => {
+                    this.handlePrefetch();
+                    if (typeof onFocusProp === 'function') {
+                        onFocusProp(event);
+                    }
+                }}
+                onBlur={(event) => {
+                    if (typeof onBlurProp === 'function') {
+                        onBlurProp(event);
+                    }
+                }}
             >
                 <Image
                     width={48}

@@ -15,7 +15,7 @@ const AppTooltipContent: React.FC<AppTooltipContentProps> = ({ meta }) => {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 break-words text-left">
       {meta.title ? (
         <p className="text-sm font-semibold text-white">{meta.title}</p>
       ) : null}

@@ -1,17 +1,21 @@
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import DelayedTooltip from '../../components/ui/DelayedTooltip';
+import { useEffect, useMemo, useState } from 'react';
 import AppTooltipContent from '../../components/ui/AppTooltipContent';
+import DelayedTooltip from '../../components/ui/DelayedTooltip';
 import {
   buildAppMetadata,
   loadAppRegistry,
 } from '../../lib/appRegistry';
 
-const AppsPage = () => {
-  const [apps, setApps] = useState([]);
+type RegistryData = Awaited<ReturnType<typeof loadAppRegistry>>;
+type RegistryApp = RegistryData['apps'][number];
+type RegistryMetadata = RegistryData['metadata'];
+
+const AppsPage = (): JSX.Element => {
+  const [apps, setApps] = useState<RegistryApp[]>([]);
   const [query, setQuery] = useState('');
-  const [metadata, setMetadata] = useState({});
+  const [metadata, setMetadata] = useState<RegistryMetadata>({} as RegistryMetadata);
 
   useEffect(() => {
     let isMounted = true;
@@ -26,7 +30,7 @@ const AppsPage = () => {
     };
   }, []);
 
-  const filteredApps = useMemo(
+  const filteredApps = useMemo<RegistryApp[]>(
     () =>
       apps.filter(
         (app) =>
@@ -48,6 +52,7 @@ const AppsPage = () => {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search apps"
         className="mb-4 w-full rounded border p-2"
+        aria-label="Search apps"
       />
       <div
         id="app-grid"
@@ -61,17 +66,27 @@ const AppsPage = () => {
               key={app.id}
               content={<AppTooltipContent meta={meta} />}
             >
-              {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+              {({
+                ref,
+                onPointerDown,
+                onPointerUp,
+                onPointerLeave,
+                onPointerCancel,
+                onFocus,
+                onBlur,
+              }) => (
                 <div
                   ref={ref}
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
                   className="flex flex-col items-center"
                 >
                   <Link
                     href={`/apps/${app.id}`}
                     className="flex h-full w-full flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
                     aria-label={app.title}
+                    onPointerDown={onPointerDown}
+                    onPointerUp={onPointerUp}
+                    onPointerLeave={onPointerLeave}
+                    onPointerCancel={onPointerCancel}
                     onFocus={onFocus}
                     onBlur={onBlur}
                   >
