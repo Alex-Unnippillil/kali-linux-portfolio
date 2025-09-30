@@ -1,0 +1,29 @@
+{
+  "title": "Hydra Simulation Playbook",
+  "intro": "Learn how to demonstrate credential spraying safely inside the Hydra simulation.",
+  "sections": [
+    {
+      "heading": "Prerequisites",
+      "body": [
+        "Launch the Hydra app from the desktop or taskbar.",
+        "Select the demo target provided in the left rail."
+      ]
+    },
+    {
+      "heading": "Workflow",
+      "steps": [
+        "Choose an attack profile such as **Spray** or **Brute**.",
+        "Press **Run Simulation** to replay the canned credential attempts.",
+        "Watch the activity feed for lockout thresholds and policy reminders."
+      ]
+    },
+    {
+      "heading": "Tips",
+      "body": [
+        "Enable **Verbose Mode** to show each generated request.",
+        "Use **Reset Demo** between walkthroughs to restore the fake service state.",
+        "Share the generated report from the **Export** dropdown once the run completes."
+      ]
+    }
+  ]
+}

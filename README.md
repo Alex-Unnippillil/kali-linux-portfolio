@@ -464,6 +464,7 @@ play/pause and track controls include keyboard hotkeys.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
 - **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
+- **`components/common/DocsSidecar.tsx`** - attaches contextual documentation to windows. Content is sourced from Markdown/JSON entries declared in [`docs/app-docs.json`](./docs/app-docs.json) and fetched via `/api/docs/[id]`.
 
 ---
 
@@ -477,7 +478,8 @@ play/pause and track controls include keyboard hotkeys.
    ```
 3. Add metadata (icon, title) where appropriate.
 4. If the app needs persistent state, use `usePersistentState(key, initial, validator)`.
-5. If the app embeds external sites, **whitelist** the domain in `next.config.js` CSP (`connect-src`, `frame-src`, `img-src`) and `images.domains`.
+5. (Optional) To surface inline docs, add an entry to [`docs/app-docs.json`](./docs/app-docs.json) that points to a Markdown or JSON file under `docs/`. The sidecar will render it when the app window is open.
+6. If the app embeds external sites, **whitelist** the domain in `next.config.js` CSP (`connect-src`, `frame-src`, `img-src`) and `images.domains`.
 
 ---
 

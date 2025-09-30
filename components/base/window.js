@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import DocsSidecar from '../common/DocsSidecar';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -693,10 +694,15 @@ export class Window extends Component {
                         />
                         {(this.id === "settings"
                             ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                            : <WindowMainScreen
+                                screen={this.props.screen}
+                                title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp}
-                                context={this.props.context} />)}
+                                context={this.props.context}
+                                docs={this.props.docs}
+                                appId={this.id}
+                            />)}
                     </div>
                 </Draggable >
             </>
@@ -858,23 +864,33 @@ export function WindowEditButtons(props) {
 }
 
 // Window's Main Screen
-export class WindowMainScreen extends Component {
-    constructor() {
-        super();
-        this.state = {
-            setDarkBg: false,
-        }
-    }
-    componentDidMount() {
-        setTimeout(() => {
-            this.setState({ setDarkBg: true });
+export function WindowMainScreen(props) {
+    const [hasDarkBg, setHasDarkBg] = React.useState(false);
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            setHasDarkBg(true);
         }, 3000);
-    }
-    render() {
+        return () => clearTimeout(timer);
+    }, []);
+
+    const containerClass = "w-full flex-grow z-20 max-h-full windowMainScreen" + (hasDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey");
+    const content = (
+        <div className="h-full w-full overflow-y-auto">
+            {props.screen(props.addFolder, props.openApp, props.context)}
+        </div>
+    );
+
+    if (props.docs) {
+        const appId = props.appId || props.id || 'window';
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+            <div className={containerClass}>
+                <DocsSidecar appId={appId} doc={props.docs}>
+                    {content}
+                </DocsSidecar>
             </div>
-        )
+        );
     }
+
+    return <div className={containerClass}>{content}</div>;
 }

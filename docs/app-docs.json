@@ -1,0 +1,23 @@
+{
+  "terminal": {
+    "title": "Terminal Quickstart",
+    "summary": "Keyboard shortcuts and demo scripts for the web terminal.",
+    "source": "docs/apps/terminal.md",
+    "defaultOpen": false
+  },
+  "hydra": {
+    "title": "Hydra Simulation Playbook",
+    "summary": "Step-by-step guidance for the credential spraying demo.",
+    "source": "docs/apps/hydra.json"
+  },
+  "nmap-nse": {
+    "title": "Nmap NSE Walkthrough",
+    "summary": "Highlights the simulated workflow for NSE scripts.",
+    "source": "docs/nmap-nse-walkthrough.md"
+  },
+  "reconng": {
+    "title": "Recon-ng Workflow",
+    "summary": "Key modules and signals to explore in the Recon-ng sandbox.",
+    "source": "docs/reconng.md"
+  }
+}
