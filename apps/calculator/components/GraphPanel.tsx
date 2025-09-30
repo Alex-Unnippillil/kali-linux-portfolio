@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { create, all } from 'mathjs';
 
 const math = create(all);
@@ -199,6 +200,10 @@ export default function GraphPanel({
   const trace = useRef<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
+  const tapRef = useRef<{ id: number; x: number; y: number; time: number } | null>(null);
+  const [ariaTrace, setAriaTrace] = useState('');
+  const instructionsId = useId();
+  const liveRegionId = `${instructionsId}-live`;
 
   const draw = () => {
     const canvas = canvasRef.current;
@@ -263,75 +268,317 @@ export default function GraphPanel({
 
   useEffect(() => {
     compiled.current = compile(expression);
+    if (trace.current) {
+      const y = compiled.current(trace.current.x);
+      if (Number.isFinite(y)) {
+        trace.current = { x: trace.current.x, y };
+        setAriaTrace(
+          `Trace at (${trace.current.x.toFixed(2)}, ${trace.current.y.toFixed(2)})`,
+        );
+      } else {
+        trace.current = null;
+        setAriaTrace('');
+      }
+    }
     draw();
   }, [expression]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = () => canvas.getBoundingClientRect();
+    canvas.style.touchAction = 'pan-x pan-y';
 
-    const onMouseDown = (e: MouseEvent) => {
-      dragging.current = true;
-      last.current = { x: e.clientX, y: e.clientY };
+    const rect = () => canvas.getBoundingClientRect();
+    const toCanvas = (clientX: number, clientY: number) => {
+      const r = rect();
+      return { x: clientX - r.left, y: clientY - r.top };
     };
-    const onMouseMove = (e: MouseEvent) => {
-      if (dragging.current) {
-        origin.current.x += e.clientX - last.current.x;
-        origin.current.y += e.clientY - last.current.y;
-        last.current = { x: e.clientX, y: e.clientY };
-        draw();
+    const pointerPositions = new Map<number, { x: number; y: number }>();
+    let multiCenter: { x: number; y: number } | null = null;
+
+    const getCentroid = () => {
+      let sumX = 0;
+      let sumY = 0;
+      pointerPositions.forEach((pos) => {
+        sumX += pos.x;
+        sumY += pos.y;
+      });
+      const count = pointerPositions.size || 1;
+      return { x: sumX / count, y: sumY / count };
+    };
+
+    const setTraceFromPoint = (clientX: number, clientY: number, announce = false) => {
+      const { x: px } = toCanvas(clientX, clientY);
+      const graphX = (px - origin.current.x) / scale.current;
+      const graphY = compiled.current(graphX);
+      if (Number.isFinite(graphY)) {
+        trace.current = { x: graphX, y: graphY };
+        if (announce) {
+          setAriaTrace(`Trace at (${trace.current.x.toFixed(2)}, ${trace.current.y.toFixed(2)})`);
+        }
       } else {
-        const r = rect();
-        const px = e.clientX - r.left;
-        const x = (px - origin.current.x) / scale.current;
-        const y = compiled.current(x);
-        trace.current = Number.isFinite(y) ? { x, y } : null;
-        draw();
+        trace.current = null;
+        if (announce) {
+          setAriaTrace('Trace unavailable at that position');
+        }
+      }
+      draw();
+    };
+
+    const clearTrace = (announce = false) => {
+      trace.current = null;
+      if (announce) setAriaTrace('Trace cleared');
+      draw();
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') {
+        if (event.button !== 0) return;
+        dragging.current = true;
+        last.current = { x: event.clientX, y: event.clientY };
+        canvas.setPointerCapture(event.pointerId);
+        setTraceFromPoint(event.clientX, event.clientY);
+        return;
+      }
+
+      pointerPositions.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointerPositions.size === 1) {
+        tapRef.current = {
+          id: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          time: performance.now(),
+        };
+      } else {
+        tapRef.current = null;
+      }
+      if (pointerPositions.size >= 2) {
+        multiCenter = getCentroid();
+        canvas.style.touchAction = 'none';
       }
     };
-    const onMouseUp = () => {
-      dragging.current = false;
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') {
+        if (dragging.current) {
+          origin.current.x += event.clientX - last.current.x;
+          origin.current.y += event.clientY - last.current.y;
+          last.current = { x: event.clientX, y: event.clientY };
+          draw();
+        } else {
+          setTraceFromPoint(event.clientX, event.clientY);
+        }
+        return;
+      }
+
+      if (pointerPositions.has(event.pointerId)) {
+        pointerPositions.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
+
+      if (pointerPositions.size >= 2 && multiCenter) {
+        const next = getCentroid();
+        origin.current.x += next.x - multiCenter.x;
+        origin.current.y += next.y - multiCenter.y;
+        multiCenter = next;
+        draw();
+      } else if (pointerPositions.size === 1 && tapRef.current?.id === event.pointerId) {
+        const dx = event.clientX - tapRef.current.x;
+        const dy = event.clientY - tapRef.current.y;
+        if (Math.hypot(dx, dy) > 10) {
+          tapRef.current = null;
+        }
+      }
     };
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const r = rect();
-      const px = e.clientX - r.left;
-      const py = e.clientY - r.top;
-      const x = (px - origin.current.x) / scale.current;
-      const y = (py - origin.current.y) / scale.current;
-      const zoom = Math.exp(-e.deltaY / 200);
-      scale.current *= zoom;
-      origin.current.x = px - x * scale.current;
-      origin.current.y = py - y * scale.current;
-      draw();
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') {
+        if (dragging.current) {
+          dragging.current = false;
+          if (canvas.hasPointerCapture?.(event.pointerId)) {
+            canvas.releasePointerCapture(event.pointerId);
+          }
+        }
+        return;
+      }
+
+      pointerPositions.delete(event.pointerId);
+      if (pointerPositions.size < 2) {
+        multiCenter = null;
+        canvas.style.touchAction = 'pan-x pan-y';
+      }
+
+      if (tapRef.current?.id === event.pointerId) {
+        if (performance.now() - tapRef.current.time < 500) {
+          setTraceFromPoint(event.clientX, event.clientY, true);
+        }
+        tapRef.current = null;
+      }
     };
-    const onLeave = () => {
-      trace.current = null;
-      draw();
+
+    const onPointerCancel = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') {
+        dragging.current = false;
+        return;
+      }
+      pointerPositions.delete(event.pointerId);
+      tapRef.current = null;
+      if (pointerPositions.size < 2) {
+        multiCenter = null;
+        canvas.style.touchAction = 'pan-x pan-y';
+      }
     };
-    canvas.addEventListener('mousedown', onMouseDown);
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
-    canvas.addEventListener('mouseleave', onLeave);
-    window.addEventListener('mouseup', onMouseUp);
+
+    const onPointerLeave = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse' && !dragging.current) {
+        clearTrace();
+      }
+    };
+
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerCancel);
+    canvas.addEventListener('pointerleave', onPointerLeave);
+
     return () => {
-      canvas.removeEventListener('mousedown', onMouseDown);
-      canvas.removeEventListener('mousemove', onMouseMove);
-      canvas.removeEventListener('wheel', onWheel);
-      canvas.removeEventListener('mouseleave', onLeave);
-      window.removeEventListener('mouseup', onMouseUp);
+      canvas.style.touchAction = '';
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerCancel);
+      canvas.removeEventListener('pointerleave', onPointerLeave);
     };
   }, []);
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const panStep = 20;
+    const zoomFactor = 1.1;
+    const traceStep = 0.25;
+
+    if (event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const baseX = trace.current
+        ? trace.current.x
+        : (canvas.width / 2 - origin.current.x) / scale.current;
+      const nextX = baseX + direction * traceStep;
+      const nextY = compiled.current(nextX);
+      if (Number.isFinite(nextY)) {
+        trace.current = { x: nextX, y: nextY };
+        setAriaTrace(`Trace at (${nextX.toFixed(2)}, ${nextY.toFixed(2)})`);
+        draw();
+      } else {
+        trace.current = null;
+        setAriaTrace('Trace unavailable at that position');
+        draw();
+      }
+      return;
+    }
+
+    const zoomAtCenter = (factor: number) => {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const graphX = (centerX - origin.current.x) / scale.current;
+      const graphY = (centerY - origin.current.y) / scale.current;
+      scale.current *= factor;
+      origin.current.x = centerX - graphX * scale.current;
+      origin.current.y = centerY - graphY * scale.current;
+      draw();
+    };
+
+    switch (event.key) {
+      case 'ArrowUp':
+        event.preventDefault();
+        origin.current.y -= panStep;
+        draw();
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        origin.current.y += panStep;
+        draw();
+        break;
+      case 'ArrowLeft':
+        event.preventDefault();
+        origin.current.x -= panStep;
+        draw();
+        break;
+      case 'ArrowRight':
+        event.preventDefault();
+        origin.current.x += panStep;
+        draw();
+        break;
+      case '+':
+      case '=':
+      case 'Add':
+        event.preventDefault();
+        zoomAtCenter(zoomFactor);
+        break;
+      case '-':
+      case '_':
+      case 'Subtract':
+        event.preventDefault();
+        zoomAtCenter(1 / zoomFactor);
+        break;
+      case '0':
+      case 'Home':
+        event.preventDefault();
+        origin.current.x = canvas.width / 2;
+        origin.current.y = canvas.height / 2;
+        scale.current = 40;
+        setAriaTrace('View reset');
+        draw();
+        break;
+      case 'Enter':
+      case ' ': {
+        event.preventDefault();
+        if (trace.current) {
+          trace.current = null;
+          setAriaTrace('Trace cleared');
+          draw();
+        } else {
+          const centerX = canvas.width / 2;
+          const graphX = (centerX - origin.current.x) / scale.current;
+          const graphY = compiled.current(graphX);
+          if (Number.isFinite(graphY)) {
+            trace.current = { x: graphX, y: graphY };
+            setAriaTrace(`Trace at (${graphX.toFixed(2)}, ${graphY.toFixed(2)})`);
+            draw();
+          } else {
+            setAriaTrace('Trace unavailable at center');
+          }
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      role="img"
-      aria-label="Graph panel"
-    />
+    <div className="flex flex-col gap-2">
+      <p id={instructionsId} className="sr-only">
+        Use arrow keys to pan the graph, plus or minus to zoom, and zero to reset the view. Press
+        Enter or Space to toggle a trace at the center. Hold Shift and press the left or right arrow
+        keys to move the trace along the curve. On touch devices, tap to reveal coordinates and use
+        two fingers to pan without blocking page scroll.
+      </p>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        role="img"
+        aria-label="Graph panel"
+        aria-describedby={`${instructionsId} ${liveRegionId}`}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      />
+      <div id={liveRegionId} aria-live="polite" className="sr-only">
+        {ariaTrace}
+      </div>
+    </div>
   );
 }
 
