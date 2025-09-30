@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { telemetryStore } from '../../lib/telemetryStore';
 
 interface ToastProps {
   message: string;
@@ -6,6 +7,8 @@ interface ToastProps {
   onAction?: () => void;
   onClose?: () => void;
   duration?: number;
+  level?: 'info' | 'warn' | 'error';
+  source?: string;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -14,9 +17,12 @@ const Toast: React.FC<ToastProps> = ({
   onAction,
   onClose,
   duration = 6000,
+  level = 'info',
+  source,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
+  const lastLoggedMessage = useRef<string | null>(null);
 
   useEffect(() => {
     setVisible(true);
@@ -27,6 +33,18 @@ const Toast: React.FC<ToastProps> = ({
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [duration, onClose]);
+
+  useEffect(() => {
+    if (!telemetryStore.enabled) return;
+    if (!message) return;
+    if (lastLoggedMessage.current === message) return;
+    lastLoggedMessage.current = message;
+    telemetryStore.logToast(message, {
+      actionLabel,
+      level,
+      source,
+    });
+  }, [actionLabel, level, message, source]);
 
   return (
     <div

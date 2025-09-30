@@ -101,6 +101,7 @@ export default function Overlay({
           message={toast}
           onClose={() => setToast('')}
           duration={1000000}
+          source="Game overlay"
         />
       )}
     </>
