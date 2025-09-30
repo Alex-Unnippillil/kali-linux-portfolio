@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import type { TouchEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
 
@@ -106,6 +107,207 @@ interface Project {
   type: string;
   thumbnail: string;
   demo?: string;
+  repo?: string;
+}
+
+const ACTION_WIDTH = 160;
+const SWIPE_THRESHOLD = 80;
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+interface ProjectCardProps {
+  project: Project;
+  isActive: boolean;
+  onOpen: (project: Project) => void;
+  onCompare: (project: Project) => void;
+  onSwipeOpen: () => void;
+  onSwipeClose: () => void;
+  isSelectedForCompare: boolean;
+}
+
+function ProjectCard({
+  project,
+  isActive,
+  onOpen,
+  onCompare,
+  onSwipeOpen,
+  onSwipeClose,
+  isSelectedForCompare,
+}: ProjectCardProps) {
+  const [offset, setOffset] = useState(0);
+  const offsetRef = useRef(0);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const baseOffsetRef = useRef(0);
+  const isDraggingRef = useRef(false);
+
+  useEffect(() => {
+    if (isDraggingRef.current) return;
+    const target = isActive ? -ACTION_WIDTH : 0;
+    setOffset(target);
+    offsetRef.current = target;
+  }, [isActive]);
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches) {
+      return;
+    }
+    const touch = event.touches[0];
+    startRef.current = { x: touch.clientX, y: touch.clientY };
+    baseOffsetRef.current = offsetRef.current;
+    isDraggingRef.current = false;
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    if (!startRef.current) return;
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - startRef.current.x;
+    const deltaY = touch.clientY - startRef.current.y;
+
+    if (!isDraggingRef.current) {
+      if (Math.abs(deltaX) < 10 || Math.abs(deltaX) <= Math.abs(deltaY)) {
+        return;
+      }
+      isDraggingRef.current = true;
+    }
+
+    const nextOffset = clamp(baseOffsetRef.current + deltaX, -ACTION_WIDTH, 0);
+    setOffset(nextOffset);
+    offsetRef.current = nextOffset;
+  };
+
+  const handleTouchEnd = () => {
+    if (!startRef.current) return;
+    const shouldOpen = offsetRef.current <= -SWIPE_THRESHOLD;
+    if (shouldOpen) {
+      onSwipeOpen();
+      setOffset(-ACTION_WIDTH);
+      offsetRef.current = -ACTION_WIDTH;
+    } else {
+      onSwipeClose();
+      setOffset(0);
+      offsetRef.current = 0;
+    }
+    startRef.current = null;
+    isDraggingRef.current = false;
+  };
+
+  const handleToggleActions = () => {
+    if (isActive) {
+      onSwipeClose();
+      setOffset(0);
+      offsetRef.current = 0;
+    } else {
+      onSwipeOpen();
+      setOffset(-ACTION_WIDTH);
+      offsetRef.current = -ACTION_WIDTH;
+    }
+  };
+
+  return (
+    <div className="relative">
+      <div className="absolute inset-y-0 right-0 flex w-40 bg-blue-600 text-white sm:hidden">
+        <button
+          type="button"
+          className="w-1/2 px-3 text-sm font-medium border-r border-white/20"
+          onClick={() => {
+            onOpen(project);
+            onSwipeClose();
+          }}
+        >
+          Open
+        </button>
+        <button
+          type="button"
+          className="w-1/2 px-3 text-sm font-medium"
+          onClick={() => {
+            onCompare(project);
+            onSwipeClose();
+          }}
+          aria-pressed={isSelectedForCompare}
+        >
+          Compare
+        </button>
+      </div>
+      <div
+        className="bg-white border rounded-lg shadow-sm overflow-hidden transition-transform duration-150 ease-out"
+        style={{ transform: `translateX(${offset}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+      >
+        <div className="flex flex-col gap-3 p-4 sm:flex-row">
+          <div className="sm:w-48 sm:flex-none">
+            <div className="aspect-video w-full overflow-hidden rounded-md bg-gray-100">
+              <img src={project.thumbnail} alt={project.title} className="h-full w-full object-cover" />
+            </div>
+          </div>
+          <div className="flex-1 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
+                <p className="text-sm text-gray-600">{project.description}</p>
+              </div>
+              <button
+                type="button"
+                className="sm:hidden text-xs font-medium text-blue-600"
+                onClick={handleToggleActions}
+                aria-expanded={isActive}
+              >
+                Actions
+              </button>
+            </div>
+            <dl className="grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-2">
+              <div>
+                <dt className="font-semibold text-gray-800">Stack</dt>
+                <dd>{project.stack.join(', ')}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-gray-800">Year</dt>
+                <dd>{project.year}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-gray-800">Type</dt>
+                <dd className="capitalize">{project.type}</dd>
+              </div>
+              {project.tags.length > 0 && (
+                <div>
+                  <dt className="font-semibold text-gray-800">Tags</dt>
+                  <dd className="flex flex-wrap gap-1">
+                    {project.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              )}
+            </dl>
+            <div className="hidden gap-3 sm:flex">
+              <button
+                type="button"
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                onClick={() => onOpen(project)}
+              >
+                Open
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-blue-600 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                onClick={() => onCompare(project)}
+                aria-pressed={isSelectedForCompare}
+              >
+                {isSelectedForCompare ? 'Remove from compare' : 'Compare'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ProjectGalleryPage() {
@@ -119,8 +321,9 @@ export default function ProjectGalleryPage() {
   const [tags, setTags] = usePersistentState<string[]>('pg-tags', []);
   const [search, setSearch] = usePersistentState<string>('pg-search', '');
   const [demoOnly, setDemoOnly] = usePersistentState<boolean>('pg-demo', false);
+  const [compareSelection, setCompareSelection] = useState<Project[]>([]);
+  const [activeSwipe, setActiveSwipe] = useState<number | null>(null);
 
-  // load projects
   useEffect(() => {
     setLoading(true);
     fetch('/projects.json')
@@ -130,7 +333,6 @@ export default function ProjectGalleryPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // initialize from query string
   useEffect(() => {
     if (!router.isReady) return;
     const {
@@ -158,7 +360,6 @@ export default function ProjectGalleryPage() {
     setDemoOnly,
   ]);
 
-  // encode selection in query string
   useEffect(() => {
     const query: Record<string, string> = {};
     if (tech.length) query.tech = tech.join(',');
@@ -203,14 +404,36 @@ export default function ProjectGalleryPage() {
     [projects, tech, year, type, tags, search, demoOnly]
   );
 
+  const handleOpen = (project: Project) => {
+    const url = project.demo || project.repo;
+    if (!url) return;
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleCompare = (project: Project) => {
+    setCompareSelection((prev) => {
+      const exists = prev.find((p) => p.id === project.id);
+      if (exists) {
+        return prev.filter((p) => p.id !== project.id);
+      }
+      if (prev.length === 2) {
+        return [prev[1], project];
+      }
+      return [...prev, project];
+    });
+  };
+
   return (
     <div className="p-4 space-y-4 text-black">
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
           placeholder="Search..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search projects"
           className="px-2 py-1 border rounded"
         />
         <FilterChip
@@ -268,50 +491,68 @@ export default function ProjectGalleryPage() {
           />
         ))}
       </div>
-      <div className="grid gap-3 min-[320px]:grid-cols-2 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {loading
           ? Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-72 flex flex-col border rounded overflow-hidden animate-pulse"
-              >
-                <div className="w-full h-40 bg-gray-300" />
-                <div className="p-2 space-y-2 flex-1">
-                  <div className="h-4 bg-gray-300 rounded w-3/4" />
-                  <div className="h-3 bg-gray-300 rounded w-1/2" />
+              <div key={i} className="space-y-3 rounded-lg border p-4">
+                <div className="aspect-video w-full rounded-md bg-gray-200" />
+                <div className="space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-gray-200" />
+                  <div className="h-3 w-2/3 rounded bg-gray-200" />
+                  <div className="h-3 w-1/2 rounded bg-gray-200" />
                 </div>
               </div>
             ))
           : filtered.map((p) => (
-              <div
+              <ProjectCard
                 key={p.id}
-                tabIndex={0}
-                className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
-                aria-label={`${p.title}: ${p.description}`}
-              >
-                <div className="w-full aspect-video overflow-hidden">
-                  <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-2 flex-1">
-                  <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>
-                  <p className="text-sm">{p.description}</p>
-                </div>
-                <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
-                  <div className="p-2 flex flex-wrap gap-1">
-                    {p.tags.map((t) => (
-                      <span key={t} className="bg-white text-black rounded px-1 text-xs">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-auto p-2 text-right">
-                    <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
-                  </div>
-                </div>
-              </div>
+                project={p}
+                isActive={activeSwipe === p.id}
+                onOpen={handleOpen}
+                onCompare={handleCompare}
+                onSwipeOpen={() => setActiveSwipe(p.id)}
+                onSwipeClose={() => setActiveSwipe((current) => (current === p.id ? null : current))}
+                isSelectedForCompare={compareSelection.some((item) => item.id === p.id)}
+              />
             ))}
       </div>
+      {!loading && filtered.length === 0 && (
+        <div className="rounded-lg border border-dashed bg-white/60 p-6 text-center text-sm text-gray-600">
+          <p className="font-medium text-gray-800">No projects match your filters.</p>
+          <p>
+            Try clearing the search or deselecting a few tags to explore the full catalog.
+          </p>
+        </div>
+      )}
+      {compareSelection.length > 0 && (
+        <div className="space-y-3 rounded-lg border bg-white p-4">
+          <h2 className="text-base font-semibold text-gray-900">Compare selection</h2>
+          {compareSelection.length === 1 ? (
+            <p className="text-sm text-gray-600">
+              {compareSelection[0].title} is ready. Swipe another project and tap compare to see them side-by-side.
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {compareSelection.map((project) => (
+                <div key={project.id} className="rounded-md border p-3 text-sm text-gray-700">
+                  <h3 className="text-base font-semibold text-gray-900">{project.title}</h3>
+                  <p className="mt-1 text-gray-600">{project.description}</p>
+                  <dl className="mt-3 space-y-1">
+                    <div>
+                      <dt className="font-medium text-gray-800">Stack</dt>
+                      <dd>{project.stack.join(', ')}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-gray-800">Highlights</dt>
+                      <dd>{project.tags.join(', ')}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-
