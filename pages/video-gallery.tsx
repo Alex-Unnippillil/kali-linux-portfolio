@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import React, { useEffect, useState } from 'react';
 
 interface Video {
@@ -45,6 +45,7 @@ const VideoGallery: React.FC = () => {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="mb-4 w-full max-w-md px-4 py-2 border rounded"
+        aria-label="Search videos"
       />
       {playing && (
         <div className="mb-4 w-full max-w-2xl aspect-video">

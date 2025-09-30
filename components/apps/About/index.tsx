@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
@@ -355,6 +355,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        aria-label={`${title} badge filter`}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (

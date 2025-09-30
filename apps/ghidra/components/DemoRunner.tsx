@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import GhidraApp from '../../../components/apps/ghidra';
 
 export default function DemoRunner() {

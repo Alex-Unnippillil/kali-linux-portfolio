@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 

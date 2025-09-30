@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import AboutApp from '../../components/apps/About';
 
 function GitHubIcon({ className }: { className?: string }) {

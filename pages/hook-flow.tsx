@@ -1,6 +1,6 @@
 "use client";
 
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import React, { useState } from 'react';
 
 const HookFlow: React.FC = () => {

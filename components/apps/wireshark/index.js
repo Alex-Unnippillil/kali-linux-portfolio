@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
 import { protocolName, getRowColor, matchesDisplayFilter } from './utils';
@@ -302,11 +302,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
         <datalist id="bpf-suggestions">
-          <option value="tcp" />
-          <option value="udp" />
-          <option value="icmp" />
-          <option value="port 80" />
-          <option value="host 10.0.0.1" />
+          <option value="tcp">tcp</option>
+          <option value="udp">udp</option>
+          <option value="icmp">icmp</option>
+          <option value="port 80">port 80</option>
+          <option value="host 10.0.0.1">host 10.0.0.1</option>
         </datalist>
         <a
           href="https://www.wireshark.org/docs/dfref/"
@@ -321,6 +321,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           onClick={handlePause}
           className="px-3 py-1 bg-gray-700 rounded"
           aria-pressed={paused}
+          aria-label={paused ? 'Resume capture playback' : 'Pause capture playback'}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
@@ -349,6 +350,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
             protocolFilter === '' ? 'bg-gray-700' : 'bg-gray-800'
           }`}
           onClick={() => setProtocolFilter('')}
+          aria-label="Show all protocols"
         >
           All
         </button>
@@ -359,6 +361,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
               protocolFilter === proto ? 'bg-gray-700' : 'bg-gray-800'
             }`}
             onClick={() => setProtocolFilter(proto)}
+            aria-label={`Filter ${proto} traffic`}
           >
             {proto}
           </button>
@@ -370,6 +373,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
             view === 'packets' ? 'bg-gray-700' : 'bg-gray-800'
           }`}
           onClick={() => setView('packets')}
+          aria-label="Show packet list"
         >
           Packets
         </button>
@@ -378,6 +382,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
             view === 'flows' ? 'bg-gray-700' : 'bg-gray-800'
           }`}
           onClick={() => setView('flows')}
+          aria-label="Show flow summaries"
         >
           Flows
         </button>
