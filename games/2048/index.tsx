@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GameShell from '../../components/games/GameShell';
 import { toPng } from 'html-to-image';
 import useOPFSLeaderboard from '../../hooks/useOPFSLeaderboard';
@@ -71,7 +71,8 @@ const Game2048 = () => {
   const [paused, setPaused] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
+  const lastTouch = useRef<{ x: number; y: number; time: number } | null>(null);
   const { scores, addScore } = useOPFSLeaderboard('game_2048');
 
   // load best score from localStorage
@@ -200,23 +201,49 @@ const Game2048 = () => {
   // touch controls
   const handleTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
-    touchStart.current = { x: t.clientX, y: t.clientY };
+    const time = performance.now();
+    touchStart.current = { x: t.clientX, y: t.clientY, time };
+    lastTouch.current = { x: t.clientX, y: t.clientY, time };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart.current) return;
+    const t = e.touches[0];
+    lastTouch.current = { x: t.clientX, y: t.clientY, time: performance.now() };
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart.current || paused) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchStart.current.x;
-    const dy = t.clientY - touchStart.current.y;
+    if (!touchStart.current) return;
+    if (paused) {
+      touchStart.current = null;
+      lastTouch.current = null;
+      return;
+    }
+    const endTouch = lastTouch.current ?? {
+      x: e.changedTouches[0].clientX,
+      y: e.changedTouches[0].clientY,
+      time: performance.now(),
+    };
+    const start = touchStart.current;
+    const dx = endTouch.x - start.x;
+    const dy = endTouch.y - start.y;
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
-    if (Math.max(absX, absY) < 30) return;
+    const distance = Math.max(absX, absY);
+    const elapsed = Math.max(endTouch.time - start.time, 1);
+    const velocity = distance / elapsed;
+    if (distance < 30 && velocity < 0.45) {
+      touchStart.current = null;
+      lastTouch.current = null;
+      return;
+    }
     if (absX > absY) {
       move(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
     } else {
       move(dy > 0 ? 'ArrowDown' : 'ArrowUp');
     }
     touchStart.current = null;
+    lastTouch.current = null;
   };
 
   // record score when game ends
@@ -264,6 +291,26 @@ const Game2048 = () => {
         </select>
       </label>
     </div>
+  );
+
+  const boardStyle = useMemo<
+    React.CSSProperties & Record<'--tile-size' | '--tile-gap', string>
+  >(
+    () => ({
+      '--tile-size':
+        boardSize === 5 ? 'clamp(2.5rem, 17vw, 4.75rem)' : 'clamp(3rem, 20vw, 5.5rem)',
+      '--tile-gap': boardSize === 5 ? 'clamp(0.3rem, 1.5vw, 0.45rem)' : 'clamp(0.35rem, 1.7vw, 0.55rem)',
+      gridTemplateColumns: `repeat(${boardSize}, var(--tile-size))`,
+      gridAutoRows: 'var(--tile-size)',
+      gap: 'var(--tile-gap)',
+      justifyContent: 'center',
+    }),
+    [boardSize]
+  );
+
+  const gesturePadding = useMemo(
+    () => (boardSize === 5 ? 'clamp(0.75rem, 7vw, 1.75rem)' : 'clamp(1rem, 9vw, 2.25rem)'),
+    [boardSize]
   );
 
   return (
@@ -324,20 +371,21 @@ const Game2048 = () => {
           </div>
         </div>
         <div
+          className="relative flex-1 w-full touch-none"
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className={`grid w-full max-w-sm ${
-            boardSize === 5 ? 'grid-cols-5' : 'grid-cols-4'
-          } gap-1.5`}
+          style={{ padding: gesturePadding }}
         >
+          <div className="grid mx-auto" style={boardStyle}>
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => (
               <div
                 key={`${rIdx}-${cIdx}`}
-                className="w-full aspect-square transition-transform duration-[120ms]"
+                className="transition-transform duration-[120ms] will-change-transform"
               >
                 <div
-                  className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded transition-transform duration-[150ms] ${
+                  className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded transition-transform duration-[150ms] will-change-transform ${
                     cell ? currentSkin[cell] || 'bg-gray-700' : 'bg-gray-800'
                   } ${
                     merged.some(([r, c]) => r === rIdx && c === cIdx)
@@ -350,6 +398,7 @@ const Game2048 = () => {
               </div>
             ))
           )}
+          </div>
         </div>
         {(won || lost) && (
           <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
