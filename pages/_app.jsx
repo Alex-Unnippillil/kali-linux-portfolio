@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -14,11 +14,13 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
+import PerformanceHUD from '../components/common/PerformanceHUD';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
+import { useRouter } from 'next/router';
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
@@ -28,7 +30,37 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const router = useRouter();
+  const [showPerfHUD, setShowPerfHUD] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const computeFlag = () => {
+      const params = new URLSearchParams(window.location.search);
+      const value = params.get('perf');
+      if (value === null) return false;
+      const normalized = value.toLowerCase();
+      if (normalized === '0' || normalized === 'false' || normalized === 'off') return false;
+      return true;
+    };
+
+    const update = () => {
+      setShowPerfHUD(computeFlag());
+    };
+
+    update();
+
+    window.addEventListener('popstate', update);
+    router.events.on('routeChangeComplete', update);
+    router.events.on('hashChangeComplete', update);
+
+    return () => {
+      window.removeEventListener('popstate', update);
+      router.events.off('routeChangeComplete', update);
+      router.events.off('hashChangeComplete', update);
+    };
+  }, [router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
@@ -149,6 +181,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -163,6 +196,7 @@ function MyApp(props) {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
+              <PerformanceHUD visible={showPerfHUD} />
               <Analytics
                 beforeSend={(e) => {
                   if (e.url.includes('/admin') || e.url.includes('/private')) return null;

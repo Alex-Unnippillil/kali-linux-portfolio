@@ -113,6 +113,16 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 
 ---
 
+## Performance HUD for QA
+
+- Append `?perf` to any URL to enable the in-app performance HUD.
+- The overlay surfaces hydration lifecycle markers and live Web Vitals collected via the [`web-vitals`](https://github.com/GoogleChrome/web-vitals) package.
+- Remove the flag or use `?perf=0` to disable it during navigation.
+
+For onboarding details and screenshots of the overlay, see [`docs/performance-hud.md`](./docs/performance-hud.md).
+
+---
+
 ## Tech Stack
 
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
