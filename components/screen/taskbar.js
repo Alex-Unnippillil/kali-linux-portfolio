@@ -18,15 +18,8 @@ export default function Taskbar(props) {
     return (
 
         <div
-            className="absolute bottom-0 left-0 z-40 flex w-full items-center justify-start bg-black bg-opacity-50 backdrop-blur-sm"
+            className="global-footer absolute bottom-0 left-0 z-40 flex w-full items-center justify-start bg-black bg-opacity-50 backdrop-blur-sm"
             role="toolbar"
-            style={{
-                minHeight: 'calc(var(--shell-taskbar-height, 2.5rem) + var(--safe-area-bottom, 0px))',
-                paddingTop: '0.35rem',
-                paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 0.35rem)',
-                paddingLeft: 'calc(var(--shell-taskbar-padding-x, 0.75rem) + var(--safe-area-left, 0px))',
-                paddingRight: 'calc(var(--shell-taskbar-padding-x, 0.75rem) + var(--safe-area-right, 0px))',
-            }}
         >
             <div
                 className="flex items-center overflow-x-auto"
