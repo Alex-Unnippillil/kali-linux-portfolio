@@ -11,7 +11,7 @@ interface Props {
 export default function ExplainerPane({ lines, resources }: Props) {
   return (
     <aside
-      className="text-xs p-2 border-l border-ub-cool-grey overflow-auto h-full"
+      className="h-full overflow-auto border-t border-ub-cool-grey p-2 text-xs lg:border-t-0 lg:border-l"
       aria-label="explainer pane"
     >
       <h3 className="font-bold mb-2">Key Points</h3>
