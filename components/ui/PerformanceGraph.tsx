@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 const SAMPLE_INTERVAL = 1000;
 const MAX_POINTS = 32;
-const GRAPH_HEIGHT = 18;
-const GRAPH_WIDTH = 80;
+const SPARKLINE_HEIGHT = 18;
+const SPARKLINE_WIDTH = 120;
+const FULL_GRAPH_HEIGHT = 48;
+const FULL_GRAPH_WIDTH = 280;
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -49,12 +51,17 @@ type PerformanceGraphProps = {
 
 const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [points, setPoints] = useState<number[]>(() =>
     Array.from({ length: MAX_POINTS }, (_, index) => 0.32 + (index % 3) * 0.04)
   );
   const timeoutRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastSampleRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
+  const graphInstanceId = useId();
+
+  const graphWidth = isExpanded ? FULL_GRAPH_WIDTH : SPARKLINE_WIDTH;
+  const graphHeight = isExpanded ? FULL_GRAPH_HEIGHT : SPARKLINE_HEIGHT;
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -113,31 +120,33 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
     }
 
     const visiblePoints = points.slice(-MAX_POINTS);
-    const step = visiblePoints.length > 1 ? GRAPH_WIDTH / (visiblePoints.length - 1) : GRAPH_WIDTH;
+    const step = visiblePoints.length > 1 ? graphWidth / (visiblePoints.length - 1) : graphWidth;
 
     return visiblePoints
       .map((value, index) => {
         const clamped = Math.max(0, Math.min(1, value));
         const x = Number((index * step).toFixed(2));
-        const y = Number(((1 - clamped) * GRAPH_HEIGHT).toFixed(2));
+        const y = Number(((1 - clamped) * graphHeight).toFixed(2));
         return `${index === 0 ? 'M' : 'L'}${x} ${y}`;
       })
       .join(' ');
-  }, [points]);
+  }, [graphHeight, graphWidth, points]);
 
   return (
     <div
       className={
-        'hidden items-center pr-2 text-ubt-grey/70 sm:flex md:pr-3 lg:pr-4' + (className ? ` ${className}` : '')
+        'flex w-full max-w-xs items-center justify-between gap-3 pr-2 text-ubt-grey/70 sm:max-w-sm md:pr-3 lg:pr-4' +
+        (className ? ` ${className}` : '')
       }
-      aria-hidden="true"
       data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}
+      data-view={isExpanded ? 'expanded' : 'compact'}
     >
       <svg
-        width={GRAPH_WIDTH}
-        height={GRAPH_HEIGHT}
-        viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
-        className="opacity-90"
+        id={`${graphInstanceId}-graph`}
+        width={graphWidth}
+        height={graphHeight}
+        viewBox={`0 0 ${graphWidth} ${graphHeight}`}
+        className="shrink-0 opacity-90"
         role="presentation"
         focusable="false"
       >
@@ -151,11 +160,20 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
           d={path}
           fill="none"
           stroke="url(#kaliSpark)"
-          strokeWidth={1.6}
+          strokeWidth={isExpanded ? 2 : 1.6}
           strokeLinecap="round"
           shapeRendering="geometricPrecision"
         />
       </svg>
+      <button
+        type="button"
+        className="ml-auto inline-flex shrink-0 items-center rounded border border-ubt-blue/40 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-ubt-blue transition hover:border-ubt-blue hover:text-ubt-blue focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue/70"
+        onClick={() => setIsExpanded(prev => !prev)}
+        aria-expanded={isExpanded}
+        aria-controls={`${graphInstanceId}-graph`}
+      >
+        {isExpanded ? 'Compact View' : 'Full View'}
+      </button>
     </div>
   );
 };
