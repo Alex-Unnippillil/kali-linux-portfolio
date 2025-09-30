@@ -40,8 +40,34 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
+  const [isMobile, setIsMobile] = useState(false);
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const idRef = useRef(`tabbed-window-${Math.random().toString(36).slice(2)}`);
+  const tabsRef = useRef(tabs);
+  const skipHistoryUpdateRef = useRef(false);
+  const hasInitializedHistoryRef = useRef(false);
+
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    const applyMatches = (matches: boolean) => setIsMobile(matches);
+    const handleChange = (event: MediaQueryListEvent) => applyMatches(event.matches);
+
+    applyMatches(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -64,12 +90,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     [onTabsChange],
   );
 
-  const setActive = useCallback(
-    (id: string) => {
-      setActiveId(id);
-    },
-    [],
-  );
+  const setActive = useCallback((id: string) => {
+    setActiveId((prev) => (prev === id ? prev : id));
+  }, []);
 
   const closeTab = useCallback(
     (id: string) => {
@@ -98,6 +121,50 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     updateTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as
+        | {
+            tabbedWindows?: Record<string, string>;
+          }
+        | null
+        | undefined;
+      const targetId = state?.tabbedWindows?.[idRef.current];
+      if (!targetId) return;
+      const exists = tabsRef.current.some((t) => t.id === targetId);
+      if (!exists) return;
+      skipHistoryUpdateRef.current = true;
+      setActiveId(targetId);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!activeId) return;
+
+    const state = window.history.state ?? {};
+    const tabbedWindows = { ...(state.tabbedWindows ?? {}), [idRef.current]: activeId };
+    const nextState = { ...state, tabbedWindows };
+
+    if (!hasInitializedHistoryRef.current) {
+      hasInitializedHistoryRef.current = true;
+      window.history.replaceState(nextState, '');
+      return;
+    }
+
+    if (skipHistoryUpdateRef.current) {
+      skipHistoryUpdateRef.current = false;
+      return;
+    }
+
+    window.history.pushState(nextState, '');
+  }, [activeId]);
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
@@ -162,17 +229,25 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
   };
 
+  const tabListClassName = [
+    'flex bg-gray-800 text-white text-sm overflow-x-auto',
+    isMobile ? 'sticky top-0 z-10' : 'flex-shrink-0',
+  ].join(' ');
+
+  const activeTab = tabs.find((t) => t.id === activeId);
+
   return (
     <div
       className={`flex flex-col w-full h-full ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className={tabListClassName} role="tablist" aria-orientation="horizontal">
         {tabs.map((t, i) => (
-          <div
+          <button
             key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
+            type="button"
+            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none focus:outline-none focus-visible:ring ${
               t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
             }`}
             draggable
@@ -180,10 +255,16 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             onDragOver={handleDragOver(i)}
             onDrop={handleDrop(i)}
             onClick={() => setActive(t.id)}
+            role="tab"
+            aria-selected={t.id === activeId}
+            aria-controls={`${idRef.current}-${t.id}-panel`}
+            id={`${idRef.current}-${t.id}-tab`}
+            title={t.title}
           >
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
               <button
+                type="button"
                 className="p-0.5"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -194,7 +275,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                 ×
               </button>
             )}
-          </div>
+          </button>
         ))}
         {onNewTab && (
           <button
@@ -207,20 +288,40 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         )}
       </div>
       <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
-            <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+        {isMobile ? (
+          activeTab && (
+            <TabContext.Provider
+              value={{ id: activeTab.id, active: true, close: () => closeTab(activeTab.id) }}
             >
-              {t.content}
-            </div>
-          </TabContext.Provider>
-        ))}
+              <div
+                className="absolute inset-0 w-full h-full overflow-auto"
+                role="tabpanel"
+                id={`${idRef.current}-${activeTab.id}-panel`}
+                aria-labelledby={`${idRef.current}-${activeTab.id}-tab`}
+              >
+                {activeTab.content}
+              </div>
+            </TabContext.Provider>
+          )
+        ) : (
+          tabs.map((t) => (
+            <TabContext.Provider
+              key={t.id}
+              value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
+            >
+              <div
+                className={`absolute inset-0 w-full h-full ${
+                  t.id === activeId ? 'block' : 'hidden'
+                }`}
+                role="tabpanel"
+                id={`${idRef.current}-${t.id}-panel`}
+                aria-labelledby={`${idRef.current}-${t.id}-tab`}
+              >
+                {t.content}
+              </div>
+            </TabContext.Provider>
+          ))
+        )}
       </div>
     </div>
   );
