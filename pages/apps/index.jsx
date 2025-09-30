@@ -61,11 +61,22 @@ const AppsPage = () => {
               key={app.id}
               content={<AppTooltipContent meta={meta} />}
             >
-              {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+              {({
+                ref,
+                onPointerEnter,
+                onPointerLeave,
+                onPointerCancel,
+                onPointerDown,
+                onFocus,
+                onBlur,
+                dismiss,
+              }) => (
                 <div
                   ref={ref}
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
+                  onPointerEnter={onPointerEnter}
+                  onPointerLeave={onPointerLeave}
+                  onPointerCancel={onPointerCancel}
+                  onPointerDown={onPointerDown}
                   className="flex flex-col items-center"
                 >
                   <Link
@@ -74,6 +85,7 @@ const AppsPage = () => {
                     aria-label={app.title}
                     onFocus={onFocus}
                     onBlur={onBlur}
+                    onClick={dismiss}
                   >
                     {app.icon && (
                       <Image

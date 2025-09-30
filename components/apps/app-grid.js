@@ -83,7 +83,16 @@ export default function AppGrid({ openApp }) {
     const meta = data.metadata[app.id] ?? buildAppMetadata(app);
     return (
       <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
-        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+        {({
+          ref,
+          onPointerEnter,
+          onPointerLeave,
+          onPointerCancel,
+          onPointerDown,
+          onFocus,
+          onBlur,
+          dismiss,
+        }) => (
           <div
             ref={ref}
             style={{
@@ -93,8 +102,10 @@ export default function AppGrid({ openApp }) {
               alignItems: 'center',
               padding: 12,
             }}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
+            onPointerEnter={onPointerEnter}
+            onPointerLeave={onPointerLeave}
+            onPointerCancel={onPointerCancel}
+            onPointerDown={onPointerDown}
             onFocus={onFocus}
             onBlur={onBlur}
           >
@@ -103,7 +114,10 @@ export default function AppGrid({ openApp }) {
               icon={app.icon}
               name={app.title}
               displayName={<>{app.nodes}</>}
-              openApp={() => openApp && openApp(app.id)}
+              openApp={() => {
+                dismiss();
+                openApp && openApp(app.id);
+              }}
             />
           </div>
         )}
@@ -113,12 +127,13 @@ export default function AppGrid({ openApp }) {
 
   return (
     <div className="flex flex-col items-center h-full">
-      <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
-        placeholder="Search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+        <input
+          className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+          placeholder="Search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search apps"
+        />
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
