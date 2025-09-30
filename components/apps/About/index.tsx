@@ -9,8 +9,9 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import Sidebar from './Sidebar';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
+class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string }> {
   screens: Record<string, React.ReactNode> = {};
 
   constructor(props: unknown) {
@@ -18,7 +19,6 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     this.state = {
       screen: <></>,
       active_screen: 'about',
-      navbar: false,
     };
   }
 
@@ -33,71 +33,23 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     };
 
     let lastVisitedScreen = localStorage.getItem('about-section');
-    if (!lastVisitedScreen) {
+    if (!lastVisitedScreen || !this.screens[lastVisitedScreen]) {
       lastVisitedScreen = 'about';
     }
 
-    this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
+    this.changeScreen(lastVisitedScreen);
   }
 
-  changeScreen = (e: any) => {
-    const screen = e.id || e.target.id;
+  changeScreen = (screen: string) => {
+    if (!this.screens[screen]) {
+      return;
+    }
+    if (this.state.active_screen === screen && this.state.screen === this.screens[screen]) {
+      return;
+    }
     localStorage.setItem('about-section', screen);
     ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
     this.setState({ screen: this.screens[screen], active_screen: screen });
-  };
-
-  showNavBar = () => {
-    this.setState({ navbar: !this.state.navbar });
-  };
-
-  renderNavLinks = () => (
-    <>
-      {data.sections.map((section) => (
-        <div
-          key={section.id}
-          id={section.id}
-          role="tab"
-          aria-selected={this.state.active_screen === section.id}
-          tabIndex={this.state.active_screen === section.id ? 0 : -1}
-          onFocus={this.changeScreen}
-          className={
-            (this.state.active_screen === section.id
-              ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
-              : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
-            ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
-          }
-        >
-          <Image
-            className="w-3 md:w-4 rounded border border-gray-600"
-            alt={section.alt}
-            src={section.icon}
-            width={16}
-            height={16}
-            sizes="16px"
-          />
-          <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
-        </div>
-      ))}
-    </>
-  );
-
-  handleNavKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const tabs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')
-    );
-    let index = tabs.indexOf(document.activeElement as HTMLElement);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      index = (index + 1) % tabs.length;
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
-      index = (index - 1 + tabs.length) % tabs.length;
-    } else {
-      return;
-    }
-    tabs.forEach((tab, i) => (tab.tabIndex = i === index ? 0 : -1));
-    tabs[index].focus();
   };
 
   render() {
@@ -110,7 +62,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     const nonce = getCspNonce();
 
     return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+      <main className="w-full h-full flex flex-col md:flex-row bg-ub-cool-grey text-white select-none relative">
         <Head>
           <title>About</title>
           <script
@@ -119,34 +71,22 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
           />
         </Head>
-        <div
-          className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
-          role="tablist"
-          aria-orientation="vertical"
-          onKeyDown={this.handleNavKeyDown}
-        >
-          {this.renderNavLinks()}
-        </div>
-        <div
-          onClick={this.showNavBar}
-          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
-        >
-          <div className=" w-3.5 border-t border-white" />
-          <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
-          <div className=" w-3.5 border-t border-white" />
-          <div
-            className={
-              (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
-            }
-            role="tablist"
-            aria-orientation="vertical"
-            onKeyDown={this.handleNavKeyDown}
-          >
-            {this.renderNavLinks()}
-          </div>
-        </div>
-        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+
+        <Sidebar
+          sections={data.sections}
+          activeId={this.state.active_screen}
+          onChange={this.changeScreen}
+          orientation="horizontal"
+          className="md:hidden w-full border-b border-black bg-ub-cool-grey px-2 py-2 windowMainScreen"
+        />
+        <Sidebar
+          sections={data.sections}
+          activeId={this.state.active_screen}
+          onChange={this.changeScreen}
+          orientation="vertical"
+          className="hidden md:flex md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+        />
+        <div className="flex flex-col w-full md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
           {this.state.screen}
         </div>
       </main>
@@ -354,6 +294,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         placeholder="Filter..."
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
+        aria-label="Filter skills"
         onChange={(e) => setFilter(e.target.value)}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
@@ -513,19 +454,26 @@ function Resume() {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="p-2 text-right no-print space-x-2">
+      <div className="p-2 no-print flex flex-col gap-2 items-stretch sm:items-end">
         <a
           href="/assets/Alex-Unnippillil-Resume.pdf"
           download
           onClick={handleDownload}
-          className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+          className="flex items-center justify-center gap-2 rounded bg-ub-gedit-light px-3 text-sm min-h-[44px] text-white w-full sm:w-auto"
         >
           Download
         </a>
-        <a href="/assets/alex-unnippillil.vcf" download className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
+        <a
+          href="/assets/alex-unnippillil.vcf"
+          download
+          className="flex items-center justify-center gap-2 rounded bg-ub-gedit-light px-3 text-sm min-h-[44px] text-white w-full sm:w-auto"
+        >
           vCard
         </a>
-        <button onClick={shareContact} className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
+        <button
+          onClick={shareContact}
+          className="flex items-center justify-center gap-2 rounded bg-ub-gedit-light px-3 text-sm min-h-[44px] text-white w-full sm:w-auto"
+        >
           Share contact
         </button>
       </div>
