@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  createContext,
+  useContext,
+} from 'react';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -42,6 +50,14 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [overflowedIds, setOverflowedIds] = useState<string[]>([]);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -64,6 +80,17 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     [onTabsChange],
   );
 
+  const focusTab = useCallback((id: string, { force = false } = {}) => {
+    const el = tabRefs.current.get(id);
+    if (!el) return;
+    if (!force) {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      if (!container.contains(document.activeElement)) return;
+    }
+    el.focus({ preventScroll: true });
+  }, []);
+
   const setActive = useCallback(
     (id: string) => {
       setActiveId(id);
@@ -81,6 +108,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
           setActiveId(fallback.id);
+          requestAnimationFrame(() => focusTab(fallback.id, { force: true }));
         } else if (next.length === 0 && onNewTab) {
           const tab = onNewTab();
           next.push(tab);
@@ -89,7 +117,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         return next;
       });
     },
-    [activeId, onNewTab, updateTabs],
+    [activeId, focusTab, onNewTab, updateTabs],
   );
 
   const addTab = useCallback(() => {
@@ -142,6 +170,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
           : (idx + 1) % prev.length;
         const nextTab = prev[nextIdx];
         setActiveId(nextTab.id);
+        requestAnimationFrame(() => focusTab(nextTab.id));
         return prev;
       });
       return;
@@ -157,10 +186,121 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             : (idx + 1) % prev.length;
         const nextTab = prev[nextIdx];
         setActiveId(nextTab.id);
+        requestAnimationFrame(() => focusTab(nextTab.id));
         return prev;
       });
     }
   };
+
+  const updateOverflow = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const visibleLeft = container.scrollLeft;
+    const visibleRight = visibleLeft + container.clientWidth;
+    setCanScrollLeft(visibleLeft > 0);
+    setCanScrollRight(visibleRight < container.scrollWidth - 1);
+    const hidden: string[] = [];
+    tabs.forEach((tab) => {
+      const el = tabRefs.current.get(tab.id);
+      if (!el) return;
+      const left = el.offsetLeft;
+      const right = left + el.offsetWidth;
+      if (left < visibleLeft || right > visibleRight) {
+        hidden.push(tab.id);
+      }
+    });
+    setOverflowedIds(hidden);
+  }, [tabs]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => updateOverflow();
+    updateOverflow();
+    container.addEventListener('scroll', handleScroll);
+    const observer =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateOverflow()) : null;
+    observer?.observe(container);
+    window.addEventListener('resize', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      observer?.disconnect();
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [updateOverflow]);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => updateOverflow());
+    return () => cancelAnimationFrame(id);
+  }, [activeId, tabs, updateOverflow]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    const activeEl = tabRefs.current.get(activeId);
+    if (!container || !activeEl) return;
+    const left = activeEl.offsetLeft;
+    const right = left + activeEl.offsetWidth;
+    const visibleLeft = container.scrollLeft;
+    const visibleRight = visibleLeft + container.clientWidth;
+    if (left < visibleLeft) {
+      container.scrollTo({ left, behavior: 'smooth' });
+    } else if (right > visibleRight) {
+      container.scrollTo({ left: right - container.clientWidth, behavior: 'smooth' });
+    }
+  }, [activeId]);
+
+  useEffect(() => {
+    if (!moreMenuOpen) return;
+    const handlePointer = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (moreButtonRef.current?.contains(target)) return;
+      if (moreMenuRef.current?.contains(target)) return;
+      setMoreMenuOpen(false);
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [moreMenuOpen]);
+
+  useEffect(() => {
+    focusTab(activeId);
+  }, [activeId, focusTab]);
+
+  const overflowTabs = useMemo(() => {
+    if (overflowedIds.length === 0) return [] as TabDefinition[];
+    const overflowSet = new Set(overflowedIds);
+    return tabs.filter((tab) => overflowSet.has(tab.id));
+  }, [overflowedIds, tabs]);
+
+  useEffect(() => {
+    if (overflowTabs.length === 0 && moreMenuOpen) {
+      setMoreMenuOpen(false);
+    }
+  }, [moreMenuOpen, overflowTabs.length]);
+
+  const scrollByAmount = useCallback((direction: 'left' | 'right') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const amount = container.clientWidth * 0.6;
+    container.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  }, []);
+
+  const handleMoreSelect = useCallback(
+    (id: string) => {
+      setMoreMenuOpen(false);
+      setActive(id);
+      requestAnimationFrame(() => focusTab(id, { force: true }));
+    },
+    [focusTab, setActive],
+  );
 
   return (
     <div
@@ -168,34 +308,113 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
-        {tabs.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
-            draggable
-            onDragStart={handleDragStart(i)}
-            onDragOver={handleDragOver(i)}
-            onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
+      <div className="flex flex-shrink-0 items-center gap-1 bg-gray-800 text-white text-sm">
+        {canScrollLeft && (
+          <button
+            type="button"
+            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            onClick={() => scrollByAmount('left')}
+            aria-label="Scroll tabs left"
           >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
-              <button
-                className="p-0.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
+            ‹
+          </button>
+        )}
+        <div className="flex-1 overflow-hidden">
+          <div
+            ref={scrollContainerRef}
+            role="tablist"
+            aria-orientation="horizontal"
+            className="flex overflow-x-auto scrollbar-thin scroll-smooth"
+          >
+            {tabs.map((t, i) => (
+              <div
+                key={t.id}
+                role="tab"
+                aria-selected={t.id === activeId}
+                tabIndex={t.id === activeId ? 0 : -1}
+                ref={(node) => {
+                  if (node) {
+                    tabRefs.current.set(t.id, node);
+                  } else {
+                    tabRefs.current.delete(t.id);
+                  }
                 }}
-                aria-label="Close Tab"
+                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
+                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+                }`}
+                draggable
+                onDragStart={handleDragStart(i)}
+                onDragOver={handleDragOver(i)}
+                onDrop={handleDrop(i)}
+                onClick={() => setActive(t.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setActive(t.id);
+                  }
+                }}
               >
-                ×
-              </button>
+                <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+                {t.closable !== false && tabs.length > 1 && (
+                  <button
+                    className="p-0.5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(t.id);
+                    }}
+                    aria-label="Close Tab"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        {canScrollRight && (
+          <button
+            type="button"
+            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            onClick={() => scrollByAmount('right')}
+            aria-label="Scroll tabs right"
+          >
+            ›
+          </button>
+        )}
+        {overflowTabs.length > 0 && (
+          <div className="relative flex-shrink-0">
+            <button
+              type="button"
+              ref={moreButtonRef}
+              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              onClick={() => setMoreMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={moreMenuOpen}
+            >
+              More ▾
+            </button>
+            {moreMenuOpen && (
+              <div
+                ref={moreMenuRef}
+                role="menu"
+                className="absolute right-0 z-10 mt-1 w-48 rounded border border-gray-700 bg-gray-900 py-1 shadow-lg"
+              >
+                {overflowTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700"
+                    onClick={() => handleMoreSelect(tab.id)}
+                  >
+                    <span className="truncate">{tab.title}</span>
+                    {tab.id === activeId && <span className="ml-2 text-xs text-ub-orange">Active</span>}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-        ))}
+        )}
         {onNewTab && (
           <button
             className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
