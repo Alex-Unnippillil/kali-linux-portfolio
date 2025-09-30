@@ -89,6 +89,16 @@ const ModuleWorkspace: React.FC = () => {
     setResult('');
   }, []);
 
+  const resetOptionValues = useCallback(() => {
+    if (!selected) return;
+    const initial: Record<string, string> = {};
+    selected.options.forEach((o) => {
+      initial[o.name] = '';
+    });
+    setOptionValues(initial);
+    setResult('');
+  }, [selected]);
+
   const runCommand = useCallback(() => {
     if (!selected) return;
     const opts = selected.options
@@ -105,13 +115,14 @@ const ModuleWorkspace: React.FC = () => {
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
       <section className="space-y-2">
         <h1 className="text-xl font-semibold">Workspaces</h1>
-        <div className="flex gap-2">
-          <input
-            value={newWorkspace}
-            onChange={(e) => setNewWorkspace(e.target.value)}
-            placeholder="New workspace"
-            className="p-1 rounded text-black"
-          />
+          <div className="flex gap-2">
+            <input
+              value={newWorkspace}
+              onChange={(e) => setNewWorkspace(e.target.value)}
+              placeholder="New workspace"
+              aria-label="New workspace name"
+              className="p-1 rounded text-black"
+            />
           <button
             onClick={addWorkspace}
             className="px-2 py-1 bg-ub-orange rounded text-black"
@@ -156,68 +167,90 @@ const ModuleWorkspace: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {filteredModules.map((m) => (
               <button
                 key={m.id}
                 onClick={() => selectModule(m)}
-                className="p-3 text-left bg-ub-grey rounded border border-gray-700"
+                className="p-3 text-left bg-ub-grey rounded border border-gray-700 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
               >
                 <h3 className="font-semibold">{m.name}</h3>
-                <p className="text-sm text-gray-300">{m.description}</p>
+                <p className="text-sm text-gray-300 line-clamp-2 sm:line-clamp-none">
+                  {m.description}
+                </p>
               </button>
             ))}
           </div>
           {selected && (
-            <div className="space-y-2">
-              <h2 className="font-semibold">Command Composer</h2>
-              {selected.options.map((opt) => (
-                <div key={opt.name}>
-                  <label className="block text-sm">
-                    {opt.name} {opt.required ? '*' : ''}
-                    <input
-                      value={optionValues[opt.name]}
-                      onChange={(e) =>
-                        setOptionValues({
-                          ...optionValues,
-                          [opt.name]: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full p-1 rounded text-black"
-                    />
-                  </label>
+            <div className="space-y-3">
+              <details className="overflow-hidden rounded border border-gray-700 bg-ub-grey/80">
+                <summary className="cursor-pointer list-none px-3 py-2 text-sm font-semibold tracking-wide transition hover:bg-ub-grey">
+                  Command Composer · {selected.name}
+                </summary>
+                <div className="space-y-3 border-t border-gray-700 bg-ub-grey/70 px-3 py-3">
+                  {selected.options.map((opt) => {
+                    const inputId = `option-${selected.id}-${opt.name}`;
+                    return (
+                      <div key={opt.name} className="space-y-1">
+                        <label className="block text-sm" htmlFor={inputId}>
+                          {opt.name} {opt.required ? '*' : ''}
+                        </label>
+                        <input
+                          id={inputId}
+                          aria-label={`${opt.name} option`}
+                          value={optionValues[opt.name]}
+                          onChange={(e) =>
+                            setOptionValues({
+                              ...optionValues,
+                              [opt.name]: e.target.value,
+                            })
+                          }
+                          className="w-full rounded border border-gray-600 bg-white/90 p-2 text-black focus:outline-none focus:ring-2 focus:ring-ub-orange"
+                        />
+                      </div>
+                    );
+                  })}
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      onClick={runCommand}
+                      className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-black transition hover:bg-green-500"
+                    >
+                      Run Command
+                    </button>
+                    <button
+                      onClick={resetOptionValues}
+                      className="rounded border border-gray-600 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:bg-gray-700"
+                    >
+                      Clear Inputs
+                    </button>
+                  </div>
                 </div>
-              ))}
-              <button
-                onClick={runCommand}
-                className="px-2 py-1 bg-green-600 rounded text-black"
-              >
-                Run
-              </button>
+              </details>
               {result && (
-                <div className="flex items-start gap-2">
+                <div className="space-y-2 rounded border border-gray-700 bg-black/70 p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <h3 className="font-semibold">Command Output</h3>
+                    <button
+                      onClick={() => navigator.clipboard?.writeText(result)}
+                      className="self-start rounded bg-gray-700 px-3 py-1 text-sm font-medium transition hover:bg-gray-600"
+                    >
+                      Copy Output
+                    </button>
+                  </div>
                   <pre
-                    className="flex-1 bg-black text-green-400 p-2 overflow-auto font-mono"
+                    className="max-h-64 overflow-auto rounded bg-black p-2 font-mono text-green-400"
                     role="log"
                   >
                     {result}
                   </pre>
-                  <button
-                    onClick={() =>
-                      navigator.clipboard?.writeText(result)
-                    }
-                    className="px-2 py-1 text-sm rounded bg-gray-700"
-                  >
-                    Copy
-                  </button>
                 </div>
               )}
               {Object.keys(storeData).length > 0 && (
-                <div>
+                <div className="space-y-2 rounded border border-gray-700 bg-ub-grey/80 p-3">
                   <h3 className="font-semibold">Stored Values</h3>
-                  <ul className="text-xs">
+                  <ul className="space-y-1 text-xs">
                     {Object.entries(storeData).map(([k, v]) => (
-                      <li key={k}>
+                      <li key={k} className="break-words">
                         <strong>{k}</strong>: {v}
                       </li>
                     ))}
