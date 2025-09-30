@@ -180,7 +180,7 @@ const PopularModules: React.FC = () => {
   };
 
   return (
-    <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
+    <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen cq-inline">
       <p className="text-sm">
         All modules are simulated; no network activity occurs. This interface is
         non-operational.
@@ -203,9 +203,10 @@ const PopularModules: React.FC = () => {
         placeholder="Search modules"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        aria-label="Search modules"
         className="w-full p-2 text-black rounded"
       />
-      <div className="flex flex-wrap gap-2">
+      <div className="cq-pill-cluster">
         <button
           onClick={() => setFilter('')}
           className={`px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
@@ -250,9 +251,9 @@ const PopularModules: React.FC = () => {
       </div>
       {selected ? (
         <div className="space-y-2">
-          <form className="space-y-2">
+          <form className="cq-inline cq-form-grid">
             {selected.options.map((o) => (
-              <label key={o.name} className="block text-sm">
+              <label key={o.name} className="cq-form-grid__field text-sm">
                 {o.label}
                 <input
                   aria-label={o.label}
@@ -266,7 +267,7 @@ const PopularModules: React.FC = () => {
               </label>
             ))}
           </form>
-          <div className="flex items-start gap-2">
+          <div className="cq-inline cq-stack-md">
             <pre
               data-testid="command-preview"
               className="flex-1 bg-black text-green-400 p-2 overflow-auto font-mono"
@@ -276,22 +277,24 @@ const PopularModules: React.FC = () => {
             <button
               type="button"
               onClick={copyCommand}
-              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 cq-stack-md__aside"
             >
               Copy
             </button>
           </div>
-          <div className="space-y-1">
-            <label className="block text-sm">
-              Filter logs
+            <div className="space-y-1">
+              <label className="block text-sm" htmlFor="popular-modules-log-filter">
+                Filter logs
+              </label>
               <input
+                id="popular-modules-log-filter"
                 placeholder="Filter logs"
                 type="text"
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
-                className="w-full p-1 mt-1 text-black rounded"
+                aria-label="Filter logs"
+                className="w-full p-1 text-black rounded"
               />
-            </label>
             <button
               type="button"
               onClick={copyLogs}

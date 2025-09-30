@@ -1,0 +1,100 @@
+/*
+ * Container query helpers
+ * -----------------------
+ * Apply the `.cq-inline` class to any element that should establish a container
+ * context. Combine it with the layout helpers below to create responsive
+ * modules that adapt based on their available inline size instead of the
+ * viewport. Example usage:
+ *
+ *   <section class="cq-inline cq-stack-md">
+ *     ...
+ *   </section>
+ *
+ *   <form class="cq-inline cq-form-grid">
+ *     ...
+ *   </form>
+ */
+
+.cq-inline {
+  container-type: inline-size;
+}
+
+/* Split layouts that collapse into a vertical stack when space is limited. */
+.cq-stack-md {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.cq-stack-md > * {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+
+.cq-stack-md__aside {
+  flex: 0 0 auto;
+}
+
+/* Compact breakpoint: medium modules under ~900px tighten spacing. */
+@container (max-width: 56rem) {
+  .cq-stack-md {
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+  }
+}
+
+/* Narrow breakpoint: stack content vertically for handheld windows. */
+@container (max-width: 48rem) {
+  .cq-stack-md {
+    flex-direction: column;
+  }
+
+  .cq-stack-md__aside {
+    width: 100%;
+  }
+}
+
+/* Chip clusters wrap into balanced columns at compact widths. */
+.cq-pill-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@container (max-width: 36rem) {
+  .cq-pill-cluster {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+}
+
+/* Option forms auto-flow into columns and collapse to a single column when
+ * constrained. */
+.cq-form-grid {
+  display: grid;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.cq-form-grid__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+@container (max-width: 40rem) {
+  .cq-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Utility: make action buttons span the full width when stacked. */
+@container (max-width: 40rem) {
+  .cq-stack-md__aside {
+    display: flex;
+    inline-size: 100%;
+  }
+
+  .cq-stack-md__aside > * {
+    inline-size: 100%;
+  }
+}
