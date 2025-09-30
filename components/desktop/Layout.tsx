@@ -9,13 +9,20 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
       <div
         ref={ref}
         className={clsx(
-          "desktop-shell relative h-screen w-screen overflow-hidden bg-transparent text-white antialiased",
+          "desktop-shell relative min-h-screen w-full overflow-hidden bg-transparent text-white antialiased",
           className,
         )}
         {...props}
       >
         {children}
         <style jsx>{`
+          :global(:root) {
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --safe-area-right: env(safe-area-inset-right, 0px);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-area-left: env(safe-area-inset-left, 0px);
+          }
+
           .desktop-shell {
             --shell-taskbar-height: 2.5rem;
             --shell-taskbar-padding-x: 0.75rem;
@@ -31,6 +38,19 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             --desktop-icon-font-size: 0.75rem;
             touch-action: manipulation;
             font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1rem);
+            min-height: 100vh;
+          }
+
+          @supports (min-height: 100svh) {
+            .desktop-shell {
+              min-height: 100svh;
+            }
+          }
+
+          @supports (min-height: 100dvh) {
+            .desktop-shell {
+              min-height: 100dvh;
+            }
           }
 
           @media (min-width: 640px) {
