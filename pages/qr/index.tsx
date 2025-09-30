@@ -1,6 +1,6 @@
 "use client";
 
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
@@ -207,6 +207,7 @@ const QRPage: React.FC = () => {
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="w-full rounded border p-2"
+              aria-label="Text to encode"
             />
             <button
               type="submit"
@@ -227,6 +228,7 @@ const QRPage: React.FC = () => {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="w-full rounded border p-2"
+              aria-label="URL to encode"
             />
             <button
               type="submit"
@@ -245,6 +247,7 @@ const QRPage: React.FC = () => {
                 value={ssid}
                 onChange={(e) => setSsid(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
+                aria-label="Wi-Fi network name"
               />
             </label>
             <label className="block text-sm">
@@ -254,6 +257,7 @@ const QRPage: React.FC = () => {
                 value={wifiPassword}
                 onChange={(e) => setWifiPassword(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
+                aria-label="Wi-Fi password"
               />
             </label>
             <label className="block text-sm">
@@ -262,6 +266,7 @@ const QRPage: React.FC = () => {
                 value={wifiType}
                 onChange={(e) => setWifiType(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
+                aria-label="Wi-Fi encryption type"
               >
                 <option value="WPA">WPA/WPA2</option>
                 <option value="WEP">WEP</option>
@@ -285,6 +290,7 @@ const QRPage: React.FC = () => {
                 value={vName}
                 onChange={(e) => setVName(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
+                aria-label="Full name"
               />
             </label>
             <label className="block text-sm">
@@ -294,6 +300,7 @@ const QRPage: React.FC = () => {
                 value={vOrg}
                 onChange={(e) => setVOrg(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
+                aria-label="Organization"
               />
             </label>
             <label className="block text-sm">
@@ -303,6 +310,7 @@ const QRPage: React.FC = () => {
                 value={vPhone}
                 onChange={(e) => setVPhone(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
+                aria-label="Phone number"
               />
             </label>
             <label className="block text-sm">
@@ -312,6 +320,7 @@ const QRPage: React.FC = () => {
                 value={vEmail}
                 onChange={(e) => setVEmail(e.target.value)}
                 className="mt-1 w-full rounded border p-2"
+                aria-label="Email address"
               />
             </label>
             <button
@@ -351,7 +360,7 @@ const QRPage: React.FC = () => {
         )}
       </div>
       <div className="w-full max-w-md">
-        <video ref={videoRef} className="h-48 w-full rounded border" />
+        <video ref={videoRef} className="h-48 w-full rounded border" aria-label="Live camera preview for scanning" />
         {scanResult && (
           <p className="mt-2 text-center text-sm">Decoded: {scanResult}</p>
         )}

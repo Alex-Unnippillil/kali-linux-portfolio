@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import Image from 'next/image'
+import Image from '@/components/common/Image'
 
 export class UbuntuApp extends Component {
     constructor() {

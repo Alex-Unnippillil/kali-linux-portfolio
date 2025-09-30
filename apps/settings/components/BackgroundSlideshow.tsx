@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
@@ -70,6 +70,7 @@ export default function BackgroundSlideshow() {
               type="checkbox"
               checked={selected.includes(file)}
               onChange={() => toggle(file)}
+              aria-label={`Toggle ${file} wallpaper`}
             />
           </label>
         ))}
@@ -83,6 +84,7 @@ export default function BackgroundSlideshow() {
           value={Math.round(intervalMs / 1000)}
           onChange={(e) => setIntervalMs(Number(e.target.value) * 1000)}
           className="w-20 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+          aria-label="Wallpaper rotation interval in seconds"
         />
       </div>
       <button

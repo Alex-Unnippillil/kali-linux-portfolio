@@ -1,17 +1,19 @@
-import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import Image from '@/components/common/Image';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import DelayedTooltip from '../../components/ui/DelayedTooltip';
 import AppTooltipContent from '../../components/ui/AppTooltipContent';
 import {
   buildAppMetadata,
   loadAppRegistry,
+  type AppEntry,
+  type AppMetadata,
 } from '../../lib/appRegistry';
 
 const AppsPage = () => {
-  const [apps, setApps] = useState([]);
+  const [apps, setApps] = useState<AppEntry[]>([]);
   const [query, setQuery] = useState('');
-  const [metadata, setMetadata] = useState({});
+  const [metadata, setMetadata] = useState<Record<string, AppMetadata>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -48,6 +50,7 @@ const AppsPage = () => {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search apps"
         className="mb-4 w-full rounded border p-2"
+        aria-label="Search apps"
       />
       <div
         id="app-grid"
