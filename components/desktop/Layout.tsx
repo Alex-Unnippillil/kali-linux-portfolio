@@ -9,7 +9,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
       <div
         ref={ref}
         className={clsx(
-          "desktop-shell relative min-h-screen w-full overflow-hidden bg-transparent text-white antialiased",
+          "desktop-shell viewport-full-height relative w-full overflow-hidden bg-transparent text-white antialiased",
           className,
         )}
         {...props}
@@ -38,19 +38,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             --desktop-icon-font-size: 0.75rem;
             touch-action: manipulation;
             font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1rem);
-            min-height: 100vh;
-          }
-
-          @supports (min-height: 100svh) {
-            .desktop-shell {
-              min-height: 100svh;
-            }
-          }
-
-          @supports (min-height: 100dvh) {
-            .desktop-shell {
-              min-height: 100dvh;
-            }
+            min-height: var(--app-viewport-height, 100vh);
           }
 
           @media (min-width: 640px) {

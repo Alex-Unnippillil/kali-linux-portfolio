@@ -2,7 +2,8 @@ body {
   font-family: sans-serif;
   margin: 0;
   padding: 0;
-  height: 100vh;
+  min-height: var(--app-viewport-height, 100vh);
+  height: var(--app-viewport-height, 100vh);
   background: var(--color-bg);
 }
 

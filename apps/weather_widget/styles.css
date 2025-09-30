@@ -4,7 +4,8 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: var(--app-viewport-height, 100vh);
+  height: var(--app-viewport-height, 100vh);
   margin: 0;
 }
 

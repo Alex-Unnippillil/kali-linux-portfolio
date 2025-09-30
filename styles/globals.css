@@ -99,3 +99,31 @@ html {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
 }
+
+/* Viewport sizing utilities */
+:root {
+  --app-viewport-height: 100vh;
+}
+
+@supports (height: 100svh) {
+  :root {
+    --app-viewport-height: 100svh;
+  }
+}
+
+@supports (height: 100lvh) {
+  :root {
+    --app-viewport-height: 100lvh;
+  }
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-viewport-height: 100dvh;
+  }
+}
+
+.viewport-full-height {
+  min-height: var(--app-viewport-height, 100vh);
+  height: var(--app-viewport-height, 100vh);
+}
