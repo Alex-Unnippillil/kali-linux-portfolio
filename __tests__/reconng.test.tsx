@@ -2,6 +2,14 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReconNG from '../components/apps/reconng';
+import { ExperimentsProvider } from '../hooks/useExperiments';
+
+const renderWithReconFlag = (ui: React.ReactNode) =>
+  render(
+    <ExperimentsProvider loader={async () => ({ 'recon-ng-lab': true })}>
+      {ui}
+    </ExperimentsProvider>,
+  );
 
 describe('ReconNG app', () => {
   const realFetch = global.fetch;
@@ -19,9 +27,9 @@ describe('ReconNG app', () => {
   });
 
   it('stores API keys in localStorage', async () => {
-    render(<ReconNG />);
-    await userEvent.click(screen.getByText('Settings'));
-    const input = screen.getByPlaceholderText('DNS Enumeration API Key');
+    renderWithReconFlag(<ReconNG />);
+    await userEvent.click(await screen.findByText('Settings'));
+    const input = await screen.findByPlaceholderText('DNS Enumeration API Key');
     await userEvent.type(input, 'abc123');
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem('reconng-api-keys') || '{}');
@@ -30,21 +38,21 @@ describe('ReconNG app', () => {
   });
 
   it('hides API keys by default', async () => {
-    render(<ReconNG />);
-    await userEvent.click(screen.getByText('Settings'));
-    const input = screen.getByPlaceholderText('DNS Enumeration API Key');
+    renderWithReconFlag(<ReconNG />);
+    await userEvent.click(await screen.findByText('Settings'));
+    const input = await screen.findByPlaceholderText('DNS Enumeration API Key');
     expect(input).toHaveAttribute('type', 'password');
   });
 
   it('loads marketplace modules', async () => {
-    render(<ReconNG />);
-    await userEvent.click(screen.getByText('Marketplace'));
+    renderWithReconFlag(<ReconNG />);
+    await userEvent.click(await screen.findByText('Marketplace'));
     expect(await screen.findByText('Port Scan')).toBeInTheDocument();
   });
 
   it('allows tagging scripts', async () => {
-    render(<ReconNG />);
-    await userEvent.click(screen.getByText('Marketplace'));
+    renderWithReconFlag(<ReconNG />);
+    await userEvent.click(await screen.findByText('Marketplace'));
     const input = await screen.findByPlaceholderText('Tag Port Scan');
     await userEvent.type(input, 'network{enter}');
     expect(await screen.findByText('network')).toBeInTheDocument();
@@ -57,12 +65,13 @@ describe('ReconNG app', () => {
   });
 
   it('dedupes entities in table', async () => {
-    render(<ReconNG />);
-    const input = screen.getByPlaceholderText('Target');
+    renderWithReconFlag(<ReconNG />);
+    const input = await screen.findByPlaceholderText('Target');
     await userEvent.type(input, 'example.com');
-    await userEvent.click(screen.getAllByText('Run')[1]);
+    const runButtons = await screen.findAllByText('Run');
+    await userEvent.click(runButtons[1]);
     await screen.findByText('John Doe');
-    await userEvent.click(screen.getAllByText('Run')[1]);
+    await userEvent.click((await screen.findAllByText('Run'))[1]);
     const rows = screen.getAllByText('example.com');
     expect(rows.length).toBe(1);
   });

@@ -1,6 +1,14 @@
 import React from 'react';
-import { render, fireEvent, screen, act } from '@testing-library/react';
+import { render, fireEvent, screen, act, waitFor } from '@testing-library/react';
 import HydraApp from '../components/apps/hydra';
+import { ExperimentsProvider } from '../hooks/useExperiments';
+
+const renderWithHydraFlag = (ui: React.ReactNode) =>
+  render(
+    <ExperimentsProvider loader={async () => ({ 'hydra-lab': true })}>
+      {ui}
+    </ExperimentsProvider>,
+  );
 
 describe('Hydra wordlists', () => {
   beforeEach(() => {
@@ -18,23 +26,25 @@ describe('Hydra wordlists', () => {
     global.FileReader = MockFileReader;
 
     const file = new File(['user\n'], 'users.txt', { type: 'text/plain' });
-    const { unmount } = render(<HydraApp />);
-    fireEvent.change(screen.getByTestId('user-file-input'), {
+    const { unmount } = renderWithHydraFlag(<HydraApp />);
+    const input = await screen.findByTestId('user-file-input');
+    fireEvent.change(input, {
       target: { files: [file] },
     });
 
     await screen.findByText('users.txt', { selector: 'li' });
     unmount();
-    render(<HydraApp />);
-    expect(screen.getAllByText('users.txt').length).toBeGreaterThan(0);
+    renderWithHydraFlag(<HydraApp />);
+    const occurrences = await screen.findAllByText('users.txt');
+    expect(occurrences.length).toBeGreaterThan(0);
   });
 });
 
 describe('Hydra target validation', () => {
-  it('disables run button for empty or malformed targets', () => {
-    render(<HydraApp />);
-    const targetInput = screen.getByPlaceholderText('192.168.0.1');
-    const runBtn = screen.getByText('Run Hydra');
+  it('disables run button for empty or malformed targets', async () => {
+    renderWithHydraFlag(<HydraApp />);
+    const targetInput = await screen.findByPlaceholderText('192.168.0.1');
+    const runBtn = await screen.findByText('Run Hydra');
     expect(runBtn).toBeDisabled();
 
     fireEvent.change(targetInput, { target: { value: 'not a host' } });
@@ -69,11 +79,13 @@ describe('Hydra pause and resume', () => {
       });
     });
 
-    render(<HydraApp />);
-    fireEvent.change(screen.getByPlaceholderText('192.168.0.1'), {
+    renderWithHydraFlag(<HydraApp />);
+    const targetInput = await screen.findByPlaceholderText('192.168.0.1');
+    fireEvent.change(targetInput, {
       target: { value: '1.1.1.1' },
     });
-    fireEvent.click(screen.getByText('Run Hydra'));
+    const runBtn = await screen.findByText('Run Hydra');
+    fireEvent.click(runBtn);
 
     const pauseBtn = await screen.findByTestId('pause-button');
     fireEvent.click(pauseBtn);
@@ -123,19 +135,23 @@ describe('Hydra session restore', () => {
       });
     });
 
-    const { unmount } = render(<HydraApp />);
-    fireEvent.change(screen.getByPlaceholderText('192.168.0.1'), {
+    const { unmount } = renderWithHydraFlag(<HydraApp />);
+    const targetInput = await screen.findByPlaceholderText('192.168.0.1');
+    fireEvent.change(targetInput, {
       target: { value: '1.1.1.1' },
     });
-    fireEvent.click(screen.getByText('Run Hydra'));
+    const runBtn = await screen.findByText('Run Hydra');
+    fireEvent.click(runBtn);
     expect(localStorage.getItem('hydra/session')).toBeTruthy();
 
     unmount();
-    render(<HydraApp />);
+    renderWithHydraFlag(<HydraApp />);
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/hydra',
-      expect.objectContaining({ body: expect.stringContaining('resume') })
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/hydra',
+        expect.objectContaining({ body: expect.stringContaining('resume') })
+      )
     );
 
     await act(async () => {

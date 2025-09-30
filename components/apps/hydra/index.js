@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import ExperimentGate from '../../util-components/ExperimentGate';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
@@ -52,7 +53,7 @@ const saveConfigStorage = (config) => {
   localStorage.setItem('hydra/config', JSON.stringify(config));
 };
 
-const HydraApp = () => {
+const HydraAppContent = () => {
   const [target, setTarget] = useState('');
   const [service, setService] = useState('ssh');
   const [availableServices, setAvailableServices] = useState([
@@ -443,34 +444,40 @@ const HydraApp = () => {
             { label: 'SSH', value: 'ssh', icon: '/themes/Yaru/apps/ssh.svg' },
             { label: 'FTP', value: 'ftp', icon: '/themes/Yaru/apps/ftp.svg' },
           ].map((m) => (
-            <div
+            <button
               key={m.value}
+              type="button"
               onClick={() => setService(m.value)}
               className={`flex items-center p-2 rounded border cursor-pointer text-sm ${
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
+              aria-label={`Select ${m.label}`}
             >
               <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
               <span>{m.label}</span>
-            </div>
+            </button>
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">Target</label>
           <input
+            id="hydra-target"
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Target host"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">Service</label>
           <select
+            id="hydra-service"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Service protocol"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
@@ -480,11 +487,13 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">User List</label>
           <select
+            id="hydra-user-list"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="User wordlist"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -500,6 +509,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload user wordlist"
           />
           <ul>
             {userLists.map((l) => (
@@ -516,11 +526,13 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-list">Password List</label>
           <select
+            id="hydra-pass-list"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Password wordlist"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -536,6 +548,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password wordlist"
           />
           <ul>
             {passLists.map((l) => (
@@ -552,23 +565,27 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset">Charset</label>
           <input
+            id="hydra-charset"
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Charset"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule">Rule (min:max length)</label>
           <input
+            id="hydra-rule"
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Rule length"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -578,58 +595,73 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            aria-label="Hydra cracking progress chart"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
           <button
+            type="button"
             onClick={runHydra}
             disabled={running || !isTargetValid}
             className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+            aria-label="Run Hydra"
           >
             {running ? 'Running...' : 'Run Hydra'}
           </button>
           <button
+            type="button"
             onClick={dryRunHydra}
             disabled={running}
             className="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
+            aria-label="Dry run"
           >
             Dry Run
           </button>
           <button
+            type="button"
             onClick={handleSaveConfig}
             className="px-4 py-2 bg-gray-700 rounded"
+            aria-label="Save configuration"
           >
             Save Config
           </button>
           <button
+            type="button"
             onClick={handleCopyConfig}
             className="px-4 py-2 bg-gray-700 rounded"
+            aria-label="Copy configuration"
           >
             Copy Config
           </button>
           {running && !paused && (
             <button
+              type="button"
               data-testid="pause-button"
               onClick={pauseHydra}
               className="px-4 py-2 bg-yellow-600 rounded"
+              aria-label="Pause Hydra"
             >
               Pause
             </button>
           )}
           {running && paused && (
             <button
+              type="button"
               data-testid="resume-button"
               onClick={resumeHydra}
               className="px-4 py-2 bg-blue-600 rounded"
+              aria-label="Resume Hydra"
             >
               Resume
             </button>
           )}
           {running && (
             <button
+              type="button"
               data-testid="cancel-button"
               onClick={cancelHydra}
               className="px-4 py-2 bg-red-600 rounded"
+              aria-label="Cancel Hydra"
             >
               Cancel
             </button>
@@ -709,7 +741,24 @@ const HydraApp = () => {
   );
 };
 
+const HydraFallback = () => (
+  <div className="flex h-full flex-col items-center justify-center bg-ub-dark p-6 text-center text-white">
+    <h2 className="text-lg font-semibold">Hydra simulator unavailable</h2>
+    <p className="mt-2 max-w-md text-xs text-ubt-grey">
+      This lab feature is disabled. Enable the hydra-lab experiment flag to access the credential attack
+      walkthrough or review the offline training materials instead.
+    </p>
+  </div>
+);
+
+const HydraApp = () => (
+  <ExperimentGate flag="hydra-lab" fallback={<HydraFallback />} metadata={{ surface: 'hydra-app' }}>
+    <HydraAppContent />
+  </ExperimentGate>
+);
+
 export default HydraApp;
+export { HydraAppContent };
 
 export const displayHydra = () => {
   return <HydraApp />;
