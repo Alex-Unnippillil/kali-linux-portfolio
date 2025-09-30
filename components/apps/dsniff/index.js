@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
-import TerminalOutput from '../../TerminalOutput';
+import TerminalOutput from '../../util-components/TerminalOutput';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -583,14 +583,15 @@ const Dsniff = () => {
           </button>
         ))}
       </div>
-      <div className="mb-2">
-        <input
-          className="w-full text-black p-1"
-          placeholder="Search logs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+        <div className="mb-2">
+          <input
+            className="w-full text-black p-1"
+            placeholder="Search logs"
+            aria-label="Search logs"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       <div className="mb-2">
         <div className="flex space-x-2 mb-2">
           <select
@@ -601,12 +602,13 @@ const Dsniff = () => {
             <option value="host">host</option>
             <option value="protocol">protocol</option>
           </select>
-          <input
-            className="flex-1 text-black p-1"
-            placeholder="Value"
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-          />
+            <input
+              className="flex-1 text-black p-1"
+              placeholder="Value"
+              aria-label="Filter value"
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+            />
           <button
             className="bg-ub-blue text-white px-2"
             onClick={addFilter}

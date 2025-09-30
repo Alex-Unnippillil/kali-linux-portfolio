@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import TerminalOutput from './TerminalOutput';
+import TerminalOutput from './util-components/TerminalOutput';
 
 interface BuilderProps {
   doc: string;
