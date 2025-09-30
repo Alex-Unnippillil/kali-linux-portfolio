@@ -156,14 +156,16 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex justify-center my-4 items-center">
+            <input
+              id="kali-gradient-wallpaper"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Kali Gradient Wallpaper"
+            />
+            <label htmlFor="kali-gradient-wallpaper" className="text-ubt-grey">
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -264,6 +266,8 @@ export default function Settings() {
               checked={reducedMotion}
               onChange={setReducedMotion}
               ariaLabel="Reduced Motion"
+              offLabel="Off"
+              onLabel="On"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
@@ -272,6 +276,8 @@ export default function Settings() {
               checked={highContrast}
               onChange={setHighContrast}
               ariaLabel="High Contrast"
+              offLabel="Off"
+              onLabel="On"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
@@ -280,6 +286,8 @@ export default function Settings() {
               checked={haptics}
               onChange={setHaptics}
               ariaLabel="Haptics"
+              offLabel="Off"
+              onLabel="On"
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
