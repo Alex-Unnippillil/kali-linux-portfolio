@@ -3,9 +3,14 @@ export default function BetaBadge() {
   return (
     <button
       type="button"
-      className="fixed bottom-4 right-4 rounded bg-yellow-500/90 px-2 py-1 text-xs font-semibold text-black"
+      aria-label="Beta program indicator"
+      title="Beta"
+      className="fixed bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded bg-yellow-500/90 text-xs font-semibold text-black shadow-sm transition-transform sm:w-auto sm:px-2 sm:py-1"
     >
-      Beta
+      <span aria-hidden="true" className="text-base leading-none sm:hidden">
+        β
+      </span>
+      <span className="hidden sm:inline">Beta</span>
     </button>
   );
 }
