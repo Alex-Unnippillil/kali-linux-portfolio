@@ -381,6 +381,8 @@ const WhiskerMenu: React.FC = () => {
           width={16}
           height={16}
           className="inline mr-1"
+          sizes="16px"
+          priority
         />
         Applications
       </button>
@@ -439,6 +441,7 @@ const WhiskerMenu: React.FC = () => {
                       height={20}
                       className="h-5 w-5 opacity-80 group-hover:opacity-100"
                       sizes="20px"
+                      loading="lazy"
                     />
                     <span>{cat.label}</span>
                   </span>
@@ -473,6 +476,7 @@ const WhiskerMenu: React.FC = () => {
                       height={24}
                       className="h-6 w-6"
                       sizes="24px"
+                      loading="lazy"
                     />
                   </button>
                 ))}
@@ -545,6 +549,7 @@ const WhiskerMenu: React.FC = () => {
                               height={28}
                               className="h-7 w-7"
                               sizes="28px"
+                              loading="lazy"
                             />
                           </div>
                           <div>

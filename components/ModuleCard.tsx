@@ -47,12 +47,16 @@ export default function ModuleCard({
           alt="Details"
           width={24}
           height={24}
+          sizes="24px"
+          loading="lazy"
         />
         <Image
           src="/themes/Yaru/status/download.svg"
           alt="Run"
           width={24}
           height={24}
+          sizes="24px"
+          loading="lazy"
         />
       </div>
     </button>

@@ -72,6 +72,8 @@ const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryId, label }) => {
       width={20}
       height={20}
       className="h-5 w-5 flex-shrink-0"
+      sizes="20px"
+      loading="lazy"
       onError={() => {
         if (src !== DEFAULT_CATEGORY_ICON) {
           setSrc(DEFAULT_CATEGORY_ICON);

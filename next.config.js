@@ -213,7 +213,6 @@ module.exports = withBundleAnalyzer(
       ignoreDuringBuilds: true,
     },
     images: {
-      unoptimized: true,
       domains: [
         'opengraph.githubassets.com',
         'raw.githubusercontent.com',
@@ -226,8 +225,8 @@ module.exports = withBundleAnalyzer(
         'developer.mozilla.org',
         'en.wikipedia.org',
       ],
-      deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
-      imageSizes: [16, 32, 48, 64, 96, 128, 256],
+      deviceSizes: [360, 414, 640, 750, 828, 1080, 1280, 1536, 1920],
+      imageSizes: [16, 20, 24, 32, 48, 64, 96, 128, 256],
     },
     // Security headers are skipped outside production; remove !isProd check to restore them for development.
     ...(isStaticExport || !isProd
