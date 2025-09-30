@@ -5,7 +5,6 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
-import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -79,14 +78,7 @@ export default class Navbar extends PureComponent {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
                                 <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
-                                        style={{
-                                                minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.5rem)`,
-                                                paddingBottom: '0.5rem',
-                                                paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                                paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                        }}
+                                        className="global-header main-navbar-vp fixed inset-x-0 top-0 z-50 flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                 >
                                         <div className="flex items-center gap-2 text-xs md:text-sm">
                                                 <WhiskerMenu />

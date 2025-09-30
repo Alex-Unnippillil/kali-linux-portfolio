@@ -18,7 +18,8 @@ class MyDocument extends Document {
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
-          <script nonce={nonce} src="/theme.js" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <script nonce={nonce} src="/theme.js" defer />
         </Head>
         <body>
           <Main />
