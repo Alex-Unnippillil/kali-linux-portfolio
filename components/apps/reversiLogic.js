@@ -180,13 +180,22 @@ export const minimax = (
   return value;
 };
 
-export const bestMove = (board, player, depth, weights = DEFAULT_WEIGHTS) => {
+export const bestMove = (
+  board,
+  player,
+  depth,
+  weights = DEFAULT_WEIGHTS,
+  options = {},
+) => {
   const movesObj = computeLegalMoves(board, player);
   const entries = Object.entries(movesObj);
   if (entries.length === 0) return null;
   const opponent = player === 'B' ? 'W' : 'B';
   let best = null;
   let bestVal = -Infinity;
+  let evaluated = 0;
+  const { onProgress } = options;
+  const totalMoves = entries.length;
   for (const [key, flips] of entries) {
     const [r, c] = key.split('-').map(Number);
     const newBoard = applyMove(board, r, c, player, flips);
@@ -202,6 +211,18 @@ export const bestMove = (board, player, depth, weights = DEFAULT_WEIGHTS) => {
     if (val > bestVal) {
       bestVal = val;
       best = [r, c];
+    }
+    evaluated += 1;
+    if (typeof onProgress === 'function') {
+      onProgress({
+        evaluated,
+        total: totalMoves,
+        candidate: [r, c],
+        score: val,
+        bestMove: best,
+        bestScore: bestVal,
+        completed: evaluated === totalMoves,
+      });
     }
   }
   return best;

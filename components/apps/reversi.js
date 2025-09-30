@@ -9,6 +9,12 @@ import {
   getBookMove,
 } from './reversiLogic';
 
+const DIFFICULTIES = {
+  easy: { depth: 2, weights: { mobility: 1, corners: 10, edges: 5 } },
+  medium: { depth: 3, weights: { mobility: 3, corners: 20, edges: 7 } },
+  hard: { depth: 4, weights: { mobility: 5, corners: 25, edges: 10 } },
+};
+
 const BOARD_SIZE = 400;
 const CELL = BOARD_SIZE / SIZE;
 
@@ -34,16 +40,13 @@ const Reversi = () => {
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [mobility, setMobility] = useState({ player: 0, ai: 0 });
   const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
-  const DIFFICULTIES = {
-    easy: { depth: 2, weights: { mobility: 1, corners: 10, edges: 5 } },
-    medium: { depth: 3, weights: { mobility: 3, corners: 20, edges: 7 } },
-    hard: { depth: 4, weights: { mobility: 5, corners: 25, edges: 10 } },
-  };
   const [difficulty, setDifficulty] = useState('medium');
   const [useBook, setUseBook] = useState(true);
   const [history, setHistory] = useState([]);
   const [score, setScore] = useState(() => countPieces(board));
   const [diskTheme, setDiskTheme] = useState('dark');
+  const [aiProgress, setAiProgress] = useState(null);
+  const [isAiThinking, setIsAiThinking] = useState(false);
   const themeRef = useRef('dark');
   const bookEnabled = React.useMemo(() => useBook, [useBook]);
 
@@ -64,7 +67,16 @@ const Reversi = () => {
           new URL('../../workers/reversi.worker.js', import.meta.url)
         );
         workerRef.current.onmessage = (e) => {
+          const { type } = e.data;
+          if (type === 'progress') {
+            const { evaluated, total } = e.data;
+            setAiProgress({ evaluated, total });
+            return;
+          }
+          if (type !== 'done') return;
           aiThinkingRef.current = false;
+          setIsAiThinking(false);
+          setAiProgress(null);
           const { move } = e.data;
           if (!move) return;
           const [r, c] = move;
@@ -263,6 +275,8 @@ const Reversi = () => {
         : 'Tip: Control the corners to gain an advantage.',
     );
     if (Object.keys(moves).length === 0) {
+      setIsAiThinking(false);
+      setAiProgress(null);
       const opp = player === 'B' ? 'W' : 'B';
       const oppMoves = computeLegalMoves(board, opp);
       if (Object.keys(oppMoves).length === 0) {
@@ -283,27 +297,35 @@ const Reversi = () => {
     }
     if (player === 'W' && !paused && !aiThinkingRef.current) {
       const bookMove = bookEnabled ? getBookMove(board, 'W') : null;
-        if (bookMove) {
-          const [r, c] = bookMove;
-          const flips = moves[`${r}-${c}`];
-          if (flips) {
-            const prev = boardRef.current.map((row) => row.slice());
-            const next = applyMove(prev, r, c, 'W', flips);
-            queueFlips(r, c, 'W', prev);
-            setHistory((h) => [...h, { board: prev, player: 'W' }]);
-            setBoard(next);
-            playSound();
-            setPlayer('B');
-          }
-        } else {
+      if (bookMove) {
+        const [r, c] = bookMove;
+        const flips = moves[`${r}-${c}`];
+        if (flips) {
+          const prev = boardRef.current.map((row) => row.slice());
+          const next = applyMove(prev, r, c, 'W', flips);
+          queueFlips(r, c, 'W', prev);
+          setHistory((h) => [...h, { board: prev, player: 'W' }]);
+          setBoard(next);
+          playSound();
+          setPlayer('B');
+        }
+      } else {
         aiThinkingRef.current = true;
+        setIsAiThinking(true);
+        setAiProgress(null);
         if (workerRef.current) {
           const { depth, weights } = DIFFICULTIES[difficulty];
           workerRef.current.postMessage({ board, player: 'W', depth, weights });
         }
       }
     }
-    setMessage(player === 'B' ? 'Your turn' : "AI's turn");
+    if (player === 'B') {
+      setMessage('Your turn');
+    } else if (aiThinkingRef.current) {
+      setMessage('AI is thinking...');
+    } else {
+      setMessage("AI's turn");
+    }
   }, [board, player, paused, difficulty, playSound, bookEnabled]);
 
   const handleClick = (e) => {
@@ -354,6 +376,9 @@ const Reversi = () => {
     setMessage('Your turn');
     setPaused(false);
     setHistory([]);
+    setAiProgress(null);
+    setIsAiThinking(false);
+    aiThinkingRef.current = false;
   };
 
   const undo = useCallback(() => {
@@ -366,6 +391,8 @@ const Reversi = () => {
     previewRef.current = null;
     flippingRef.current = [];
     aiThinkingRef.current = false;
+    setIsAiThinking(false);
+    setAiProgress(null);
   }, [history]);
 
   useEffect(() => {
@@ -390,6 +417,7 @@ const Reversi = () => {
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           className="bg-green-700"
+          aria-label="Reversi board"
         />
         <div className="absolute top-1 left-1 flex items-center space-x-1 text-sm">
           <div
@@ -407,6 +435,23 @@ const Reversi = () => {
       <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
       <div className="mt-1">Mobility - You: {mobility.player} | AI: {mobility.ai}</div>
       <div className="mt-1" role="status" aria-live="polite">{message}</div>
+      {isAiThinking && (
+        <div
+          className="mt-2 flex items-center text-sm text-gray-300"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            aria-hidden="true"
+            className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border border-white/30 border-t-transparent"
+          />
+          <span>
+            {aiProgress && aiProgress.total
+              ? `AI evaluating moves (${aiProgress.evaluated}/${aiProgress.total})`
+              : 'AI evaluating moves...'}
+          </span>
+        </div>
+      )}
       <div className="mt-1 text-sm text-gray-300">{tip}</div>
       <div className="mt-2 flex space-x-2 items-center">
         <button
@@ -449,6 +494,7 @@ const Reversi = () => {
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           value={difficulty}
           onChange={(e) => setDifficulty(e.target.value)}
+          aria-label="Select difficulty"
         >
           {Object.keys(DIFFICULTIES).map((d) => (
             <option key={d} value={d}>
