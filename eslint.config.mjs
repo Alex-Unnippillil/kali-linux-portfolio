@@ -4,6 +4,18 @@ import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
 const compat = new FlatCompat();
 
 const config = [
+  {
+    files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+  },
   { ignores: ['components/apps/Chrome/index.tsx'] },
   {
     plugins: {
