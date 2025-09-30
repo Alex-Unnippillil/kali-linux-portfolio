@@ -1,6 +1,6 @@
 "use client";
 
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 
@@ -71,42 +71,46 @@ const VCardPage: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
       <form className="w-full max-w-md space-y-2">
-        <label className="block text-sm">
-          Full Name
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
-          />
-        </label>
-        <label className="block text-sm">
-          Organization
-          <input
-            type="text"
-            value={org}
-            onChange={(e) => setOrg(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
-          />
-        </label>
-        <label className="block text-sm">
-          Phone
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
-          />
-        </label>
-        <label className="block text-sm">
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded border p-2"
-          />
-        </label>
+          <label className="block text-sm">
+            Full Name
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded border p-2"
+              aria-label="Full name"
+            />
+          </label>
+          <label className="block text-sm">
+            Organization
+            <input
+              type="text"
+              value={org}
+              onChange={(e) => setOrg(e.target.value)}
+              className="mt-1 w-full rounded border p-2"
+              aria-label="Organization"
+            />
+          </label>
+          <label className="block text-sm">
+            Phone
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-1 w-full rounded border p-2"
+              aria-label="Phone number"
+            />
+          </label>
+          <label className="block text-sm">
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full rounded border p-2"
+              aria-label="Email address"
+            />
+          </label>
       </form>
       {vcard && (
         <div className="flex flex-col items-center gap-2">

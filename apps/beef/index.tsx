@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 import BeefApp from '../../components/apps/beef';
 
 type Severity = 'Low' | 'Medium' | 'High';

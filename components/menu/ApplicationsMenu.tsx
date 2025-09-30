@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import Image from '@/components/common/Image';
 
 export type KaliCategory = {
   id: string;

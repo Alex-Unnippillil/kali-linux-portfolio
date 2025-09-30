@@ -6,10 +6,11 @@ export type AppMetadata = {
   icon?: string;
 };
 
-type AppEntry = {
+export type AppEntry = {
   id: string;
   title: string;
   icon?: string;
+  disabled?: boolean;
 };
 
 const DEFAULT_KEYBOARD_HINTS = [

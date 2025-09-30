@@ -226,8 +226,26 @@ module.exports = withBundleAnalyzer(
         'developer.mozilla.org',
         'en.wikipedia.org',
       ],
-      deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
-      imageSizes: [16, 32, 48, 64, 96, 128, 256],
+      deviceSizes: [
+        320,
+        360,
+        375,
+        390,
+        414,
+        480,
+        540,
+        640,
+        750,
+        828,
+        1080,
+        1200,
+        1280,
+        1920,
+        2048,
+        3840,
+      ],
+      // Align with icon tokens (16–96px) and large preview usage.
+      imageSizes: [16, 20, 24, 28, 32, 48, 64, 96, 128, 256],
     },
     // Security headers are skipped outside production; remove !isProd check to restore them for development.
     ...(isStaticExport || !isProd
