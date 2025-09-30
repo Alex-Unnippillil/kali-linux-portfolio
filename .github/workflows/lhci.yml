@@ -1,0 +1,38 @@
+name: Lighthouse CI (Canary)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  lhci:
+    name: Audit canary deployment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      LHCI_CANARY_BASE_URL: ${{ secrets.LHCI_CANARY_BASE_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable --check-cache
+
+      - name: Run Lighthouse CI against canary
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          configPath: .lighthouserc.js
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          runs: 1
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          LHCI_CANARY_BASE_URL: ${{ env.LHCI_CANARY_BASE_URL }}
