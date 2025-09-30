@@ -42,6 +42,15 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const swipeState = useRef({
+    pointerId: null as number | null,
+    startX: 0,
+    startY: 0,
+    isActive: false,
+    isHorizontal: false,
+  });
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -64,15 +73,52 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     [onTabsChange],
   );
 
-  const setActive = useCallback(
+  const focusContainer = useCallback(() => {
+    containerRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  const selectTab = useCallback(
     (id: string) => {
-      setActiveId(id);
+      setActiveId((prev) => {
+        if (prev === id) return prev;
+        return id;
+      });
+      focusContainer();
     },
-    [],
+    [focusContainer],
   );
+
+  const goToOffset = useCallback(
+    (direction: number) => {
+      if (tabs.length === 0) return false;
+      const currentIndex = tabs.findIndex((t) => t.id === activeId);
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex;
+      const nextIndex = (safeIndex + direction + tabs.length) % tabs.length;
+      const nextTab = tabs[nextIndex];
+      if (nextTab && nextTab.id !== activeId) {
+        setActiveId(nextTab.id);
+        return true;
+      }
+      return false;
+    },
+    [activeId, tabs],
+  );
+
+  const activateNext = useCallback(() => {
+    if (goToOffset(1)) {
+      focusContainer();
+    }
+  }, [focusContainer, goToOffset]);
+
+  const activatePrevious = useCallback(() => {
+    if (goToOffset(-1)) {
+      focusContainer();
+    }
+  }, [focusContainer, goToOffset]);
 
   const closeTab = useCallback(
     (id: string) => {
+      focusContainer();
       updateTabs((prev) => {
         const idx = prev.findIndex((t) => t.id === id);
         const removed = prev[idx];
@@ -88,8 +134,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         }
         return next;
       });
-    },
-    [activeId, onNewTab, updateTabs],
+      },
+    [activeId, focusContainer, onNewTab, updateTabs],
   );
 
   const addTab = useCallback(() => {
@@ -97,7 +143,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     const tab = onNewTab();
     updateTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
-  }, [onNewTab, updateTabs]);
+    focusContainer();
+  }, [focusContainer, onNewTab, updateTabs]);
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
@@ -134,93 +181,199 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
     if (e.ctrlKey && e.key === 'Tab') {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx = e.shiftKey
-          ? (idx - 1 + prev.length) % prev.length
-          : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
+      if (e.shiftKey) {
+        activatePrevious();
+      } else {
+        activateNext();
+      }
       return;
     }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx =
-          e.key === 'ArrowLeft'
-            ? (idx - 1 + prev.length) % prev.length
-            : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
+      if (e.key === 'ArrowLeft') {
+        activatePrevious();
+      } else {
+        activateNext();
+      }
     }
   };
 
+  const releasePointer = useCallback(() => {
+    const state = swipeState.current;
+    if (state.pointerId !== null && contentRef.current) {
+      try {
+        contentRef.current.releasePointerCapture(state.pointerId);
+      } catch {
+        // ignore if capture is not set
+      }
+    }
+    swipeState.current = {
+      pointerId: null,
+      startX: 0,
+      startY: 0,
+      isActive: false,
+      isHorizontal: false,
+    };
+  }, []);
+
+  const SWIPE_LOCK_THRESHOLD = 10;
+  const SWIPE_ACTIVATION_DISTANCE = 80;
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+    swipeState.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      isActive: true,
+      isHorizontal: false,
+    };
+    contentRef.current?.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const state = swipeState.current;
+      if (!state.isActive || state.pointerId !== e.pointerId) return;
+      const dx = e.clientX - state.startX;
+      const dy = e.clientY - state.startY;
+      if (!state.isHorizontal) {
+        if (Math.abs(dx) >= SWIPE_LOCK_THRESHOLD) {
+          state.isHorizontal = Math.abs(dx) > Math.abs(dy);
+        }
+      }
+      if (state.isHorizontal) {
+        e.preventDefault();
+      }
+    },
+    [],
+  );
+
+  const handlePointerEnd = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const state = swipeState.current;
+      if (!state.isActive || state.pointerId !== e.pointerId) return;
+      const dx = e.clientX - state.startX;
+      if (state.isHorizontal && Math.abs(dx) >= SWIPE_ACTIVATION_DISTANCE) {
+        if (dx < 0) {
+          activateNext();
+        } else {
+          activatePrevious();
+        }
+      }
+      releasePointer();
+    },
+    [activateNext, activatePrevious, releasePointer],
+  );
+
+  const handlePointerCancel = useCallback(() => {
+    releasePointer();
+  }, [releasePointer]);
+
+  const activeTab = tabs.find((t) => t.id === activeId) ?? tabs[0];
+
+  useEffect(() => {
+    if (tabs.length === 0) {
+      if (activeId !== '') {
+        setActiveId('');
+      }
+      return;
+    }
+    if (!tabs.some((t) => t.id === activeId)) {
+      setActiveId(tabs[0].id);
+    }
+  }, [activeId, tabs]);
+
   return (
     <div
+      ref={containerRef}
       className={`flex flex-col w-full h-full ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
-        {tabs.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
-            draggable
-            onDragStart={handleDragStart(i)}
-            onDragOver={handleDragOver(i)}
-            onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
-          >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
-              <button
-                className="p-0.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
+      <div className="flex flex-shrink-0 bg-gray-900 text-white text-sm">
+        <div
+          className="flex w-full overflow-x-auto gap-1 px-2 py-2 sm:py-1"
+          role="tablist"
+          aria-label="Window tabs"
+        >
+          {tabs.map((t, i) => {
+            const isActive = t.id === activeId;
+            return (
+              <div
+                key={t.id}
+                id={`tab-${t.id}`}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`tabpanel-${t.id}`}
+                tabIndex={isActive ? 0 : -1}
+                className={`flex items-center gap-2 rounded-md border border-transparent px-3 py-2 text-xs sm:text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                  isActive ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                } min-w-[120px] sm:min-w-[90px] shrink-0 select-none`}
+                draggable
+                onDragStart={handleDragStart(i)}
+                onDragOver={handleDragOver(i)}
+                onDrop={handleDrop(i)}
+                onClick={() => selectTab(t.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    selectTab(t.id);
+                  }
                 }}
-                aria-label="Close Tab"
               >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        {onNewTab && (
-          <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
-            onClick={addTab}
-            aria-label="New Tab"
-          >
-            +
-          </button>
-        )}
+                <span className="truncate">{middleEllipsis(t.title)}</span>
+                {t.closable !== false && tabs.length > 1 && (
+                  <button
+                    type="button"
+                    className="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(t.id);
+                    }}
+                    aria-label="Close Tab"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {onNewTab && (
+            <button
+              type="button"
+              className="flex h-full items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs sm:text-sm text-gray-200 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-gray-900"
+              onClick={addTab}
+              aria-label="New Tab"
+            >
+              +
+            </button>
+          )}
+        </div>
       </div>
-      <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
+      <div
+        ref={contentRef}
+        className="relative flex-grow overflow-hidden touch-pan-y"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerCancel}
+      >
+        {activeTab && (
           <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
+            key={activeTab.id}
+            value={{ id: activeTab.id, active: true, close: () => closeTab(activeTab.id) }}
           >
             <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+              id={`tabpanel-${activeTab.id}`}
+              role="tabpanel"
+              aria-labelledby={`tab-${activeTab.id}`}
+              className="absolute inset-0 h-full w-full"
             >
-              {t.content}
+              {activeTab.content}
             </div>
           </TabContext.Provider>
-        ))}
+        )}
       </div>
     </div>
   );
