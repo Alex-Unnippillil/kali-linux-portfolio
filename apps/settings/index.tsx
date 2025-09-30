@@ -127,7 +127,7 @@ export default function Settings() {
               />
             )}
           </div>
-          <div className="flex justify-center my-4">
+          <div className="flex items-center justify-center my-4">
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
               value={theme}
@@ -140,7 +140,7 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
+          <div className="flex items-center justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
               {ACCENT_OPTIONS.map((c) => (
@@ -156,14 +156,16 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex items-center justify-center my-4">
+            <input
+              id="kali-gradient-wallpaper"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Enable Kali gradient wallpaper"
+            />
+            <label htmlFor="kali-gradient-wallpaper" className="text-ubt-grey">
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -258,28 +260,31 @@ export default function Settings() {
               <option value="compact">Compact</option>
             </select>
           </div>
-          <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
+          <div className="flex justify-center my-4">
             <ToggleSwitch
               checked={reducedMotion}
               onChange={setReducedMotion}
-              ariaLabel="Reduced Motion"
+              label="Reduced Motion"
+              caption="Limit animations and motion effects."
+              containerClassName="w-full max-w-xs justify-between"
             />
           </div>
-          <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">High Contrast:</span>
+          <div className="flex justify-center my-4">
             <ToggleSwitch
               checked={highContrast}
               onChange={setHighContrast}
-              ariaLabel="High Contrast"
+              label="High Contrast"
+              caption="Increase interface contrast for readability."
+              containerClassName="w-full max-w-xs justify-between"
             />
           </div>
-          <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Haptics:</span>
+          <div className="flex justify-center my-4">
             <ToggleSwitch
               checked={haptics}
               onChange={setHaptics}
-              ariaLabel="Haptics"
+              label="Haptics"
+              caption="Enable simulated vibration feedback."
+              containerClassName="w-full max-w-xs justify-between"
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
