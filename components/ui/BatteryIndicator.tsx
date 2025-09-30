@@ -179,7 +179,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
     <div ref={rootRef} className={`relative flex items-center ${className}`.trim()}>
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
+        className="touch-target touch-target-spacing rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
         aria-label={tooltip}
         aria-haspopup="true"
         aria-expanded={open}
