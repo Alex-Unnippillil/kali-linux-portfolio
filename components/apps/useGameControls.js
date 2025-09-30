@@ -62,29 +62,77 @@ const useGameControls = (arg, gameId = 'default') => {
     if (!onDirection) return undefined;
     let startX = 0;
     let startY = 0;
+    let active = false;
+    let handled = false;
+    const threshold = 24;
 
-    const start = (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    };
-
-    const end = (e) => {
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
+    const handleSwipe = (dx, dy) => {
       if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 30) onDirection({ x: 1, y: 0 });
-        else if (dx < -30) onDirection({ x: -1, y: 0 });
+        onDirection({ x: dx > 0 ? 1 : -1, y: 0 });
       } else {
-        if (dy > 30) onDirection({ x: 0, y: 1 });
-        else if (dy < -30) onDirection({ x: 0, y: -1 });
+        onDirection({ x: 0, y: dy > 0 ? 1 : -1 });
       }
     };
 
-    window.addEventListener('touchstart', start);
-    window.addEventListener('touchend', end);
+    const start = (e) => {
+      if (!e.touches?.length) return;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      active = true;
+      handled = false;
+    };
+
+    const move = (e) => {
+      if (!active || handled || !e.touches?.length) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
+      e.preventDefault();
+      handleSwipe(dx, dy);
+      handled = true;
+      active = false;
+    };
+
+    const end = (e) => {
+      if (!active || handled) {
+        active = false;
+        return;
+      }
+      const touch = e.changedTouches?.[0];
+      if (!touch) {
+        active = false;
+        return;
+      }
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold / 2) {
+        active = false;
+        return;
+      }
+      e.preventDefault();
+      handleSwipe(dx, dy);
+      active = false;
+    };
+
+    const cancel = () => {
+      active = false;
+      handled = false;
+    };
+
+    const target = document;
+    const listenerOptions = { passive: false, capture: true };
+    const captureOptions = { capture: true };
+    target.addEventListener('touchstart', start, listenerOptions);
+    target.addEventListener('touchmove', move, listenerOptions);
+    target.addEventListener('touchend', end, captureOptions);
+    target.addEventListener('touchcancel', cancel, captureOptions);
     return () => {
-      window.removeEventListener('touchstart', start);
-      window.removeEventListener('touchend', end);
+      target.removeEventListener('touchstart', start, listenerOptions);
+      target.removeEventListener('touchmove', move, listenerOptions);
+      target.removeEventListener('touchend', end, captureOptions);
+      target.removeEventListener('touchcancel', cancel, captureOptions);
     };
   }, [onDirection]);
 
