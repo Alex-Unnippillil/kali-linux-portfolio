@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useCallback, useId, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
 
 interface Playlist {
   id: string;
   title: string;
-  description: string;
-  thumbnail: string;
-  channelTitle: string;
-  channelId: string;
-  itemCount: number;
-  updatedAt: string;
+  description?: string;
+  thumbnail?: string;
+  channelTitle?: string;
+  channelName?: string;
+  channelId?: string;
+  itemCount?: number;
+  updatedAt?: string;
 }
 
 interface Props {
@@ -19,29 +20,35 @@ interface Props {
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
+const getTitleForSort = (value?: string) => value ?? '';
+
 const SORT_OPTIONS = [
   {
     id: 'title-asc' as const,
     label: 'Title A → Z',
     compare: (a: Playlist, b: Playlist) =>
-      a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+      getTitleForSort(a.title).localeCompare(getTitleForSort(b.title), undefined, {
+        sensitivity: 'base',
+      }),
   },
   {
     id: 'title-desc' as const,
     label: 'Title Z → A',
     compare: (a: Playlist, b: Playlist) =>
-      b.title.localeCompare(a.title, undefined, { sensitivity: 'base' }),
+      getTitleForSort(b.title).localeCompare(getTitleForSort(a.title), undefined, {
+        sensitivity: 'base',
+      }),
   },
   {
     id: 'updated-desc' as const,
     label: 'Recently Updated',
     compare: (a: Playlist, b: Playlist) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime(),
   },
   {
     id: 'size-desc' as const,
     label: 'Largest First',
-    compare: (a: Playlist, b: Playlist) => b.itemCount - a.itemCount,
+    compare: (a: Playlist, b: Playlist) => (b.itemCount ?? 0) - (a.itemCount ?? 0),
   },
 ];
 
@@ -104,6 +111,22 @@ type PipedItem = {
   updated?: string;
 };
 
+function normalizePlaylist(playlist: Playlist): Playlist {
+  const channelDisplay = playlist.channelTitle ?? playlist.channelName ?? 'Unknown channel';
+  const channelIdentifier = playlist.channelId ?? playlist.channelName ?? channelDisplay;
+
+  return {
+    ...playlist,
+    title: playlist.title || 'Untitled playlist',
+    description: playlist.description ?? '',
+    thumbnail: playlist.thumbnail ?? '',
+    channelTitle: channelDisplay,
+    channelId: channelIdentifier,
+    itemCount: playlist.itemCount ?? 0,
+    updatedAt: playlist.updatedAt ?? new Date().toISOString(),
+  };
+}
+
 async function fetchPlaylistsFromYouTube(
   query: string,
   pageToken?: string,
@@ -141,10 +164,11 @@ async function fetchPlaylistsFromYouTube(
     throw new Error(details.error?.message || 'Failed to load playlist details');
   }
 
-  const items: Playlist[] = (details.items ?? []).map((item) => ({
-    id: item.id,
-    title: item.snippet?.title ?? 'Untitled playlist',
-    description: item.snippet?.description ?? '',
+  const items: Playlist[] = (details.items ?? [])
+    .map((item) => ({
+      id: item.id,
+      title: item.snippet?.title ?? 'Untitled playlist',
+      description: item.snippet?.description ?? '',
     thumbnail:
       item.snippet?.thumbnails?.maxres?.url ||
       item.snippet?.thumbnails?.medium?.url ||
@@ -154,7 +178,8 @@ async function fetchPlaylistsFromYouTube(
     channelId: item.snippet?.channelId ?? '',
     itemCount: item.contentDetails?.itemCount ?? 0,
     updatedAt: item.snippet?.publishedAt ?? new Date().toISOString(),
-  }));
+  }))
+    .map(normalizePlaylist);
 
   return {
     items,
@@ -201,12 +226,14 @@ async function fetchPlaylistsFromPiped(query: string): Promise<FetchResult> {
         '',
       itemCount: item?.videos || item?.videoCount || 0,
       updatedAt: item?.uploaded || item?.updated || new Date().toISOString(),
-    }));
+    }))
+    .map(normalizePlaylist);
 
   return { items, nextPageToken: null };
 }
 
-function formatDate(value: string) {
+function formatDate(value?: string) {
+  if (!value) return 'Unknown';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Unknown';
   return new Intl.DateTimeFormat(undefined, {
@@ -216,14 +243,24 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function getChannelDisplay(playlist: Playlist) {
+  return playlist.channelTitle ?? playlist.channelName ?? 'Unknown channel';
+}
+
+function getChannelId(playlist: Playlist) {
+  return playlist.channelId ?? playlist.channelName ?? getChannelDisplay(playlist);
+}
+
 function PlaylistCard({ playlist }: { playlist: Playlist }) {
+  const title = playlist.title || 'Untitled playlist';
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/30 shadow-lg transition hover:-translate-y-1 hover:border-ubt-green/70 hover:shadow-2xl">
       <div className="relative">
         {playlist.thumbnail ? (
           <img
             src={playlist.thumbnail}
-            alt={`Thumbnail for ${playlist.title}`}
+            alt={`Thumbnail for ${title}`}
             className="h-40 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
           />
         ) : (
@@ -232,14 +269,14 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
           </div>
         )}
         <span className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs text-white">
-          {playlist.itemCount} videos
+          {playlist.itemCount ?? 0} videos
         </span>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">{playlist.title}</h3>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
           <p className="mt-1 text-sm text-ubt-grey">
-            by <span className="text-ubt-green">{playlist.channelTitle}</span>
+            by <span className="text-ubt-green">{getChannelDisplay(playlist)}</span>
           </p>
         </div>
         {playlist.description && (
@@ -266,7 +303,11 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
 export default function YouTubeApp({ initialResults = [] }: Props) {
   const searchInputId = useId();
   const [query, setQuery] = useState('');
-  const [playlists, setPlaylists] = useState<Playlist[]>(initialResults);
+  const normalizedInitial = useMemo(
+    () => initialResults.map(normalizePlaylist),
+    [initialResults],
+  );
+  const [playlists, setPlaylists] = useState<Playlist[]>(normalizedInitial);
   const [sortId, setSortId] = useState<SortId>('updated-desc');
   const [layout, setLayout] = useState<LayoutId>('grid');
   const [selectedChannel, setSelectedChannel] = useState<string>('all');
@@ -276,10 +317,15 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [lastQuery, setLastQuery] = useState<string>('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
+  useEffect(() => {
+    setPlaylists(normalizedInitial);
+  }, [normalizedInitial]);
+
   const channels = useMemo(() => {
     const map = new Map<string, { id: string; title: string; count: number }>();
     playlists.forEach((playlist) => {
-      const id = playlist.channelId || playlist.channelTitle;
+      const id = getChannelId(playlist);
+      const title = getChannelDisplay(playlist);
       const current = map.get(id);
       if (current) {
         map.set(id, {
@@ -289,13 +335,15 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       } else {
         map.set(id, {
           id,
-          title: playlist.channelTitle,
+          title,
           count: 1,
         });
       }
     });
     return Array.from(map.values()).sort((a, b) =>
-      a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+      getTitleForSort(a.title).localeCompare(getTitleForSort(b.title), undefined, {
+        sensitivity: 'base',
+      }),
     );
   }, [playlists]);
 
@@ -303,9 +351,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     (items: Playlist[]): Playlist[] => {
       let filtered = selectedChannel === 'all'
         ? items
-        : items.filter((item) =>
-            (item.channelId || item.channelTitle) === selectedChannel,
-          );
+        : items.filter((item) => getChannelId(item) === selectedChannel);
 
       const option = SORT_OPTIONS.find((opt) => opt.id === sortId) ?? SORT_OPTIONS[0];
       filtered = [...filtered].sort(option.compare);
@@ -320,13 +366,14 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     if (layout !== 'channel-groups') return [];
     const groups = new Map<string, { title: string; items: Playlist[] }>();
     organizedPlaylists.forEach((playlist) => {
-      const id = playlist.channelId || playlist.channelTitle;
+      const id = getChannelId(playlist);
+      const title = getChannelDisplay(playlist);
       const group = groups.get(id);
       if (group) {
         group.items.push(playlist);
       } else {
         groups.set(id, {
-          title: playlist.channelTitle,
+          title,
           items: [playlist],
         });
       }
