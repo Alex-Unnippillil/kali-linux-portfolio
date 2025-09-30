@@ -72,6 +72,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
                   height={28}
                   className="h-7 w-7 flex-shrink-0"
                   data-fallback-src={item.icon}
+                  loading="lazy"
                   onError={(event) => {
                     const target = event.currentTarget;
                     if (target.getAttribute(FALLBACK_FLAG) === 'true') {
