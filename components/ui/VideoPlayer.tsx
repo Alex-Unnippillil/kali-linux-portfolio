@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 
 interface VideoPlayerProps {
@@ -91,35 +91,194 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     const initialVolume = videoRef.current?.volume ?? 1;
     const DocPipControls: React.FC<{ initialVolume: number }> = ({ initialVolume }) => {
       const [vol, setVol] = useState(initialVolume);
-      const send = (msg: any) =>
-        window.opener?.postMessage({ source: "doc-pip", ...msg }, "*");
+      const [copiedId, setCopiedId] = useState<string | null>(null);
+      const [copyError, setCopyError] = useState<string | null>(null);
+      const send = useCallback(
+        (msg: any) => {
+          window.opener?.postMessage({ source: "doc-pip", ...msg }, "*");
+        },
+        [],
+      );
+
+      const handleCopy = useCallback(async (text: string, id: string) => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+        setCopyError(null);
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.setAttribute("readonly", "true");
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            const successful = document.execCommand("copy");
+            document.body.removeChild(textarea);
+            if (!successful) {
+              throw new Error("Copy command was not successful");
+            }
+          }
+          setCopiedId(id);
+          window.setTimeout(() => {
+            setCopiedId((current) => (current === id ? null : current));
+          }, 2000);
+        } catch (err) {
+          console.error(err);
+          setCopyError("Copy failed. Long-press the command to select it manually.");
+        }
+      }, []);
+
+      const osSections = [
+        {
+          id: "mac",
+          title: "macOS setup",
+          description:
+            "Install Yarn with Homebrew, then install dependencies and start the development server.",
+          command: "brew install yarn\ncd kali-linux-portfolio\nyarn install\nyarn dev",
+        },
+        {
+          id: "windows",
+          title: "Windows setup",
+          description:
+            "Use Winget to install Yarn, then install dependencies from PowerShell and run the dev server.",
+          command:
+            "winget install --id Yarn.Yarn -e\ncd kali-linux-portfolio\nyarn install\nyarn dev",
+        },
+        {
+          id: "linux",
+          title: "Linux setup",
+          description:
+            "Install Yarn via your package manager, then install dependencies and start the dev server.",
+          command:
+            "sudo apt update && sudo apt install yarnpkg\ncd kali-linux-portfolio\nyarn install\nyarn dev",
+        },
+      ];
+
       return (
         <div
           style={{
-            padding: 8,
-            background: "black",
+            padding: 12,
+            background: "#0b0b0b",
             color: "white",
-            fontFamily: "sans-serif",
+            fontFamily: "system-ui, sans-serif",
             display: "flex",
-            gap: 8,
-            alignItems: "center",
+            flexDirection: "column",
+            gap: 12,
+            minWidth: 320,
+            boxSizing: "border-box",
           }}
         >
-          <button onClick={() => send({ type: "toggle" })}>Play/Pause</button>
-          <button onClick={() => send({ type: "seek", delta: -5 })}>-5s</button>
-          <button onClick={() => send({ type: "seek", delta: 5 })}>+5s</button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={vol}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              setVol(v);
-              send({ type: "volume", value: v });
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              alignItems: "center",
+              justifyContent: "flex-start",
             }}
-          />
+          >
+            <button
+              style={{ padding: "6px 10px", background: "#2563eb", color: "white", border: "none", borderRadius: 6 }}
+              onClick={() => send({ type: "toggle" })}
+            >
+              Play/Pause
+            </button>
+            <button
+              style={{ padding: "6px 10px", background: "#1f2937", color: "white", border: "none", borderRadius: 6 }}
+              onClick={() => send({ type: "seek", delta: -5 })}
+            >
+              -5s
+            </button>
+            <button
+              style={{ padding: "6px 10px", background: "#1f2937", color: "white", border: "none", borderRadius: 6 }}
+              onClick={() => send({ type: "seek", delta: 5 })}
+            >
+              +5s
+            </button>
+            <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12 }}>Volume</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={vol}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  setVol(v);
+                  send({ type: "volume", value: v });
+                }}
+              />
+            </label>
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.2)", paddingTop: 8 }}>
+            <h2 style={{ margin: "0 0 8px", fontSize: 16 }}>Quick start cheatsheet</h2>
+            <p style={{ margin: "0 0 8px", fontSize: 13, lineHeight: 1.4 }}>
+              Choose your operating system below to view the recommended setup commands. Use the copy button or long-press on
+              mobile devices to copy the snippet.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {osSections.map((section) => {
+                const label = copiedId === section.id ? "Copied!" : "Copy";
+                return (
+                  <details
+                    key={section.id}
+                    style={{
+                      background: "#111827",
+                      borderRadius: 8,
+                      padding: "6px 8px",
+                    }}
+                  >
+                    <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14 }}>{section.title}</summary>
+                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.4 }}>{section.description}</p>
+                      <pre
+                        style={{
+                          margin: 0,
+                          background: "rgba(15,23,42,0.8)",
+                          borderRadius: 6,
+                          padding: 8,
+                          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                          fontSize: 12,
+                          lineHeight: 1.5,
+                          whiteSpace: "pre-wrap",
+                        }}
+                        aria-label={`${section.title} setup commands`}
+                      >
+                        <code>{section.command}</code>
+                      </pre>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(section.command, section.id)}
+                        style={{
+                          alignSelf: "flex-start",
+                          padding: "6px 10px",
+                          background: copiedId === section.id ? "#16a34a" : "#2563eb",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          transition: "background 0.2s ease",
+                        }}
+                        aria-live="polite"
+                      >
+                        {label}
+                      </button>
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+            {copyError && (
+              <p style={{ marginTop: 8, color: "#fbbf24", fontSize: 12 }} aria-live="assertive">
+                {copyError}
+              </p>
+            )}
+          </div>
         </div>
       );
     };
