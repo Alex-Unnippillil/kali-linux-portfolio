@@ -22,6 +22,12 @@
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
+
+  --beta-badge-bg: rgba(234, 179, 8, 0.9);
+  --beta-badge-bg-hover: rgba(250, 204, 21, 0.95);
+  --beta-badge-fg: #1f2937;
+  --beta-badge-icon: #92400e;
+  --beta-badge-outline: var(--color-focus-ring);
 }
 
 body {
@@ -42,6 +48,11 @@ html[data-theme='dark'] {
   --color-border: #333333;
   --color-terminal: #00ff00;
   --color-dark: #0a0a0a;
+
+  --beta-badge-bg: rgba(217, 119, 6, 0.9);
+  --beta-badge-bg-hover: rgba(250, 204, 21, 0.9);
+  --beta-badge-fg: #111827;
+  --beta-badge-icon: #fbbf24;
 }
 
 /* Neon theme */
@@ -57,6 +68,11 @@ html[data-theme='neon'] {
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+
+  --beta-badge-bg: color-mix(in srgb, var(--color-accent) 80%, rgba(0, 0, 0, 0.1));
+  --beta-badge-bg-hover: var(--color-accent);
+  --beta-badge-fg: #0f172a;
+  --beta-badge-icon: #fef9c3;
 }
 
 /* Matrix theme */
@@ -72,6 +88,11 @@ html[data-theme='matrix'] {
   --color-border: #003300;
   --color-terminal: #00ff00;
   --color-dark: #000000;
+
+  --beta-badge-bg: color-mix(in srgb, var(--color-accent) 75%, rgba(0, 0, 0, 0.15));
+  --beta-badge-bg-hover: color-mix(in srgb, var(--color-accent) 85%, rgba(0, 0, 0, 0.05));
+  --beta-badge-fg: #001b0b;
+  --beta-badge-icon: #bbf7d0;
 
 }
 
