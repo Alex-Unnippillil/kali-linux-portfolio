@@ -24,6 +24,62 @@
   accent-color: var(--color-control-accent);
 }
 
+.text-body-sm,
+.text-body-md,
+.text-body-lg,
+.text-heading-sm,
+.text-heading-md,
+.text-heading-lg,
+.text-heading-xl {
+  font-family: var(--font-family-base);
+  color: inherit;
+}
+
+.text-body-sm,
+.text-body-md,
+.text-body-lg {
+  line-height: var(--line-height-body);
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+.text-body-sm {
+  font-size: var(--font-size-body-sm);
+}
+
+.text-body-md {
+  font-size: var(--font-size-body-md);
+}
+
+.text-body-lg {
+  font-size: var(--font-size-body-lg);
+}
+
+.text-heading-sm,
+.text-heading-md,
+.text-heading-lg,
+.text-heading-xl {
+  line-height: var(--line-height-heading);
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.text-heading-sm {
+  font-size: var(--font-size-heading-sm);
+}
+
+.text-heading-md {
+  font-size: var(--font-size-heading-md);
+}
+
+.text-heading-lg {
+  font-size: var(--font-size-heading-lg);
+}
+
+.text-heading-xl {
+  font-size: var(--font-size-heading-xl);
+}
+
 body {
   background: var(--kali-bg);
   color: var(--kali-text);

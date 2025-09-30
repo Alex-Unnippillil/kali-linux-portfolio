@@ -262,10 +262,10 @@ const ContactApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
-      <h1 className="mb-6 text-2xl">Contact</h1>
+      <h1 className="mb-6 font-semibold text-heading-md">Contact</h1>
       {banner && (
         <div
-          className={`mb-6 rounded p-3 text-sm ${
+          className={`mb-6 rounded p-3 text-body-sm ${
             banner.type === 'success' ? 'bg-green-600' : 'bg-red-600'
           }`}
         >
@@ -273,7 +273,7 @@ const ContactApp: React.FC = () => {
         </div>
       )}
       {fallback && (
-        <p className="mb-6 text-sm">
+        <p className="mb-6 text-body-sm">
           Service unavailable. You can{' '}
           <button
             type="button"
@@ -299,7 +299,7 @@ const ContactApp: React.FC = () => {
         </p>
       )}
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
-        <div className="relative">
+        <div className="relative text-body-md">
           <input
             id="contact-name"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
@@ -315,7 +315,7 @@ const ContactApp: React.FC = () => {
             Name
           </label>
         </div>
-        <div className="relative">
+        <div className="relative text-body-md">
           <input
             id="contact-email"
             type="email"
@@ -339,7 +339,7 @@ const ContactApp: React.FC = () => {
             </FormError>
           )}
         </div>
-        <div className="relative">
+        <div className="relative text-body-md">
           <textarea
             id="contact-message"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"

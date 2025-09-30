@@ -45,13 +45,24 @@
   --game-color-warning: #d97706;
   --game-color-danger: #b91c1c;
 
-  /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
+  /* Spacing scale (fluid between 320px and 1440px viewports) */
+  --space-1: clamp(0.25rem, calc(0.3571vw + 0.1786rem), 0.5rem);
+  --space-2: clamp(0.5rem, calc(0.3571vw + 0.4286rem), 0.75rem);
+  --space-3: clamp(0.75rem, calc(0.3571vw + 0.6786rem), 1rem);
+  --space-4: clamp(1rem, calc(0.7143vw + 0.8571rem), 1.5rem);
+  --space-5: clamp(1.5rem, calc(0.7143vw + 1.3571rem), 2rem);
+  --space-6: clamp(2rem, calc(1.4286vw + 1.7143rem), 3rem);
+
+  /* Typography scale */
+  --font-size-body-sm: clamp(0.75rem, calc(0.1786vw + 0.7143rem), 0.875rem);
+  --font-size-body-md: clamp(0.875rem, calc(0.1786vw + 0.8393rem), 1rem);
+  --font-size-body-lg: clamp(1rem, calc(0.1786vw + 0.9643rem), 1.125rem);
+  --font-size-heading-sm: clamp(1.25rem, calc(0.3571vw + 1.1786rem), 1.5rem);
+  --font-size-heading-md: clamp(1.5rem, calc(0.5357vw + 1.3929rem), 1.875rem);
+  --font-size-heading-lg: clamp(1.75rem, calc(0.7143vw + 1.6071rem), 2.25rem);
+  --font-size-heading-xl: clamp(2.25rem, calc(1.0714vw + 2.0357rem), 3rem);
+  --line-height-body: 1.6;
+  --line-height-heading: 1.25;
 
   /* Radius */
   --radius-sm: 2px;
