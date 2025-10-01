@@ -86,6 +86,10 @@ export class Window extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
+        if (typeof this.props.onTelemetryMount === 'function') {
+            this.props.onTelemetryMount(this.id);
+        }
+
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
         // Listen for context menu events to toggle inert background

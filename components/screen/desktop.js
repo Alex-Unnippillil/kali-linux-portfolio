@@ -94,6 +94,11 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set(apps.map((app) => app.id));
 
+        this.windowPerformance = {
+            pending: new Map(),
+            samples: [],
+        };
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -135,6 +140,106 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    getPerformanceNow = () => {
+        if (typeof performance === 'undefined' || typeof performance.now !== 'function') {
+            return null;
+        }
+        return performance.now();
+    };
+
+    markWindowOpening = (appId, meta = {}) => {
+        const startTime = this.getPerformanceNow();
+        if (startTime === null) return;
+        const title = meta.title || meta.name || appId;
+        this.windowPerformance.pending.set(appId, {
+            start: startTime,
+            title,
+            workspace: this.state.activeWorkspace,
+        });
+    };
+
+    formatMs = (value) => {
+        if (typeof value !== 'number' || Number.isNaN(value) || value === Infinity) {
+            return value;
+        }
+        return Math.round(value * 10) / 10;
+    };
+
+    logWindowPerformanceSummary = (latestRecord = null) => {
+        if (process.env.NODE_ENV === 'production') return;
+        const summary = {};
+        this.windowPerformance.samples.forEach((sample) => {
+            if (!summary[sample.id]) {
+                summary[sample.id] = {
+                    appId: sample.id,
+                    title: sample.title || sample.id,
+                    opens: 0,
+                    totalMs: 0,
+                    lastMs: 0,
+                    minMs: Number.POSITIVE_INFINITY,
+                    maxMs: 0,
+                };
+            }
+            const entry = summary[sample.id];
+            entry.opens += 1;
+            entry.totalMs += sample.duration;
+            entry.lastMs = sample.duration;
+            entry.minMs = Math.min(entry.minMs, sample.duration);
+            entry.maxMs = Math.max(entry.maxMs, sample.duration);
+        });
+
+        const rows = Object.values(summary).map((entry) => ({
+            App: `${entry.title} (${entry.appId})`,
+            Opens: entry.opens,
+            'Last (ms)': this.formatMs(entry.lastMs),
+            'Avg (ms)': this.formatMs(entry.totalMs / entry.opens),
+            'Min (ms)': this.formatMs(entry.minMs === Number.POSITIVE_INFINITY ? 0 : entry.minMs),
+            'Max (ms)': this.formatMs(entry.maxMs),
+        }));
+
+        if (rows.length === 0) return;
+
+        rows.sort((a, b) => {
+            const lastA = typeof a['Last (ms)'] === 'number' ? a['Last (ms)'] : 0;
+            const lastB = typeof b['Last (ms)'] === 'number' ? b['Last (ms)'] : 0;
+            return lastB - lastA;
+        });
+
+        console.groupCollapsed('🖥️ Window open performance');
+        console.table(rows);
+        if (latestRecord) {
+            console.log('Latest sample', {
+                app: `${latestRecord.title || latestRecord.id} (${latestRecord.id})`,
+                durationMs: this.formatMs(latestRecord.duration),
+                workspace: latestRecord.workspace,
+                context: latestRecord.context,
+            });
+        }
+        console.groupEnd();
+    };
+
+    handleWindowMount = (appId) => {
+        const endTime = this.getPerformanceNow();
+        if (endTime === null) return;
+        const pending = this.windowPerformance.pending.get(appId);
+        if (!pending) return;
+        const duration = endTime - pending.start;
+        const record = {
+            id: appId,
+            title: pending.title,
+            duration,
+            startedAt: pending.start,
+            completedAt: endTime,
+            workspace: pending.workspace,
+            context: this.state.window_context[appId],
+        };
+        this.windowPerformance.pending.delete(appId);
+        this.windowPerformance.samples.push(record);
+        if (process.env.NODE_ENV !== 'production') {
+            this.logWindowPerformanceSummary(record);
+        }
     };
 
     setupPointerMediaWatcher = () => {
@@ -1399,6 +1504,7 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    onTelemetryMount: this.handleWindowMount,
                 }
 
                 windowsJsx.push(
@@ -1492,6 +1598,7 @@ export class Desktop extends Component {
             console.warn(`Attempted to open unknown app: ${objId}`);
             return;
         }
+        const appMeta = apps.find((app) => app.id === objId);
         const context = params && typeof params === 'object'
             ? {
                 ...params,
@@ -1575,6 +1682,8 @@ export class Desktop extends Component {
 
             addRecentApp(objId);
 
+            this.markWindowOpening(objId, appMeta || {});
+
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
@@ -1597,6 +1706,8 @@ export class Desktop extends Component {
     }
 
     closeApp = async (objId) => {
+
+        this.windowPerformance.pending.delete(objId);
 
         // capture window snapshot
         let image = null;
