@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
+import { copyStreamWithProgress } from '../../utils/fileCopy';
+import CopyStatusBar from './file-explorer/CopyStatusBar';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
 export async function openFileDialog(options = {}) {
@@ -61,11 +63,17 @@ export async function saveFileDialog(options = {}) {
 
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
+const COPY_STORE = 'copy-jobs';
 
 function openDB() {
-  return getDb(DB_NAME, 1, {
+  return getDb(DB_NAME, 2, {
     upgrade(db) {
-      db.createObjectStore(STORE_NAME, { autoIncrement: true });
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains(COPY_STORE)) {
+        db.createObjectStore(COPY_STORE);
+      }
     },
   });
 }
@@ -91,6 +99,35 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+async function persistCopyJob(job) {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    await db.put(COPY_STORE, job, job.id);
+  } catch {}
+}
+
+async function removeCopyJob(id) {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    await db.delete(COPY_STORE, id);
+  } catch {}
+}
+
+async function loadCopyJobs() {
+  try {
+    const dbp = openDB();
+    if (!dbp) return [];
+    const db = await dbp;
+    return (await db.getAll(COPY_STORE)) || [];
+  } catch {
+    return [];
+  }
+}
+
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -105,6 +142,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const [copyJob, setCopyJob] = useState(null);
+  const [copyProgress, setCopyProgress] = useState(null);
+  const [copySupported, setCopySupported] = useState(false);
+  const abortRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -116,11 +157,19 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const scheduleFrame = useCallback((cb) => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(cb);
+    } else {
+      setTimeout(() => cb(Date.now()), 16);
+    }
+  }, []);
 
   useEffect(() => {
-    const ok = !!window.showDirectoryPicker;
-    setSupported(ok);
-    if (ok) getRecentDirs().then(setRecent);
+    const hasDirectoryPicker = !!window.showDirectoryPicker;
+    setSupported(hasDirectoryPicker);
+    setCopySupported(hasDirectoryPicker);
+    if (hasDirectoryPicker) getRecentDirs().then(setRecent);
   }, []);
 
   useEffect(() => {
@@ -131,7 +180,18 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
+
+  useEffect(() => {
+    let active = true;
+    loadCopyJobs().then((jobs) => {
+      if (!active || jobs.length === 0) return;
+      runCopyJob(jobs[0]);
+    });
+    return () => {
+      active = false;
+    };
+  }, [runCopyJob]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -146,6 +206,171 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
 
+  const runCopyJob = useCallback(
+    async (job) => {
+      if (!job || !job.sourceHandle || !job.destDirHandle) {
+        if (job?.id) await removeCopyJob(job.id);
+        setCopyJob(null);
+        setCopyProgress(null);
+        return;
+      }
+
+      const ensurePermission = async (handle, mode) => {
+        if (!handle?.queryPermission) return 'granted';
+        try {
+          const current = await handle.queryPermission({ mode });
+          if (current === 'granted') return 'granted';
+          if (!handle.requestPermission) return current;
+          return await handle.requestPermission({ mode });
+        } catch {
+          return 'denied';
+        }
+      };
+
+      const destName = job.destName || job.fileName || job.name || 'copy';
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let writable;
+      try {
+        const [readPerm, writePerm] = await Promise.all([
+          ensurePermission(job.sourceHandle, 'read'),
+          ensurePermission(job.destDirHandle, 'readwrite'),
+        ]);
+        if (readPerm !== 'granted' || writePerm !== 'granted') {
+          throw new Error('permission-denied');
+        }
+
+        const sourceFile = await job.sourceHandle.getFile();
+        const totalBytes = sourceFile.size ?? job.totalBytes ?? 0;
+        const startOffset = Math.min(job.bytesProcessed || 0, totalBytes);
+        const startedAt = job.startedAt || Date.now();
+        const baseJob = {
+          ...job,
+          destName,
+          totalBytes,
+          bytesProcessed: startOffset,
+          startedAt,
+          updatedAt: Date.now(),
+        };
+
+        setCopyJob(baseJob);
+        setCopyProgress({
+          jobId: baseJob.id,
+          bytesProcessed: startOffset,
+          totalBytes,
+          throughput: 0,
+          etaMs: null,
+          startedAt,
+          updatedAt: Date.now(),
+        });
+        await persistCopyJob(baseJob);
+
+        const sourceStream =
+          startOffset > 0
+            ? sourceFile.slice(startOffset).stream()
+            : sourceFile.stream();
+        const reader = sourceStream.getReader();
+        const iterable = {
+          async *[Symbol.asyncIterator]() {
+            try {
+              while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                if (value) yield value;
+              }
+            } finally {
+              reader.releaseLock();
+            }
+          },
+        };
+
+        if (startOffset === 0) {
+          try {
+            await job.destDirHandle.removeEntry(destName);
+          } catch {}
+        }
+
+        const destHandle = await job.destDirHandle.getFileHandle(destName, {
+          create: true,
+        });
+        writable = await destHandle.createWritable({
+          keepExistingData: startOffset > 0,
+        });
+        let writeOffset = startOffset;
+
+        await copyStreamWithProgress(
+          iterable,
+          {
+            write: async (chunk) => {
+              await writable.write({
+                type: 'write',
+                position: writeOffset,
+                data: chunk,
+              });
+              writeOffset += chunk.byteLength;
+            },
+            close: () => writable.close(),
+            abort: () =>
+              typeof writable.abort === 'function'
+                ? writable.abort()
+                : writable.close(),
+          },
+          {
+            jobId: baseJob.id,
+            totalBytes,
+            signal: controller.signal,
+            schedule: scheduleFrame,
+            startTime: startedAt,
+            resumeFromBytes: startOffset,
+            onProgress: (progress) => {
+              setCopyProgress(progress);
+              setCopyJob((prev) =>
+                prev && prev.id === baseJob.id
+                  ? {
+                      ...prev,
+                      bytesProcessed: progress.bytesProcessed,
+                      totalBytes: progress.totalBytes,
+                      updatedAt: progress.updatedAt,
+                    }
+                  : prev,
+              );
+            },
+            onPersist: async (state) => {
+              await persistCopyJob({
+                ...baseJob,
+                bytesProcessed: state.bytesProcessed,
+                totalBytes: state.totalBytes,
+                updatedAt: state.updatedAt,
+              });
+            },
+          },
+        );
+
+        await removeCopyJob(baseJob.id);
+        setCopyJob(null);
+        setCopyProgress(null);
+        abortRef.current = null;
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setLocationError('Copy failed');
+        }
+        try {
+          await writable?.abort?.();
+        } catch {}
+        try {
+          if (job.destDirHandle?.removeEntry) {
+            await job.destDirHandle.removeEntry(destName);
+          }
+        } catch {}
+        await removeCopyJob(job.id);
+        setCopyJob(null);
+        setCopyProgress(null);
+        abortRef.current = null;
+      }
+    },
+    [scheduleFrame],
+  );
+
   const openFallback = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -153,6 +378,56 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setCurrentFile({ name: file.name });
     setContent(text);
   };
+
+  const copyCurrentFile = useCallback(async () => {
+    if (!currentFile?.handle || copyJob) return;
+    if (!window.showDirectoryPicker) {
+      setLocationError('Copy requires File System Access support.');
+      return;
+    }
+    try {
+      const destDir = await window.showDirectoryPicker();
+      if (!destDir) return;
+      const sourceFile = await currentFile.handle.getFile();
+      const totalBytes = sourceFile.size ?? 0;
+      const startedAt = Date.now();
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `copy-${Date.now()}`;
+      const job = {
+        id,
+        fileName: currentFile.name,
+        destName: currentFile.name,
+        sourceHandle: currentFile.handle,
+        destDirHandle: destDir,
+        totalBytes,
+        bytesProcessed: 0,
+        startedAt,
+        updatedAt: startedAt,
+      };
+      setCopyJob(job);
+      setCopyProgress({
+        jobId: id,
+        bytesProcessed: 0,
+        totalBytes,
+        throughput: 0,
+        etaMs: null,
+        startedAt,
+        updatedAt: startedAt,
+      });
+      await persistCopyJob(job);
+      await runCopyJob(job);
+    } catch {
+      setLocationError('Unable to start copy');
+      setCopyJob(null);
+      setCopyProgress(null);
+    }
+  }, [copyJob, currentFile, runCopyJob]);
+
+  const cancelCopy = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const openFolder = async () => {
     try {
@@ -314,8 +589,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   if (!supported) {
     return (
-      <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <div className="p-4 flex flex-col h-full">
+          <input
+            ref={fallbackInputRef}
+            type="file"
+            onChange={openFallback}
+            className="hidden"
+            aria-label="Open file"
+          />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -326,11 +607,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         )}
         {currentFile && (
           <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+              <textarea
+                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File contents"
+              />
             <button
               onClick={async () => {
                 const handle = await saveFileDialog({ suggestedName: currentFile.name });
@@ -366,9 +648,19 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         )}
         {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
+          <>
+            <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Save
+            </button>
+            {copySupported && (
+              <button
+                onClick={copyCurrentFile}
+                className="px-2 py-1 bg-black bg-opacity-50 rounded"
+              >
+                Copy To…
+              </button>
+            )}
+          </>
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
@@ -405,16 +697,22 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           ))}
         </div>
         <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
-          <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
+            {currentFile && (
+              <textarea
+                className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File contents"
+              />
+            )}
+            <div className="p-2 border-t border-gray-600">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                className="px-1 py-0.5 text-black"
+                aria-label="Search files"
+              />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
@@ -428,6 +726,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         </div>
       </div>
+      {copyJob && copyProgress && (
+        <CopyStatusBar
+          jobName={`Copying ${copyJob.destName || copyJob.fileName || copyJob.name}`}
+          progress={copyProgress}
+          onCancel={cancelCopy}
+        />
+      )}
     </div>
   );
 }
