@@ -8,6 +8,9 @@ export interface Shortcut {
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Open focused window menu', keys: 'Alt+Space' },
+  { description: 'Snap focused window', keys: 'Win+Arrow Keys' },
+  { description: 'Close focused window', keys: 'Alt+F4' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
