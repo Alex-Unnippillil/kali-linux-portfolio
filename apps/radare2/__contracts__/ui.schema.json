@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:radare2:ui",
+  "title": "Radare2 UI contract",
+  "description": "UI surface contract for the Radare2 application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "radare2"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

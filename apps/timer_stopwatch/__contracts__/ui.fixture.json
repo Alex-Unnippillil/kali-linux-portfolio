@@ -1,0 +1,22 @@
+{
+  "appId": "timer_stopwatch",
+  "title": "Timer Stopwatch",
+  "version": "1.0.0",
+  "status": "ok",
+  "description": "Timer Stopwatch base UI contract. Update panels and metadata when the UI changes.",
+  "panels": [
+    {
+      "id": "main",
+      "type": "static",
+      "description": "Default panel placeholder. Replace with app-specific sections.",
+      "content": {
+        "headline": "Timer Stopwatch preview",
+        "body": "Document expected widgets, metrics, and interactive regions for this app."
+      }
+    }
+  ],
+  "metadata": {
+    "contractOwner": "ui-team",
+    "changelog": []
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:checkers:ui",
+  "title": "Checkers UI contract",
+  "description": "UI surface contract for the Checkers application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "checkers"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

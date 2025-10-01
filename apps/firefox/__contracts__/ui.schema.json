@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:firefox:ui",
+  "title": "Firefox UI contract",
+  "description": "UI surface contract for the Firefox application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "firefox"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

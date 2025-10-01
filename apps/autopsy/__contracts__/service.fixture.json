@@ -1,0 +1,6 @@
+{
+  "appId": "autopsy",
+  "version": "1.0.0",
+  "notes": "Autopsy does not define remote calls. Extend this contract when the app integrates with APIs.",
+  "endpoints": []
+}

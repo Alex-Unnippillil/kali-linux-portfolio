@@ -1,0 +1,43 @@
+{
+  "appId": "contact",
+  "version": "1.0.0",
+  "notes": "Contract verified against the /api/contact stub when reCAPTCHA is disabled in local development.",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/contact",
+      "description": "Fetches a CSRF token. In environments without RECAPTCHA it returns a disabled payload.",
+      "mock": {
+        "status": 503,
+        "body": {
+          "ok": false,
+          "code": "recaptcha_disabled"
+        }
+      },
+      "runtimeTest": {
+        "enabled": true,
+        "mode": "mock",
+        "expectedStatus": 503,
+        "responseSchema": {
+          "type": "object",
+          "required": [
+            "ok",
+            "code"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "code": {
+              "enum": [
+                "recaptcha_disabled",
+                "recaptcha_error"
+              ]
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:figlet:service",
+  "title": "Figlet service contract",
+  "description": "Service interactions for the Figlet application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:service"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "figlet"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:contract:ui",
+  "title": "Base UI contract",
+  "type": "object",
+  "required": ["appId", "title", "version", "status", "panels"],
+  "additionalProperties": false,
+  "properties": {
+    "appId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._\\-/]+$",
+      "description": "Stable identifier that matches the app slug"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human readable title rendered in the window chrome"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the contract. Bump when UI expectations change"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "deprecated", "experimental"],
+      "description": "Lifecycle signal for the contract"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional summary of the UI surface"
+    },
+    "panels": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "content"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": ["static", "list", "terminal", "form", "canvas", "chart", "custom"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "content": {
+            "type": "object",
+            "description": "Panel specific payload. Individual apps can extend this structure"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional free-form metadata that accompanies the contract"
+    }
+  }
+}

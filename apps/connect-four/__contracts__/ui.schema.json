@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:connect-four:ui",
+  "title": "Connect Four UI contract",
+  "description": "UI surface contract for the Connect Four application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "connect-four"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

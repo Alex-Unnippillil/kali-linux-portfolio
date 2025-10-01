@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:kismet:ui",
+  "title": "Kismet UI contract",
+  "description": "UI surface contract for the Kismet application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "kismet"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

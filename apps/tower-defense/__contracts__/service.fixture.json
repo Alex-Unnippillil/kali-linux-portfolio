@@ -1,0 +1,6 @@
+{
+  "appId": "tower-defense",
+  "version": "1.0.0",
+  "notes": "Tower Defense does not define remote calls. Extend this contract when the app integrates with APIs.",
+  "endpoints": []
+}

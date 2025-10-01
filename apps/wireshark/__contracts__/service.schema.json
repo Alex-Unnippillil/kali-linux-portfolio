@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:wireshark:service",
+  "title": "Wireshark service contract",
+  "description": "Service interactions for the Wireshark application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:service"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "wireshark"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

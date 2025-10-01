@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:simon:service",
+  "title": "Simon service contract",
+  "description": "Service interactions for the Simon application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:service"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "simon"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

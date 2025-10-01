@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:settings:service",
+  "title": "Settings service contract",
+  "description": "Service interactions for the Settings application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:service"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "settings"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

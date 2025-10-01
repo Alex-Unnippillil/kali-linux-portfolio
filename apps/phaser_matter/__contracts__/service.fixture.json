@@ -1,0 +1,6 @@
+{
+  "appId": "phaser_matter",
+  "version": "1.0.0",
+  "notes": "Phaser Matter does not define remote calls. Extend this contract when the app integrates with APIs.",
+  "endpoints": []
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:2048:ui",
+  "title": "2048 UI contract",
+  "description": "UI surface contract for the 2048 application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "2048"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

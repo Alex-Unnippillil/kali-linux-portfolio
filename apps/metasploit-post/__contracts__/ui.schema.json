@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:metasploit-post:ui",
+  "title": "Metasploit Post UI contract",
+  "description": "UI surface contract for the Metasploit Post application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "metasploit-post"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

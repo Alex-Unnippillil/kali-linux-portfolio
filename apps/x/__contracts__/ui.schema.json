@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:x:ui",
+  "title": "X UI contract",
+  "description": "UI surface contract for the X application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "x"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

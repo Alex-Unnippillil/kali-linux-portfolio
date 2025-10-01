@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:converter:ui",
+  "title": "Converter UI contract",
+  "description": "UI surface contract for the Converter application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "converter"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}
