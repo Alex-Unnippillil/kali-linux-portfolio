@@ -1,4 +1,5 @@
 import ReactGA from 'react-ga4';
+import { enqueueTelemetry } from './telemetry';
 
 interface WebVitalMetric {
   id: string;
@@ -16,6 +17,7 @@ export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
   if (name !== 'LCP' && name !== 'INP') return;
 
   const rounded = Math.round(value);
+  const threshold = thresholds[name];
 
   ReactGA.event({
     category: 'Web Vitals',
@@ -25,7 +27,13 @@ export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
     nonInteraction: true,
   });
 
-  const threshold = thresholds[name];
+  enqueueTelemetry('performance', {
+    metric: name,
+    value: rounded,
+    metricId: id,
+    threshold,
+    aboveThreshold: threshold !== undefined ? value > threshold : false,
+  });
   if (threshold !== undefined && value > threshold) {
     ReactGA.event({
       category: 'Performance Alert',

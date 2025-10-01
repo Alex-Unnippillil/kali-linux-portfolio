@@ -22,9 +22,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTelemetryPreferences as loadTelemetryPreferences,
+  setTelemetryPreferences as saveTelemetryPreferences,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { updateTelemetryConsent } from '../utils/telemetry';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -66,6 +69,9 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  telemetryPerformance: boolean;
+  telemetryErrors: boolean;
+  telemetryFeatures: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +84,9 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setTelemetryPerformance: (value: boolean) => void;
+  setTelemetryErrors: (value: boolean) => void;
+  setTelemetryFeatures: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +103,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  telemetryPerformance: defaults.telemetry.performance,
+  telemetryErrors: defaults.telemetry.errors,
+  telemetryFeatures: defaults.telemetry.features,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +118,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setTelemetryPerformance: () => {},
+  setTelemetryErrors: () => {},
+  setTelemetryFeatures: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +136,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [telemetryPerformance, setTelemetryPerformance] = useState<boolean>(
+    defaults.telemetry.performance,
+  );
+  const [telemetryErrors, setTelemetryErrors] = useState<boolean>(
+    defaults.telemetry.errors,
+  );
+  const [telemetryFeatures, setTelemetryFeatures] = useState<boolean>(
+    defaults.telemetry.features,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +161,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      const telemetryPrefs = await loadTelemetryPreferences();
+      setTelemetryPerformance(telemetryPrefs.performance);
+      setTelemetryErrors(telemetryPrefs.errors);
+      setTelemetryFeatures(telemetryPrefs.features);
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +278,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    const preferences = {
+      performance: telemetryPerformance,
+      errors: telemetryErrors,
+      features: telemetryFeatures,
+    };
+    saveTelemetryPreferences(preferences);
+    updateTelemetryConsent(preferences);
+  }, [telemetryPerformance, telemetryErrors, telemetryFeatures]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +305,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        telemetryPerformance,
+        telemetryErrors,
+        telemetryFeatures,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +320,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setTelemetryPerformance,
+        setTelemetryErrors,
+        setTelemetryFeatures,
         setTheme,
       }}
     >
