@@ -142,6 +142,7 @@
     "playwright-core": "^1.55.0",
     "test-exclude": "7.0.1",
     "typescript": "5.8.2",
+    "wabt": "^1.0.37",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
     "workbox-build": "7.1.1",
