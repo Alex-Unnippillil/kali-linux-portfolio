@@ -82,7 +82,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });
@@ -130,6 +130,75 @@ describe('NmapNSEApp', () => {
     expect(
       within(scriptNode.parentElement as HTMLElement).getByText('discovery')
     ).toBeInTheDocument();
+
+    mockFetch.mockRestore();
+  });
+
+  it('shows drawer metadata for a selected script', async () => {
+    const mockFetch = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ hosts: [] })
+        })
+      );
+
+    render(<NmapNSEApp />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByLabelText(/ftp-anon/i));
+    const headings = await screen.findAllByRole('heading', {
+      name: /ftp-anon/i
+    });
+    const drawerHeading = headings.find((heading) => heading.closest('aside')) as
+      | HTMLElement
+      | undefined;
+    expect(drawerHeading).toBeTruthy();
+    const drawer = drawerHeading?.closest('aside') as HTMLElement;
+
+    expect(drawer).not.toBeNull();
+    expect(
+      within(drawer as HTMLElement).getByText(
+        /Checks for anonymous FTP access/i
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(drawer as HTMLElement).getByText('ftp-anon.maxlist')
+    ).toBeInTheDocument();
+    expect(
+      within(drawer as HTMLElement).getByRole('link', { name: /view docs/i })
+    ).toHaveAttribute('href', 'https://nmap.org/book/nse.html');
+
+    mockFetch.mockRestore();
+  });
+
+  it('copies script snippet from the drawer', async () => {
+    const mockFetch = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ hosts: [] })
+        })
+      );
+    const writeText = jest.fn();
+    // @ts-ignore
+    navigator.clipboard = { writeText };
+
+    render(<NmapNSEApp />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByLabelText(/dns-brute/i));
+    const copyButton = await screen.findByRole('button', {
+      name: /copy script snippet/i
+    });
+    await userEvent.click(copyButton);
+
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('--script dns-brute')
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('dns-brute.threads=10')
+    );
 
     mockFetch.mockRestore();
   });
