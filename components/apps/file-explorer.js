@@ -131,7 +131,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -146,12 +146,26 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
 
+  const emitFileOpened = (name) => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.dispatchEvent(
+        new CustomEvent('checklist:file-opened', {
+          detail: { name },
+        }),
+      );
+    } catch {
+      // ignore dispatch failures in unsupported environments
+    }
+  };
+
   const openFallback = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const text = await file.text();
     setCurrentFile({ name: file.name });
     setContent(text);
+    emitFileOpened(file.name);
   };
 
   const openFolder = async () => {
@@ -189,6 +203,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       text = await f.text();
     }
     setContent(text);
+    emitFileOpened(file.name);
   };
 
   const readDir = useCallback(async (handle) => {
@@ -315,7 +330,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Select a file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -324,12 +345,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Open File
           </button>
         )}
-        {currentFile && (
+          {currentFile && (
           <>
             <textarea
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -406,7 +428,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -414,6 +441,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search file contents"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search

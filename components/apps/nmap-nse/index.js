@@ -165,6 +165,24 @@ const NmapNSEApp = () => {
     setToast('Output selected');
   };
 
+  const runDemoScan = () => {
+    setToast('Simulated scan running');
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('checklist:nmap-scan', {
+            detail: {
+              target,
+              scripts: selectedScripts,
+            },
+          }),
+        );
+      } catch {
+        // ignore dispatch errors
+      }
+    }
+  };
+
   const handleOutputKey = (e) => {
     if (e.ctrlKey && e.key.toLowerCase() === 'c') {
       e.preventDefault();
@@ -204,6 +222,7 @@ const NmapNSEApp = () => {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-label="Scan target"
           />
         </div>
         <div className="mb-4">
@@ -216,6 +235,7 @@ const NmapNSEApp = () => {
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-label="Filter scripts"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
@@ -225,6 +245,7 @@ const NmapNSEApp = () => {
                     type="checkbox"
                     checked={selectedScripts.includes(s.name)}
                     onChange={() => toggleScript(s.name)}
+                    aria-label={`Toggle script ${s.name}`}
                   />
                   <span className="font-mono">{s.name}</span>
                 </label>
@@ -248,6 +269,7 @@ const NmapNSEApp = () => {
                     }
                     placeholder="arg=value"
                     className="w-full p-1 border rounded text-black"
+                    aria-label={`Arguments for ${s.name}`}
                   />
                 )}
               </div>
@@ -274,17 +296,26 @@ const NmapNSEApp = () => {
             ))}
           </div>
         </div>
-        <div className="flex items-center mb-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
           <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
             {command}
           </pre>
-          <button
-            type="button"
-            onClick={copyCommand}
-            className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
-          >
-            Copy Command
-          </button>
+          <div className="flex gap-2 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={copyCommand}
+              className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            >
+              Copy Command
+            </button>
+            <button
+              type="button"
+              onClick={runDemoScan}
+              className="px-2 py-1 bg-blue-500 text-white rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300"
+            >
+              Run Demo Scan
+            </button>
+          </div>
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">

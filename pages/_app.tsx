@@ -14,11 +14,20 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
+import { ChecklistProvider } from '../components/common/Checklist';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
+import type { AppProps } from 'next/app';
+
+declare global {
+  interface Window {
+    initA2HS?: () => void;
+    manualRefresh?: () => void;
+  }
+}
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
@@ -26,8 +35,7 @@ const ubuntu = Ubuntu({
 });
 
 
-function MyApp(props) {
-  const { Component, pageProps } = props;
+function MyApp({ Component, pageProps }: AppProps) {
 
 
   useEffect(() => {
@@ -85,7 +93,7 @@ function MyApp(props) {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
-    const update = (message) => {
+    const update = (message: string) => {
       liveRegion.textContent = '';
       setTimeout(() => {
         liveRegion.textContent = message;
@@ -104,13 +112,13 @@ function MyApp(props) {
     const originalWrite = clipboard?.writeText?.bind(clipboard);
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
-      clipboard.writeText = async (text) => {
+      (clipboard as Clipboard & { writeText: (data: string) => Promise<void> }).writeText = async (text: string) => {
         update('Copied to clipboard');
         return originalWrite(text);
       };
     }
     if (originalRead) {
-      clipboard.readText = async () => {
+      (clipboard as Clipboard & { readText: () => Promise<string> }).readText = async () => {
         const text = await originalRead();
         update('Pasted from clipboard');
         return text;
@@ -119,7 +127,7 @@ function MyApp(props) {
 
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
+      const WrappedNotification: any = function (title: string, options?: NotificationOptions) {
         update(`${title}${options?.body ? ' ' + options.body : ''}`);
         return new OriginalNotification(title, options);
       };
@@ -130,7 +138,7 @@ function MyApp(props) {
         get: () => OriginalNotification.permission,
       });
       WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification;
+      window.Notification = WrappedNotification as typeof Notification;
     }
 
     return () => {
@@ -138,8 +146,12 @@ function MyApp(props) {
       window.removeEventListener('cut', handleCut);
       window.removeEventListener('paste', handlePaste);
       if (clipboard) {
-        if (originalWrite) clipboard.writeText = originalWrite;
-        if (originalRead) clipboard.readText = originalRead;
+        if (originalWrite) {
+          (clipboard as Clipboard & { writeText: (data: string) => Promise<void> }).writeText = originalWrite;
+        }
+        if (originalRead) {
+          (clipboard as Clipboard & { readText: () => Promise<string> }).readText = originalRead;
+        }
       }
       if (OriginalNotification) {
         window.Notification = OriginalNotification;
@@ -149,6 +161,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -158,23 +171,25 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+          <ChecklistProvider>
+            <NotificationCenter>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(e) => {
+                    if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                    const evt = e;
+                    if (evt.metadata?.email) delete evt.metadata.email;
+                    return e;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </ChecklistProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>
