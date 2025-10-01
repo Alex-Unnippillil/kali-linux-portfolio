@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import { useSafeMode } from '../../common/SafeMode';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -43,6 +44,7 @@ const MetasploitApp = ({
   const [timeline, setTimeline] = useState([]);
   const [replaying, setReplaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const { guardSensitiveAction } = useSafeMode();
 
   useEffect(() => {
     onLoadingChange(loading);
@@ -144,6 +146,15 @@ const MetasploitApp = ({
   const runCommand = async () => {
     const cmd = command.trim();
     if (!cmd) return;
+    const allowed = guardSensitiveAction({
+      action: 'metasploit:console-command',
+      appId: 'metasploit',
+      summary: 'Metasploit console commands are disabled while Safe Mode is active.',
+      details:
+        'Exit Safe Mode from Quick Settings after acknowledging the legal notice to run simulated console commands.',
+      openDialogOnBlock: true,
+    });
+    if (!allowed) return;
     setLoading(true);
     try {
       if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
@@ -167,6 +178,15 @@ const MetasploitApp = ({
   };
 
   const runDemo = async () => {
+    const allowed = guardSensitiveAction({
+      action: 'metasploit:demo-run',
+      appId: 'metasploit',
+      summary: 'Metasploit demo replay is locked while Safe Mode is enabled.',
+      details:
+        'Disable Safe Mode from Quick Settings after acknowledging the responsible use notice to play exploit replays.',
+      openDialogOnBlock: true,
+    });
+    if (!allowed) return;
     setLoading(true);
     try {
       const exploit = modules[0];
@@ -197,6 +217,15 @@ const MetasploitApp = ({
   };
 
   const startReplay = () => {
+    const allowed = guardSensitiveAction({
+      action: 'metasploit:timeline-replay',
+      appId: 'metasploit',
+      summary: 'Timeline replays remain blocked while Safe Mode runs.',
+      details:
+        'Disable Safe Mode if you need to run the simulated exploitation sequence end-to-end.',
+      openDialogOnBlock: true,
+    });
+    if (!allowed) return;
     if (workerRef.current) workerRef.current.terminate();
     setTimeline([]);
     setProgress(0);

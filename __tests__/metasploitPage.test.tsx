@@ -1,10 +1,18 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import MetasploitPage from '../apps/metasploit';
+import NotificationCenter from '../components/common/NotificationCenter';
+import { SafeModeProvider } from '../components/common/SafeMode';
 
 describe('Metasploit page module filtering', () => {
   it('filters modules by search and shows tags', () => {
-    render(<MetasploitPage />);
+    render(
+      <NotificationCenter>
+        <SafeModeProvider>
+          <MetasploitPage />
+        </SafeModeProvider>
+      </NotificationCenter>,
+    );
 
     // expand tree to reveal a known module
     fireEvent.click(screen.getAllByText('auxiliary')[0]);
