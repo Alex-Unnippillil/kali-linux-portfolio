@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { getDailySeed } from '../../utils/dailySeed';
+import { withDeepLinkBoundary } from '../../utils/deeplink';
 
 const Sokoban = dynamic(() => import('../../apps/sokoban'), {
   ssr: false,
@@ -11,4 +12,4 @@ const SokobanPage = () => (
   <Sokoban getDailySeed={() => getDailySeed('sokoban')} />
 );
 
-export default SokobanPage;
+export default withDeepLinkBoundary('sokoban', SokobanPage);

@@ -1,11 +1,13 @@
 import dynamic from 'next/dynamic';
+import { withDeepLinkBoundary } from '../../utils/deeplink';
 
 const StickyNotes = dynamic(() => import('../../apps/sticky_notes'), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
 
-export default function StickyNotesPage() {
+function StickyNotesPage() {
   return <StickyNotes />;
 }
 
+export default withDeepLinkBoundary('sticky_notes', StickyNotesPage);

@@ -1,10 +1,13 @@
 import dynamic from 'next/dynamic';
+import { withDeepLinkBoundary } from '../../utils/deeplink';
 
 const MetasploitPost = dynamic(() => import('../../apps/metasploit-post'), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
 
-export default function MetasploitPostPage() {
+function MetasploitPostPage() {
   return <MetasploitPost />;
 }
+
+export default withDeepLinkBoundary('metasploit-post', MetasploitPostPage);

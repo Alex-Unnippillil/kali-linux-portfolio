@@ -1,10 +1,13 @@
 import dynamic from 'next/dynamic';
+import { withDeepLinkBoundary } from '../../utils/deeplink';
 
 const Autopsy = dynamic(() => import('../../apps/autopsy'), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
 
-export default function AutopsyPage() {
+function AutopsyPage() {
   return <Autopsy />;
 }
+
+export default withDeepLinkBoundary('autopsy', AutopsyPage);

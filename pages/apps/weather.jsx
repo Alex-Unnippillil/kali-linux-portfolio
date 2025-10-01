@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic';
+import { withDeepLinkBoundary } from '../../utils/deeplink';
 
 const WeatherApp = dynamic(
   () =>
@@ -12,5 +13,4 @@ const WeatherApp = dynamic(
   }
 );
 
-export default WeatherApp;
-
+export default withDeepLinkBoundary('weather', WeatherApp);
