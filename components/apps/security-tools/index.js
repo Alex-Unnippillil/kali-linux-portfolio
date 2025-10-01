@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import cacheStore from '../../../utils/cacheStore';
 import LabMode from '../../LabMode';
 import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
@@ -29,11 +30,67 @@ export default function SecurityTools() {
   const [sampleText, setSampleText] = useState('');
 
   useEffect(() => {
-    fetch('/fixtures/suricata.json').then(r => r.json()).then(setSuricata);
-    fetch('/fixtures/zeek.json').then(r => r.json()).then(setZeek);
-    fetch('/fixtures/sigma.json').then(r => r.json()).then(setSigma);
-    fetch('/fixtures/mitre.json').then(r => r.json()).then(setMitre);
-    fetch('/fixtures/yara_sample.txt').then(r => r.text()).then(setSampleText);
+    const controller = new AbortController();
+    let cancelled = false;
+    const TTL = 12 * 60 * 60 * 1000; // 12 hours
+
+    const loadFixtures = async () => {
+      try {
+        const [suricataRes, zeekRes, sigmaRes, mitreRes, yaraRes] = await Promise.all([
+          cacheStore.rememberJSON('fixtures:suricata', async () => {
+            const res = await fetch('/fixtures/suricata.json', {
+              cache: 'no-store',
+              signal: controller.signal,
+            });
+            return await res.json();
+          }, { ttlMs: TTL, signal: controller.signal }),
+          cacheStore.rememberJSON('fixtures:zeek', async () => {
+            const res = await fetch('/fixtures/zeek.json', {
+              cache: 'no-store',
+              signal: controller.signal,
+            });
+            return await res.json();
+          }, { ttlMs: TTL, signal: controller.signal }),
+          cacheStore.rememberJSON('fixtures:sigma', async () => {
+            const res = await fetch('/fixtures/sigma.json', {
+              cache: 'no-store',
+              signal: controller.signal,
+            });
+            return await res.json();
+          }, { ttlMs: TTL, signal: controller.signal }),
+          cacheStore.rememberJSON('fixtures:mitre', async () => {
+            const res = await fetch('/fixtures/mitre.json', {
+              cache: 'no-store',
+              signal: controller.signal,
+            });
+            return await res.json();
+          }, { ttlMs: TTL, signal: controller.signal }),
+          cacheStore.rememberText('fixtures:yara-sample', async () => {
+            const res = await fetch('/fixtures/yara_sample.txt', {
+              cache: 'no-store',
+              signal: controller.signal,
+            });
+            return await res.text();
+          }, { ttlMs: TTL, signal: controller.signal }),
+        ]);
+        if (cancelled) return;
+        setSuricata(suricataRes.data ?? []);
+        setZeek(zeekRes.data ?? []);
+        setSigma(sigmaRes.data ?? []);
+        setMitre(mitreRes.data ?? { tactics: [] });
+        setSampleText(yaraRes.data ?? '');
+      } catch (err) {
+        if ((err && err.name === 'AbortError') || cancelled) return;
+        console.error('Failed to load fixtures', err);
+      }
+    };
+
+    loadFixtures();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, []);
 
   const [yaraRule, setYaraRule] = useState('rule Demo { strings: $a = "MALWARE" condition: $a }');
