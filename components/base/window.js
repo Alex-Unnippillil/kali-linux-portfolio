@@ -689,7 +689,9 @@ export class Window extends Component {
                             close={this.closeWindow}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            pip={this.props.supportsPiP !== false
+                                ? () => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)
+                                : null}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -705,6 +707,10 @@ export class Window extends Component {
 }
 
 export default Window
+
+Window.defaultProps = {
+    supportsPiP: true,
+}
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {

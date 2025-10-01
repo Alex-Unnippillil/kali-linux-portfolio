@@ -8,6 +8,15 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import apps, { games } from '../../apps.config';
+import {
+    appSupportsPiP,
+    getAllAppIds,
+    getAppDisplayName,
+    getAppIcon,
+    getAppRegistryEntry,
+    registerDynamicApp,
+    setAppIconOverride,
+} from '../common/appRegistry';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -92,7 +101,7 @@ export class Desktop extends Component {
 
         this.currentPointerIsCoarse = false;
 
-        this.validAppIds = new Set(apps.map((app) => app.id));
+        this.validAppIds = new Set(getAllAppIds());
 
     }
 
@@ -412,8 +421,8 @@ export class Desktop extends Component {
             .filter((app) => closed_windows[app.id] === false)
             .map((app) => ({
                 id: app.id,
-                title: app.title,
-                icon: app.icon.replace('./', '/'),
+                title: getAppDisplayName(app.id),
+                icon: getAppIcon(app.id),
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
             }));
@@ -903,6 +912,9 @@ export class Desktop extends Component {
             case 'open':
                 this.openApp(appId);
                 break;
+            case 'close':
+                this.closeApp(appId);
+                break;
             case 'toggle':
             default:
                 if (this.state.minimized_windows[appId]) {
@@ -1091,8 +1103,7 @@ export class Desktop extends Component {
     openWindowSwitcher = () => {
         const windows = this.getActiveStack()
             .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
+            .filter(id => Boolean(getAppRegistryEntry(id)));
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
         }
@@ -1317,16 +1328,16 @@ export class Desktop extends Component {
         const iconBaseZIndex = 15;
         const containerZIndex = blockIcons ? 5 : 15;
         const icons = desktopApps.map((appId, index) => {
-            const app = apps.find((item) => item.id === appId);
-            if (!app) return null;
+            const entry = getAppRegistryEntry(appId);
+            if (!entry) return null;
 
             const props = {
-                name: app.title,
-                id: app.id,
-                icon: app.icon,
+                name: entry.name,
+                id: entry.id,
+                icon: entry.icon,
                 openApp: this.openApp,
-                disabled: this.state.disabled_apps[app.id],
-                prefetch: app.screen?.prefetch,
+                disabled: this.state.disabled_apps[entry.id],
+                prefetch: entry.prefetch,
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
@@ -1342,9 +1353,9 @@ export class Desktop extends Component {
 
             return (
                 <div
-                    key={app.id}
+                    key={entry.id}
                     style={wrapperStyle}
-                    onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
+                    onPointerDown={(event) => this.handleIconPointerDown(event, entry.id)}
                     onPointerMove={this.handleIconPointerMove}
                     onPointerUp={this.handleIconPointerUp}
                     onPointerCancel={this.handleIconPointerCancel}
@@ -1378,8 +1389,9 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const entry = getAppRegistryEntry(app.id);
                 const props = {
-                    title: app.title,
+                    title: entry?.name || app.title,
                     id: app.id,
                     screen: app.screen,
                     addFolder: this.addToDesktop,
@@ -1399,6 +1411,7 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    supportsPiP: appSupportsPiP(app.id),
                 }
 
                 windowsJsx.push(
@@ -1610,7 +1623,7 @@ export class Desktop extends Component {
         }
 
         // persist in trash with autopurge
-        const appMeta = apps.find(a => a.id === objId) || {};
+        const appMeta = getAppRegistryEntry(objId);
         const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
         const ms = purgeDays * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -1619,8 +1632,8 @@ export class Desktop extends Component {
         trash = trash.filter(item => now - item.closedAt <= ms);
         trash.push({
             id: objId,
-            title: appMeta.title || objId,
-            icon: appMeta.icon,
+            title: (appMeta && appMeta.name) || objId,
+            icon: appMeta?.icon,
             image,
             closedAt: now,
         });
@@ -1655,7 +1668,15 @@ export class Desktop extends Component {
         favourite_apps[id] = true
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
-        if (app) app.favourite = true
+        if (app) {
+            app.favourite = true
+            registerDynamicApp({
+                id,
+                title: app.title,
+                icon: app.icon,
+                favourite: true,
+            });
+        }
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
@@ -1669,7 +1690,15 @@ export class Desktop extends Component {
         if (this.state.closed_windows[id]) favourite_apps[id] = false
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
-        if (app) app.favourite = false
+        if (app) {
+            app.favourite = false
+            registerDynamicApp({
+                id,
+                title: app.title,
+                icon: app.icon,
+                favourite: false,
+            });
+        }
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         pinnedApps = pinnedApps.filter(appId => appId !== id)
@@ -1705,6 +1734,12 @@ export class Desktop extends Component {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
         apps[appIndex].desktop_shortcut = true;
+        registerDynamicApp({
+            id: app_id,
+            title: apps[appIndex].title,
+            icon: apps[appIndex].icon,
+            desktopShortcut: true,
+        });
         let shortcuts = [];
         try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
         if (!shortcuts.includes(app_id)) {
@@ -1724,6 +1759,12 @@ export class Desktop extends Component {
                     const appIndex = apps.findIndex(app => app.id === id);
                     if (appIndex !== -1) {
                         apps[appIndex].desktop_shortcut = true;
+                        registerDynamicApp({
+                            id,
+                            title: apps[appIndex].title,
+                            icon: apps[appIndex].icon,
+                            desktopShortcut: true,
+                        });
                     }
                 });
             } catch (e) {
@@ -1743,6 +1784,7 @@ export class Desktop extends Component {
                 : '/themes/Yaru/status/user-trash-symbolic.svg';
             if (apps[appIndex].icon !== icon) {
                 apps[appIndex].icon = icon;
+                setAppIconOverride('trash', icon);
                 this.forceUpdate();
             }
         }
@@ -1760,6 +1802,14 @@ export class Desktop extends Component {
             desktop_shortcut: true,
             screen: () => { },
         });
+        registerDynamicApp({
+            id: `new-folder-${folder_id}`,
+            title: folder_name,
+            icon: '/themes/Yaru/system/folder.png',
+            disabled: true,
+            desktopShortcut: true,
+        });
+        this.validAppIds.add(`new-folder-${folder_id}`);
         // store in local storage
         let new_folders = [];
         try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
