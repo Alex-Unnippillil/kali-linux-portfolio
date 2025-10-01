@@ -2,6 +2,8 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InstallButton from '../components/InstallButton';
 
+jest.mock('@vercel/analytics', () => ({ track: jest.fn() }));
+
 describe('InstallButton', () => {
   test('shows install prompt when beforeinstallprompt fires', async () => {
     render(<InstallButton />);
