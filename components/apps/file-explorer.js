@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { createDirectoryIndexer } from '../../utils/indexer';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -62,6 +63,14 @@ export async function saveFileDialog(options = {}) {
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
 
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, exponent);
+  return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+};
+
 function openDB() {
   return getDb(DB_NAME, 1, {
     upgrade(db) {
@@ -102,11 +111,18 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
-  const workerRef = useRef(null);
+  const [searching, setSearching] = useState(false);
+  const indexerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
-
-  const hasWorker = typeof Worker !== 'undefined';
+  const [indexSnapshot, setIndexSnapshot] = useState({
+    status: 'idle',
+    filesProcessed: 0,
+    bytesProcessed: 0,
+    pending: 0,
+    elapsedMs: 0,
+    currentPath: null,
+  });
   const {
     supported: opfsSupported,
     root,
@@ -124,14 +140,27 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   }, []);
 
   useEffect(() => {
+    const indexer = createDirectoryIndexer();
+    indexerRef.current = indexer;
+    const unsubscribe = indexer.subscribe(() => {
+      setIndexSnapshot(indexer.getSnapshot());
+    });
+    return () => {
+      unsubscribe();
+      indexer.destroy();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!opfsSupported || !root) return;
     (async () => {
       setUnsavedDir(await getDir('unsaved'));
       setDirHandle(root);
-      setPath([{ name: root.name || '/', handle: root }]);
-      await readDir(root);
+      setPath([{ name: root.name || '/', handle: root, path: '' }]);
+      await readDir(root, '');
+      indexerRef.current?.start(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -160,8 +189,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setDirHandle(handle);
       addRecentDir(handle);
       setRecent(await getRecentDirs());
-      setPath([{ name: handle.name || '/', handle }]);
-      await readDir(handle);
+      setPath([{ name: handle.name || '/', handle, path: '' }]);
+      await readDir(handle, '');
+      indexerRef.current?.start(handle);
+      setResults([]);
       setLocationError(null);
     } catch {}
   };
@@ -171,8 +202,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
       if (perm !== 'granted') return;
       setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
+      setPath([{ name: entry.name, handle: entry.handle, path: '' }]);
+      await readDir(entry.handle, '');
+      indexerRef.current?.start(entry.handle);
+      setResults([]);
       setLocationError(null);
     } catch {}
   };
@@ -191,12 +224,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setContent(text);
   };
 
-  const readDir = useCallback(async (handle) => {
+  const readDir = useCallback(async (handle, basePath = '') => {
     const ds = [];
     const fs = [];
     for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
+      const fullPath = basePath ? `${basePath}/${name}` : name;
+      if (h.kind === 'file') fs.push({ name, handle: h, path: fullPath });
+      else if (h.kind === 'directory') ds.push({ name, handle: h, path: fullPath });
     }
     setDirs(ds);
     setFiles(fs);
@@ -216,25 +250,29 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         if (!sanitized) {
           if (!active) return;
           setDirHandle(root);
-          setPath([{ name: root.name || '/', handle: root }]);
-          await readDir(root);
+          setPath([{ name: root.name || '/', handle: root, path: '' }]);
+          await readDir(root, '');
+          indexerRef.current?.start(root);
           if (active) setLocationError(null);
           return;
         }
         let current = root;
-        const crumbs = [{ name: root.name || '/', handle: root }];
+        const crumbs = [{ name: root.name || '/', handle: root, path: '' }];
         const segments = sanitized
           .split('/')
           .map((segment) => segment.trim())
           .filter(Boolean);
+        let currentPath = '';
         for (const segment of segments) {
           current = await current.getDirectoryHandle(segment, { create: true });
-          crumbs.push({ name: segment, handle: current });
+          currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+          crumbs.push({ name: segment, handle: current, path: currentPath });
         }
         if (!active) return;
         setDirHandle(current);
         setPath(crumbs);
-        await readDir(current);
+        await readDir(current, currentPath);
+        indexerRef.current?.start(root);
         if (active) setLocationError(null);
       } catch {
         if (active) setLocationError(`Unable to open ${requested}`);
@@ -249,8 +287,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
+    setPath((p) => [...p, { name: dir.name, handle: dir.handle, path: dir.path }]);
+    await readDir(dir.handle, dir.path);
     setLocationError(null);
   };
 
@@ -259,7 +297,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (!target || !target.handle) return;
     setDirHandle(target.handle);
     setPath(path.slice(0, index + 1));
-    await readDir(target.handle);
+    await readDir(target.handle, target.path || '');
     setLocationError(null);
   };
 
@@ -270,7 +308,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setPath(newPath);
     if (prev?.handle) {
       setDirHandle(prev.handle);
-      await readDir(prev.handle);
+      await readDir(prev.handle, prev.path || '');
       setLocationError(null);
     }
   };
@@ -282,6 +320,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       await writable.write(content);
       await writable.close();
       if (opfsSupported) await removeBuffer(currentFile.name);
+      if (currentFile.path && currentFile.handle && indexerRef.current) {
+        await indexerRef.current.updateFile(currentFile.path, currentFile.handle);
+      }
     } catch {}
   };
 
@@ -291,31 +332,32 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
   };
 
-  const runSearch = () => {
-    if (!dirHandle || !hasWorker) return;
-    setResults([]);
-    if (workerRef.current) workerRef.current.terminate();
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
-      workerRef.current.onmessage = (e) => {
-        const { file, line, text, done } = e.data;
-        if (done) {
-          workerRef.current?.terminate();
-          workerRef.current = null;
-        } else {
-          setResults((r) => [...r, { file, line, text }]);
-        }
-      };
-      workerRef.current.postMessage({ directoryHandle: dirHandle, query });
+  const runSearch = async () => {
+    if (!dirHandle || !indexerRef.current || !query.trim()) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const hits = await indexerRef.current.search(query, { limit: 200 });
+      setResults(hits);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
     }
   };
-
-  useEffect(() => () => workerRef.current?.terminate(), []);
 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Select a file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +372,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -359,16 +402,48 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Back
           </button>
         )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
-        {locationError && (
-          <div className="text-xs text-red-300" role="status">
-            {locationError}
-          </div>
-        )}
+        <div className="flex-1 flex items-center space-x-2 min-w-0">
+          <Breadcrumbs path={path} onNavigate={navigateTo} />
+          {locationError && (
+            <div className="text-xs text-red-300" role="status">
+              {locationError}
+            </div>
+          )}
+        </div>
         {currentFile && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
           </button>
+        )}
+        {supported && (
+          <div className="ml-2 flex items-center space-x-2 text-xs text-white" role="status">
+            {indexSnapshot.status === 'indexing' && (
+              <span>
+                Indexing {indexSnapshot.filesProcessed} files · {formatBytes(indexSnapshot.bytesProcessed)}
+              </span>
+            )}
+            {indexSnapshot.status === 'paused' && (
+              <span>Indexing paused at {indexSnapshot.filesProcessed} files</span>
+            )}
+            {indexSnapshot.status === 'completed' && indexSnapshot.lastComplete && (
+              <span>
+                Indexed {indexSnapshot.lastComplete.filesIndexed} files in{' '}
+                {(indexSnapshot.lastComplete.durationMs / 1000).toFixed(1)}s
+              </span>
+            )}
+            {['indexing', 'paused'].includes(indexSnapshot.status) && (
+              <button
+                onClick={() =>
+                  indexSnapshot.status === 'paused'
+                    ? indexerRef.current?.resume()
+                    : indexerRef.current?.pause()
+                }
+                className="px-2 py-1 bg-black bg-opacity-50 rounded"
+              >
+                {indexSnapshot.status === 'paused' ? 'Resume' : 'Pause'}
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
@@ -406,7 +481,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -414,14 +494,23 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search files"
             />
-            <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
-              Search
+            <button
+              onClick={runSearch}
+              disabled={searching || !query.trim()}
+              className={`ml-2 px-2 py-1 rounded ${
+                searching || !query.trim()
+                  ? 'bg-black bg-opacity-30 cursor-not-allowed'
+                  : 'bg-black bg-opacity-50'
+              }`}
+            >
+              {searching ? 'Searching…' : 'Search'}
             </button>
             <div className="max-h-40 overflow-auto mt-2">
               {results.map((r, i) => (
                 <div key={i}>
-                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+                  <span className="font-bold">{r.path}:{r.line}</span> {r.text}
                 </div>
               ))}
             </div>
