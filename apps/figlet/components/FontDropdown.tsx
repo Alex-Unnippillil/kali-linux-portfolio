@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 interface FontInfo {
   name: string;
@@ -15,7 +15,9 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLUListElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const itemsRef = useRef<(HTMLLIElement | null)[]>([]);
+  const wasOpen = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -32,14 +34,44 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
 
   useEffect(() => {
     if (!open) return;
-    const el = listRef.current?.children[active] as HTMLElement | undefined;
-    el?.scrollIntoView({ block: 'nearest' });
+    const el = itemsRef.current[active] ?? null;
+    if (el) {
+      if (typeof document !== 'undefined' && document.activeElement !== el) {
+        el.focus();
+      }
+      el.scrollIntoView({ block: 'nearest' });
+    }
   }, [open, active]);
 
   useEffect(() => {
     const idx = fonts.findIndex((f) => f.name === value);
-    if (idx >= 0) setActive(idx);
+    if (idx >= 0) {
+      setActive(idx);
+    } else if (fonts.length > 0) {
+      setActive((prev) => Math.min(prev, fonts.length - 1));
+    }
   }, [value, fonts]);
+
+  useEffect(() => {
+    if (open) {
+      wasOpen.current = true;
+      return;
+    }
+    if (wasOpen.current) {
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
+  const moveActive = useCallback(
+    (delta: number) => {
+      if (!fonts.length) return;
+      setActive((a) => {
+        const next = (a + delta + fonts.length) % fonts.length;
+        return next;
+      });
+    },
+    [fonts.length],
+  );
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (!open) {
@@ -49,21 +81,30 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
       }
       return;
     }
-    if (e.key === 'ArrowDown') {
-      setActive((a) => (a + 1) % fonts.length);
-      e.preventDefault();
-    } else if (e.key === 'ArrowUp') {
-      setActive((a) => (a - 1 + fonts.length) % fonts.length);
-      e.preventDefault();
-    } else if (e.key === 'Enter') {
-      onChange(fonts[active].name);
-      setOpen(false);
-      e.preventDefault();
+    if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      if (fonts.length) {
+        moveActive(1);
+        e.preventDefault();
+      }
+    } else if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
+      if (fonts.length) {
+        moveActive(-1);
+        e.preventDefault();
+      }
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      const font = fonts[active];
+      if (font) {
+        onChange(font.name);
+        setOpen(false);
+        e.preventDefault();
+      }
     } else if (e.key === 'Escape') {
       setOpen(false);
       e.preventDefault();
     }
   };
+
+  itemsRef.current.length = fonts.length;
 
   return (
     <div className="relative" ref={containerRef}>
@@ -74,23 +115,31 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={handleKey}
+        ref={triggerRef}
       >
         {value || 'Select font'}
       </button>
       {open && (
         <ul
           role="listbox"
-          ref={listRef}
           tabIndex={-1}
           className="absolute z-10 bg-gray-800 text-white max-h-60 overflow-auto w-full"
           onKeyDown={handleKey}
+          aria-activedescendant={fonts.length ? `font-option-${active}` : undefined}
         >
           {fonts.map((f, i) => (
             <li
               key={f.name}
               role="option"
-              aria-selected={value === f.name}
-              className={`cursor-pointer px-2 ${i === active ? 'bg-blue-600' : ''}`}
+              id={`font-option-${i}`}
+              aria-selected={i === active}
+              tabIndex={i === active ? 0 : -1}
+              ref={(el) => {
+                itemsRef.current[i] = el;
+              }}
+              className={`cursor-pointer px-2 ${
+                i === active ? 'bg-blue-600' : value === f.name ? 'bg-gray-700' : ''
+              }`}
               style={{ height: '24px', lineHeight: '24px', fontFamily: 'monospace' }}
               onMouseEnter={() => setActive(i)}
               onMouseDown={(e) => {
