@@ -180,7 +180,8 @@ const WordleGame = () => {
   const shareResult = async () => {
     const mosaic = buildResultMosaic(guesses.map((g) => g.result));
     const text = `Wordle ${guesses.length}/6\n${mosaic}`;
-    if (!(await share(text))) {
+    const result = await share({ text });
+    if (!result.ok) {
       try {
         await navigator.clipboard.writeText(text);
       } catch {
