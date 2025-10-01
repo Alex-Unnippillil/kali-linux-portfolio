@@ -28,17 +28,46 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
+const normalizeCoordinate = (value) => {
+    if (typeof value !== 'number') return null;
+    if (typeof window === 'undefined') return value;
+    const ratio = window.devicePixelRatio || 1;
+    return Math.round(value * ratio) / ratio;
+};
+
 const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
     const halfWidth = viewportWidth / 2;
     const safeTop = Math.max(topInset, DEFAULT_WINDOW_TOP_OFFSET);
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
     const availableHeight = Math.max(0, viewportHeight - safeTop - SNAP_BOTTOM_INSET - safeBottom);
-    const topHeight = Math.min(availableHeight, Math.max(viewportHeight / 2, 0));
+    const halfHeight = availableHeight / 2;
+    const topHeight = Math.max(halfHeight, 0);
+    const bottomTop = safeTop + Math.max(availableHeight - halfHeight, 0);
+
     return {
         left: { left: 0, top: safeTop, width: halfWidth, height: availableHeight },
         right: { left: viewportWidth - halfWidth, top: safeTop, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: safeTop, width: viewportWidth, height: topHeight },
-
+        top: { left: 0, top: safeTop, width: viewportWidth, height: Math.min(topHeight, availableHeight) },
+        bottom: { left: 0, top: bottomTop, width: viewportWidth, height: Math.min(halfHeight, availableHeight) },
+        'top-left': { left: 0, top: safeTop, width: halfWidth, height: Math.min(halfHeight, availableHeight) },
+        'top-right': {
+            left: viewportWidth - halfWidth,
+            top: safeTop,
+            width: halfWidth,
+            height: Math.min(halfHeight, availableHeight),
+        },
+        'bottom-left': {
+            left: 0,
+            top: bottomTop,
+            width: halfWidth,
+            height: Math.min(halfHeight, availableHeight),
+        },
+        'bottom-right': {
+            left: viewportWidth - halfWidth,
+            top: bottomTop,
+            width: halfWidth,
+            height: Math.min(halfHeight, availableHeight),
+        },
     };
 };
 
@@ -77,6 +106,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._lastPointerPosition = null;
     }
 
     componentDidMount() {
@@ -253,6 +283,7 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
+        this._lastPointerPosition = null;
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
 
@@ -319,7 +350,7 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (position) => {
+    snapWindow = (position, regionOverride = null) => {
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -327,7 +358,7 @@ export class Window extends Component {
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
-        const region = regions[position];
+        const region = regionOverride || regions[position];
         if (!region) return;
         const { width, height } = this.state;
         const node = this.getWindowNode();
@@ -335,14 +366,22 @@ export class Window extends Component {
             const offsetTop = region.top - DESKTOP_TOP_PADDING;
             node.style.transform = `translate(${region.left}px, ${offsetTop}px)`;
         }
+        const nextWidth = percentOf(region.width, viewportWidth);
+        const nextHeight = percentOf(region.height, viewportHeight);
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
             lastSize: { width, height },
-            width: percentOf(region.width, viewportWidth),
-            height: percentOf(region.height, viewportHeight)
+            width: nextWidth,
+            height: nextHeight
         }, this.resizeBoundries);
+
+        if (this.props.onPositionChange) {
+            const snappedX = this.snapToGrid(region.left);
+            const snappedY = clampWindowTopPosition(this.snapToGrid(region.top), topInset);
+            this.props.onPositionChange(snappedX, snappedY);
+        }
     }
 
     setInertBackground = () => {
@@ -359,40 +398,130 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = () => {
-        const node = this.getWindowNode();
-        if (!node) return;
-        const rect = node.getBoundingClientRect();
+    getPointerPosition = (event) => {
+        if (!event) return null;
+        if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+            const x = normalizeCoordinate(event.clientX);
+            const y = normalizeCoordinate(event.clientY);
+            return x == null || y == null ? null : { x, y };
+        }
+        const touch = event.changedTouches?.[event.changedTouches.length - 1] || event.touches?.[0];
+        if (touch && typeof touch.clientX === 'number' && typeof touch.clientY === 'number') {
+            const x = normalizeCoordinate(touch.clientX);
+            const y = normalizeCoordinate(touch.clientY);
+            return x == null || y == null ? null : { x, y };
+        }
+        return null;
+    }
+
+    resolveSnapCandidate = ({ pointer, rect } = {}) => {
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        if (!viewportWidth || !viewportHeight) return;
+        if (!viewportWidth || !viewportHeight) {
+            return { position: null, region: null };
+        }
+
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const pointerX = pointer?.x ?? null;
+        const pointerY = pointer?.y ?? null;
+        const rectLeft = rect ? normalizeCoordinate(rect.left) : null;
+        const rectRight = rect ? normalizeCoordinate(rect.right) : null;
+        const rectTop = rect ? normalizeCoordinate(rect.top) : null;
+        const rectBottom = rect ? normalizeCoordinate(rect.bottom) : null;
+        if (pointerX == null && rectLeft == null) {
+            return { position: null, region: null };
+        }
+        if (pointerY == null && rectTop == null) {
+            return { position: null, region: null };
+        }
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
-        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const safeBottomInset = Math.max(0, measureSafeAreaInset('bottom'));
+        const bottomLimit = viewportHeight - SNAP_BOTTOM_INSET - safeBottomInset;
+
+        const distanceLeft = Math.min(
+            pointerX != null ? pointerX : Infinity,
+            rectLeft != null ? rectLeft : Infinity,
+        );
+        const distanceRight = Math.min(
+            pointerX != null ? viewportWidth - pointerX : Infinity,
+            rectRight != null ? viewportWidth - rectRight : Infinity,
+        );
+        const distanceTop = Math.min(
+            pointerY != null ? Math.max(pointerY - topInset, 0) : Infinity,
+            rectTop != null ? Math.max(rectTop - topInset, 0) : Infinity,
+        );
+        const distanceBottom = Math.min(
+            pointerY != null ? Math.max(bottomLimit - pointerY, 0) : Infinity,
+            rectBottom != null ? Math.max(bottomLimit - rectBottom, 0) : Infinity,
+        );
+
+        const nearLeft = distanceLeft <= horizontalThreshold;
+        const nearRight = distanceRight <= horizontalThreshold;
+        const nearTop = distanceTop <= verticalThreshold;
+        const nearBottom = distanceBottom <= verticalThreshold;
+
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
+        const pick = (key) => {
+            const region = regions[key];
+            if (!region || region.width <= 0 || region.height <= 0) return null;
+            return { position: key, region };
+        };
 
-        let candidate = null;
-        if (rect.top <= topInset + verticalThreshold && regions.top.height > 0) {
-
-            candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
-            candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
-            candidate = { position: 'right', preview: regions.right };
+        if (nearLeft && nearTop) {
+            const topLeft = pick('top-left');
+            if (topLeft) return topLeft;
+        }
+        if (nearRight && nearTop) {
+            const topRight = pick('top-right');
+            if (topRight) return topRight;
+        }
+        if (nearLeft && nearBottom) {
+            const bottomLeft = pick('bottom-left');
+            if (bottomLeft) return bottomLeft;
+        }
+        if (nearRight && nearBottom) {
+            const bottomRight = pick('bottom-right');
+            if (bottomRight) return bottomRight;
+        }
+        if (nearTop) {
+            const top = pick('top');
+            if (top) return top;
+        }
+        if (nearBottom) {
+            const bottom = pick('bottom');
+            if (bottom) return bottom;
+        }
+        if (nearLeft) {
+            const left = pick('left');
+            if (left) return left;
+        }
+        if (nearRight) {
+            const right = pick('right');
+            if (right) return right;
         }
 
-        if (candidate) {
-            const { position, preview } = candidate;
+        return { position: null, region: null };
+    }
+
+    checkSnapPreview = (pointer = null) => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const candidate = this.resolveSnapCandidate({ pointer, rect });
+
+        if (candidate.position && candidate.region) {
+            const { position, region } = candidate;
             const samePosition = this.state.snapPosition === position;
             const samePreview =
                 this.state.snapPreview &&
-                this.state.snapPreview.left === preview.left &&
-                this.state.snapPreview.top === preview.top &&
-                this.state.snapPreview.width === preview.width &&
-                this.state.snapPreview.height === preview.height;
+                this.state.snapPreview.left === region.left &&
+                this.state.snapPreview.top === region.top &&
+                this.state.snapPreview.width === region.width &&
+                this.state.snapPreview.height === region.height;
             if (!samePosition || !samePreview) {
-                this.setState({ snapPreview: preview, snapPosition: position });
+                this.setState({ snapPreview: region, snapPosition: position });
             }
         } else if (this.state.snapPreview) {
             this.setState({ snapPreview: null, snapPosition: null });
@@ -422,20 +551,32 @@ export class Window extends Component {
     }
 
     handleDrag = (e, data) => {
+        const pointer = this.getPointerPosition(e);
+        if (pointer) {
+            this._lastPointerPosition = pointer;
+        }
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
-        this.checkSnapPreview();
+        this.checkSnapPreview(pointer);
     }
 
-    handleStop = () => {
+    handleStop = (event) => {
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
-        if (snapPos) {
-            this.snapWindow(snapPos);
+        const pointer = this.getPointerPosition(event) || this._lastPointerPosition;
+        const node = this.getWindowNode();
+        const rect = node ? node.getBoundingClientRect() : null;
+        let candidate = this.resolveSnapCandidate({ pointer, rect });
+        if (!candidate.position && this.state.snapPosition && this.state.snapPreview) {
+            candidate = { position: this.state.snapPosition, region: this.state.snapPreview };
+        }
+        if (candidate.position && candidate.region) {
+            this.snapWindow(candidate.position, candidate.region);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
+            this.setWinowsPosition();
         }
+        this._lastPointerPosition = null;
     }
 
     focusWindow = () => {
