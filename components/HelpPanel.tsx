@@ -65,7 +65,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
           onClick={toggle}
         >
           <div
-            className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
+            className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto contain-layout-paint cis-panel md:cis-panel-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div dangerouslySetInnerHTML={{ __html: html }} />

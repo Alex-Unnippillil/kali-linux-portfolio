@@ -33,7 +33,7 @@ export default function ModuleCard({
   return (
     <button
       onClick={() => onSelect(module)}
-      className={`w-full text-left border rounded p-3 flex items-start justify-between hover:bg-gray-50 focus:outline-none ${
+      className={`w-full text-left border rounded p-3 flex items-start justify-between hover:bg-gray-50 focus:outline-none contain-layout-paint cis-card md:cis-card-lg ${
         selected ? 'bg-gray-100' : ''
       }`}
     >

@@ -126,6 +126,23 @@ module.exports = {
         }
       }
       addUtilities(cols, ['responsive']);
+
+      const containUtilities = {
+        '.contain-content': { contain: 'content' },
+        '.contain-layout': { contain: 'layout' },
+        '.contain-layout-paint': { contain: 'layout paint' },
+        '.contain-strict': { contain: 'strict' },
+      };
+
+      const intrinsicSizeUtilities = {
+        '.cis-card': { containIntrinsicSize: '12rem' },
+        '.cis-card-lg': { containIntrinsicSize: '16rem' },
+        '.cis-panel': { containIntrinsicSize: '20rem' },
+        '.cis-panel-lg': { containIntrinsicSize: '24rem' },
+      };
+
+      addUtilities(containUtilities, ['responsive']);
+      addUtilities(intrinsicSizeUtilities, ['responsive']);
     }),
   ],
 };
