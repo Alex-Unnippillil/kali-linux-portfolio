@@ -7,6 +7,9 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import SplitPane from './SplitPane';
+import useTabLayoutStore, { DEFAULT_LAYOUT_STATE } from '../../hooks/useTabLayoutStore';
+import { SettingsContext } from '../../hooks/useSettings';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -17,7 +20,7 @@ function middleEllipsis(text: string, max = 30) {
 export interface TabDefinition {
   id: string;
   title: string;
-  content: React.ReactNode;
+  content: React.ReactNode | ((pane: 'primary' | 'secondary') => React.ReactNode);
   closable?: boolean;
   onActivate?: () => void;
   onDeactivate?: () => void;
@@ -30,6 +33,8 @@ interface TabbedWindowProps {
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
 }
+
+type PaneType = 'primary' | 'secondary';
 
 interface TabContextValue {
   id: string;
@@ -58,6 +63,22 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const { getLayout, updateLayout, removeLayout } = useTabLayoutStore();
+  const { reducedMotion } = useContext(SettingsContext);
+  const paneRefs = useRef<
+    Map<string, { primary: HTMLDivElement | null; secondary: HTMLDivElement | null }>
+  >(new Map());
+  const paneClassName =
+    'h-full w-full overflow-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-focus-ring] focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900';
+  const activeLayout = useMemo(
+    () => (activeId ? getLayout(activeId) : DEFAULT_LAYOUT_STATE),
+    [activeId, getLayout],
+  );
+
+  const activeTab = useMemo(
+    () => tabs.find((tab) => tab.id === activeId) ?? null,
+    [tabs, activeId],
+  );
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -91,9 +112,80 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     el.focus({ preventScroll: true });
   }, []);
 
+  const setPaneRef = useCallback(
+    (tabId: string, pane: PaneType) =>
+      (node: HTMLDivElement | null) => {
+        const entry = paneRefs.current.get(tabId) ?? { primary: null, secondary: null };
+        entry[pane] = node;
+        if (!entry.primary && !entry.secondary) {
+          paneRefs.current.delete(tabId);
+        } else {
+          paneRefs.current.set(tabId, entry);
+        }
+      },
+    [],
+  );
+
   const setActive = useCallback(
     (id: string) => {
       setActiveId(id);
+    },
+    [],
+  );
+
+  const focusPane = useCallback(
+    (pane: PaneType) => {
+      if (!activeId) return;
+      const entry = paneRefs.current.get(activeId);
+      const target = entry?.[pane];
+      target?.focus({ preventScroll: false });
+    },
+    [activeId],
+  );
+
+  const handleSizeChange = useCallback(
+    (tabId: string) => (next: number) => {
+      if (!Number.isFinite(next)) return;
+      updateLayout(tabId, { size: next });
+    },
+    [updateLayout],
+  );
+
+  const toggleSplit = useCallback(() => {
+    if (!activeId) return;
+    updateLayout(activeId, (current) => ({
+      ...current,
+      split: !current.split,
+      ...(current.split ? { linkScroll: false } : {}),
+    }));
+  }, [activeId, updateLayout]);
+
+  const toggleOrientation = useCallback(() => {
+    if (!activeId) return;
+    updateLayout(activeId, (current) => ({
+      ...current,
+      orientation: current.orientation === 'horizontal' ? 'vertical' : 'horizontal',
+    }));
+  }, [activeId, updateLayout]);
+
+  const toggleLinkScroll = useCallback(() => {
+    if (!activeId) return;
+    updateLayout(activeId, (current) => ({
+      ...current,
+      linkScroll: !current.linkScroll,
+    }));
+  }, [activeId, updateLayout]);
+
+  const renderPaneContent = useCallback(
+    (tab: TabDefinition, pane: PaneType) => {
+      const { content } = tab;
+      if (typeof content === 'function') {
+        return content(pane);
+      }
+      if (React.isValidElement(content)) {
+        return React.cloneElement(content, { key: `${tab.id}-${pane}` });
+      }
+      return content;
     },
     [],
   );
@@ -105,6 +197,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         const removed = prev[idx];
         const next = prev.filter((t) => t.id !== id);
         if (removed && removed.onClose) removed.onClose();
+        removeLayout(id);
+        paneRefs.current.delete(id);
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
           setActiveId(fallback.id);
@@ -117,7 +211,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         return next;
       });
     },
-    [activeId, focusTab, onNewTab, updateTabs],
+    [activeId, focusTab, onNewTab, removeLayout, updateTabs],
   );
 
   const addTab = useCallback(() => {
@@ -274,6 +368,47 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     focusTab(activeId);
   }, [activeId, focusTab]);
 
+  useEffect(() => {
+    if (!activeId) return;
+    if (!activeLayout.split || !activeLayout.linkScroll) return;
+    const entry = paneRefs.current.get(activeId);
+    const primary = entry?.primary;
+    const secondary = entry?.secondary;
+    if (!primary || !secondary) return;
+
+    let syncing = false;
+    const sync = (source: HTMLDivElement, target: HTMLDivElement) => () => {
+      if (syncing) return;
+      syncing = true;
+      const top = source.scrollTop;
+      const left = source.scrollLeft;
+      if (typeof target.scrollTo === 'function') {
+        target.scrollTo({
+          top,
+          left,
+          behavior: reducedMotion ? 'auto' : 'smooth',
+        });
+      } else {
+        target.scrollTop = top;
+        target.scrollLeft = left;
+      }
+      requestAnimationFrame(() => {
+        syncing = false;
+      });
+    };
+
+    const handlePrimary = sync(primary, secondary);
+    const handleSecondary = sync(secondary, primary);
+
+    primary.addEventListener('scroll', handlePrimary, { passive: true });
+    secondary.addEventListener('scroll', handleSecondary, { passive: true });
+
+    return () => {
+      primary.removeEventListener('scroll', handlePrimary);
+      secondary.removeEventListener('scroll', handleSecondary);
+    };
+  }, [activeId, activeLayout.linkScroll, activeLayout.split, reducedMotion]);
+
   const overflowTabs = useMemo(() => {
     if (overflowedIds.length === 0) return [] as TabDefinition[];
     const overflowSet = new Set(overflowedIds);
@@ -415,31 +550,130 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             )}
           </div>
         )}
-        {onNewTab && (
+        <div className="flex items-center gap-1 pr-2">
+          {onNewTab && (
+            <button
+              type="button"
+              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              onClick={addTab}
+              aria-label="New Tab"
+            >
+              +
+            </button>
+          )}
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
-            onClick={addTab}
-            aria-label="New Tab"
+            type="button"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={toggleSplit}
+            aria-label="Toggle split view"
+            aria-pressed={activeLayout.split}
+            disabled={!activeTab}
           >
-            +
+            Split view
           </button>
-        )}
+          <button
+            type="button"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={toggleOrientation}
+            aria-label="Toggle split orientation"
+            disabled={!activeTab || !activeLayout.split}
+          >
+            {activeLayout.orientation === 'horizontal' ? 'Stack panes' : 'Side by side'}
+          </button>
+          <button
+            type="button"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={toggleLinkScroll}
+            aria-label="Link pane scrolling"
+            aria-pressed={activeLayout.linkScroll}
+            disabled={!activeTab || !activeLayout.split}
+          >
+            Link scroll
+          </button>
+          {activeLayout.split && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => focusPane('primary')}
+                aria-label={
+                  activeTab ? `Focus ${activeTab.title} pane 1` : 'Focus pane 1'
+                }
+                disabled={!activeTab}
+              >
+                Focus pane 1
+              </button>
+              <button
+                type="button"
+                className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => focusPane('secondary')}
+                aria-label={
+                  activeTab ? `Focus ${activeTab.title} pane 2` : 'Focus pane 2'
+                }
+                disabled={!activeTab}
+              >
+                Focus pane 2
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
-            <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+        {tabs.map((t) => {
+          const layout = getLayout(t.id);
+          const paneOneLabel = `${t.title} pane 1`;
+          const paneTwoLabel = `${t.title} pane 2`;
+          const primaryRef = setPaneRef(t.id, 'primary');
+          const secondaryRef = setPaneRef(t.id, 'secondary');
+
+          return (
+            <TabContext.Provider
+              key={t.id}
+              value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
             >
-              {t.content}
-            </div>
-          </TabContext.Provider>
-        ))}
+              <div
+                className={`absolute inset-0 w-full h-full ${
+                  t.id === activeId ? 'block' : 'hidden'
+                }`}
+              >
+                {layout.split ? (
+                  <SplitPane
+                    orientation={layout.orientation}
+                    size={layout.size}
+                    onSizeChange={handleSizeChange(t.id)}
+                    firstPaneProps={{
+                      ref: primaryRef,
+                      tabIndex: 0,
+                      role: 'region',
+                      'aria-label': paneOneLabel,
+                      className: paneClassName,
+                    }}
+                    secondPaneProps={{
+                      ref: secondaryRef,
+                      tabIndex: 0,
+                      role: 'region',
+                      'aria-label': paneTwoLabel,
+                      className: paneClassName,
+                    }}
+                  >
+                    {renderPaneContent(t, 'primary')}
+                    {renderPaneContent(t, 'secondary')}
+                  </SplitPane>
+                ) : (
+                  <div
+                    ref={primaryRef}
+                    tabIndex={0}
+                    role="region"
+                    aria-label={`${t.title} pane`}
+                    className={paneClassName}
+                  >
+                    {renderPaneContent(t, 'primary')}
+                  </div>
+                )}
+              </div>
+            </TabContext.Provider>
+          );
+        })}
       </div>
     </div>
   );
