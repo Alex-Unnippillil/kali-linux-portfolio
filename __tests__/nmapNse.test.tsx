@@ -13,6 +13,8 @@ describe('NmapNSEApp', () => {
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
                 ? { hosts: [] }
+                : typeof url === 'string' && url.includes('trends')
+                ? { runs: [] }
                 : { 'ftp-anon': 'FTP output' }
             ),
         })
@@ -36,6 +38,8 @@ describe('NmapNSEApp', () => {
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
                 ? { hosts: [] }
+                : typeof url === 'string' && url.includes('trends')
+                ? { runs: [] }
                 : {}
             ),
         })
@@ -65,6 +69,8 @@ describe('NmapNSEApp', () => {
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
                 ? { hosts: [] }
+                : typeof url === 'string' && url.includes('trends')
+                ? { runs: [] }
                 : { 'http-title': 'Sample output' }
             ),
         })
@@ -82,7 +88,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });
@@ -115,6 +121,8 @@ describe('NmapNSEApp', () => {
                       },
                     ],
                   }
+                : typeof url === 'string' && url.includes('trends')
+                ? { runs: [] }
                 : {}
             ),
         })
