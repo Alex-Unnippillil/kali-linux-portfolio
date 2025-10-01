@@ -30,6 +30,43 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+const scheduleIdleTask = (task, timeout = 500) => {
+    if (typeof window === 'undefined') {
+        const handle = setTimeout(task, timeout);
+        return () => clearTimeout(handle);
+    }
+
+    const win = window;
+    let cancelled = false;
+    const invoke = () => {
+        if (!cancelled) {
+            try {
+                task();
+            } catch (error) {
+                if (process.env.NODE_ENV !== 'production') {
+                    console.warn('[desktop] Deferred task failed', error);
+                }
+            }
+        }
+    };
+
+    if (typeof win.requestIdleCallback === 'function') {
+        const id = win.requestIdleCallback(() => invoke(), { timeout });
+        return () => {
+            cancelled = true;
+            if (typeof win.cancelIdleCallback === 'function') {
+                win.cancelIdleCallback(id);
+            }
+        };
+    }
+
+    const handle = win.setTimeout(invoke, timeout);
+    return () => {
+        cancelled = true;
+        win.clearTimeout(handle);
+    };
+};
+
 
 export class Desktop extends Component {
     constructor() {
@@ -94,6 +131,9 @@ export class Desktop extends Component {
         this.currentPointerIsCoarse = false;
 
         this.validAppIds = new Set(apps.map((app) => app.id));
+
+        this.deferredCleanups = [];
+        this._isUnmounted = false;
 
     }
 
@@ -830,17 +870,8 @@ export class Desktop extends Component {
                 this.openApp('about');
             }
         });
-        this.setContextListeners();
-        this.setEventListeners();
-        this.checkForNewFolders();
-        this.checkForAppShortcuts();
         this.updateTrashIcon();
-        window.addEventListener('trash-change', this.updateTrashIcon);
-        window.addEventListener('resize', this.handleViewportResize);
-        document.addEventListener('keydown', this.handleGlobalShortcut);
-        window.addEventListener('open-app', this.handleOpenAppEvent);
-        this.setupPointerMediaWatcher();
-        this.setupGestureListeners();
+        this.scheduleDeferredSetup();
     }
 
     componentDidUpdate(_prevProps, prevState) {
@@ -854,6 +885,19 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this._isUnmounted = true;
+        if (Array.isArray(this.deferredCleanups)) {
+            this.deferredCleanups.forEach((cancel) => {
+                try {
+                    cancel?.();
+                } catch (error) {
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.warn('[desktop] Failed to cancel deferred task', error);
+                    }
+                }
+            });
+            this.deferredCleanups = [];
+        }
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
@@ -867,6 +911,27 @@ export class Desktop extends Component {
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
     }
+
+    scheduleDeferredSetup = () => {
+        const immediateCancel = scheduleIdleTask(() => {
+            if (this._isUnmounted) return;
+            this.setContextListeners();
+            this.setEventListeners();
+            this.checkForNewFolders();
+            this.checkForAppShortcuts();
+            this.setupPointerMediaWatcher();
+            this.setupGestureListeners();
+        });
+        const listenerCancel = scheduleIdleTask(() => {
+            if (this._isUnmounted) return;
+            window.addEventListener('trash-change', this.updateTrashIcon);
+            window.addEventListener('resize', this.handleViewportResize);
+            document.addEventListener('keydown', this.handleGlobalShortcut);
+            window.addEventListener('open-app', this.handleOpenAppEvent);
+        }, 800);
+
+        this.deferredCleanups.push(immediateCancel, listenerCancel);
+    };
 
     attachIconKeyboardListeners = () => {
         if (this.iconKeyListenerAttached || typeof document === 'undefined') return;

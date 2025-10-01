@@ -187,6 +187,7 @@ function configureWebpack(config, { isServer }) {
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-ga4$': require('path').resolve(__dirname, 'utils/reactGaProxy.ts'),
   };
   if (isProd) {
     config.optimization = {
