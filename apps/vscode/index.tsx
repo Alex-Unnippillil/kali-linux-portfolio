@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
@@ -55,15 +54,6 @@ export default function VsCode() {
             className="w-full h-full"
             onLoad={() => {}}
           />
-          <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
-            <Image
-              src="/themes/Yaru/system/view-app-grid-symbolic.svg"
-              alt="Open Folder"
-              width={64}
-              height={64}
-            />
-            <span className="text-lg">Open Folder</span>
-          </div>
         </div>
         <div
           className="flex items-center gap-2 px-2 py-1 border-t border-black/20"
