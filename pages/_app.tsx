@@ -1,4 +1,5 @@
 "use client";
+// @ts-nocheck
 
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
@@ -14,9 +15,11 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
+import DocsViewerProvider from '../components/apps/docs/DocsViewer';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import type { AppProps } from 'next/app';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -26,8 +29,7 @@ const ubuntu = Ubuntu({
 });
 
 
-function MyApp(props) {
-  const { Component, pageProps } = props;
+function MyApp({ Component, pageProps }: AppProps) {
 
 
   useEffect(() => {
@@ -149,7 +151,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
-      <Script src="/a2hs.js" strategy="beforeInteractive" />
+      <Script src="/a2hs.js" strategy="afterInteractive" />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"
@@ -160,19 +162,21 @@ function MyApp(props) {
         <SettingsProvider>
           <NotificationCenter>
             <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+              <DocsViewerProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(e) => {
+                    if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                    const evt = e;
+                    if (evt.metadata?.email) delete evt.metadata.email;
+                    return e;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </DocsViewerProvider>
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>

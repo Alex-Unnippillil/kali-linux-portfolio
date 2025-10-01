@@ -2,6 +2,7 @@
 
 import React from 'react';
 import capture from '../../../components/apps/kismet/sampleCapture.json';
+import { DocsLink } from '../../../components/apps/docs/DocsViewer';
 
 interface Frame {
   seq: number;
@@ -53,12 +54,13 @@ const DeauthWalkthrough: React.FC = () => {
       </p>
       <p className="mt-2">
         For defensive guidance, review the{' '}
-        <a
-          href="/docs/deauth-mitigation.md"
+        <DocsLink
+          appId="kismet"
+          docPath="/docs/deauth-mitigation.md"
           className="text-blue-400 underline"
         >
           mitigation notes
-        </a>
+        </DocsLink>
         .
       </p>
     </div>
