@@ -80,7 +80,7 @@ export default function GhidraApp() {
   const syncing = useRef(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const hexWorkerRef = useRef(null);
-  const [query, setQuery] = useState('');
+  const [pinnedFunctions, setPinnedFunctions] = useState([]);
   const [funcNotes, setFuncNotes] = useState({});
   const [strings, setStrings] = useState([]);
   const [selectedString, setSelectedString] = useState(null);
@@ -90,6 +90,21 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const handleSelect = useCallback(
+    (name) => {
+      if (!name) return;
+      setSelected(name);
+    },
+    [setSelected]
+  );
+  const togglePinned = useCallback(
+    (name) => {
+      setPinnedFunctions((prev) =>
+        prev.includes(name) ? prev.filter((fn) => fn !== name) : [...prev, name]
+      );
+    },
+    [setPinnedFunctions]
+  );
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -241,6 +256,12 @@ export default function GhidraApp() {
     };
   }, []);
 
+  useEffect(() => {
+    if (selected && decompileRef.current) {
+      decompileRef.current.focus({ preventScroll: true });
+    }
+  }, [selected]);
+
   if (engine === 'capstone') {
     return (
       <div
@@ -285,12 +306,12 @@ export default function GhidraApp() {
   }
 
   const currentFunc = funcMap[selected] || { code: [], blocks: [], calls: [] };
-  const filteredFunctions = functions.filter((f) =>
-    f.name.toLowerCase().includes(query.toLowerCase())
-  );
   const filteredStrings = strings.filter((s) =>
     s.value.toLowerCase().includes(stringQuery.toLowerCase())
   );
+  const funcNotesId = selected ? `func-notes-${selected}` : 'func-notes';
+  const stringNotesId =
+    selectedString !== null ? `string-note-${selectedString}` : 'string-note';
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
@@ -307,31 +328,13 @@ export default function GhidraApp() {
       </div>
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
-          <div className="p-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search symbols"
-              className="w-full mb-2 p-1 rounded text-black"
-            />
-          </div>
-          {query ? (
-            <ul className="p-2 text-sm space-y-1">
-              {filteredFunctions.map((f) => (
-                <li key={f.name}>
-                  <button
-                    onClick={() => setSelected(f.name)}
-                    className={`text-left w-full ${selected === f.name ? 'font-bold' : ''}`}
-                  >
-                    {f.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
-          )}
+          <FunctionTree
+            functions={functions}
+            onSelect={handleSelect}
+            selected={selected}
+            pinned={pinnedFunctions}
+            onTogglePin={togglePinned}
+          />
         </div>
         <div className="border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0">
           <ControlFlowGraph
@@ -346,6 +349,7 @@ export default function GhidraApp() {
           ref={decompileRef}
           aria-label="Decompiled code"
           className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
+          tabIndex={0}
         >
           {currentFunc.code.map((line, idx) => {
             const m = line.match(/call\s+(\w+)/);
@@ -354,7 +358,7 @@ export default function GhidraApp() {
               const target = m[1];
               codeElem = (
                 <div
-                  onClick={() => setSelected(target)}
+                  onClick={() => handleSelect(target)}
                   className="cursor-pointer text-blue-400 hover:underline"
                 >
                   {line}
@@ -380,6 +384,7 @@ export default function GhidraApp() {
                   }
                   placeholder="note"
                   className="ml-2 w-24 text-xs text-black rounded"
+                  aria-label={`Inline note for line ${idx + 1}`}
                 />
               </div>
             );
@@ -390,7 +395,7 @@ export default function GhidraApp() {
               {xrefs[selected].map((xr) => (
                 <button
                   key={xr}
-                  onClick={() => setSelected(xr)}
+                  onClick={() => handleSelect(xr)}
                   className="ml-2 underline text-blue-400"
                 >
                   {xr}
@@ -412,21 +417,23 @@ export default function GhidraApp() {
         <CallGraph
           func={currentFunc}
           callers={xrefs[selected] || []}
-          onSelect={setSelected}
+          onSelect={handleSelect}
         />
       </div>
-      <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
-          Notes for {selected || 'function'}
-        </label>
-        <textarea
-          value={funcNotes[selected] || ''}
-          onChange={(e) =>
-            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
-          }
-          className="w-full h-16 p-1 rounded text-black"
-        />
-      </div>
+        <div className="border-t border-gray-700 p-2">
+          <label className="block text-sm mb-1" htmlFor={funcNotesId}>
+            Notes for {selected || 'function'}
+          </label>
+          <textarea
+            id={funcNotesId}
+            value={funcNotes[selected] || ''}
+            onChange={(e) =>
+              setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+            }
+            className="w-full h-16 p-1 rounded text-black"
+            aria-label={`Notes for ${selected || 'function'}`}
+          />
+        </div>
       <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
         <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
           <input
@@ -435,6 +442,7 @@ export default function GhidraApp() {
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
             className="w-full mb-2 p-1 rounded text-black"
+            aria-label="Search strings"
           />
           <ul className="text-sm space-y-1">
             {filteredStrings.map((s) => (
@@ -452,12 +460,13 @@ export default function GhidraApp() {
           </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
+          <label className="block text-sm mb-1" htmlFor={stringNotesId}>
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
             }
           </label>
           <textarea
+            id={stringNotesId}
             value={stringNotes[selectedString] || ''}
             onChange={(e) =>
               setStringNotes({
@@ -466,6 +475,9 @@ export default function GhidraApp() {
               })
             }
             className="w-full h-full p-1 rounded text-black"
+            aria-label={`Notes for ${
+              strings.find((s) => s.id === selectedString)?.value || 'string'
+            }`}
           />
         </div>
       </div>
