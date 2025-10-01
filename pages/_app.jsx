@@ -15,6 +15,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import SelectionCopyBubble from '../components/base/SelectionCopyBubble';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
@@ -160,6 +161,7 @@ function MyApp(props) {
         <SettingsProvider>
           <NotificationCenter>
             <PipPortalProvider>
+              <SelectionCopyBubble />
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
