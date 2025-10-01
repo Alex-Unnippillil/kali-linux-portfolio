@@ -367,6 +367,7 @@ const ReaverPage: React.FC = () => {
       className="min-h-screen bg-gray-900 text-white"
       initialTabs={[createTab()]}
       onNewTab={createTab}
+      layoutStorageKey="reaver-session-layout"
     />
   );
 };

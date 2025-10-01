@@ -1,3 +1,5 @@
+import { safeLocalStorage } from './safeStorage';
+
 const NAVBAR_SELECTOR = '.main-navbar-vp';
 const DEFAULT_NAVBAR_HEIGHT = 48;
 const WINDOW_TOP_MARGIN = 16;
@@ -65,4 +67,57 @@ export const clampWindowTopPosition = (value, topOffset) => {
     return safeOffset;
   }
   return Math.max(value, safeOffset);
+};
+
+export const TABBED_WINDOW_LAYOUT_STORAGE_KEY = 'tabbed-window-layouts';
+export const DEFAULT_TABBED_LAYOUT = 'tabs';
+export const DEFAULT_CASCADE_OFFSETS = { x: 32, y: 28 };
+
+const readStoredLayouts = () => {
+  if (!safeLocalStorage) return {};
+  try {
+    const raw = safeLocalStorage.getItem(TABBED_WINDOW_LAYOUT_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
+  } catch (error) {
+    console.warn('Failed to parse stored tabbed window layouts', error);
+    return {};
+  }
+};
+
+const writeStoredLayouts = (layouts) => {
+  if (!safeLocalStorage) return;
+  try {
+    safeLocalStorage.setItem(
+      TABBED_WINDOW_LAYOUT_STORAGE_KEY,
+      JSON.stringify(layouts || {}),
+    );
+  } catch (error) {
+    console.warn('Failed to persist tabbed window layouts', error);
+  }
+};
+
+export const getStoredTabbedLayout = (key, fallback = DEFAULT_TABBED_LAYOUT) => {
+  if (!key) return fallback;
+  const layouts = readStoredLayouts();
+  const stored = layouts[key];
+  return typeof stored === 'string' ? stored : fallback;
+};
+
+export const setStoredTabbedLayout = (key, layout) => {
+  if (!key || typeof layout !== 'string') return;
+  const layouts = readStoredLayouts();
+  const next = { ...layouts, [key]: layout };
+  writeStoredLayouts(next);
+};
+
+export const clearStoredTabbedLayout = (key) => {
+  if (!key) return;
+  const layouts = readStoredLayouts();
+  if (!Object.prototype.hasOwnProperty.call(layouts, key)) return;
+  const next = { ...layouts };
+  delete next[key];
+  writeStoredLayouts(next);
 };

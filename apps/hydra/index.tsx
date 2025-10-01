@@ -19,7 +19,11 @@ const HydraPreview: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <TabbedWindow initialTabs={[createTab()]} onNewTab={createTab} />
+      <TabbedWindow
+        initialTabs={[createTab()]}
+        onNewTab={createTab}
+        layoutStorageKey="hydra-session-layout"
+      />
       <StrategyTrainer />
     </div>
   );
