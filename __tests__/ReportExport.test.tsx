@@ -23,6 +23,12 @@ describe('ReportExport', () => {
             size: 1,
             plugin: 'p',
             timestamp: '2023-01-01',
+            tags: ['demo'],
+            lineage: {
+              source: 'fixture',
+              transforms: ['normalize'],
+              tags: ['fixture'],
+            },
           },
         ]}
       />
@@ -31,6 +37,10 @@ describe('ReportExport', () => {
     await waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalled()
     );
-    expect((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]).toContain('<!DOCTYPE html>');
+    const html = (navigator.clipboard.writeText as jest.Mock).mock.calls[0][0];
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('<th>Lineage</th>');
+    expect(html).toContain('Source: fixture');
+    expect(html).toContain('demo');
   });
 });

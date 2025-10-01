@@ -5,6 +5,11 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import {
+  ensureLineageCollection,
+  withLineage,
+  formatLineageSummary,
+} from '../../../utils/lineage';
 
 const escapeFilename = (str = '') =>
   str
@@ -13,6 +18,49 @@ const escapeFilename = (str = '') =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+
+
+const FIXTURE_LINEAGE = {
+  source: 'Static Autopsy Fixture',
+  transforms: ['Loaded via Autopsy UI'],
+  tags: ['autopsy', 'fixture'],
+};
+
+const IMPORT_LINEAGE = {
+  source: 'Autopsy JSON import',
+  transforms: ['Imported via Autopsy UI'],
+  tags: ['autopsy', 'import'],
+};
+
+const UPLOAD_LINEAGE = {
+  source: 'User upload',
+  transforms: ['Analyzed via Autopsy byte inspector'],
+  tags: ['autopsy', 'upload'],
+};
+
+const buildArtifactTags = (artifact = {}) => {
+  const tags = [];
+  if (artifact.type) tags.push(`type:${artifact.type}`);
+  if (artifact.plugin) tags.push(`plugin:${artifact.plugin}`);
+  if (artifact.user) tags.push(`user:${artifact.user}`);
+  return tags;
+};
+
+const applyLineageToArtifacts = (items = [], defaults = FIXTURE_LINEAGE) =>
+  ensureLineageCollection(items, defaults, {
+    getExtraTags: buildArtifactTags,
+  });
+
+const enrichArtifact = (
+  artifact,
+  defaults = FIXTURE_LINEAGE,
+  update = {},
+  extraTags = [],
+) =>
+  withLineage(artifact, defaults, update, [
+    ...buildArtifactTags(artifact),
+    ...extraTags,
+  ]);
 
 
 function Timeline({ events, onSelect }) {
@@ -374,7 +422,7 @@ function Autopsy({ initialArtifacts = null }) {
           new URL('./jsonWorker.js', import.meta.url)
         );
         parseWorkerRef.current.onmessage = (e) =>
-          setArtifacts(e.data || []);
+          setArtifacts(applyLineageToArtifacts(e.data || [], FIXTURE_LINEAGE));
       } catch {
         parseWorkerRef.current = null;
       }
@@ -385,9 +433,9 @@ function Autopsy({ initialArtifacts = null }) {
   useEffect(() => {
     if (!currentCase) return;
     if (initialArtifacts) {
-      setArtifacts(initialArtifacts);
+      setArtifacts(applyLineageToArtifacts(initialArtifacts, IMPORT_LINEAGE));
     } else {
-      setArtifacts(demoArtifacts);
+      setArtifacts(applyLineageToArtifacts(demoArtifacts, FIXTURE_LINEAGE));
       fetch('/autopsy-demo.json')
         .then(async (res) => {
           const text = res.text
@@ -398,13 +446,22 @@ function Autopsy({ initialArtifacts = null }) {
           } else {
             try {
               const data = JSON.parse(text);
-              setArtifacts(data.artifacts || demoArtifacts);
+              setArtifacts(
+                applyLineageToArtifacts(
+                  data.artifacts || demoArtifacts,
+                  FIXTURE_LINEAGE,
+                ),
+              );
             } catch {
-              setArtifacts(demoArtifacts);
+              setArtifacts(
+                applyLineageToArtifacts(demoArtifacts, FIXTURE_LINEAGE),
+              );
             }
           }
         })
-        .catch(() => setArtifacts(demoArtifacts));
+        .catch(() =>
+          setArtifacts(applyLineageToArtifacts(demoArtifacts, FIXTURE_LINEAGE)),
+        );
     }
     fetch('/demo-data/autopsy/filetree.json')
       .then((res) => res.json())
@@ -471,13 +528,20 @@ function Autopsy({ initialArtifacts = null }) {
       );
       setArtifacts((prev) => [
         ...prev,
-        {
-          name: file.name,
-          size: file.size,
-          hex,
-          plugin: selectedPlugin || 'None',
-          timestamp: new Date().toISOString(),
-        },
+        enrichArtifact(
+          {
+            name: file.name,
+            type: 'File',
+            description: 'User uploaded artifact',
+            size: file.size,
+            hex,
+            plugin: selectedPlugin || 'None',
+            timestamp: new Date().toISOString(),
+          },
+          UPLOAD_LINEAGE,
+          { transforms: ['Analyzed via Autopsy byte inspector'] },
+          ['upload'],
+        ),
       ]);
     };
     reader.readAsArrayBuffer(file);
@@ -806,6 +870,23 @@ function Autopsy({ initialArtifacts = null }) {
           <div className="text-xs">Plugin: {selectedArtifact.plugin}</div>
           <div className="text-xs">User: {selectedArtifact.user || 'Unknown'}</div>
           <div className="text-xs">Size: {selectedArtifact.size}</div>
+          {selectedArtifact.lineage && (
+            <div className="text-xs mt-2">
+              {formatLineageSummary(selectedArtifact.lineage)}
+            </div>
+          )}
+          {selectedArtifact.tags?.length ? (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {selectedArtifact.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 rounded bg-ub-cool-grey text-xs"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatLineageSummary } from '../../../utils/lineage';
 
 const escapeHtml = (str = '') =>
   str
@@ -59,12 +60,16 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
         </button>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
-        {artifacts.map((a, idx) => (
+        {artifacts.map((a, idx) => {
+          const tags = Array.isArray(a.tags) ? a.tags : [];
+          const lineageSummary = formatLineageSummary(a.lineage);
+          return (
           <button
             type="button"
             key={`${a.name}-${idx}`}
             onClick={() => onSelect(a)}
             className="p-2 bg-ub-grey rounded text-sm text-left flex flex-col"
+            title={lineageSummary}
           >
             <div className="flex items-center font-bold">
               <span className="mr-1" aria-hidden="true">
@@ -88,8 +93,22 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
               className="text-xs"
               dangerouslySetInnerHTML={{ __html: highlight(a.description) }}
             />
+            {tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <span
+                    key={`${a.name}-${tag}`}
+                    className="px-2 py-0.5 text-xs rounded bg-ub-cool-grey"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 text-xs text-gray-400">{lineageSummary}</div>
           </button>
-        ))}
+        );
+        })}
       </div>
     </>
   );

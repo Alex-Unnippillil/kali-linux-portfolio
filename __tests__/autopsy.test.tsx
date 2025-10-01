@@ -77,4 +77,16 @@ describe('Autopsy plugins and timeline', () => {
     expect(screen.queryByText('resume.docx')).toBeNull();
     expect(screen.getByText('system.log')).toBeInTheDocument();
   });
+
+  it('shows lineage badges for loaded artifacts', async () => {
+    render(<Autopsy />);
+    fireEvent.change(screen.getByPlaceholderText('Case name'), {
+      target: { value: 'Demo' },
+    });
+    fireEvent.click(screen.getByText('Create Case'));
+    const typeBadges = await screen.findAllByText('type:Document');
+    expect(typeBadges.length).toBeGreaterThan(0);
+    const pluginBadges = screen.getAllByText('plugin:metadata');
+    expect(pluginBadges.length).toBeGreaterThan(0);
+  });
 });
