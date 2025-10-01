@@ -4,6 +4,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef(null);
+  const headingId = 'window-switcher-title';
 
   const filtered = windows.filter((w) =>
     w.title.toLowerCase().includes(query.toLowerCase())
@@ -57,8 +58,17 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={headingId}
+      tabIndex={-1}
+    >
       <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
+        <h2 id={headingId} className="sr-only">
+          Switch between open windows
+        </h2>
         <input
           ref={inputRef}
           value={query}
@@ -66,6 +76,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           onKeyDown={handleKeyDown}
           className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
           placeholder="Search windows"
+          aria-label="Search windows"
         />
         <ul>
           {filtered.map((w, i) => (

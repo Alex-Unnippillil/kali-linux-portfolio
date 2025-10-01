@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Modal from '../components/base/Modal';
+import OverlayHost from '../components/common/OverlayHost';
 
 test('modal traps focus, disables background, and restores opener focus', async () => {
   const root = document.createElement('div');
@@ -21,7 +22,14 @@ test('modal traps focus, disables background, and restores opener focus', async 
     );
   };
 
-  const { getByText, unmount } = render(<Wrapper />, { container: root });
+  const { getByText, unmount } = render(
+    (
+      <OverlayHost>
+        <Wrapper />
+      </OverlayHost>
+    ),
+    { container: root },
+  );
   const openButton = getByText('open');
   openButton.focus();
   fireEvent.click(openButton);
@@ -59,7 +67,11 @@ test('modal closes when Escape pressed globally', async () => {
     );
   };
 
-  const { getByText } = render(<Wrapper />);
+  const { getByText } = render(
+    <OverlayHost>
+      <Wrapper />
+    </OverlayHost>,
+  );
   const openButton = getByText('open');
   openButton.focus();
   fireEvent.click(openButton);

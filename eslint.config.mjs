@@ -19,6 +19,9 @@ const config = [
       'no-restricted-globals': ['error', 'window', 'document'],
     },
   },
+  {
+    files: ['**/*.jsx'],
+  },
   ...compat.config({
     extends: ['next/core-web-vitals'],
     rules: {

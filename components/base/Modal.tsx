@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import useOverlay from '../../hooks/useOverlay';
 
 interface ModalProps {
     isOpen: boolean;
@@ -28,99 +28,118 @@ const FOCUSABLE_SELECTORS = [
 ].join(',');
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
-    const modalRef = useRef<HTMLDivElement>(null);
-    const triggerRef = useRef<HTMLElement | null>(null);
-    const portalRef = useRef<HTMLDivElement | null>(null);
-    const inertRootRef = useRef<HTMLElement | null>(null);
+    const overlay = useOverlay();
+    const modalRef = useRef<HTMLDivElement | null>(null);
+    const overlayIdRef = useRef<string | null>(null);
 
-    if (!portalRef.current && typeof document !== 'undefined') {
-        const el = document.createElement('div');
-        portalRef.current = el;
-        document.body.appendChild(el);
-    }
+    const assignModalNode = useCallback(
+        (node: HTMLDivElement | null) => {
+            modalRef.current = node;
+            if (!node || !isOpen) return;
+            const elements = node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+            const firstElement = elements[0] ?? node;
+            try {
+                firstElement.focus({ preventScroll: true });
+            } catch {
+                firstElement.focus();
+            }
+        },
+        [isOpen],
+    );
 
-    const getOverlayRoot = useCallback((): HTMLElement | null => {
+    const inertTarget = useMemo(() => {
         if (overlayRoot) {
             if (typeof overlayRoot === 'string') {
-                return document.getElementById(overlayRoot);
+                return () => document.getElementById(overlayRoot);
             }
-            return overlayRoot;
+            return () => overlayRoot;
         }
-        return document.getElementById('__next') || document.body;
+        return () => document.getElementById('__next') || document.body;
     }, [overlayRoot]);
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key !== 'Tab') return;
-        const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
-        if (!elements || elements.length === 0) return;
-        const first = elements[0];
-        const last = elements[elements.length - 1];
-        const current = document.activeElement as HTMLElement;
-        if (!e.shiftKey && current === last) {
-            e.preventDefault();
-            first.focus();
-        } else if (e.shiftKey && current === first) {
-            e.preventDefault();
-            last.focus();
-        }
-    }, []);
+    const options = useMemo(
+        () => ({
+            trapFocus: true,
+            inertRoot: inertTarget,
+            initialFocus: () => {
+                const node = modalRef.current;
+                if (!node) return null;
+                const focusable = node.querySelector<HTMLElement>(FOCUSABLE_SELECTORS);
+                return focusable ?? node;
+            },
+        }),
+        [inertTarget],
+    );
 
     useEffect(() => {
-        if (!isOpen) return;
-        const handleKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
+        if (!isOpen) return undefined;
+        const handleKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
                 onClose();
             }
         };
         document.addEventListener('keydown', handleKey);
-        return () => document.removeEventListener('keydown', handleKey);
+        return () => {
+            document.removeEventListener('keydown', handleKey);
+        };
     }, [isOpen, onClose]);
 
-    useEffect(() => {
-        return () => {
-            if (portalRef.current) {
-                document.body.removeChild(portalRef.current);
-                portalRef.current = null;
+    useLayoutEffect(() => {
+        if (!isOpen) return;
+        const focusFirst = () => {
+            const node = modalRef.current;
+            if (!node) return;
+            const elements = node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+            const firstElement = elements[0] ?? node;
+            try {
+                firstElement.focus({ preventScroll: true });
+            } catch {
+                firstElement.focus();
             }
         };
-    }, []);
+        focusFirst();
+        const id = setTimeout(focusFirst, 0);
+        return () => clearTimeout(id);
+    }, [isOpen]);
 
     useEffect(() => {
-        inertRootRef.current = getOverlayRoot();
-        if (isOpen) {
-            triggerRef.current = document.activeElement as HTMLElement;
-            inertRootRef.current?.setAttribute('inert', '');
-            const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
-            if (elements && elements.length > 0) {
-                elements[0].focus();
-            } else {
-                modalRef.current?.focus();
+        if (!isOpen) {
+            if (overlayIdRef.current) {
+                overlay.pop(overlayIdRef.current);
+                overlayIdRef.current = null;
             }
-        } else {
-            inertRootRef.current?.removeAttribute('inert');
-            triggerRef.current?.focus();
-            triggerRef.current = null;
+            return;
         }
+
+        const node = (
+            <div role="dialog" aria-modal="true" ref={assignModalNode} tabIndex={-1}>
+                {children}
+            </div>
+        );
+
+        if (overlayIdRef.current) {
+            overlay.update(overlayIdRef.current, node, options);
+        } else {
+            overlayIdRef.current = overlay.push(node, options);
+        }
+
         return () => {
-            inertRootRef.current?.removeAttribute('inert');
+            if (overlayIdRef.current) {
+                overlay.pop(overlayIdRef.current);
+                overlayIdRef.current = null;
+            }
         };
-    }, [isOpen, getOverlayRoot]);
+    }, [assignModalNode, children, isOpen, overlay, options]);
 
-    if (!isOpen || !portalRef.current) return null;
+    useEffect(() => () => {
+        if (overlayIdRef.current) {
+            overlay.pop(overlayIdRef.current);
+            overlayIdRef.current = null;
+        }
+    }, [overlay]);
 
-    return createPortal(
-        <div
-            role="dialog"
-            aria-modal="true"
-            ref={modalRef}
-            onKeyDown={handleKeyDown}
-            tabIndex={-1}
-        >
-            {children}
-        </div>,
-        portalRef.current
-    );
+    return null;
 };
 
 export default Modal;

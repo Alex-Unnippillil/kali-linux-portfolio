@@ -13,6 +13,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import { OverlayMount } from '../common/OverlayHost'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -1720,9 +1721,12 @@ export class Desktop extends Component {
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
 
     renderNameBar = () => {
+        const inputId = "folder-name-input";
+        const titleId = "folder-name-dialog-title";
         const addFolder = () => {
-            let folder_name = document.getElementById("folder-name-input").value;
-            this.addToDesktop(folder_name);
+            const input = document.getElementById(inputId);
+            const value = input && 'value' in input ? input.value : '';
+            this.addToDesktop(value);
         };
 
         const removeCard = () => {
@@ -1730,36 +1734,45 @@ export class Desktop extends Component {
         };
 
         return (
-            <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
-                <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input
-                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
-                        id="folder-name-input"
-                        type="text"
-                        autoComplete="off"
-                        spellCheck="false"
-                        autoFocus={true}
-                        aria-label="Folder name"
-                    />
-                </div>
-                <div className="flex">
-                    <button
-                        type="button"
-                        onClick={addFolder}
-                        aria-label="Create folder"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
-                    >
-                        Create
-                    </button>
-                    <button
-                        type="button"
-                        onClick={removeCard}
-                        aria-label="Cancel folder creation"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
-                    >
-                        Cancel
-                    </button>
+            <div
+                className="fixed inset-0 flex items-center justify-center bg-black/70 px-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+            >
+                <div className="w-full max-w-md rounded-md bg-ub-cool-grey text-white shadow-xl">
+                    <div className="flex flex-col items-stretch gap-4 px-6 py-6">
+                        <h2 id={titleId} className="text-lg font-semibold">
+                            New folder name
+                        </h2>
+                        <input
+                            className="outline-none rounded border-2 border-blue-700 bg-transparent px-2 py-1 text-base"
+                            id={inputId}
+                            type="text"
+                            autoComplete="off"
+                            spellCheck="false"
+                            autoFocus={true}
+                            aria-label="Folder name"
+                        />
+                    </div>
+                    <div className="flex">
+                        <button
+                            type="button"
+                            onClick={addFolder}
+                            aria-label="Create folder"
+                            className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 text-base hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                        >
+                            Create
+                        </button>
+                        <button
+                            type="button"
+                            onClick={removeCard}
+                            aria-label="Cancel folder creation"
+                            className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 text-base hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -1838,30 +1851,35 @@ export class Desktop extends Component {
                 />
 
                 {/* Folder Input Name Bar */}
-                {
-                    (this.state.showNameBar
-                        ? this.renderNameBar()
-                        : null
-                    )
-                }
+                <OverlayMount open={this.state.showNameBar} options={{ trapFocus: true }}>
+                    {this.renderNameBar()}
+                </OverlayMount>
 
-                { this.state.allAppsView ?
-                    <AllApplications apps={apps}
+                <OverlayMount open={this.state.allAppsView} options={{ trapFocus: true }}>
+                    <AllApplications
+                        apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                    />
+                </OverlayMount>
 
-                { this.state.showShortcutSelector ?
-                    <ShortcutSelector apps={apps}
+                <OverlayMount open={this.state.showShortcutSelector} options={{ trapFocus: true }}>
+                    <ShortcutSelector
+                        apps={apps}
                         games={games}
                         onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+                        onClose={() => this.setState({ showShortcutSelector: false })}
+                    />
+                </OverlayMount>
 
-                { this.state.showWindowSwitcher ?
+                <OverlayMount open={this.state.showWindowSwitcher} options={{ trapFocus: true }}>
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                        onClose={this.closeWindowSwitcher}
+                    />
+                </OverlayMount>
 
             </main>
         );
