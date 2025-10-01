@@ -3,6 +3,10 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const {
+  DEFAULT_PERMISSIONS_POLICY,
+  PERMISSIONS_POLICY_OVERRIDES,
+} = require('./lib/security/permissions-policy');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -48,7 +52,7 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=*',
+    value: DEFAULT_PERMISSIONS_POLICY,
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
@@ -56,6 +60,15 @@ const securityHeaders = [
     value: 'SAMEORIGIN',
   },
 ];
+
+const permissionsPolicyOverrides = PERMISSIONS_POLICY_OVERRIDES.map((override) => ({
+  source: override.source,
+  headers: securityHeaders.map((header) =>
+    header.key === 'Permissions-Policy'
+      ? { ...header, value: override.policy }
+      : header,
+  ),
+}));
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
@@ -235,6 +248,7 @@ module.exports = withBundleAnalyzer(
       : {
           async headers() {
             return [
+              ...permissionsPolicyOverrides,
               {
                 source: '/(.*)',
                 headers: securityHeaders,
