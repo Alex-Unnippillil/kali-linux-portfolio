@@ -22,6 +22,26 @@
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
+  --app-scroll-behavior: smooth;
+  scroll-behavior: var(--app-scroll-behavior);
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: contain;
+}
+
+:root.app-scroll-reduced {
+  --app-scroll-behavior: auto;
+}
+
+[data-normalized-scroll] {
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
+}
+
+@supports (-webkit-overflow-scrolling: touch) {
+  [data-normalized-scroll] {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 body {

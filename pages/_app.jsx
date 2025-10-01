@@ -15,6 +15,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import AppShell from '../components/layout/AppShell';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
@@ -149,6 +150,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -160,19 +162,21 @@ function MyApp(props) {
         <SettingsProvider>
           <NotificationCenter>
             <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+              <AppShell>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(e) => {
+                    if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                    const evt = e;
+                    if (evt.metadata?.email) delete evt.metadata.email;
+                    return e;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </AppShell>
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>

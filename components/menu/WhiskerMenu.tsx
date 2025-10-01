@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useNormalizedScroll from '../../utils/scroll';
+import { useSettings } from '../../hooks/useSettings';
 
 type AppMeta = {
   id: string;
@@ -154,6 +156,26 @@ const WhiskerMenu: React.FC = () => {
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const { reducedMotion } = useSettings();
+  const menuScrollRef = useNormalizedScroll<HTMLDivElement>({ axis: 'both', reduceMotion: reducedMotion });
+  const categoryScrollRef = useNormalizedScroll<HTMLDivElement>({ reduceMotion: reducedMotion });
+
+  const setMenuNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      menuRef.current = node;
+      menuScrollRef.current = node;
+    },
+    [menuScrollRef],
+  );
+
+  const setCategoryListNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      categoryListRef.current = node;
+      categoryScrollRef.current = node;
+    },
+    [categoryScrollRef],
+  );
 
 
   const allApps: AppMeta[] = apps as any;
@@ -411,7 +433,8 @@ const WhiskerMenu: React.FC = () => {
       </button>
       {isVisible && (
         <div
-          ref={menuRef}
+          ref={setMenuNode}
+          data-normalized-scroll
           className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
@@ -423,14 +446,15 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
+          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible" data-normalized-scroll>
             <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
               <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
               Categories
             </div>
             <div
-              ref={categoryListRef}
+              ref={setCategoryListNode}
               className="flex max-h-[32vh] flex-1 flex-col gap-1 overflow-y-auto px-3 py-3 sm:max-h-full sm:px-2"
+              data-normalized-scroll
               role="listbox"
               aria-label="Application categories"
               tabIndex={0}
