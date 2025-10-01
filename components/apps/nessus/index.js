@@ -4,12 +4,25 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
+import {
+  decodeCacheValue,
+  decodeCacheValueSync,
+  encodeCacheValueSync,
+  isCacheRecord,
+} from '../../../utils/cacheCompression';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem('nessusJobs') || '[]');
+    const raw = localStorage.getItem('nessusJobs');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (isCacheRecord(parsed)) {
+      const decoded = decodeCacheValueSync(parsed);
+      return Array.isArray(decoded) ? decoded : [];
+    }
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -19,14 +32,26 @@ export const saveJobDefinition = (job) => {
   if (typeof window === 'undefined') return [];
   const jobs = loadJobDefinitions();
   const updated = [...jobs, job];
-  localStorage.setItem('nessusJobs', JSON.stringify(updated));
+  try {
+    const record = encodeCacheValueSync(updated);
+    localStorage.setItem('nessusJobs', JSON.stringify(record));
+  } catch {
+    /* ignore */
+  }
   return updated;
 };
 
 export const loadFalsePositives = () => {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem('nessusFalsePositives') || '[]');
+    const raw = localStorage.getItem('nessusFalsePositives');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (isCacheRecord(parsed)) {
+      const decoded = decodeCacheValueSync(parsed);
+      return Array.isArray(decoded) ? decoded : [];
+    }
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -36,7 +61,12 @@ export const recordFalsePositive = (findingId, reason) => {
   if (typeof window === 'undefined') return [];
   const fps = loadFalsePositives();
   const updated = [...fps, { findingId, reason }];
-  localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));
+  try {
+    const record = encodeCacheValueSync(updated);
+    localStorage.setItem('nessusFalsePositives', JSON.stringify(record));
+  } catch {
+    /* ignore */
+  }
   return updated;
 };
 
@@ -75,14 +105,24 @@ const Nessus = () => {
     parserWorkerRef.current = new Worker(
       new URL('../../../workers/nessus-parser.ts', import.meta.url)
     );
-      parserWorkerRef.current.onmessage = (e) => {
-      const { findings: parsed = [], error: err } = e.data || {};
+    parserWorkerRef.current.onmessage = (e) => {
+      const { payload, findings: legacy, error: err } = e.data || {};
       if (err) {
         setParseError(err);
         setFindings([]);
       } else {
-        setFindings(parsed);
-        setParseError('');
+        const apply = async () => {
+          if (payload && isCacheRecord(payload)) {
+            const decoded = await decodeCacheValue(payload);
+            setFindings(decoded ?? []);
+          } else if (Array.isArray(legacy)) {
+            setFindings(legacy);
+          } else {
+            setFindings([]);
+          }
+          setParseError('');
+        };
+        void apply();
       }
     };
     return () => parserWorkerRef.current?.terminate();

@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import {
+  encodeCacheValue,
+  decodeCacheValue,
+  isCacheRecord,
+  type CacheRecord,
+} from '../utils/cacheCompression';
 
 interface LoaderProps {
   onData: (rows: any[]) => void;
@@ -16,16 +22,54 @@ export default function FixturesLoader({ onData }: LoaderProps) {
       const { type, payload } = e.data;
       if (type === 'progress') setProgress(payload);
       if (type === 'result') {
-        onData(payload);
-        try {
-          localStorage.setItem('fixtures-last', JSON.stringify(payload));
-        } catch {
-          /* ignore */
-        }
+        const persist = async () => {
+          if (isCacheRecord(payload)) {
+            const rows = await decodeCacheValue<any[]>(payload);
+            if (rows) onData(rows);
+            try {
+              localStorage.setItem('fixtures-last', JSON.stringify(payload));
+            } catch {
+              /* ignore */
+            }
+          } else if (Array.isArray(payload)) {
+            onData(payload);
+            try {
+              const record = await encodeCacheValue(payload);
+              localStorage.setItem('fixtures-last', JSON.stringify(record));
+            } catch {
+              /* ignore */
+            }
+          }
+        };
+        void persist();
       }
     };
     setWorker(w);
     return () => w.terminate();
+  }, [onData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    const hydrate = async () => {
+      try {
+        const stored = window.localStorage.getItem('fixtures-last');
+        if (!stored) return;
+        const parsed = JSON.parse(stored);
+        if (isCacheRecord(parsed)) {
+          const rows = await decodeCacheValue<any[]>(parsed as CacheRecord);
+          if (!cancelled && rows) onData(rows);
+        } else if (Array.isArray(parsed)) {
+          onData(parsed);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
   }, [onData]);
 
   const loadSample = async () => {

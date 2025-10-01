@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  encodeCacheValue,
+  decodeCacheValue,
+  type CachePayload,
+} from './cacheCompression';
 import { getDb } from './safeIDB';
 
 const DB_NAME = 'kali-games';
@@ -29,7 +34,12 @@ export async function getSeed(game: string, date: string): Promise<string | unde
     const dbp = openDB();
     if (!dbp) return undefined;
     const db = await dbp;
-    return (await db.get(STORE_SEEDS, `${game}-${date}`)) as string | undefined;
+    const raw = (await db.get(
+      STORE_SEEDS,
+      `${game}-${date}`,
+    )) as CachePayload<string>;
+    const decoded = await decodeCacheValue<string>(raw);
+    return decoded ?? (typeof raw === 'string' ? raw : undefined);
   } catch {
     return undefined;
   }
@@ -40,7 +50,11 @@ export async function setSeed(game: string, date: string, seed: string): Promise
     const dbp = openDB();
     if (!dbp) return;
     const db = await dbp;
-    await db.put(STORE_SEEDS, seed, `${game}-${date}`);
+    await db.put(
+      STORE_SEEDS,
+      await encodeCacheValue(seed),
+      `${game}-${date}`,
+    );
   } catch {
     // ignore
   }
@@ -51,7 +65,11 @@ export async function saveReplay(game: string, id: string, data: any): Promise<v
     const dbp = openDB();
     if (!dbp) return;
     const db = await dbp;
-    await db.put(STORE_REPLAYS, data, `${game}-${id}`);
+    await db.put(
+      STORE_REPLAYS,
+      await encodeCacheValue(data),
+      `${game}-${id}`,
+    );
   } catch {
     // ignore
   }
@@ -62,7 +80,12 @@ export async function getReplay<T = any>(game: string, id: string): Promise<T | 
     const dbp = openDB();
     if (!dbp) return undefined;
     const db = await dbp;
-    return (await db.get(STORE_REPLAYS, `${game}-${id}`)) as T | undefined;
+    const raw = (await db.get(
+      STORE_REPLAYS,
+      `${game}-${id}`,
+    )) as CachePayload<T>;
+    const decoded = await decodeCacheValue<T>(raw);
+    return decoded ?? (raw as T | undefined);
   } catch {
     return undefined;
   }

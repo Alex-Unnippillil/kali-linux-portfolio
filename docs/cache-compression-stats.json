@@ -1,0 +1,9 @@
+{
+  "originalBytes": 2344559,
+  "compressedBytes": 106429,
+  "compressionRatio": 0.04539403785530669,
+  "parseP95": 42.072622000000024,
+  "decodeP95": 78.5416680000003,
+  "overhead": 86.68118188593108,
+  "iterations": 17
+}

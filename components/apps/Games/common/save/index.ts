@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { createStore, get, set, del, keys } from 'idb-keyval';
 import useOPFS from '../../../../../hooks/useOPFS';
+import {
+  encodeCacheValue,
+  decodeCacheValue,
+  type CachePayload,
+} from '../../../../../utils/cacheCompression';
 
 export interface SaveSlot {
   name: string;
@@ -29,7 +34,7 @@ export default function useGameSaves(gameId: string) {
         await writeFile(`${slot.name}.json`, JSON.stringify(slot.data), dir);
       } else {
         const store = getStore(gameId);
-        await set(slot.name, slot.data, store);
+        await set(slot.name, await encodeCacheValue(slot.data), store);
       }
     },
     [supported, gameId, writeFile],
@@ -43,7 +48,9 @@ export default function useGameSaves(gameId: string) {
         return txt ? (JSON.parse(txt) as T) : undefined;
       }
       const store = getStore(gameId);
-      return get<T>(name, store);
+      const raw = await get<CachePayload<T>>(name, store);
+      const decoded = await decodeCacheValue<T>(raw);
+      return decoded ?? undefined;
     },
     [supported, gameId, readFile],
   );
@@ -99,7 +106,8 @@ export default function useGameSaves(gameId: string) {
       const allKeys = await keys(store);
       const saves: SaveSlot[] = [];
       for (const key of allKeys) {
-        const data = await get(key, store);
+        const raw = await get<CachePayload<unknown>>(key, store);
+        const data = await decodeCacheValue(raw);
         saves.push({ name: key as string, data });
       }
       return saves;
@@ -118,7 +126,11 @@ export default function useGameSaves(gameId: string) {
         );
       } else {
         const store = getStore(gameId);
-        await Promise.all(saves.map((slot) => set(slot.name, slot.data, store)));
+        await Promise.all(
+          saves.map(async (slot) =>
+            set(slot.name, await encodeCacheValue(slot.data), store),
+          ),
+        );
       }
     },
     [supported, gameId, writeFile],

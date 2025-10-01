@@ -1,6 +1,8 @@
+import { encodeCacheValue, type CacheRecord } from '../utils/cacheCompression';
+
 let cancelled = false;
 
-self.onmessage = (e: MessageEvent) => {
+self.onmessage = async (e: MessageEvent) => {
   const { type, text } = e.data as { type: string; text?: string };
   if (type === 'cancel') {
     cancelled = true;
@@ -25,7 +27,8 @@ self.onmessage = (e: MessageEvent) => {
       }
     }
     (self as any).postMessage({ type: 'progress', payload: 100 });
-    (self as any).postMessage({ type: 'result', payload: result });
+    const payload = (await encodeCacheValue(result)) as CacheRecord;
+    (self as any).postMessage({ type: 'result', payload });
   }
 };
 

@@ -1,3 +1,5 @@
+import { encodeCacheValue, type CacheRecord } from '../utils/cacheCompression';
+
 export interface ParseMessage {
   action: 'parse';
   text: string;
@@ -24,7 +26,7 @@ export interface ProgressMessage {
 
 export interface DoneMessage {
   type: 'done';
-  parsed: ParsedLine[];
+  payload: CacheRecord;
 }
 
 export interface CancelledMessage {
@@ -38,7 +40,7 @@ export type SimulatorParserResponse =
 
 let cancelled = false;
 
-self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
+self.onmessage = async ({ data }: MessageEvent<SimulatorParserRequest>) => {
   if (data.action === 'parse') {
     cancelled = false;
     const lines = data.text.split(/\r?\n/);
@@ -67,7 +69,8 @@ self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
         );
       }
     }
-    self.postMessage({ type: 'done', parsed } as SimulatorParserResponse);
+    const payload = (await encodeCacheValue(parsed)) as CacheRecord;
+    self.postMessage({ type: 'done', payload } as SimulatorParserResponse);
   } else if (data.action === 'cancel') {
     cancelled = true;
   }
