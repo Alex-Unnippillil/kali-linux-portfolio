@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import cacheStore from '../utils/cacheStore';
+
+const SAMPLE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 interface LoaderProps {
   onData: (rows: any[]) => void;
@@ -9,6 +12,7 @@ interface LoaderProps {
 export default function FixturesLoader({ onData }: LoaderProps) {
   const [progress, setProgress] = useState(0);
   const [worker, setWorker] = useState<Worker | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
@@ -25,13 +29,33 @@ export default function FixturesLoader({ onData }: LoaderProps) {
       }
     };
     setWorker(w);
-    return () => w.terminate();
+    return () => {
+      abortRef.current?.abort();
+      w.terminate();
+    };
   }, [onData]);
 
   const loadSample = async () => {
-    const res = await fetch('/fixtures/sample.json');
-    const text = await res.text();
-    worker?.postMessage({ type: 'parse', text });
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+    try {
+      const { data } = await cacheStore.rememberText(
+        'fixtures:sample-json',
+        async () => {
+          const res = await fetch('/fixtures/sample.json', {
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+          return await res.text();
+        },
+        { ttlMs: SAMPLE_TTL_MS, signal: controller.signal },
+      );
+      worker?.postMessage({ type: 'parse', text: data });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      console.error('Failed to load sample fixtures', err);
+    }
   };
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +68,10 @@ export default function FixturesLoader({ onData }: LoaderProps) {
     reader.readAsText(file);
   };
 
-  const cancel = () => worker?.postMessage({ type: 'cancel' });
+  const cancel = () => {
+    abortRef.current?.abort();
+    worker?.postMessage({ type: 'cancel' });
+  };
 
   return (
     <div className="text-xs" aria-label="fixtures loader">
