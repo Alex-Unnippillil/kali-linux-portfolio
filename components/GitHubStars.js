@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
+import Skeleton from './ui/Skeleton';
+import Spinner from './ui/Spinner';
+import { announce } from '../utils/liveAnnouncer';
 
 const GitHubStars = ({ user, repo }) => {
   const ref = useRef(null);
@@ -13,7 +16,9 @@ const GitHubStars = ({ user, repo }) => {
       const res = await fetch(`https://api.github.com/repos/${user}/${repo}`);
       if (!res.ok) throw new Error('Request failed');
       const data = await res.json();
-      setStars(data.stargazers_count || 0);
+      const count = data.stargazers_count || 0;
+      setStars(count);
+      announce(`${repo} star count loaded: ${count}`);
     } catch (e) {
       console.error('Failed to fetch star count', e);
     } finally {
@@ -46,7 +51,10 @@ const GitHubStars = ({ user, repo }) => {
   return (
     <div ref={ref} className="inline-flex items-center text-xs text-gray-300">
       {loading ? (
-        <div className="h-5 w-12 bg-gray-200 animate-pulse rounded" />
+        <>
+          <Skeleton className="h-5 w-12 bg-gray-200/70" />
+          <Spinner className="sr-only" label={`Loading star count for ${repo}`} />
+        </>
       ) : (
         <>
           <span>⭐ {stars}</span>
