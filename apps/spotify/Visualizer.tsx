@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { rentUint8Array, releaseTypedArray } from '../../utils/pools';
 
 interface Props {
   analyser: AnalyserNode | null;
@@ -16,10 +17,11 @@ export default function Visualizer({ analyser }: Props) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
+    const dataArray = rentUint8Array(bufferLength);
+    let raf = 0;
 
     const draw = () => {
-      requestAnimationFrame(draw);
+      raf = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const barWidth = canvas.width / bufferLength;
@@ -31,6 +33,11 @@ export default function Visualizer({ analyser }: Props) {
       }
     };
     draw();
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      releaseTypedArray(dataArray);
+    };
   }, [analyser]);
 
   return <canvas ref={canvasRef} width={300} height={100} className="w-full h-24" />;

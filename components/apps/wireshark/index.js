@@ -7,7 +7,7 @@ import DecodeTree from './DecodeTree';
 import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
-import { parsePcap } from '../../../utils/pcap';
+import { parsePcap, releaseParsedPackets } from '../../../utils/pcap';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>
@@ -53,6 +53,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [error, setError] = useState('');
   const workerRef = useRef(null);
   const pausedRef = useRef(false);
+  const packetsRef = useRef(initialPackets);
   const prefersReducedMotion = useRef(false);
   const VISIBLE = 100;
 
@@ -105,6 +106,16 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   }, [timeline, paused]);
 
+  useEffect(() => {
+    packetsRef.current = packets;
+  }, [packets]);
+
+  useEffect(() => {
+    return () => {
+      releaseParsedPackets(packetsRef.current);
+    };
+  }, []);
+
   const handleFilterChange = (val) => {
     setFilter(val);
     if (typeof window !== 'undefined') {
@@ -130,7 +141,10 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     try {
       const buffer = await file.arrayBuffer();
       const parsed = parsePcap(buffer);
-      setPackets(parsed);
+      setPackets((prev) => {
+        releaseParsedPackets(prev);
+        return parsed;
+      });
       setTimeline(parsed);
       setError('');
     } catch (err) {
@@ -166,7 +180,14 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     ws.onmessage = (event) => {
       try {
         const pkt = JSON.parse(event.data);
-        setPackets((prev) => [pkt, ...prev].slice(0, 500));
+        setPackets((prev) => {
+          const next = [pkt, ...prev];
+          const trimmed = next.slice(0, 500);
+          if (next.length > 500) {
+            releaseParsedPackets(next.slice(500));
+          }
+          return trimmed;
+        });
         if (!pausedRef.current) {
           workerRef.current?.postMessage(pkt);
         }
