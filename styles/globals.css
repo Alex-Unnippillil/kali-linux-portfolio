@@ -22,6 +22,10 @@
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
+  --text-caret-color: var(--color-focus-ring);
+  --text-caret-width: 2px;
+  --text-caret-shape: auto;
+  --text-caret-transition: 150ms;
 }
 
 body {
@@ -87,6 +91,54 @@ html[data-theme='matrix'] {
 
 html {
   scrollbar-color: var(--kali-border, var(--color-border)) transparent;
+}
+
+input,
+textarea,
+[contenteditable='true'],
+.caret-preview,
+.monaco-editor textarea {
+  caret-color: var(--text-caret-color);
+}
+
+@supports (caret-shape: bar) {
+  input,
+  textarea,
+  [contenteditable='true'],
+  .caret-preview {
+    caret-shape: var(--text-caret-shape);
+  }
+}
+
+.caret-preview {
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: var(--space-3, 0.75rem);
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-height: 2.75rem;
+  line-height: 1.5;
+  transition: border-color var(--text-caret-transition), box-shadow var(--text-caret-transition);
+}
+
+.caret-preview:focus {
+  outline: none;
+  box-shadow: 0 0 0 calc(var(--text-caret-width) + 1px) color-mix(in srgb, var(--text-caret-color) 40%, transparent);
+  border-color: var(--text-caret-color);
+}
+
+.monaco-editor .cursor {
+  width: var(--text-caret-width) !important;
+  background-color: var(--text-caret-color) !important;
+  transition: width var(--text-caret-transition), background-color var(--text-caret-transition);
+}
+
+.monaco-editor .cursor.secondary {
+  background-color: color-mix(in srgb, var(--text-caret-color) 65%, transparent) !important;
+}
+
+.monaco-editor .inputarea.ime-input {
+  caret-color: var(--text-caret-color) !important;
 }
 
 ::-webkit-scrollbar {

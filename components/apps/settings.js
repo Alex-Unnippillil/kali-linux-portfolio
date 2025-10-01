@@ -4,10 +4,16 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, cursorThickness, setCursorThickness, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+
+    const thicknessOptions = [
+        { value: 'thin', label: 'Thin', description: '1px caret for minimal footprint.' },
+        { value: 'regular', label: 'Regular', description: '2px caret balanced for most users.' },
+        { value: 'thick', label: 'Thick', description: '4px block-style caret for low-vision support.' },
+    ];
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -159,6 +165,40 @@ export function Settings() {
                     Large Hit Areas
                 </label>
             </div>
+            <div className="flex flex-col items-center my-4">
+                <fieldset className="flex flex-col items-center" role="radiogroup" aria-label="Cursor thickness">
+                    <legend className="text-ubt-grey mb-2">Cursor Thickness:</legend>
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {thicknessOptions.map((option) => (
+                            <label key={option.value} className={`px-3 py-1 rounded border ${cursorThickness === option.value ? 'border-ubt-cool-grey bg-ub-cool-grey/40' : 'border-transparent bg-ub-cool-grey/10'} transition-colors` }>
+                                <input
+                                    type="radio"
+                                    name="cursor-thickness"
+                                    value={option.value}
+                                    checked={cursorThickness === option.value}
+                                    onChange={(e) => setCursorThickness(e.target.value)}
+                                    className="sr-only"
+                                />
+                                <span className="text-ubt-grey">{option.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </fieldset>
+                <div className="w-full max-w-md mt-3">
+                    <div
+                        className="caret-preview"
+                        role="textbox"
+                        aria-label="Type to preview cursor thickness"
+                        contentEditable
+                        suppressContentEditableWarning
+                    >
+                        Try typing here to preview the caret.
+                    </div>
+                    <p className="text-xs text-ubt-grey mt-2 text-center" aria-live="polite">
+                        {thicknessOptions.find(option => option.value === cursorThickness)?.description}
+                    </p>
+                </div>
+            </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
@@ -275,6 +315,7 @@ export function Settings() {
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
+                        setCursorThickness(defaults.cursorThickness);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
@@ -300,6 +341,7 @@ export function Settings() {
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
+                        if (parsed.cursorThickness !== undefined) setCursorThickness(parsed.cursorThickness);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
