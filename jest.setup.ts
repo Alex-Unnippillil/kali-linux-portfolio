@@ -107,6 +107,42 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
+// Provide a PointerEvent polyfill for environments like jsdom that do not
+// expose it by default. Components relying on pointer events (e.g. tooltips)
+// expect `pointerType` to exist when dispatching synthetic events in tests.
+if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    pointerId: number;
+    width: number;
+    height: number;
+    pressure: number;
+    tangentialPressure: number;
+    tiltX: number;
+    tiltY: number;
+    twist: number;
+    pointerType: string;
+    isPrimary: boolean;
+
+    constructor(type: string, props: PointerEventInit = {}) {
+      super(type, props);
+      this.pointerId = props.pointerId ?? 0;
+      this.width = props.width ?? 1;
+      this.height = props.height ?? 1;
+      this.pressure = props.pressure ?? 0;
+      this.tangentialPressure = props.tangentialPressure ?? 0;
+      this.tiltX = props.tiltX ?? 0;
+      this.tiltY = props.tiltY ?? 0;
+      this.twist = props.twist ?? 0;
+      this.pointerType = props.pointerType ?? 'mouse';
+      this.isPrimary = props.isPrimary ?? true;
+    }
+  }
+  // @ts-ignore
+  window.PointerEvent = PointerEventPolyfill as any;
+  // @ts-ignore
+  global.PointerEvent = PointerEventPolyfill as any;
+}
+
 // Simple localStorage mock for environments without it
 if (typeof window !== 'undefined' && !window.localStorage) {
   const store: Record<string, string> = {};

@@ -61,12 +61,26 @@ const AppsPage = () => {
               key={app.id}
               content={<AppTooltipContent meta={meta} />}
             >
-              {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+              {({
+                ref,
+                onMouseEnter,
+                onMouseLeave,
+                onFocus,
+                onBlur,
+                onPointerDown,
+                onPointerUp,
+                onPointerLeave,
+                onPointerCancel,
+              }) => (
                 <div
                   ref={ref}
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   className="flex flex-col items-center"
+                  onPointerDown={onPointerDown}
+                  onPointerUp={onPointerUp}
+                  onPointerLeave={onPointerLeave}
+                  onPointerCancel={onPointerCancel}
                 >
                   <Link
                     href={`/apps/${app.id}`}

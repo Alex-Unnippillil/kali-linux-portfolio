@@ -14,6 +14,10 @@ type TriggerProps = {
   onMouseLeave: (event: React.MouseEvent<HTMLElement>) => void;
   onFocus: (event: React.FocusEvent<HTMLElement>) => void;
   onBlur: (event: React.FocusEvent<HTMLElement>) => void;
+  onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerUp: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerLeave: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerCancel: (event: React.PointerEvent<HTMLElement>) => void;
 };
 
 type DelayedTooltipProps = {
@@ -26,6 +30,8 @@ const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 const DEFAULT_OFFSET = 8;
+const ARROW_SIZE = 12;
+const ARROW_SAFE_ZONE = 16;
 
 const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   content,
@@ -38,6 +44,9 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const timerRef = useRef<number | null>(null);
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+  const pointerTypeRef = useRef<string | null>(null);
+  const [placement, setPlacement] = useState<'top' | 'bottom'>('bottom');
+  const [arrowOffset, setArrowOffset] = useState(ARROW_SAFE_ZONE);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -68,18 +77,22 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   const hide = useCallback(() => {
     clearTimer();
     setVisible(false);
+    pointerTypeRef.current = null;
   }, [clearTimer]);
 
   useEffect(() => () => clearTimer(), [clearTimer]);
 
-  useIsomorphicLayoutEffect(() => {
-    if (!visible || !triggerRef.current || !tooltipRef.current) {
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current || !tooltipRef.current) {
       return;
     }
+
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+
+    let nextPlacement: 'top' | 'bottom' = 'bottom';
 
     let top = triggerRect.bottom + DEFAULT_OFFSET;
     let left =
@@ -91,10 +104,16 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     if (left + tooltipRect.width > viewportWidth - DEFAULT_OFFSET) {
       left = viewportWidth - tooltipRect.width - DEFAULT_OFFSET;
     }
+    if (left < DEFAULT_OFFSET) {
+      left = DEFAULT_OFFSET;
+    }
 
     if (top + tooltipRect.height > viewportHeight - DEFAULT_OFFSET) {
-      top = triggerRect.top - tooltipRect.height - DEFAULT_OFFSET;
-      if (top < DEFAULT_OFFSET) {
+      const flippedTop = triggerRect.top - tooltipRect.height - DEFAULT_OFFSET;
+      if (flippedTop >= DEFAULT_OFFSET) {
+        nextPlacement = 'top';
+        top = flippedTop;
+      } else {
         top = Math.max(
           DEFAULT_OFFSET,
           viewportHeight - tooltipRect.height - DEFAULT_OFFSET,
@@ -102,8 +121,52 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
       }
     }
 
+    top = Math.min(
+      Math.max(top, DEFAULT_OFFSET),
+      Math.max(DEFAULT_OFFSET, viewportHeight - tooltipRect.height - DEFAULT_OFFSET),
+    );
+
+    const triggerCenter = triggerRect.left + triggerRect.width / 2;
+    const rawArrowOffset = triggerCenter - left;
+    let arrowMin = ARROW_SAFE_ZONE + ARROW_SIZE / 2;
+    let arrowMax =
+      tooltipRect.width - ARROW_SAFE_ZONE - ARROW_SIZE / 2;
+    if (arrowMin > arrowMax) {
+      const midpoint = tooltipRect.width / 2;
+      arrowMin = midpoint;
+      arrowMax = midpoint;
+    }
+    const clampedArrowOffset = Math.min(
+      Math.max(rawArrowOffset, arrowMin),
+      arrowMax,
+    );
+
     setPosition({ top, left });
-  }, [visible, content]);
+    setPlacement(nextPlacement);
+    setArrowOffset(clampedArrowOffset);
+  }, []);
+
+  useIsomorphicLayoutEffect(() => {
+    if (!visible) {
+      return;
+    }
+    updatePosition();
+  }, [visible, updatePosition, content]);
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    const handleReposition = () => updatePosition();
+    window.addEventListener('resize', handleReposition, true);
+    window.addEventListener('scroll', handleReposition, true);
+
+    return () => {
+      window.removeEventListener('resize', handleReposition, true);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [visible, updatePosition]);
 
   const triggerProps: TriggerProps = {
     ref: (node) => {
@@ -121,7 +184,33 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     onBlur: () => {
       hide();
     },
+    onPointerDown: (event) => {
+      pointerTypeRef.current = event.pointerType;
+      if (event.pointerType === 'touch') {
+        show();
+      }
+    },
+    onPointerUp: (event) => {
+      if (pointerTypeRef.current === 'touch' && event.pointerType === 'touch') {
+        hide();
+      }
+    },
+    onPointerLeave: (event) => {
+      if (pointerTypeRef.current === 'touch' && event.pointerType === 'touch') {
+        hide();
+      }
+    },
+    onPointerCancel: (event) => {
+      if (pointerTypeRef.current === 'touch' && event.pointerType === 'touch') {
+        hide();
+      }
+    },
   };
+
+  const renderedContent =
+    React.isValidElement(content)
+      ? React.cloneElement(content, { placement, arrowOffset })
+      : content;
 
   return (
     <>
@@ -130,15 +219,16 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
         ? createPortal(
             <div
               ref={tooltipRef}
+              data-delayed-tooltip-content="true"
               style={{
                 position: 'fixed',
                 top: position.top,
                 left: position.left,
                 zIndex: 1000,
               }}
-              className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
+              className="pointer-events-none"
             >
-              {content}
+              {renderedContent}
             </div>,
             portalEl,
           )

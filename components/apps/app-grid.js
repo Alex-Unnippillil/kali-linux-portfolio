@@ -153,7 +153,17 @@ export default function AppGrid({ openApp }) {
     const meta = data.metadata[app.id] ?? buildAppMetadata(app);
     return (
       <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
-        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+        {({
+          ref,
+          onMouseEnter,
+          onMouseLeave,
+          onFocus,
+          onBlur,
+          onPointerDown,
+          onPointerUp,
+          onPointerLeave,
+          onPointerCancel,
+        }) => (
           <div
             ref={ref}
             style={{
@@ -167,6 +177,10 @@ export default function AppGrid({ openApp }) {
             onMouseLeave={onMouseLeave}
             onFocus={onFocus}
             onBlur={onBlur}
+            onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
+            onPointerLeave={onPointerLeave}
+            onPointerCancel={onPointerCancel}
           >
             <UbuntuApp
               id={app.id}
