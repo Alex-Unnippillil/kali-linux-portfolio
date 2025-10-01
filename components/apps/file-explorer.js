@@ -3,61 +3,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
+import { saveFileDialog as saveFileDialogUtil } from '../../utils/fileDialogs';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
-export async function openFileDialog(options = {}) {
-  if (typeof window !== 'undefined' && window.showOpenFilePicker) {
-    const [handle] = await window.showOpenFilePicker(options);
-    return handle;
-  }
-
-  return await new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    if (options?.multiple) input.multiple = true;
-    if (options?.types) {
-      const accept = options.types
-        .map((t) => t.accept && Object.values(t.accept).flat())
-        .flat()
-        .join(',');
-      if (accept) input.accept = accept;
-    }
-    input.onchange = () => {
-      const file = input.files[0];
-      resolve(
-        file && {
-          name: file.name,
-          getFile: async () => file,
-        }
-      );
-    };
-    input.click();
-  });
-}
-
-export async function saveFileDialog(options = {}) {
-  if (typeof window !== 'undefined' && window.showSaveFilePicker) {
-    return await window.showSaveFilePicker(options);
-  }
-
-  return {
-    name: options?.suggestedName || 'download',
-    async createWritable() {
-      return {
-        async write(data) {
-          const blob = data instanceof Blob ? data : new Blob([data]);
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = options?.suggestedName || 'download';
-          a.click();
-          URL.revokeObjectURL(url);
-        },
-        async close() {},
-      };
-    },
-  };
-}
+export { openFileDialog, saveFileDialog } from '../../utils/fileDialogs';
 
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
@@ -333,7 +282,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             />
             <button
               onClick={async () => {
-                const handle = await saveFileDialog({ suggestedName: currentFile.name });
+                const handle = await saveFileDialogUtil({ suggestedName: currentFile.name });
                 const writable = await handle.createWritable();
                 await writable.write(content);
                 await writable.close();

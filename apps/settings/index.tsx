@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -13,6 +13,11 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import {
+  openFileDialog,
+  FileDialogError,
+  getFileDialogConstraint,
+} from "../../utils/fileDialogs";
 
 export default function Settings() {
   const {
@@ -35,7 +40,9 @@ export default function Settings() {
     theme,
     setTheme,
   } = useSettings();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const settingsConstraint = getFileDialogConstraint("settings");
+  const [importInfo, setImportInfo] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -70,23 +77,83 @@ export default function Settings() {
     URL.revokeObjectURL(url);
   };
 
-  const handleImport = async (file: File) => {
-    const text = await file.text();
-    await importSettingsData(text);
+  const importSettingsFromText = async (
+    text: string,
+    source: string,
+    successMessage?: string,
+  ) => {
+    setImportError(null);
+    setImportInfo(null);
+    let parsed: Record<string, unknown>;
     try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
-    } catch (err) {
-      console.error("Invalid settings", err);
+      parsed = JSON.parse(text);
+    } catch {
+      setImportError("Settings files must contain valid JSON data.");
+      return false;
     }
+
+    await importSettingsData(parsed);
+
+    if (parsed.accent !== undefined) setAccent(parsed.accent as string);
+    if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper as string);
+    if ((parsed as { useKaliWallpaper?: boolean }).useKaliWallpaper !== undefined)
+      setUseKaliWallpaper(Boolean((parsed as { useKaliWallpaper?: boolean }).useKaliWallpaper));
+    if (parsed.density !== undefined) setDensity(parsed.density as any);
+    if (parsed.reducedMotion !== undefined)
+      setReducedMotion(Boolean(parsed.reducedMotion));
+    if (parsed.fontScale !== undefined)
+      setFontScale(Number(parsed.fontScale));
+    if (parsed.highContrast !== undefined)
+      setHighContrast(Boolean(parsed.highContrast));
+    if ((parsed as { haptics?: boolean }).haptics !== undefined)
+      setHaptics(Boolean((parsed as { haptics?: boolean }).haptics));
+    if ((parsed as { theme?: string }).theme !== undefined)
+      setTheme((parsed as { theme?: string }).theme ?? "default");
+
+    setImportInfo(successMessage ?? `Imported settings from ${source}`);
+    return true;
+  };
+
+  const applyImportedSettings = async (
+    file: File,
+    source: string,
+    successMessage?: string,
+  ) => {
+    setImportError(null);
+    setImportInfo(null);
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      setImportError("Unable to read the selected settings file.");
+      return false;
+    }
+    return importSettingsFromText(text, source, successMessage);
+  };
+
+  const handleImport = async () => {
+    try {
+      const handle = await openFileDialog("settings");
+      if (!handle) return;
+      const file = await handle.getFile();
+      await applyImportedSettings(file, file.name);
+    } catch (error) {
+      if (error instanceof FileDialogError) {
+        setImportError(error.message);
+        setImportInfo(null);
+        return;
+      }
+      console.error(error);
+      setImportError("An unexpected error occurred while opening the file.");
+    }
+  };
+
+  const handleSampleImport = async () => {
+    if (!settingsConstraint.sampleData) return;
+    const { getContent, fileName, label, successMessage } =
+      settingsConstraint.sampleData;
+    const text = await getContent();
+    await importSettingsFromText(text, label ?? fileName, successMessage);
   };
 
   const handleReset = async () => {
@@ -302,26 +369,31 @@ export default function Settings() {
               Export Settings
             </button>
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleImport}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Import Settings
             </button>
           </div>
+          <div className="flex flex-col items-center space-y-2 text-sm text-ubt-grey">
+            {settingsConstraint.sampleData && (
+              <button
+                type="button"
+                onClick={handleSampleImport}
+                className="text-xs underline hover:text-white"
+              >
+                {settingsConstraint.sampleData.label}
+              </button>
+            )}
+            {importInfo && (
+              <p className="text-green-300 text-center max-w-md">{importInfo}</p>
+            )}
+            {importError && (
+              <p className="text-red-300 text-center max-w-md">{importError}</p>
+            )}
+          </div>
         </>
       )}
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          aria-label="Import settings file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handleImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );
