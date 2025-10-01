@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -13,6 +13,10 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import LanguageSwitcher from "../../components/common/LanguageSwitcher";
+import { useI18n } from "../../hooks/useI18n";
+
+type TabId = "appearance" | "accessibility" | "privacy";
 
 export default function Settings() {
   const {
@@ -35,14 +39,17 @@ export default function Settings() {
     theme,
     setTheme,
   } = useSettings();
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const tabs = [
-    { id: "appearance", label: "Appearance" },
-    { id: "accessibility", label: "Accessibility" },
-    { id: "privacy", label: "Privacy" },
-  ] as const;
-  type TabId = (typeof tabs)[number]["id"];
+  const tabs = useMemo(
+    () => [
+      { id: "appearance" as TabId, label: t("settings.tabs.appearance") },
+      { id: "accessibility" as TabId, label: t("settings.tabs.accessibility") },
+      { id: "privacy" as TabId, label: t("settings.tabs.privacy") },
+    ],
+    [t],
+  );
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
   const wallpapers = [
@@ -140,6 +147,9 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
+          <div className="my-6 flex justify-center px-6">
+            <LanguageSwitcher />
+          </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
@@ -163,6 +173,7 @@ export default function Settings() {
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Use Kali gradient wallpaper"
               />
               Kali Gradient Wallpaper
             </label>
