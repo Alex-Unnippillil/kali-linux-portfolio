@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FormError from '../ui/FormError';
+import TerminalOutput from '../TerminalOutput';
 
 interface SerialPort {
   readonly readable: ReadableStream<Uint8Array> | null;
@@ -113,9 +114,13 @@ const SerialTerminalApp: React.FC = () => {
         </p>
       )}
       {error && <FormError className="mb-2 mt-0">{error}</FormError>}
-      <pre className="h-[calc(100%-4rem)] overflow-auto whitespace-pre-wrap break-words">
-        {logs || 'No data'}
-      </pre>
+      <div className="h-[calc(100%-4rem)] overflow-auto pr-1">
+        <TerminalOutput
+          text={logs || 'No data'}
+          ariaLabel="Serial terminal output"
+          className="h-full"
+        />
+      </div>
     </div>
   );
 };
