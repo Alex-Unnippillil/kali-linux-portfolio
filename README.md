@@ -202,6 +202,7 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
 | `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
 | `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
+| `NEXT_PUBLIC_DEV_MODE` | Enable Dev Mode helpers such as the extension example catalog. |
 | `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
 | `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
