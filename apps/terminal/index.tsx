@@ -8,9 +8,11 @@ import React, {
   useImperativeHandle,
   useCallback,
 } from 'react';
+import Toast from '@/components/ui/Toast';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { buildMarkdownExport, buildPlainTextExport } from './utils/exportHelpers';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -76,6 +78,12 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+const PROMPT_HEADER_ANSI =
+  '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m';
+const PROMPT_LINE_ANSI = '\x1b[1;34m└─\x1b[0m$ ';
+const PROMPT_HEADER_PLAIN = '┌──(kali㉿kali)-[~]';
+const PROMPT_LINE_PLAIN = '└─$ ';
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -101,6 +109,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [toast, setToast] = useState('');
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -131,31 +140,83 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
   }, []);
 
+  const persistContent = useCallback(() => {
+    if (opfsSupported && dirRef.current) {
+      writeFile('history.txt', contentRef.current, dirRef.current);
+    }
+  }, [opfsSupported, writeFile]);
+
+  const appendToContent = useCallback(
+    (value: string) => {
+      contentRef.current += value;
+      persistContent();
+    },
+    [persistContent],
+  );
+
+  const removeFromContent = useCallback(
+    (count: number) => {
+      if (count <= 0) return;
+      contentRef.current = contentRef.current.slice(0, -count);
+      persistContent();
+    },
+    [persistContent],
+  );
+
   const writeLine = useCallback(
     (text: string) => {
       if (termRef.current) termRef.current.writeln(text);
-      contentRef.current += `${text}\n`;
-      if (opfsSupported && dirRef.current) {
-        writeFile('history.txt', contentRef.current, dirRef.current);
-      }
+      appendToContent(`${text}\n`);
       updateOverflow();
     },
-    [opfsSupported, updateOverflow, writeFile],
+    [appendToContent, updateOverflow],
   );
 
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
-    termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
-    );
-    termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
-  }, []);
+    termRef.current.writeln(PROMPT_HEADER_ANSI);
+    termRef.current.write(PROMPT_LINE_ANSI);
+    appendToContent(`${PROMPT_HEADER_PLAIN}\n${PROMPT_LINE_PLAIN}`);
+  }, [appendToContent]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
-  };
+  const handleCopyAll = useCallback(() => {
+    const exportText = buildPlainTextExport(contentRef.current);
+    navigator.clipboard
+      .writeText(exportText)
+      .then(() => {
+        setToast('Copied terminal output');
+      })
+      .catch(() => {});
+  }, [setToast]);
+
+  const handleCopyMarkdown = useCallback(() => {
+    const markdown = buildMarkdownExport(contentRef.current);
+    navigator.clipboard
+      .writeText(markdown)
+      .then(() => {
+        setToast('Copied terminal output as Markdown');
+      })
+      .catch(() => {});
+  }, [setToast]);
+
+  const handleDownloadText = useCallback(() => {
+    const exportText = buildPlainTextExport(contentRef.current);
+    const blob = new Blob([exportText], {
+      type: 'text/plain;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:]/g, '-');
+    link.href = url;
+    link.download = `terminal-session-${timestamp}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setToast('Downloaded terminal session (.txt)');
+  }, [setToast]);
 
   const handlePaste = async () => {
     try {
@@ -271,6 +332,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         for (const ch of data) {
           if (ch === '\r') {
             termRef.current?.writeln('');
+            appendToContent('\n');
             runCommand(commandRef.current.trim());
             commandRef.current = '';
             prompt();
@@ -278,14 +340,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             if (commandRef.current.length > 0) {
               termRef.current?.write('\b \b');
               commandRef.current = commandRef.current.slice(0, -1);
+              removeFromContent(1);
             }
           } else {
             commandRef.current += ch;
             termRef.current?.write(ch);
+            appendToContent(ch);
           }
         }
       },
-      [runCommand, prompt],
+      [appendToContent, prompt, removeFromContent, runCommand],
     );
 
   useImperativeHandle(ref, () => ({
@@ -418,6 +482,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             <input
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
+              aria-label="Command palette search"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
@@ -481,16 +546,48 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       <div className="flex h-full flex-col">
-        <div className="flex flex-wrap items-center gap-2 bg-gray-800 p-2">
-          <button onClick={handleCopy} aria-label="Copy">
-            <CopyIcon />
-          </button>
-          <button onClick={handlePaste} aria-label="Paste">
-            <PasteIcon />
-          </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
-            <SettingsIcon />
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-800 p-2">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={handleCopyAll} aria-label="Copy all">
+              <CopyIcon />
+              <span className="sr-only">Copy all</span>
+            </button>
+            <button type="button" onClick={handlePaste} aria-label="Paste">
+              <PasteIcon />
+              <span className="sr-only">Paste</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+            >
+              <SettingsIcon />
+              <span className="sr-only">Settings</span>
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyAll}
+              className="rounded border border-gray-600 px-2 py-1 text-xs font-medium uppercase tracking-wide text-white transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 sm:text-sm"
+            >
+              Copy all
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadText}
+              className="rounded border border-gray-600 px-2 py-1 text-xs font-medium uppercase tracking-wide text-white transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 sm:text-sm"
+            >
+              Download .txt
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyMarkdown}
+              className="rounded border border-gray-600 px-2 py-1 text-xs font-medium uppercase tracking-wide text-white transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 sm:text-sm"
+            >
+              Copy as Markdown fence
+            </button>
+          </div>
         </div>
         <div className="relative flex-1 min-h-0">
           <TerminalContainer
@@ -508,6 +605,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
           )}
         </div>
+        {toast && <Toast message={toast} onClose={() => setToast('')} />}
       </div>
     </div>
   );
