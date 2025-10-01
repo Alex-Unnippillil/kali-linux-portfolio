@@ -312,7 +312,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {canScrollLeft && (
           <button
             type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus-ring"
             onClick={() => scrollByAmount('left')}
             aria-label="Scroll tabs left"
           >
@@ -374,7 +374,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {canScrollRight && (
           <button
             type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus-ring"
             onClick={() => scrollByAmount('right')}
             aria-label="Scroll tabs right"
           >
@@ -386,7 +386,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <button
               type="button"
               ref={moreButtonRef}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none focus-ring"
               onClick={() => setMoreMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={moreMenuOpen}

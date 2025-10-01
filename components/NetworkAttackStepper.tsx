@@ -98,7 +98,7 @@ const NetworkAttackStepper: React.FC = () => {
                       type="button"
                       onClick={() => setStep(index)}
                       aria-current={isActive ? 'step' : undefined}
-                      className={`group relative flex w-full items-center gap-4 rounded-lg border border-transparent px-1 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue ${
+                      className={`group relative flex w-full items-center gap-4 rounded-lg border border-transparent px-1 py-3 text-left transition focus:outline-none focus-ring focus-ring-surface ${
                         isActive ? 'bg-slate-800/80' : 'hover:bg-slate-800/60'
                       }`}
                     >

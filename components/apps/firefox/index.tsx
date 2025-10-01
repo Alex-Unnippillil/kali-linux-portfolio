@@ -100,11 +100,12 @@ const Firefox: React.FC = () => {
           value={inputValue}
           onChange={(event) => setInputValue(event.target.value)}
           placeholder="Enter a URL"
-          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+          aria-label="Address bar"
+          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus-ring focus-ring-inset"
         />
         <button
           type="submit"
-          className="rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          className="rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-400 focus:outline-none focus-ring focus-ring-strong"
         >
           Go
         </button>
@@ -115,7 +116,7 @@ const Firefox: React.FC = () => {
             key={bookmark.url}
             type="button"
             onClick={() => updateAddress(bookmark.url)}
-            className="rounded bg-gray-800 px-3 py-1 font-medium text-gray-200 transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="rounded bg-gray-800 px-3 py-1 font-medium text-gray-200 transition hover:bg-gray-700 focus:outline-none focus-ring"
           >
             {bookmark.label}
           </button>

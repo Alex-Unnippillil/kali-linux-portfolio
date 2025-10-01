@@ -188,7 +188,7 @@ const PopularModules: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           onClick={handleUpdate}
-          className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus-ring focus-ring-surface"
         >
           Update Modules
         </button>
@@ -203,12 +203,13 @@ const PopularModules: React.FC = () => {
         placeholder="Search modules"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        aria-label="Search modules"
         className="w-full p-2 text-black rounded"
       />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
-          className={`px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+          className={`px-2 py-1 text-sm rounded focus:outline-none focus-ring focus-ring-surface ${
             filter === '' ? 'bg-blue-600' : 'bg-gray-700'
           }`}
         >
@@ -218,7 +219,7 @@ const PopularModules: React.FC = () => {
           <button
             key={t}
             onClick={() => setFilter(t)}
-            className={`px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+            className={`px-2 py-1 text-sm rounded focus:outline-none focus-ring focus-ring-surface ${
               filter === t ? 'bg-blue-600' : 'bg-gray-700'
             }`}
           >
@@ -231,7 +232,7 @@ const PopularModules: React.FC = () => {
           <button
             key={m.id}
             onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus-ring focus-ring-surface"
           >
             <h3 className="font-semibold">{m.name}</h3>
             <p className="text-sm text-gray-300">{m.description}</p>
@@ -276,26 +277,28 @@ const PopularModules: React.FC = () => {
             <button
               type="button"
               onClick={copyCommand}
-              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus-ring focus-ring-surface"
             >
               Copy
             </button>
           </div>
           <div className="space-y-1">
-            <label className="block text-sm">
+            <label className="block text-sm" htmlFor="module-log-filter">
               Filter logs
               <input
+                id="module-log-filter"
                 placeholder="Filter logs"
                 type="text"
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
+                aria-label="Filter logs"
                 className="w-full p-1 mt-1 text-black rounded"
               />
             </label>
             <button
               type="button"
               onClick={copyLogs}
-              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus-ring focus-ring-surface"
             >
               Copy Logs
             </button>

@@ -48,7 +48,7 @@ export default function WorkspaceSwitcher({
             aria-pressed={isActive}
             aria-label={formatAriaLabel(workspace)}
             onClick={() => onSelect(workspace.id)}
-            className={`relative flex h-8 min-w-[2.25rem] items-center justify-center px-3 text-xs font-medium text-white/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161b25] ${
+            className={`relative flex h-8 min-w-[2.25rem] items-center justify-center px-3 text-xs font-medium text-white/70 transition-colors focus:outline-none focus-ring focus-ring-surface ${
               index > 0 ? "border-l border-white/10" : ""
             } ${isActive ? "text-white" : "hover:text-white"}`}
           >

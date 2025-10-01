@@ -17,7 +17,6 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
-  --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
@@ -81,8 +80,61 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+  --tw-ring-color: var(--focus-ring-color) !important;
+  --tw-ring-offset-width: var(--focus-ring-offset);
+  --tw-ring-offset-color: var(--focus-ring-offset-color);
+}
+
+.focus-ring {
+  outline: none;
+  transition: outline-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+}
+
+.focus-ring-strong:focus-visible {
+  outline-width: var(--focus-ring-width-strong);
+  box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+}
+
+.focus-ring-inset {
+  outline: none;
+}
+
+.focus-ring-inset:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 var(--focus-ring-width) var(--focus-ring-color);
+}
+
+.focus-ring-inset.focus-ring-strong:focus-visible {
+  box-shadow: inset 0 0 0 var(--focus-ring-width-strong)
+      var(--focus-ring-color);
+}
+
+.focus-ring-contrast {
+  --focus-ring-color: var(--focus-ring-contrast-color);
+  --focus-ring-offset-color: var(--focus-ring-contrast-offset-color);
+}
+
+.focus-ring-offset-none {
+  --focus-ring-offset: 0px;
+  --focus-ring-offset-color: transparent;
+}
+
+.focus-ring-surface {
+  --focus-ring-offset-color: color-mix(
+    in srgb,
+    var(--color-bg) 82%,
+    transparent 18%
+  );
 }
 
 html {

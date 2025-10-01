@@ -537,7 +537,7 @@ export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> 
         href={simulation.externalUrl}
         target="_blank"
         rel="noreferrer"
-        className="mt-4 inline-flex items-center gap-2 rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+        className="mt-4 inline-flex items-center gap-2 rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-400 focus:outline-none focus-ring focus-ring-strong"
       >
         {simulation.ctaLabel ?? 'Open official site'}
         <span aria-hidden="true" className="text-xs">↗</span>
@@ -557,7 +557,7 @@ export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> 
                       href={link.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                      className="font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus-ring"
                     >
                       {link.label}
                     </a>
