@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import CredSets from './CredSets';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -636,6 +637,8 @@ const HydraApp = () => {
           )}
         </div>
       </div>
+
+      <CredSets />
 
       <Stepper
         active={running && !paused}
