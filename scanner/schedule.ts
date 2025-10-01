@@ -1,3 +1,5 @@
+import { enqueueJob } from '../utils/backpressure';
+
 export interface ScheduledScan {
   id: string;
   schedule: string;
@@ -10,6 +12,13 @@ interface RunningScan extends ScheduledScan {
 
 const STORAGE_KEY = 'scanSchedules';
 const runningScans: RunningScan[] = [];
+
+export interface ScheduleOptions {
+  jobType?: string;
+  label?: string;
+  metadata?: Record<string, unknown>;
+  allowResume?: boolean;
+}
 
 export const loadScheduledScans = (): ScheduledScan[] => {
   if (typeof window === 'undefined') return [];
@@ -43,13 +52,33 @@ export const cronToInterval = (expr: string): number => {
 export const scheduleScan = (
   id: string,
   schedule: string,
-  callback: () => void,
+  callback: () => void | Promise<void>,
+  options: ScheduleOptions = {},
 ): ScheduledScan => {
   const jobs = loadScheduledScans();
   jobs.push({ id, schedule });
   persistSchedules(jobs);
   const interval = cronToInterval(schedule);
-  const timer = setInterval(callback, interval);
+  const run = () => {
+    if (options.jobType) {
+      enqueueJob(
+        options.jobType,
+        {
+          run: async () => {
+            await Promise.resolve(callback());
+          },
+        },
+        {
+          label: options.label ?? `Scheduled scan ${id}`,
+          metadata: { id, schedule, ...(options.metadata || {}) },
+          allowResume: options.allowResume ?? false,
+        },
+      );
+    } else {
+      callback();
+    }
+  };
+  const timer = setInterval(run, interval);
   runningScans.push({ id, schedule, timer, callback });
   return { id, schedule };
 };
