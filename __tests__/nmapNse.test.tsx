@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import NmapNSEApp from '../components/apps/nmap-nse';
+import NmapNSEApp, {
+  NMAP_NSE_FALLBACK_SEED,
+} from '../components/apps/nmap-nse';
+import { generateServiceReport } from '../utils/faker/services';
 
 describe('NmapNSEApp', () => {
   it('shows example output for selected script', async () => {
@@ -130,6 +133,31 @@ describe('NmapNSEApp', () => {
     expect(
       within(scriptNode.parentElement as HTMLElement).getByText('discovery')
     ).toBeInTheDocument();
+
+    mockFetch.mockRestore();
+  });
+
+  it('falls back to generated report when demo data is unavailable', async () => {
+    const mockFetch = jest
+      .spyOn(global, 'fetch')
+      .mockRejectedValue(new Error('network down'));
+    const fallback = generateServiceReport({
+      seed: NMAP_NSE_FALLBACK_SEED,
+    });
+
+    render(<NmapNSEApp />);
+
+    const fallbackHost = fallback.hosts[0];
+    const hostNode = await screen.findByText(fallbackHost.ip);
+    const hostSection = hostNode.closest('li');
+    expect(hostSection).not.toBeNull();
+    for (const port of fallbackHost.ports) {
+      expect(
+        within(hostSection as HTMLElement).getByText(
+          `${port.port}/tcp ${port.service}`
+        )
+      ).toBeInTheDocument();
+    }
 
     mockFetch.mockRestore();
   });
