@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../../../hooks/usePersistentState';
 import defaultTemplates from '../../../../templates/export/report-templates.json';
+import RedactionPreview from '../../../../components/common/RedactionPreview';
 
 interface Finding {
   title: string;
@@ -55,8 +56,14 @@ export default function ReportTemplates() {
     [templateKey, templateData],
   );
 
+  const [redactedReport, setRedactedReport] = useState(report);
+
+  useEffect(() => {
+    setRedactedReport(report);
+  }, [report]);
+
   const exportReport = () => {
-    const blob = new Blob([report], { type: 'text/plain' });
+    const blob = new Blob([redactedReport], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -124,19 +131,29 @@ export default function ReportTemplates() {
           Import/Share
         </button>
       </div>
-      <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap text-sm">
-        {report}
-      </pre>
+      <div className="flex-1 overflow-auto pr-1">
+        <RedactionPreview
+          content={report}
+          context="recon-report-export"
+          onChange={(value) => setRedactedReport(value)}
+        />
+      </div>
       {showDialog && (
-        <dialog open className="p-4 bg-gray-800 text-white rounded max-w-md">
-          <p className="mb-2">Import templates (JSON)</p>
-          <input type="file" accept="application/json" onChange={handleImport} />
-          <p className="mt-4 mb-2">Share templates</p>
-          <textarea
-            readOnly
-            value={shareJson}
-            className="w-full h-40 p-1 text-black"
-          />
+          <dialog open className="p-4 bg-gray-800 text-white rounded max-w-md">
+            <p className="mb-2">Import templates (JSON)</p>
+            <input
+              type="file"
+              accept="application/json"
+              onChange={handleImport}
+              aria-label="Import report templates JSON"
+            />
+            <p className="mt-4 mb-2">Share templates</p>
+            <textarea
+              readOnly
+              value={shareJson}
+              className="w-full h-40 p-1 text-black"
+              aria-label="Shareable templates JSON"
+            />
           <div className="flex gap-2 mt-2">
             <button
               type="button"
