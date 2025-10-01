@@ -7,34 +7,87 @@ const scripts = [
   {
     name: 'http-title',
     description: 'Fetches page titles from HTTP services.',
-    tags: ['discovery', 'http']
+    categories: ['discovery', 'http'],
+    arguments: [
+      {
+        name: 'http-title.path',
+        description: 'Overrides the request path used when fetching the title.',
+        example: 'http-title.path=/admin'
+      },
+      {
+        name: 'http-title.timeout',
+        description: 'Adjusts the HTTP request timeout in milliseconds.',
+        example: 'http-title.timeout=5000'
+      }
+    ]
   },
   {
     name: 'ssl-cert',
     description: 'Retrieves TLS certificate information.',
-    tags: ['ssl', 'discovery']
+    categories: ['discovery', 'ssl'],
+    arguments: [
+      {
+        name: 'ssl-cert.location',
+        description: 'Specifies the host:port of the TLS endpoint to query.',
+        example: 'ssl-cert.location=example.com:443'
+      }
+    ]
   },
   {
     name: 'smb-os-discovery',
     description: 'Discovers remote OS information via SMB.',
-    tags: ['smb', 'discovery']
+    categories: ['discovery', 'smb'],
+    arguments: []
   },
   {
     name: 'ftp-anon',
     description: 'Checks for anonymous FTP access.',
-    tags: ['ftp', 'auth']
+    categories: ['ftp', 'auth'],
+    arguments: [
+      {
+        name: 'ftp-anon.maxlist',
+        description: 'Limits the number of directory entries the script lists.',
+        example: 'ftp-anon.maxlist=10'
+      }
+    ]
   },
   {
     name: 'http-enum',
     description: 'Enumerates directories on web servers.',
-    tags: ['http', 'vuln']
+    categories: ['vulnerability', 'http'],
+    arguments: [
+      {
+        name: 'http-enum.basepath',
+        description: 'Sets a base path for the enumeration requests.',
+        example: 'http-enum.basepath=/intranet'
+      },
+      {
+        name: 'http-enum.category',
+        description: 'Filters checks by category (e.g. apache, iis).',
+        example: 'http-enum.category=apache'
+      }
+    ]
   },
   {
     name: 'dns-brute',
     description: 'Performs DNS subdomain brute force enumeration.',
-    tags: ['dns', 'brute']
+    categories: ['brute-force', 'dns'],
+    arguments: [
+      {
+        name: 'dns-brute.threads',
+        description: 'Controls the number of concurrent DNS requests.',
+        example: 'dns-brute.threads=10'
+      },
+      {
+        name: 'dns-brute.hostlist',
+        description: 'Points to a custom wordlist of subdomains.',
+        example: 'dns-brute.hostlist=/path/to/list.txt'
+      }
+    ]
   }
 ];
+
+const NSE_DOCS_URL = 'https://nmap.org/book/nse.html';
 
 const scriptPhases = {
   'http-title': ['portrule'],
@@ -85,6 +138,7 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -107,6 +161,7 @@ const NmapNSEApp = () => {
     });
     setActiveScript(name);
     setPhaseStep(0);
+    setDrawerOpen(true);
   };
 
   useEffect(() => {
@@ -115,6 +170,12 @@ const NmapNSEApp = () => {
       setPhaseStep(0);
     }
   }, [selectedScripts, activeScript]);
+
+  useEffect(() => {
+    if (!activeScript || selectedScripts.length === 0) {
+      setDrawerOpen(false);
+    }
+  }, [activeScript, selectedScripts.length]);
 
   const filteredScripts = scripts.filter((s) =>
     s.name.toLowerCase().includes(scriptQuery.toLowerCase())
@@ -129,6 +190,38 @@ const NmapNSEApp = () => {
   } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
     .replace(/\s+/g, ' ')
     .trim();
+
+  const activeScriptMeta = scripts.find((s) => s.name === activeScript);
+  const drawerVisible = isDrawerOpen && !!activeScriptMeta;
+
+  const buildScriptSnippet = (script) => {
+    if (!script) return '';
+    const baseTarget = target || 'example.com';
+    const argExamples = (script.arguments || [])
+      .map((arg) => arg.example)
+      .filter(Boolean);
+    const argsValue = argExamples.length
+      ? ` --script-args ${argExamples.join(',')}`
+      : '';
+    return `nmap --script ${script.name}${argsValue} ${baseTarget}`
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const copyScriptSnippet = async () => {
+    const snippet = buildScriptSnippet(activeScriptMeta);
+    if (!snippet) return;
+    if (typeof window !== 'undefined') {
+      try {
+        await navigator.clipboard.writeText(snippet);
+        setToast('Script snippet copied');
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
+  const closeDrawer = () => setDrawerOpen(false);
 
   const copyCommand = async () => {
     if (typeof window !== 'undefined') {
@@ -190,7 +283,7 @@ const NmapNSEApp = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full text-white">
-      <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
+      <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto relative">
         <h1 className="text-lg mb-4">Nmap NSE Demo</h1>
         <div className="mb-4 p-2 bg-yellow-900 text-yellow-200 border-l-4 border-yellow-500 rounded">
           <p className="text-sm font-bold">
@@ -204,6 +297,7 @@ const NmapNSEApp = () => {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-label="Target"
           />
         </div>
         <div className="mb-4">
@@ -216,40 +310,43 @@ const NmapNSEApp = () => {
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-label="Search scripts"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
               <div key={s.name} className="bg-white text-black p-2 rounded">
                 <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
+                    <input
+                      type="checkbox"
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                      aria-label={s.name}
+                    />
                   <span className="font-mono">{s.name}</span>
                 </label>
                 <p className="text-xs mb-1">{s.description}</p>
                 <div className="flex flex-wrap gap-1 mb-1">
-                  {s.tags.map((t) => (
+                  {s.categories.map((t) => (
                     <span key={t} className="px-1 text-xs bg-gray-200 rounded">
                       {t}
                     </span>
                   ))}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      className="w-full p-1 border rounded text-black"
+                      aria-label={`${s.name} arguments`}
+                    />
+                  )}
               </div>
             ))}
             {filteredScripts.length === 0 && (
@@ -257,6 +354,104 @@ const NmapNSEApp = () => {
             )}
           </div>
         </div>
+        <aside
+          className={`transition-all duration-300 overflow-hidden border border-ub-grey rounded bg-gray-900 ${
+            drawerVisible ? 'max-h-[480px] opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0 pointer-events-none'
+          }`}
+          role="complementary"
+          aria-label="Script details"
+          aria-labelledby="script-drawer-title"
+          aria-hidden={!drawerVisible}
+        >
+          {activeScriptMeta && (
+            <div className="p-3 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 id="script-drawer-title" className="text-lg font-mono">
+                    {activeScriptMeta.name}
+                  </h2>
+                  <p className="text-sm text-gray-200">
+                    {activeScriptMeta.description}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeDrawer}
+                  className="px-2 py-1 text-xs uppercase tracking-wide bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+                  aria-label="Close script details"
+                >
+                  Close
+                </button>
+              </div>
+              <div>
+                <h3 className="text-xs uppercase tracking-wider text-gray-400">
+                  Categories
+                </h3>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {activeScriptMeta.categories.length > 0 ? (
+                    activeScriptMeta.categories.map((category) => (
+                      <span
+                        key={category}
+                        className="px-2 py-0.5 bg-gray-800 rounded text-xs font-mono"
+                      >
+                        {category}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-400">Uncategorized</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs uppercase tracking-wider text-gray-400">
+                  Arguments
+                </h3>
+                {activeScriptMeta.arguments?.length ? (
+                  <ul className="mt-1 space-y-1 text-xs">
+                    {activeScriptMeta.arguments.map((arg) => (
+                      <li key={arg.name} className="border border-gray-800 rounded p-2 bg-black/40">
+                        <p className="font-mono text-ub-yellow">{arg.name}</p>
+                        <p className="text-gray-200">{arg.description}</p>
+                        {arg.example && (
+                          <p className="text-gray-400">
+                            Example: <span className="font-mono">{arg.example}</span>
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-400">No custom arguments for this script.</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs uppercase tracking-wider text-gray-400">
+                  Command snippet
+                </h3>
+                <pre className="mt-1 bg-black text-green-400 p-2 rounded overflow-auto">
+                  {buildScriptSnippet(activeScriptMeta)}
+                </pre>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={copyScriptSnippet}
+                  className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+                >
+                  Copy script snippet
+                </button>
+                <a
+                  href={NSE_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2 py-1 bg-blue-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+                >
+                  View docs
+                </a>
+              </div>
+            </div>
+          )}
+        </aside>
         <div className="mb-4">
           <p className="block text-sm mb-1">Port presets</p>
           <div className="flex gap-2">
@@ -376,7 +571,7 @@ const NmapNSEApp = () => {
                                 <span className="font-mono">{sc.name}</span>
                                 {meta && (
                                   <div className="flex flex-wrap gap-1">
-                                    {meta.tags.map((t) => (
+                                    {meta.categories.map((t) => (
                                       <span
                                         key={t}
                                         className="px-1.5 py-0.5 rounded text-xs bg-gray-700"
