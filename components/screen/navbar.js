@@ -37,7 +37,36 @@ const areRunningAppsEqual = (next = [], prev = []) => {
         return true;
 };
 
+const clampBatteryLevel = (value) => {
+        if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+        return Math.min(1, Math.max(0, value));
+};
+
+const createSimulatedBattery = () => {
+        const level = Math.min(0.95, Math.max(0.35, Math.random() * 0.6 + 0.3));
+        return {
+                batteryLevel: Number(level.toFixed(2)),
+                batteryCharging: Math.random() > 0.5
+        };
+};
+
+const createSimulatedStatus = () => {
+        const battery = createSimulatedBattery();
+        return {
+                online: Math.random() > 0.2,
+                isOnlineSimulated: true,
+                ...battery,
+                isBatterySimulated: true
+        };
+};
+
 export default class Navbar extends PureComponent {
+        batteryManager = null;
+
+        deviceBattery = null;
+
+        deviceOnline = null;
+
         constructor() {
                 super();
                 this.state = {
@@ -46,7 +75,12 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
+                        status: createSimulatedStatus(),
+                        statusAnnouncement: '',
+                        statusAnnouncementId: 0,
+                        hasDeviceNetwork: false,
+                        hasDeviceBattery: false
                 };
         }
 
@@ -54,14 +88,318 @@ export default class Navbar extends PureComponent {
                 if (typeof window !== 'undefined') {
                         window.addEventListener('workspace-state', this.handleWorkspaceStateUpdate);
                         window.dispatchEvent(new CustomEvent('workspace-request'));
+                        this.initializeStatusMonitors();
                 }
         }
 
         componentWillUnmount() {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
+                        window.removeEventListener('online', this.handleNetworkOnline);
+                        window.removeEventListener('offline', this.handleNetworkOffline);
+                }
+                if (this.batteryManager) {
+                        this.batteryManager.removeEventListener('levelchange', this.handleBatteryDeviceChange);
+                        this.batteryManager.removeEventListener('chargingchange', this.handleBatteryDeviceChange);
                 }
         }
+
+        initializeStatusMonitors = () => {
+                if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+                        return;
+                }
+                this.initializeNetworkMonitor();
+                this.initializeBatteryMonitor();
+        };
+
+        initializeNetworkMonitor = () => {
+                if (typeof window === 'undefined') {
+                        return;
+                }
+
+                if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean') {
+                        const online = navigator.onLine;
+                        this.deviceOnline = online;
+                        this.setStatusState(
+                                {
+                                        online,
+                                        isOnlineSimulated: false
+                                },
+                                { message: `Network ${online ? 'online' : 'offline'} (live)` }
+                        );
+                        this.setState((previousState) =>
+                                previousState.hasDeviceNetwork ? null : { hasDeviceNetwork: true }
+                        );
+                }
+
+                window.addEventListener('online', this.handleNetworkOnline);
+                window.addEventListener('offline', this.handleNetworkOffline);
+
+                if (this.deviceOnline) {
+                        this.verifyNetworkConnectivity();
+                }
+        };
+
+        verifyNetworkConnectivity = async () => {
+                if (typeof window === 'undefined') {
+                        return;
+                }
+
+                try {
+                        const url = new URL('/favicon.ico', window.location.href).toString();
+                        await fetch(url, { method: 'HEAD', cache: 'no-store' });
+                        this.deviceOnline = true;
+                        if (!this.state.status.isOnlineSimulated) {
+                                this.setStatusState(
+                                        {
+                                                online: true,
+                                                isOnlineSimulated: false
+                                        },
+                                        { message: 'Network verified online (live)' }
+                                );
+                        }
+                } catch (error) {
+                        this.deviceOnline = false;
+                        if (!this.state.status.isOnlineSimulated) {
+                                this.setStatusState(
+                                        {
+                                                online: false,
+                                                isOnlineSimulated: false
+                                        },
+                                        { message: 'Network check failed (live)' }
+                                );
+                        }
+                }
+        };
+
+        initializeBatteryMonitor = () => {
+                if (typeof navigator === 'undefined' || typeof navigator.getBattery !== 'function') {
+                        const battery = createSimulatedBattery();
+                        this.setStatusState(
+                                {
+                                        ...battery,
+                                        isBatterySimulated: true
+                                },
+                                { message: 'Battery status simulated' }
+                        );
+                        return;
+                }
+
+                navigator
+                        .getBattery()
+                        .then((batteryManager) => {
+                                this.batteryManager = batteryManager;
+                                const level = clampBatteryLevel(batteryManager.level);
+                                const charging = Boolean(batteryManager.charging);
+                                this.deviceBattery = { level, charging };
+                                this.setStatusState(
+                                        {
+                                                batteryLevel: level,
+                                                batteryCharging: charging,
+                                                isBatterySimulated: false
+                                        },
+                                        {
+                                                message: `Battery ${Math.round(level * 100)}% ${
+                                                        charging ? 'charging' : 'on battery'
+                                                } (live)`
+                                        }
+                                );
+                                this.setState((previousState) =>
+                                        previousState.hasDeviceBattery ? null : { hasDeviceBattery: true }
+                                );
+                                batteryManager.addEventListener('levelchange', this.handleBatteryDeviceChange);
+                                batteryManager.addEventListener('chargingchange', this.handleBatteryDeviceChange);
+                        })
+                        .catch(() => {
+                                const battery = createSimulatedBattery();
+                                this.setStatusState(
+                                        {
+                                                ...battery,
+                                                isBatterySimulated: true
+                                        },
+                                        { message: 'Battery status simulated' }
+                                );
+                        });
+        };
+
+        handleNetworkOnline = () => {
+                this.deviceOnline = true;
+                if (this.state.status.isOnlineSimulated) return;
+                this.setStatusState(
+                        {
+                                online: true,
+                                isOnlineSimulated: false
+                        },
+                        { message: 'Network online (live)' }
+                );
+        };
+
+        handleNetworkOffline = () => {
+                this.deviceOnline = false;
+                if (this.state.status.isOnlineSimulated) return;
+                this.setStatusState(
+                        {
+                                online: false,
+                                isOnlineSimulated: false
+                        },
+                        { message: 'Network offline (live)' }
+                );
+        };
+
+        handleBatteryDeviceChange = () => {
+                if (!this.batteryManager) return;
+                const level = clampBatteryLevel(this.batteryManager.level);
+                const charging = Boolean(this.batteryManager.charging);
+                this.deviceBattery = { level, charging };
+                if (this.state.status.isBatterySimulated) return;
+                this.setStatusState(
+                        {
+                                batteryLevel: level,
+                                batteryCharging: charging,
+                                isBatterySimulated: false
+                        },
+                        {
+                                message: `Battery ${Math.round(level * 100)}% ${
+                                        charging ? 'charging' : 'on battery'
+                                } (live)`
+                        }
+                );
+        };
+
+        composeStatusAnnouncement = (previousStatus, nextStatus) => {
+                const parts = [];
+                if (
+                        previousStatus.online !== nextStatus.online ||
+                        previousStatus.isOnlineSimulated !== nextStatus.isOnlineSimulated
+                ) {
+                        const origin = nextStatus.isOnlineSimulated ? 'Simulated' : 'Live';
+                        const label = nextStatus.online ? 'online' : 'offline';
+                        parts.push(`${origin} network ${label}`);
+                }
+
+                if (
+                        previousStatus.batteryLevel !== nextStatus.batteryLevel ||
+                        previousStatus.batteryCharging !== nextStatus.batteryCharging ||
+                        previousStatus.isBatterySimulated !== nextStatus.isBatterySimulated
+                ) {
+                        const origin = nextStatus.isBatterySimulated ? 'Simulated' : 'Live';
+                        const percent = `${Math.round(nextStatus.batteryLevel * 100)}%`;
+                        const charging = nextStatus.batteryCharging ? 'charging' : 'on battery';
+                        parts.push(`${origin} battery ${percent} ${charging}`);
+                }
+
+                return parts.join('. ');
+        };
+
+        setStatusState = (nextPartial, context = {}) => {
+                this.setState((previousState) => {
+                        const previousStatus = previousState.status;
+                        const nextStatus = { ...previousStatus, ...nextPartial };
+                        const hasChanged = Object.keys(nextPartial).some(
+                                (key) => previousStatus[key] !== nextStatus[key]
+                        );
+
+                        if (!hasChanged && !context.forceAnnouncement) {
+                                return null;
+                        }
+
+                        const announcementParts = [];
+                        if (context.message) {
+                                announcementParts.push(context.message);
+                        }
+
+                        const autoAnnouncement = this.composeStatusAnnouncement(previousStatus, nextStatus);
+                        if (autoAnnouncement) {
+                                announcementParts.push(autoAnnouncement);
+                        }
+
+                        const statusAnnouncement = announcementParts.join('. ').trim();
+
+                        if (!statusAnnouncement) {
+                                return { status: nextStatus };
+                        }
+
+                        return {
+                                status: nextStatus,
+                                statusAnnouncement,
+                                statusAnnouncementId: previousState.statusAnnouncementId + 1
+                        };
+                });
+        };
+
+        handleNetworkToggle = (nextOnline) => {
+                const message = nextOnline
+                        ? 'Simulated online mode enabled'
+                        : 'Simulated offline mode enabled';
+                this.setStatusState(
+                        {
+                                online: nextOnline,
+                                isOnlineSimulated: true
+                        },
+                        { message, forceAnnouncement: true }
+                );
+        };
+
+        handleUseDeviceNetwork = () => {
+                if (typeof this.deviceOnline !== 'boolean') return;
+                this.setStatusState(
+                        {
+                                online: this.deviceOnline,
+                                isOnlineSimulated: false
+                        },
+                        {
+                                message: `Using device network (${this.deviceOnline ? 'online' : 'offline'})`,
+                                forceAnnouncement: true
+                        }
+                );
+        };
+
+        handleBatteryLevelChange = (nextLevel) => {
+                const level = clampBatteryLevel(nextLevel);
+                this.setStatusState(
+                        {
+                                batteryLevel: level,
+                                isBatterySimulated: true
+                        },
+                        {
+                                message: `Simulated battery ${Math.round(level * 100)}%`,
+                                forceAnnouncement: true
+                        }
+                );
+        };
+
+        handleBatteryChargingChange = (nextCharging) => {
+                const charging = Boolean(nextCharging);
+                this.setStatusState(
+                        {
+                                batteryCharging: charging,
+                                isBatterySimulated: true
+                        },
+                        {
+                                message: charging
+                                        ? 'Simulated charging enabled'
+                                        : 'Simulated battery discharge',
+                                forceAnnouncement: true
+                        }
+                );
+        };
+
+        handleUseDeviceBattery = () => {
+                if (!this.deviceBattery) return;
+                this.setStatusState(
+                        {
+                                batteryLevel: this.deviceBattery.level,
+                                batteryCharging: this.deviceBattery.charging,
+                                isBatterySimulated: false
+                        },
+                        {
+                                message: `Using device battery (${Math.round(
+                                        this.deviceBattery.level * 100
+                                )}% ${this.deviceBattery.charging ? 'charging' : 'on battery'})`,
+                                forceAnnouncement: true
+                        }
+                );
+        };
 
         handleWorkspaceStateUpdate = (event) => {
                 const detail = event?.detail || {};
@@ -180,7 +518,16 @@ export default class Navbar extends PureComponent {
         };
 
                 render() {
-                        const { workspaces, activeWorkspace } = this.state;
+                        const {
+                                workspaces,
+                                activeWorkspace,
+                                status,
+                                statusAnnouncement,
+                                statusAnnouncementId,
+                                hasDeviceNetwork,
+                                hasDeviceBattery,
+                                status_card
+                        } = this.state;
                         return (
                                 <div
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
@@ -218,13 +565,29 @@ export default class Navbar extends PureComponent {
                                                                 'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                         }
                                                 >
-                                                        <Status />
-                                                        <QuickSettings open={this.state.status_card} />
+                                                        <Status
+                                                                status={status}
+                                                                announcement={statusAnnouncement}
+                                                                announcementId={statusAnnouncementId}
+                                                                onBatteryLevelChange={this.handleBatteryLevelChange}
+                                                                onBatteryChargingChange={this.handleBatteryChargingChange}
+                                                        />
+                                                        <QuickSettings
+                                                                open={status_card}
+                                                                status={status}
+                                                                supportsDeviceNetwork={hasDeviceNetwork}
+                                                                supportsDeviceBattery={hasDeviceBattery}
+                                                                onNetworkToggle={this.handleNetworkToggle}
+                                                                onUseDeviceNetwork={this.handleUseDeviceNetwork}
+                                                                onBatteryLevelChange={this.handleBatteryLevelChange}
+                                                                onBatteryChargingChange={this.handleBatteryChargingChange}
+                                                                onUseDeviceBattery={this.handleUseDeviceBattery}
+                                                        />
                                                 </div>
                                         </div>
                                 </div>
-			);
-		}
+                        );
+                }
 
 
 }
