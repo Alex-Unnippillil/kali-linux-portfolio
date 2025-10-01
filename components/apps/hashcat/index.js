@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import CliUiMap from '../../common/CliUiMap';
 
 export const hashTypes = [
   {
@@ -303,6 +304,73 @@ function HashcatApp() {
     attackModes[0].label;
   const info = { ...progressInfo, mode: selectedMode };
 
+  const hashcatCliConfig = useMemo(() => {
+    const hashSource = hashInput || 'hash.txt';
+    const dictionary = wordlist ? `${wordlist}.txt` : 'wordlist.txt';
+    const maskPart = showMask && mask ? mask : '';
+    const ruleFile = ruleSet !== 'none' ? `${ruleSet}.rule` : '';
+    const parts = ['hashcat', '-m', hashType, '-a', attackMode, hashSource, dictionary];
+    if (maskPart) {
+      parts.push(maskPart);
+    }
+    if (ruleFile) {
+      parts.push('-r', ruleFile);
+    }
+
+    return {
+      id: 'hashcat',
+      label: 'Hashcat',
+      command: parts.join(' '),
+      sections: [
+        {
+          title: 'Mode configuration',
+          rows: [
+            {
+              label: 'Hash mode',
+              flag: '-m',
+              value: `${hashType} (${selected.name})`,
+            },
+            {
+              label: 'Attack mode',
+              flag: '-a',
+              value: `${attackMode} (${selectedMode})`,
+            },
+          ],
+        },
+        {
+          title: 'Inputs',
+          rows: [
+            { label: 'Hash input', value: hashSource },
+            { label: 'Wordlist', value: dictionary },
+            {
+              label: 'Mask',
+              flag: maskPart ? 'mask' : undefined,
+              value: maskPart || 'Not applied',
+              hint: showMask
+                ? undefined
+                : 'Switch to a mask-enabled attack mode to configure a pattern',
+            },
+            {
+              label: 'Rule set',
+              flag: ruleFile ? '-r' : undefined,
+              value: ruleFile || 'None',
+            },
+          ],
+        },
+      ],
+    };
+  }, [
+    attackMode,
+    hashInput,
+    hashType,
+    mask,
+    ruleSet,
+    selected.name,
+    selectedMode,
+    showMask,
+    wordlist,
+  ]);
+
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
     setHashInput(value);
@@ -514,38 +582,7 @@ function HashcatApp() {
         )}
         <div className="text-xs mt-1">Uploading wordlists is disabled.</div>
       </div>
-      <div className="mt-2">
-        <div className="text-sm">Demo Command:</div>
-        <div className="flex items-center">
-          <code
-            className="bg-black px-2 py-1 text-xs"
-            data-testid="demo-command"
-          >
-            {`hashcat -m ${hashType} -a ${attackMode} ${
-              hashInput || 'hash.txt'
-            } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-              showMask && mask ? ` ${mask}` : ''
-            }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
-          </code>
-          <button
-            className="ml-2"
-            type="button"
-            onClick={() => {
-              if (navigator?.clipboard?.writeText) {
-                navigator.clipboard.writeText(
-                  `hashcat -m ${hashType} -a ${attackMode} ${
-                    hashInput || 'hash.txt'
-                  } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-                    showMask && mask ? ` ${mask}` : ''
-                  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`
-                );
-              }
-            }}
-          >
-            Copy
-          </button>
-        </div>
-      </div>
+      <CliUiMap tools={[hashcatCliConfig]} />
       <div className="mt-4 w-full max-w-md">
         <div className="text-sm">Sample Output:</div>
         <pre className="bg-black p-2 text-xs overflow-auto">

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import CliUiMap from '../../common/CliUiMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -130,17 +131,6 @@ const NmapNSEApp = () => {
     .replace(/\s+/g, ' ')
     .trim();
 
-  const copyCommand = async () => {
-    if (typeof window !== 'undefined') {
-      try {
-        await navigator.clipboard.writeText(command);
-        setToast('Command copied');
-      } catch (e) {
-        // ignore
-      }
-    }
-  };
-
   const copyOutput = async () => {
     const text = selectedScripts
       .map((s) => `# ${s}\n${examples[s] || ''}`)
@@ -174,6 +164,44 @@ const NmapNSEApp = () => {
       selectOutput();
     }
   };
+
+  const nmapCliConfig = useMemo(() => {
+    const scriptsList = selectedScripts.join(', ');
+    return {
+      id: 'nmap',
+      label: 'Nmap',
+      command,
+      sections: [
+        {
+          title: 'Targeting',
+          rows: [
+            { label: 'Target host', value: target || 'example.com' },
+            {
+              label: 'Port preset',
+              flag: portFlag || undefined,
+              value: portFlag ? portFlag : 'Default top ports',
+            },
+          ],
+        },
+        {
+          title: 'NSE options',
+          rows: [
+            {
+              label: 'Scripts',
+              flag: '--script',
+              value: scriptsList || 'None selected',
+              hint: scriptsList ? undefined : 'Check a script to include it in the CLI command',
+            },
+            {
+              label: 'Script arguments',
+              flag: argsString ? '--script-args' : undefined,
+              value: argsString || 'None',
+            },
+          ],
+        },
+      ],
+    };
+  }, [argsString, command, portFlag, selectedScripts, target]);
 
   const renderOutput = (text) => {
     if (!text) return 'No sample output available.';
@@ -274,17 +302,11 @@ const NmapNSEApp = () => {
             ))}
           </div>
         </div>
-        <div className="flex items-center mb-4">
-          <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
-            {command}
-          </pre>
-          <button
-            type="button"
-            onClick={copyCommand}
-            className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
-          >
-            Copy Command
-          </button>
+        <div className="mb-4">
+          <CliUiMap
+            tools={[nmapCliConfig]}
+            onCopy={() => setToast('Command copied')}
+          />
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">

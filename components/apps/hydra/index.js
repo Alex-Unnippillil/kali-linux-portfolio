@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import CliUiMap from '../../common/CliUiMap';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -198,6 +199,100 @@ const HydraApp = () => {
     };
     reader.readAsText(file);
   };
+
+  const hydraCliConfig = useMemo(() => {
+    const trimmedTarget = target.trim();
+    const targetWithoutScheme = trimmedTarget.replace(/^https?:\/\//, '');
+    const [hostPart = 'target.example.com', portPart] = targetWithoutScheme
+      ? targetWithoutScheme.split(':')
+      : ['target.example.com', undefined];
+    const port = portPart && /^\d+$/.test(portPart) ? portPart : '';
+    const resolvedUserList =
+      selectedUser || userLists[0]?.name || 'users.txt';
+    const resolvedPassList =
+      selectedPass || passLists[0]?.name || 'passwords.txt';
+    const lengthTokens = rule
+      .split(':')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const hasLengthRule =
+      lengthTokens.length === 2 && lengthTokens.every((value) => /^\d+$/.test(value));
+    const bruteForceSegment =
+      charset && hasLengthRule ? `${lengthTokens[0]}:${lengthTokens[1]}:${charset}` : '';
+    const scheme = service.includes('://') ? service : `${service}://`;
+    const formattedTarget = scheme.endsWith('://')
+      ? `${scheme}${hostPart}`
+      : `${scheme}://${hostPart}`;
+
+    const parts = ['hydra', '-L', resolvedUserList, '-P', resolvedPassList];
+    if (port) {
+      parts.push('-s', port);
+    }
+    if (bruteForceSegment) {
+      parts.push('-x', bruteForceSegment);
+    }
+    parts.push(formattedTarget);
+
+    return {
+      id: 'hydra',
+      label: 'Hydra',
+      command: parts.join(' '),
+      sections: [
+        {
+          title: 'Target configuration',
+          rows: [
+            { label: 'Service', value: service },
+            { label: 'Host', value: hostPart || 'target.example.com' },
+            {
+              label: 'Port override',
+              flag: port ? '-s' : undefined,
+              value: port || 'Default service port',
+            },
+          ],
+        },
+        {
+          title: 'Credential sources',
+          rows: [
+            {
+              label: 'Username list',
+              flag: '-L',
+              value: resolvedUserList,
+              hint: selectedUser ? undefined : 'Defaults to bundled demo list',
+            },
+            {
+              label: 'Password list',
+              flag: '-P',
+              value: resolvedPassList,
+              hint: selectedPass ? undefined : 'Defaults to bundled demo list',
+            },
+          ],
+        },
+        {
+          title: 'Brute-force tuning',
+          rows: [
+            { label: 'Charset', value: charset || 'Not set' },
+            {
+              label: 'Length rule',
+              flag: bruteForceSegment ? '-x' : undefined,
+              value: bruteForceSegment || 'Disabled',
+              hint: bruteForceSegment
+                ? undefined
+                : 'Set charset and a min:max rule to enable Hydra charset mode',
+            },
+          ],
+        },
+      ],
+    };
+  }, [
+    charset,
+    passLists,
+    rule,
+    selectedPass,
+    selectedUser,
+    service,
+    target,
+    userLists,
+  ]);
 
   const removeWordList = (name, listsSetter, lists) => {
     listsSetter(lists.filter((l) => l.name !== name));
@@ -636,6 +731,11 @@ const HydraApp = () => {
           )}
         </div>
       </div>
+
+      <CliUiMap
+        tools={[hydraCliConfig]}
+        onCopy={() => setAnnounce('Hydra CLI command copied')}
+      />
 
       <Stepper
         active={running && !paused}

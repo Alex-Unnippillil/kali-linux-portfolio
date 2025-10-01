@@ -47,7 +47,7 @@ describe('NmapNSEApp', () => {
     render(<NmapNSEApp />);
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
     await userEvent.click(
-      screen.getByRole('button', { name: /copy command/i })
+      screen.getByRole('button', { name: /copy cli command/i })
     );
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('nmap')
@@ -82,7 +82,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+    expect(await screen.findByText('Output copied')).toBeInTheDocument();
 
     mockFetch.mockRestore();
   });
