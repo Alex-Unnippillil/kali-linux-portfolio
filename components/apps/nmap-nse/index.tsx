@@ -1,9 +1,44 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import {
+  generateServiceReport,
+  cloneServiceReport,
+} from '@/utils/faker/services';
+import type { ServiceReport } from '@/utils/faker/services';
+
+type ScriptMeta = {
+  name: string;
+  description: string;
+  tags: string[];
+};
+
+type ScriptExamples = Record<string, string>;
+type ScriptOptionMap = Record<string, string>;
+
+type ScriptRunResult = {
+  name: string;
+  output: string;
+};
+
+type PortResult = {
+  port: number;
+  service: string;
+  cvss: number;
+  scripts?: ScriptRunResult[];
+};
+
+type HostResult = {
+  ip: string;
+  ports: PortResult[];
+};
+
+type NmapResults = {
+  hosts: HostResult[];
+};
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
-const scripts = [
+const scripts: ScriptMeta[] = [
   {
     name: 'http-title',
     description: 'Fetches page titles from HTTP services.',
@@ -67,6 +102,9 @@ const portPresets = [
   { label: 'Full', flag: '-p-' }
 ];
 
+const FALLBACK_SEED = 'nmap-nse-demo';
+export const NMAP_NSE_FALLBACK_SEED = FALLBACK_SEED;
+
 const cvssColor = (score) => {
   if (score >= 9) return 'bg-red-700';
   if (score >= 7) return 'bg-orange-700';
@@ -75,32 +113,86 @@ const cvssColor = (score) => {
 };
 
 const NmapNSEApp = () => {
-  const [target, setTarget] = useState('example.com');
-  const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
-  const [scriptQuery, setScriptQuery] = useState('');
-  const [portFlag, setPortFlag] = useState('');
-  const [examples, setExamples] = useState({});
-  const [results, setResults] = useState({ hosts: [] });
-  const [scriptOptions, setScriptOptions] = useState({});
-  const [activeScript, setActiveScript] = useState(scripts[0].name);
-  const [phaseStep, setPhaseStep] = useState(0);
-  const [toast, setToast] = useState('');
-  const outputRef = useRef(null);
+  const [target, setTarget] = useState<string>('example.com');
+  const [selectedScripts, setSelectedScripts] = useState<string[]>([
+    scripts[0].name,
+  ]);
+  const [scriptQuery, setScriptQuery] = useState<string>('');
+  const [portFlag, setPortFlag] = useState<string>('');
+  const fallbackReport = useMemo(
+    () => generateServiceReport({ seed: FALLBACK_SEED }),
+    []
+  );
+  const fallbackRef = useRef<ServiceReport>(fallbackReport);
+  const initialClone = useMemo<ServiceReport>(
+    () => cloneServiceReport(fallbackRef.current),
+    []
+  );
+  const [examples, setExamples] = useState<ScriptExamples>(
+    initialClone.scriptExamples
+  );
+  const [results, setResults] = useState<NmapResults>({
+    hosts: initialClone.hosts as HostResult[],
+  });
+  const [scriptOptions, setScriptOptions] = useState<ScriptOptionMap>({});
+  const [activeScript, setActiveScript] = useState<string>(scripts[0].name);
+  const [phaseStep, setPhaseStep] = useState<number>(0);
+  const [toast, setToast] = useState<string>('');
+  const outputRef = useRef<HTMLDivElement | null>(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
   useEffect(() => {
-    fetch('/demo/nmap-nse.json')
-      .then((r) => r.json())
-      .then(setExamples)
-      .catch(() => setExamples({}));
-    fetch('/demo/nmap-results.json')
-      .then((r) => r.json())
-      .then(setResults)
-      .catch(() => setResults({ hosts: [] }));
+    let cancelled = false;
+    const fallbackClone = (): ServiceReport => cloneServiceReport(fallbackRef.current);
+
+    const loadExamples = async () => {
+      try {
+        const res = await fetch('/demo/nmap-nse.json');
+        const json = (await res.json()) as ScriptExamples;
+        if (cancelled) return;
+        if (json && Object.keys(json).length > 0) {
+          setExamples(json);
+        } else {
+          const fallback = fallbackClone();
+          setExamples(fallback.scriptExamples);
+        }
+      } catch {
+        if (!cancelled) {
+          const fallback = fallbackClone();
+          setExamples(fallback.scriptExamples);
+        }
+      }
+    };
+
+    const loadResults = async () => {
+      try {
+        const res = await fetch('/demo/nmap-results.json');
+        const json = (await res.json()) as Partial<NmapResults>;
+        if (cancelled) return;
+        if (json?.hosts?.length) {
+          setResults(json as NmapResults);
+        } else {
+          const fallback = fallbackClone();
+          setResults({ hosts: fallback.hosts as HostResult[] });
+        }
+      } catch {
+        if (!cancelled) {
+          const fallback = fallbackClone();
+          setResults({ hosts: fallback.hosts as HostResult[] });
+        }
+      }
+    };
+
+    loadExamples();
+    loadResults();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const toggleScript = (name) => {
-    setSelectedScripts((prev) => {
+  const toggleScript = (name: string) => {
+    setSelectedScripts((prev: string[]) => {
       const exists = prev.includes(name);
       const next = exists ? prev.filter((n) => n !== name) : [...prev, name];
       return next;
@@ -122,7 +214,7 @@ const NmapNSEApp = () => {
 
   const argsString = selectedScripts
     .map((s) => scriptOptions[s])
-    .filter(Boolean)
+    .filter((value): value is string => Boolean(value))
     .join(',');
   const command = `nmap ${portFlag} ${
     selectedScripts.length ? `--script ${selectedScripts.join(',')}` : ''
@@ -201,9 +293,11 @@ const NmapNSEApp = () => {
           <label className="block text-sm mb-1" htmlFor="target">Target</label>
           <input
             id="target"
+            type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-label="Target host"
           />
         </div>
         <div className="mb-4">
@@ -212,19 +306,26 @@ const NmapNSEApp = () => {
           </label>
           <input
             id="scripts"
+            type="text"
             value={scriptQuery}
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-label="Search scripts"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
               <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
+                <label
+                  className="flex items-center space-x-2"
+                  htmlFor={`script-toggle-${s.name}`}
+                >
                   <input
+                    id={`script-toggle-${s.name}`}
                     type="checkbox"
                     checked={selectedScripts.includes(s.name)}
                     onChange={() => toggleScript(s.name)}
+                    aria-label={`Toggle script ${s.name}`}
                   />
                   <span className="font-mono">{s.name}</span>
                 </label>
@@ -237,18 +338,28 @@ const NmapNSEApp = () => {
                   ))}
                 </div>
                 {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
+                  <div className="mt-1">
+                    <label
+                      className="sr-only"
+                      htmlFor={`script-option-${s.name}`}
+                    >
+                      Arguments for {s.name}
+                    </label>
+                    <input
+                      id={`script-option-${s.name}`}
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev: ScriptOptionMap) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      className="w-full p-1 border rounded text-black"
+                      aria-label={`Arguments for ${s.name}`}
+                    />
+                  </div>
                 )}
               </div>
             ))}
@@ -322,7 +433,7 @@ const NmapNSEApp = () => {
               <button
                 type="button"
                 onClick={() =>
-                  setPhaseStep((s) =>
+                  setPhaseStep((s: number) =>
                     Math.min(
                       s + 1,
                       (scriptPhases[activeScript]?.length || 1) - 1

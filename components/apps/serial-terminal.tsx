@@ -1,5 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FormError from '../ui/FormError';
+import {
+  DEFAULT_SERIAL_SEED,
+  formatSerialFrame,
+  generateSerialFrames,
+} from '@/utils/faker/serial';
 
 interface SerialPort {
   readonly readable: ReadableStream<Uint8Array> | null;
@@ -18,7 +23,13 @@ type NavigatorSerial = Navigator & { serial: Serial };
 const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
   const [port, setPort] = useState<SerialPort | null>(null);
-  const [logs, setLogs] = useState('');
+  const fallbackFramesRef = useRef(
+    generateSerialFrames({ seed: DEFAULT_SERIAL_SEED })
+  );
+  const fallbackTextRef = useRef(
+    fallbackFramesRef.current.map((frame) => formatSerialFrame(frame)).join('\n')
+  );
+  const [logs, setLogs] = useState(fallbackTextRef.current);
   const [error, setError] = useState('');
   const readerRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
 
@@ -63,6 +74,7 @@ const SerialTerminalApp: React.FC = () => {
       const p = await (navigator as NavigatorSerial).serial.requestPort();
       await p.open({ baudRate: 9600 });
       setPort(p);
+      setLogs('');
       readLoop(p);
     } catch (err) {
       const e = err as DOMException;
@@ -84,6 +96,7 @@ const SerialTerminalApp: React.FC = () => {
       // ignore
     } finally {
       setPort(null);
+      setLogs(fallbackTextRef.current);
     }
   };
 
