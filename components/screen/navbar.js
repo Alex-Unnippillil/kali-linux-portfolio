@@ -106,29 +106,25 @@ export default class Navbar extends PureComponent {
                                                 )}
                                                 <PerformanceGraph />
                                         </div>
-                                        <div
-                                                className={
-                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
-                                                }
-                                        >
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                        <div className="flex items-center gap-4 text-xs md:text-sm">
+                                                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                                <div
+                                                        id="status-bar"
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        aria-label="System status"
+                                                        aria-expanded={this.state.status_card}
+                                                        onClick={this.handleStatusToggle}
+                                                        onKeyDown={this.handleStatusKeyDown}
+                                                        className={
+                                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                        }
+                                                >
+                                                        <Status />
+                                                        <QuickSettings open={this.state.status_card} />
+                                                </div>
                                         </div>
-                                        <div
-                                                id="status-bar"
-                                                role="button"
-                                                tabIndex={0}
-                                                aria-label="System status"
-                                                aria-expanded={this.state.status_card}
-                                                onClick={this.handleStatusToggle}
-                                                onKeyDown={this.handleStatusKeyDown}
-                                                className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                }
-                                        >
-                                                <Status />
-                                                <QuickSettings open={this.state.status_card} />
-                                        </div>
-				</div>
+                                </div>
 			);
 		}
 
