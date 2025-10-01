@@ -212,6 +212,70 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [highContrast]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const variant = highContrast ? 'filled' : 'outline';
+    const definitions: Array<{
+      rel: HTMLLinkElement['rel'];
+      href: string;
+      sizes?: string;
+      type?: string;
+    }> = [
+      {
+        rel: 'icon',
+        href: `/icons/brand-${variant}.svg`,
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'icon',
+        href: `/icons/48/brand-${variant}.svg`,
+        sizes: '48x48',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'icon',
+        href: `/icons/64/brand-${variant}.svg`,
+        sizes: '64x64',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'icon',
+        href: `/icons/128/brand-${variant}.svg`,
+        sizes: '128x128',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'icon',
+        href: `/icons/256/brand-${variant}.svg`,
+        sizes: '256x256',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'apple-touch-icon',
+        href: `/icons/256/brand-${variant}.svg`,
+        sizes: '180x180',
+      },
+    ];
+
+    definitions.forEach(({ rel, href, sizes, type }) => {
+      const selectorParts = [`link[rel="${rel}"]`];
+      if (type) selectorParts.push(`[type="${type}"]`);
+      if (sizes) selectorParts.push(`[sizes="${sizes}"]`);
+      const selector = selectorParts.join('');
+      let link = document.head.querySelector<HTMLLinkElement>(selector);
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = rel;
+        if (type) link.type = type;
+        if (sizes) link.sizes = sizes;
+        document.head.appendChild(link);
+      }
+      if (type) link.type = type;
+      if (sizes) link.sizes = sizes;
+      link.href = href;
+    });
+  }, [highContrast]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);

@@ -38,6 +38,12 @@
   --kali-panel-highlight: rgba(255, 255, 255, 0.05);
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
+  /* Icon system */
+  --icon-container: #0f1317;
+  --icon-outline: #1793d1;
+  --icon-symbol: #f5f5f5;
+  --icon-symbol-strong: #0f1317;
+  --icon-fill: #1793d1;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -104,6 +110,11 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --icon-container: #000000;
+  --icon-outline: #ffff00;
+  --icon-symbol: #ffffff;
+  --icon-symbol-strong: #000000;
+  --icon-fill: #ffff00;
 }
 
 /* Dyslexia-friendly fonts */
@@ -143,5 +154,10 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --icon-container: #000000;
+    --icon-outline: #ffff00;
+    --icon-symbol: #ffffff;
+    --icon-symbol-strong: #000000;
+    --icon-fill: #ffff00;
   }
 }

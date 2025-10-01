@@ -1,3 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <use href="/favicon.svg#icon" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" aria-hidden="true">
+  <title>Kali Linux Portfolio app icon</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    .container {
+      fill: var(--icon-container, #0f1317);
+    }
+    .panel {
+      fill: var(--icon-fill, #1793d1);
+    }
+    .glyph {
+      fill: var(--icon-symbol-strong, #0f1317);
+    }
+    .shine {
+      fill: none;
+      stroke: var(--icon-symbol, #f5f5f5);
+      stroke-width: 6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.45;
+    }
+  </style>
+  <rect class="container" x="6" y="6" width="116" height="116" rx="28" ry="28" />
+  <rect class="panel" x="12" y="12" width="104" height="104" rx="24" ry="24" />
+  <path class="glyph" d="M48 32h18v24l24-24h20l-34 36 32 32H88l-22-22v22H48z" />
+  <path class="shine" d="M56 40h10v18m0 26v18" />
 </svg>
