@@ -7,6 +7,7 @@ export interface Shortcut {
 
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
+  { description: 'Open workspace switcher', keys: 'Ctrl+P' },
   { description: 'Open settings', keys: 'Ctrl+,' },
 ];
 
