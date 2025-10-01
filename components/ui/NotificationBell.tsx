@@ -8,69 +8,20 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {
-  useNotifications,
-  AppNotification,
-  NotificationPriority,
-} from '../../hooks/useNotifications';
+import { useNotifications, NotificationPriority } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import NotificationCard from '../common/notifications/NotificationCard';
+import {
+  PRIORITY_METADATA,
+  createNotificationTimeFormatter,
+  formatNotifications,
+  groupNotificationsByPriority,
+  type FormattedNotification,
+  type NotificationGroup,
+} from '../common/notifications/primitives';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
-
-const PRIORITY_METADATA: Record<
-  NotificationPriority,
-  {
-    label: string;
-    badgeClass: string;
-    accentClass: string;
-    defaultCollapsed: boolean;
-    description: string;
-  }
-> = {
-  critical: {
-    label: 'Critical',
-    badgeClass: 'bg-red-500 text-white',
-    accentClass: 'border-red-500 bg-red-500/10',
-    defaultCollapsed: false,
-    description: 'Immediate action required alerts.',
-  },
-  high: {
-    label: 'High',
-    badgeClass: 'bg-orange-500 text-white',
-    accentClass: 'border-orange-400 bg-orange-500/10',
-    defaultCollapsed: false,
-    description: 'Important follow-up from active tools.',
-  },
-  normal: {
-    label: 'Normal',
-    badgeClass: 'bg-sky-500 text-white',
-    accentClass: 'border-sky-400 bg-sky-500/5',
-    defaultCollapsed: false,
-    description: 'Routine updates and summaries.',
-  },
-  low: {
-    label: 'Low',
-    badgeClass: 'bg-slate-600 text-white',
-    accentClass: 'border-slate-600 bg-slate-500/10',
-    defaultCollapsed: true,
-    description: 'Verbose background chatter collapses by default.',
-  },
-};
-
-type PriorityMetadata = (typeof PRIORITY_METADATA)[NotificationPriority];
-
-interface FormattedNotification extends AppNotification {
-  formattedTime: string;
-  readableTime: string;
-  metadata: PriorityMetadata;
-}
-
-interface NotificationGroup {
-  priority: NotificationPriority;
-  metadata: PriorityMetadata;
-  notifications: FormattedNotification[];
-}
 
 const NotificationBell: React.FC = () => {
   const {
@@ -188,35 +139,15 @@ const NotificationBell: React.FC = () => {
     }
   }, [isOpen, markAllRead, notifications]);
 
-  const timeFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'short',
-        timeStyle: 'short',
-      }),
-    [],
-  );
+  const timeFormatter = useMemo(() => createNotificationTimeFormatter(), []);
 
   const formattedNotifications = useMemo(
-    () =>
-      notifications.map<FormattedNotification>(notification => ({
-        ...notification,
-        formattedTime: new Date(notification.timestamp).toISOString(),
-        readableTime: timeFormatter.format(new Date(notification.timestamp)),
-        metadata: PRIORITY_METADATA[notification.priority],
-      })),
+    () => formatNotifications(notifications, timeFormatter),
     [notifications, timeFormatter],
   );
 
   const groupedNotifications = useMemo<NotificationGroup[]>(
-    () =>
-      PRIORITY_ORDER.map(priority => ({
-        priority,
-        metadata: PRIORITY_METADATA[priority],
-        notifications: formattedNotifications.filter(
-          notification => notification.priority === priority,
-        ),
-      })).filter(group => group.notifications.length > 0),
+    () => groupNotificationsByPriority(formattedNotifications),
     [formattedNotifications],
   );
 
@@ -332,32 +263,11 @@ const NotificationBell: React.FC = () => {
                       >
                         <ul role="list" className="divide-y divide-white/10">
                           {group.notifications.map(notification => (
-                            <li
-                              key={notification.id}
-                              className={`border-l-2 px-4 py-3 text-sm text-white ${notification.metadata.accentClass}`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-medium">{notification.title}</p>
-                                <span
-                                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClass}`}
-                                  title={
-                                    notification.classification.matchedRuleId
-                                      ? `Priority ${notification.metadata.label} (${notification.classification.source}: ${notification.classification.matchedRuleId})`
-                                      : `Priority ${notification.metadata.label}`
-                                  }
-                                >
-                                  {notification.metadata.label}
-                                </span>
-                              </div>
-                              {notification.body && (
-                                <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
-                                  {notification.body}
-                                </p>
-                              )}
-                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
-                                <span>{notification.appId}</span>
-                                <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
-                              </div>
+                            <li key={notification.id}>
+                              <NotificationCard
+                                notification={notification}
+                                mode="center"
+                              />
                             </li>
                           ))}
                         </ul>
