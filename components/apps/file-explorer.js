@@ -105,6 +105,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const [permissionIssue, setPermissionIssue] = useState(null);
+  const [regranting, setRegranting] = useState(false);
+  const pendingOpsRef = useRef([]);
+  const dirHandleRef = useRef(null);
+  const pathNamesRef = useRef([]);
+  const currentFileRef = useRef(null);
+  const contentRef = useRef('');
+  const rootHandleRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -121,6 +129,100 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
+  }, []);
+
+  useEffect(() => {
+    dirHandleRef.current = dirHandle;
+  }, [dirHandle]);
+
+  useEffect(() => {
+    pathNamesRef.current = path.map((p) => p?.name || '/');
+    if (path.length > 0) {
+      rootHandleRef.current = path[0]?.handle || rootHandleRef.current;
+    }
+  }, [path]);
+
+  useEffect(() => {
+    currentFileRef.current = currentFile;
+  }, [currentFile]);
+
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
+  const isPermissionError = (error) => {
+    if (!error) return false;
+    const { name = '', message = '' } = error;
+    if (name === 'NotAllowedError' || name === 'SecurityError') return true;
+    return /permission/i.test(message || '');
+  };
+
+  const handlePermissionError = useCallback(
+    (error, operation) => {
+      if (!isPermissionError(error)) return false;
+      if (operation) {
+        pendingOpsRef.current.push(operation);
+      }
+      setPermissionIssue(
+        'Access to this folder was revoked by the browser. Re-open it to resume pending actions.',
+      );
+      return true;
+    },
+    [],
+  );
+
+  const runWithPermission = useCallback(
+    async (operation, { requeue = true } = {}) => {
+      try {
+        return await operation();
+      } catch (error) {
+        if (handlePermissionError(error, requeue ? operation : null)) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    [handlePermissionError],
+  );
+
+  const flushPendingOperations = useCallback(async () => {
+    if (!pendingOpsRef.current.length) return;
+    const queue = [...pendingOpsRef.current];
+    pendingOpsRef.current = [];
+    for (const op of queue) {
+      try {
+        await op();
+      } catch (error) {
+        if (!handlePermissionError(error, op)) {
+          // eslint-disable-next-line no-console
+          console.error(error);
+        }
+      }
+    }
+  }, [handlePermissionError]);
+
+  const resolvePath = useCallback(async (names, rootOverride) => {
+    const baseHandle = rootOverride || rootHandleRef.current;
+    if (!baseHandle) return null;
+    const pathNames = Array.isArray(names) && names.length ? names : [baseHandle.name || '/'];
+    const [first, ...rest] = pathNames;
+    const crumbs = [
+      {
+        name: first || baseHandle.name || '/',
+        handle: baseHandle,
+      },
+    ];
+    let current = baseHandle;
+    for (const segment of rest) {
+      if (!segment || segment === '/') continue;
+      try {
+        current = await current.getDirectoryHandle(segment);
+        crumbs.push({ name: segment, handle: current });
+      } catch {
+        break;
+      }
+    }
+    return { handle: current, crumbs };
   }, []);
 
   useEffect(() => {
@@ -157,39 +259,83 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const openFolder = async () => {
     try {
       const handle = await window.showDirectoryPicker();
-      setDirHandle(handle);
-      addRecentDir(handle);
-      setRecent(await getRecentDirs());
-      setPath([{ name: handle.name || '/', handle }]);
-      await readDir(handle);
-      setLocationError(null);
-    } catch {}
+      rootHandleRef.current = handle;
+      const operation = async () => {
+        setDirHandle(handle);
+        addRecentDir(handle);
+        setRecent(await getRecentDirs());
+        const crumbName = handle.name || '/';
+        setPath([{ name: crumbName, handle }]);
+        await readDir(handle);
+        setLocationError(null);
+        setPermissionIssue(null);
+      };
+      await runWithPermission(operation, { requeue: false });
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      if (!handlePermissionError(error)) {
+        // eslint-disable-next-line no-console
+        console.error(error);
+      }
+    }
   };
 
   const openRecent = async (entry) => {
     try {
       const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
       if (perm !== 'granted') return;
-      setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
-      setLocationError(null);
-    } catch {}
+      rootHandleRef.current = entry.handle;
+      const operation = async () => {
+        setDirHandle(entry.handle);
+        setPath([{ name: entry.name || entry.handle.name || '/', handle: entry.handle }]);
+        await readDir(entry.handle);
+        setLocationError(null);
+        setPermissionIssue(null);
+      };
+      await runWithPermission(operation);
+    } catch (error) {
+      if (!handlePermissionError(error)) {
+        // eslint-disable-next-line no-console
+        console.error(error);
+      }
+    }
   };
 
-  const openFile = async (file) => {
-    setCurrentFile(file);
-    let text = '';
-    if (opfsSupported) {
-      const unsaved = await loadBuffer(file.name);
-      if (unsaved !== null) text = unsaved;
-    }
-    if (!text) {
-      const f = await file.handle.getFile();
-      text = await f.text();
-    }
-    setContent(text);
-  };
+  const openFile = useCallback(
+    async (file) => {
+      const name = typeof file === 'string' ? file : file?.name;
+      if (!name) return;
+      const operation = async () => {
+        const resolved = await resolvePath(pathNamesRef.current);
+        if (!resolved?.handle) return;
+        let handle = null;
+        try {
+          handle = await resolved.handle.getFileHandle(name);
+        } catch (error) {
+          if (error?.name === 'NotFoundError' && typeof file !== 'string' && file?.handle) {
+            handle = file.handle;
+          } else {
+            throw error;
+          }
+        }
+        if (!handle) return;
+        let text = '';
+        if (opfsSupported) {
+          const unsaved = await loadBuffer(name);
+          if (unsaved !== null) text = unsaved;
+        }
+        if (!text) {
+          const f = await handle.getFile();
+          text = await f.text();
+        }
+        setCurrentFile({ name, handle });
+        setContent(text);
+        setPermissionIssue(null);
+      };
+      await runWithPermission(operation);
+    },
+    [resolvePath, runWithPermission, opfsSupported, loadBuffer],
+  );
 
   const readDir = useCallback(async (handle) => {
     const ds = [];
@@ -247,43 +393,80 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     };
   }, [context, initialPath, pathProp, opfsSupported, root, readDir]);
 
-  const openDir = async (dir) => {
-    setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
-    setLocationError(null);
-  };
+  const openDir = useCallback(
+    async (dir) => {
+      const targetNames = [...pathNamesRef.current, dir.name];
+      const operation = async () => {
+        const resolved = await resolvePath(targetNames);
+        if (!resolved?.handle) return;
+        setDirHandle(resolved.handle);
+        setPath(resolved.crumbs);
+        await readDir(resolved.handle);
+        setLocationError(null);
+        setPermissionIssue(null);
+      };
+      await runWithPermission(operation);
+    },
+    [resolvePath, runWithPermission, readDir],
+  );
 
-  const navigateTo = async (index) => {
-    const target = path[index];
-    if (!target || !target.handle) return;
-    setDirHandle(target.handle);
-    setPath(path.slice(0, index + 1));
-    await readDir(target.handle);
-    setLocationError(null);
-  };
+  const navigateTo = useCallback(
+    async (index) => {
+      const names = pathNamesRef.current.slice(0, index + 1);
+      if (!names.length) return;
+      const operation = async () => {
+        const resolved = await resolvePath(names);
+        if (!resolved?.handle) return;
+        setDirHandle(resolved.handle);
+        setPath(resolved.crumbs);
+        await readDir(resolved.handle);
+        setLocationError(null);
+        setPermissionIssue(null);
+      };
+      await runWithPermission(operation);
+    },
+    [resolvePath, runWithPermission, readDir],
+  );
 
-  const goBack = async () => {
-    if (path.length <= 1) return;
-    const newPath = path.slice(0, -1);
-    const prev = newPath[newPath.length - 1];
-    setPath(newPath);
-    if (prev?.handle) {
-      setDirHandle(prev.handle);
-      await readDir(prev.handle);
+  const goBack = useCallback(async () => {
+    if (pathNamesRef.current.length <= 1) return;
+    const names = pathNamesRef.current.slice(0, -1);
+    const operation = async () => {
+      const resolved = await resolvePath(names);
+      if (!resolved?.handle) return;
+      setDirHandle(resolved.handle);
+      setPath(resolved.crumbs);
+      await readDir(resolved.handle);
       setLocationError(null);
-    }
-  };
+      setPermissionIssue(null);
+    };
+    await runWithPermission(operation);
+  }, [resolvePath, runWithPermission, readDir]);
 
-  const saveFile = async () => {
-    if (!currentFile) return;
-    try {
-      const writable = await currentFile.handle.createWritable();
-      await writable.write(content);
+  const saveFile = useCallback(async () => {
+    const fileName = currentFileRef.current?.name;
+    if (!fileName) return;
+    const operation = async () => {
+      const resolved = await resolvePath(pathNamesRef.current);
+      if (!resolved?.handle) return;
+      let handle = currentFileRef.current?.handle || null;
+      try {
+        handle = await resolved.handle.getFileHandle(fileName, { create: true });
+      } catch (error) {
+        if (error?.name !== 'NotFoundError' || !handle) {
+          throw error;
+        }
+      }
+      if (!handle) return;
+      const writable = await handle.createWritable();
+      await writable.write(contentRef.current);
       await writable.close();
-      if (opfsSupported) await removeBuffer(currentFile.name);
-    } catch {}
-  };
+      setCurrentFile({ name: fileName, handle });
+      if (opfsSupported) await removeBuffer(fileName);
+      setPermissionIssue(null);
+    };
+    await runWithPermission(operation);
+  }, [resolvePath, runWithPermission, opfsSupported, removeBuffer]);
 
   const onChange = (e) => {
     const text = e.target.value;
@@ -309,6 +492,59 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       workerRef.current.postMessage({ directoryHandle: dirHandle, query });
     }
   };
+
+  const regrantAccess = useCallback(async () => {
+    if (typeof window === 'undefined' || !window.showDirectoryPicker) return;
+    try {
+      setRegranting(true);
+      const startIn = path[0]?.handle || dirHandleRef.current || undefined;
+      const pickerOptions = startIn ? { startIn } : undefined;
+      const handle = await window.showDirectoryPicker(pickerOptions);
+      rootHandleRef.current = handle;
+      addRecentDir(handle);
+      setRecent(await getRecentDirs());
+      const names = pathNamesRef.current.length
+        ? [pathNamesRef.current[0] || handle.name || '/', ...pathNamesRef.current.slice(1)]
+        : [handle.name || '/'];
+      const resolved = await resolvePath(names, handle);
+      if (resolved) {
+        setDirHandle(resolved.handle);
+        setPath(resolved.crumbs);
+        await runWithPermission(async () => {
+          await readDir(resolved.handle);
+        });
+      } else {
+        setDirHandle(handle);
+        setPath([{ name: handle.name || '/', handle }]);
+        await runWithPermission(async () => {
+          await readDir(handle);
+        });
+      }
+      setPermissionIssue(null);
+      setLocationError(null);
+      const fileName = currentFileRef.current?.name;
+      if (fileName) {
+        await openFile(fileName);
+      }
+      await flushPendingOperations();
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      if (!handlePermissionError(error)) {
+        // eslint-disable-next-line no-console
+        console.error(error);
+      }
+    } finally {
+      setRegranting(false);
+    }
+  }, [
+    path,
+    resolvePath,
+    runWithPermission,
+    readDir,
+    openFile,
+    flushPendingOperations,
+    handlePermissionError,
+  ]);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
@@ -360,16 +596,30 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </button>
         )}
         <Breadcrumbs path={path} onNavigate={navigateTo} />
-        {locationError && (
-          <div className="text-xs text-red-300" role="status">
-            {locationError}
-          </div>
-        )}
-        {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
-        )}
+        <div className="ml-auto flex items-center space-x-3">
+          {locationError && (
+            <div className="text-xs text-red-300" role="status">
+              {locationError}
+            </div>
+          )}
+          {permissionIssue && (
+            <div className="flex items-center space-x-2 text-xs text-yellow-200" role="status">
+              <span>{permissionIssue}</span>
+              <button
+                onClick={regrantAccess}
+                disabled={regranting}
+                className="px-2 py-1 bg-black bg-opacity-50 rounded disabled:opacity-50"
+              >
+                {regranting ? 'Re-opening…' : 'Re-open Folder'}
+              </button>
+            </div>
+          )}
+          {currentFile && (
+            <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Save
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
