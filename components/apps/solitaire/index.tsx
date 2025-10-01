@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import {
@@ -77,6 +77,7 @@ const Solitaire = () => {
   const timer = useRef<NodeJS.Timeout | null>(null);
   const [paused, setPaused] = useState(prefersReducedMotion);
   const [scale, setScale] = useState(1);
+  const winnableToggleId = useId();
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
   const wasteRef = useRef<HTMLDivElement | null>(null);
@@ -357,7 +358,7 @@ const Solitaire = () => {
     ghost.style.top = '-1000px';
     ghost.style.left = '-1000px';
     ghost.style.pointerEvents = 'none';
-    ghost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+    ghost.style.boxShadow = 'var(--elevation-shadow-3)';
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 32, 48);
     dragImageRef.current = ghost;
@@ -694,7 +695,7 @@ const Solitaire = () => {
             className="absolute transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{
               transform: `translate(${c.x}px, ${c.y}px) rotate(${c.angle}deg)`,
-              boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+              boxShadow: 'var(--elevation-shadow-3)',
             }}
           >
             {renderCard(c)}
@@ -782,14 +783,18 @@ const Solitaire = () => {
         >
           Passes {passLimit === Infinity ? '∞' : passLimit}
         </button>
-        <label className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1">
           <input
             type="checkbox"
+            id={winnableToggleId}
             checked={winnableOnly}
             onChange={(e) => setWinnableOnly(e.target.checked)}
+            aria-label="Toggle winnable only deals"
           />
-          <span className="select-none">Winnable Only</span>
-        </label>
+          <label className="select-none" htmlFor={winnableToggleId}>
+            Winnable Only
+          </label>
+        </div>
       </div>
       <div className="flex space-x-4 mb-4">
         <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onClick={draw}>

@@ -10,8 +10,8 @@
     @apply transition ease-out duration-100;
   }
   .glass {
-    background-color: color-mix(in srgb, var(--color-bg), transparent 55%);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    background-color: color-mix(in srgb, var(--elevation-surface-4), transparent 25%);
+    box-shadow: var(--elevation-shadow-4);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
   }
