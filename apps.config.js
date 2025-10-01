@@ -89,7 +89,6 @@ const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
-const PinballApp = createDynamicApp('pinball', 'Pinball');
 const VolatilityApp = createDynamicApp('volatility', 'Volatility');
 
 const KismetApp = createDynamicApp('kismet', 'Kismet');
@@ -177,7 +176,6 @@ const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
-const displayPinball = createDisplay(PinballApp);
 const displayVolatility = createDisplay(VolatilityApp);
 
 const displayMsfPost = createDisplay(MsfPostApp);
@@ -580,15 +578,6 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGomoku,
-  },
-  {
-    id: 'pinball',
-    title: 'Pinball',
-    icon: './themes/Yaru/apps/pinball.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayPinball,
   },
 ];
 
