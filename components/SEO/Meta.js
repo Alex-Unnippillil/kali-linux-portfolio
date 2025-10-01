@@ -23,12 +23,12 @@ export default function Meta() {
             <meta name="theme-color" content="#0f1317" />
 
             {/* Search Engine */}
-            <meta name="image" content="images/logos/fevicon.png" />
+            <meta name="image" content="/icons/256/brand-filled.svg" />
             {/* Schema.org for Google */}
             <meta itemProp="name" content="Alex Unnippillil Portfolio " />
             <meta itemProp="description"
                 content="Alex Unnippillil Personal Portfolio Website" />
-            <meta itemProp="image" content="images/logos/fevicon.png" />
+            <meta itemProp="image" content="/icons/256/brand-filled.svg" />
             {/* Twitter */}
             <meta name="twitter:card" content="summary" />
             <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website" />
@@ -48,8 +48,12 @@ export default function Meta() {
             <meta name="og:type" content="website" />
 
             <link rel="canonical" href="https://unnippillil.com/" />
-            <link rel="icon" href="images/logos/fevicon.svg" />
-            <link rel="apple-touch-icon" href="images/logos/logo.png" />
+            <link rel="icon" type="image/svg+xml" href="/icons/brand-outline.svg" />
+            <link rel="icon" type="image/svg+xml" sizes="48x48" href="/icons/48/brand-outline.svg" />
+            <link rel="icon" type="image/svg+xml" sizes="64x64" href="/icons/64/brand-outline.svg" />
+            <link rel="icon" type="image/svg+xml" sizes="128x128" href="/icons/128/brand-outline.svg" />
+            <link rel="icon" type="image/svg+xml" sizes="256x256" href="/icons/256/brand-outline.svg" />
+            <link rel="apple-touch-icon" href="/icons/256/brand-filled.svg" />
             <script
                 type="application/ld+json"
                 nonce={nonce}

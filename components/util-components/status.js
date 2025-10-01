@@ -13,7 +13,7 @@ export default function Status() {
     const pingServer = async () => {
       if (!window?.location) return;
       try {
-        const url = new URL('/favicon.ico', window.location.href).toString();
+        const url = new URL('/icons/brand-outline.svg', window.location.href).toString();
         await fetch(url, { method: 'HEAD', cache: 'no-store' });
         setOnline(true);
       } catch (e) {

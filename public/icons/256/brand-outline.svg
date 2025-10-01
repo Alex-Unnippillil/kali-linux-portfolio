@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 128 128" aria-hidden="true">
+  <title>Kali Linux Portfolio outline icon – 256px</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    .container {
+      fill: var(--icon-container, #0f1317);
+    }
+    .frame {
+      fill: none;
+      stroke: var(--icon-outline, #1793d1);
+      stroke-width: 8;
+      stroke-linejoin: round;
+    }
+    .glyph {
+      fill: none;
+      stroke: var(--icon-symbol, #f5f5f5);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    @media (prefers-contrast: more), (forced-colors: active) {
+      .frame {
+        stroke-width: 10;
+      }
+    }
+  </style>
+  <rect class="container" x="6" y="6" width="116" height="116" rx="28" ry="28" />
+  <rect class="frame" x="10" y="10" width="108" height="108" rx="24" ry="24" />
+  <path class="glyph" d="M44 34v60m0-30 38-30m-38 30 40 30" />
+</svg>
