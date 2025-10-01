@@ -1,0 +1,890 @@
+{
+  "runs": [
+    {
+      "id": "run-1",
+      "label": "Jan 01, 08:00",
+      "startedAt": "2024-01-01T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 45
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 60
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 71
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "open",
+              "latencyMs": 43
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 65
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 51
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 83
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 106
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-2",
+      "label": "Jan 02, 08:00",
+      "startedAt": "2024-01-02T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 45
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 56
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 71
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "closed"
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "filtered"
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 46
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 82
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 105
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-3",
+      "label": "Jan 03, 08:00",
+      "startedAt": "2024-01-03T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 45
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 54
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "filtered"
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "open",
+              "latencyMs": 42
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "closed"
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 42
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 82
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "filtered"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-4",
+      "label": "Jan 04, 08:00",
+      "startedAt": "2024-01-04T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "closed"
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 66
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 57
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "closed"
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 43
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 59
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "closed"
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 69
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-5",
+      "label": "Jan 05, 08:00",
+      "startedAt": "2024-01-05T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 29
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 52
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 51
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "open",
+              "latencyMs": 18
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 41
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 42
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 56
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-6",
+      "label": "Jan 06, 08:00",
+      "startedAt": "2024-01-06T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 41
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 57
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 66
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "closed"
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "closed"
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 46
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 73
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 94
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-7",
+      "label": "Jan 07, 08:00",
+      "startedAt": "2024-01-07T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 46
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 62
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "filtered"
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "open",
+              "latencyMs": 44
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 66
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 54
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 85
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "filtered"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-8",
+      "label": "Jan 08, 08:00",
+      "startedAt": "2024-01-08T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 44
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 58
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 70
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "closed"
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "filtered"
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 47
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 80
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 103
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-9",
+      "label": "Jan 09, 08:00",
+      "startedAt": "2024-01-09T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "closed"
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 53
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 72
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "open",
+              "latencyMs": 44
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "closed"
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 41
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "closed"
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 109
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-10",
+      "label": "Jan 10, 08:00",
+      "startedAt": "2024-01-10T08:00:00.000Z",
+      "hosts": [
+        {
+          "host": "192.0.2.10",
+          "hostname": "web01",
+          "services": [
+            {
+              "port": 80,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 37
+            },
+            {
+              "port": 443,
+              "service": "https",
+              "state": "open",
+              "latencyMs": 64
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.20",
+          "hostname": "db01",
+          "services": [
+            {
+              "port": 5432,
+              "service": "postgres",
+              "state": "open",
+              "latencyMs": 62
+            }
+          ]
+        },
+        {
+          "host": "192.0.2.30",
+          "hostname": "ftp01",
+          "services": [
+            {
+              "port": 21,
+              "service": "ftp",
+              "state": "closed"
+            }
+          ]
+        },
+        {
+          "host": "198.51.100.10",
+          "hostname": "edge-proxy",
+          "services": [
+            {
+              "port": 8080,
+              "service": "http",
+              "state": "open",
+              "latencyMs": 50
+            },
+            {
+              "port": 22,
+              "service": "ssh",
+              "state": "open",
+              "latencyMs": 56
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.5",
+          "hostname": "vpn01",
+          "services": [
+            {
+              "port": 1194,
+              "service": "openvpn",
+              "state": "open",
+              "latencyMs": 63
+            }
+          ]
+        },
+        {
+          "host": "203.0.113.40",
+          "hostname": "rdp-gateway",
+          "services": [
+            {
+              "port": 3389,
+              "service": "rdp",
+              "state": "open",
+              "latencyMs": 82
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

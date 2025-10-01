@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
+import Trends, { TrendRun } from '../../components/apps/nmap-nse/Trends';
 
 interface Script {
   name: string;
@@ -25,6 +26,7 @@ const NmapNSE: React.FC = () => {
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
   );
+  const [trendRuns, setTrendRuns] = useState<TrendRun[]>([]);
 
   // load static script metadata
   useEffect(() => {
@@ -41,6 +43,23 @@ const NmapNSE: React.FC = () => {
       }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    const loadRuns = async () => {
+      try {
+        const res = await fetch('/demo-data/nmap/trends.json');
+        const json = await res.json();
+        if (Array.isArray(json)) {
+          setTrendRuns(json as TrendRun[]);
+        } else if (Array.isArray(json?.runs)) {
+          setTrendRuns(json.runs as TrendRun[]);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    loadRuns();
   }, []);
 
   const tags = useMemo(() => Array.from(new Set(data.map((s) => s.tag))), [
@@ -213,6 +232,11 @@ const NmapNSE: React.FC = () => {
           ) : (
             <p>Select a script to view details.</p>
           )}
+          <div className="mt-8">
+            <CollapsibleSection title="Trend Explorer">
+              <Trends runs={trendRuns} />
+            </CollapsibleSection>
+          </div>
         </main>
       </div>
     </div>
