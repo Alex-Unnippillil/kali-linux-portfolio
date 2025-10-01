@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { getPermissionsPolicy } from './lib/security/permissionsPolicy';
+
 function nonce() {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
@@ -42,5 +44,6 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  res.headers.set('Permissions-Policy', getPermissionsPolicy(req.nextUrl.pathname));
   return res;
 }
