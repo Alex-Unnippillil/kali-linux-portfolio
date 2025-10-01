@@ -1611,12 +1611,21 @@ export class Desktop extends Component {
 
         // persist in trash with autopurge
         const appMeta = apps.find(a => a.id === objId) || {};
-        const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
-        const ms = purgeDays * 24 * 60 * 60 * 1000;
+        const rawPurgeDays = safeLocalStorage?.getItem('trash-purge-days');
+        let purgeDays;
+        if (rawPurgeDays === '0') {
+            purgeDays = Number.POSITIVE_INFINITY;
+        } else {
+            const parsed = parseInt(rawPurgeDays || '30', 10);
+            purgeDays = Number.isNaN(parsed) || parsed < 0 ? 30 : parsed;
+        }
+        const ms = Number.isFinite(purgeDays) ? purgeDays * 24 * 60 * 60 * 1000 : Number.POSITIVE_INFINITY;
         const now = Date.now();
         let trash = [];
         try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
-        trash = trash.filter(item => now - item.closedAt <= ms);
+        if (Number.isFinite(ms)) {
+            trash = trash.filter(item => now - item.closedAt <= ms);
+        }
         trash.push({
             id: objId,
             title: appMeta.title || objId,

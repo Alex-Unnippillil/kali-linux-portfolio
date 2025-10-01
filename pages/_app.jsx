@@ -14,6 +14,8 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
+import TasksManagerProvider from '../components/common/TasksManager';
+import DataRetentionProvider from '../components/common/DataRetentionProvider';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
@@ -158,11 +160,13 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
+          <TasksManagerProvider>
+            <DataRetentionProvider>
+              <NotificationCenter>
+                <PipPortalProvider>
+                  <div aria-live="polite" id="live-region" />
+                  <Component {...pageProps} />
+                  <ShortcutOverlay />
               <Analytics
                 beforeSend={(e) => {
                   if (e.url.includes('/admin') || e.url.includes('/private')) return null;
@@ -172,9 +176,11 @@ function MyApp(props) {
                 }}
               />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </DataRetentionProvider>
+        </TasksManagerProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>

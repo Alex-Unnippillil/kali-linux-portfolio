@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import useTrashState from './state';
 import HistoryList from './components/HistoryList';
+import { parseTrashPurgeSetting } from '../../utils/dataRetention';
 
 const DEFAULT_ICON = '/themes/Yaru/system/folder.png';
 const EMPTY_ICON = '/themes/Yaru/status/user-trash-symbolic.svg';
@@ -18,23 +19,24 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     restoreAllFromHistory,
   } = useTrashState();
   const [selected, setSelected] = useState<number | null>(null);
-  const [purgeDays, setPurgeDays] = useState(30);
+  const [purgeDays, setPurgeDays] = useState<number>(30);
   const [emptyCountdown, setEmptyCountdown] = useState<number | null>(null);
   const [, setTick] = useState(0);
   const daysLeft = useCallback(
-    (closedAt: number) =>
-      Math.max(
+    (closedAt: number) => {
+      if (!Number.isFinite(purgeDays)) return Number.POSITIVE_INFINITY;
+      return Math.max(
         purgeDays -
           Math.floor((Date.now() - closedAt) / (24 * 60 * 60 * 1000)),
         0,
-      ),
+      );
+    },
     [purgeDays],
   );
 
   useEffect(() => {
-    const pd = parseInt(
-      window.localStorage.getItem('trash-purge-days') || '30',
-      10,
+    const pd = parseTrashPurgeSetting(
+      window.localStorage.getItem('trash-purge-days'),
     );
     setPurgeDays(pd);
     const id = setInterval(() => setTick(t => t + 1), 60 * 1000);
@@ -208,13 +210,19 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
                 </span>
                 <span
                   className="ml-auto text-xs opacity-70"
-                  aria-label={`Purges in ${daysLeft(item.closedAt)} day${
-                    daysLeft(item.closedAt) === 1 ? '' : 's'
-                  }`}
+                  aria-label={
+                    Number.isFinite(daysLeft(item.closedAt))
+                      ? `Purges in ${daysLeft(item.closedAt)} day${
+                          daysLeft(item.closedAt) === 1 ? '' : 's'
+                        }`
+                      : 'No automatic purge scheduled'
+                  }
                 >
-                  {`${daysLeft(item.closedAt)} day${
-                    daysLeft(item.closedAt) === 1 ? '' : 's'
-                  } left`}
+                  {Number.isFinite(daysLeft(item.closedAt))
+                    ? `${daysLeft(item.closedAt)} day${
+                        daysLeft(item.closedAt) === 1 ? '' : 's'
+                      } left`
+                    : 'No auto purge'}
                 </span>
               </li>
             ))}
