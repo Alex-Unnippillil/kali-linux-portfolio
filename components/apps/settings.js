@@ -1,7 +1,9 @@
+/* eslint-disable jsx-a11y/control-has-associated-label */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import WebVitalsSamplingSettings from '../util-components/WebVitalsSamplingSettings';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
@@ -202,6 +204,9 @@ export function Settings() {
                     />
                     Pong Spin
                 </label>
+            </div>
+            <div className="w-full px-6">
+                <WebVitalsSamplingSettings />
             </div>
             <div className="flex justify-center my-4">
                 <div
