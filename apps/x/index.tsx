@@ -14,6 +14,8 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import PermissionPrompt from '../../components/common/PermissionPrompt';
+import { usePermissionPrompt } from '../../hooks/usePermissionPrompt';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -109,6 +111,7 @@ export default function XTimeline() {
   const timeoutsRef = useRef<Record<string, number>>({});
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
+  const { prompt, requestPermission, resolvePermission } = usePermissionPrompt();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -120,16 +123,53 @@ export default function XTimeline() {
   }, []);
 
   useEffect(() => {
-    if (
-      typeof window !== 'undefined' &&
-      'Notification' in window &&
-      Notification.permission === 'default'
-    ) {
-      Notification.requestPermission().catch(() => {});
-    }
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    const preview = (
+      <div className="space-y-2 text-sm text-gray-200">
+        <div className="font-semibold text-white">Reminder preview</div>
+        <div className="rounded border border-gray-700 bg-gray-800/70 p-3">
+          <p className="font-semibold">Tweet reminder</p>
+          <p className="text-gray-300">“Ship release thread” posts in 10 minutes.</p>
+        </div>
+      </div>
+    );
+
+    requestPermission({
+      permission: 'notifications',
+      title: 'Enable tweet reminders?',
+      summary:
+        'Tweet Scheduler uses browser notifications to nudge you before a scheduled post is due.',
+      reasons: [
+        {
+          title: 'Stay on schedule',
+          description:
+            'Reminders fire when a tweet you scheduled is about to publish so you can review or cancel it in time.',
+        },
+        {
+          title: 'Your queue, your rules',
+          description:
+            'Notifications only come from tweets you add here — no extra tracking or background services.',
+        },
+      ],
+      preview,
+      confirmLabel: 'Allow reminders',
+      declineLabel: 'Not now',
+      onAllow: async () => {
+        if (Notification.permission === 'default') {
+          try {
+            await Notification.requestPermission();
+          } catch {
+            // ignore native prompt failures
+          }
+        }
+      },
+    });
+  }, [requestPermission]);
+
+  useEffect(() => {
     const timeouts = timeoutsRef.current;
     return () => {
-      Object.values(timeouts).forEach(clearTimeout);
+      Object.values(timeouts).forEach((timeout) => clearTimeout(timeout));
     };
   }, []);
 
@@ -324,24 +364,26 @@ export default function XTimeline() {
           </button>
         </header>
         <div className="p-1.5 space-y-4 flex-1 overflow-auto">
-        <form onSubmit={handleScheduleTweet} className="space-y-2">
-          <textarea
-            value={tweetText}
-            onChange={(e) => setTweetText(e.target.value)}
-            placeholder="Tweet text"
-            className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          />
-          <div className="flex gap-2 items-center">
-            <input
-              type="datetime-local"
-              value={tweetTime}
-              onChange={(e) => setTweetTime(e.target.value)}
-              className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          <form onSubmit={handleScheduleTweet} className="space-y-2">
+            <textarea
+              value={tweetText}
+              onChange={(e) => setTweetText(e.target.value)}
+              placeholder="Tweet text"
+              className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              aria-label="Scheduled tweet text"
             />
-            <button
-              type="submit"
-              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-              style={{ backgroundColor: accent }}
+            <div className="flex gap-2 items-center">
+              <input
+                type="datetime-local"
+                value={tweetTime}
+                onChange={(e) => setTweetTime(e.target.value)}
+                className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                aria-label="Schedule time"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                style={{ backgroundColor: accent }}
             >
               Schedule
             </button>
@@ -402,21 +444,26 @@ export default function XTimeline() {
             List
           </button>
         </div>
-        <form onSubmit={handleAddPreset} className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              timelineType === 'profile'
-                ? 'Add screen name'
-                : 'Add list (owner/slug or id)'
-            }
-            className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          />
-          <button
-            type="submit"
-            className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-            style={{ backgroundColor: accent }}
+          <form onSubmit={handleAddPreset} className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                timelineType === 'profile'
+                  ? 'Add screen name'
+                  : 'Add list (owner/slug or id)'
+              }
+              className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              aria-label={
+                timelineType === 'profile'
+                  ? 'Add profile screen name'
+                  : 'Add list identifier'
+              }
+            />
+            <button
+              type="submit"
+              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              style={{ backgroundColor: accent }}
           >
             Save
           </button>
@@ -509,6 +556,19 @@ export default function XTimeline() {
           width: 100%;
         }
       `}</style>
+      {prompt && (
+        <PermissionPrompt
+          open
+          permissionType={prompt.permission}
+          title={prompt.title}
+          summary={prompt.summary}
+          reasons={prompt.reasons}
+          preview={prompt.preview}
+          confirmLabel={prompt.confirmLabel}
+          declineLabel={prompt.declineLabel}
+          onDecision={resolvePermission}
+        />
+      )}
     </>
   );
 }

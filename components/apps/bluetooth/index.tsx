@@ -1,5 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import FormError from "../../ui/FormError";
+import PermissionPrompt from "../../common/PermissionPrompt";
+import {
+  usePermissionPrompt,
+  type PermissionPromptReason,
+} from "../../../hooks/usePermissionPrompt";
 
 interface DeviceInfo {
   address: string;
@@ -30,10 +35,10 @@ const BluetoothApp: React.FC = () => {
   const [rssiFilter, setRssiFilter] = useState("");
   const [search, setSearch] = useState("");
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [pairingDevice, setPairingDevice] = useState<DeviceInfo | null>(null);
   const [pairedDevice, setPairedDevice] = useState("");
   const [knownDevices, setKnownDevices] = useState<string[]>([]);
+  const { prompt, requestPermission, resolvePermission } = usePermissionPrompt();
 
   useEffect(() => {
     const loadKnown = async () => {
@@ -61,11 +66,75 @@ const BluetoothApp: React.FC = () => {
     }
   };
 
+  const reasons: PermissionPromptReason[] = useMemo(
+    () => [
+      {
+        title: "Simulate device discovery",
+        description:
+          "We request Bluetooth access to populate this demo with a realistic list of nearby devices and signal strength.",
+      },
+      {
+        title: "Keep scans offline",
+        description:
+          "Scan results stay within your browser session. No device data leaves the portfolio environment.",
+      },
+    ],
+    [],
+  );
+
+  const permissionPreview = useMemo(
+    () => (
+      <div className="space-y-2 text-sm text-gray-200">
+        <div className="font-semibold text-white">Upcoming scan preview</div>
+        <div className="space-y-1 rounded border border-gray-700 bg-gray-800/60 p-2">
+          <div className="flex items-center justify-between text-xs">
+            <span>Wireless Headset</span>
+            <span>-64 dBm</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span>Pixel Watch</span>
+            <span>-70 dBm</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-gray-400">
+            <span>Printer-Office</span>
+            <span>-82 dBm</span>
+          </div>
+        </div>
+      </div>
+    ),
+    [],
+  );
+
   const handleScan = () => {
-    if (!permissionGranted) {
-      setShowPermissionModal(true);
-    } else {
-      loadData();
+    if (prompt) return;
+    const result = requestPermission({
+      permission: "bluetooth",
+      title: "Allow Bluetooth scan for this demo?",
+      summary:
+        "The Bluetooth app emulates a scan of nearby devices. We ask first so you can review what data is accessed.",
+      reasons,
+      preview: permissionPreview,
+      confirmLabel: "Allow scan",
+      declineLabel: "Not now",
+      onAllow: async () => {
+        setPermissionGranted(true);
+        setError("");
+        await loadData();
+      },
+      onDeny: () => {
+        setPermissionGranted(false);
+        setError("Permission denied.");
+      },
+    });
+
+    if (result.status === "blocked") {
+      setPermissionGranted(false);
+      setError("Permission recently dismissed. Try again later.");
+    }
+
+    if (result.status === "denied") {
+      setPermissionGranted(false);
+      setError("Bluetooth access remembered as denied.");
     }
   };
 
@@ -101,22 +170,24 @@ const BluetoothApp: React.FC = () => {
           Scan for Devices
         </button>
       </div>
-      <div className="mb-4 flex gap-2">
-        <input
-          type="number"
-          placeholder="Min RSSI"
-          value={rssiFilter}
-          onChange={(e) => setRssiFilter(e.target.value)}
-          className="w-1/3 rounded bg-gray-800 p-2 text-white"
-        />
-        <input
-          type="text"
-          placeholder="Search devices"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-2/3 rounded bg-gray-800 p-2 text-white"
-        />
-      </div>
+        <div className="mb-4 flex gap-2">
+          <input
+            type="number"
+            placeholder="Min RSSI"
+            value={rssiFilter}
+            onChange={(e) => setRssiFilter(e.target.value)}
+            className="w-1/3 rounded bg-gray-800 p-2 text-white"
+            aria-label="Minimum RSSI filter"
+          />
+          <input
+            type="text"
+            placeholder="Search devices"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-2/3 rounded bg-gray-800 p-2 text-white"
+            aria-label="Search devices"
+          />
+        </div>
       {error && <FormError className="mb-4 mt-0">{error}</FormError>}
       {pairedDevice && <p className="mb-2">Paired with: {pairedDevice}</p>}
       <div className="space-y-4 overflow-auto">
@@ -150,33 +221,18 @@ const BluetoothApp: React.FC = () => {
           </div>
         ))}
       </div>
-      {showPermissionModal && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-          <div className="w-64 rounded bg-gray-800 p-4 text-center">
-            <p className="mb-4">Allow access to Bluetooth devices?</p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setShowPermissionModal(false);
-                  setError("Permission denied.");
-                }}
-                className="w-[90px] rounded bg-gray-600 px-2 py-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setPermissionGranted(true);
-                  setShowPermissionModal(false);
-                  loadData();
-                }}
-                className="w-[90px] rounded bg-blue-600 px-2 py-1"
-              >
-                Allow
-              </button>
-            </div>
-          </div>
-        </div>
+      {prompt && (
+        <PermissionPrompt
+          open
+          permissionType={prompt.permission}
+          title={prompt.title}
+          summary={prompt.summary}
+          reasons={prompt.reasons}
+          preview={prompt.preview}
+          confirmLabel={prompt.confirmLabel}
+          declineLabel={prompt.declineLabel}
+          onDecision={resolvePermission}
+        />
       )}
       {pairingDevice && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">

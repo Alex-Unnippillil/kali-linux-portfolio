@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import PermissionPrompt from '../common/PermissionPrompt';
+import { usePermissionPrompt } from '../../hooks/usePermissionPrompt';
 import { getDb } from '../../utils/safeIDB';
+import type { PermissionPromptReason } from '../../hooks/usePermissionPrompt';
 
 interface ClipItem {
   id?: number;
@@ -31,6 +34,7 @@ function getDB() {
 
 const ClipboardManager: React.FC = () => {
   const [items, setItems] = useState<ClipItem[]>([]);
+  const { prompt, requestPermission, resolvePermission } = usePermissionPrompt();
 
   const loadItems = useCallback(async () => {
     try {
@@ -68,7 +72,7 @@ const ClipboardManager: React.FC = () => {
     loadItems();
   }, [loadItems]);
 
-  const handleCopy = useCallback(async () => {
+  const readClipboard = useCallback(async () => {
     try {
       const perm = await (navigator.permissions as any)?.query?.({
         name: 'clipboard-read' as any,
@@ -83,12 +87,61 @@ const ClipboardManager: React.FC = () => {
     }
   }, [items, addItem]);
 
+  const readReasons: PermissionPromptReason[] = useMemo(
+    () => [
+      {
+        title: 'Capture copies automatically',
+        description:
+          'Each time you copy text, the clipboard manager records it locally so you can quickly reuse it.',
+      },
+      {
+        title: 'Keep history on this device',
+        description:
+          'Clipboard entries never leave your browser — they are stored in IndexedDB for your private reference.',
+      },
+    ],
+    [],
+  );
+
+  const clipboardPreview = useMemo(
+    () => (
+      <div className="space-y-2 text-xs text-gray-200">
+        <div className="font-semibold text-white">Clipboard history</div>
+        <div className="rounded border border-gray-700 bg-gray-800/80 p-2">
+          Most recent copy will appear here automatically.
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800/40 p-2 text-gray-400">
+          Older snippets stay available for one-click reuse.
+        </div>
+      </div>
+    ),
+    [],
+  );
+
+  const handleCopy = useCallback(() => {
+    const result = requestPermission({
+      permission: 'clipboard-read',
+      title: 'Allow Clipboard Manager to read your clipboard?',
+      summary:
+        'Clipboard Manager watches for new copy events so your recent snippets stay available in one place.',
+      reasons: readReasons,
+      preview: clipboardPreview,
+      confirmLabel: 'Allow clipboard access',
+      declineLabel: 'Not now',
+      onAllow: () => readClipboard(),
+    });
+
+    if (result.status === 'blocked') {
+      console.info('Clipboard read permission prompt snoozed.');
+    }
+  }, [clipboardPreview, readClipboard, readReasons, requestPermission]);
+
   useEffect(() => {
     document.addEventListener('copy', handleCopy);
     return () => document.removeEventListener('copy', handleCopy);
   }, [handleCopy]);
 
-  const writeToClipboard = async (text: string) => {
+  const performClipboardWrite = useCallback(async (text: string) => {
     try {
       const perm = await (navigator.permissions as any)?.query?.({
         name: 'clipboard-write' as any,
@@ -98,7 +151,54 @@ const ClipboardManager: React.FC = () => {
     } catch (err) {
       console.error('Clipboard write failed:', err);
     }
-  };
+  }, []);
+
+  const writeReasons: PermissionPromptReason[] = useMemo(
+    () => [
+      {
+        title: 'Copy saved items back',
+        description:
+          'Selecting an entry needs permission to push that text back into your system clipboard instantly.',
+      },
+      {
+        title: 'Respect your privacy',
+        description:
+          'We never send clipboard contents to servers — writing happens locally for your selected item only.',
+      },
+    ],
+    [],
+  );
+
+  const handleWrite = useCallback(
+    (text: string) => {
+      if (!text) return;
+      const snippet = text.length > 140 ? `${text.slice(0, 140)}…` : text;
+      const preview = (
+        <div className="space-y-2 text-sm text-gray-200">
+          <div className="font-semibold text-white">Selected entry</div>
+          <div className="rounded border border-gray-700 bg-gray-800/80 p-3 text-left">
+            {snippet || 'Clipboard text will appear here.'}
+          </div>
+        </div>
+      );
+
+      const result = requestPermission({
+        permission: 'clipboard-write',
+        title: 'Allow Clipboard Manager to write to your clipboard?',
+        summary: 'We need clipboard write access to copy saved snippets back into your clipboard when you pick them.',
+        reasons: writeReasons,
+        preview,
+        confirmLabel: 'Copy to clipboard',
+        declineLabel: 'Cancel',
+        onAllow: () => performClipboardWrite(text),
+      });
+
+      if (result.status === 'blocked') {
+        console.info('Clipboard write permission prompt snoozed.');
+      }
+    },
+    [performClipboardWrite, requestPermission, writeReasons],
+  );
 
   const clearHistory = async () => {
     try {
@@ -126,12 +226,25 @@ const ClipboardManager: React.FC = () => {
           <li
             key={item.id}
             className="cursor-pointer hover:underline"
-            onClick={() => writeToClipboard(item.text)}
+            onClick={() => handleWrite(item.text)}
           >
             {item.text}
           </li>
         ))}
       </ul>
+      {prompt && (
+        <PermissionPrompt
+          open
+          permissionType={prompt.permission}
+          title={prompt.title}
+          summary={prompt.summary}
+          reasons={prompt.reasons}
+          preview={prompt.preview}
+          confirmLabel={prompt.confirmLabel}
+          declineLabel={prompt.declineLabel}
+          onDecision={resolvePermission}
+        />
+      )}
     </div>
   );
 };
