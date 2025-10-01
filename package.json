@@ -33,6 +33,7 @@
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
+    "@phosphor-icons/react": "^2.1.7",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
     "@vercel/analytics": "^1.5.0",
@@ -147,6 +148,11 @@
     "workbox-build": "7.1.1",
     "ws": "^8.18.0"
   },
+  "sideEffects": [
+    "**/*.css",
+    "**/*.module.css",
+    "**/*.worker.js"
+  ],
   "resolutions": {
     "source-map": "^0.7.6",
     "test-exclude": "7.0.1",

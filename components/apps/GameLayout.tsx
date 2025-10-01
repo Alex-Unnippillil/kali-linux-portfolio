@@ -8,7 +8,7 @@ import React, {
   useContext,
 } from 'react';
 import HelpOverlay from './HelpOverlay';
-import PerfOverlay from './Games/common/perf';
+import PerfOverlay from './Games/common/perf/PerfOverlay';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import {
   serialize as serializeRng,

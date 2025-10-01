@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import Phaser from 'phaser';
+import type * as PhaserTypes from 'phaser';
 import { GameState } from './gameLogic';
 import usePersistedState from '../../hooks/usePersistedState';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
@@ -15,15 +15,33 @@ interface PhaserMatterProps {
 const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   void getDailySeed;
   const containerRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<Phaser.Game | null>(null);
+  const gameRef = useRef<PhaserTypes.Game | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersRef = useRef(prefersReducedMotion);
   // Pause the game loop entirely when reduced motion is requested
+  const [phaserModule, setPhaserModule] = useState<unknown>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import('phaser')
+      .then((mod) => {
+        if (cancelled) return;
+        const resolved = mod.default ?? mod;
+        setPhaserModule(resolved);
+      })
+      .catch((error) => {
+        console.error('Failed to load Phaser runtime', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     prefersRef.current = prefersReducedMotion;
     if (!gameRef.current) return;
-    const scene = gameRef.current.scene.getScene('level') as Phaser.Scene & {
-      matter: Phaser.Physics.Matter.MatterPhysics;
+    const scene = gameRef.current.scene.getScene('level') as PhaserTypes.Scene & {
+      matter: PhaserTypes.Physics.Matter.MatterPhysics;
     };
     if (prefersReducedMotion) {
       scene.scene.pause();
@@ -125,20 +143,22 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   }, [waiting, setPadMap]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !phaserModule) return;
 
-    class LevelScene extends Phaser.Scene {
-      player!: Phaser.Physics.Matter.Image;
+    const PhaserRuntime = phaserModule as any;
+
+    class LevelScene extends PhaserRuntime.Scene {
+      player!: PhaserTypes.Physics.Matter.Image;
       declare gameState: GameState;
       lastGrounded = 0;
       coyoteTime = 100; // ms
       jumpBufferTimer = 0;
       buffered = false;
       padJumpWasPressed = false;
-      parallax: Phaser.GameObjects.Rectangle[] = [];
-      checkpointFlags: { body: MatterJS.BodyType; flag: Phaser.GameObjects.Rectangle }[] = [];
-      coins: { body: MatterJS.BodyType; sprite: Phaser.GameObjects.Rectangle }[] = [];
-      coinText!: Phaser.GameObjects.Text;
+      parallax: PhaserTypes.GameObjects.Rectangle[] = [];
+      checkpointFlags: { body: MatterJS.BodyType; flag: PhaserTypes.GameObjects.Rectangle }[] = [];
+      coins: { body: MatterJS.BodyType; sprite: PhaserTypes.GameObjects.Rectangle }[] = [];
+      coinText!: PhaserTypes.GameObjects.Text;
 
       constructor() {
         super('level');
@@ -161,7 +181,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
 
         // Parallax background layers
         data.parallaxLayers?.forEach((l: any) => {
-          const color = Phaser.Display.Color.HexStringToColor(l.color).color;
+          const color = PhaserRuntime.Display.Color.HexStringToColor(l.color).color;
           const rect = this.add
             .rectangle(
               data.bounds.width / 2,
@@ -346,8 +366,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       }
     }
 
-    const game = new Phaser.Game({
-      type: Phaser.AUTO,
+    const game = new PhaserRuntime.Game({
+      type: PhaserRuntime.AUTO,
       width: 800,
       height: 600,
       parent: containerRef.current,
@@ -365,8 +385,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     gameRef.current = game;
 
     const handleVisibility = () => {
-      const scene = game.scene.getScene('level') as Phaser.Scene & {
-        matter: Phaser.Physics.Matter.MatterPhysics;
+      const scene = game.scene.getScene('level') as PhaserTypes.Scene & {
+        matter: PhaserTypes.Physics.Matter.MatterPhysics;
       };
       if (document.visibilityState === 'hidden' || prefersRef.current) {
         scene.scene.pause();
@@ -386,7 +406,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       game.destroy(true);
       gameRef.current = null;
     };
-  }, []);
+  }, [phaserModule]);
 
   const bind = (key: Action) =>
     key === 'jump'
@@ -487,6 +507,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
             value={bufferWindow}
             onChange={(e) => setBufferWindow(Number(e.target.value))}
             className="mx-1"
+            aria-label="Adjust jump buffer window"
           />
           {bufferWindow}ms
         </div>

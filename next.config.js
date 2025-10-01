@@ -194,6 +194,27 @@ function configureWebpack(config, { isServer }) {
       mangleExports: false,
     };
   }
+  if (!isServer) {
+    const splitChunks = config.optimization?.splitChunks || {};
+    config.optimization = {
+      ...(config.optimization || {}),
+      splitChunks: {
+        ...splitChunks,
+        cacheGroups: {
+          ...(splitChunks.cacheGroups || {}),
+          phaser: {
+            test: /[\\/]node_modules[\\/]phaser[\\/]/,
+            name: 'phaser-runtime',
+            filename: 'static/chunks/phaser.[contenthash].js',
+            chunks: 'all',
+            enforce: true,
+            priority: 40,
+            reuseExistingChunk: true,
+          },
+        },
+      },
+    };
+  }
   return config;
 }
 
@@ -207,6 +228,11 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    modularizeImports: {
+      '@phosphor-icons/react': {
+        transform: '@phosphor-icons/react/dist/ssr/{{member}}',
+      },
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {

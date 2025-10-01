@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
-import { useSaveSlots } from './Games/common';
+import useSaveSlots from './Games/common/useSaveSlots';
 import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
@@ -457,6 +457,7 @@ const Snake = () => {
             step="10"
             value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
+            aria-label="Snake speed"
           />
         </div>
         <div className="mt-2 flex items-center space-x-2">
