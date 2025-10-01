@@ -1,4 +1,5 @@
 import React, { PureComponent } from 'react';
+import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
@@ -17,6 +18,25 @@ const areWorkspacesEqual = (next, prev) => {
         return true;
 };
 
+const areRunningAppsEqual = (next = [], prev = []) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+                const a = next[index];
+                const b = prev[index];
+                if (!b) return false;
+                if (
+                        a.id !== b.id ||
+                        a.title !== b.title ||
+                        a.icon !== b.icon ||
+                        a.isFocused !== b.isFocused ||
+                        a.isMinimized !== b.isMinimized
+                ) {
+                        return false;
+                }
+        }
+        return true;
+};
+
 export default class Navbar extends PureComponent {
         constructor() {
                 super();
@@ -25,7 +45,8 @@ export default class Navbar extends PureComponent {
                         applicationsMenuOpen: false,
                         placesMenuOpen: false,
                         workspaces: [],
-                        activeWorkspace: 0
+                        activeWorkspace: 0,
+                        runningApps: []
                 };
         }
 
@@ -47,20 +68,96 @@ export default class Navbar extends PureComponent {
                 const { workspaces, activeWorkspace } = detail;
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
+                const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
 
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
+                        const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
 
-                        if (!workspacesChanged && !activeChanged) {
+                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
                                 return null;
                         }
 
                         return {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
-                                activeWorkspace: nextActiveWorkspace
+                                activeWorkspace: nextActiveWorkspace,
+                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
                         };
                 });
+        };
+
+        dispatchTaskbarCommand = (detail) => {
+                if (typeof window === 'undefined') return;
+                window.dispatchEvent(new CustomEvent('taskbar-command', { detail }));
+        };
+
+        handleAppButtonClick = (app) => {
+                const detail = { appId: app.id, action: 'toggle' };
+                this.dispatchTaskbarCommand(detail);
+        };
+
+        handleAppButtonKeyDown = (event, app) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        this.handleAppButtonClick(app);
+                }
+        };
+
+        renderRunningApps = () => {
+                const { runningApps } = this.state;
+                if (!runningApps.length) return null;
+
+                return (
+                        <ul
+                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                role="list"
+                                aria-label="Open applications"
+                        >
+                                {runningApps.map((app) => (
+                                        <li key={app.id} className="flex">
+                                                {this.renderRunningAppButton(app)}
+                                        </li>
+                                ))}
+                        </ul>
+                );
+        };
+
+        renderRunningAppButton = (app) => {
+                const isActive = !app.isMinimized;
+                const isFocused = app.isFocused && isActive;
+
+                return (
+                        <button
+                                type="button"
+                                aria-label={app.title}
+                                aria-pressed={isActive}
+                                data-context="taskbar"
+                                data-app-id={app.id}
+                                data-active={isActive ? 'true' : 'false'}
+                                onClick={() => this.handleAppButtonClick(app)}
+                                onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
+                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                        >
+                                <span className="relative inline-flex items-center justify-center">
+                                        <Image
+                                                src={app.icon}
+                                                alt=""
+                                                width={28}
+                                                height={28}
+                                                className="h-6 w-6"
+                                        />
+                                        {isActive && (
+                                                <span
+                                                        aria-hidden="true"
+                                                        data-testid="running-indicator"
+                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
+                                                />
+                                        )}
+                                </span>
+                                <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                        </button>
+                );
         };
 
         handleWorkspaceSelect = (workspaceId) => {
@@ -104,6 +201,7 @@ export default class Navbar extends PureComponent {
                                                                 onSelect={this.handleWorkspaceSelect}
                                                         />
                                                 )}
+                                                {this.renderRunningApps()}
                                                 <PerformanceGraph />
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">

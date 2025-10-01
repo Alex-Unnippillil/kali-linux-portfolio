@@ -16,7 +16,6 @@ import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
-import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
@@ -405,6 +404,19 @@ export class Desktop extends Component {
                 openWindows,
             };
         });
+    };
+
+    getRunningAppSummaries = () => {
+        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
+        return apps
+            .filter((app) => closed_windows[app.id] === false)
+            .map((app) => ({
+                id: app.id,
+                title: app.title,
+                icon: app.icon.replace('./', '/'),
+                isFocused: Boolean(focused_windows[app.id]),
+                isMinimized: Boolean(minimized_windows[app.id]),
+            }));
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -797,6 +809,7 @@ export class Desktop extends Component {
         const detail = {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
+            runningApps: this.getRunningAppSummaries(),
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
@@ -808,6 +821,7 @@ export class Desktop extends Component {
         if (typeof window !== 'undefined') {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
+            window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
             this.broadcastWorkspaceState();
         }
 
@@ -847,6 +861,8 @@ export class Desktop extends Component {
         if (
             prevState.activeWorkspace !== this.state.activeWorkspace ||
             prevState.closed_windows !== this.state.closed_windows ||
+            prevState.focused_windows !== this.state.focused_windows ||
+            prevState.minimized_windows !== this.state.minimized_windows ||
             prevState.workspaces !== this.state.workspaces
         ) {
             this.broadcastWorkspaceState();
@@ -863,10 +879,41 @@ export class Desktop extends Component {
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
+            window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
     }
+
+    handleExternalTaskbarCommand = (event) => {
+        const detail = event?.detail || {};
+        const appId = detail.appId;
+        const action = detail.action || 'toggle';
+        if (!appId || !this.validAppIds.has(appId)) return;
+
+        switch (action) {
+            case 'minimize':
+                if (!this.state.minimized_windows[appId]) {
+                    this.hasMinimised(appId);
+                }
+                break;
+            case 'focus':
+                this.focus(appId);
+                break;
+            case 'open':
+                this.openApp(appId);
+                break;
+            case 'toggle':
+            default:
+                if (this.state.minimized_windows[appId]) {
+                    this.openApp(appId);
+                } else if (this.state.focused_windows[appId]) {
+                    this.hasMinimised(appId);
+                } else {
+                    this.openApp(appId);
+                }
+        }
+    };
 
     attachIconKeyboardListeners = () => {
         if (this.iconKeyListenerAttached || typeof document === 'undefined') return;
@@ -1800,16 +1847,6 @@ export class Desktop extends Component {
 
                 {/* Background Image */}
                 <BackgroundImage />
-
-                {/* Taskbar */}
-                <Taskbar
-                    apps={apps}
-                    closed_windows={this.state.closed_windows}
-                    minimized_windows={this.state.minimized_windows}
-                    focused_windows={this.state.focused_windows}
-                    openApp={this.openApp}
-                    minimize={this.hasMinimised}
-                />
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
