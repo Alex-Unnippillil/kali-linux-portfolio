@@ -105,6 +105,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const [permissionNeeded, setPermissionNeeded] = useState(false);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -123,15 +124,35 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (ok) getRecentDirs().then(setRecent);
   }, []);
 
+  const interpretAccessError = useCallback((error, fallback) => {
+    if (!error) {
+      return { message: fallback, requiresPermission: false };
+    }
+    const name = error?.name;
+    if (name === 'AbortError') {
+      return { message: 'Folder selection was cancelled.', requiresPermission: false };
+    }
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      return {
+        message: 'Permission to access this location was denied. Use "Grant access" to try again.',
+        requiresPermission: true,
+      };
+    }
+    return { message: fallback, requiresPermission: false };
+  }, []);
+
   useEffect(() => {
     if (!opfsSupported || !root) return;
     (async () => {
       setUnsavedDir(await getDir('unsaved'));
       setDirHandle(root);
       setPath([{ name: root.name || '/', handle: root }]);
-      await readDir(root);
+      const success = await readDir(root);
+      if (success) {
+        setPermissionNeeded(false);
+      }
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -157,24 +178,46 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const openFolder = async () => {
     try {
       const handle = await window.showDirectoryPicker();
+      const success = await readDir(handle);
+      if (!success) return;
       setDirHandle(handle);
       addRecentDir(handle);
       setRecent(await getRecentDirs());
       setPath([{ name: handle.name || '/', handle }]);
-      await readDir(handle);
+      setPermissionNeeded(false);
       setLocationError(null);
-    } catch {}
+    } catch (error) {
+      const { message, requiresPermission } = interpretAccessError(
+        error,
+        'Unable to open the selected folder.',
+      );
+      setPermissionNeeded(requiresPermission);
+      setLocationError(message);
+    }
   };
 
   const openRecent = async (entry) => {
     try {
       const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') return;
+      if (perm !== 'granted') {
+        setPermissionNeeded(true);
+        setLocationError('Permission is required to open this folder again.');
+        return;
+      }
+      const success = await readDir(entry.handle);
+      if (!success) return;
       setDirHandle(entry.handle);
       setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
+      setPermissionNeeded(false);
       setLocationError(null);
-    } catch {}
+    } catch (error) {
+      const { message, requiresPermission } = interpretAccessError(
+        error,
+        `Unable to open ${entry.name}.`,
+      );
+      setPermissionNeeded(requiresPermission);
+      setLocationError(message);
+    }
   };
 
   const openFile = async (file) => {
@@ -191,16 +234,32 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setContent(text);
   };
 
-  const readDir = useCallback(async (handle) => {
-    const ds = [];
-    const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
-    }
-    setDirs(ds);
-    setFiles(fs);
-  }, []);
+  const readDir = useCallback(
+    async (handle) => {
+      const ds = [];
+      const fs = [];
+      try {
+        for await (const [name, h] of handle.entries()) {
+          if (h.kind === 'file') fs.push({ name, handle: h });
+          else if (h.kind === 'directory') ds.push({ name, handle: h });
+        }
+        setDirs(ds);
+        setFiles(fs);
+        return true;
+      } catch (error) {
+        setDirs([]);
+        setFiles([]);
+        const { message, requiresPermission } = interpretAccessError(
+          error,
+          'Unable to read the selected location.',
+        );
+        setPermissionNeeded(requiresPermission);
+        setLocationError(message);
+        return false;
+      }
+    },
+    [interpretAccessError],
+  );
 
   useEffect(() => {
     const requested =
@@ -217,8 +276,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           if (!active) return;
           setDirHandle(root);
           setPath([{ name: root.name || '/', handle: root }]);
-          await readDir(root);
-          if (active) setLocationError(null);
+          const ok = await readDir(root);
+          if (ok && active) {
+            setPermissionNeeded(false);
+            setLocationError(null);
+          }
           return;
         }
         let current = root;
@@ -234,8 +296,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         if (!active) return;
         setDirHandle(current);
         setPath(crumbs);
-        await readDir(current);
-        if (active) setLocationError(null);
+        const ok = await readDir(current);
+        if (ok && active) {
+          setPermissionNeeded(false);
+          setLocationError(null);
+        }
       } catch {
         if (active) setLocationError(`Unable to open ${requested}`);
       }
@@ -250,8 +315,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);
     setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
-    setLocationError(null);
+    const ok = await readDir(dir.handle);
+    if (ok) {
+      setPermissionNeeded(false);
+      setLocationError(null);
+    }
   };
 
   const navigateTo = async (index) => {
@@ -259,8 +327,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (!target || !target.handle) return;
     setDirHandle(target.handle);
     setPath(path.slice(0, index + 1));
-    await readDir(target.handle);
-    setLocationError(null);
+    const ok = await readDir(target.handle);
+    if (ok) {
+      setPermissionNeeded(false);
+      setLocationError(null);
+    }
   };
 
   const goBack = async () => {
@@ -270,8 +341,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setPath(newPath);
     if (prev?.handle) {
       setDirHandle(prev.handle);
-      await readDir(prev.handle);
-      setLocationError(null);
+      const ok = await readDir(prev.handle);
+      if (ok) {
+        setPermissionNeeded(false);
+        setLocationError(null);
+      }
     }
   };
 
@@ -282,7 +356,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       await writable.write(content);
       await writable.close();
       if (opfsSupported) await removeBuffer(currentFile.name);
-    } catch {}
+    } catch (error) {
+      const { message, requiresPermission } = interpretAccessError(
+        error,
+        `Unable to save ${currentFile.name}.`,
+      );
+      setPermissionNeeded(requiresPermission);
+      setLocationError(message);
+    }
   };
 
   const onChange = (e) => {
@@ -315,7 +396,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Choose a file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +417,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -348,10 +436,46 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     );
   }
 
+  const hasEntries = dirs.length > 0 || files.length > 0;
+  const emptyState = (() => {
+    if (permissionNeeded) {
+      return {
+        icon: '🔐',
+        title: 'Permission required',
+        description:
+          'The Files app needs access to one of your folders. Grant access again to reconnect and list its contents.',
+        action: true,
+      };
+    }
+    if (!dirHandle) {
+      return {
+        icon: '📂',
+        title: 'Choose a workspace',
+        description:
+          'Select a folder to browse its files. You control which directories are shared with this demo.',
+        action: true,
+      };
+    }
+    if (!hasEntries) {
+      return {
+        icon: '🗂️',
+        title: 'This folder is empty',
+        description:
+          'Add files or subdirectories to this location to see them listed here. Changes stay inside your browser sandbox.',
+        action: true,
+      };
+    }
+    return null;
+  })();
+
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+        <button
+          onClick={openFolder}
+          className="px-2 py-1 bg-black bg-opacity-50 rounded"
+          title="Grant this Files app access to a folder using the browser&apos;s Origin Private File System (OPFS)."
+        >
           Open Folder
         </button>
         {path.length > 1 && (
@@ -361,7 +485,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         )}
         <Breadcrumbs path={path} onNavigate={navigateTo} />
         {locationError && (
-          <div className="text-xs text-red-300" role="status">
+          <div className="text-xs text-red-300" role="alert" aria-live="assertive">
             {locationError}
           </div>
         )}
@@ -370,6 +494,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Save
           </button>
         )}
+      </div>
+      <div className="px-3 py-2 text-xs text-gray-200 bg-ub-warm-grey bg-opacity-20">
+        {'Files opened here are cached with the browser\'s Origin Private File System (OPFS). Reopen the same folder to pick up unsaved changes.'}
       </div>
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
@@ -405,16 +532,47 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           ))}
         </div>
         <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
-          <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
+          {currentFile ? (
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
             />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 px-6">
+              {emptyState ? (
+                <>
+                  <div className="text-5xl" aria-hidden="true">
+                    {emptyState.icon}
+                  </div>
+                  <h2 className="text-lg font-semibold">{emptyState.title}</h2>
+                  <p className="text-sm text-gray-200 max-w-xs">{emptyState.description}</p>
+                  {emptyState.action && (
+                    <button
+                      onClick={openFolder}
+                      className="px-3 py-1.5 bg-black bg-opacity-50 rounded"
+                    >
+                      Grant access
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-300 max-w-xs">
+                    OPFS keeps a private copy of any edits inside this browser so your real files stay untouched until you save.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-200">Select a file from the sidebar to preview its contents.</p>
+              )}
+            </div>
+          )}
+            <div className="p-2 border-t border-gray-600">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                className="px-1 py-0.5 text-black"
+                aria-label="Search files"
+              />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
