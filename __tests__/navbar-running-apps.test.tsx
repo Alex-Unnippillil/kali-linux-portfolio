@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
+import { getPinnedAppIds, pinApp, unpinApp } from '../utils/taskbar';
 
 jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
 jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
@@ -32,10 +33,18 @@ describe('Navbar running apps tray', () => {
 
   beforeEach(() => {
     dispatchSpy = jest.spyOn(window, 'dispatchEvent');
+    window.localStorage.clear();
+    act(() => {
+      getPinnedAppIds().forEach((id) => unpinApp(id));
+    });
   });
 
   afterEach(() => {
     dispatchSpy.mockRestore();
+    act(() => {
+      getPinnedAppIds().forEach((id) => unpinApp(id));
+    });
+    window.localStorage.clear();
   });
 
   it('dispatches a taskbar command when clicking an open app', () => {
@@ -86,5 +95,18 @@ describe('Navbar running apps tray', () => {
     expect(button).toHaveAttribute('aria-pressed', 'false');
     expect(button).toHaveAttribute('data-active', 'false');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
+  });
+
+  it('renders pinned apps even when not running', () => {
+    act(() => {
+      pinApp('terminal');
+    });
+
+    render(<Navbar />);
+
+    const button = screen.getByRole('button', { name: /terminal/i });
+    expect(button).toHaveAttribute('data-pinned', 'true');
+    expect(button).toHaveAttribute('data-running', 'false');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
   });
 });
