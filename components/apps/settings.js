@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import { contrastRatio, getNearestAccessibleColor } from '../../utils/colorAccessibility';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
-    const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
@@ -16,45 +16,34 @@ export function Settings() {
         setWallpaper(name);
     };
 
-    let hexToRgb = (hex) => {
-        hex = hex.replace('#', '');
-        let bigint = parseInt(hex, 16);
-        return {
-            r: (bigint >> 16) & 255,
-            g: (bigint >> 8) & 255,
-            b: bigint & 255,
-        };
-    };
-
-    let luminance = ({ r, g, b }) => {
-        let a = [r, g, b].map(v => {
-            v = v / 255;
-            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-        });
-        return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
-    };
-
-    const contrastRatio = useCallback((hex1, hex2) => {
-        let l1 = luminance(hexToRgb(hex1)) + 0.05;
-        let l2 = luminance(hexToRgb(hex2)) + 0.05;
-        return l1 > l2 ? l1 / l2 : l2 / l1;
-    }, []);
-
     const accentText = useCallback(() => {
         return contrastRatio(accent, '#000000') > contrastRatio(accent, '#ffffff') ? '#000000' : '#ffffff';
-    }, [accent, contrastRatio]);
+    }, [accent]);
+
+    const contrast = useMemo(() => contrastRatio(accent, accentText()), [accent, accentText]);
 
     useEffect(() => {
-        let raf = requestAnimationFrame(() => {
-            let ratio = contrastRatio(accent, accentText());
-            setContrast(ratio);
+        const raf = requestAnimationFrame(() => {
             if (liveRegion.current) {
-                const msg = `Contrast ratio ${ratio.toFixed(2)}:1 ${ratio >= 4.5 ? 'passes' : 'fails'}`;
-                liveRegion.current.textContent = msg;
+                if (contrast < 4.5) {
+                    liveRegion.current.textContent = `Warning: accent color contrast ${contrast.toFixed(2)} to 1 fails WCAG AA.`;
+                } else {
+                    liveRegion.current.textContent = '';
+                }
             }
         });
         return () => cancelAnimationFrame(raf);
-    }, [accent, accentText, contrastRatio]);
+    }, [contrast]);
+
+    const wcagStatus = useMemo(() => ({
+        aa: contrast >= 4.5,
+        aaa: contrast >= 7,
+    }), [contrast]);
+
+    const handleFixAccent = useCallback(() => {
+        const fixed = getNearestAccessibleColor(accent, accentText(), 4.5);
+        setAccent(fixed);
+    }, [accent, accentText, setAccent]);
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
@@ -83,8 +72,10 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="toggle-kali-wallpaper" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="toggle-kali-wallpaper"
+                        aria-label="Toggle Kali gradient wallpaper"
                         type="checkbox"
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
@@ -98,21 +89,40 @@ export function Settings() {
                     Your previous wallpaper selection is preserved for when you turn this off.
                 </p>
             )}
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
-                <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
-                    {ACCENT_OPTIONS.map((c) => (
-                        <button
-                            key={c}
-                            aria-label={`select-accent-${c}`}
-                            role="radio"
-                            aria-checked={accent === c}
-                            onClick={() => setAccent(c)}
-                            className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                            style={{ backgroundColor: c }}
-                        />
-                    ))}
+            <div className="flex flex-col items-center my-4">
+                <div className="flex items-center mb-2">
+                    <label className="mr-2 text-ubt-grey">Accent:</label>
+                    <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+                        {ACCENT_OPTIONS.map((c) => (
+                            <button
+                                key={c}
+                                aria-label={`select-accent-${c}`}
+                                role="radio"
+                                aria-checked={accent === c}
+                                onClick={() => setAccent(c)}
+                                className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                                style={{ backgroundColor: c }}
+                            />
+                        ))}
+                    </div>
                 </div>
+                <p className="text-sm text-ubt-grey text-center">
+                    Contrast {contrast.toFixed(2)}:1 —
+                    <span className={`ml-1 ${wcagStatus.aa ? 'text-green-400' : 'text-red-400'}`}>
+                        WCAG AA {wcagStatus.aa ? 'pass' : 'fail'}
+                    </span>
+                    <span className={`ml-2 ${wcagStatus.aaa ? 'text-green-400' : 'text-red-400'}`}>
+                        WCAG AAA {wcagStatus.aaa ? 'pass' : 'fail'}
+                    </span>
+                </p>
+                <button
+                    type="button"
+                    onClick={handleFixAccent}
+                    disabled={wcagStatus.aa}
+                    className={`mt-2 px-3 py-1 rounded ${wcagStatus.aa ? 'bg-ubt-grey/30 text-ubt-grey cursor-not-allowed' : 'bg-ub-orange text-white'}`}
+                >
+                    Fix color
+                </button>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Density:</label>
@@ -126,8 +136,10 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="font-scale-slider">Font Size:</label>
                 <input
+                    id="font-scale-slider"
+                    aria-label="Adjust font size"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -138,8 +150,10 @@ export function Settings() {
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="toggle-reduced-motion" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="toggle-reduced-motion"
+                        aria-label="Toggle reduced motion"
                         type="checkbox"
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
@@ -149,8 +163,10 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="toggle-large-hit-areas" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="toggle-large-hit-areas"
+                        aria-label="Toggle large hit areas"
                         type="checkbox"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
@@ -160,8 +176,10 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="toggle-high-contrast" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="toggle-high-contrast"
+                        aria-label="Toggle high contrast mode"
                         type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
@@ -171,8 +189,10 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="toggle-allow-network" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="toggle-allow-network"
+                        aria-label="Toggle allow network requests"
                         type="checkbox"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
@@ -182,8 +202,10 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="toggle-haptics" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="toggle-haptics"
+                        aria-label="Toggle haptics"
                         type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
@@ -193,8 +215,10 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label htmlFor="toggle-pong-spin" className="mr-2 text-ubt-grey flex items-center">
                     <input
+                        id="toggle-pong-spin"
+                        aria-label="Toggle Pong spin"
                         type="checkbox"
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
@@ -218,7 +242,7 @@ export function Settings() {
                     <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-green-400' : 'text-red-400'}`}>
                         {`Contrast ${contrast.toFixed(2)}:1 ${contrast >= 4.5 ? 'Pass' : 'Fail'}`}
                     </p>
-                    <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
+                    <span ref={liveRegion} role="alert" aria-live="assertive" className="sr-only"></span>
                 </div>
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
@@ -288,6 +312,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
