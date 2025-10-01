@@ -99,6 +99,8 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- Husky pre-commit hooks run targeted linting, tests, type checks, and Pa11y scans. See [docs/git-hooks.md](./docs/git-hooks.md)
+  for install and bypass instructions, or run `yarn hook:check` to reproduce the sequence manually.
 
 ---
 

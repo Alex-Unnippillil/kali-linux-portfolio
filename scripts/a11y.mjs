@@ -6,9 +6,45 @@ const { defaults = {}, urls = [], scenarios = [{}] } = JSON.parse(
   fs.readFileSync(configPath),
 );
 
+const normalizeUrl = (baseUrl, url) => {
+  if (!baseUrl) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return `${baseUrl.replace(/\/$/, '')}${parsed.pathname}${parsed.search ?? ''}`;
+  } catch {
+    const formatted = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl.replace(/\/$/, '')}${formatted}`;
+  }
+};
+
+const resolveUrls = () => {
+  if (process.env.A11Y_URLS) {
+    try {
+      const parsed = JSON.parse(process.env.A11Y_URLS);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch {
+      // fall through to other resolution strategies
+    }
+  }
+
+  const baseUrl = process.env.BASE_URL;
+  if (baseUrl) {
+    return urls.map((url) => normalizeUrl(baseUrl, url));
+  }
+
+  return urls;
+};
+
 (async () => {
   let hasErrors = false;
-  for (const url of urls) {
+  const resolvedUrls = resolveUrls();
+
+  for (const url of resolvedUrls) {
     for (const scenario of scenarios) {
       const options = { ...defaults, ...scenario };
       const label = scenario.label ? ` (${scenario.label})` : '';
