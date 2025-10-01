@@ -6,6 +6,9 @@ const compat = new FlatCompat();
 const config = [
   { ignores: ['components/apps/Chrome/index.tsx'] },
   {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+  },
+  {
     plugins: {
       'no-top-level-window': noTopLevelWindow,
     },
@@ -27,6 +30,12 @@ const config = [
       'jsx-a11y/control-has-associated-label': 'error',
     },
   }),
+  {
+    files: ['pages/_app.jsx'],
+    rules: {
+      '@next/next/no-before-interactive-script-outside-document': 'off',
+    },
+  },
 ];
 
 export default config;
