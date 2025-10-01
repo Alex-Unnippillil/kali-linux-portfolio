@@ -1,7 +1,18 @@
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  fireEvent,
+  waitFor,
+  act,
+  within,
+} from '@testing-library/react';
 import HashcatApp, { detectHashType } from '../components/apps/hashcat';
 import progressInfo from '../components/apps/hashcat/progress.json';
+import {
+  applyPresetChanges,
+  curatedPresets,
+  generatePresetDiff,
+} from '../components/apps/hashcat/Presets';
 
 describe('HashcatApp', () => {
   it('auto-detects hash types', () => {
@@ -126,5 +137,64 @@ describe('HashcatApp', () => {
     expect(
       getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
     ).toBeInTheDocument();
+  });
+
+  it('computes diffs only for changed preset values', () => {
+    const diff = generatePresetDiff(
+      { hashType: '100', mask: '?d?d', wordlist: 'rockyou' },
+      { hashType: '0', mask: '?d?d', wordlist: '' }
+    );
+    expect(diff).toEqual([
+      { field: 'hashType', currentValue: '0', nextValue: '100' },
+      { field: 'wordlist', currentValue: '', nextValue: 'rockyou' },
+    ]);
+  });
+
+  it('applies preset changes without touching unspecified fields', () => {
+    const setters = {
+      hashType: jest.fn(),
+      attackMode: jest.fn(),
+      mask: jest.fn(),
+      ruleSet: jest.fn(),
+    };
+    applyPresetChanges(
+      { hashType: '3200', mask: '?d?d' },
+      setters
+    );
+    expect(setters.hashType).toHaveBeenCalledWith('3200');
+    expect(setters.mask).toHaveBeenCalledWith('?d?d');
+    expect(setters.attackMode).not.toHaveBeenCalled();
+    expect(setters.ruleSet).not.toHaveBeenCalled();
+  });
+
+  it('requires preview before applying presets and updates relevant fields', () => {
+    const { getByText, getByLabelText } = render(<HashcatApp />);
+    const preset = curatedPresets.find((p) => p.id === 'sha1-pin-bruteforce');
+    if (!preset) {
+      throw new Error('Expected preset not found');
+    }
+    const card = getByText(preset.name).closest('li');
+    expect(card).toBeTruthy();
+    if (!card) return;
+    const applyButton = within(card).getByRole('button', {
+      name: /apply preset/i,
+    });
+    const previewButton = within(card).getByRole('button', {
+      name: /preview diff/i,
+    });
+    expect(applyButton).toBeDisabled();
+    fireEvent.click(previewButton);
+    expect(applyButton).not.toBeDisabled();
+    fireEvent.click(applyButton);
+    expect((getByLabelText('Hash Type:') as HTMLSelectElement).value).toBe(
+      preset.changes.hashType
+    );
+    expect((getByLabelText('Attack Mode:') as HTMLSelectElement).value).toBe(
+      preset.changes.attackMode
+    );
+    expect((getByLabelText('Mask') as HTMLInputElement).value).toBe(
+      preset.changes.mask
+    );
+    expect((getByLabelText('Wordlist:') as HTMLSelectElement).value).toBe('');
   });
 });

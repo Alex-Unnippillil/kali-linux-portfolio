@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import Presets, { applyPresetChanges } from './Presets';
 
 export const hashTypes = [
   {
@@ -302,6 +303,23 @@ function HashcatApp() {
     attackModes.find((m) => m.value === attackMode)?.label ||
     attackModes[0].label;
   const info = { ...progressInfo, mode: selectedMode };
+  const presetConfig = {
+    hashType,
+    attackMode,
+    mask,
+    ruleSet,
+    wordlist,
+  };
+
+  const handleApplyPreset = (changes) => {
+    applyPresetChanges(changes, {
+      hashType: setHashType,
+      attackMode: setAttackMode,
+      mask: setMask,
+      ruleSet: setRuleSet,
+      wordlist: setWordlist,
+    });
+  };
 
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
@@ -390,6 +408,7 @@ function HashcatApp() {
           ))}
         </select>
       </div>
+      <Presets currentConfig={presetConfig} onApplyPreset={handleApplyPreset} />
       {showMask && (
         <div>
           <label className="block" htmlFor="mask-input">
