@@ -19,6 +19,8 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
   return (
     <TabbedWindow
       className="h-full w-full"
+      appId="terminal-tabs"
+      title="Terminal"
       initialTabs={[createTab()]}
       onNewTab={createTab}
     />

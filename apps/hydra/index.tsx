@@ -19,7 +19,12 @@ const HydraPreview: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <TabbedWindow initialTabs={[createTab()]} onNewTab={createTab} />
+      <TabbedWindow
+        appId="hydra"
+        title="Hydra Session Planner"
+        initialTabs={[createTab()]}
+        onNewTab={createTab}
+      />
       <StrategyTrainer />
     </div>
   );

@@ -7,12 +7,26 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import useFocusTrap from '../../hooks/useFocusTrap';
+import usePersistentState from '../../hooks/usePersistentState';
+import WindowControls from './WindowControls';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
   const half = Math.floor((max - 1) / 2);
   return `${text.slice(0, half)}…${text.slice(text.length - half)}`;
 }
+
+const MIN_ZOOM = 0.75;
+const MAX_ZOOM = 1.5;
+const ZOOM_STEP = 0.1;
+const ZOOM_EPSILON = 1e-3;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const roundTo = (value: number, precision = 2) =>
+  Math.round(value * 10 ** precision) / 10 ** precision;
+const isValidZoom = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= MIN_ZOOM && value <= MAX_ZOOM;
 
 export interface TabDefinition {
   id: string;
@@ -29,6 +43,10 @@ interface TabbedWindowProps {
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
+  appId?: string;
+  title?: string;
+  onCloseWindow?: () => void;
+  onMinimizeWindow?: () => void;
 }
 
 interface TabContextValue {
@@ -45,6 +63,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   onNewTab,
   onTabsChange,
   className = '',
+  appId,
+  title,
+  onCloseWindow,
+  onMinimizeWindow,
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
@@ -58,6 +80,102 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const zoomStorageKey = useMemo(() => `app-zoom:${appId ?? 'default'}`, [appId]);
+  const [zoom, setZoomState] = usePersistentState<number>(
+    zoomStorageKey,
+    1,
+    isValidZoom,
+  );
+  const setZoom = useCallback(
+    (value: React.SetStateAction<number>) => {
+      setZoomState((prev) => {
+        const next =
+          typeof value === 'function' ? (value as (val: number) => number)(prev) : value;
+        const rounded = roundTo(next);
+        return clamp(rounded, MIN_ZOOM, MAX_ZOOM);
+      });
+    },
+    [setZoomState],
+  );
+  const handleZoomIn = useCallback(() => setZoom((prev) => prev + ZOOM_STEP), [setZoom]);
+  const handleZoomOut = useCallback(() => setZoom((prev) => prev - ZOOM_STEP), [setZoom]);
+  const handleZoomReset = useCallback(() => setZoom(1), [setZoom]);
+  const canZoomIn = zoom < MAX_ZOOM - ZOOM_EPSILON;
+  const canZoomOut = zoom > MIN_ZOOM + ZOOM_EPSILON;
+  const canResetZoom = Math.abs(zoom - 1) > ZOOM_EPSILON;
+  const zoomStyle = useMemo<React.CSSProperties | undefined>(() => {
+    if (Math.abs(zoom - 1) <= ZOOM_EPSILON) return undefined;
+    const inverse = 1 / zoom;
+    return {
+      transform: `scale(${zoom})`,
+      transformOrigin: 'top left',
+      width: `${inverse * 100}%`,
+      height: `${inverse * 100}%`,
+    };
+  }, [zoom]);
+  const toggleMaximized = useCallback(() => {
+    setIsMaximized((prev) => !prev);
+  }, []);
+  const exitFullscreen = useCallback(async () => {
+    if (typeof document === 'undefined') return;
+    const node = containerRef.current;
+    if (!node) return;
+    if (document.fullscreenElement === node && document.exitFullscreen) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+  const handleFullscreenToggle = useCallback(async () => {
+    if (typeof document === 'undefined') return;
+    const node = containerRef.current;
+    if (!node) return;
+    if (document.fullscreenElement === node) {
+      await exitFullscreen();
+    } else if (node.requestFullscreen) {
+      try {
+        await node.requestFullscreen();
+        node.focus({ preventScroll: true });
+      } catch {
+        // ignore failures to enter fullscreen
+      }
+    }
+  }, [exitFullscreen]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleChange = () => {
+      const node = containerRef.current;
+      const active = !!node && document.fullscreenElement === node;
+      setIsFullscreen(active);
+      if (active) {
+        node?.focus({ preventScroll: true });
+      }
+    };
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        const node = containerRef.current;
+        if (node && document.fullscreenElement === node) {
+          event.preventDefault();
+          document.exitFullscreen?.().catch(() => {});
+        }
+      }
+    };
+    document.addEventListener('fullscreenchange', handleChange);
+    document.addEventListener('keydown', handleKeydown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleChange);
+      document.removeEventListener('keydown', handleKeydown);
+      void exitFullscreen();
+    };
+  }, [exitFullscreen]);
+
+  useFocusTrap(containerRef, isFullscreen);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -127,40 +245,75 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
 
-  const handleDragStart = (index: number) => (e: React.DragEvent) => {
-    dragSrc.current = index;
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (index: number) => (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (index: number) => (e: React.DragEvent) => {
-    e.preventDefault();
-    const src = dragSrc.current;
-    if (src === null || src === index) return;
-    updateTabs((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(src, 1);
-      next.splice(index, 0, moved);
-      return next;
-    });
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.ctrlKey && e.key.toLowerCase() === 'w') {
-      e.preventDefault();
-      closeTab(activeId);
+  const activeTab = useMemo(() => tabs.find((t) => t.id === activeId), [tabs, activeId]);
+  const activeTabId = activeTab?.id;
+  const canCloseActiveTab = Boolean(activeTab && activeTab.closable !== false);
+  const handleClose = useCallback(() => {
+    if (onCloseWindow) {
+      onCloseWindow();
       return;
     }
-    if (e.ctrlKey && e.key.toLowerCase() === 't') {
+    if (!activeTabId || !canCloseActiveTab) return;
+    closeTab(activeTabId);
+  }, [activeTabId, canCloseActiveTab, closeTab, onCloseWindow]);
+  const showCloseButton = Boolean(onCloseWindow || canCloseActiveTab);
+  const closeDisabled = !onCloseWindow && !canCloseActiveTab;
+  const activeTitle = activeTab?.title;
+  const headerTitle = useMemo(
+    () => title ?? activeTitle ?? 'Application',
+    [title, activeTitle],
+  );
+  const rootClassName = useMemo(
+    () => `flex h-full w-full flex-col ${className}`.trim(),
+    [className],
+  );
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const ctrlOrMeta = e.ctrlKey || e.metaKey;
+    if (ctrlOrMeta && !e.altKey) {
+      const key = e.key;
+      if (key === '0' || key === ')') {
+        e.preventDefault();
+        handleZoomReset();
+        return;
+      }
+      if (key === '-' || key === '_') {
+        e.preventDefault();
+        handleZoomOut();
+        return;
+      }
+      if (key === '=' || key === '+') {
+        e.preventDefault();
+        handleZoomIn();
+        return;
+      }
+    }
+    if (e.key === 'F11') {
+      e.preventDefault();
+      void handleFullscreenToggle();
+      return;
+    }
+    if (e.key === 'Escape' && isFullscreen) {
+      e.preventDefault();
+      void exitFullscreen();
+      return;
+    }
+    if (e.altKey && !ctrlOrMeta && e.key.toLowerCase() === 'f10') {
+      e.preventDefault();
+      toggleMaximized();
+      return;
+    }
+    if (ctrlOrMeta && e.key.toLowerCase() === 'w') {
+      e.preventDefault();
+      handleClose();
+      return;
+    }
+    if (ctrlOrMeta && e.key.toLowerCase() === 't') {
       e.preventDefault();
       addTab();
       return;
     }
-    if (e.ctrlKey && e.key === 'Tab') {
+    if (ctrlOrMeta && e.key === 'Tab') {
       e.preventDefault();
       setTabs((prev) => {
         if (prev.length === 0) return prev;
@@ -190,6 +343,28 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         return prev;
       });
     }
+  };
+
+  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+    dragSrc.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const src = dragSrc.current;
+    if (src === null || src === index) return;
+    updateTabs((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(src, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
   };
 
   const updateOverflow = useCallback(() => {
@@ -304,142 +479,170 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 
   return (
     <div
-      className={`flex flex-col w-full h-full ${className}`.trim()}
+      ref={containerRef}
+      className={rootClassName}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      data-maximized={isMaximized ? 'true' : 'false'}
+      data-fullscreen={isFullscreen ? 'true' : 'false'}
     >
-      <div className="flex flex-shrink-0 items-center gap-1 bg-gray-800 text-white text-sm">
-        {canScrollLeft && (
-          <button
-            type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
-            onClick={() => scrollByAmount('left')}
-            aria-label="Scroll tabs left"
-          >
-            ‹
-          </button>
-        )}
-        <div className="flex-1 overflow-hidden">
-          <div
-            ref={scrollContainerRef}
-            role="tablist"
-            aria-orientation="horizontal"
-            className="flex overflow-x-auto scrollbar-thin scroll-smooth"
-          >
-            {tabs.map((t, i) => (
-              <div
-                key={t.id}
-                role="tab"
-                aria-selected={t.id === activeId}
-                tabIndex={t.id === activeId ? 0 : -1}
-                ref={(node) => {
-                  if (node) {
-                    tabRefs.current.set(t.id, node);
-                  } else {
-                    tabRefs.current.delete(t.id);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
-                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-                }`}
-                draggable
-                onDragStart={handleDragStart(i)}
-                onDragOver={handleDragOver(i)}
-                onDrop={handleDrop(i)}
-                onClick={() => setActive(t.id)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setActive(t.id);
-                  }
-                }}
-              >
-                <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-                {t.closable !== false && tabs.length > 1 && (
-                  <button
-                    className="p-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(t.id);
-                    }}
-                    aria-label="Close Tab"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-        {canScrollRight && (
-          <button
-            type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
-            onClick={() => scrollByAmount('right')}
-            aria-label="Scroll tabs right"
-          >
-            ›
-          </button>
-        )}
-        {overflowTabs.length > 0 && (
-          <div className="relative flex-shrink-0">
+      <div className="flex items-center justify-between border-b border-gray-800 bg-gray-900 px-3 py-2 text-sm text-white">
+        <span className="truncate font-semibold">{headerTitle}</span>
+        <WindowControls
+          isMaximized={isMaximized}
+          isFullscreen={isFullscreen}
+          zoom={zoom}
+          onMaximizeToggle={toggleMaximized}
+          onFullscreenToggle={handleFullscreenToggle}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          disableZoomIn={!canZoomIn}
+          disableZoomOut={!canZoomOut}
+          disableZoomReset={!canResetZoom}
+          onClose={showCloseButton ? handleClose : undefined}
+          closeDisabled={closeDisabled}
+          onMinimize={onMinimizeWindow}
+        />
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex flex-shrink-0 items-center gap-1 border-b border-gray-700 bg-gray-800 text-white text-sm">
+          {canScrollLeft && (
             <button
               type="button"
-              ref={moreButtonRef}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
-              onClick={() => setMoreMenuOpen((open) => !open)}
-              aria-haspopup="menu"
-              aria-expanded={moreMenuOpen}
+              className="h-full px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              onClick={() => scrollByAmount('left')}
+              aria-label="Scroll tabs left"
             >
-              More ▾
+              ‹
             </button>
-            {moreMenuOpen && (
-              <div
-                ref={moreMenuRef}
-                role="menu"
-                className="absolute right-0 z-10 mt-1 w-48 rounded border border-gray-700 bg-gray-900 py-1 shadow-lg"
-              >
-                {overflowTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700"
-                    onClick={() => handleMoreSelect(tab.id)}
-                  >
-                    <span className="truncate">{tab.title}</span>
-                    {tab.id === activeId && <span className="ml-2 text-xs text-ub-orange">Active</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        {onNewTab && (
-          <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
-            onClick={addTab}
-            aria-label="New Tab"
-          >
-            +
-          </button>
-        )}
-      </div>
-      <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
+          )}
+          <div className="flex-1 overflow-hidden">
             <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+              ref={scrollContainerRef}
+              role="tablist"
+              aria-orientation="horizontal"
+              className="flex overflow-x-auto scroll-smooth scrollbar-thin"
             >
-              {t.content}
+              {tabs.map((t, i) => (
+                <div
+                  key={t.id}
+                  role="tab"
+                  aria-selected={t.id === activeId}
+                  tabIndex={t.id === activeId ? 0 : -1}
+                  ref={(node) => {
+                    if (node) {
+                      tabRefs.current.set(t.id, node);
+                    } else {
+                      tabRefs.current.delete(t.id);
+                    }
+                  }}
+                  className={`flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 px-3 py-1 ${
+                    t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+                  }`}
+                  draggable
+                  onDragStart={handleDragStart(i)}
+                  onDragOver={handleDragOver(i)}
+                  onDrop={handleDrop(i)}
+                  onClick={() => setActive(t.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setActive(t.id);
+                    }
+                  }}
+                >
+                  <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+                  {t.closable !== false && tabs.length > 1 && (
+                    <button
+                      className="p-0.5"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        closeTab(t.id);
+                      }}
+                      aria-label="Close Tab"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-          </TabContext.Provider>
-        ))}
+          </div>
+          {canScrollRight && (
+            <button
+              type="button"
+              className="h-full px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              onClick={() => scrollByAmount('right')}
+              aria-label="Scroll tabs right"
+            >
+              ›
+            </button>
+          )}
+          {overflowTabs.length > 0 && (
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                ref={moreButtonRef}
+                className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+                onClick={() => setMoreMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={moreMenuOpen}
+              >
+                More ▾
+              </button>
+              {moreMenuOpen && (
+                <div
+                  ref={moreMenuRef}
+                  role="menu"
+                  className="absolute right-0 z-10 mt-1 w-48 rounded border border-gray-700 bg-gray-900 py-1 shadow-lg"
+                >
+                  {overflowTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700"
+                      onClick={() => handleMoreSelect(tab.id)}
+                    >
+                      <span className="truncate">{tab.title}</span>
+                      {tab.id === activeId && <span className="ml-2 text-xs text-ub-orange">Active</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {onNewTab && (
+            <button
+              className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+              onClick={addTab}
+              aria-label="New Tab"
+            >
+              +
+            </button>
+          )}
+        </div>
+        <div className="relative flex-1 overflow-hidden">
+          {tabs.map((t) => (
+            <TabContext.Provider
+              key={t.id}
+              value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
+            >
+              <div
+                className={`absolute inset-0 h-full w-full ${
+                  t.id === activeId ? 'block' : 'hidden'
+                }`}
+              >
+                <div className="h-full w-full overflow-auto">
+                  <div className="min-h-full min-w-full" style={zoomStyle}>
+                    {t.content}
+                  </div>
+                </div>
+              </div>
+            </TabContext.Provider>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -259,6 +259,7 @@ const ReaverPanel: React.FC = () => {
               value={rate}
               onChange={(e) => setRate(Number(e.target.value) || 1)}
               className="w-20 p-1 bg-gray-800 rounded text-white"
+              aria-label="PIN attempts per second"
             />
             <button
               type="button"
@@ -365,6 +366,8 @@ const ReaverPage: React.FC = () => {
   return (
     <TabbedWindow
       className="min-h-screen bg-gray-900 text-white"
+      appId="reaver"
+      title="Reaver WPS Lab"
       initialTabs={[createTab()]}
       onNewTab={createTab}
     />
