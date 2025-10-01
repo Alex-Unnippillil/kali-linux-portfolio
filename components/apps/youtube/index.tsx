@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { getMessageFormatter } from '../../../i18n/message';
 
 interface Playlist {
   id: string;
@@ -316,6 +317,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<string>('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const messageFormatter = useMemo(() => getMessageFormatter(), []);
 
   useEffect(() => {
     setPlaylists(normalizedInitial);
@@ -657,7 +659,9 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                   <div className="mb-3 flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-white">{group.title}</h2>
                     <span className="rounded-full bg-black/30 px-3 py-1 text-xs text-ubt-grey">
-                      {group.items.length} playlist{group.items.length === 1 ? '' : 's'}
+                      {messageFormatter.format('youtube.playlistCount', {
+                        count: group.items.length,
+                      })}
                     </span>
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

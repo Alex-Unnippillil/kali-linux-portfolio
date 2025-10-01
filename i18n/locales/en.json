@@ -1,0 +1,12 @@
+{
+  "trash.daysRemaining": "{count, plural, one {{count} day left} other {{count} days left}}",
+  "trash.daysRemaining.aria": "Purges in {count, plural, one {{count} day} other {{count} days}}",
+  "trash.genderedActor": "{gender, select, male {{name} deleted {count, plural, one {his file} other {his files}}} female {{name} deleted {count, plural, one {her file} other {her files}}} other {{name} deleted {count, plural, one {their file} other {their files}}}}",
+  "projectGallery.filteredCount": "Showing {count, plural, one {# project} other {# projects}}{filters}",
+  "projectGallery.filters.stack": " filtered by {stack}",
+  "projectGallery.filters.tags": " with tags {tags}",
+  "projectGallery.filters.year": " in {year}",
+  "projectGallery.filters.type": " of type {type}",
+  "projectGallery.filters.search": " matching \"{search}\"",
+  "youtube.playlistCount": "{count, plural, one {# playlist} other {# playlists}}"
+}

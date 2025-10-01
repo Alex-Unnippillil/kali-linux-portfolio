@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getMessageFormatter } from '../../i18n/message';
 import useTrashState from './state';
 import HistoryList from './components/HistoryList';
 
@@ -21,6 +22,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [purgeDays, setPurgeDays] = useState(30);
   const [emptyCountdown, setEmptyCountdown] = useState<number | null>(null);
   const [, setTick] = useState(0);
+  const messageFormatter = useMemo(() => getMessageFormatter(), []);
   const daysLeft = useCallback(
     (closedAt: number) =>
       Math.max(
@@ -191,13 +193,15 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
         </div>
         {items.length > 0 && (
           <ul className="p-2 space-y-1.5 mt-4">
-            {items.map((item, idx) => (
-              <li
-                key={item.closedAt}
-                tabIndex={0}
-                onClick={() => setSelected(idx)}
-                className={`flex items-center h-9 px-1 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
-              >
+            {items.map((item, idx) => {
+              const remaining = daysLeft(item.closedAt);
+              return (
+                <li
+                  key={item.closedAt}
+                  tabIndex={0}
+                  onClick={() => setSelected(idx)}
+                  className={`flex items-center h-9 px-1 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+                >
                 <img
                   src={item.icon || DEFAULT_ICON}
                   alt=""
@@ -206,18 +210,20 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
                 <span className="truncate font-mono" title={item.title}>
                   {item.title}
                 </span>
-                <span
-                  className="ml-auto text-xs opacity-70"
-                  aria-label={`Purges in ${daysLeft(item.closedAt)} day${
-                    daysLeft(item.closedAt) === 1 ? '' : 's'
-                  }`}
-                >
-                  {`${daysLeft(item.closedAt)} day${
-                    daysLeft(item.closedAt) === 1 ? '' : 's'
-                  } left`}
-                </span>
-              </li>
-            ))}
+                  <span
+                    className="ml-auto text-xs opacity-70"
+                    aria-label={messageFormatter.format(
+                      'trash.daysRemaining.aria',
+                      { count: remaining },
+                    )}
+                  >
+                    {messageFormatter.format('trash.daysRemaining', {
+                      count: remaining,
+                    })}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

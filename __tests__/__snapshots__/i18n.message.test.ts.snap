@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`ICU message formatting formats pluralised trash day strings across locales 1`] = `
+{
+  "en": [
+    "0 days left",
+    "1 day left",
+    "2 days left",
+    "5 days left",
+  ],
+  "es": [
+    "Quedan 0 días",
+    "Queda 1 día",
+    "Quedan 2 días",
+    "Quedan 5 días",
+  ],
+  "fr": [
+    "0 days left",
+    "1 day left",
+    "2 days left",
+    "5 days left",
+  ],
+}
+`;
+
+exports[`ICU message formatting supports gender aware selections 1`] = `
+{
+  "enFemale": "Riley deleted her file",
+  "enMale": "Alex deleted his files",
+  "enNeutral": "Sam deleted their files",
+  "esNeutral": "Mar eliminó sus archivos",
+}
+`;
