@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, auditLogEnabled, setAuditLogEnabled, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -89,6 +89,7 @@ export function Settings() {
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -135,6 +136,7 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Adjust font scale"
                 />
             </div>
             <div className="flex justify-center my-4">
@@ -144,6 +146,7 @@ export function Settings() {
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle reduced motion"
                     />
                     Reduced Motion
                 </label>
@@ -155,6 +158,7 @@ export function Settings() {
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle large hit areas"
                     />
                     Large Hit Areas
                 </label>
@@ -166,6 +170,7 @@ export function Settings() {
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle high contrast mode"
                     />
                     High Contrast
                 </label>
@@ -177,6 +182,7 @@ export function Settings() {
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle network requests"
                     />
                     Allow Network Requests
                 </label>
@@ -185,9 +191,32 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        checked={auditLogEnabled}
+                        onChange={(e) => setAuditLogEnabled(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Toggle audit logging"
+                    />
+                    Enable Audit Logging
+                </label>
+            </div>
+            {auditLogEnabled ? (
+                <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                    Audit entries are stored only in this browser using OPFS/IndexedDB. Use the Audit Log Viewer utility to
+                    export or import verified bundles when you need a backup.
+                </p>
+            ) : (
+                <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                    Opt in to keep a local-only audit trail. Nothing is recorded until you enable logging.
+                </p>
+            )}
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle haptics"
                     />
                     Haptics
                 </label>
@@ -199,6 +228,7 @@ export function Settings() {
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle pong spin"
                     />
                     Pong Spin
                 </label>
@@ -288,6 +318,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;

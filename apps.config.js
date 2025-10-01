@@ -92,6 +92,7 @@ const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
 const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
+const AuditLogViewerApp = createDynamicApp('audit-log', 'Audit Log Viewer');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
@@ -178,6 +179,7 @@ const displayVolatility = createDisplay(VolatilityApp);
 
 const displayMsfPost = createDisplay(MsfPostApp);
 const displayEvidenceVault = createDisplay(EvidenceVaultApp);
+const displayAuditLogViewer = createDisplay(AuditLogViewerApp);
 const displayMimikatz = createDisplay(MimikatzApp);
 const displayMimikatzOffline = createDisplay(MimikatzOfflineApp);
 const displayEttercap = createDisplay(EttercapApp);
@@ -1013,6 +1015,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayEvidenceVault,
+  },
+  {
+    id: 'audit-log',
+    title: 'Audit Log Viewer',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAuditLogViewer,
   },
   {
     id: 'dsniff',

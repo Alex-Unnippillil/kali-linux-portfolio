@@ -9,7 +9,14 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const {
+    accent,
+    setAccent,
+    theme,
+    setTheme,
+    auditLogEnabled,
+    setAuditLogEnabled,
+  } = useSettings();
 
   return (
     <div>
@@ -51,6 +58,22 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label className="mt-4 block">
+            <span className="font-semibold block">Audit log</span>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={auditLogEnabled}
+                onChange={(e) => setAuditLogEnabled(e.target.checked)}
+                aria-label="Enable audit logging"
+              />
+              <span>Store local-only audit events</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-300">
+              Events are saved to your browser&apos;s private storage (OPFS/IndexedDB)
+              and never leave this device.
+            </p>
           </label>
         </div>
       )}

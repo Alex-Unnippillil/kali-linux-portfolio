@@ -100,6 +100,16 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Audit Logging (Local Only)
+
+- Users can opt into audit logging from **Settings → Enable Audit Logging**. Logging is disabled by default to honor privacy.
+- When enabled, events are written to the browser&apos;s Origin Private File System (OPFS) where available, or IndexedDB as a
+  fallback. No audit data leaves the device.
+- The **Audit Log Viewer** utility lists recorded events, verifies payload hashes, and supports export/import of integrity-
+  checked bundles so analysts can back up or restore their local trail.
+- Exported bundles include SHA-256 digests for each entry and for the bundle manifest; imports are rejected if verification
+  fails.
+
 ---
 
 ## Speed Insights
