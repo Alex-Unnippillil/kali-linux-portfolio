@@ -1771,8 +1771,8 @@ export class Desktop extends Component {
                 id="desktop"
                 role="main"
                 ref={this.desktopRef}
-                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
-                style={{ paddingTop: DESKTOP_TOP_PADDING }}
+                className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                style={{ paddingTop: DESKTOP_TOP_PADDING, minHeight: '100dvh' }}
             >
 
                 {/* Window Area */}
