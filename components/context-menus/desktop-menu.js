@@ -110,6 +110,17 @@ function DesktopMenu(props) {
             </button>
             <Devider />
             <button
+                onClick={props.onToggleHighContrast}
+                type="button"
+                role="menuitemcheckbox"
+                aria-label={props.highContrastEnabled ? "Disable high contrast mode" : "Enable high contrast mode"}
+                aria-checked={props.highContrastEnabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">{props.highContrastEnabled ? "Disable" : "Enable"} High Contrast</span>
+            </button>
+            <Devider />
+            <button
                 onClick={goFullScreen}
                 type="button"
                 role="menuitem"
