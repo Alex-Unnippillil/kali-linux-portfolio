@@ -32,7 +32,8 @@ const drawMap = (canvas, hosts = []) => {
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '10px monospace';
-    ctx.fillText(host.ip || host, x + 6, y + 3);
+    const label = host.label || host.alias || host.ip || host;
+    ctx.fillText(label, x + 6, y + 3);
   });
 };
 
