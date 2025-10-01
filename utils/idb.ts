@@ -5,6 +5,7 @@ const STORE_REPLAYS = 'replays';
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    // Guard against environments without IndexedDB (e.g., server-side rendering)
     if (typeof indexedDB === 'undefined') {
       reject(new Error('IndexedDB not available on server'));
       return;
