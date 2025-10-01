@@ -7,6 +7,8 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import AppTooltipContent from './AppTooltipContent';
+import DelayedTooltip from './DelayedTooltip';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -39,6 +41,14 @@ interface TabContextValue {
 
 const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
 export const useTab = () => useContext(TabContext);
+
+const KEYBOARD_SHORTCUTS = {
+  CLOSE_TAB: 'Ctrl+W',
+  NEW_TAB: 'Ctrl+T',
+} as const;
+
+const FOCUS_VISIBLE_RING_CLASSES =
+  'focus-visible:outline focus-visible:outline-[length:var(--focus-outline-width)] focus-visible:outline-[color:var(--focus-outline-color)] focus-visible:outline-offset-2 focus:outline-none';
 
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
   initialTabs,
@@ -312,7 +322,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {canScrollLeft && (
           <button
             type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            className={`px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 ${FOCUS_VISIBLE_RING_CLASSES}`}
             onClick={() => scrollByAmount('left')}
             aria-label="Scroll tabs left"
           >
@@ -339,7 +349,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     tabRefs.current.delete(t.id);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 rounded ${
+                  FOCUS_VISIBLE_RING_CLASSES
+                } ${
                   t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
                 }`}
                 draggable
@@ -356,16 +368,44 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
               >
                 <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
                 {t.closable !== false && tabs.length > 1 && (
-                  <button
-                    className="p-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(t.id);
-                    }}
-                    aria-label="Close Tab"
+                  <DelayedTooltip
+                    content={
+                      <AppTooltipContent
+                        meta={{
+                          title: 'Close tab',
+                          description: `Close the ${t.title} tab.`,
+                          keyboard: [KEYBOARD_SHORTCUTS.CLOSE_TAB],
+                        }}
+                      />
+                    }
                   >
-                    ×
-                  </button>
+                    {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => {
+                      const closeLabel = `Close ${t.title} tab (${KEYBOARD_SHORTCUTS.CLOSE_TAB})`;
+                      return (
+                        <button
+                          type="button"
+                          ref={(node) => ref(node)}
+                          className={`ml-0.5 flex items-center justify-center rounded transition-colors hover:bg-gray-600 ${FOCUS_VISIBLE_RING_CLASSES}`}
+                          style={{
+                            minWidth: 'var(--hit-area)',
+                            minHeight: 'var(--hit-area)',
+                          }}
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
+                          onFocus={onFocus}
+                          onBlur={onBlur}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeTab(t.id);
+                          }}
+                          aria-label={closeLabel}
+                          title={closeLabel}
+                        >
+                          ×
+                        </button>
+                      );
+                    }}
+                  </DelayedTooltip>
                 )}
               </div>
             ))}
@@ -374,7 +414,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {canScrollRight && (
           <button
             type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            className={`px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 ${FOCUS_VISIBLE_RING_CLASSES}`}
             onClick={() => scrollByAmount('right')}
             aria-label="Scroll tabs right"
           >
@@ -386,7 +426,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <button
               type="button"
               ref={moreButtonRef}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              className={`px-2 py-1 bg-gray-800 hover:bg-gray-700 ${FOCUS_VISIBLE_RING_CLASSES}`}
               onClick={() => setMoreMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={moreMenuOpen}
@@ -404,7 +444,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     key={tab.id}
                     type="button"
                     role="menuitem"
-                    className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700"
+                    className={`flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700 ${FOCUS_VISIBLE_RING_CLASSES}`}
                     onClick={() => handleMoreSelect(tab.id)}
                   >
                     <span className="truncate">{tab.title}</span>
@@ -416,13 +456,41 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
           </div>
         )}
         {onNewTab && (
-          <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
-            onClick={addTab}
-            aria-label="New Tab"
+          <DelayedTooltip
+            content={
+              <AppTooltipContent
+                meta={{
+                  title: 'New tab',
+                  description: 'Open a new tab.',
+                  keyboard: [KEYBOARD_SHORTCUTS.NEW_TAB],
+                }}
+              />
+            }
           >
-            +
-          </button>
+            {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => {
+              const newTabLabel = `Open new tab (${KEYBOARD_SHORTCUTS.NEW_TAB})`;
+              return (
+                <button
+                  type="button"
+                  ref={(node) => ref(node)}
+                  className={`px-2 py-1 bg-gray-800 hover:bg-gray-700 ${FOCUS_VISIBLE_RING_CLASSES}`}
+                  style={{
+                    minWidth: 'var(--hit-area)',
+                    minHeight: 'var(--hit-area)',
+                  }}
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                  onClick={addTab}
+                  aria-label={newTabLabel}
+                  title={newTabLabel}
+                >
+                  +
+                </button>
+              );
+            }}
+          </DelayedTooltip>
         )}
       </div>
       <div className="flex-grow relative overflow-hidden">
