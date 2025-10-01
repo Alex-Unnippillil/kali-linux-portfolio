@@ -35,7 +35,8 @@ const HookFlow: React.FC = () => {
       <iframe
         title="React Hooks Documentation"
         src="https://react.dev/learn/hooks"
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-popups allow-scripts"
+        referrerPolicy="no-referrer"
         className="w-full h-96 border"
       />
     </main>

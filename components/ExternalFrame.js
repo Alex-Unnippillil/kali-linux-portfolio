@@ -63,8 +63,8 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
           <iframe
             src={src}
             title={title}
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
+            allow="clipboard-write"
             referrerPolicy="no-referrer"
             onLoad={(e) => {
               setLoaded(true);

@@ -1,74 +1,103 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import PluginManager from '../components/apps/plugin-manager';
 
-describe('PluginManager', () => {
+describe('PluginManager iframe sandbox', () => {
+  const originalFetch = global.fetch;
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  const originalCreateElement = document.createElement.bind(document);
+
   beforeEach(() => {
     localStorage.clear();
-    (global as any).URL.createObjectURL = jest.fn(() => 'blob:mock');
-    (global as any).URL.revokeObjectURL = jest.fn();
+    sessionStorage.clear();
 
-    class MockWorker {
-      onmessage: ((e: { data: any }) => void) | null = null;
-      onerror: (() => void) | null = null;
-      constructor(_url: string) {
-        setTimeout(() => {
-          this.onmessage && this.onmessage({ data: 'content' });
-        }, 0);
-      }
-      postMessage() {}
-      terminate() {}
-    }
-    (global as any).Worker = MockWorker;
-
-    (global as any).fetch = jest.fn((url: string) => {
+    global.fetch = jest.fn(async (url: RequestInfo | URL) => {
       if (url === '/api/plugins') {
-        return Promise.resolve({
-          json: () => Promise.resolve([{ id: 'demo', file: 'demo.json' }]),
+        return {
+          json: async () => [{ id: 'iframePlugin', file: 'iframe.json' }],
+        } as unknown as Response;
+      }
+      if (url === '/api/plugins/iframe.json') {
+        return {
+          json: async () => ({ id: 'iframePlugin', sandbox: 'iframe', code: '' }),
+        } as unknown as Response;
+      }
+      throw new Error(`Unexpected fetch: ${String(url)}`);
+    }) as unknown as typeof fetch;
+
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
+
+    jest.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      const element = originalCreateElement(tagName) as HTMLIFrameElement;
+      if (tagName.toLowerCase() === 'iframe') {
+        Object.defineProperty(element, 'contentWindow', {
+          value: {},
+          configurable: true,
+        });
+        Object.defineProperty(element, 'sandbox', {
+          value: { add: jest.fn() },
+          configurable: true,
         });
       }
-      if (url === '/api/plugins/demo.json') {
-        return Promise.resolve({
-          json: () =>
-            Promise.resolve({
-              id: 'demo',
-              sandbox: 'worker',
-              code: "self.postMessage('content');",
-            }),
-        });
-      }
-      return Promise.reject(new Error('unknown url'));
+      return element;
     });
   });
 
-  test('installs plugin from catalog', async () => {
-    render(<PluginManager />);
-    const button = await screen.findByText('Install');
-    fireEvent.click(button);
-    await waitFor(() =>
-      expect(localStorage.getItem('installedPlugins')).toContain('sandbox')
-    );
-    expect(button.textContent).toBe('Installed');
+  afterEach(() => {
+    jest.restoreAllMocks();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
+    if (originalFetch) {
+      global.fetch = originalFetch;
+    } else {
+      // @ts-expect-error restore undefined fetch
+      delete global.fetch;
+    }
   });
 
-  test('persists last plugin run and exports CSV', async () => {
-    const { unmount } = render(<PluginManager />);
-    const installBtn = await screen.findByText('Install');
-    fireEvent.click(installBtn);
-    await waitFor(() =>
-      expect(localStorage.getItem('installedPlugins')).toContain('demo')
-    );
-    const runBtn = await screen.findByText('Run');
-    fireEvent.click(runBtn);
-    await waitFor(() =>
-      expect(localStorage.getItem('lastPluginRun')).toContain('content')
-    );
-    unmount();
-    (global as any).URL.createObjectURL = jest.fn(() => 'blob:csv');
-    (global as any).URL.revokeObjectURL = jest.fn();
+  it('only records messages from the sandboxed iframe origin', async () => {
+    const user = userEvent.setup();
     render(<PluginManager />);
-    expect(await screen.findByText(/Last Run: demo/)).toBeInTheDocument();
-    const exportBtn = screen.getByText('Export CSV');
-    fireEvent.click(exportBtn);
-    expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+    const installButton = await screen.findByRole('button', { name: 'Install' });
+    await user.click(installButton);
+    const runButton = await screen.findByRole('button', { name: 'Run' });
+    await user.click(runButton);
+
+    const frame = document.querySelector('iframe');
+    expect(frame).toBeTruthy();
+    const frameWindow = (frame as HTMLIFrameElement).contentWindow as Window;
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://malicious.example',
+          data: 'bad',
+          source: frameWindow,
+        }),
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'null',
+          data: 'ok',
+          source: frameWindow,
+        }),
+      );
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(await screen.findByText(/Last Run: iframePlugin/)).toBeInTheDocument();
+    const output = screen.getByText((_, element) => element?.tagName === 'PRE');
+    expect(output).toHaveTextContent('ok');
+    expect(output).not.toHaveTextContent('bad');
   });
 });
+

@@ -29,6 +29,11 @@ describe('Firefox app', () => {
     await user.click(screen.getByRole('button', { name: 'Go' }));
     const frame = await screen.findByTitle('Firefox');
     expect(frame).toHaveAttribute('src', 'https://example.com/');
+    expect(frame).toHaveAttribute(
+      'sandbox',
+      'allow-forms allow-popups allow-scripts allow-top-navigation-by-user-activation',
+    );
+    expect(frame).toHaveAttribute('referrerpolicy', 'no-referrer');
     expect(localStorage.getItem('firefox:last-url')).toBe('https://example.com/');
   });
 
