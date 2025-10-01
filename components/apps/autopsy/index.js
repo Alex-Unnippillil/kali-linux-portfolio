@@ -5,6 +5,13 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import PreviewPane from './PreviewPane';
+import {
+  PREVIEW_CHUNK_BYTES,
+  buildPreviewFromBase64,
+  computeSha256FromBase64,
+  guessMimeType,
+} from './preview-utils';
 
 const escapeFilename = (str = '') =>
   str
@@ -354,7 +361,6 @@ function Autopsy({ initialArtifacts = null }) {
   const [hashDB, setHashDB] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
-  const [previewTab, setPreviewTab] = useState('hex');
   const [timelineEvents] = useState(
     demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
   );
@@ -415,6 +421,19 @@ function Autopsy({ initialArtifacts = null }) {
       .then((data) => setHashDB(data || {}))
       .catch(() => setHashDB({}));
   }, [currentCase, initialArtifacts]);
+
+  const selectedFileHash = selectedFile?.hash;
+  const selectedFileKnown = selectedFile?.known;
+
+  useEffect(() => {
+    if (!selectedFileHash) return;
+    const nextKnown = hashDB[selectedFileHash] || null;
+    if (selectedFileKnown === nextKnown) return;
+    setSelectedFile((prev) => {
+      if (!prev || prev.hash !== selectedFileHash) return prev;
+      return { ...prev, known: nextKnown };
+    });
+  }, [hashDB, selectedFileHash, selectedFileKnown]);
 
   const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))];
   const users = [
@@ -492,60 +511,64 @@ function Autopsy({ initialArtifacts = null }) {
       .join('')
       .trim();
 
-  const decodeBase64 = (b64) =>
-    Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const selectFile = useCallback(
+    async (file) => {
+      const base64 = file.content || '';
+      const mimeType = guessMimeType(file.name);
+      try {
+        const preview = await buildPreviewFromBase64(base64, PREVIEW_CHUNK_BYTES);
+        const totalBytes = file.size || preview.totalBytes || 0;
+        setSelectedFile({
+          name: file.name,
+          base64,
+          previewText: preview.text,
+          previewHex: preview.hex,
+          truncated: preview.truncated,
+          isBinary: preview.isBinary,
+          previewByteLength: preview.previewByteLength,
+          totalBytes,
+          isImage: Boolean(mimeType),
+          mimeType,
+          hash: '',
+          known: null,
+        });
 
-  const selectFile = async (file) => {
-    try {
-      const bytes = decodeBase64(file.content || '');
-      const hex = bufferToHex(bytes);
-      const strings = new TextDecoder()
-        .decode(bytes)
-        .replace(/[^\x20-\x7E]+/g, ' ');
-      let hash = '';
-      if (crypto && crypto.subtle) {
-        const buf = await crypto.subtle.digest('SHA-256', bytes);
-        hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
-      }
-      const known = hashDB[hash];
-      let imageUrl = null;
-      const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(file.name);
-      if (isImage && typeof URL !== 'undefined') {
-        try {
-          imageUrl = URL.createObjectURL(new Blob([bytes]));
-        } catch {
-          imageUrl = null;
+        if (base64) {
+          const currentName = file.name;
+          computeSha256FromBase64(base64).then((hash) => {
+            if (!hash) return;
+            setSelectedFile((prev) => {
+              if (!prev || prev.name !== currentName) return prev;
+              const known = hashDB[hash] || null;
+              return {
+                ...prev,
+                hash,
+                known,
+              };
+            });
+          });
         }
+      } catch (error) {
+        console.error('Failed to build preview', error);
+        const totalBytes = file.size || 0;
+        setSelectedFile({
+          name: file.name,
+          base64,
+          previewText: '',
+          previewHex: '',
+          truncated: false,
+          isBinary: false,
+          previewByteLength: 0,
+          totalBytes,
+          isImage: false,
+          mimeType: undefined,
+          hash: '',
+          known: null,
+        });
       }
-      setSelectedFile({
-        name: file.name,
-        hex,
-        strings,
-        hash,
-        known,
-        imageUrl,
-      });
-      setPreviewTab('hex');
-    } catch (e) {
-      setSelectedFile({
-        name: file.name,
-        hex: '',
-        strings: '',
-        hash: '',
-        known: null,
-        imageUrl: null,
-      });
-      setPreviewTab('hex');
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (selectedFile && selectedFile.imageUrl) {
-        URL.revokeObjectURL(selectedFile.imageUrl);
-      }
-    };
-  }, [selectedFile]);
+    },
+    [hashDB],
+  );
 
   const renderTree = (node) => {
     if (!node) return null;
@@ -719,68 +742,7 @@ function Autopsy({ initialArtifacts = null }) {
                 <div className="text-sm font-bold mb-1">File Explorer</div>
                 {renderTree(fileTree)}
               </div>
-              {selectedFile && (
-                <div className="flex-grow bg-ub-grey p-2 rounded text-xs">
-                  <div className="font-bold mb-1">{selectedFile.name}</div>
-                  <div className="mb-1">SHA-256: {selectedFile.hash}</div>
-                  {selectedFile.known && (
-                    <div className="mb-1 text-green-400">
-                      Known: {selectedFile.known}
-                    </div>
-                  )}
-                  <div className="flex space-x-2 mb-2">
-                    <button
-                      className={`${
-                        previewTab === 'hex'
-                          ? 'bg-ub-orange text-black'
-                          : 'bg-ub-cool-grey'
-                      } px-2 py-1 rounded`}
-                      onClick={() => setPreviewTab('hex')}
-                    >
-                      Hex
-                    </button>
-                    <button
-                      className={`${
-                        previewTab === 'text'
-                          ? 'bg-ub-orange text-black'
-                          : 'bg-ub-cool-grey'
-                      } px-2 py-1 rounded`}
-                      onClick={() => setPreviewTab('text')}
-                    >
-                      Text
-                    </button>
-                    {selectedFile.imageUrl && (
-                      <button
-                        className={`${
-                          previewTab === 'image'
-                            ? 'bg-ub-orange text-black'
-                            : 'bg-ub-cool-grey'
-                        } px-2 py-1 rounded`}
-                        onClick={() => setPreviewTab('image')}
-                      >
-                        Image
-                      </button>
-                    )}
-                  </div>
-                  {previewTab === 'hex' && (
-                    <pre className="font-mono whitespace-pre-wrap break-all">
-                      {selectedFile.hex}
-                    </pre>
-                  )}
-                  {previewTab === 'text' && (
-                    <pre className="font-mono whitespace-pre-wrap break-all">
-                      {selectedFile.strings}
-                    </pre>
-                  )}
-                  {previewTab === 'image' && selectedFile.imageUrl && (
-                    <img
-                      src={selectedFile.imageUrl}
-                      alt={selectedFile.name}
-                      className="max-w-full h-auto"
-                    />
-                  )}
-                </div>
-              )}
+              {selectedFile && <PreviewPane file={selectedFile} />}
             </div>
           )}
           <ReportExport caseName={currentCase || 'case'} artifacts={artifacts} />
