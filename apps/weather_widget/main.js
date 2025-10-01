@@ -1,6 +1,7 @@
 import demoCity from './demoCity.json';
 import { isBrowser } from '../../utils/env';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { createTrustedHTML } from '../../utils/csp';
 
 if (isBrowser) {
 const widget = document.getElementById('weather');
@@ -27,8 +28,12 @@ unitToggle.value = unit;
 
 let savedCities = JSON.parse(safeLocalStorage?.getItem('savedCities') || '[]');
 
+const setTrustedHTML = (element, html) => {
+  element.innerHTML = createTrustedHTML(html);
+};
+
 function updateDatalist() {
-  datalist.innerHTML = '';
+  setTrustedHTML(datalist, '');
   savedCities.forEach((c) => {
     const option = document.createElement('option');
     option.value = c;
@@ -76,14 +81,17 @@ function renderWeather(data) {
       }
       forecastEl.textContent = data.condition;
       if (data.forecast) {
-        dailyEl.innerHTML = data.forecast
+        setTrustedHTML(
+          dailyEl,
+          data.forecast
           .map(
             (d) =>
               `<div class="day"><img class="forecast-icon animated-icon" src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.condition}"><div>${d.day} ${Math.round(
                 convertTemp(d.tempC)
               )}°${unit === 'metric' ? 'C' : 'F'}</div></div>`
           )
-          .join('');
+          .join(''),
+        );
       }
       sunriseEl.textContent = `Sunrise: ${formatTime(data.sunrise)}`;
       sunsetEl.textContent = `Sunset: ${formatTime(data.sunset)}`;

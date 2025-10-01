@@ -80,8 +80,19 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
+- `CSP_REPORT_ONLY` – defaults to `true`. Keep in report-only mode while collecting violations, then set to `false` to enforce the policy.
 
 See `.env.local.example` for the full list.
+
+---
+
+## Content Security Policy & Trusted Types
+
+- Global CSP headers are generated in [`middleware.ts`](./middleware.ts). Every request receives a nonce via the `x-csp-nonce` header and `data-csp-nonce` attribute on `<html>`, alongside `Report-To`/`Reporting-Endpoints` pointing to [`/api/csp-report`](./pages/api/csp-report.ts).
+- When `CSP_REPORT_ONLY` is left at its default (`true`), the policy is served with `Content-Security-Policy-Report-Only`. Flip it to `false` once the report stream is clean to enforce the directives.
+- Trusted Types are required for scripts (`require-trusted-types-for 'script'`). Use `createTrustedHTML` from [`utils/csp.ts`](./utils/csp.ts) inside React or the global `window.__appSetTrustedHTML` helper for vanilla DOM code. Avoid calling `innerHTML`/`dangerouslySetInnerHTML` with raw strings.
+- Violation reports are logged server-side; export them from logs and address each before toggling enforcement.
+- Tests: `yarn test` exercises the middleware contract. Playwright coverage lives in [`tests/csp.spec.ts`](./tests/csp.spec.ts); run it with `npx playwright test` against a running instance (CI executes it automatically).
 
 ---
 

@@ -27,8 +27,12 @@ if (isBrowser) {
     hexOutput.textContent = color;
   }
 
+  const setHTML = window.__appSetTrustedHTML || ((element, value) => {
+    element.innerHTML = value;
+  });
+
   function renderSwatches() {
-    swatches.innerHTML = '';
+    setHTML(swatches, '');
     colors.forEach((color) => {
       const swatch = document.createElement('div');
       swatch.className = 'swatch';

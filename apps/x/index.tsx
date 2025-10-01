@@ -170,7 +170,7 @@ export default function XTimeline() {
     setLoading(true);
     setScriptError(false);
     setTimelineLoaded(false);
-    timelineRef.current.innerHTML = '';
+    timelineRef.current.replaceChildren();
     const options = {
       chrome: 'noheader noborders',
       theme,

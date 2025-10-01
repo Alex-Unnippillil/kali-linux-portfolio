@@ -5,6 +5,9 @@ document.getElementById('retry').addEventListener('click', () => {
 
 (async () => {
   const list = document.getElementById('apps');
+  const setHTML = window.__appSetTrustedHTML || ((element, value) => {
+    element.innerHTML = value;
+  });
   try {
     const names = await caches.keys();
     const urls = new Set();
@@ -19,7 +22,7 @@ document.getElementById('retry').addEventListener('click', () => {
       }
     }
     if (urls.size === 0) {
-      list.innerHTML = '<li>No apps available offline.</li>';
+      setHTML(list, '<li>No apps available offline.</li>');
     } else {
       urls.forEach((path) => {
         const li = document.createElement('li');
@@ -31,6 +34,6 @@ document.getElementById('retry').addEventListener('click', () => {
       });
     }
   } catch (err) {
-    list.innerHTML = '<li>Unable to access cached apps.</li>';
+    setHTML(list, '<li>Unable to access cached apps.</li>');
   }
 })();

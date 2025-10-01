@@ -10,8 +10,12 @@ if (isBrowser) {
   const list = document.getElementById('history');
   const clearBtn = document.getElementById('clear');
 
+  const setHTML = window.__appSetTrustedHTML || ((element, value) => {
+    element.innerHTML = value;
+  });
+
   function render() {
-    list.innerHTML = '';
+    setHTML(list, '');
     history.forEach((item) => {
       const li = document.createElement('li');
       li.textContent = item;

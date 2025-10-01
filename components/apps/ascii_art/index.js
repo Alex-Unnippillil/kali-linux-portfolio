@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import DOMPurify from 'dompurify';
+import { createTrustedHTML } from '../../../utils/csp';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -58,6 +59,7 @@ export default function AsciiArt() {
   const fileRef = useRef(null);
   const prefersReducedMotion = useRef(false);
   const fonts = ['monospace', 'Courier New', 'Fira Code'];
+  const trustedAscii = useMemo(() => createTrustedHTML(asciiHtml), [asciiHtml]);
 
   // Load saved preferences
   useEffect(() => {
@@ -574,7 +576,7 @@ export default function AsciiArt() {
       ) : (
         <pre
           className="font-mono whitespace-pre overflow-auto flex-1"
-          dangerouslySetInnerHTML={{ __html: asciiHtml }}
+          dangerouslySetInnerHTML={{ __html: trustedAscii }}
         />
       )}
       <canvas ref={canvasRef} className="hidden w-full h-full" />

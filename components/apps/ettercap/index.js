@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import data from './data.json';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
+import { createTrustedHTML } from '../../../utils/csp';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -307,12 +308,14 @@ const EttercapApp = () => {
   };
 
   const highlightFilter = (code) =>
-    code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/(if|else|drop|pass)/g, '<span class="text-blue-400">$1</span>')
-      .replace(/('[^']*')/g, '<span class="text-green-300">$1</span>');
+    createTrustedHTML(
+      code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/(if|else|drop|pass)/g, '<span class="text-blue-400">$1</span>')
+        .replace(/('[^']*')/g, '<span class="text-green-300">$1</span>'),
+    );
 
   const drawMap = useCallback(() => {
     const canvas = canvasRef.current;
