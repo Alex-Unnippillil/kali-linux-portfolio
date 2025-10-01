@@ -17,6 +17,10 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import {
+  undo as undoHistory,
+  redo as redoHistory,
+} from '../utils/history/globalHistory';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -79,6 +83,35 @@ function MyApp(props) {
         console.error('Service worker setup failed', err);
       });
     }
+  }, []);
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key?.toLowerCase() !== 'z') return;
+      const target = event.target;
+      const isEditableTarget =
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(target.tagName));
+
+      if (event.shiftKey) {
+        const handled = redoHistory();
+        if (handled) {
+          event.preventDefault();
+          return;
+        }
+        if (isEditableTarget) return; // fall back to native redo
+      } else {
+        const handled = undoHistory();
+        if (handled) {
+          event.preventDefault();
+          return;
+        }
+        if (isEditableTarget) return; // fall back to native undo
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   useEffect(() => {

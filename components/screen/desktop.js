@@ -22,6 +22,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
+import { setActiveScope, clearHistory as clearHistoryScope } from '../../utils/history/globalHistory';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import {
     clampWindowTopPosition,
@@ -1648,6 +1649,7 @@ export class Desktop extends Component {
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
         this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        clearHistoryScope(objId);
     }
 
     pinApp = (id) => {
@@ -1691,6 +1693,7 @@ export class Desktop extends Component {
             }
         }
         this.setWorkspaceState({ focused_windows });
+        setActiveScope(objId);
     }
 
     addNewFolder = () => {

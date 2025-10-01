@@ -18,10 +18,18 @@ import {
   Position,
   DirectionKey,
 } from './engine';
+import {
+  createScopedHistory,
+  setActiveScope,
+  getActiveScope,
+  clearHistory as clearHistoryScope,
+} from '../../utils/history/globalHistory';
 
 const CELL = 32;
 
 const LEVEL_THUMB_CELL = 8;
+
+const HISTORY_SCOPE = 'sokoban';
 
 const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
   const width = Math.max(...level.map((r) => r.length));
@@ -87,6 +95,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [index, setIndex] = useState(0);
   const currentPack = packs[packIndex];
   const [state, setState] = useState<State>(() => loadLevel(currentPack.levels[0]));
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(currentPack.levels[0])));
   const [best, setBest] = useState<number | null>(null);
   const [hint, setHint] = useState<string>('');
@@ -105,6 +115,18 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     pushes: 0,
   });
   const initRef = useRef(false);
+  const historyApi = useMemo(() => createScopedHistory(HISTORY_SCOPE), []);
+  const suppressHistory = useRef(false);
+
+  useEffect(() => {
+    setActiveScope(HISTORY_SCOPE);
+    return () => {
+      if (getActiveScope() === HISTORY_SCOPE) {
+        setActiveScope(null);
+      }
+      clearHistoryScope(HISTORY_SCOPE);
+    };
+  }, []);
 
   const selectLevel = useCallback(
     (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
@@ -112,6 +134,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       const st = loadLevel(pack.levels[i]);
       setPackIndex(pIdx);
       setIndex(i);
+      historyApi.clear();
+      setPuffs([]);
+      setLastPush(null);
       setState(st);
       setReach(reachable(st));
       setHint('');
@@ -123,7 +148,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       logGameStart('sokoban');
       logEvent({ category: 'sokoban', action: 'level_select', value: i });
     },
-    [packIndex, packs]
+    [packIndex, packs, historyApi]
   );
 
   const selectPack = useCallback(
@@ -133,9 +158,13 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     [selectLevel]
   );
 
-  const handleUndo = useCallback(() => {
-    const st = undoMove(state);
-    if (st !== state) {
+  const performUndo = useCallback(() => {
+    const current = stateRef.current;
+    const st = undoMove(current);
+    if (st === current) return false;
+    suppressHistory.current = true;
+    try {
+      stateRef.current = st;
       setState(st);
       setReach(reachable(st));
       setHint('');
@@ -143,26 +172,108 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setGhost(new Set());
       setSolutionPath(new Set());
       setShowStats(false);
+      setPuffs([]);
+      setLastPush(null);
+    } finally {
+      suppressHistory.current = false;
+    }
+    return true;
+  }, []);
+
+  const performRedo = useCallback(() => {
+    const current = stateRef.current;
+    const st = redoMove(current);
+    if (st === current) return false;
+    suppressHistory.current = true;
+    try {
+      stateRef.current = st;
+      setState(st);
+      setReach(reachable(st));
+      setHint('');
+      setStatus('');
+      setGhost(new Set());
+      setSolutionPath(new Set());
+      setShowStats(false);
+      setPuffs([]);
+      setLastPush(null);
+    } finally {
+      suppressHistory.current = false;
+    }
+    return true;
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (historyApi.undo()) {
+      logEvent({ category: 'sokoban', action: 'undo' });
+      return;
+    }
+    if (performUndo()) {
       logEvent({ category: 'sokoban', action: 'undo' });
     }
-  }, [state]);
+  }, [historyApi, performUndo]);
 
   const handleRedo = useCallback(() => {
-    const st = redoMove(state);
-    if (st !== state) {
-      setState(st);
-      setReach(reachable(st));
+    if (historyApi.redo()) {
+      logEvent({ category: 'sokoban', action: 'redo' });
+      return;
+    }
+    if (performRedo()) {
+      logEvent({ category: 'sokoban', action: 'redo' });
+    }
+  }, [historyApi, performRedo]);
+
+  const commitMove = useCallback(
+    (prev: State, next: State) => {
+      if (next === prev) return false;
+      stateRef.current = next;
+      setState(next);
+      setReach(reachable(next));
       setHint('');
-      setStatus('');
+      setStatus(next.deadlocks.size ? 'Deadlock!' : '');
       setGhost(new Set());
       setSolutionPath(new Set());
       setShowStats(false);
-      logEvent({ category: 'sokoban', action: 'redo' });
-    }
-  }, [state]);
+      if (next.pushes > prev.pushes) {
+        const from = Array.from(prev.boxes).find((b) => !next.boxes.has(b));
+        const to = Array.from(next.boxes).find((b) => !prev.boxes.has(b));
+        if (from) {
+          const [fx, fy] = from.split(',').map(Number);
+          const id = puffId.current++;
+          setPuffs((p) => [...p, { id, x: fx, y: fy }]);
+          setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+        }
+        if (to) {
+          setLastPush(to);
+          setTimeout(() => setLastPush(null), 200);
+        }
+        logEvent({ category: 'sokoban', action: 'push' });
+      }
+      if (isSolved(next)) {
+        logGameEnd('sokoban', `level_complete`);
+        logEvent({
+          category: 'sokoban',
+          action: 'level_complete',
+          value: next.pushes,
+        });
+        const bestKey = `sokoban-best-${packIndex}-${index}`;
+        const prevBest = localStorage.getItem(bestKey);
+        if (!prevBest || next.pushes < Number(prevBest)) {
+          localStorage.setItem(bestKey, String(next.pushes));
+          setBest(next.pushes);
+        }
+        setStats({ moves: next.moves, pushes: next.pushes });
+        setShowStats(true);
+      }
+      return true;
+    },
+    [index, packIndex],
+  );
 
   const handleReset = useCallback(() => {
     const st = resetLevel(currentPack.levels[index]);
+    historyApi.clear();
+    setPuffs([]);
+    setLastPush(null);
     setState(st);
     setReach(reachable(st));
       setHint('');
@@ -172,7 +283,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setShowStats(false);
       setMinPushes(null);
     setTimeout(() => setMinPushes(findMinPushes(st)), 0);
-  }, [currentPack, index]);
+  }, [currentPack, index, historyApi]);
 
   const handleFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,101 +374,38 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       if (!directionKeys.includes(e.key as DirectionKey)) return;
       e.preventDefault();
       const dir = e.key as DirectionKey;
+      const current = stateRef.current;
       if (warnDir) {
         if (warnDir === dir) {
-          const newState = move(state, dir);
-          if (newState !== state) {
-            setState(newState);
-            setReach(reachable(newState));
-            setHint('');
-            setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
-            setGhost(new Set());
-            setSolutionPath(new Set());
-            if (newState.pushes > state.pushes) {
-              const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
-              const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
-              if (from) {
-                const [fx, fy] = from.split(',').map(Number);
-                const id = puffId.current++;
-                setPuffs((p) => [...p, { id, x: fx, y: fy }]);
-                setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
-              }
-              if (to) {
-                setLastPush(to);
-                setTimeout(() => setLastPush(null), 200);
-              }
-              logEvent({ category: 'sokoban', action: 'push' });
-            }
-            if (isSolved(newState)) {
-              logGameEnd('sokoban', `level_complete`);
-              logEvent({
-                category: 'sokoban',
-                action: 'level_complete',
-                value: newState.pushes,
-              });
-              const bestKey = `sokoban-best-${packIndex}-${index}`;
-              const prevBest = localStorage.getItem(bestKey);
-              if (!prevBest || newState.pushes < Number(prevBest)) {
-                localStorage.setItem(bestKey, String(newState.pushes));
-                setBest(newState.pushes);
-              }
-              setStats({ moves: newState.moves, pushes: newState.pushes });
-              setShowStats(true);
-            }
+          const newState = move(current, dir);
+          if (commitMove(current, newState) && !suppressHistory.current) {
+            historyApi.register({
+              undo: () => performUndo(),
+              redo: () => performRedo(),
+            });
           }
           setWarnDir(null);
           return;
         }
         setWarnDir(null);
       }
-      if (wouldDeadlock(state, dir)) {
+      if (wouldDeadlock(current, dir)) {
         setStatus('Deadlock ahead! Press again to confirm.');
         setWarnDir(dir);
         return;
       }
-      const newState = move(state, dir);
-      if (newState === state) return;
-      setState(newState);
-      setReach(reachable(newState));
-      setHint('');
-      setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
-      setGhost(new Set());
-      setSolutionPath(new Set());
-      if (newState.pushes > state.pushes) {
-        const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
-        const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
-        if (from) {
-          const [fx, fy] = from.split(',').map(Number);
-          const id = puffId.current++;
-          setPuffs((p) => [...p, { id, x: fx, y: fy }]);
-          setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
-        }
-        if (to) {
-          setLastPush(to);
-          setTimeout(() => setLastPush(null), 200);
-        }
-        logEvent({ category: 'sokoban', action: 'push' });
-      }
-      if (isSolved(newState)) {
-        logGameEnd('sokoban', `level_complete`);
-        logEvent({
-          category: 'sokoban',
-          action: 'level_complete',
-          value: newState.pushes,
+      const newState = move(current, dir);
+      if (!commitMove(current, newState)) return;
+      if (!suppressHistory.current) {
+        historyApi.register({
+          undo: () => performUndo(),
+          redo: () => performRedo(),
         });
-        const bestKey = `sokoban-best-${packIndex}-${index}`;
-        const prevBest = localStorage.getItem(bestKey);
-        if (!prevBest || newState.pushes < Number(prevBest)) {
-          localStorage.setItem(bestKey, String(newState.pushes));
-          setBest(newState.pushes);
-        }
-        setStats({ moves: newState.moves, pushes: newState.pushes });
-        setShowStats(true);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index, packIndex, warnDir, handleReset, handleUndo, handleRedo]);
+  }, [warnDir, handleReset, handleUndo, handleRedo, commitMove, historyApi, performUndo, performRedo]);
 
   const handleHint = useCallback(() => {
     setHint('...');
