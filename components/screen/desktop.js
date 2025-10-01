@@ -8,7 +8,7 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import SideBar from './side_bar';
-import apps, { games } from '../../apps.config';
+import apps, { games, defaultRecentAppIds } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -342,6 +342,14 @@ export class Desktop extends Component {
         }
     }
 
+    updateRecentMetadata = (ids = []) => {
+        const recentSet = new Set(defaultRecentAppIds);
+        ids.forEach((id) => recentSet.add(id));
+        apps.forEach((app) => {
+            app.recent = recentSet.has(app.id);
+        });
+    }
+
     fetchAppsData = (callback) => {
         let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
@@ -350,6 +358,16 @@ export class Desktop extends Component {
         } else {
             pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
+        }
+        const storedRecent = safeLocalStorage?.getItem('recentApps');
+        if (storedRecent) {
+            try {
+                this.updateRecentMetadata(JSON.parse(storedRecent));
+            } catch (e) {
+                this.updateRecentMetadata([]);
+            }
+        } else {
+            this.updateRecentMetadata([]);
         }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
@@ -577,13 +595,20 @@ export class Desktop extends Component {
     }
 
     handleOpenAppEvent = (e) => {
-        const id = e.detail;
-        if (id) {
-            this.openApp(id);
+        const detail = e.detail;
+        if (!detail) return;
+        if (typeof detail === 'string') {
+            this.openApp(detail);
+            return;
+        }
+        if (typeof detail === 'object' && detail.id) {
+            this.openApp(detail.id, { spawnNew: !!detail.spawnNew });
         }
     }
 
-    openApp = (objId) => {
+    openApp = (objId, options = {}) => {
+
+        const { spawnNew = false } = options || {};
 
         // google analytics
         ReactGA.event({
@@ -594,13 +619,17 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        const wasOpen = this.state.closed_windows[objId] === false;
+
         // if app is already open, focus it instead of spawning a new window
-        if (this.state.closed_windows[objId] === false) {
+        if (wasOpen && !spawnNew) {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
                 var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                if (r) {
+                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                }
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
                 this.setState({ minimized_windows: minimized_windows }, this.saveSession);
@@ -609,51 +638,62 @@ export class Desktop extends Component {
                 this.saveSession();
             }
             return;
-        } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
-            }
-
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
-                }
-                if (a.frequency > b.frequency) {
-                    return -1;
-                }
-                return 0; // sort according to decreasing frequencies
-            });
-
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
-
-            let recentApps = [];
-            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
-            recentApps = recentApps.filter(id => id !== objId);
-            recentApps.unshift(objId);
-            recentApps = recentApps.slice(0, 10);
-            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
-
-            setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    this.focus(objId);
-                    this.saveSession();
-                });
-                this.app_stack.push(objId);
-            }, 200);
         }
+
+        let closed_windows = this.state.closed_windows;
+        let favourite_apps = this.state.favourite_apps;
+        let minimized_windows = this.state.minimized_windows;
+        let frequentApps = [];
+        try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
+        var currentApp = frequentApps.find(app => app.id === objId);
+        if (currentApp) {
+            frequentApps.forEach((app) => {
+                if (app.id === currentApp.id) {
+                    app.frequency += 1; // increase the frequency if app is found
+                }
+            });
+        } else {
+            frequentApps.push({ id: objId, frequency: 1 }); // new app opened
+        }
+
+        frequentApps.sort((a, b) => {
+            if (a.frequency < b.frequency) {
+                return 1;
+            }
+            if (a.frequency > b.frequency) {
+                return -1;
+            }
+            return 0; // sort according to decreasing frequencies
+        });
+
+        safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
+
+        let recentApps = [];
+        try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
+        recentApps = recentApps.filter(id => id !== objId);
+        recentApps.unshift(objId);
+        recentApps = recentApps.slice(0, 10);
+        safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+        this.updateRecentMetadata(recentApps);
+
+        setTimeout(() => {
+            favourite_apps[objId] = true; // adds opened app to sideBar
+            closed_windows[objId] = false; // openes app's window
+            if (wasOpen) {
+                minimized_windows[objId] = false;
+            }
+            const nextState = wasOpen
+                ? { closed_windows, favourite_apps, minimized_windows, allAppsView: false }
+                : { closed_windows, favourite_apps, allAppsView: false };
+            this.setState(nextState, () => {
+                this.focus(objId);
+                this.saveSession();
+            });
+            if (wasOpen) {
+                this.app_stack = this.app_stack.filter(id => id !== objId);
+            }
+            this.app_stack.push(objId);
+        }, 200);
     }
 
     closeApp = async (objId) => {

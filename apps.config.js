@@ -269,7 +269,7 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -592,9 +592,7 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
-
-const apps = [
+const appList = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -1051,10 +1049,74 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
-  // Utilities are grouped separately
-  ...utilities,
-  // Games are included so they appear alongside apps
-  ...games,
 ];
+
+const DEFAULT_RECENT_APP_IDS = ['plugin-manager', 'kismet', 'evidence-vault'];
+
+const APP_CATEGORIES = new Map();
+const assignCategory = (category, ids) => {
+  ids.forEach((id) => APP_CATEGORIES.set(id, category));
+};
+
+assignCategory('Utility', [
+  'calculator',
+  'converter',
+  'resource-monitor',
+  'screen-recorder',
+  'weather',
+  'weather-widget',
+]);
+assignCategory('Game', gameList.map((item) => item.id));
+assignCategory('Utility', utilityList.map((item) => item.id));
+assignCategory('Browser', ['chrome']);
+assignCategory('Development', ['terminal', 'vscode', 'html-rewriter']);
+assignCategory('Social', ['x']);
+assignCategory('Media', ['spotify', 'youtube']);
+assignCategory('Security', [
+  'beef',
+  'metasploit',
+  'wireshark',
+  'ettercap',
+  'nikto',
+  'reaver',
+  'nessus',
+  'hydra',
+  'nmap-nse',
+  'mimikatz',
+  'mimikatz/offline',
+  'hashcat',
+  'msf-post',
+  'dsniff',
+  'john',
+  'openvas',
+  'recon-ng',
+  'security-tools',
+  'kismet',
+]);
+assignCategory('System', ['about', 'settings', 'files', 'plugin-manager', 'trash']);
+assignCategory('Productivity', ['todoist', 'sticky_notes']);
+assignCategory('Communication', ['gedit', 'contact']);
+assignCategory('Hardware', ['ble-sensor', 'serial-terminal']);
+assignCategory('Reverse Engineering', ['ghidra', 'radare2']);
+assignCategory('Forensics', ['autopsy', 'volatility', 'evidence-vault']);
+assignCategory('Networking', ['ssh', 'http']);
+
+const RECENT_APP_IDS = new Set(DEFAULT_RECENT_APP_IDS);
+
+const withMetadata = (entry) => ({
+  ...entry,
+  category: entry.category ?? APP_CATEGORIES.get(entry.id) ?? 'Application',
+  recent: entry.recent ?? RECENT_APP_IDS.has(entry.id),
+});
+
+export const utilities = utilityList.map((item) => withMetadata(item));
+
+export const games = gameList.map((game) =>
+  withMetadata({ ...gameDefaults, ...game })
+);
+
+const apps = [...appList.map(withMetadata), ...utilities, ...games];
+
+export const defaultRecentAppIds = [...DEFAULT_RECENT_APP_IDS];
 
 export default apps;
