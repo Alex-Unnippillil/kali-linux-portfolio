@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import useAnnounce from '../hooks/useAnnounce';
 
 interface LoaderProps {
   onData: (rows: any[]) => void;
@@ -9,6 +10,7 @@ interface LoaderProps {
 export default function FixturesLoader({ onData }: LoaderProps) {
   const [progress, setProgress] = useState(0);
   const [worker, setWorker] = useState<Worker | null>(null);
+  const { announceProgress, announceTask } = useAnnounce();
 
   useEffect(() => {
     const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
@@ -45,6 +47,15 @@ export default function FixturesLoader({ onData }: LoaderProps) {
   };
 
   const cancel = () => worker?.postMessage({ type: 'cancel' });
+
+  useEffect(() => {
+    if (progress <= 0) return;
+    if (progress >= 100) {
+      announceTask({ taskName: 'Fixture import', status: 'completed' });
+      return;
+    }
+    announceProgress({ label: 'Fixture import', value: progress, total: 100 });
+  }, [progress, announceProgress, announceTask]);
 
   return (
     <div className="text-xs" aria-label="fixtures loader">

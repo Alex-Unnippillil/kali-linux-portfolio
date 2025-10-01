@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
+import useAnnounce from '../../hooks/useAnnounce';
 
 interface Project {
   id: number;
@@ -35,6 +36,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+  const { announcePolite } = useAnnounce();
 
   const readFilters = async () => {
     try {
@@ -88,9 +90,11 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       setYear(data.year || '');
       setType(data.type || '');
       setTags(data.tags || []);
-      setAriaMessage(`Showing ${projects.length} projects`);
+      const initialMessage = `Showing ${projects.length} projects`;
+      setAriaMessage(initialMessage);
+      announcePolite(initialMessage);
     });
-  }, [projects.length]);
+  }, [projects.length, announcePolite]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
@@ -129,10 +133,16 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   }, [search, stack, year, type, tags]);
 
   useEffect(() => {
-    setAriaMessage(
-      `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${tags.length ? ` with tags ${tags.join(', ')}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching "${search}"` : ''}`
-    );
-  }, [filtered.length, stack, year, type, tags, search]);
+    const message = `Showing ${
+      filtered.length
+    } project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${
+      tags.length ? ` with tags ${tags.join(', ')}` : ''
+    }${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${
+      search ? ` matching "${search}"` : ''
+    }`;
+    setAriaMessage(message);
+    announcePolite(message);
+  }, [announcePolite, filtered.length, stack, year, type, tags, search]);
 
   const openInFirefox = (url: string) => {
     try {
