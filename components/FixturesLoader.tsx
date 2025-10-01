@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import BackpressureNotice from './system/BackpressureNotice';
+import {
+  cancelJob,
+  enqueueJob,
+} from '../utils/backpressure';
+import useBackpressureJob from '../hooks/useBackpressureJob';
 
 interface LoaderProps {
   onData: (rows: any[]) => void;
@@ -8,30 +14,90 @@ interface LoaderProps {
 
 export default function FixturesLoader({ onData }: LoaderProps) {
   const [progress, setProgress] = useState(0);
-  const [worker, setWorker] = useState<Worker | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const jobIdRef = useRef<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const job = useBackpressureJob(jobId);
 
-  useEffect(() => {
-    const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
-    w.onmessage = (e) => {
-      const { type, payload } = e.data;
-      if (type === 'progress') setProgress(payload);
-      if (type === 'result') {
-        onData(payload);
-        try {
-          localStorage.setItem('fixtures-last', JSON.stringify(payload));
-        } catch {
-          /* ignore */
-        }
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate();
+    },
+    [],
+  );
+
+  const startParsing = (text: string, source: string) => {
+    if (!text) return;
+    setProgress(0);
+
+    const id = `fixtures:${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    const handle = enqueueJob(
+      'fixtures:parse',
+      {
+        run: () =>
+          new Promise<void>((resolve, reject) => {
+            const worker = new Worker(
+              new URL('../workers/fixturesParser.ts', import.meta.url),
+            );
+            workerRef.current = worker;
+            const cleanup = () => {
+              workerRef.current?.terminate();
+              workerRef.current = null;
+            };
+            worker.onerror = (err) => {
+              cleanup();
+              reject(err?.message || 'Failed to parse fixtures');
+            };
+            worker.onmessage = (e) => {
+              if (jobIdRef.current !== id) return;
+              const { type, payload } = e.data;
+              if (type === 'progress') setProgress(payload);
+              if (type === 'result') {
+                onData(payload);
+                try {
+                  localStorage.setItem('fixtures-last', JSON.stringify(payload));
+                } catch {
+                  /* ignore */
+                }
+                cleanup();
+                resolve();
+              }
+            };
+            worker.postMessage({ type: 'parse', text });
+          }),
+        cancel: () => {
+          if (workerRef.current) {
+            workerRef.current.postMessage({ type: 'cancel' });
+            workerRef.current.terminate();
+            workerRef.current = null;
+          }
+          setProgress(0);
+        },
+      },
+      {
+        id,
+        label: source === 'sample' ? 'Parsing sample fixtures' : 'Parsing imported fixtures',
+        metadata: { source },
+      },
+    );
+
+    jobIdRef.current = id;
+    setJobId(id);
+    handle.done.finally(() => {
+      if (jobIdRef.current === id) {
+        jobIdRef.current = null;
+        setJobId(null);
       }
-    };
-    setWorker(w);
-    return () => w.terminate();
-  }, [onData]);
+    });
+  };
 
   const loadSample = async () => {
     const res = await fetch('/fixtures/sample.json');
     const text = await res.text();
-    worker?.postMessage({ type: 'parse', text });
+    startParsing(text, 'sample');
   };
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,12 +105,18 @@ export default function FixturesLoader({ onData }: LoaderProps) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      worker?.postMessage({ type: 'parse', text: reader.result });
+      startParsing(String(reader.result || ''), 'upload');
     };
     reader.readAsText(file);
   };
 
-  const cancel = () => worker?.postMessage({ type: 'cancel' });
+  const cancel = () => {
+    if (!jobIdRef.current) return;
+    cancelJob(jobIdRef.current);
+    setProgress(0);
+  };
+
+  const cancelLabel = job?.status === 'paused' ? 'Remove' : 'Cancel';
 
   return (
     <div className="text-xs" aria-label="fixtures loader">
@@ -56,10 +128,23 @@ export default function FixturesLoader({ onData }: LoaderProps) {
           Import
           <input type="file" onChange={onFile} className="hidden" aria-label="import fixture" />
         </label>
-        <button onClick={cancel} className="px-2 py-1 bg-ub-red text-white" type="button">
-          Cancel
+        <button
+          onClick={cancel}
+          className="px-2 py-1 bg-ub-red text-white disabled:opacity-60"
+          type="button"
+          disabled={!jobId}
+        >
+          {cancelLabel}
         </button>
       </div>
+      {job && (
+        <div className="mb-2">
+          <BackpressureNotice
+            jobId={jobId}
+            description="Fixture parsing is waiting for a worker slot"
+          />
+        </div>
+      )}
       <div className="mb-2" aria-label="progress">
         Parsing: {progress}%
       </div>
