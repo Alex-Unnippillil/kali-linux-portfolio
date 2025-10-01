@@ -7,8 +7,9 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import {
-    clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
+    clampWindowPositionToSafeArea,
+    computeWindowDragBounds,
     measureSafeAreaInset,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
@@ -54,7 +55,11 @@ export class Window extends Component {
         this.startX =
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = clampWindowTopPosition(props.initialY, initialTopInset);
+        this.startY = typeof props.initialY === 'number' ? props.initialY : initialTopInset;
+        const initialClamp = clampWindowPositionToSafeArea(this.startX, this.startY, 0, 0);
+        this.startX = initialClamp.x;
+        this.startY = initialClamp.y;
+        const initialBounds = initialClamp.bounds || computeWindowDragBounds(0, 0);
 
         this.state = {
             cursorType: "cursor-default",
@@ -62,11 +67,13 @@ export class Window extends Component {
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
-            parentSize: {
-                height: 100,
-                width: 100
+            safeAreaTop: initialBounds.safeArea?.top ?? initialTopInset,
+            dragBounds: {
+                minX: initialBounds.minX ?? 0,
+                maxX: initialBounds.maxX ?? 0,
+                minY: initialBounds.minY ?? initialTopInset,
+                maxY: initialBounds.maxY ?? initialTopInset,
             },
-            safeAreaTop: initialTopInset,
             snapPreview: null,
             snapPosition: null,
             snapped: null,
@@ -95,6 +102,14 @@ export class Window extends Component {
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
+        }
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => {
+                this.setWinowsPosition();
+            });
+        } else {
+            this.setWinowsPosition();
         }
     }
 
@@ -129,32 +144,33 @@ export class Window extends Component {
         } else {
             this.setState({ height: 85, width: 60 }, this.resizeBoundries);
         }
+
+        const safeStart = clampWindowPositionToSafeArea(this.startX, this.startY, 0, 0);
+        this.startX = safeStart.x;
+        this.startY = safeStart.y;
     }
 
     resizeBoundries = () => {
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const topInset = typeof window !== 'undefined'
-            ? measureWindowTopOffset()
-            : DEFAULT_WINDOW_TOP_OFFSET;
         const windowHeightPx = viewportHeight * (this.state.height / 100.0);
         const windowWidthPx = viewportWidth * (this.state.width / 100.0);
-        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
-        const availableVertical = Math.max(viewportHeight - topInset - SNAP_BOTTOM_INSET - safeAreaBottom, 0);
-        const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
-        const maxTop = Math.max(availableVertical - windowHeightPx, 0);
-
+        const boundsResult = computeWindowDragBounds(windowWidthPx, windowHeightPx);
+        const { minX, maxX, minY, maxY, safeArea } = boundsResult;
         this.setState({
-            parentSize: {
-                height: maxTop,
-                width: availableHorizontal,
+            safeAreaTop: safeArea.top,
+            dragBounds: {
+                minX,
+                maxX,
+                minY,
+                maxY,
             },
-            safeAreaTop: topInset,
 
         }, () => {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
+            this.setWinowsPosition();
         });
     }
 
@@ -285,16 +301,23 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const snappedX = this.snapToGrid(rect.x);
-        const relativeY = rect.y - topInset;
-        const snappedRelativeY = this.snapToGrid(relativeY);
-        const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
-        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const initialClamp = clampWindowPositionToSafeArea(rect.x, rect.y, rect.width, rect.height);
+        let nextX = initialClamp.x;
+        let nextY = initialClamp.y;
+
+        if (this.props.snapEnabled) {
+            nextX = this.snapToGrid(nextX);
+            nextY = this.snapToGrid(nextY);
+            const reclamp = clampWindowPositionToSafeArea(nextX, nextY, rect.width, rect.height);
+            nextX = reclamp.x;
+            nextY = reclamp.y;
+        }
+
+        node.style.setProperty('--window-transform-x', `${nextX.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${nextY.toFixed(1)}px`);
 
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(snappedX, absoluteY);
+            this.props.onPositionChange(nextX, nextY, { width: rect.width, height: rect.height });
         }
     }
 
@@ -404,11 +427,14 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
-        const topBound = this.state.safeAreaTop ?? 0;
-        const maxX = this.state.parentSize.width;
-        const maxY = topBound + this.state.parentSize.height;
+        const bounds = this.state.dragBounds || {};
+        const minX = Number.isFinite(bounds.minX) ? bounds.minX : 0;
+        const maxX = Number.isFinite(bounds.maxX) ? bounds.maxX : minX;
+        const minY = Number.isFinite(bounds.minY) ? bounds.minY : (this.state.safeAreaTop ?? 0);
+        const maxY = Number.isFinite(bounds.maxY) ? bounds.maxY : minY;
 
         const resist = (pos, min, max) => {
+            if (max <= min) return min;
             if (pos < min) return min;
             if (pos < min + threshold) return min + (pos - min) * resistance;
             if (pos > max) return max;
@@ -416,8 +442,8 @@ export class Window extends Component {
             return pos;
         }
 
-        x = resist(x, 0, maxX);
-        y = resist(y, topBound, maxY);
+        x = resist(x, minX, maxX);
+        y = resist(y, minY, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
@@ -429,6 +455,7 @@ export class Window extends Component {
     }
 
     handleStop = () => {
+        this.setWinowsPosition();
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
@@ -614,6 +641,24 @@ export class Window extends Component {
     }
 
     render() {
+        const dragBounds = this.state.dragBounds || {};
+        const defaultTop = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const bounds = {
+            left: Number.isFinite(dragBounds.minX) ? dragBounds.minX : 0,
+            top: Number.isFinite(dragBounds.minY) ? dragBounds.minY : defaultTop,
+            right: Number.isFinite(dragBounds.maxX)
+                ? dragBounds.maxX
+                : (Number.isFinite(dragBounds.minX) ? dragBounds.minX : 0),
+            bottom: Number.isFinite(dragBounds.maxY)
+                ? dragBounds.maxY
+                : (Number.isFinite(dragBounds.minY) ? dragBounds.minY : defaultTop),
+        };
+        if (bounds.right < bounds.left) {
+            bounds.right = bounds.left;
+        }
+        if (bounds.bottom < bounds.top) {
+            bounds.bottom = bounds.top;
+        }
         return (
             <>
                 {this.state.snapPreview && (
@@ -642,12 +687,7 @@ export class Window extends Component {
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{
-                        left: 0,
-                        top: this.state.safeAreaTop,
-                        right: this.state.parentSize.width,
-                        bottom: this.state.safeAreaTop + this.state.parentSize.height,
-                    }}
+                    bounds={bounds}
                 >
                     <div
                         ref={this.windowRef}
