@@ -1,0 +1,195 @@
+[
+  {
+    "runId": "2024-q4-sim",
+    "label": "Q4 Blue Team Simulation",
+    "startedAt": "2024-11-03T09:00:00Z",
+    "baseline": true,
+    "scenario": "Credential stuffing replay across exposed services",
+    "attempts": [
+      {
+        "id": "2024-q4-sim-01",
+        "target": "VPN Gateway Alpha",
+        "protocol": "IPSec",
+        "status": "blocked",
+        "timestamp": "2024-11-03T09:12:00Z",
+        "detection": "Firewall rate limit",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-01",
+        "durationMs": 4200,
+        "notes": "Denied after adaptive rate control kicked in."
+      },
+      {
+        "id": "2024-q4-sim-02",
+        "target": "Customer Portal",
+        "protocol": "HTTPS",
+        "status": "detected",
+        "timestamp": "2024-11-03T09:38:00Z",
+        "detection": "WAF anomaly",
+        "sensitivity": "internal",
+        "operatorAlias": "Analyst-02",
+        "durationMs": 3600,
+        "notes": "Blocked login spray by captcha challenge."
+      },
+      {
+        "id": "2024-q4-sim-03",
+        "target": "Legacy FTP",
+        "protocol": "FTP",
+        "status": "success",
+        "timestamp": "2024-11-03T10:05:00Z",
+        "detection": "Log review",
+        "sensitivity": "restricted",
+        "operatorAlias": "Analyst-01",
+        "durationMs": 2800,
+        "notes": "Credential reuse from previous tabletop exercise."
+      },
+      {
+        "id": "2024-q4-sim-04",
+        "target": "API Gateway",
+        "protocol": "HTTPS",
+        "status": "blocked",
+        "timestamp": "2024-11-03T10:44:00Z",
+        "detection": "WAF rule",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-03",
+        "durationMs": 5100,
+        "notes": "Schema fuzzing attempt rejected."
+      }
+    ]
+  },
+  {
+    "runId": "2025-q1-refresh",
+    "label": "Q1 Platform Hardening",
+    "startedAt": "2025-02-12T13:00:00Z",
+    "scenario": "Updated control validation with patched services",
+    "attempts": [
+      {
+        "id": "2025-q1-refresh-01",
+        "target": "VPN Gateway Alpha",
+        "protocol": "IPSec",
+        "status": "detected",
+        "timestamp": "2025-02-12T13:09:00Z",
+        "detection": "SIEM correlation",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-02",
+        "durationMs": 3400,
+        "notes": "Automated alert acknowledged within 90 seconds."
+      },
+      {
+        "id": "2025-q1-refresh-02",
+        "target": "Customer Portal",
+        "protocol": "HTTPS",
+        "status": "blocked",
+        "timestamp": "2025-02-12T13:31:00Z",
+        "detection": "WAF anomaly",
+        "sensitivity": "internal",
+        "operatorAlias": "Analyst-03",
+        "durationMs": 3300,
+        "notes": "Improved captcha triggered earlier."
+      },
+      {
+        "id": "2025-q1-refresh-03",
+        "target": "Legacy FTP",
+        "protocol": "FTP",
+        "status": "blocked",
+        "timestamp": "2025-02-12T13:58:00Z",
+        "detection": "EDR sensor",
+        "sensitivity": "restricted",
+        "operatorAlias": "Analyst-02",
+        "durationMs": 2500,
+        "notes": "EDR quarantined the honeypot account immediately."
+      },
+      {
+        "id": "2025-q1-refresh-04",
+        "target": "API Gateway",
+        "protocol": "HTTPS",
+        "status": "success",
+        "timestamp": "2025-02-12T14:22:00Z",
+        "detection": "Post-run review",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-01",
+        "durationMs": 4600,
+        "notes": "GraphQL introspection allowed limited enumeration."
+      },
+      {
+        "id": "2025-q1-refresh-05",
+        "target": "MQ Broker",
+        "protocol": "AMQP",
+        "status": "detected",
+        "timestamp": "2025-02-12T14:45:00Z",
+        "detection": "Broker audit log",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-04",
+        "durationMs": 3900,
+        "notes": "Demo credentials rejected."
+      }
+    ]
+  },
+  {
+    "runId": "2025-q2-lab",
+    "label": "Q2 Incident Response Lab",
+    "startedAt": "2025-05-18T15:30:00Z",
+    "scenario": "Cross-team purple exercise with new services",
+    "attempts": [
+      {
+        "id": "2025-q2-lab-01",
+        "target": "Customer Portal",
+        "protocol": "HTTPS",
+        "status": "success",
+        "timestamp": "2025-05-18T15:34:00Z",
+        "detection": "Red team report",
+        "sensitivity": "internal",
+        "operatorAlias": "Analyst-05",
+        "durationMs": 4100,
+        "notes": "Password reset email misconfiguration exploited."
+      },
+      {
+        "id": "2025-q2-lab-02",
+        "target": "MQ Broker",
+        "protocol": "AMQP",
+        "status": "blocked",
+        "timestamp": "2025-05-18T15:55:00Z",
+        "detection": "Broker audit log",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-04",
+        "durationMs": 3700,
+        "notes": "Policy enforced TLS mutual auth."
+      },
+      {
+        "id": "2025-q2-lab-03",
+        "target": "Telemetry API",
+        "protocol": "HTTPS",
+        "status": "detected",
+        "timestamp": "2025-05-18T16:20:00Z",
+        "detection": "Observability alerts",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-01",
+        "durationMs": 3200,
+        "notes": "Spike in unusual parameter combinations."
+      },
+      {
+        "id": "2025-q2-lab-04",
+        "target": "VPN Gateway Alpha",
+        "protocol": "IPSec",
+        "status": "detected",
+        "timestamp": "2025-05-18T16:42:00Z",
+        "detection": "SIEM correlation",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-06",
+        "durationMs": 3600,
+        "notes": "Certificate pinning failure blocked replay."
+      },
+      {
+        "id": "2025-q2-lab-05",
+        "target": "Telemetry API",
+        "protocol": "HTTPS",
+        "status": "deferred",
+        "timestamp": "2025-05-18T17:05:00Z",
+        "detection": "Change advisory",
+        "sensitivity": "public",
+        "operatorAlias": "Analyst-05",
+        "durationMs": 1800,
+        "notes": "Escalated to change board for approval."
+      }
+    ]
+  }
+]
