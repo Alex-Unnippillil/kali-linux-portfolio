@@ -29,10 +29,179 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+const WINDOW_GEOMETRY_STORAGE_KEY = 'desktop_window_geometry';
+const WINDOW_GEOMETRY_VERSION = 1;
+
+const clampNumber = (value, { min = Number.NEGATIVE_INFINITY, max = Number.POSITIVE_INFINITY, precision } = {}) => {
+    if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        value = Number.isFinite(parsed) ? parsed : Number.NaN;
+    }
+    if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) {
+        return undefined;
+    }
+    let next = value;
+    if (typeof min === 'number') {
+        next = Math.max(next, min);
+    }
+    if (typeof max === 'number') {
+        next = Math.min(next, max);
+    }
+    if (typeof precision === 'number' && precision >= 0) {
+        const factor = Math.pow(10, precision);
+        next = Math.round(next * factor) / factor;
+    }
+    return next;
+};
+
+const sanitizeWindowGeometryEntry = (entry) => {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+    const sanitized = {};
+    const x = clampNumber(entry.x, { min: -5000, max: 5000, precision: 1 });
+    if (typeof x === 'number') {
+        sanitized.x = x;
+    }
+    const y = clampNumber(entry.y, { min: -5000, max: 5000, precision: 1 });
+    if (typeof y === 'number') {
+        sanitized.y = y;
+    }
+    const width = clampNumber(entry.width, { min: 10, max: 200, precision: 2 });
+    if (typeof width === 'number') {
+        sanitized.width = width;
+    }
+    const height = clampNumber(entry.height, { min: 10, max: 200, precision: 2 });
+    if (typeof height === 'number') {
+        sanitized.height = height;
+    }
+    if (entry.maximized !== undefined) {
+        if (typeof entry.maximized === 'string') {
+            sanitized.maximized = entry.maximized === 'true';
+        } else {
+            sanitized.maximized = Boolean(entry.maximized);
+        }
+    }
+    return Object.keys(sanitized).length ? sanitized : null;
+};
+
+const createDefaultGeometryStore = () => ({
+    version: WINDOW_GEOMETRY_VERSION,
+    windows: {},
+});
+
+const readWindowGeometryFromStorage = () => {
+    const fallback = createDefaultGeometryStore();
+    if (!safeLocalStorage) {
+        return fallback;
+    }
+    try {
+        const raw = safeLocalStorage.getItem(WINDOW_GEOMETRY_STORAGE_KEY);
+        if (!raw) {
+            return fallback;
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || parsed.version !== WINDOW_GEOMETRY_VERSION) {
+            return fallback;
+        }
+        if (!parsed.windows || typeof parsed.windows !== 'object') {
+            return fallback;
+        }
+        const windows = {};
+        Object.entries(parsed.windows).forEach(([id, value]) => {
+            const sanitized = sanitizeWindowGeometryEntry(value);
+            if (sanitized) {
+                windows[id] = sanitized;
+            }
+        });
+        return {
+            version: WINDOW_GEOMETRY_VERSION,
+            windows,
+        };
+    } catch (error) {
+        try {
+            safeLocalStorage?.removeItem(WINDOW_GEOMETRY_STORAGE_KEY);
+        } catch (e) {
+            // ignore removal errors
+        }
+        return fallback;
+    }
+};
+
+const persistWindowGeometryStore = (store) => {
+    if (!safeLocalStorage || !store || typeof store !== 'object') {
+        return;
+    }
+    const payload = {
+        version: WINDOW_GEOMETRY_VERSION,
+        windows: store.windows || {},
+    };
+    try {
+        safeLocalStorage.setItem(WINDOW_GEOMETRY_STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+        // ignore write errors
+    }
+};
+
+const captureWindowGeometrySnapshot = (id) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return null;
+    }
+    if (!id) return null;
+    const node = document.getElementById(id);
+    if (!node || typeof node.getBoundingClientRect !== 'function') {
+        return null;
+    }
+    const rect = node.getBoundingClientRect();
+    const viewportWidth = Math.max(window.innerWidth || 0, 1);
+    const viewportHeight = Math.max(window.innerHeight || 0, 1);
+    const parseCoordinate = (value, fallback) => {
+        const parsed = clampNumber(value, { min: -5000, max: 5000, precision: 1 });
+        if (typeof parsed === 'number') {
+            return parsed;
+        }
+        return fallback;
+    };
+    const rawX = node.style?.getPropertyValue?.('--window-transform-x');
+    const rawY = node.style?.getPropertyValue?.('--window-transform-y');
+    const x = parseCoordinate(rawX, clampNumber(rect.left, { min: -5000, max: 5000, precision: 1 }));
+    const y = parseCoordinate(rawY, clampNumber(rect.top, { min: -5000, max: 5000, precision: 1 }));
+    const widthPercent = clampNumber(
+        rect.width ? (rect.width / viewportWidth) * 100 : undefined,
+        { min: 10, max: 200, precision: 2 },
+    );
+    const heightPercent = clampNumber(
+        rect.height ? (rect.height / viewportHeight) * 100 : undefined,
+        { min: 10, max: 200, precision: 2 },
+    );
+    const maximized = node.getAttribute('data-window-maximized') === 'true';
+    return sanitizeWindowGeometryEntry({
+        x,
+        y,
+        width: widthPercent,
+        height: heightPercent,
+        maximized,
+    });
+};
+
+const extractWindowPositionsFromStore = (store) => {
+    const positions = {};
+    if (!store || !store.windows || typeof store.windows !== 'object') {
+        return positions;
+    }
+    Object.entries(store.windows).forEach(([id, value]) => {
+        if (value && typeof value.x === 'number' && typeof value.y === 'number') {
+            positions[id] = { x: value.x, y: value.y };
+        }
+    });
+    return positions;
+};
+
 
 export class Desktop extends Component {
     constructor() {
         super();
+        this.windowGeometryStore = readWindowGeometryFromStorage();
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
@@ -51,7 +220,7 @@ export class Desktop extends Component {
             disabled_apps: {},
             favourite_apps: {},
             minimized_windows: {},
-            window_positions: {},
+            window_positions: extractWindowPositionsFromStore(this.windowGeometryStore),
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
@@ -135,6 +304,44 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    storeWindowGeometry = (id, geometry) => {
+        if (!id) return;
+        const sanitized = sanitizeWindowGeometryEntry(geometry);
+        if (!sanitized) return;
+        if (!this.windowGeometryStore || typeof this.windowGeometryStore !== 'object') {
+            this.windowGeometryStore = createDefaultGeometryStore();
+        }
+        const existing = (this.windowGeometryStore.windows && this.windowGeometryStore.windows[id]) || {};
+        const nextWindows = {
+            ...(this.windowGeometryStore.windows || {}),
+            [id]: { ...existing, ...sanitized },
+        };
+        this.windowGeometryStore = {
+            version: WINDOW_GEOMETRY_VERSION,
+            windows: nextWindows,
+        };
+        persistWindowGeometryStore(this.windowGeometryStore);
+    };
+
+    handleWindowGeometryChange = (id, geometry = {}) => {
+        this.storeWindowGeometry(id, geometry);
+    };
+
+    captureAndPersistWindowGeometry = (id) => {
+        const snapshot = captureWindowGeometrySnapshot(id);
+        if (snapshot) {
+            this.storeWindowGeometry(id, snapshot);
+        }
+    };
+
+    getStoredWindowGeometry = (id) => {
+        if (!id || !this.windowGeometryStore || !this.windowGeometryStore.windows) {
+            return null;
+        }
+        const entry = this.windowGeometryStore.windows[id];
+        return entry ? { ...entry } : null;
     };
 
     setupPointerMediaWatcher = () => {
@@ -1377,7 +1584,14 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
-                const pos = this.state.window_positions[app.id];
+                const storedGeometry = this.getStoredWindowGeometry(app.id) || {};
+                const pos = this.state.window_positions[app.id] || (typeof storedGeometry.x === 'number' && typeof storedGeometry.y === 'number'
+                    ? { x: storedGeometry.x, y: storedGeometry.y }
+                    : undefined);
+                const initialX = pos ? pos.x : undefined;
+                const initialY = pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset;
+                const defaultWidth = typeof storedGeometry.width === 'number' ? storedGeometry.width : app.defaultWidth;
+                const defaultHeight = typeof storedGeometry.height === 'number' ? storedGeometry.height : app.defaultHeight;
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -1391,12 +1605,14 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
-                    initialX: pos ? pos.x : undefined,
-                    initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
+                    defaultWidth,
+                    defaultHeight,
+                    initialX,
+                    initialY,
+                    initialMaximized: storedGeometry.maximized === true,
 
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onGeometryChange: this.handleWindowGeometryChange,
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
                 }
@@ -1419,6 +1635,7 @@ export class Desktop extends Component {
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), this.saveSession);
+        this.storeWindowGeometry(id, { x: nextX, y: nextY });
     }
 
     saveSession = () => {
@@ -1440,6 +1657,7 @@ export class Desktop extends Component {
     }
 
     hasMinimised = (objId) => {
+        this.captureAndPersistWindowGeometry(objId);
         let minimized_windows = this.state.minimized_windows;
         var focused_windows = this.state.focused_windows;
 
@@ -1597,6 +1815,7 @@ export class Desktop extends Component {
     }
 
     closeApp = async (objId) => {
+        this.captureAndPersistWindowGeometry(objId);
 
         // capture window snapshot
         let image = null;
