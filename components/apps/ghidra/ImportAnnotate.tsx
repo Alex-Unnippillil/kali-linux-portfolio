@@ -112,11 +112,15 @@ export default function ImportAnnotate() {
 
   return (
     <div className="text-xs md:text-sm">
-      <label className="block mb-1">Upload PE or ELF file</label>
+      <label htmlFor="ghidra-import-file" className="block mb-1">
+        Upload PE or ELF file
+      </label>
       <input
+        id="ghidra-import-file"
         type="file"
         accept=".exe,.dll,.bin,.elf"
         onChange={handleFile}
+        aria-label="Upload PE or ELF file"
         className="mb-2"
       />
       <div className="flex flex-wrap gap-4">
