@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../utils/urlPolicy';
 
 interface Module {
   id: string;
@@ -198,13 +199,14 @@ const PopularModules: React.FC = () => {
         )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
-      <input
-        type="text"
-        placeholder="Search modules"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-2 text-black rounded"
-      />
+        <input
+          type="text"
+          placeholder="Search modules"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full p-2 text-black rounded"
+          aria-label="Search modules"
+        />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
@@ -284,13 +286,14 @@ const PopularModules: React.FC = () => {
           <div className="space-y-1">
             <label className="block text-sm">
               Filter logs
-              <input
-                placeholder="Filter logs"
-                type="text"
-                value={logFilter}
-                onChange={(e) => setLogFilter(e.target.value)}
-                className="w-full p-1 mt-1 text-black rounded"
-              />
+                <input
+                  placeholder="Filter logs"
+                  type="text"
+                  value={logFilter}
+                  onChange={(e) => setLogFilter(e.target.value)}
+                  className="w-full p-1 mt-1 text-black rounded"
+                  aria-label="Filter logs"
+                />
             </label>
             <button
               type="button"
@@ -339,14 +342,26 @@ const PopularModules: React.FC = () => {
                 <li key={i}>{i}</li>
               ))}
             </ul>
-            <a
-              href={selected.lab}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-blue-300"
-            >
-              Practice Lab
-            </a>
+            {(() => {
+              const safeLab = sanitizeUrl(selected.lab);
+              if (!safeLab) {
+                return (
+                  <span className="text-xs italic text-ubt-grey">
+                    {LINK_UNAVAILABLE_COPY}
+                  </span>
+                );
+              }
+              return (
+                <a
+                  href={safeLab.href}
+                  target="_blank"
+                  rel={computeRelAttribute(safeLab.isExternal)}
+                  className="underline text-blue-300"
+                >
+                  Practice Lab
+                </a>
+              );
+            })()}
           </div>
         </div>
       ) : (

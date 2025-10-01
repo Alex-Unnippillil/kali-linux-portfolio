@@ -1,4 +1,5 @@
 import React from 'react';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../../utils/urlPolicy';
 
 /**
  * SafetyNote displays an ethics reminder for security testing.
@@ -17,14 +18,28 @@ export default function SafetyNote() {
       <p>
         Use security tools responsibly and only on systems you are authorized to
         test. Learn more about{' '}
-        <a
-          href="https://owasp.org/www-project-web-security-testing-guide/stable/en/01-Introduction/0A-Testing-Ethics"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline text-ubt-blue"
-        >
-          testing ethics
-        </a>
+        {(() => {
+          const safeLink = sanitizeUrl(
+            'https://owasp.org/www-project-web-security-testing-guide/stable/en/01-Introduction/0A-Testing-Ethics',
+          );
+          if (!safeLink) {
+            return (
+              <span className="underline italic text-ubt-grey">
+                testing ethics ({LINK_UNAVAILABLE_COPY})
+              </span>
+            );
+          }
+          return (
+            <a
+              href={safeLink.href}
+              target="_blank"
+              rel={computeRelAttribute(safeLink.isExternal)}
+              className="underline text-ubt-blue"
+            >
+              testing ethics
+            </a>
+          );
+        })()}
         .
       </p>
     </aside>

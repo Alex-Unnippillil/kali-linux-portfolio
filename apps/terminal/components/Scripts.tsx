@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import runScript, { ScriptController } from '../utils/scriptRunner';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../../utils/urlPolicy';
 
 interface ScriptEntry {
   code: string;
@@ -106,14 +107,26 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
     <div className="p-2 space-y-2 text-sm">
       <p className="text-xs">
         Need sample scripts?{' '}
-        <a
-          href={examplesHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline text-blue-400"
-        >
-          View examples
-        </a>
+        {(() => {
+          const safeExamples = sanitizeUrl(examplesHref);
+          if (!safeExamples) {
+            return (
+              <span className="underline text-blue-200 italic">
+                View examples ({LINK_UNAVAILABLE_COPY})
+              </span>
+            );
+          }
+          return (
+            <a
+              href={safeExamples.href}
+              target="_blank"
+              rel={computeRelAttribute(safeExamples.isExternal, 'noopener noreferrer')}
+              className="underline text-blue-400"
+            >
+              View examples
+            </a>
+          );
+        })()}
         . Use <code>$1</code>, <code>$2</code>… in scripts for arguments.
       </p>
       <div className="space-y-1">
@@ -122,12 +135,14 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
           onChange={(e) => setName(e.target.value)}
           placeholder="script name"
           className="w-full border p-1"
+          aria-label="Script name"
         />
         <textarea
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder={"echo hello\nsleep 1000\necho done"}
           className="w-full border p-1 h-32"
+          aria-label="Script body"
         />
         <button
           onClick={save}

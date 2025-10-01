@@ -1,4 +1,5 @@
 import React from 'react';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../../utils/urlPolicy';
 
 export type SimulationLink = {
   label: string;
@@ -528,47 +529,65 @@ export const SIMULATIONS = Object.fromEntries([
   }),
 ]) as Record<string, FirefoxSimulation>;
 
-export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> = ({ simulation }) => (
-  <div className="flex h-full flex-col overflow-hidden bg-gray-950 text-gray-100">
-    <header className="border-b border-gray-800 px-6 py-5">
-      <h1 className="text-2xl font-semibold text-white">{simulation.heading}</h1>
-      <p className="mt-2 max-w-3xl text-sm text-gray-300">{simulation.description}</p>
-      <a
-        href={simulation.externalUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-4 inline-flex items-center gap-2 rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
-      >
-        {simulation.ctaLabel ?? 'Open official site'}
-        <span aria-hidden="true" className="text-xs">↗</span>
-      </a>
-    </header>
-    <div className="flex-1 overflow-y-auto px-6 py-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        {simulation.sections.map((section) => (
-          <section key={section.title} className="rounded-lg border border-gray-800 bg-gray-900/60 p-5 shadow-inner">
-            <h2 className="text-lg font-semibold text-white">{section.title}</h2>
-            {section.body ? <p className="mt-2 text-sm text-gray-300">{section.body}</p> : null}
-            {section.links ? (
-              <ul className="mt-4 space-y-3 text-sm">
-                {section.links.map((link) => (
-                  <li key={link.href} className="rounded-md bg-gray-900/80 p-3 transition hover:bg-gray-800/80">
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-                    >
-                      {link.label}
-                    </a>
-                    {link.description ? <p className="mt-1 text-xs text-gray-400">{link.description}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-        ))}
+export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> = ({ simulation }) => {
+  const safeExternal = sanitizeUrl(simulation.externalUrl);
+  return (
+    <div className="flex h-full flex-col overflow-hidden bg-gray-950 text-gray-100">
+      <header className="border-b border-gray-800 px-6 py-5">
+        <h1 className="text-2xl font-semibold text-white">{simulation.heading}</h1>
+        <p className="mt-2 max-w-3xl text-sm text-gray-300">{simulation.description}</p>
+        {safeExternal ? (
+          <a
+            href={safeExternal.href}
+            target="_blank"
+            rel={computeRelAttribute(safeExternal.isExternal, 'noreferrer')}
+            className="mt-4 inline-flex items-center gap-2 rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            {simulation.ctaLabel ?? 'Open official site'}
+            <span aria-hidden="true" className="text-xs">↗</span>
+          </a>
+        ) : (
+          <span className="mt-4 inline-flex items-center gap-2 rounded bg-blue-500/40 px-4 py-2 text-sm font-medium text-blue-100">
+            {simulation.ctaLabel ?? 'Open official site'} ({LINK_UNAVAILABLE_COPY})
+          </span>
+        )}
+      </header>
+      <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {simulation.sections.map((section) => (
+            <section key={section.title} className="rounded-lg border border-gray-800 bg-gray-900/60 p-5 shadow-inner">
+              <h2 className="text-lg font-semibold text-white">{section.title}</h2>
+              {section.body ? <p className="mt-2 text-sm text-gray-300">{section.body}</p> : null}
+              {section.links ? (
+                <ul className="mt-4 space-y-3 text-sm">
+                  {section.links.map((link) => {
+                    const safeLink = sanitizeUrl(link.href);
+                    return (
+                      <li key={link.href} className="rounded-md bg-gray-900/80 p-3 transition hover:bg-gray-800/80">
+                        {safeLink ? (
+                          <a
+                            href={safeLink.href}
+                            target="_blank"
+                            rel={computeRelAttribute(safeLink.isExternal, 'noreferrer')}
+                            className="font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                          >
+                            {link.label}
+                          </a>
+                        ) : (
+                          <span className="font-medium text-blue-200 italic">
+                            {link.label} ({LINK_UNAVAILABLE_COPY})
+                          </span>
+                        )}
+                        {link.description ? <p className="mt-1 text-xs text-gray-400">{link.description}</p> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </section>
+          ))}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};

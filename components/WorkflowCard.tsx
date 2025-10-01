@@ -1,4 +1,5 @@
 import React from 'react';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../utils/urlPolicy';
 
 interface Step {
   title: string;
@@ -30,14 +31,26 @@ const WorkflowCard: React.FC = () => (
     <ul>
       {steps.map((s) => (
         <li key={s.title} className="mb-2">
-          <a
-            href={s.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-ub-orange underline"
-          >
-            {s.title}
-          </a>
+          {(() => {
+            const safeLink = sanitizeUrl(s.link);
+            if (!safeLink) {
+              return (
+                <span className="italic text-ubt-grey">
+                  {s.title} ({LINK_UNAVAILABLE_COPY})
+                </span>
+              );
+            }
+            return (
+              <a
+                href={safeLink.href}
+                target="_blank"
+                rel={computeRelAttribute(safeLink.isExternal)}
+                className="text-ub-orange underline"
+              >
+                {s.title}
+              </a>
+            );
+          })()}
           <p className="text-sm">{s.description}</p>
         </li>
       ))}

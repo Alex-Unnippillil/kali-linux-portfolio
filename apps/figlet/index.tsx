@@ -5,6 +5,7 @@ import { toPng, toSvg } from "html-to-image";
 import AlignmentControls from "./components/AlignmentControls";
 import FontGrid from "./components/FontGrid";
 import usePersistentState from "../../hooks/usePersistentState";
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from "../../utils/urlPolicy";
 
 interface FontInfo {
   name: string;
@@ -542,14 +543,26 @@ const FigletApp: React.FC = () => {
       </div>
       <div className="p-2 text-xs text-right">
         About this feature{" "}
-        <a
-          href="http://www.figlet.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          FIGlet
-        </a>
+        {(() => {
+          const safeLink = sanitizeUrl("http://www.figlet.org/");
+          if (!safeLink) {
+            return (
+              <span className="underline italic">
+                FIGlet ({LINK_UNAVAILABLE_COPY})
+              </span>
+            );
+          }
+          return (
+            <a
+              href={safeLink.href}
+              target="_blank"
+              rel={computeRelAttribute(safeLink.isExternal, "noopener noreferrer")}
+              className="underline"
+            >
+              FIGlet
+            </a>
+          );
+        })()}
       </div>
       <div aria-live="polite" className="sr-only">
         {announce}

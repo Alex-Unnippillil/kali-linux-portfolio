@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../utils/urlPolicy';
 
 const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
@@ -13,14 +14,26 @@ const HTTPBuilder: React.FC = () => {
       <h1 className="mb-4 text-2xl">HTTP Request Builder</h1>
       <p className="mb-4 text-sm text-yellow-300">
         Build a curl command without sending any requests. Learn more at{' '}
-        <a
-          href="https://curl.se/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline text-blue-400"
-        >
-          the curl project page
-        </a>
+        {(() => {
+          const safeLink = sanitizeUrl('https://curl.se/');
+          if (!safeLink) {
+            return (
+              <span className="underline text-blue-200 italic">
+                the curl project page ({LINK_UNAVAILABLE_COPY})
+              </span>
+            );
+          }
+          return (
+            <a
+              href={safeLink.href}
+              target="_blank"
+              rel={computeRelAttribute(safeLink.isExternal, 'noopener noreferrer')}
+              className="underline text-blue-400"
+            >
+              the curl project page
+            </a>
+          );
+        })()}
         .
       </p>
       <form onSubmit={(e) => e.preventDefault()} className="mb-4 space-y-4">
@@ -50,6 +63,7 @@ const HTTPBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            aria-label="Request URL"
           />
         </div>
       </form>

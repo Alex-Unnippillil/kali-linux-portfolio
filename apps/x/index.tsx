@@ -14,6 +14,7 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../utils/urlPolicy';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -109,6 +110,13 @@ export default function XTimeline() {
   const timeoutsRef = useRef<Record<string, number>>({});
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
+
+  const openFeedInNewTab = () => {
+    const safeLink = feed ? sanitizeUrl(`https://x.com/${feed}`) : null;
+    if (safeLink) {
+      window.open(safeLink.href, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -271,14 +279,26 @@ export default function XTimeline() {
             </p>
             <p className="mb-4">
               You can explore with a demo account{' '}
-              <a
-                href="https://x.com/AUnnippillil"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                @AUnnippillil
-              </a>
+              {(() => {
+                const safeDemo = sanitizeUrl('https://x.com/AUnnippillil');
+                if (!safeDemo) {
+                  return (
+                    <span className="underline italic">
+                      @AUnnippillil ({LINK_UNAVAILABLE_COPY})
+                    </span>
+                  );
+                }
+                return (
+                  <a
+                    href={safeDemo.href}
+                    target="_blank"
+                    rel={computeRelAttribute(safeDemo.isExternal, 'noopener noreferrer')}
+                    className="underline"
+                  >
+                    @AUnnippillil
+                  </a>
+                );
+              })()}
               .
             </p>
             <button
@@ -317,7 +337,7 @@ export default function XTimeline() {
           <button
             type="button"
             aria-label="Open on x.com"
-            onClick={() => window.open(`https://x.com/${feed}`, '_blank')}
+            onClick={openFeedInNewTab}
             className="p-1 rounded hover:bg-[var(--color-muted)]"
           >
             <IconShare className="w-6 h-6" />
@@ -330,6 +350,7 @@ export default function XTimeline() {
             onChange={(e) => setTweetText(e.target.value)}
             placeholder="Tweet text"
             className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            aria-label="Tweet text"
           />
           <div className="flex gap-2 items-center">
             <input
@@ -337,6 +358,7 @@ export default function XTimeline() {
               value={tweetTime}
               onChange={(e) => setTweetTime(e.target.value)}
               className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              aria-label="Schedule time"
             />
             <button
               type="submit"
@@ -412,6 +434,7 @@ export default function XTimeline() {
                 : 'Add list (owner/slug or id)'
             }
             className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            aria-label="Timeline feed identifier"
           />
           <button
             type="submit"
@@ -484,15 +507,27 @@ export default function XTimeline() {
             {scriptError && (
               <div className="text-center">
                 <div className="mb-2">Nothing to see</div>
-                <a
-                  href={`https://x.com/${feed}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                  style={{ color: accent }}
-                >
-                  Open on x.com
-                </a>
+                {(() => {
+                  const safeLink = feed ? sanitizeUrl(`https://x.com/${feed}`) : null;
+                  if (!safeLink) {
+                    return (
+                      <span className="underline italic" style={{ color: accent }}>
+                        Open on x.com ({LINK_UNAVAILABLE_COPY})
+                      </span>
+                    );
+                  }
+                  return (
+                    <a
+                      href={safeLink.href}
+                      target="_blank"
+                      rel={computeRelAttribute(safeLink.isExternal, 'noopener noreferrer')}
+                      className="underline"
+                      style={{ color: accent }}
+                    >
+                      Open on x.com
+                    </a>
+                  );
+                })()}
               </div>
             )}
             {!loading && !timelineLoaded && !scriptError && (

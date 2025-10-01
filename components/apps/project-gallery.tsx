@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../utils/urlPolicy';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -228,7 +229,9 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           <table className="w-full text-sm text-left" role="table">
             <thead>
               <tr>
-                <th />
+                <th className="sr-only" scope="col">
+                  Attribute
+                </th>
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -252,99 +255,115 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         </div>
       )}
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
-          <div
-            key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
-          >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
-              <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
+        {filtered.map((project) => {
+          const safeRepo = sanitizeUrl(project.repo);
+          const safeDemo = project.demo ? sanitizeUrl(project.demo) : null;
+          return (
+            <div
+              key={project.id}
+              className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
+            >
+              <div className="flex flex-col md:flex-row h-48">
+                <img
+                  src={project.thumbnail}
+                  alt={project.title}
+                  className="w-full md:w-1/2 h-48 object-cover"
+                  loading="lazy"
                 />
+                <div className="w-full md:w-1/2 h-48">
+                  <Editor
+                    height="100%"
+                    theme="vs-dark"
+                    language={project.language}
+                    value={project.snippet}
+                    options={{ readOnly: true, minimap: { enabled: false } }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="p-4 space-y-2">
-              <h3 className="text-lg font-semibold">{project.title}</h3>
-              <p className="text-sm">{project.description}</p>
-              <button
-                onClick={() => toggleSelect(project)}
-                aria-label={`Select ${project.title} for comparison`}
-                className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-              >
-                {selected.some((p) => p.id === project.id)
-                  ? 'Deselect'
-                  : 'Compare'}
-              </button>
-              <div className="flex flex-wrap gap-1">
-                {project.stack.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStack(s)}
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {project.tags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() =>
-                      setTags((prev) =>
-                        prev.includes(t)
-                          ? prev.filter((tag) => tag !== t)
-                          : [...prev, t]
-                      )
-                    }
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm pt-2">
-                <a
-                  href={project.repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
+              <div className="p-4 space-y-2">
+                <h3 className="text-lg font-semibold">{project.title}</h3>
+                <p className="text-sm">{project.description}</p>
+                <button
+                  onClick={() => toggleSelect(project)}
+                  aria-label={`Select ${project.title} for comparison`}
+                  className="bg-gray-700 text-xs px-2 py-1 rounded-full"
                 >
-                  Repo
-                </a>
-                  {project.demo && (
-                    <>
-                      <a
-                        href={project.demo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        Live Demo
-                      </a>
-                      <button
-                        onClick={() => openInFirefox(project.demo)}
-                        className="text-blue-400 hover:underline"
-                      >
-                        Open in Firefox
-                      </button>
-                    </>
+                  {selected.some((p) => p.id === project.id)
+                    ? 'Deselect'
+                    : 'Compare'}
+                </button>
+                <div className="flex flex-wrap gap-1">
+                  {project.stack.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setStack(s)}
+                      className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {project.tags.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() =>
+                        setTags((prev) =>
+                          prev.includes(t)
+                            ? prev.filter((tag) => tag !== t)
+                            : [...prev, t]
+                        )
+                      }
+                      className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3 text-sm pt-2">
+                  {safeRepo ? (
+                    <a
+                      href={safeRepo.href}
+                      target="_blank"
+                      rel={computeRelAttribute(safeRepo.isExternal, 'noopener noreferrer')}
+                      className="text-blue-400 hover:underline"
+                    >
+                      Repo
+                    </a>
+                  ) : (
+                    <span className="text-blue-200 italic">
+                      Repo ({LINK_UNAVAILABLE_COPY})
+                    </span>
                   )}
+                  {project.demo && (
+                    safeDemo ? (
+                      <>
+                        <a
+                          href={safeDemo.href}
+                          target="_blank"
+                          rel={computeRelAttribute(safeDemo.isExternal, 'noopener noreferrer')}
+                          className="text-blue-400 hover:underline"
+                        >
+                          Live Demo
+                        </a>
+                        <button
+                          onClick={() => openInFirefox(safeDemo.href)}
+                          className="text-blue-400 hover:underline"
+                        >
+                          Open in Firefox
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-blue-200 italic">
+                        Live Demo ({LINK_UNAVAILABLE_COPY})
+                      </span>
+                    )
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}

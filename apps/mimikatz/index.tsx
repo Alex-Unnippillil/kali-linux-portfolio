@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import MimikatzApp from '../../components/apps/mimikatz';
 import ExposureExplainer from './components/ExposureExplainer';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../utils/urlPolicy';
 
 const disclaimerUrl = 'https://www.kali.org/docs/policy/disclaimer/';
 
@@ -18,14 +19,26 @@ const MimikatzPage: React.FC = () => {
             Mimikatz can execute high-risk commands that may compromise system
             security. Proceed only if you understand the risks.
           </p>
-          <a
-            href={disclaimerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-300 underline"
-          >
-            Read the full disclaimer
-          </a>
+          {(() => {
+            const safeDisclaimer = sanitizeUrl(disclaimerUrl);
+            if (!safeDisclaimer) {
+              return (
+                <span className="text-blue-200 underline italic">
+                  Read the full disclaimer ({LINK_UNAVAILABLE_COPY})
+                </span>
+              );
+            }
+            return (
+              <a
+                href={safeDisclaimer.href}
+                target="_blank"
+                rel={computeRelAttribute(safeDisclaimer.isExternal, 'noopener noreferrer')}
+                className="text-blue-300 underline"
+              >
+                Read the full disclaimer
+              </a>
+            );
+          })()}
           <div className="flex justify-center space-x-4 pt-2">
             <button
               onClick={() => setConfirmed(true)}

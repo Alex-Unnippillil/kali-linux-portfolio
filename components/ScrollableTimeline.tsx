@@ -4,6 +4,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../utils/urlPolicy';
 import rawMilestones from '../data/milestones.json';
 
 interface Milestone {
@@ -149,19 +150,39 @@ const ScrollableTimeline: React.FC = () => {
                   <div className="text-ubt-blue font-bold text-lg mb-2">
                     {selectedYear}-{m.month}
                   </div>
-                  <a
-                    href={m.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mb-2"
-                  >
-                    <img
-                      src={m.image}
-                      alt={m.title}
-                      className="w-full h-32 object-cover mb-2 rounded"
-                    />
-                    <p className="text-sm md:text-base">{m.title}</p>
-                  </a>
+                  {(() => {
+                    const safeLink = sanitizeUrl(m.link);
+                    const content = (
+                      <>
+                        <img
+                          src={m.image}
+                          alt={m.title}
+                          className="w-full h-32 object-cover mb-2 rounded"
+                        />
+                        <p className="text-sm md:text-base">{m.title}</p>
+                      </>
+                    );
+                    if (!safeLink) {
+                      return (
+                        <div className="block mb-2">
+                          {content}
+                          <p className="mt-2 text-xs italic text-ubt-grey">
+                            {LINK_UNAVAILABLE_COPY}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <a
+                        href={safeLink.href}
+                        target="_blank"
+                        rel={computeRelAttribute(safeLink.isExternal)}
+                        className="block mb-2"
+                      >
+                        {content}
+                      </a>
+                    );
+                  })()}
                   {renderTags(m.tags)}
                 </li>
               ))}

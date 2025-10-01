@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../utils/urlPolicy';
 import type {
   SimulatorParserRequest,
   SimulatorParserResponse,
@@ -159,10 +160,10 @@ const Simulator: React.FC = () => {
 
   return (
     <div className="space-y-4" aria-label="Simulator">
-      <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
-        <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
-      </div>
+        <div className="flex items-center space-x-2">
+          <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} aria-label="Toggle lab mode" />
+          <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
+        </div>
       {!labMode && (
         <div className="bg-yellow-100 text-yellow-800 p-2" role="alert">
           {LAB_BANNER}
@@ -205,9 +206,27 @@ const Simulator: React.FC = () => {
           <div key={p.line} className="text-sm">
             <span className="font-mono bg-gray-100 mr-2 px-1">{p.line}</span>
             {p.raw}
-            {p.key && (
-              <a className="ml-2 text-blue-600 underline" href={`https://example.com/search?q=${encodeURIComponent(p.key)}`} target="_blank" rel="noopener noreferrer">docs</a>
-            )}
+            {p.key && (() => {
+              const href = `https://example.com/search?q=${encodeURIComponent(p.key)}`;
+              const safeLink = sanitizeUrl(href);
+              if (!safeLink) {
+                return (
+                  <span className="ml-2 text-xs italic text-ubt-grey">
+                    docs ({LINK_UNAVAILABLE_COPY})
+                  </span>
+                );
+              }
+              return (
+                <a
+                  className="ml-2 text-blue-600 underline"
+                  href={safeLink.href}
+                  target="_blank"
+                  rel={computeRelAttribute(safeLink.isExternal)}
+                >
+                  docs
+                </a>
+              );
+            })()}
           </div>
         ))}
       </div>

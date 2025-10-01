@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import AboutApp from '../../components/apps/About';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../utils/urlPolicy';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -47,24 +48,48 @@ export default function AboutPage() {
             <p className="text-gray-200">Cybersecurity Specialist</p>
           </div>
           <div className="ml-4 flex gap-3">
-            <a
-              href="https://github.com/unnippillil"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              className="text-white"
-            >
-              <GitHubIcon className="w-6 h-6" />
-            </a>
-            <a
-              href="https://www.linkedin.com/in/alex-unnippillil"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-              className="text-white"
-            >
-              <LinkedInIcon className="w-6 h-6" />
-            </a>
+            {(() => {
+              const safeGitHub = sanitizeUrl('https://github.com/unnippillil');
+              if (!safeGitHub) {
+                return (
+                  <span className="text-white/60" aria-label={`GitHub (${LINK_UNAVAILABLE_COPY})`}>
+                    <GitHubIcon className="w-6 h-6 opacity-60" aria-hidden="true" />
+                  </span>
+                );
+              }
+              return (
+                <a
+                  href={safeGitHub.href}
+                  target="_blank"
+                  rel={computeRelAttribute(safeGitHub.isExternal, 'noopener noreferrer')}
+                  aria-label="GitHub"
+                  className="text-white"
+                >
+                  <GitHubIcon className="w-6 h-6" />
+                </a>
+              );
+            })()}
+            {(() => {
+              const safeLinkedIn = sanitizeUrl('https://www.linkedin.com/in/alex-unnippillil');
+              if (!safeLinkedIn) {
+                return (
+                  <span className="text-white/60" aria-label={`LinkedIn (${LINK_UNAVAILABLE_COPY})`}>
+                    <LinkedInIcon className="w-6 h-6 opacity-60" aria-hidden="true" />
+                  </span>
+                );
+              }
+              return (
+                <a
+                  href={safeLinkedIn.href}
+                  target="_blank"
+                  rel={computeRelAttribute(safeLinkedIn.isExternal, 'noopener noreferrer')}
+                  aria-label="LinkedIn"
+                  className="text-white"
+                >
+                  <LinkedInIcon className="w-6 h-6" />
+                </a>
+              );
+            })()}
           </div>
         </section>
         <AboutApp />
