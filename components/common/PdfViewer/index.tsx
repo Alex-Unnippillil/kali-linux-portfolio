@@ -18,11 +18,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   const [matches, setMatches] = useState<number[]>([]);
   const thumbListRef = useRef<HTMLDivElement | null>(null);
 
-  useRovingTabIndex(
-    thumbListRef as React.RefObject<HTMLElement>,
-    thumbs.length > 0,
-    'horizontal',
-  );
+  useRovingTabIndex(thumbListRef, thumbs.length > 0, 'horizontal');
 
   useEffect(() => {
     let mounted = true;
@@ -96,16 +92,18 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   };
 
   return (
-    <div>
-      <div className="flex gap-2 mb-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search"
-        />
-        <button onClick={search}>Search</button>
-      </div>
-      <canvas ref={canvasRef} data-testid="pdf-canvas" />
+      <div>
+        <div className="flex gap-2 mb-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search"
+            aria-label="Search document"
+          />
+          <button onClick={search}>Search</button>
+        </div>
+        <canvas ref={canvasRef} data-testid="pdf-canvas" role="img" aria-label="Current page" />
       <div
         className="flex gap-2 overflow-x-auto mt-2"
         role="listbox"
@@ -113,12 +111,13 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
         ref={thumbListRef}
       >
         {thumbs.map((t, i) => (
-          <canvas
-            key={i + 1}
-            role="option"
-            tabIndex={page === i + 1 ? 0 : -1}
-            aria-selected={page === i + 1}
-            data-testid={`thumb-${i + 1}`}
+            <canvas
+              key={i + 1}
+              role="option"
+              tabIndex={page === i + 1 ? 0 : -1}
+              aria-selected={page === i + 1}
+              aria-label={`Go to page ${i + 1}`}
+              data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
             onFocus={() => setPage(i + 1)}
             ref={(el) => {

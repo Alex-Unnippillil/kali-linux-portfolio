@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import type { MutableRefObject, RefObject } from 'react';
 
 /**
  * Enables roving tab index and arrow key navigation within a container.
@@ -6,8 +7,10 @@ import { useEffect } from 'react';
  * or role="option" will participate in the roving behaviour. This covers
  * common patterns such as tabs, menus and listboxes.
  */
+type RovingRef = RefObject<HTMLElement | null> | MutableRefObject<HTMLElement | null>;
+
 export default function useRovingTabIndex(
-  ref: React.RefObject<HTMLElement>,
+  ref: RovingRef,
   active: boolean = true,
   orientation: 'horizontal' | 'vertical' = 'horizontal'
 ) {
@@ -25,10 +28,19 @@ export default function useRovingTabIndex(
     let index = items.findIndex((el) => el.tabIndex === 0);
     if (index === -1) index = 0;
     items.forEach((el, i) => (el.tabIndex = i === index ? 0 : -1));
+    if (!node.contains(document.activeElement)) {
+      items[index].focus();
+    }
 
     const handleKey = (e: KeyboardEvent) => {
-      const forward = orientation === 'horizontal' ? ['ArrowRight', 'ArrowDown'] : ['ArrowDown'];
-      const backward = orientation === 'horizontal' ? ['ArrowLeft', 'ArrowUp'] : ['ArrowUp'];
+      const forward =
+        orientation === 'horizontal'
+          ? ['ArrowRight', 'ArrowDown']
+          : ['ArrowDown', 'ArrowRight'];
+      const backward =
+        orientation === 'horizontal'
+          ? ['ArrowLeft', 'ArrowUp']
+          : ['ArrowUp', 'ArrowLeft'];
       if (forward.includes(e.key)) {
         e.preventDefault();
         index = (index + 1) % items.length;

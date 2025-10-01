@@ -111,12 +111,17 @@ export default class Navbar extends PureComponent {
                                                 id="status-bar"
                                                 aria-label="System status"
                                                 onClick={this.handleStatusToggle}
+                                                aria-haspopup="dialog"
+                                                aria-expanded={this.state.status_card}
                                                 className={
                                                         'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                 }
                                         >
                                                 <Status />
-                                                <QuickSettings open={this.state.status_card} />
+                                                <QuickSettings
+                                                        open={this.state.status_card}
+                                                        onClose={() => this.setState({ status_card: false })}
+                                                />
                                         </button>
 				</div>
 			);

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
 export interface MenuItem {
   label: React.ReactNode;
@@ -25,12 +26,28 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
-  useRovingTabIndex(
-    menuRef as React.RefObject<HTMLElement>,
-    open,
-    'vertical',
-  );
+  useFocusTrap(menuRef, open, {
+    restoreFocus: false,
+  });
+  useRovingTabIndex(menuRef, open, 'vertical');
+
+  useEscapeKey(() => setOpen(false), open);
+
+  const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) {
+      if (wasOpenRef.current) {
+        targetRef.current?.focus();
+      }
+      wasOpenRef.current = false;
+      return;
+    }
+
+    wasOpenRef.current = true;
+    const firstMenuItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    firstMenuItem?.focus();
+  }, [open, targetRef]);
 
   useEffect(() => {
     const node = targetRef.current;
@@ -77,18 +94,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       }
     };
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
     document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleEscape);
 
     return () => {
       document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleEscape);
     };
   }, [open]);
 
