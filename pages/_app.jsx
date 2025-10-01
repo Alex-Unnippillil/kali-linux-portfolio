@@ -10,6 +10,7 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
+import dynamic from 'next/dynamic';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
@@ -24,6 +25,11 @@ const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+const DevPerformanceOverlay =
+  process.env.NODE_ENV === 'development'
+    ? dynamic(() => import('../components/dev/PerformanceOverlay'), { ssr: false })
+    : () => null;
 
 
 function MyApp(props) {
@@ -149,6 +155,8 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* Required for the Add-to-Home-Screen helper that must run before hydration */}
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -163,6 +171,7 @@ function MyApp(props) {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
+              <DevPerformanceOverlay />
               <Analytics
                 beforeSend={(e) => {
                   if (e.url.includes('/admin') || e.url.includes('/private')) return null;

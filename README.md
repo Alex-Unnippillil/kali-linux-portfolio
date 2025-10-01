@@ -100,6 +100,14 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+### Developer performance overlay
+
+- The dev server renders a HUD in the bottom-right corner that tracks FPS, long tasks, and worker queue depth.
+- Use the **Expand** control to access toggles and adjust warning thresholds for each metric.
+- Overlay rendering uses `OffscreenCanvas` when supported to keep draw time under 5 ms; the HUD logs whenever that budget is exceeded.
+- Instrumentation events from `logDevEvent` (see `utils/devInstrumentation.ts`) appear in the HUD log so you can correlate app behaviour with performance dips.
+- The overlay is disabled in production builds and tree-shaken from static exports.
+
 ---
 
 ## Speed Insights
