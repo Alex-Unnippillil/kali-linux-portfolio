@@ -25,6 +25,7 @@ import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import {
     clampWindowTopPosition,
+    clampWindowPositionToSafeArea,
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
@@ -832,9 +833,15 @@ export class Desktop extends Component {
             if (session.windows && session.windows.length) {
                 const safeTopOffset = measureWindowTopOffset();
                 session.windows.forEach(({ id, x, y }) => {
+                    const safePosition = clampWindowPositionToSafeArea(
+                        typeof x === 'number' ? x : 0,
+                        typeof y === 'number' ? y : safeTopOffset,
+                        0,
+                        0,
+                    );
                     positions[id] = {
-                        x,
-                        y: clampWindowTopPosition(y, safeTopOffset),
+                        x: safePosition.x,
+                        y: clampWindowTopPosition(safePosition.y, safeTopOffset),
                     };
                 });
                 this.setWorkspaceState({ window_positions: positions }, () => {
@@ -1378,6 +1385,18 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                let initialX = pos ? pos.x : undefined;
+                let initialY = pos ? pos.y : undefined;
+                if (pos) {
+                    const safe = clampWindowPositionToSafeArea(
+                        typeof pos.x === 'number' ? pos.x : 0,
+                        typeof pos.y === 'number' ? pos.y : safeTopOffset,
+                        0,
+                        0,
+                    );
+                    initialX = safe.x;
+                    initialY = clampWindowTopPosition(safe.y, safeTopOffset);
+                }
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -1393,10 +1412,10 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
-                    initialX: pos ? pos.x : undefined,
-                    initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
+                    initialX,
+                    initialY: initialY !== undefined ? initialY : safeTopOffset,
 
-                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onPositionChange: (x, y, size) => this.updateWindowPosition(app.id, x, y, size),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
                 }
@@ -1409,13 +1428,18 @@ export class Desktop extends Component {
         return windowsJsx;
     }
 
-    updateWindowPosition = (id, x, y) => {
+    updateWindowPosition = (id, x, y, size) => {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
-        const safeTopOffset = measureWindowTopOffset();
-        const nextX = snap(x);
-        const nextY = clampWindowTopPosition(snap(y), safeTopOffset);
+        const width = typeof size?.width === 'number' ? size.width : 0;
+        const height = typeof size?.height === 'number' ? size.height : 0;
+        const initialClamp = clampWindowPositionToSafeArea(x, y, width, height);
+        let nextX = snap(initialClamp.x);
+        let nextY = snap(initialClamp.y);
+        const reclamp = clampWindowPositionToSafeArea(nextX, nextY, width, height);
+        nextX = reclamp.x;
+        nextY = reclamp.y;
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), this.saveSession);
@@ -1427,8 +1451,14 @@ export class Desktop extends Component {
         const safeTopOffset = measureWindowTopOffset();
         const windows = openWindows.map(id => {
             const position = this.state.window_positions[id] || {};
-            const nextX = typeof position.x === 'number' ? position.x : 60;
-            const nextY = clampWindowTopPosition(position.y, safeTopOffset);
+            const safe = clampWindowPositionToSafeArea(
+                typeof position.x === 'number' ? position.x : 0,
+                typeof position.y === 'number' ? position.y : safeTopOffset,
+                0,
+                0,
+            );
+            const nextX = Number.isFinite(safe.x) ? safe.x : 60;
+            const nextY = clampWindowTopPosition(safe.y, safeTopOffset);
             return { id, x: nextX, y: nextY };
         });
 
