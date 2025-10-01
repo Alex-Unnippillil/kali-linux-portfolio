@@ -1,6 +1,9 @@
 import React, { useRef } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import { MenuItemsList } from '../common/ContextMenu';
+
+/** @typedef {import('../common/ContextMenu').MenuItem} MenuItem */
 
 function TaskbarMenu(props) {
     const menuRef = useRef(null);
@@ -23,6 +26,20 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    /** @type {MenuItem[]} */
+    const items = [
+        {
+            id: 'toggle-minimize',
+            label: props.minimized ? 'Restore' : 'Minimize',
+            onSelect: handleMinimize,
+        },
+        {
+            id: 'close-window',
+            label: 'Close',
+            onSelect: handleClose,
+        },
+    ];
+
     return (
         <div
             id="taskbar-menu"
@@ -32,24 +49,7 @@ function TaskbarMenu(props) {
             onKeyDown={handleKeyDown}
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
         >
-            <button
-                type="button"
-                onClick={handleMinimize}
-                role="menuitem"
-                aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
-            </button>
-            <button
-                type="button"
-                onClick={handleClose}
-                role="menuitem"
-                aria-label="Close Window"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">Close</span>
-            </button>
+            <MenuItemsList items={items} />
         </div>
     );
 }

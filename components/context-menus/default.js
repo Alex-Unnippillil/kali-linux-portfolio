@@ -1,6 +1,9 @@
-import React, { useRef } from 'react'
+import React, { useMemo, useRef } from 'react'
 import useFocusTrap from '../../hooks/useFocusTrap'
 import useRovingTabIndex from '../../hooks/useRovingTabIndex'
+import { MenuItemsList } from '../common/ContextMenu'
+
+/** @typedef {import('../common/ContextMenu').MenuItem} MenuItem */
 
 function DefaultMenu(props) {
     const menuRef = useRef(null)
@@ -11,6 +14,46 @@ function DefaultMenu(props) {
         if (e.key === 'Escape') {
             props.onClose && props.onClose()
         }
+    }
+
+    const followLinks = useMemo(
+        () => /** @type {MenuItem[]} */ ([
+            {
+                id: 'follow-linkedin',
+                icon: '🙋‍♂️',
+                label: 'Follow on Linkedin',
+                onSelect: () => window.open('https://www.linkedin.com/in/unnippillil/', '_blank', 'noopener,noreferrer'),
+            },
+            {
+                id: 'follow-github',
+                icon: '🤝',
+                label: 'Follow on Github',
+                onSelect: () => window.open('https://github.com/Alex-Unnippillil', '_blank', 'noopener,noreferrer'),
+            },
+            {
+                id: 'contact-email',
+                icon: '📥',
+                label: 'Contact Me',
+                onSelect: () => window.open('mailto:alex.j.unnippillil@gmail.com', '_self'),
+            },
+        ]),
+        [],
+    )
+
+    const systemItems = useMemo(
+        () => /** @type {MenuItem[]} */ ([
+            {
+                id: 'reset-session',
+                icon: '🧹',
+                label: 'Reset Kali Linux',
+                onSelect: () => { localStorage.clear(); window.location.reload() },
+            },
+        ]),
+        [],
+    )
+
+    const handleItemSelect = () => {
+        props.onClose && props.onClose()
     }
 
     return (
@@ -24,46 +67,15 @@ function DefaultMenu(props) {
         >
 
             <Devider />
-            <a
-                rel="noopener noreferrer"
-                href="https://www.linkedin.com/in/unnippillil/"
-                target="_blank"
-                role="menuitem"
-                aria-label="Follow on Linkedin"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">🙋‍♂️</span> <span className="ml-2">Follow on <strong>Linkedin</strong></span>
-            </a>
-            <a
-                rel="noopener noreferrer"
-                href="https://github.com/Alex-Unnippillil"
-                target="_blank"
-                role="menuitem"
-                aria-label="Follow on Github"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">🤝</span> <span className="ml-2">Follow on <strong>Github</strong></span>
-            </a>
-            <a
-                rel="noopener noreferrer"
-                href="mailto:alex.j.unnippillil@gmail.com"
-                target="_blank"
-                role="menuitem"
-                aria-label="Contact Me"
-                className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">📥</span> <span className="ml-2">Contact Me</span>
-            </a>
+            <MenuItemsList
+                items={followLinks}
+                onItemSelect={handleItemSelect}
+            />
             <Devider />
-            <button
-                type="button"
-                onClick={() => { localStorage.clear(); window.location.reload() }}
-                role="menuitem"
-                aria-label="Reset Kali Linux"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">🧹</span> <span className="ml-2">Reset Kali Linux</span>
-            </button>
+            <MenuItemsList
+                items={systemItems}
+                onItemSelect={handleItemSelect}
+            />
         </div>
     )
 }

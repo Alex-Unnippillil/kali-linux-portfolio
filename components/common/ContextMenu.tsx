@@ -3,7 +3,23 @@ import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 export interface MenuItem {
+  /**
+   * Stable identifier for the menu item so React can key it and
+   * callers can memoize item arrays.
+   */
+  id: string;
+  /** Primary label rendered for the menu option. */
   label: React.ReactNode;
+  /** Optional visual icon that appears before the label. */
+  icon?: React.ReactNode;
+  /** Optional keyboard accelerator text aligned to the right. */
+  accel?: string;
+  /**
+   * When true the item is rendered in a disabled state and the
+   * `onSelect` handler will not run.
+   */
+  disabled?: boolean;
+  /** Invoked when the menu item is activated. */
   onSelect: () => void;
 }
 
@@ -13,6 +29,67 @@ interface ContextMenuProps {
   /** Menu items to render */
   items: MenuItem[];
 }
+
+interface MenuItemsListProps {
+  /** Items to render in order */
+  items: MenuItem[];
+  /** Optional callback fired after the item's `onSelect` runs */
+  onItemSelect?: (item: MenuItem) => void;
+  /**
+   * Additional classes for interactive (non-disabled) menu items to
+   * customize hover styles when reusing the renderer.
+   */
+  itemClassName?: string;
+}
+
+export const MenuItemsList: React.FC<MenuItemsListProps> = ({
+  items,
+  onItemSelect,
+  itemClassName,
+}) => (
+  <>
+    {items.map((item) => {
+      const stringLabel =
+        typeof item.label === 'string' ? item.label : undefined;
+      const isDisabled = Boolean(item.disabled);
+
+      return (
+        <button
+          key={item.id}
+          role="menuitem"
+          tabIndex={-1}
+          type="button"
+          aria-label={stringLabel}
+          aria-disabled={isDisabled}
+          disabled={isDisabled}
+          onClick={() => {
+            if (isDisabled) return;
+            item.onSelect();
+            onItemSelect?.(item);
+          }}
+          className={
+            'w-full text-left cursor-default py-0.5 mb-1.5 px-4 flex items-center justify-between gap-3 rounded-sm transition-colors ' +
+            (isDisabled
+              ? 'text-gray-400 cursor-not-allowed hover:bg-transparent'
+              : itemClassName || 'hover:bg-gray-700')
+          }
+        >
+          <span className="flex items-center gap-2">
+            {item.icon ? (
+              <span aria-hidden className="text-base leading-none">
+                {item.icon}
+              </span>
+            ) : null}
+            <span className="truncate">{item.label}</span>
+          </span>
+          {item.accel ? (
+            <span className="text-xs text-gray-400">{item.accel}</span>
+          ) : null}
+        </button>
+      );
+    })}
+  </>
+);
 
 /**
  * Accessible context menu that supports right click and Shift+F10
@@ -101,20 +178,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       className={(open ? 'block ' : 'hidden ') +
         'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
     >
-      {items.map((item, i) => (
-        <button
-          key={i}
-          role="menuitem"
-          tabIndex={-1}
-          onClick={() => {
-            item.onSelect();
-            setOpen(false);
-          }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-        >
-          {item.label}
-        </button>
-      ))}
+      <MenuItemsList items={items} onItemSelect={() => setOpen(false)} />
     </div>
   );
 };
