@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import ExportPanel from './Export';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -198,60 +199,88 @@ const NmapNSEApp = () => {
           </p>
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
+          <label className="block text-sm mb-1" id="target-label" htmlFor="target">
+            Target
+          </label>
           <input
             id="target"
+            type="text"
+            aria-labelledby="target-label"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">
+          <label className="block text-sm mb-1" id="scripts-label" htmlFor="scripts">
             Scripts
           </label>
           <input
             id="scripts"
+            type="text"
+            aria-labelledby="scripts-label"
             value={scriptQuery}
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
-                <p className="text-xs mb-1">{s.description}</p>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {s.tags.map((t) => (
-                    <span key={t} className="px-1 text-xs bg-gray-200 rounded">
-                      {t}
-                    </span>
-                  ))}
+            {filteredScripts.map((s) => {
+              const scriptId = `script-${s.name.replace(/[^a-z0-9]/gi, '-')}`;
+              const argId = `${scriptId}-args`;
+              const isSelected = selectedScripts.includes(s.name);
+              const labelId = `${scriptId}-label`;
+              const argLabelId = `${argId}-label`;
+              return (
+                <div key={s.name} className="bg-white text-black p-2 rounded">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id={scriptId}
+                      aria-labelledby={labelId}
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleScript(s.name)}
+                    />
+                    <label id={labelId} htmlFor={scriptId} className="font-mono cursor-pointer">
+                      {s.name}
+                    </label>
+                  </div>
+                  <p className="text-xs mb-1">{s.description}</p>
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {s.tags.map((t) => (
+                      <span key={t} className="px-1 text-xs bg-gray-200 rounded">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  {isSelected && (
+                    <div className="mt-2">
+                      <label
+                        id={argLabelId}
+                        htmlFor={argId}
+                        className="block text-xs font-semibold text-gray-700 mb-1"
+                      >
+                        Script arguments (comma separated)
+                      </label>
+                      <input
+                        id={argId}
+                        aria-labelledby={argLabelId}
+                        type="text"
+                        value={scriptOptions[s.name] || ''}
+                        onChange={(e) =>
+                          setScriptOptions((prev) => ({
+                            ...prev,
+                            [s.name]: e.target.value,
+                          }))
+                        }
+                        placeholder="arg=value"
+                        className="w-full p-1 border rounded text-black"
+                      />
+                    </div>
+                  )}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
             {filteredScripts.length === 0 && (
               <p className="text-sm">No scripts found.</p>
             )}
@@ -434,6 +463,7 @@ const NmapNSEApp = () => {
             Select All
           </button>
         </div>
+        <ExportPanel hosts={results.hosts} selectedScripts={selectedScripts} />
       </div>
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
