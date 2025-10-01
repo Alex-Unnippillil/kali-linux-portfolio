@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import ShortcutSettings from './settings/ShortcutSettings';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -309,6 +310,7 @@ export function Settings() {
                 }}
                 className="hidden"
             />
+            <ShortcutSettings />
         </div>
     )
 }

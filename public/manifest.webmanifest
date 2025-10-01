@@ -29,7 +29,9 @@
       "files": [
         {
           "name": "files",
-          "accept": ["*/*"]
+          "accept": [
+            "*/*"
+          ]
         }
       ]
     }
@@ -38,17 +40,58 @@
     {
       "name": "Open Terminal",
       "short_name": "Terminal",
-      "url": "/?open=terminal"
+      "url": "/?open=terminal",
+      "description": "Resume your Kali terminal session instantly.",
+      "icons": [
+        {
+          "src": "/themes/Yaru/apps/bash.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ],
+      "integrity": "sha256-lULHA9VW9r9mzSxQ50ZemkH8tP4cdhB5nJuTcZdh7SY="
     },
     {
-      "name": "New Note",
-      "short_name": "Note",
-      "url": "/apps/sticky_notes/"
+      "name": "New Sticky Note",
+      "short_name": "Notes",
+      "url": "/apps/sticky_notes/",
+      "description": "Capture a quick thought in Sticky Notes.",
+      "icons": [
+        {
+          "src": "/themes/Yaru/apps/gnome-control-center.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ],
+      "integrity": "sha256-C1/BmHrIPeKB/dgAeOyhQk75GAndcO7Ci8sxCPzfgTM="
     },
     {
       "name": "Open 2048 Daily",
       "short_name": "2048",
-      "url": "/?open=2048&daily=true"
+      "url": "/?open=2048&daily=true",
+      "description": "Return to the daily 2048 puzzle.",
+      "icons": [
+        {
+          "src": "/themes/Yaru/apps/2048.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ],
+      "integrity": "sha256-Bf+EXczvXls5e10FdZH8iEWNGL3Q8/QeBbfY82GMotg="
+    },
+    {
+      "name": "View Weather Dashboard",
+      "short_name": "Weather",
+      "url": "/apps/weather",
+      "description": "Jump back into the weather dashboard.",
+      "icons": [
+        {
+          "src": "/themes/Yaru/apps/weather.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ],
+      "integrity": "sha256-Z2jKRfRckBZUcCHTXgu2sUPGopoiyvmHr6Kj1X2d3Mg="
     }
   ]
 }

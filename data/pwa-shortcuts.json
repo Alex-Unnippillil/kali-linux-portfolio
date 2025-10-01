@@ -1,0 +1,66 @@
+[
+  {
+    "id": "terminal",
+    "name": "Open Terminal",
+    "shortName": "Terminal",
+    "url": "/?open=terminal",
+    "description": "Resume your Kali terminal session instantly.",
+    "icons": [
+      {
+        "src": "/themes/Yaru/apps/bash.png",
+        "sizes": "96x96",
+        "type": "image/png"
+      }
+    ],
+    "defaultPinned": true,
+    "mruScore": 90
+  },
+  {
+    "id": "sticky_notes",
+    "name": "New Sticky Note",
+    "shortName": "Notes",
+    "url": "/apps/sticky_notes/",
+    "description": "Capture a quick thought in Sticky Notes.",
+    "icons": [
+      {
+        "src": "/themes/Yaru/apps/gnome-control-center.png",
+        "sizes": "96x96",
+        "type": "image/png"
+      }
+    ],
+    "defaultPinned": false,
+    "mruScore": 55
+  },
+  {
+    "id": "2048",
+    "name": "Open 2048 Daily",
+    "shortName": "2048",
+    "url": "/?open=2048&daily=true",
+    "description": "Return to the daily 2048 puzzle.",
+    "icons": [
+      {
+        "src": "/themes/Yaru/apps/2048.svg",
+        "sizes": "96x96",
+        "type": "image/svg+xml"
+      }
+    ],
+    "defaultPinned": false,
+    "mruScore": 48
+  },
+  {
+    "id": "weather",
+    "name": "View Weather Dashboard",
+    "shortName": "Weather",
+    "url": "/apps/weather",
+    "description": "Jump back into the weather dashboard.",
+    "icons": [
+      {
+        "src": "/themes/Yaru/apps/weather.svg",
+        "sizes": "96x96",
+        "type": "image/svg+xml"
+      }
+    ],
+    "defaultPinned": false,
+    "mruScore": 42
+  }
+]

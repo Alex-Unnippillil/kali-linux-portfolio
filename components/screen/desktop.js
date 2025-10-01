@@ -22,6 +22,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
+import { recordShortcutUsage } from '../../services/mru/store';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import {
@@ -1449,6 +1450,8 @@ export class Desktop extends Component {
         const contextState = context
             ? { ...this.state.window_context, [objId]: context }
             : this.state.window_context;
+
+        recordShortcutUsage(objId).catch(() => {});
 
 
         // google analytics
