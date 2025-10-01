@@ -5,6 +5,9 @@ import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
+const HIDDEN_APPS_KEY = 'hiddenApps';
+const HIDDEN_APPS_EVENT = 'hidden-apps-change';
+
 type AppMeta = {
   id: string;
   title: string;
@@ -154,9 +157,57 @@ const WhiskerMenu: React.FC = () => {
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
 
+  const sanitizeHiddenIds = useCallback((list: unknown[]): string[] => {
+    const unique: string[] = [];
+    const seen = new Set<string>();
+    list.forEach((id) => {
+      if (typeof id !== 'string') return;
+      if (seen.has(id)) return;
+      seen.add(id);
+      unique.push(id);
+    });
+    return unique;
+  }, []);
 
-  const allApps: AppMeta[] = apps as any;
+  const readHiddenIdsFromStorage = useCallback((): string[] => {
+    if (!safeLocalStorage) return [];
+    try {
+      const stored = safeLocalStorage.getItem(HIDDEN_APPS_KEY);
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) return [];
+      return sanitizeHiddenIds(parsed);
+    } catch {
+      return [];
+    }
+  }, [sanitizeHiddenIds]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setHiddenIds(readHiddenIdsFromStorage());
+    const handleHiddenChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ hiddenApps?: unknown[] }>).detail;
+      if (detail && Array.isArray(detail.hiddenApps)) {
+        setHiddenIds(sanitizeHiddenIds(detail.hiddenApps));
+      } else {
+        setHiddenIds(readHiddenIdsFromStorage());
+      }
+    };
+    window.addEventListener(HIDDEN_APPS_EVENT, handleHiddenChange);
+    return () => {
+      window.removeEventListener(HIDDEN_APPS_EVENT, handleHiddenChange);
+    };
+  }, [readHiddenIdsFromStorage, sanitizeHiddenIds]);
+
+  const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
+
+  const allApps: AppMeta[] = useMemo(() => {
+    const raw = (apps as AppMeta[]) || [];
+    if (!hiddenSet.size) return raw;
+    return raw.filter((app) => !hiddenSet.has(app.id));
+  }, [hiddenSet]);
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());

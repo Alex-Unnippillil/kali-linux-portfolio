@@ -29,6 +29,11 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+const TASKBAR_PINS_KEY = 'taskbarPins';
+const HIDDEN_APPS_KEY = 'hiddenApps';
+const HIDDEN_APPS_EVENT = 'hidden-apps-change';
+const RESTORE_REQUEST_EVENT = 'request-app-restore';
+
 
 export class Desktop extends Component {
     constructor() {
@@ -72,6 +77,8 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            taskbar_pins: [],
+            hidden_apps: [],
         }
 
         this.desktopRef = React.createRef();
@@ -93,6 +100,11 @@ export class Desktop extends Component {
         this.currentPointerIsCoarse = false;
 
         this.validAppIds = new Set(apps.map((app) => app.id));
+        games.forEach((game) => {
+            if (game && typeof game.id === 'string') {
+                this.validAppIds.add(game.id);
+            }
+        });
 
     }
 
@@ -135,6 +147,70 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    loadTaskbarPins = (hiddenSet = new Set()) => {
+        if (!safeLocalStorage) return [];
+        try {
+            const stored = safeLocalStorage.getItem(TASKBAR_PINS_KEY);
+            const parsed = stored ? JSON.parse(stored) : [];
+            if (!Array.isArray(parsed)) return [];
+            const filtered = parsed.filter((id) => this.validAppIds.has(id) && !hiddenSet.has(id));
+            if (filtered.length !== parsed.length) {
+                safeLocalStorage.setItem(TASKBAR_PINS_KEY, JSON.stringify(filtered));
+            }
+            return filtered;
+        } catch (e) {
+            return [];
+        }
+    };
+
+    persistTaskbarPins = (pins = []) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(TASKBAR_PINS_KEY, JSON.stringify(pins));
+        } catch (e) {
+            // ignore persistence errors
+        }
+    };
+
+    loadHiddenApps = () => {
+        if (!safeLocalStorage) return new Set();
+        try {
+            const stored = safeLocalStorage.getItem(HIDDEN_APPS_KEY);
+            if (!stored) return new Set();
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) return new Set();
+            const filtered = parsed.filter((id) => this.validAppIds.has(id));
+            if (filtered.length !== parsed.length) {
+                safeLocalStorage.setItem(HIDDEN_APPS_KEY, JSON.stringify(filtered));
+            }
+            return new Set(filtered);
+        } catch (e) {
+            return new Set();
+        }
+    };
+
+    persistHiddenApps = (hiddenSet) => {
+        if (!safeLocalStorage) return;
+        try {
+            const list = Array.from(hiddenSet);
+            safeLocalStorage.setItem(HIDDEN_APPS_KEY, JSON.stringify(list));
+        } catch (e) {
+            // ignore persistence errors
+        }
+    };
+
+    dispatchHiddenAppsChange = () => {
+        if (typeof window === 'undefined') return;
+        const detail = { hiddenApps: [...(this.state.hidden_apps || [])] };
+        window.dispatchEvent(new CustomEvent(HIDDEN_APPS_EVENT, { detail }));
+    };
+
+    removeFromWorkspaceStacks = (appId) => {
+        this.workspaceStacks = this.workspaceStacks.map((stack = []) =>
+            stack.filter((id) => id !== appId)
+        );
     };
 
     setupPointerMediaWatcher = () => {
@@ -810,6 +886,7 @@ export class Desktop extends Component {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
             runningApps: this.getRunningAppSummaries(),
+            taskbarPins: Array.isArray(this.state.taskbar_pins) ? [...this.state.taskbar_pins] : [],
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
@@ -822,6 +899,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener(RESTORE_REQUEST_EVENT, this.handleRestoreRequest);
             this.broadcastWorkspaceState();
         }
 
@@ -863,7 +941,8 @@ export class Desktop extends Component {
             prevState.closed_windows !== this.state.closed_windows ||
             prevState.focused_windows !== this.state.focused_windows ||
             prevState.minimized_windows !== this.state.minimized_windows ||
-            prevState.workspaces !== this.state.workspaces
+            prevState.workspaces !== this.state.workspaces ||
+            prevState.taskbar_pins !== this.state.taskbar_pins
         ) {
             this.broadcastWorkspaceState();
         }
@@ -880,6 +959,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener(RESTORE_REQUEST_EVENT, this.handleRestoreRequest);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -913,6 +993,13 @@ export class Desktop extends Component {
                     this.openApp(appId);
                 }
         }
+    };
+
+    handleRestoreRequest = (event) => {
+        const appId = event?.detail?.appId;
+        if (typeof appId !== 'string') return;
+        if (!this.validAppIds.has(appId)) return;
+        this.restoreApp(appId);
     };
 
     attachIconKeyboardListeners = () => {
@@ -1229,6 +1316,7 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
 
+        const hiddenSet = this.loadHiddenApps();
         const focused_windows = {};
         const closed_windows = {};
         const disabled_apps = {};
@@ -1240,9 +1328,12 @@ export class Desktop extends Component {
             focused_windows[app.id] = false;
             closed_windows[app.id] = true;
             disabled_apps[app.id] = app.disabled;
-            favourite_apps[app.id] = app.favourite;
+            favourite_apps[app.id] = app.favourite && !hiddenSet.has(app.id);
+            if (hiddenSet.has(app.id) && app.favourite) {
+                app.favourite = false;
+            }
             minimized_windows[app.id] = false;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            if (app.desktop_shortcut && !hiddenSet.has(app.id)) desktop_apps.push(app.id);
         });
 
         const workspaceState = {
@@ -1253,6 +1344,7 @@ export class Desktop extends Component {
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+        const taskbarPins = this.loadTaskbarPins(hiddenSet);
         this.setWorkspaceState({
             ...workspaceState,
             disabled_apps,
@@ -1263,9 +1355,17 @@ export class Desktop extends Component {
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
+        this.setState({
+            taskbar_pins: taskbarPins,
+            hidden_apps: Array.from(hiddenSet),
+        }, () => {
+            this.dispatchHiddenAppsChange();
+            this.broadcastWorkspaceState();
+        });
     }
 
     updateAppsData = () => {
+        const hiddenSet = new Set(this.state.hidden_apps || []);
         const focused_windows = {};
         const closed_windows = {};
         const favourite_apps = {};
@@ -1278,8 +1378,12 @@ export class Desktop extends Component {
             minimized_windows[app.id] = this.state.minimized_windows[app.id] ?? false;
             disabled_apps[app.id] = app.disabled;
             closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
-            favourite_apps[app.id] = app.favourite;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            const isHidden = hiddenSet.has(app.id);
+            favourite_apps[app.id] = app.favourite && !isHidden;
+            if (isHidden && app.favourite) {
+                app.favourite = false;
+            }
+            if (app.desktop_shortcut && !isHidden) desktop_apps.push(app.id);
         });
 
         const workspaceState = {
@@ -1678,6 +1782,116 @@ export class Desktop extends Component {
         this.hideAllContextMenu()
     }
 
+    pinToTaskbar = (id) => {
+        if (!id) return;
+        this.setState((prevState) => {
+            const current = Array.isArray(prevState.taskbar_pins) ? prevState.taskbar_pins : [];
+            if (current.includes(id)) return null;
+            const next = [...current, id];
+            this.persistTaskbarPins(next);
+            return { taskbar_pins: next };
+        }, () => {
+            this.broadcastWorkspaceState();
+            this.hideAllContextMenu();
+        });
+    };
+
+    unpinFromTaskbar = (id) => {
+        if (!id) return;
+        this.setState((prevState) => {
+            const current = Array.isArray(prevState.taskbar_pins) ? prevState.taskbar_pins : [];
+            if (!current.includes(id)) return null;
+            const next = current.filter((appId) => appId !== id);
+            this.persistTaskbarPins(next);
+            return { taskbar_pins: next };
+        }, () => {
+            this.broadcastWorkspaceState();
+            this.hideAllContextMenu();
+        });
+    };
+
+    hideApp = (id) => {
+        if (!id) return;
+        const appMeta = apps.find((app) => app.id === id);
+        this.setWorkspaceState((prevState) => {
+            const hiddenSet = new Set(prevState.hidden_apps || []);
+            if (hiddenSet.has(id)) return null;
+            hiddenSet.add(id);
+            const desktop_apps = (prevState.desktop_apps || []).filter((appId) => appId !== id);
+            const favourite_apps = { ...prevState.favourite_apps, [id]: false };
+            const closed_windows = { ...prevState.closed_windows, [id]: true };
+            const minimized_windows = { ...prevState.minimized_windows, [id]: false };
+            const focused_windows = { ...prevState.focused_windows, [id]: false };
+            const taskbar_pins = (prevState.taskbar_pins || []).filter((appId) => appId !== id);
+            const window_context = { ...prevState.window_context };
+            if (window_context[id]) {
+                delete window_context[id];
+            }
+            this.persistHiddenApps(hiddenSet);
+            this.persistTaskbarPins(taskbar_pins);
+            this.removeFromWorkspaceStacks(id);
+            this.initFavourite[id] = false;
+            if (appMeta) {
+                appMeta.favourite = false;
+            }
+            return {
+                hidden_apps: Array.from(hiddenSet),
+                desktop_apps,
+                favourite_apps,
+                closed_windows,
+                minimized_windows,
+                focused_windows,
+                taskbar_pins,
+                window_context,
+            };
+        }, () => {
+            this.ensureIconPositions(this.state.desktop_apps);
+            this.saveSession();
+            this.hideAllContextMenu();
+            this.broadcastWorkspaceState();
+            this.dispatchHiddenAppsChange();
+        });
+    };
+
+    restoreApp = (id) => {
+        if (!id) return;
+        const appMeta = apps.find((app) => app.id === id);
+        if (!appMeta) return;
+        this.setWorkspaceState((prevState) => {
+            const hiddenSet = new Set(prevState.hidden_apps || []);
+            if (!hiddenSet.has(id)) return null;
+            hiddenSet.delete(id);
+            const desktop_apps = appMeta.desktop_shortcut
+                ? Array.from(new Set([...(prevState.desktop_apps || []), id]))
+                : prevState.desktop_apps || [];
+            const closed_windows = { ...prevState.closed_windows };
+            if (!(id in closed_windows)) {
+                closed_windows[id] = true;
+            }
+            const minimized_windows = { ...prevState.minimized_windows };
+            if (!(id in minimized_windows)) {
+                minimized_windows[id] = false;
+            }
+            const focused_windows = { ...prevState.focused_windows };
+            if (!(id in focused_windows)) {
+                focused_windows[id] = false;
+            }
+            this.persistHiddenApps(hiddenSet);
+            return {
+                hidden_apps: Array.from(hiddenSet),
+                desktop_apps,
+                closed_windows,
+                minimized_windows,
+                focused_windows,
+            };
+        }, () => {
+            this.ensureIconPositions(this.state.desktop_apps);
+            this.broadcastWorkspaceState();
+            this.dispatchHiddenAppsChange();
+            this.hideAllContextMenu();
+        });
+    };
+
     focus = (objId) => {
         // removes focus from all window and 
         // gives focus to window with 'id = objId'
@@ -1865,6 +2079,12 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    taskbarPinned={Array.isArray(this.state.taskbar_pins) ? this.state.taskbar_pins.includes(this.state.context_app) : false}
+                    pinToTaskbar={() => this.pinToTaskbar(this.state.context_app)}
+                    unpinFromTaskbar={() => this.unpinFromTaskbar(this.state.context_app)}
+                    isHidden={Array.isArray(this.state.hidden_apps) ? this.state.hidden_apps.includes(this.state.context_app) : false}
+                    removeApp={() => this.hideApp(this.state.context_app)}
+                    restoreApp={() => this.restoreApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
@@ -1899,7 +2119,10 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        hiddenApps={this.state.hidden_apps}
+                        onRestoreApp={this.restoreApp}
+                    /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}

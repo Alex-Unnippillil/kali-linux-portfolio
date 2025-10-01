@@ -21,6 +21,22 @@ function AppMenu(props) {
         }
     }
 
+    const handleTaskbarPin = () => {
+        if (props.taskbarPinned) {
+            props.unpinFromTaskbar && props.unpinFromTaskbar()
+        } else {
+            props.pinToTaskbar && props.pinToTaskbar()
+        }
+    }
+
+    const handleVisibilityToggle = () => {
+        if (props.isHidden) {
+            props.restoreApp && props.restoreApp()
+        } else {
+            props.removeApp && props.removeApp()
+        }
+    }
+
     return (
         <div
             id="app-menu"
@@ -38,6 +54,24 @@ function AppMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleTaskbarPin}
+                role="menuitem"
+                aria-label={props.taskbarPinned ? 'Unpin from Taskbar' : 'Pin to Taskbar'}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{props.taskbarPinned ? 'Unpin from Taskbar' : 'Pin to Taskbar'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleVisibilityToggle}
+                role="menuitem"
+                aria-label={props.isHidden ? 'Restore application to list' : 'Remove application from list'}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{props.isHidden ? 'Restore to List' : 'Remove from List'}</span>
             </button>
         </div>
     )
