@@ -1,3 +1,5 @@
+'use client';
+
 import React, {
   useCallback,
   useEffect,
@@ -7,6 +9,7 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -29,6 +32,7 @@ interface TabbedWindowProps {
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
+  storageKey?: string;
 }
 
 interface TabContextValue {
@@ -40,16 +44,42 @@ interface TabContextValue {
 const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
 export const useTab = () => useContext(TabContext);
 
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+interface DragSnapshot {
+  sourceId: string;
+  dropIndex: number;
+  method: 'pointer' | 'html';
+}
+
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
   initialTabs,
   onNewTab,
   onTabsChange,
   className = '',
+  storageKey,
 }) => {
-  const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
+  const persistenceKey = storageKey ?? 'tabbed-window';
+  const orderKey = `${persistenceKey}:order`;
+  const [storedOrder, setStoredOrder] = usePersistentState<string[]>(
+    orderKey,
+    () => initialTabs.map((tab) => tab.id),
+    isStringArray,
+  );
+  const orderedInitialTabs = useMemo(() => {
+    const lookup = new Map(initialTabs.map((tab) => [tab.id, tab]));
+    const ordered = storedOrder
+      .map((id) => lookup.get(id))
+      .filter((tab): tab is TabDefinition => Boolean(tab));
+    const seen = new Set(ordered.map((tab) => tab.id));
+    const missing = initialTabs.filter((tab) => !seen.has(tab.id));
+    return [...ordered, ...missing];
+  }, [initialTabs, storedOrder]);
+  const [tabs, setTabs] = useState<TabDefinition[]>(orderedInitialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
-  const dragSrc = useRef<number | null>(null);
+  const dragSrc = useRef<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -58,6 +88,25 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState<DragSnapshot | null>(null);
+  const pointerDrag = useRef<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    moved: boolean;
+  } | null>(null);
+  const [liveMessage, setLiveMessage] = useState('');
+
+  useEffect(() => {
+    setTabs(orderedInitialTabs);
+  }, [orderedInitialTabs]);
+
+  useEffect(() => {
+    if (!liveMessage) return;
+    if (typeof window === 'undefined') return;
+    const timeout = window.setTimeout(() => setLiveMessage(''), 1000);
+    return () => window.clearTimeout(timeout);
+  }, [liveMessage]);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -69,15 +118,85 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
   }, [activeId, tabs]);
 
+  const applyTabs = useCallback(
+    (next: TabDefinition[], announcement?: string) => {
+      onTabsChange?.(next);
+      setStoredOrder(next.map((tab) => tab.id));
+      if (announcement) {
+        setLiveMessage(announcement);
+      }
+      return next;
+    },
+    [onTabsChange, setStoredOrder],
+  );
+
   const updateTabs = useCallback(
     (updater: (prev: TabDefinition[]) => TabDefinition[]) => {
+      setTabs((prev) => applyTabs(updater(prev)));
+    },
+    [applyTabs],
+  );
+
+  const reorderTabs = useCallback(
+    (sourceId: string, destinationIndex: number) => {
       setTabs((prev) => {
-        const next = updater(prev);
-        onTabsChange?.(next);
-        return next;
+        const safeDestination = Math.min(Math.max(destinationIndex, 0), prev.length);
+        const sourceIndex = prev.findIndex((tab) => tab.id === sourceId);
+        if (sourceIndex === -1) return prev;
+        if (safeDestination === sourceIndex || safeDestination === sourceIndex + 1) {
+          return prev;
+        }
+        const next = [...prev];
+        const [moved] = next.splice(sourceIndex, 1);
+        const insertionIndex = safeDestination > sourceIndex ? safeDestination - 1 : safeDestination;
+        next.splice(insertionIndex, 0, moved);
+        const finalIndex = next.findIndex((tab) => tab.id === moved.id);
+        const announcement = `${middleEllipsis(moved.title)} moved to position ${finalIndex + 1} of ${next.length}.`;
+        return applyTabs(next, announcement);
       });
     },
-    [onTabsChange],
+    [applyTabs],
+  );
+
+  const endDrag = useCallback(() => {
+    dragSrc.current = null;
+    setDragState(null);
+    pointerDrag.current = null;
+  }, []);
+
+  const updateDropIndicator = useCallback(
+    (dropIndex: number, sourceId: string, method: 'pointer' | 'html') => {
+      setDragState((prev) => {
+        if (prev && prev.dropIndex === dropIndex && prev.sourceId === sourceId && prev.method === method) {
+          return prev;
+        }
+        return { sourceId, dropIndex, method };
+      });
+    },
+    [],
+  );
+
+  const getDropIndexFromClientX = useCallback(
+    (clientX: number) => {
+      const container = scrollContainerRef.current;
+      if (!container) return null;
+      const rect = container.getBoundingClientRect();
+      if (!rect) return null;
+      const relativeX = clientX - rect.left + container.scrollLeft;
+      if (Number.isNaN(relativeX)) return null;
+      for (let i = 0; i < tabs.length; i += 1) {
+        const tab = tabs[i];
+        const el = tabRefs.current.get(tab.id);
+        if (!el) continue;
+        const left = el.offsetLeft;
+        const width = el.offsetWidth;
+        if (relativeX < left + width / 2) {
+          return i;
+        }
+      }
+      return tabs.length;
+    },
+    [tabs],
   );
 
   const focusTab = useCallback((id: string, { force = false } = {}) => {
@@ -127,26 +246,136 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
 
-  const handleDragStart = (index: number) => (e: React.DragEvent) => {
-    dragSrc.current = index;
-    e.dataTransfer.effectAllowed = 'move';
+  const handleDragStart = (tabId: string, index: number) => (e: React.DragEvent) => {
+    dragSrc.current = tabId;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try {
+        e.dataTransfer.setData('text/plain', tabId);
+      } catch {
+        // ignore browsers that disallow setData in this context
+      }
+    }
+    updateDropIndicator(index, tabId, 'html');
   };
 
   const handleDragOver = (index: number) => (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    const sourceId = dragState?.sourceId ?? dragSrc.current;
+    if (!sourceId) return;
+    const nextIndex = getDropIndexFromClientX(e.clientX) ?? index;
+    updateDropIndicator(nextIndex, sourceId, 'html');
   };
 
-  const handleDrop = (index: number) => (e: React.DragEvent) => {
+  const handleDrop = (fallbackIndex: number) => (e: React.DragEvent) => {
     e.preventDefault();
-    const src = dragSrc.current;
-    if (src === null || src === index) return;
-    updateTabs((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(src, 1);
-      next.splice(index, 0, moved);
-      return next;
-    });
+    e.stopPropagation();
+    const sourceId = dragState?.sourceId ?? dragSrc.current;
+    if (!sourceId) {
+      endDrag();
+      return;
+    }
+    const destinationIndex = dragState?.dropIndex ?? getDropIndexFromClientX(e.clientX) ?? fallbackIndex;
+    reorderTabs(sourceId, destinationIndex);
+    endDrag();
+  };
+
+  const handleDragEnd = () => {
+    endDrag();
+  };
+
+  const handleContainerDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!dragSrc.current && !dragState) return;
+    e.preventDefault();
+    const sourceId = dragState?.sourceId ?? dragSrc.current;
+    if (!sourceId) return;
+    const nextIndex = getDropIndexFromClientX(e.clientX);
+    if (nextIndex === null) return;
+    updateDropIndicator(nextIndex, sourceId, 'html');
+  };
+
+  const handleContainerDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!dragSrc.current && !dragState) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const sourceId = dragState?.sourceId ?? dragSrc.current;
+    if (!sourceId) {
+      endDrag();
+      return;
+    }
+    const nextIndex = dragState?.dropIndex ?? getDropIndexFromClientX(e.clientX) ?? tabs.length;
+    reorderTabs(sourceId, nextIndex);
+    endDrag();
+  };
+
+  const handlePointerDown = (tabId: string) => (e: React.PointerEvent<HTMLDivElement>) => {
+    if (typeof e.button === 'number' && e.button !== 0) return;
+    pointerDrag.current = {
+      id: tabId,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      moved: false,
+    };
+    if (typeof e.currentTarget.setPointerCapture === 'function') {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore pointer capture errors
+      }
+    }
+  };
+
+  const handlePointerMove = (index: number) => (e: React.PointerEvent<HTMLDivElement>) => {
+    const info = pointerDrag.current;
+    if (!info || info.pointerId !== e.pointerId) return;
+    const dropIndex = getDropIndexFromClientX(e.clientX) ?? index;
+    if (!info.moved) {
+      if (Math.abs(e.clientX - info.startX) < 4) {
+        return;
+      }
+      info.moved = true;
+      updateDropIndicator(dropIndex, info.id, 'pointer');
+    } else {
+      e.preventDefault();
+      updateDropIndicator(dropIndex, info.id, 'pointer');
+    }
+  };
+
+  const finishPointerDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const info = pointerDrag.current;
+    if (!info || info.pointerId !== e.pointerId) return;
+    if (info.moved) {
+      const destinationIndex = dragState?.dropIndex ?? getDropIndexFromClientX(e.clientX) ?? tabs.length;
+      reorderTabs(info.id, destinationIndex);
+    }
+    if (typeof e.currentTarget.releasePointerCapture === 'function') {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore pointer capture errors
+      }
+    }
+    endDrag();
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    finishPointerDrag(e);
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    const info = pointerDrag.current;
+    if (!info || info.pointerId !== e.pointerId) return;
+    if (typeof e.currentTarget.releasePointerCapture === 'function') {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore pointer capture errors
+      }
+    }
+    endDrag();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -325,51 +554,64 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             role="tablist"
             aria-orientation="horizontal"
             className="flex overflow-x-auto scrollbar-thin scroll-smooth"
+            onDragOver={handleContainerDragOver}
+            onDrop={handleContainerDrop}
           >
             {tabs.map((t, i) => (
-              <div
-                key={t.id}
-                role="tab"
-                aria-selected={t.id === activeId}
-                tabIndex={t.id === activeId ? 0 : -1}
-                ref={(node) => {
-                  if (node) {
-                    tabRefs.current.set(t.id, node);
-                  } else {
-                    tabRefs.current.delete(t.id);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
-                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-                }`}
-                draggable
-                onDragStart={handleDragStart(i)}
-                onDragOver={handleDragOver(i)}
-                onDrop={handleDrop(i)}
-                onClick={() => setActive(t.id)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setActive(t.id);
-                  }
-                }}
-              >
-                <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-                {t.closable !== false && tabs.length > 1 && (
-                  <button
-                    className="p-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(t.id);
-                    }}
-                    aria-label="Close Tab"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
+              <React.Fragment key={t.id}>
+                <DropIndicator active={Boolean(dragState) && dragState.dropIndex === i} />
+                <div
+                  role="tab"
+                  aria-selected={t.id === activeId}
+                  tabIndex={t.id === activeId ? 0 : -1}
+                  ref={(node) => {
+                    if (node) {
+                      tabRefs.current.set(t.id, node);
+                    } else {
+                      tabRefs.current.delete(t.id);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 transition-colors ${
+                    t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+                  } ${dragState?.sourceId === t.id ? 'ring-2 ring-ub-orange' : ''}`.trim()}
+                  draggable
+                  onDragStart={handleDragStart(t.id, i)}
+                  onDragOver={handleDragOver(i)}
+                  onDrop={handleDrop(i)}
+                  onDragEnd={handleDragEnd}
+                  onPointerDown={handlePointerDown(t.id)}
+                  onPointerMove={handlePointerMove(i)}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerCancel}
+                  onClick={() => setActive(t.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setActive(t.id);
+                    }
+                  }}
+                >
+                  <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+                  {t.closable !== false && tabs.length > 1 && (
+                    <button
+                      className="p-0.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(t.id);
+                      }}
+                      aria-label="Close Tab"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </React.Fragment>
             ))}
+            <DropIndicator active={Boolean(dragState) && dragState.dropIndex === tabs.length} />
           </div>
+        </div>
+        <div role="status" aria-live="polite" className="sr-only">
+          {liveMessage}
         </div>
         {canScrollRight && (
           <button
@@ -446,3 +688,22 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 };
 
 export default TabbedWindow;
+
+interface DropIndicatorProps {
+  active: boolean;
+}
+
+const DropIndicator: React.FC<DropIndicatorProps> = ({ active }) => (
+  <div
+    aria-hidden="true"
+    data-testid="tab-drop-indicator"
+    data-active={active ? 'true' : 'false'}
+    className="pointer-events-none flex w-2 justify-center"
+  >
+    <span
+      className={`h-6 w-0.5 rounded-full bg-ub-orange transition-all duration-150 ease-out ${
+        active ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0'
+      }`}
+    />
+  </div>
+);
