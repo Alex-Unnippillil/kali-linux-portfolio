@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import events from '../events.json';
+import {
+  ensureLineageCollection,
+  formatLineageSummary,
+} from '../../../utils/lineage';
 
 const escapeHtml = (str: string = '') =>
   str
@@ -42,8 +46,29 @@ function KeywordTester() {
     return safe;
   };
 
-  const matches = events.artifacts.filter((a) => {
-    const artifact = a as any;
+  const artifacts = useMemo(
+    () =>
+      ensureLineageCollection(events.artifacts as any[], {
+        source: 'Autopsy Keyword Tester Fixture',
+        transforms: ['Loaded from events.json'],
+        tags: ['autopsy', 'fixture'],
+      }, {
+        getExtraTags: (artifact: any) => {
+          const tags: string[] = [];
+          if (artifact.type) tags.push(`type:${artifact.type}`);
+          if ('plugin' in artifact && artifact.plugin) {
+            tags.push(`plugin:${artifact.plugin}`);
+          }
+          if ('user' in artifact && artifact.user) {
+            tags.push(`user:${artifact.user}`);
+          }
+          return tags;
+        },
+      }),
+    []
+  );
+
+  const matches = artifacts.filter((artifact) => {
     const content = `${artifact.name} ${artifact.description} ${
       'user' in artifact ? artifact.user : ''
     }`.toLowerCase();
@@ -64,8 +89,8 @@ function KeywordTester() {
         <div className="text-sm">Loaded {keywords.length} keywords</div>
       )}
       <div className="grid gap-2 md:grid-cols-2">
-        {matches.map((a, idx) => {
-          const artifact = a as any;
+        {matches.map((artifact, idx) => {
+          const tags = Array.isArray(artifact.tags) ? artifact.tags : [];
           return (
             <div
               key={`${artifact.name}-${idx}`}
@@ -88,6 +113,21 @@ function KeywordTester() {
                 className="text-xs"
                 dangerouslySetInnerHTML={{ __html: highlight(artifact.description) }}
               />
+              {tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {tags.map((tag: string) => (
+                    <span
+                      key={`${artifact.name}-${tag}`}
+                      className="px-2 py-0.5 text-xs rounded bg-ub-cool-grey"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="mt-2 text-xs text-gray-400">
+                {formatLineageSummary(artifact.lineage)}
+              </div>
             </div>
           );
         })}

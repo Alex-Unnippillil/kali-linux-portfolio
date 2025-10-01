@@ -6,7 +6,12 @@
     "size": 12345,
     "plugin": "metadata",
     "timestamp": "2023-08-01T10:00:00Z",
-    "user": "alice"
+    "user": "alice",
+    "lineage": {
+      "source": "Static Autopsy Fixture",
+      "transforms": ["Bundled sample artifact"],
+      "tags": ["autopsy", "fixture"]
+    }
   },
   {
     "name": "photo.jpg",
@@ -15,7 +20,12 @@
     "size": 23456,
     "plugin": "hash",
     "timestamp": "2023-08-01T12:30:00Z",
-    "user": "bob"
+    "user": "bob",
+    "lineage": {
+      "source": "Static Autopsy Fixture",
+      "transforms": ["Bundled sample artifact"],
+      "tags": ["autopsy", "fixture"]
+    }
   },
   {
     "name": "system.log",
@@ -24,7 +34,12 @@
     "size": 34567,
     "plugin": "metadata",
     "timestamp": "2023-08-01T14:45:00Z",
-    "user": "alice"
+    "user": "alice",
+    "lineage": {
+      "source": "Static Autopsy Fixture",
+      "transforms": ["Bundled sample artifact"],
+      "tags": ["autopsy", "fixture"]
+    }
   },
   {
     "name": "run.exe",
@@ -33,7 +48,12 @@
     "size": 45678,
     "plugin": "hash",
     "timestamp": "2023-08-01T16:15:00Z",
-    "user": "bob"
+    "user": "bob",
+    "lineage": {
+      "source": "Static Autopsy Fixture",
+      "transforms": ["Bundled sample artifact"],
+      "tags": ["autopsy", "fixture"]
+    }
   },
   {
     "name": "HKCU\\\\Software\\\\Example",
@@ -42,6 +62,11 @@
     "size": 0,
     "plugin": "regParser",
     "timestamp": "2023-08-01T18:20:00Z",
-    "user": "system"
+    "user": "system",
+    "lineage": {
+      "source": "Static Autopsy Fixture",
+      "transforms": ["Bundled sample artifact"],
+      "tags": ["autopsy", "fixture"]
+    }
   }
 ]
