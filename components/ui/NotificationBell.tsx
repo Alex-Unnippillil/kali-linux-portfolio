@@ -58,6 +58,8 @@ const PRIORITY_METADATA: Record<
   },
 };
 
+const PAGE_SIZE = 25;
+
 type PriorityMetadata = (typeof PRIORITY_METADATA)[NotificationPriority];
 
 interface FormattedNotification extends AppNotification {
@@ -94,6 +96,17 @@ const NotificationBell: React.FC = () => {
         }),
         {} as Record<NotificationPriority, boolean>,
       ),
+  );
+  const [visibleByPriority, setVisibleByPriority] = useState<
+    Record<NotificationPriority, number>
+  >(() =>
+    PRIORITY_ORDER.reduce(
+      (acc, priority) => (
+        (acc[priority] = PAGE_SIZE),
+        acc
+      ),
+      {} as Record<NotificationPriority, number>,
+    ),
   );
 
   const closePanel = useCallback(() => {
@@ -220,6 +233,25 @@ const NotificationBell: React.FC = () => {
     [formattedNotifications],
   );
 
+  useEffect(() => {
+    setVisibleByPriority(prev => {
+      const next = { ...prev } as Record<NotificationPriority, number>;
+      PRIORITY_ORDER.forEach(priority => {
+        const group = groupedNotifications.find(({ priority: p }) => p === priority);
+        if (!group) {
+          next[priority] = PAGE_SIZE;
+          return;
+        }
+        const previous = prev?.[priority] ?? PAGE_SIZE;
+        next[priority] = Math.min(
+          group.notifications.length,
+          Math.max(PAGE_SIZE, previous),
+        );
+      });
+      return next;
+    });
+  }, [groupedNotifications]);
+
   const toggleGroup = useCallback((priority: NotificationPriority) => {
     setCollapsedGroups(prev => ({
       ...prev,
@@ -262,111 +294,171 @@ const NotificationBell: React.FC = () => {
         )}
       </button>
       {isOpen && (
-        <div
-          ref={panelRef}
-          id={panelId}
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby={headingId}
-          tabIndex={-1}
-          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
-        >
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-            <h2 id={headingId} className="text-sm font-semibold text-white">
-              Notifications
-            </h2>
-            <button
-              type="button"
-              onClick={handleDismissAll}
-              disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="absolute inset-0 bg-black/60"
+            aria-hidden="true"
+            onClick={closePanel}
+          />
+          <div className="relative ml-auto flex h-full w-full max-w-md flex-col">
+            <div
+              ref={panelRef}
+              id={panelId}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={headingId}
+              tabIndex={-1}
+              className="flex h-full flex-col overflow-hidden border-l border-white/10 bg-ub-grey/95 text-ubt-grey shadow-2xl backdrop-blur"
             >
-              Dismiss all
-            </button>
-          </div>
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
-                You&apos;re all caught up.
-              </p>
-            ) : (
-              <div>
-                {groupedNotifications.map(group => {
-                  const collapsed =
-                    collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
-                  const contentId = `${panelId}-${group.priority}-group`;
-                  return (
-                    <section key={group.priority} className="border-b border-white/10 last:border-b-0">
-                      <button
-                        type="button"
-                        onClick={() => toggleGroup(group.priority)}
-                        aria-expanded={!collapsed}
-                        aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
-                      >
-                        <span className="flex items-center gap-2">
-                          {group.metadata.label}
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClass}`}
-                            title={group.metadata.description}
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                <div>
+                  <h2 id={headingId} className="text-base font-semibold text-white">
+                    Notifications
+                  </h2>
+                  <p className="text-xs text-ubt-grey text-opacity-80">
+                    Review alerts without leaving your workspace.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDismissAll}
+                    disabled={notifications.length === 0}
+                    className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+                  >
+                    Dismiss all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closePanel}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-ubt-grey transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                    aria-label="Close notifications"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      focusable="false"
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 8.586l4.95-4.95a1 1 0 111.414 1.415L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95A1 1 0 115.05 3.636L10 8.586z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <p className="px-6 py-10 text-center text-sm text-ubt-grey text-opacity-80">
+                    You&apos;re all caught up.
+                  </p>
+                ) : (
+                  <div>
+                    {groupedNotifications.map(group => {
+                      const collapsed =
+                        collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
+                      const contentId = `${panelId}-${group.priority}-group`;
+                      const visibleCount = visibleByPriority[group.priority] ?? PAGE_SIZE;
+                      const visibleNotifications = group.notifications.slice(0, visibleCount);
+                      const hasMore = visibleCount < group.notifications.length;
+
+                      return (
+                        <section key={group.priority} className="border-b border-white/10 last:border-b-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(group.priority)}
+                            aria-expanded={!collapsed}
+                            aria-controls={contentId}
+                            className="flex w-full items-center justify-between px-6 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
                           >
-                            {group.notifications.length}
-                          </span>
-                        </span>
-                        <svg
-                          aria-hidden="true"
-                          focusable="false"
-                          className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-0' : 'rotate-90'}`}
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M7 5l6 5-6 5V5z" />
-                        </svg>
-                      </button>
-                      <div
-                        id={contentId}
-                        role="region"
-                        aria-hidden={collapsed}
-                        hidden={collapsed}
-                        className="bg-transparent"
-                      >
-                        <ul role="list" className="divide-y divide-white/10">
-                          {group.notifications.map(notification => (
-                            <li
-                              key={notification.id}
-                              className={`border-l-2 px-4 py-3 text-sm text-white ${notification.metadata.accentClass}`}
+                            <span className="flex items-center gap-2">
+                              {group.metadata.label}
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClass}`}
+                                title={group.metadata.description}
+                              >
+                                {group.notifications.length}
+                              </span>
+                            </span>
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-0' : 'rotate-90'}`}
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-medium">{notification.title}</p>
-                                <span
-                                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClass}`}
-                                  title={
-                                    notification.classification.matchedRuleId
-                                      ? `Priority ${notification.metadata.label} (${notification.classification.source}: ${notification.classification.matchedRuleId})`
-                                      : `Priority ${notification.metadata.label}`
+                              <path d="M7 5l6 5-6 5V5z" />
+                            </svg>
+                          </button>
+                          <div
+                            id={contentId}
+                            role="region"
+                            aria-hidden={collapsed}
+                            hidden={collapsed}
+                            className="bg-transparent"
+                          >
+                            <ul role="list" className="divide-y divide-white/10">
+                              {visibleNotifications.map(notification => (
+                                <li
+                                  key={notification.id}
+                                  className={`border-l-2 px-6 py-3 text-sm text-white ${notification.metadata.accentClass}`}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="font-medium">{notification.title}</p>
+                                    <span
+                                      className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClass}`}
+                                      title={
+                                        notification.classification.matchedRuleId
+                                          ? `Priority ${notification.metadata.label} (${notification.classification.source}: ${notification.classification.matchedRuleId})`
+                                          : `Priority ${notification.metadata.label}`
+                                      }
+                                    >
+                                      {notification.metadata.label}
+                                    </span>
+                                  </div>
+                                  {notification.body && (
+                                    <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
+                                      {notification.body}
+                                    </p>
+                                  )}
+                                  <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+                                    <span>{notification.appId}</span>
+                                    <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                            {hasMore && (
+                              <div className="flex justify-center border-t border-white/5 bg-ub-grey/90 px-6 py-3">
+                                <button
+                                  type="button"
+                                  className="text-xs font-medium text-ubb-orange transition hover:text-ubb-orange/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                                  onClick={() =>
+                                    setVisibleByPriority(prev => ({
+                                      ...prev,
+                                      [group.priority]: Math.min(
+                                        group.notifications.length,
+                                        (prev[group.priority] ?? PAGE_SIZE) + PAGE_SIZE,
+                                      ),
+                                    }))
                                   }
                                 >
-                                  {notification.metadata.label}
-                                </span>
+                                  Load more
+                                  <span className="sr-only"> {group.metadata.label} notifications</span>
+                                </button>
                               </div>
-                              {notification.body && (
-                                <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
-                                  {notification.body}
-                                </p>
-                              )}
-                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
-                                <span>{notification.appId}</span>
-                                <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </section>
-                  );
-                })}
+                            )}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
