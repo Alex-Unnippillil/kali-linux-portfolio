@@ -9,6 +9,7 @@ const BackgroundImage = dynamic(
 );
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
+import AppWindowBoundary from '../base/app-window-boundary';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
@@ -72,6 +73,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            window_reset_keys: {},
         }
 
         this.desktopRef = React.createRef();
@@ -1378,6 +1380,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const resetKey = this.state.window_reset_keys?.[app.id] || 0;
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -1402,11 +1405,29 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <AppWindowBoundary
+                        key={`${app.id}-${resetKey}`}
+                        appId={app.id}
+                        appTitle={app.title}
+                        onRetry={() => this.restartAppWindow(app.id)}
+                    >
+                        <Window key={`${app.id}-window-${resetKey}`} {...props} />
+                    </AppWindowBoundary>
                 )
             }
         });
         return windowsJsx;
+    }
+
+    restartAppWindow = (appId) => {
+        this.setState((prevState) => ({
+            window_reset_keys: {
+                ...prevState.window_reset_keys,
+                [appId]: (prevState.window_reset_keys?.[appId] || 0) + 1,
+            },
+        }), () => {
+            this.focus(appId);
+        });
     }
 
     updateWindowPosition = (id, x, y) => {
