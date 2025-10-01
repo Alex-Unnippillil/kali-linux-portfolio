@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+import {
+  scheduleTask,
+  TaskPriority,
+  type ScheduledTaskHandle,
+} from '../utils/scheduler';
 
 interface LoaderProps {
   onData: (rows: any[]) => void;
@@ -8,7 +14,13 @@ interface LoaderProps {
 
 export default function FixturesLoader({ onData }: LoaderProps) {
   const [progress, setProgress] = useState(0);
-  const [worker, setWorker] = useState<Worker | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const pendingMessage = useRef<ScheduledTaskHandle | null>(null);
+
+  const clearPending = useCallback(() => {
+    pendingMessage.current?.cancel();
+    pendingMessage.current = null;
+  }, []);
 
   useEffect(() => {
     const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
@@ -24,14 +36,34 @@ export default function FixturesLoader({ onData }: LoaderProps) {
         }
       }
     };
-    setWorker(w);
-    return () => w.terminate();
-  }, [onData]);
+    workerRef.current = w;
+    return () => {
+      clearPending();
+      w.terminate();
+      workerRef.current = null;
+    };
+  }, [clearPending, onData]);
+
+  const queueWorkerMessage = useCallback(
+    (message: unknown, priority: TaskPriority = TaskPriority.Background) => {
+      if (!workerRef.current) return;
+      clearPending();
+      pendingMessage.current = scheduleTask(
+        () => {
+          workerRef.current?.postMessage(message);
+          pendingMessage.current = null;
+        },
+        priority,
+        { label: 'fixtures:worker-dispatch' },
+      );
+    },
+    [clearPending],
+  );
 
   const loadSample = async () => {
     const res = await fetch('/fixtures/sample.json');
     const text = await res.text();
-    worker?.postMessage({ type: 'parse', text });
+    queueWorkerMessage({ type: 'parse', text });
   };
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,12 +71,13 @@ export default function FixturesLoader({ onData }: LoaderProps) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      worker?.postMessage({ type: 'parse', text: reader.result });
+      queueWorkerMessage({ type: 'parse', text: reader.result });
     };
     reader.readAsText(file);
   };
 
-  const cancel = () => worker?.postMessage({ type: 'cancel' });
+  const cancel = () =>
+    queueWorkerMessage({ type: 'cancel' }, TaskPriority.UserVisible);
 
   return (
     <div className="text-xs" aria-label="fixtures loader">

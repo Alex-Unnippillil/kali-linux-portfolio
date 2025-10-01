@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import {
+  scheduleTask,
+  TaskPriority,
+  type ScheduledTaskHandle,
+} from '../../utils/scheduler';
 import type {
   SimulatorParserRequest,
   SimulatorParserResponse,
@@ -24,6 +29,7 @@ const Simulator: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [eta, setEta] = useState(0);
   const workerRef = useRef<Worker|null>(null);
+  const pendingDispatchRef = useRef<ScheduledTaskHandle | null>(null);
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
@@ -44,19 +50,39 @@ const Simulator: React.FC = () => {
         setEta(0);
       }
     };
-    return () => worker.terminate();
+    return () => {
+      pendingDispatchRef.current?.cancel();
+      worker.terminate();
+      workerRef.current = null;
+    };
   }, []);
+
+  const queueWorkerAction = useCallback(
+    (message: SimulatorParserRequest, priority: TaskPriority) => {
+      if (!workerRef.current) return;
+      pendingDispatchRef.current?.cancel();
+      pendingDispatchRef.current = scheduleTask(
+        () => {
+          workerRef.current?.postMessage(message);
+          pendingDispatchRef.current = null;
+        },
+        priority,
+        { label: 'simulator:worker-dispatch' },
+      );
+    },
+    [],
+  );
 
   const parseText = useCallback((text: string) => {
     setFixtureText(text);
     setParsed([]);
     setProgress(0);
     setEta(0);
-    workerRef.current?.postMessage({ action: 'parse', text } as SimulatorParserRequest);
-  }, []);
+    queueWorkerAction({ action: 'parse', text } as SimulatorParserRequest, TaskPriority.Background);
+  }, [queueWorkerAction]);
 
   const cancelParse = () =>
-    workerRef.current?.postMessage({ action: 'cancel' } as SimulatorParserRequest);
+    queueWorkerAction({ action: 'cancel' } as SimulatorParserRequest, TaskPriority.UserVisible);
 
   const onSampleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
