@@ -119,7 +119,13 @@ const formatDisplayTime = ({ currentTime, onlyDay, onlyTime, timeFormatter }) =>
     return `${dayString} ${timeString}`
 }
 
-const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12 = true }) => {
+const Clock = ({
+    onlyDay = false,
+    onlyTime = false,
+    showCalendar = false,
+    hour12 = true,
+    variant = 'default'
+}) => {
     const [currentTime, setCurrentTime] = useState(null)
     const [isOpen, setIsOpen] = useState(false)
     const [viewDate, setViewDate] = useState(() => new Date())
@@ -525,21 +531,31 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
         return <span suppressHydrationWarning>{displayTime}</span>
     }
 
+    const isMinimal = variant === 'minimal'
+
+    const buttonClassName = isMinimal
+        ? 'group flex items-center gap-1 rounded px-0 py-0 text-right text-sm font-semibold text-white/80 transition-colors duration-150 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-0'
+        : 'group flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-left text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:border-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900'
+
+    const textClassName = isMinimal
+        ? 'font-mono text-sm md:text-base tracking-tight'
+        : 'truncate text-xs md:text-sm tracking-tight'
+
     return (
-        <div className="relative inline-flex items-center" suppressHydrationWarning>
+        <div className={`relative inline-flex items-center ${isMinimal ? 'justify-end' : ''}`} suppressHydrationWarning>
             <button
                 type="button"
                 ref={buttonRef}
                 onClick={handleToggle}
-                className="group flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-left text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:border-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                className={buttonClassName}
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 aria-controls={popoverId}
             >
-                <span className="truncate text-xs md:text-sm tracking-tight" aria-live="polite">
+                <span className={textClassName} aria-live="polite">
                     {displayTime}
                 </span>
-                {showCalendar ? (
+                {showCalendar && !isMinimal ? (
                     <span
                         aria-hidden
                         className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500/80 text-[0.6rem] font-semibold text-slate-950 shadow ring-1 ring-white/40 transition-transform duration-200 group-hover:scale-105"
