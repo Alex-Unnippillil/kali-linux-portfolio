@@ -1,6 +1,7 @@
 "use client";
 
 import { get, set, update } from 'idb-keyval';
+import { requestQuotaCheck } from './quota';
 
 const PROGRESS_KEY = 'progress';
 const KEYBINDS_KEY = 'keybinds';
@@ -18,6 +19,7 @@ export const getProgress = async (): Promise<ProgressData> =>
 export const setProgress = async (progress: ProgressData): Promise<void> => {
   if (typeof window === 'undefined') return;
   await set(PROGRESS_KEY, progress);
+  requestQuotaCheck();
 };
 
 export const getKeybinds = async (): Promise<Keybinds> =>
@@ -28,6 +30,7 @@ export const getKeybinds = async (): Promise<Keybinds> =>
 export const setKeybinds = async (keybinds: Keybinds): Promise<void> => {
   if (typeof window === 'undefined') return;
   await set(KEYBINDS_KEY, keybinds);
+  requestQuotaCheck();
 };
 
 export const getReplays = async (): Promise<Replay[]> =>
@@ -38,11 +41,13 @@ export const getReplays = async (): Promise<Replay[]> =>
 export const saveReplay = async (replay: Replay): Promise<void> => {
   if (typeof window === 'undefined') return;
   await update<Replay[]>(REPLAYS_KEY, (replays = []) => [...replays, replay]);
+  requestQuotaCheck();
 };
 
 export const clearReplays = async (): Promise<void> => {
   if (typeof window === 'undefined') return;
   await set(REPLAYS_KEY, []);
+  requestQuotaCheck();
 };
 
 const storage = {

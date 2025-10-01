@@ -1,4 +1,5 @@
 import { isBrowser } from './isBrowser';
+import { requestQuotaCheck } from './quota';
 
 const STORAGE_KEY = 'qrScans';
 const LAST_SCAN_KEY = 'qrLastScan';
@@ -7,12 +8,12 @@ const FILE_NAME = 'qr-scans.json';
 
 const getStorage = (): StorageManager => navigator.storage;
 
-const hasOpfs =
+const hasOpfs = (): boolean =>
   isBrowser && 'storage' in navigator && Boolean(getStorage().getDirectory);
 
 export const loadScans = async (): Promise<string[]> => {
   if (!isBrowser) return [];
-  if (hasOpfs) {
+  if (hasOpfs()) {
     try {
       const root = await getStorage().getDirectory();
       const handle = await root.getFileHandle(FILE_NAME);
@@ -31,29 +32,33 @@ export const loadScans = async (): Promise<string[]> => {
 
 export const saveScans = async (scans: string[]): Promise<void> => {
   if (!isBrowser) return;
-  if (hasOpfs) {
+  if (hasOpfs()) {
     const root = await getStorage().getDirectory();
     const handle = await root.getFileHandle(FILE_NAME, { create: true });
     const writable = await handle.createWritable();
     await writable.write(JSON.stringify(scans));
     await writable.close();
+    requestQuotaCheck();
     return;
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scans));
+  requestQuotaCheck();
 };
 
 export const clearScans = async (): Promise<void> => {
   if (!isBrowser) return;
-  if (hasOpfs) {
+  if (hasOpfs()) {
     try {
       const root = await getStorage().getDirectory();
       await root.removeEntry(FILE_NAME);
     } catch {
       /* ignore */
     }
+    requestQuotaCheck();
     return;
   }
   localStorage.removeItem(STORAGE_KEY);
+  requestQuotaCheck();
 };
 
 export const loadLastScan = (): string => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { getDb } from './safeIDB';
+import { requestQuotaCheck } from './quota';
 
 const DB_NAME = 'kali-games';
 const VERSION = 1;
@@ -41,6 +42,7 @@ export async function setSeed(game: string, date: string, seed: string): Promise
     if (!dbp) return;
     const db = await dbp;
     await db.put(STORE_SEEDS, seed, `${game}-${date}`);
+    requestQuotaCheck();
   } catch {
     // ignore
   }
@@ -52,6 +54,19 @@ export async function saveReplay(game: string, id: string, data: any): Promise<v
     if (!dbp) return;
     const db = await dbp;
     await db.put(STORE_REPLAYS, data, `${game}-${id}`);
+    requestQuotaCheck();
+  } catch {
+    // ignore
+  }
+}
+
+export async function clearReplays(): Promise<void> {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    await db.clear(STORE_REPLAYS);
+    requestQuotaCheck();
   } catch {
     // ignore
   }
