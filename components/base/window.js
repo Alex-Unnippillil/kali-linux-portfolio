@@ -6,6 +6,8 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import SnapshotControls from './SnapshotControls';
+import { captureSnapshotFromNode, applySnapshotToNode } from '../../utils/appSnapshots';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -224,6 +226,18 @@ export class Window extends Component {
             return document.getElementById(this.id);
         }
         return null;
+    }
+
+    captureAppSnapshot = () => {
+        const node = this.getWindowNode();
+        return captureSnapshotFromNode(node);
+    }
+
+    restoreAppSnapshot = (snapshot) => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        this.focusWindow();
+        applySnapshotToNode(node, snapshot);
     }
 
     activateOverlay = () => {
@@ -690,6 +704,12 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            snapshots={this.id ? {
+                                appId: this.id,
+                                title: this.props.title,
+                                capture: this.captureAppSnapshot,
+                                restore: this.restoreAppSnapshot,
+                            } : undefined}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -768,7 +788,7 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
+        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[11rem]`}>
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -785,6 +805,14 @@ export function WindowEditButtons(props) {
                         sizes="16px"
                     />
                 </button>
+            )}
+            {props.snapshots && (
+                <SnapshotControls
+                    appId={props.snapshots.appId}
+                    title={props.snapshots.title}
+                    capture={props.snapshots.capture}
+                    restore={props.snapshots.restore}
+                />
             )}
             <button
                 type="button"
