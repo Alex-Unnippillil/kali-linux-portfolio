@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -24,6 +25,11 @@ const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+const DevChaosPanel =
+  process.env.NODE_ENV !== 'production'
+    ? dynamic(() => import('../components/dev/ChaosPanel'), { ssr: false })
+    : () => null;
 
 
 function MyApp(props) {
@@ -173,6 +179,7 @@ function MyApp(props) {
               />
 
               {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              {process.env.NODE_ENV !== 'production' && <DevChaosPanel />}
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>

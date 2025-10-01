@@ -4,6 +4,7 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
+import useChaos from '../../../hooks/useChaos';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -56,6 +57,7 @@ const Nessus = () => {
   const [parseError, setParseError] = useState('');
   const [selected, setSelected] = useState(null);
   const parserWorkerRef = useRef(null);
+  const { isEnabled } = useChaos('nessus');
 
   const hostData = useMemo(
     () =>
@@ -75,24 +77,37 @@ const Nessus = () => {
     parserWorkerRef.current = new Worker(
       new URL('../../../workers/nessus-parser.ts', import.meta.url)
     );
-      parserWorkerRef.current.onmessage = (e) => {
+    parserWorkerRef.current.onmessage = (e) => {
+      if (isEnabled('corruptChunk')) {
+        setParseError('Parser returned corrupted data (chaos simulation).');
+        setFindings([]);
+        return;
+      }
       const { findings: parsed = [], error: err } = e.data || {};
       if (err) {
         setParseError(err);
         setFindings([]);
+      } else if (parsed?.length && isEnabled('partialData')) {
+        const slice = Math.max(1, Math.ceil(parsed.length / 2));
+        setFindings(parsed.slice(0, slice));
+        setParseError('Partial Nessus data loaded under chaos simulation.');
       } else {
         setFindings(parsed);
         setParseError('');
       }
     };
     return () => parserWorkerRef.current?.terminate();
-  }, []);
+  }, [isEnabled]);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
+      if (isEnabled('timeout')) {
+        setParseError('Parser timed out while chaos mode was active.');
+        return;
+      }
       parserWorkerRef.current.postMessage(text);
     } catch (err) {
       setParseError('Failed to read file');

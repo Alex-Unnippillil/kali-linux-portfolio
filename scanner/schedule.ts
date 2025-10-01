@@ -1,3 +1,5 @@
+import chaosState from '../lib/dev/chaosState';
+
 export interface ScheduledScan {
   id: string;
   schedule: string;
@@ -6,6 +8,7 @@ export interface ScheduledScan {
 interface RunningScan extends ScheduledScan {
   timer: ReturnType<typeof setInterval>;
   callback: () => void;
+  skipNext?: boolean;
 }
 
 const STORAGE_KEY = 'scanSchedules';
@@ -49,8 +52,33 @@ export const scheduleScan = (
   jobs.push({ id, schedule });
   persistSchedules(jobs);
   const interval = cronToInterval(schedule);
-  const timer = setInterval(callback, interval);
-  runningScans.push({ id, schedule, timer, callback });
+  let entry: RunningScan;
+  const runner = () => {
+    if (chaosState.isEnabled('scheduler', 'timeout')) {
+      return;
+    }
+    if (chaosState.isEnabled('scheduler', 'corruptChunk')) {
+      console.warn('Chaos: scheduler emitted corrupted tick for job %s', id);
+      return;
+    }
+    if (chaosState.isEnabled('scheduler', 'partialData')) {
+      entry.skipNext = !entry.skipNext;
+      if (entry.skipNext) {
+        console.warn('Chaos: scheduler dropped interval for job %s', id);
+        return;
+      }
+    } else {
+      entry.skipNext = false;
+    }
+    try {
+      callback();
+    } catch (err) {
+      console.error('Scheduled scan callback failed', err);
+    }
+  };
+  const timer = setInterval(runner, interval);
+  entry = { id, schedule, timer, callback, skipNext: false };
+  runningScans.push(entry);
   return { id, schedule };
 };
 

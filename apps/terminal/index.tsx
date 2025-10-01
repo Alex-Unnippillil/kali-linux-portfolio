@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import useChaos from '../../hooks/useChaos';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -105,6 +106,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const { isEnabled } = useChaos('terminal');
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -171,14 +173,40 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         writeLine('Worker not available');
         return;
       }
+      if (isEnabled('timeout')) {
+        writeLine('[chaos] Worker execution timed out. Showing cached output instead.');
+        return;
+      }
       await new Promise<void>((resolve) => {
+        let partialNotified = false;
+        let corruptTriggered = false;
         worker.onmessage = ({ data }: MessageEvent<any>) => {
           if (data.type === 'data') {
-            for (const line of String(data.chunk).split('\n')) {
+            if (isEnabled('corruptChunk')) {
+              if (!corruptTriggered) {
+                writeLine('[chaos] Worker emitted a corrupted chunk. Command aborted.');
+                corruptTriggered = true;
+              }
+              resolve();
+              return;
+            }
+            let chunk = String(data.chunk ?? '');
+            if (chunk && isEnabled('partialData')) {
+              const lines = chunk.split('\n').filter(Boolean);
+              const keep = Math.max(1, Math.ceil(lines.length / 2));
+              chunk = lines.slice(0, keep).join('\n');
+              if (!partialNotified) {
+                writeLine('[chaos] Output truncated by chaos simulation.');
+                partialNotified = true;
+              }
+            }
+            for (const line of chunk.split('\n')) {
               if (line) writeLine(line);
             }
           } else if (data.type === 'end') {
-            resolve();
+            if (!corruptTriggered) {
+              resolve();
+            }
           }
         };
         worker.postMessage({
@@ -188,7 +216,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         });
       });
     },
-    [writeLine],
+    [isEnabled, writeLine],
   );
 
   contextRef.current.runWorker = runWorker;
