@@ -30,6 +30,9 @@ import {
 } from '../../utils/windowLayout';
 
 
+const DARK_THEMES = new Set(['dark', 'neon', 'matrix']);
+
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -72,6 +75,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            highContrast: false,
         }
 
         this.desktopRef = React.createRef();
@@ -93,6 +97,10 @@ export class Desktop extends Component {
         this.currentPointerIsCoarse = false;
 
         this.validAppIds = new Set(apps.map((app) => app.id));
+
+        this.previousTheme = '';
+        this.previouslyDarkTheme = false;
+        this.highContrastActive = false;
 
     }
 
@@ -814,9 +822,66 @@ export class Desktop extends Component {
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
 
+    initializeHighContrastPreference = () => {
+        const stored = safeLocalStorage?.getItem('high-contrast');
+        const enabled = stored === 'true';
+        this.applyHighContrastPreference(Boolean(enabled), false);
+    };
+
+    applyHighContrastPreference = (enabled, persist = true) => {
+        this.setState((prevState) => (
+            prevState.highContrast === enabled ? null : { highContrast: enabled }
+        ));
+
+        if (persist) {
+            safeLocalStorage?.setItem('high-contrast', enabled ? 'true' : 'false');
+        }
+
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        const html = document.documentElement;
+
+        if (enabled) {
+            if (!this.highContrastActive) {
+                const storedTheme = safeLocalStorage?.getItem('app:theme') || html.dataset.theme || '';
+                this.previousTheme = storedTheme === 'high-contrast' ? '' : storedTheme;
+                this.previouslyDarkTheme = html.classList.contains('dark');
+            }
+            html.dataset.theme = 'high-contrast';
+            html.classList.remove('dark');
+            html.classList.add('high-contrast');
+            this.highContrastActive = true;
+            return;
+        }
+
+        const storedTheme = safeLocalStorage?.getItem('app:theme') || '';
+        const themeToRestore = this.previousTheme || storedTheme;
+
+        if (themeToRestore) {
+            html.dataset.theme = themeToRestore;
+            html.classList.toggle('dark', DARK_THEMES.has(themeToRestore));
+        } else if (html.dataset.theme === 'high-contrast') {
+            html.removeAttribute('data-theme');
+            html.classList.toggle('dark', this.previouslyDarkTheme);
+        }
+
+        html.classList.remove('high-contrast');
+        this.highContrastActive = false;
+        this.previousTheme = '';
+        this.previouslyDarkTheme = false;
+    };
+
+    toggleHighContrast = () => {
+        this.applyHighContrastPreference(!this.state.highContrast);
+    };
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        this.initializeHighContrastPreference();
 
         if (typeof window !== 'undefined') {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
@@ -1857,6 +1922,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    highContrastEnabled={this.state.highContrast}
+                    onToggleHighContrast={this.toggleHighContrast}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
