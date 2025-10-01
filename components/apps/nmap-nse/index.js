@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import Aliases from './Aliases';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -85,8 +86,23 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [aliases, setAliases] = useState({});
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
+
+  const hostLabel = (host) => {
+    const alias = aliases[host.ip];
+    return alias ? `${alias} (${host.ip})` : host.ip;
+  };
+
+  const hostsWithAliases = useMemo(() => {
+    const hostList = Array.isArray(results.hosts) ? results.hosts : [];
+    return hostList.map((host) => ({
+      ...host,
+      label: hostLabel(host),
+      alias: aliases[host.ip] || null,
+    }));
+  }, [results.hosts, aliases]);
 
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
@@ -129,6 +145,29 @@ const NmapNSEApp = () => {
   } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
     .replace(/\s+/g, ' ')
     .trim();
+
+  const copyResults = async () => {
+    const payload = {
+      ...results,
+      aliases,
+      hosts: hostsWithAliases.map((host) => ({
+        ...host,
+        name: host.alias || host.ip,
+      })),
+    };
+
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setToast('Clipboard unavailable');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setToast('Results copied');
+    } catch (e) {
+      setToast('Copy failed');
+    }
+  };
 
   const copyCommand = async () => {
     if (typeof window !== 'undefined') {
@@ -274,6 +313,10 @@ const NmapNSEApp = () => {
             ))}
           </div>
         </div>
+        <div className="mb-4">
+          <h2 className="text-md mb-2 font-semibold">Host aliases</h2>
+          <Aliases aliases={aliases} onChange={setAliases} />
+        </div>
         <div className="flex items-center mb-4">
           <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
             {command}
@@ -346,12 +389,12 @@ const NmapNSEApp = () => {
           <p className="text-sm mb-4">Select a script to view phases.</p>
         )}
         <h2 className="text-lg mb-2">Topology</h2>
-        <DiscoveryMap hosts={results.hosts} />
+        <DiscoveryMap hosts={hostsWithAliases} />
         <h2 className="text-lg mb-2">Parsed output</h2>
         <ul className="mb-4 space-y-2">
-          {results.hosts.map((host) => (
+          {hostsWithAliases.map((host) => (
             <li key={host.ip}>
-              <div className="text-blue-400 font-mono">{host.ip}</div>
+              <div className="text-blue-400 font-mono">{host.label}</div>
               <ul className="ml-4 space-y-1">
                 {host.ports.map((p) => (
                   <li key={p.port}>
@@ -425,6 +468,13 @@ const NmapNSEApp = () => {
             className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
           >
             Copy Output
+          </button>
+          <button
+            type="button"
+            onClick={copyResults}
+            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+          >
+            Copy Results JSON
           </button>
           <button
             type="button"
