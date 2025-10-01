@@ -23,11 +23,14 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { dispatchShortcutOverlayEvent } from '../common/shortcutOverlayEvents';
 import {
     clampWindowTopPosition,
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+
+const SHORTCUT_OVERLAY_HOLD_DELAY = 400;
 
 
 export class Desktop extends Component {
@@ -94,6 +97,13 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set(apps.map((app) => app.id));
 
+        this.shortcutOverlayHoldState = {
+            trigger: null,
+            timer: null,
+            open: false,
+            blocked: false,
+        };
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -135,6 +145,142 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    isShortcutOverlaySuppressedTarget = (target) => {
+        if (!target || typeof target !== 'object') return false;
+        const tagName = typeof target.tagName === 'string' ? target.tagName.toUpperCase() : null;
+        if (!tagName) return false;
+        if (tagName === 'INPUT' || tagName === 'TEXTAREA') return true;
+        if (target.isContentEditable) return true;
+        if (typeof target.closest === 'function') {
+            const editable = target.closest('[contenteditable="true"]');
+            if (editable) return true;
+        }
+        return false;
+    };
+
+    getShortcutOverlayTrigger = (event) => {
+        if (!event) return null;
+        if (event.metaKey || event.altKey) return null;
+        const key = event.key;
+        if (key === 'Shift' && !event.ctrlKey) {
+            return 'shift';
+        }
+        if (!event.ctrlKey && key === '?') {
+            return 'question';
+        }
+        if (event.ctrlKey && (key === '/' || key === '?')) {
+            return 'ctrl-slash';
+        }
+        return null;
+    };
+
+    matchesShortcutOverlayKeyUp = (event, trigger) => {
+        switch (trigger) {
+            case 'shift':
+                return event.key === 'Shift';
+            case 'question':
+                return event.key === '?' || event.key === 'Shift';
+            case 'ctrl-slash':
+                return event.key === '/' || event.key === 'Control';
+            default:
+                return false;
+        }
+    };
+
+    beginShortcutOverlayHold = (trigger) => {
+        const hold = this.shortcutOverlayHoldState;
+        if (hold.timer) {
+            clearTimeout(hold.timer);
+            hold.timer = null;
+        }
+        hold.trigger = trigger;
+        hold.blocked = false;
+        if (typeof window === 'undefined') return;
+        hold.timer = window.setTimeout(() => {
+            hold.timer = null;
+            if (hold.trigger !== trigger || hold.blocked) return;
+            hold.open = true;
+            dispatchShortcutOverlayEvent({
+                action: 'hold',
+                state: 'start',
+                trigger,
+            });
+        }, SHORTCUT_OVERLAY_HOLD_DELAY);
+    };
+
+    cancelShortcutOverlayHold = (shouldClose = false) => {
+        const hold = this.shortcutOverlayHoldState;
+        if (hold.timer) {
+            clearTimeout(hold.timer);
+            hold.timer = null;
+        }
+        if (shouldClose && hold.open && hold.trigger) {
+            dispatchShortcutOverlayEvent({
+                action: 'hold',
+                state: 'end',
+                trigger: hold.trigger,
+            });
+        }
+        hold.open = false;
+        hold.trigger = null;
+        hold.blocked = false;
+    };
+
+    handleShortcutOverlayKeydown = (event) => {
+        const hold = this.shortcutOverlayHoldState;
+        if (event.defaultPrevented) return;
+        if (this.isShortcutOverlaySuppressedTarget(event.target)) {
+            this.cancelShortcutOverlayHold(false);
+            return;
+        }
+
+        const trigger = this.getShortcutOverlayTrigger(event);
+        if (trigger) {
+            if (event.repeat && hold.trigger === trigger) {
+                return;
+            }
+            if (event.repeat) {
+                return;
+            }
+            if (hold.trigger && hold.trigger !== trigger) {
+                if (hold.trigger === 'shift' && trigger === 'question') {
+                    const shouldClose = hold.open;
+                    this.cancelShortcutOverlayHold(shouldClose);
+                } else {
+                    return;
+                }
+            }
+            this.beginShortcutOverlayHold(trigger);
+            return;
+        }
+
+        if (hold.trigger === 'shift' && event.key !== 'Shift') {
+            hold.blocked = true;
+            this.cancelShortcutOverlayHold(false);
+        }
+    };
+
+    handleShortcutOverlayKeyup = (event) => {
+        const hold = this.shortcutOverlayHoldState;
+        if (!hold.trigger) return;
+        if (this.matchesShortcutOverlayKeyUp(event, hold.trigger)) {
+            const shouldClose = hold.open;
+            this.cancelShortcutOverlayHold(shouldClose);
+        }
+    };
+
+    resetShortcutOverlayHold = () => {
+        const hold = this.shortcutOverlayHoldState;
+        this.cancelShortcutOverlayHold(Boolean(hold.open));
+    };
+
+    handleShortcutOverlayVisibility = () => {
+        if (typeof document === 'undefined') return;
+        if (document.visibilityState === 'hidden') {
+            this.resetShortcutOverlayHold();
+        }
     };
 
     setupPointerMediaWatcher = () => {
@@ -852,6 +998,10 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         window.addEventListener('resize', this.handleViewportResize);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        document.addEventListener('keydown', this.handleShortcutOverlayKeydown, true);
+        document.addEventListener('keyup', this.handleShortcutOverlayKeyup, true);
+        window.addEventListener('blur', this.resetShortcutOverlayHold);
+        document.addEventListener('visibilitychange', this.handleShortcutOverlayVisibility);
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
@@ -872,6 +1022,10 @@ export class Desktop extends Component {
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
+        document.removeEventListener('keydown', this.handleShortcutOverlayKeydown, true);
+        document.removeEventListener('keyup', this.handleShortcutOverlayKeyup, true);
+        window.removeEventListener('blur', this.resetShortcutOverlayHold);
+        document.removeEventListener('visibilitychange', this.handleShortcutOverlayVisibility);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
@@ -883,6 +1037,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.resetShortcutOverlayHold();
     }
 
     handleExternalTaskbarCommand = (event) => {
