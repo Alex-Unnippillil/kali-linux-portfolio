@@ -87,4 +87,35 @@ describe('Navbar running apps tray', () => {
     expect(button).toHaveAttribute('data-active', 'false');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
   });
+
+  it('renders progress metadata with accessible status updates', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                ...workspaceEventDetail.runningApps[0],
+                progress: {
+                  status: 'determinate',
+                  value: 0.5,
+                  label: 'Processing 50 percent',
+                },
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    expect(button.querySelector('[data-testid="taskbar-progress-track"]')).toBeTruthy();
+    expect(button.querySelector('[data-testid="taskbar-progress-indicator"]')).toHaveStyle({ width: '50%' });
+    expect(
+      screen.getByRole('status', { name: /processing 50 percent/i }),
+    ).toBeInTheDocument();
+  });
 });

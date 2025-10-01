@@ -18,6 +18,17 @@ const areWorkspacesEqual = (next, prev) => {
         return true;
 };
 
+const areAppProgressStatesEqual = (a, b) => {
+        if (a === b) return true;
+        if (!a || !b) return !a && !b;
+        if (a.status !== b.status) return false;
+        if (a.label !== b.label) return false;
+        if (a.status === 'determinate') {
+                return a.value === b.value;
+        }
+        return true;
+};
+
 const areRunningAppsEqual = (next = [], prev = []) => {
         if (next.length !== prev.length) return false;
         for (let index = 0; index < next.length; index += 1) {
@@ -29,7 +40,8 @@ const areRunningAppsEqual = (next = [], prev = []) => {
                         a.title !== b.title ||
                         a.icon !== b.icon ||
                         a.isFocused !== b.isFocused ||
-                        a.isMinimized !== b.isMinimized
+                        a.isMinimized !== b.isMinimized ||
+                        !areAppProgressStatesEqual(a.progress, b.progress)
                 ) {
                         return false;
                 }
@@ -126,6 +138,16 @@ export default class Navbar extends PureComponent {
         renderRunningAppButton = (app) => {
                 const isActive = !app.isMinimized;
                 const isFocused = app.isFocused && isActive;
+                const progress = app.progress || null;
+                const isDeterminate = progress?.status === 'determinate';
+                const determinateValue = isDeterminate
+                        ? Math.max(0, Math.min(progress?.value ?? 0, 1))
+                        : 0;
+                const srStatus = progress
+                        ? progress.label || (isDeterminate
+                                ? `${app.title} ${Math.round(determinateValue * 100)} percent`
+                                : `${app.title} in progress`)
+                        : null;
 
                 return (
                         <button
@@ -156,6 +178,33 @@ export default class Navbar extends PureComponent {
                                         )}
                                 </span>
                                 <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                                {progress && (
+                                        <span
+                                                aria-hidden="true"
+                                                className="pointer-events-none absolute bottom-0 left-1 right-1 h-0.5 overflow-hidden rounded-full bg-white/20"
+                                                data-testid="taskbar-progress-track"
+                                        >
+                                                <span
+                                                        className={`block h-full rounded-full bg-[var(--kali-blue)] ${progress.status === 'indeterminate' ? 'shell-taskbar-progress-indeterminate' : ''}`}
+                                                        style={
+                                                                progress.status === 'indeterminate'
+                                                                        ? undefined
+                                                                        : { width: `${Math.round(determinateValue * 100)}%` }
+                                                        }
+                                                        data-testid="taskbar-progress-indicator"
+                                                />
+                                        </span>
+                                )}
+                                {srStatus && (
+                                        <span
+                                                role="status"
+                                                aria-live="polite"
+                                                aria-label={srStatus}
+                                                className="sr-only"
+                                        >
+                                                {srStatus}
+                                        </span>
+                                )}
                         </button>
                 );
         };

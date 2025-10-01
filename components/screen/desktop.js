@@ -55,6 +55,7 @@ export class Desktop extends Component {
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
+            app_progress: {},
             context_menus: {
                 desktop: false,
                 default: false,
@@ -93,6 +94,8 @@ export class Desktop extends Component {
         this.currentPointerIsCoarse = false;
 
         this.validAppIds = new Set(apps.map((app) => app.id));
+
+        this.staticAppProgress = this.buildStaticProgressMap(apps);
 
     }
 
@@ -406,6 +409,94 @@ export class Desktop extends Component {
         });
     };
 
+    normalizeProgressInput = (input) => {
+        if (input == null) return null;
+
+        if (typeof input === 'string') {
+            const trimmed = input.trim().toLowerCase();
+            if (trimmed === 'indeterminate' || trimmed === 'pending') {
+                return { status: 'indeterminate' };
+            }
+            const parsed = Number.parseFloat(trimmed);
+            if (!Number.isNaN(parsed)) {
+                return this.normalizeProgressInput(parsed);
+            }
+            return null;
+        }
+
+        if (typeof input === 'number' && Number.isFinite(input)) {
+            const normalized = input > 1 ? input / 100 : input;
+            if (normalized >= 1) {
+                return null;
+            }
+            const clamped = Math.max(0, Math.min(normalized, 1));
+            return { status: 'determinate', value: clamped };
+        }
+
+        if (typeof input === 'object') {
+            if (input.indeterminate || input.status === 'indeterminate') {
+                const label = typeof input.label === 'string' ? input.label : undefined;
+                return { status: 'indeterminate', label };
+            }
+            const candidate =
+                typeof input.value === 'number'
+                    ? input.value
+                    : typeof input.progress === 'number'
+                        ? input.progress
+                        : typeof input.percent === 'number'
+                            ? input.percent / 100
+                            : null;
+            if (candidate != null) {
+                const normalized = candidate > 1 ? candidate / 100 : candidate;
+                if (normalized >= 1) {
+                    return null;
+                }
+                const clamped = Math.max(0, Math.min(normalized, 1));
+                const label = typeof input.label === 'string' ? input.label : undefined;
+                return { status: 'determinate', value: clamped, label };
+            }
+        }
+
+        return null;
+    };
+
+    progressEquals = (a, b) => {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        if (a.status !== b.status) return false;
+        if (a.label !== b.label) return false;
+        if (a.status === 'determinate') {
+            return a.value === b.value;
+        }
+        return true;
+    };
+
+    buildStaticProgressMap = (appList = []) => {
+        return appList.reduce((acc, app) => {
+            const progress = this.normalizeProgressInput(app && app.progress);
+            if (progress) {
+                acc[app.id] = progress;
+            }
+            return acc;
+        }, {});
+    };
+
+    resolveAppProgress = (appId) => {
+        const runtime = this.state.app_progress?.[appId];
+        if (runtime) {
+            return runtime;
+        }
+        const context = this.state.window_context?.[appId];
+        const contextProgress = this.normalizeProgressInput(context?.progress);
+        if (contextProgress) {
+            return contextProgress;
+        }
+        if (this.staticAppProgress?.[appId]) {
+            return this.staticAppProgress[appId];
+        }
+        return null;
+    };
+
     getRunningAppSummaries = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
         return apps
@@ -416,7 +507,67 @@ export class Desktop extends Component {
                 icon: app.icon.replace('./', '/'),
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
+                progress: this.resolveAppProgress(app.id),
             }));
+    };
+
+    handleAppProgressEvent = (event) => {
+        const detail = event?.detail || {};
+        const appId = detail.appId;
+        if (!appId || !this.validAppIds.has(appId)) return;
+
+        const resetRequested = detail.reset || detail.complete || detail.status === 'complete';
+        const indeterminateRequested = detail.indeterminate || detail.status === 'indeterminate';
+
+        const nextProgress = (() => {
+            if (resetRequested) {
+                return null;
+            }
+            if (indeterminateRequested) {
+                const label = typeof detail.label === 'string' ? detail.label : undefined;
+                return { status: 'indeterminate', label };
+            }
+            const candidate =
+                typeof detail.value === 'number'
+                    ? detail.value
+                    : typeof detail.progress === 'number'
+                        ? detail.progress
+                        : typeof detail.percent === 'number'
+                            ? detail.percent / 100
+                            : null;
+            if (candidate == null) {
+                return null;
+            }
+            const normalized = candidate > 1 ? candidate / 100 : candidate;
+            if (!Number.isFinite(normalized) || normalized >= 1) {
+                return null;
+            }
+            const clamped = Math.max(0, Math.min(normalized, 1));
+            const label = typeof detail.label === 'string' ? detail.label : undefined;
+            return { status: 'determinate', value: clamped, label };
+        })();
+
+        this.setState((prevState) => {
+            const current = prevState.app_progress || {};
+            const existing = current[appId];
+            if (!nextProgress) {
+                if (!existing) {
+                    return null;
+                }
+                const next = { ...current };
+                delete next[appId];
+                return { app_progress: next };
+            }
+            if (this.progressEquals(existing, nextProgress)) {
+                return null;
+            }
+            return {
+                app_progress: {
+                    ...current,
+                    [appId]: nextProgress,
+                },
+            };
+        });
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -822,6 +973,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('app-progress', this.handleAppProgressEvent);
             this.broadcastWorkspaceState();
         }
 
@@ -863,7 +1015,9 @@ export class Desktop extends Component {
             prevState.closed_windows !== this.state.closed_windows ||
             prevState.focused_windows !== this.state.focused_windows ||
             prevState.minimized_windows !== this.state.minimized_windows ||
-            prevState.workspaces !== this.state.workspaces
+            prevState.workspaces !== this.state.workspaces ||
+            prevState.app_progress !== this.state.app_progress ||
+            prevState.window_context !== this.state.window_context
         ) {
             this.broadcastWorkspaceState();
         }
@@ -880,6 +1034,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('app-progress', this.handleAppProgressEvent);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -1647,7 +1802,17 @@ export class Desktop extends Component {
 
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        const currentProgress = this.state.app_progress || {};
+        let nextProgress = currentProgress;
+        if (Object.prototype.hasOwnProperty.call(currentProgress, objId)) {
+            const { [objId]: _removed, ...rest } = currentProgress;
+            nextProgress = rest;
+        }
+        const nextState = { closed_windows, favourite_apps, window_context };
+        if (nextProgress !== currentProgress) {
+            nextState.app_progress = nextProgress;
+        }
+        this.setState(nextState, this.saveSession);
     }
 
     pinApp = (id) => {

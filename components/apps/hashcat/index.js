@@ -227,6 +227,44 @@ function HashcatApp() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const appId = 'hashcat';
+    const target = Math.max(progressInfo.progress || 0, 1);
+    if (isCracking) {
+      const normalized = Math.max(0, Math.min(progress / target, 1));
+      if (normalized >= 1) {
+        window.dispatchEvent(
+          new CustomEvent('app-progress', { detail: { appId, reset: true } }),
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent('app-progress', {
+            detail: {
+              appId,
+              value: normalized,
+              label: `Hashcat cracking ${Math.round(normalized * 100)} percent`,
+            },
+          }),
+        );
+      }
+    } else {
+      window.dispatchEvent(
+        new CustomEvent('app-progress', { detail: { appId, reset: true } }),
+      );
+    }
+  }, [isCracking, progress]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return () => {};
+    const appId = 'hashcat';
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent('app-progress', { detail: { appId, reset: true } }),
+      );
+    };
+  }, []);
+
   const startCracking = () => {
     if (isCracking) return;
     const expected = selected.output;
