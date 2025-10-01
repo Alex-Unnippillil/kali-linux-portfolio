@@ -1,0 +1,67 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`high contrast tokens class block matches snapshot 1`] = `
+"--color-bg: #000000;
+  --color-text: #ffffff;
+  --color-ub-grey: #000000;
+  --color-ub-cool-grey: #000000;
+  --color-ubt-grey: #ffffff;
+  --color-ubt-cool-grey: #ffffff;
+  --color-ub-orange: #ffff00;
+  --color-ub-lite-abrgn: #00ffff;
+  --color-ub-border-orange: #ffff00;
+  --color-primary: #ffff00;
+  --color-secondary: #111111;
+  --color-accent: #ffff00;
+  --color-muted: #111111;
+  --color-surface: #000000;
+  --color-border: #ffffff;
+  --color-focus-ring: #ffff00;
+  --color-selection: #00ffff;
+  --color-control-accent: #ffff00;
+  --color-window-border: #ffffff;
+  --color-window-accent: #ffff00;
+  --color-window-title: #000000;
+  --kali-bg: #000000;
+  --kali-bg-solid: #000000;
+  --kali-panel: #000000;
+  --kali-panel-border: #ffffff;
+  --kali-panel-highlight: rgba(255, 255, 255, 0.15);
+  --game-color-secondary: #ffff00;
+  --game-color-success: #00ffff;
+  --game-color-warning: #ff00ff;
+  --game-color-danger: #ff0000;"
+`;
+
+exports[`high contrast tokens media query block matches snapshot 1`] = `
+"--color-bg: #000000;
+    --color-text: #ffffff;
+    --color-ub-grey: #000000;
+    --color-ub-cool-grey: #000000;
+    --color-ubt-grey: #ffffff;
+    --color-ubt-cool-grey: #ffffff;
+    --color-ub-orange: #ffff00;
+    --color-ub-lite-abrgn: #00ffff;
+    --color-ub-border-orange: #ffff00;
+    --color-primary: #ffff00;
+    --color-secondary: #111111;
+    --color-accent: #ffff00;
+    --color-muted: #111111;
+    --color-surface: #000000;
+    --color-border: #ffffff;
+    --color-focus-ring: #ffff00;
+    --color-selection: #00ffff;
+    --color-control-accent: #ffff00;
+    --color-window-border: #ffffff;
+    --color-window-accent: #ffff00;
+    --color-window-title: #000000;
+    --kali-bg: #000000;
+    --kali-bg-solid: #000000;
+    --kali-panel: #000000;
+    --kali-panel-border: #ffffff;
+    --kali-panel-highlight: rgba(255, 255, 255, 0.15);
+    --game-color-secondary: #ffff00;
+    --game-color-success: #00ffff;
+    --game-color-warning: #ff00ff;
+    --game-color-danger: #ff0000;"
+`;

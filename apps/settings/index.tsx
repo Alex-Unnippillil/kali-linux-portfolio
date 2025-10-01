@@ -30,6 +30,8 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    highContrastMode,
+    setHighContrastMode,
     haptics,
     setHaptics,
     theme,
@@ -81,7 +83,9 @@ export default function Settings() {
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
+      if (parsed.highContrastMode !== undefined)
+        setHighContrastMode(parsed.highContrastMode);
+      else if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
@@ -103,7 +107,7 @@ export default function Settings() {
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
-    setHighContrast(defaults.highContrast);
+    setHighContrastMode('system');
     setTheme("default");
   };
 
@@ -157,13 +161,15 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+            <input
+              id="desktop-settings-kali-wallpaper"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Kali gradient wallpaper"
+            />
+            <label htmlFor="desktop-settings-kali-wallpaper" className="text-ubt-grey">
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -273,6 +279,22 @@ export default function Settings() {
               onChange={setHighContrast}
               ariaLabel="High Contrast"
             />
+          </div>
+          <div className="flex flex-col items-center -mt-2 mb-4 text-center">
+            <p className="text-xs text-ubt-grey/70 max-w-md">
+              {highContrastMode === 'system'
+                ? 'Following your operating system preference. Toggle the switch to override it when you need additional contrast.'
+                : 'High contrast is manually overridden. Turn the switch off or follow system settings to return to automatic matching.'}
+            </p>
+            {highContrastMode !== 'system' && (
+              <button
+                type="button"
+                onClick={() => setHighContrastMode('system')}
+                className="mt-1 text-xs text-ub-orange underline"
+              >
+                Follow system preference
+              </button>
+            )}
           </div>
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Haptics:</span>

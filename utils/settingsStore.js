@@ -3,6 +3,9 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+const HIGH_CONTRAST_MODE_KEY = 'high-contrast-mode';
+const LEGACY_HIGH_CONTRAST_KEY = 'high-contrast';
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
@@ -11,10 +14,24 @@ const DEFAULT_SETTINGS = {
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
+  highContrastMode: 'system',
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+};
+
+const HIGH_CONTRAST_QUERY = '(prefers-contrast: more)';
+
+const getSystemHighContrast = () => {
+  if (typeof window === 'undefined' || !window.matchMedia) {
+    return DEFAULT_SETTINGS.highContrast;
+  }
+  try {
+    return window.matchMedia(HIGH_CONTRAST_QUERY).matches;
+  } catch (error) {
+    return DEFAULT_SETTINGS.highContrast;
+  }
 };
 
 export async function getAccent() {
@@ -83,14 +100,45 @@ export async function setFontScale(scale) {
   window.localStorage.setItem('font-scale', String(scale));
 }
 
+export async function getHighContrastMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrastMode;
+  const stored = window.localStorage.getItem(HIGH_CONTRAST_MODE_KEY);
+  if (stored === 'system' || stored === 'on' || stored === 'off') {
+    return stored;
+  }
+  const legacy = window.localStorage.getItem(LEGACY_HIGH_CONTRAST_KEY);
+  if (legacy === 'true' || legacy === 'false') {
+    const migrated = legacy === 'true' ? 'on' : 'off';
+    window.localStorage.setItem(HIGH_CONTRAST_MODE_KEY, migrated);
+    window.localStorage.removeItem(LEGACY_HIGH_CONTRAST_KEY);
+    return migrated;
+  }
+  return DEFAULT_SETTINGS.highContrastMode;
+}
+
+export async function setHighContrastMode(mode) {
+  if (typeof window === 'undefined') return;
+  if (mode === 'system') {
+    window.localStorage.setItem(HIGH_CONTRAST_MODE_KEY, 'system');
+    window.localStorage.removeItem(LEGACY_HIGH_CONTRAST_KEY);
+  } else {
+    window.localStorage.setItem(HIGH_CONTRAST_MODE_KEY, mode);
+    window.localStorage.removeItem(LEGACY_HIGH_CONTRAST_KEY);
+  }
+}
+
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  const mode = await getHighContrastMode();
+  if (mode === 'system') {
+    return getSystemHighContrast();
+  }
+  return mode === 'on';
 }
 
 export async function setHighContrast(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  await setHighContrastMode(value ? 'on' : 'off');
 }
 
 export async function getLargeHitAreas() {
@@ -145,6 +193,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
+  window.localStorage.removeItem(HIGH_CONTRAST_MODE_KEY);
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
@@ -178,6 +227,7 @@ export async function exportSettings() {
     getAllowNetwork(),
     getHaptics(),
   ]);
+  const highContrastMode = await getHighContrastMode();
   const theme = getTheme();
   return JSON.stringify({
     accent,
@@ -186,6 +236,7 @@ export async function exportSettings() {
     reducedMotion,
     fontScale,
     highContrast,
+    highContrastMode,
     largeHitAreas,
     pongSpin,
     allowNetwork,
@@ -212,6 +263,7 @@ export async function importSettings(json) {
     reducedMotion,
     fontScale,
     highContrast,
+    highContrastMode,
     largeHitAreas,
     pongSpin,
     allowNetwork,
@@ -224,7 +276,8 @@ export async function importSettings(json) {
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
-  if (highContrast !== undefined) await setHighContrast(highContrast);
+  if (highContrastMode !== undefined) await setHighContrastMode(highContrastMode);
+  else if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);

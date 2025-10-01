@@ -12,8 +12,8 @@ import {
   setReducedMotion as saveReducedMotion,
   getFontScale as loadFontScale,
   setFontScale as saveFontScale,
-  getHighContrast as loadHighContrast,
-  setHighContrast as saveHighContrast,
+  getHighContrastMode as loadHighContrastMode,
+  setHighContrastMode as saveHighContrastMode,
   getLargeHitAreas as loadLargeHitAreas,
   setLargeHitAreas as saveLargeHitAreas,
   getPongSpin as loadPongSpin,
@@ -26,6 +26,7 @@ import {
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+type HighContrastMode = 'system' | 'on' | 'off';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -62,6 +63,7 @@ interface SettingsContextValue {
   reducedMotion: boolean;
   fontScale: number;
   highContrast: boolean;
+  highContrastMode: HighContrastMode;
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
@@ -74,6 +76,7 @@ interface SettingsContextValue {
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
+  setHighContrastMode: (mode: HighContrastMode) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
@@ -90,6 +93,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
+  highContrastMode: (defaults.highContrastMode as HighContrastMode) ?? 'system',
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
@@ -102,6 +106,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setReducedMotion: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
+  setHighContrastMode: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
@@ -116,13 +121,56 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
+  const [highContrast, setHighContrastState] = useState<boolean>(defaults.highContrast);
+  const [highContrastMode, setHighContrastModeState] = useState<HighContrastMode>(
+    (defaults.highContrastMode as HighContrastMode) ?? 'system'
+  );
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const highContrastModeRef = useRef<HighContrastMode>((defaults.highContrastMode as HighContrastMode) ?? 'system');
+  const highContrastQueryRef = useRef<MediaQueryList | null>(null);
+
+  const resolveHighContrast = (mode: HighContrastMode): boolean => {
+    if (mode === 'system') {
+      if (typeof window === 'undefined') return defaults.highContrast;
+      if (highContrastQueryRef.current) {
+        return highContrastQueryRef.current.matches;
+      }
+      if (window.matchMedia) {
+        try {
+          const query = window.matchMedia('(prefers-contrast: more)');
+          highContrastQueryRef.current = query;
+          return query.matches;
+        } catch {
+          return defaults.highContrast;
+        }
+      }
+      return defaults.highContrast;
+    }
+    return mode === 'on';
+  };
+
+  const applyHighContrastMode = (mode: HighContrastMode, options: { persist?: boolean } = {}) => {
+    const { persist = true } = options;
+    setHighContrastModeState(mode);
+    highContrastModeRef.current = mode;
+    setHighContrastState(resolveHighContrast(mode));
+    if (persist) {
+      void saveHighContrastMode(mode);
+    }
+  };
+
+  const handleHighContrastToggle = (value: boolean) => {
+    applyHighContrastMode(value ? 'on' : 'off');
+  };
+
+  const handleHighContrastModeChange = (mode: HighContrastMode) => {
+    applyHighContrastMode(mode);
+  };
 
   useEffect(() => {
     (async () => {
@@ -132,13 +180,49 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
+      const loadedHighContrastMode = (await loadHighContrastMode()) as HighContrastMode;
+      setHighContrastModeState(loadedHighContrastMode);
+      highContrastModeRef.current = loadedHighContrastMode;
+      setHighContrastState(resolveHighContrast(loadedHighContrastMode));
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+
+    const query = window.matchMedia('(prefers-contrast: more)');
+    highContrastQueryRef.current = query;
+
+    const applyMatch = (matches: boolean) => {
+      if (highContrastModeRef.current === 'system') {
+        setHighContrastState(matches);
+      }
+    };
+
+    applyMatch(query.matches);
+
+    const handler = (event: MediaQueryListEvent) => {
+      applyMatch(event.matches);
+    };
+
+    if (query.addEventListener) {
+      query.addEventListener('change', handler);
+    } else {
+      query.addListener(handler);
+    }
+
+    return () => {
+      if (query.removeEventListener) {
+        query.removeEventListener('change', handler);
+      } else {
+        query.removeListener(handler);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -208,7 +292,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
-    saveHighContrast(highContrast);
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.classList.toggle('high-contrast', highContrast);
+    }
   }, [highContrast]);
 
   useEffect(() => {
@@ -263,6 +349,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         reducedMotion,
         fontScale,
         highContrast,
+        highContrastMode,
         largeHitAreas,
         pongSpin,
         allowNetwork,
@@ -274,7 +361,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setDensity,
         setReducedMotion,
         setFontScale,
-        setHighContrast,
+        setHighContrast: handleHighContrastToggle,
+        setHighContrastMode: handleHighContrastModeChange,
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
