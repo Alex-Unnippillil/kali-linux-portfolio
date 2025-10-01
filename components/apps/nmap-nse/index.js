@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import Heatmap from './Heatmap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -85,6 +86,7 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [heatmapSelection, setHeatmapSelection] = useState([]);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -129,6 +131,32 @@ const NmapNSEApp = () => {
   } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
     .replace(/\s+/g, ' ')
     .trim();
+
+  const heatmapData = useMemo(() => {
+    if (!results.hosts?.length) return [];
+    const hostCount = results.hosts.length;
+    return results.hosts.flatMap((host, hostIndex) => {
+      const ports = host.ports || [];
+      const portCount = Math.max(ports.length, 1);
+      return ports.map((port, portIndex) => ({
+        x:
+          hostCount <= 1
+            ? 0.5
+            : hostIndex / Math.max(hostCount - 1, 1),
+        y:
+          portCount <= 1
+            ? 0.5
+            : portIndex / Math.max(portCount - 1, 1),
+        value: Math.max(0, Math.min(1, (port.cvss || 0) / 10)),
+        radius: 28,
+        label: `${host.ip}:${port.port}`,
+      }));
+    });
+  }, [results]);
+
+  const handleHeatmapSelection = (selection) => {
+    setHeatmapSelection(selection);
+  };
 
   const copyCommand = async () => {
     if (typeof window !== 'undefined') {
@@ -201,8 +229,10 @@ const NmapNSEApp = () => {
           <label className="block text-sm mb-1" htmlFor="target">Target</label>
           <input
             id="target"
+            type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
+            aria-label="Target host or network"
             className="w-full p-2 text-black"
           />
         </div>
@@ -212,22 +242,26 @@ const NmapNSEApp = () => {
           </label>
           <input
             id="scripts"
+            type="text"
             value={scriptQuery}
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
+            aria-label="Search NSE scripts"
             className="w-full p-2 text-black mb-2"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
               <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
+                  <label className="flex items-center space-x-2" htmlFor={`script-${s.name}`}>
+                    <input
+                      id={`script-${s.name}`}
+                      type="checkbox"
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                      aria-label={`Toggle script ${s.name}`}
+                    />
+                    <span className="font-mono">{s.name}</span>
+                  </label>
                 <p className="text-xs mb-1">{s.description}</p>
                 <div className="flex flex-wrap gap-1 mb-1">
                   {s.tags.map((t) => (
@@ -236,20 +270,21 @@ const NmapNSEApp = () => {
                     </span>
                   ))}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      aria-label={`Script arguments for ${s.name}`}
+                      className="w-full p-1 border rounded text-black"
+                    />
+                  )}
               </div>
             ))}
             {filteredScripts.length === 0 && (
@@ -347,6 +382,22 @@ const NmapNSEApp = () => {
         )}
         <h2 className="text-lg mb-2">Topology</h2>
         <DiscoveryMap hosts={results.hosts} />
+        <h2 className="text-lg mb-2 mt-4">Risk heatmap</h2>
+        <div className="mb-4">
+          <Heatmap
+            data={heatmapData}
+            ariaLabel="Heatmap of CVSS scores for discovered services"
+            onBrushSelection={handleHeatmapSelection}
+          />
+          <p className="mt-2 text-xs text-slate-300">
+            {heatmapSelection.length
+              ? `Selected targets: ${heatmapSelection
+                  .map((point) => point.label)
+                  .filter(Boolean)
+                  .join(', ')}`
+              : 'Hint: hold Shift and brush over the heatmap to highlight hosts with similar exposure.'}
+          </p>
+        </div>
         <h2 className="text-lg mb-2">Parsed output</h2>
         <ul className="mb-4 space-y-2">
           {results.hosts.map((host) => (
