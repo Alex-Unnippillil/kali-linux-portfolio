@@ -23,7 +23,10 @@
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
-    "dedupe:fix": "yarn dedupe"
+    "dedupe:fix": "yarn dedupe",
+    "bundle:budget": "node scripts/bundle-report.mjs",
+    "bundle:report": "yarn bundle:budget",
+    "bundle:baseline": "node scripts/bundle-report.mjs --update-baseline"
   },
   "engines": {
     "node": "20"

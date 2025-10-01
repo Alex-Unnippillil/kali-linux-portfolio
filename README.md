@@ -92,6 +92,8 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn bundle:budget` – compare the latest build output against the stored bundle baseline (run after `yarn build`).
+- `yarn bundle:baseline` – update `data/bundle-baseline.json` after approving an intentional bundle size increase.
 
 ---
 
@@ -99,6 +101,16 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- Run `yarn build` followed by `yarn bundle:budget` to surface any routes that exceed the 30 kB regression threshold locally.
+
+---
+
+## Bundle size monitoring
+
+- The bundle baseline lives in [`data/bundle-baseline.json`](./data/bundle-baseline.json). It records the byte size of each statically generated route.
+- Continuous integration rebuilds the site and runs `yarn bundle:budget`. Routes that grow by more than **30 kB** trigger a failing job and a pull request comment listing the affected routes.
+- When a bundle increase is expected, run `yarn build && yarn bundle:baseline`, review the diff for reasonableness, and commit the updated baseline file.
+- The [`scripts/bundle-report.mjs`](./scripts/bundle-report.mjs) helper also powers the CI comment and can write machine-readable JSON via `--output` when needed.
 
 ---
 
