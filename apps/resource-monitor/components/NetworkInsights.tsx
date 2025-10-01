@@ -9,6 +9,8 @@ import {
 } from '../../../lib/fetchProxy';
 import { exportMetrics } from '../export';
 import RequestChart from './RequestChart';
+import ResourceHeader from './ResourceHeader';
+import useResourceManager from '../hooks/useResourceManager';
 
 const HISTORY_KEY = 'network-insights-history';
 
@@ -18,6 +20,7 @@ const formatBytes = (bytes?: number) =>
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
   const [history, setHistory] = usePersistentState<FetchEntry[]>(HISTORY_KEY, []);
+  const { state: resourceState, controls, autoPauseReason } = useResourceManager();
 
   useEffect(() => {
     const unsubStart = onFetchProxy('start', () => setActive(getActiveFetches()));
@@ -33,6 +36,19 @@ export default function NetworkInsights() {
 
   return (
     <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
+      <ResourceHeader
+        cpuUsage={resourceState.cpuUsage}
+        queued={resourceState.queued}
+        running={resourceState.running}
+        completed={resourceState.completed}
+        maxParallel={resourceState.maxParallel}
+        userPaused={resourceState.userPaused}
+        autoPaused={resourceState.autoPaused}
+        autoPauseReason={autoPauseReason}
+        onParallelismChange={controls.setParallelism}
+        onPause={controls.pause}
+        onResume={controls.resume}
+      />
       <h2 className="font-bold mb-1">Active Fetches</h2>
       <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
