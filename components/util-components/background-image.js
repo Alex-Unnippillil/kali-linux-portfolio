@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from './kali-wallpaper';
+import SmartImage from '../ui/SmartImage';
 
 export default function BackgroundImage() {
     const { bgImageName, useKaliWallpaper } = useSettings();
@@ -47,10 +48,14 @@ export default function BackgroundImage() {
                 <KaliWallpaper />
             ) : (
                 <>
-                    <img
+                    <SmartImage
                         src={`/wallpapers/${bgImageName}.webp`}
                         alt=""
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
+                        width={1920}
+                        height={1080}
+                        importance="critical"
+                        lcp
                     />
                     {needsOverlay && (
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
