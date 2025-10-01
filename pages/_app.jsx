@@ -14,6 +14,7 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
+import UseRouteAbortGuard from '../components/UseRouteAbortGuard';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
@@ -158,6 +159,7 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
+          <UseRouteAbortGuard />
           <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
