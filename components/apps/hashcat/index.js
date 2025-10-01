@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
-import StatsChart from '../../StatsChart';
+import MaskBuilder from './MaskBuilder';
 
 export const hashTypes = [
   {
@@ -172,44 +172,11 @@ function HashcatApp() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
-  const appendMask = (token) => setMask((m) => m + token);
-  const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
   const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
-
-  const formatTime = (seconds) => {
-    if (seconds < 60) return `${seconds.toFixed(2)}s`;
-    const minutes = seconds / 60;
-    if (minutes < 60) return `${minutes.toFixed(2)}m`;
-    const hours = minutes / 60;
-    if (hours < 24) return `${hours.toFixed(2)}h`;
-    const days = hours / 24;
-    return `${days.toFixed(2)}d`;
-  };
-
-  useEffect(() => {
-    if (!mask) {
-      setMaskStats({ count: 0, time: 0 });
-      return;
-    }
-    const sets = { '?l': 26, '?u': 26, '?d': 10, '?s': 33, '?a': 95 };
-    let total = 1;
-    for (let i = 0; i < mask.length; i++) {
-      if (mask[i] === '?' && i < mask.length - 1) {
-        const token = mask.slice(i, i + 2);
-        if (sets[token]) {
-          total *= sets[token];
-          i++;
-          continue;
-        }
-      }
-      total *= 1;
-    }
-    setMaskStats({ count: total, time: total / 1_000_000 });
-  }, [mask]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -390,42 +357,7 @@ function HashcatApp() {
           ))}
         </select>
       </div>
-      {showMask && (
-        <div>
-          <label className="block" htmlFor="mask-input">
-            Mask
-          </label>
-          <input
-            id="mask-input"
-            type="text"
-            aria-label="Mask pattern"
-            className="text-black px-2 py-1 w-full"
-            value={mask}
-            onChange={(e) => setMask(e.target.value)}
-          />
-          <div className="space-x-2 mt-1">
-            {['?l', '?u', '?d', '?s', '?a'].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => appendMask(t)}
-                aria-label={`Add ${t} to mask`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          {mask && (
-            <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
-              <p className="text-sm">
-                Estimated @1M/s: {formatTime(maskStats.time)}
-              </p>
-              <StatsChart count={maskStats.count} time={maskStats.time} />
-            </div>
-          )}
-        </div>
-      )}
+      {showMask && <MaskBuilder mask={mask} onMaskChange={setMask} />}
       <div>
         <label className="mr-2" htmlFor="rule-set">
           Rule Set:
