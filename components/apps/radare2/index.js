@@ -6,10 +6,22 @@ import {
   loadBookmarks,
   saveBookmarks,
   extractStrings,
+  loadAnnotations,
+  persistAnnotations,
+  loadAnnotationSnapshot,
+  snapshotToAnnotations,
+  createHistory,
+  pushHistory,
+  undoHistory,
+  redoHistory,
+  annotationsEqual,
+  normalizeAnnotations,
+  createAnnotationExport,
 } from "./utils";
 import GraphView from "../../../apps/radare2/components/GraphView";
 import GuideOverlay from "./GuideOverlay";
 import { useTheme } from "../../../hooks/useTheme";
+import AnnotationManager from "./AnnotationManager";
 
 const Radare2 = ({ initialData = {} }) => {
   const {
@@ -28,15 +40,39 @@ const Radare2 = ({ initialData = {} }) => {
   const [bookmarks, setBookmarks] = useState([]);
   const [showGuide, setShowGuide] = useState(false);
   const [strings, setStrings] = useState([]);
+  const [history, setHistory] = useState(() =>
+    createHistory(normalizeAnnotations(initialData.annotations || {})),
+  );
+  const [editing, setEditing] = useState({ addr: null, field: null });
+  const [draft, setDraft] = useState("");
+  const [showManager, setShowManager] = useState(false);
   const disasmRef = useRef(null);
   const { theme } = useTheme();
+
+  const annotations = history.present || {};
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setNotes(loadNotes(file));
       setBookmarks(loadBookmarks(file));
+      const stored = loadAnnotations(file);
+      if (stored && Object.keys(stored).length) {
+        setHistory(createHistory(stored));
+      } else {
+        const snapshot = loadAnnotationSnapshot(file);
+        const snapshotAnnotations = snapshotToAnnotations(snapshot);
+        if (Object.keys(snapshotAnnotations).length) {
+          setHistory(createHistory(snapshotAnnotations));
+        } else if (initialData.annotations) {
+          setHistory(
+            createHistory(normalizeAnnotations(initialData.annotations || {})),
+          );
+        } else {
+          setHistory(createHistory({}));
+        }
+      }
     }
-  }, [file]);
+  }, [file, initialData.annotations]);
 
   useEffect(() => {
     try {
@@ -55,6 +91,106 @@ const Radare2 = ({ initialData = {} }) => {
     const base = disasm[0]?.addr || "0x0";
     setStrings(extractStrings(hex, base));
   }, [hex, disasm]);
+
+  const commitAnnotations = (updater, meta) => {
+    setHistory((prev) => {
+      const nextAnnotations = normalizeAnnotations(updater(prev.present || {}));
+      if (annotationsEqual(prev.present, nextAnnotations)) return prev;
+      const nextHistory = pushHistory(prev, nextAnnotations, meta);
+      persistAnnotations(file, disasm, nextHistory.present);
+      return nextHistory;
+    });
+  };
+
+  const handleUndo = () => {
+    setHistory((prev) => {
+      const next = undoHistory(prev);
+      if (next === prev || annotationsEqual(prev.present, next.present)) {
+        return prev;
+      }
+      persistAnnotations(file, disasm, next.present);
+      return next;
+    });
+  };
+
+  const handleRedo = () => {
+    setHistory((prev) => {
+      const next = redoHistory(prev);
+      if (next === prev || annotationsEqual(prev.present, next.present)) {
+        return prev;
+      }
+      persistAnnotations(file, disasm, next.present);
+      return next;
+    });
+  };
+
+  const updateAnnotation = (addr, partial) => {
+    commitAnnotations(
+      (current) => {
+        const nextValue = {
+          ...(current[addr] || {}),
+          ...partial,
+        };
+        const normalized = normalizeAnnotations({ [addr]: nextValue });
+        const clone = { ...current };
+        if (normalized[addr]) {
+          clone[addr] = normalized[addr];
+        } else {
+          delete clone[addr];
+        }
+        return clone;
+      },
+      { type: "update", addr },
+    );
+  };
+
+  const clearAnnotation = (addr) => {
+    commitAnnotations(
+      (current) => {
+        if (!current[addr]) return current;
+        const next = { ...current };
+        delete next[addr];
+        return next;
+      },
+      { type: "remove", addr },
+    );
+  };
+
+  const resolveConflict = (label) => {
+    commitAnnotations(
+      (current) => {
+        const entries = Object.entries(current).filter(
+          ([, value]) => (value.label || "") === label,
+        );
+        if (entries.length < 2) return current;
+        const sorted = entries.sort((a, b) => {
+          const parse = (value) => {
+            if (typeof value !== "string") return Number.MAX_SAFE_INTEGER;
+            const normalizedAddr = value.toLowerCase().startsWith("0x")
+              ? value
+              : `0x${value}`;
+            const parsed = Number.parseInt(normalizedAddr, 16);
+            return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
+          };
+          return parse(a[0]) - parse(b[0]);
+        });
+        const next = { ...current };
+        sorted.forEach(([addr], idx) => {
+          if (idx === 0) return;
+          next[addr] = {
+            ...next[addr],
+            label: `${label}_${addr.replace(/^0x/, "")}`,
+          };
+        });
+        return next;
+      },
+      { type: "resolve", label },
+    );
+  };
+
+  const clearAllAnnotations = () => {
+    commitAnnotations(() => ({}), { type: "clear" });
+  };
 
   const scrollToAddr = (addr) => {
     const idx = disasm.findIndex(
@@ -99,6 +235,49 @@ const Radare2 = ({ initialData = {} }) => {
       : [...bookmarks, addr];
     setBookmarks(next);
     saveBookmarks(file, next);
+  };
+
+  const beginEdit = (addr, field) => {
+    const value = annotations[addr]?.[field] || "";
+    setDraft(value);
+    setEditing({ addr, field });
+  };
+
+  const commitEdit = (addr, field, value) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      const otherField = field === "label" ? "comment" : "label";
+      const otherValue = annotations[addr]?.[otherField];
+      if (!otherValue) {
+        clearAnnotation(addr);
+      } else {
+        updateAnnotation(addr, { [field]: "" });
+      }
+    } else {
+      updateAnnotation(addr, { [field]: trimmed });
+    }
+    setEditing({ addr: null, field: null });
+    setDraft("");
+  };
+
+  const cancelEdit = () => {
+    setEditing({ addr: null, field: null });
+    setDraft("");
+  };
+
+  const handleExportAnnotations = () => {
+    if (typeof window === "undefined") return;
+    const payload = createAnnotationExport(file, disasm, annotations);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    const safeName = file ? file.replace(/[^a-z0-9._-]/gi, "_") : "disassembly";
+    anchor.download = `${safeName}.annotations.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -175,6 +354,48 @@ const Radare2 = ({ initialData = {} }) => {
         >
           Help
         </button>
+        <button
+          onClick={handleUndo}
+          disabled={!history.past.length}
+          className="px-3 py-1 rounded disabled:opacity-60"
+          style={{
+            backgroundColor: "var(--r2-surface)",
+            border: "1px solid var(--r2-border)",
+          }}
+        >
+          Undo
+        </button>
+        <button
+          onClick={handleRedo}
+          disabled={!history.future.length}
+          className="px-3 py-1 rounded disabled:opacity-60"
+          style={{
+            backgroundColor: "var(--r2-surface)",
+            border: "1px solid var(--r2-border)",
+          }}
+        >
+          Redo
+        </button>
+        <button
+          onClick={() => setShowManager(true)}
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: "var(--r2-surface)",
+            border: "1px solid var(--r2-border)",
+          }}
+        >
+          Manage Annotations
+        </button>
+        <button
+          onClick={handleExportAnnotations}
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: "var(--r2-surface)",
+            border: "1px solid var(--r2-border)",
+          }}
+        >
+          Export Annotations
+        </button>
       </div>
 
       {mode === "graph" ? (
@@ -219,7 +440,98 @@ const Radare2 = ({ initialData = {} }) => {
                   >
                     {bookmarks.includes(line.addr) ? "★" : "☆"}
                   </button>
-                  {line.addr}: {line.text}
+                  <div className="inline-flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                    <div className="flex items-center gap-2">
+                      {editing.addr === line.addr && editing.field === "label" ? (
+                        <input
+                          autoFocus
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onBlur={(e) => commitEdit(line.addr, "label", e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              commitEdit(line.addr, "label", draft);
+                            } else if (e.key === "Escape") {
+                              cancelEdit();
+                            }
+                          }}
+                          className="px-1 rounded text-sm"
+                          style={{
+                            backgroundColor: "var(--r2-surface)",
+                            border: "1px solid var(--r2-border)",
+                            color: "var(--r2-text)",
+                          }}
+                          aria-label={`Rename ${line.addr}`}
+                        />
+                      ) : (
+                        <span className="font-semibold">
+                          {annotations[line.addr]?.label || line.addr}
+                        </span>
+                      )}
+                      <span className="text-xs opacity-80">{line.text}</span>
+                    </div>
+                    <div className="flex gap-2 mt-1 sm:mt-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          beginEdit(line.addr, "label");
+                        }}
+                        className="text-xs underline"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          beginEdit(line.addr, "comment");
+                        }}
+                        className="text-xs underline"
+                      >
+                        Comment
+                      </button>
+                      {annotations[line.addr] && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearAnnotation(line.addr);
+                          }}
+                          className="text-xs underline text-red-300"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {editing.addr === line.addr && editing.field === "comment" ? (
+                    <textarea
+                      autoFocus
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onBlur={(e) => commitEdit(line.addr, "comment", e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          cancelEdit();
+                        }
+                        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                          commitEdit(line.addr, "comment", draft);
+                        }
+                      }}
+                      className="mt-2 w-full rounded p-1 text-sm"
+                      rows={2}
+                      style={{
+                        backgroundColor: "var(--r2-surface)",
+                        border: "1px solid var(--r2-border)",
+                        color: "var(--r2-text)",
+                      }}
+                      aria-label={`Comment on ${line.addr}`}
+                    />
+                  ) : (
+                    annotations[line.addr]?.comment && (
+                      <p className="mt-1 text-xs italic opacity-80">
+                        ; {annotations[line.addr].comment}
+                      </p>
+                    )
+                  )}
                 </li>
               ))}
             </ul>
@@ -298,6 +610,18 @@ const Radare2 = ({ initialData = {} }) => {
             ))}
           </ul>
         </div>
+      )}
+
+      {showManager && (
+        <AnnotationManager
+          annotations={annotations}
+          disasm={disasm}
+          onUpdate={updateAnnotation}
+          onResolve={resolveConflict}
+          onClear={clearAnnotation}
+          onClearAll={clearAllAnnotations}
+          onClose={() => setShowManager(false)}
+        />
       )}
     </div>
   );
