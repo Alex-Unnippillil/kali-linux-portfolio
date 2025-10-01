@@ -61,11 +61,18 @@ export async function saveFileDialog(options = {}) {
 
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
+const SEARCH_STORE = 'searches';
+const SEARCH_REFRESH_INTERVAL = 4000;
 
 function openDB() {
-  return getDb(DB_NAME, 1, {
+  return getDb(DB_NAME, 2, {
     upgrade(db) {
-      db.createObjectStore(STORE_NAME, { autoIncrement: true });
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains(SEARCH_STORE)) {
+        db.createObjectStore(SEARCH_STORE, { keyPath: 'id' });
+      }
     },
   });
 }
@@ -91,6 +98,38 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+async function getSavedSearches() {
+  try {
+    const dbp = openDB();
+    if (!dbp) return [];
+    const db = await dbp;
+    if (!db.objectStoreNames.contains(SEARCH_STORE)) return [];
+    return (await db.getAll(SEARCH_STORE)) || [];
+  } catch {
+    return [];
+  }
+}
+
+async function putSavedSearch(search) {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    if (!db.objectStoreNames.contains(SEARCH_STORE)) return;
+    await db.put(SEARCH_STORE, search);
+  } catch {}
+}
+
+async function deleteSavedSearch(id) {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    if (!db.objectStoreNames.contains(SEARCH_STORE)) return;
+    await db.delete(SEARCH_STORE, id);
+  } catch {}
+}
+
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -105,6 +144,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const [savedSearches, setSavedSearches] = useState([]);
+  const savedSearchesRef = useRef([]);
+  const [activeSavedSearchId, setActiveSavedSearchId] = useState(null);
+  const [savedSearchResults, setSavedSearchResults] = useState({});
+  const refreshTimerRef = useRef(null);
+  const isRefreshingRef = useRef(false);
+  const refreshAllSavedSearchesRef = useRef(() => Promise.resolve());
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -122,6 +168,31 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
   }, []);
+
+  useEffect(() => {
+    savedSearchesRef.current = savedSearches;
+  }, [savedSearches]);
+
+  useEffect(() => {
+    if (!supported) return;
+    let active = true;
+    (async () => {
+      const stored = await getSavedSearches();
+      if (!active) return;
+      savedSearchesRef.current = stored;
+      setSavedSearches(stored);
+      setSavedSearchResults((prev) => {
+        const next = { ...prev };
+        stored.forEach((search) => {
+          if (!next[search.id]) next[search.id] = [];
+        });
+        return next;
+      });
+    })();
+    return () => {
+      active = false;
+    };
+  }, [supported]);
 
   useEffect(() => {
     if (!opfsSupported || !root) return;
@@ -200,6 +271,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
     setDirs(ds);
     setFiles(fs);
+    refreshAllSavedSearchesRef.current?.();
   }, []);
 
   useEffect(() => {
@@ -291,26 +363,229 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
   };
 
-  const runSearch = () => {
-    if (!dirHandle || !hasWorker) return;
-    setResults([]);
-    if (workerRef.current) workerRef.current.terminate();
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
-      workerRef.current.onmessage = (e) => {
-        const { file, line, text, done } = e.data;
-        if (done) {
-          workerRef.current?.terminate();
-          workerRef.current = null;
-        } else {
-          setResults((r) => [...r, { file, line, text }]);
+  const runDirectorySearch = useCallback(
+    async (searchQuery, { onResult, onComplete } = {}) => {
+      if (!dirHandle) return [];
+      const trimmed = (searchQuery || '').trim();
+      if (!trimmed) return [];
+
+      const runWithoutWorker = async () => {
+        const matches = [];
+        async function* iterate(handle, prefix = '') {
+          for await (const [name, child] of handle.entries()) {
+            const path = prefix ? `${prefix}/${name}` : name;
+            if (child.kind === 'file') {
+              yield { handle: child, path };
+            } else if (child.kind === 'directory') {
+              yield* iterate(child, path);
+            }
+          }
         }
+
+        for await (const { handle, path } of iterate(dirHandle)) {
+          try {
+            const file = await handle.getFile();
+            const text = await file.text();
+            const lines = text.split(/\r?\n/);
+            lines.forEach((line, idx) => {
+              if (line.includes(trimmed)) {
+                const result = { file: path, line: idx + 1, text: line };
+                matches.push(result);
+                onResult?.(result);
+              }
+            });
+          } catch {}
+        }
+        onComplete?.(matches);
+        return matches;
       };
-      workerRef.current.postMessage({ directoryHandle: dirHandle, query });
+
+      const runWithWorker = () =>
+        new Promise((resolve, reject) => {
+          try {
+            if (workerRef.current) workerRef.current.terminate();
+            workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
+          } catch (error) {
+            reject(error);
+            return;
+          }
+
+          const collected = [];
+          workerRef.current.onmessage = (e) => {
+            const { file, line, text, done } = e.data || {};
+            if (done) {
+              workerRef.current?.terminate();
+              workerRef.current = null;
+              onComplete?.(collected);
+              resolve(collected);
+              return;
+            }
+            if (file) {
+              const result = { file, line, text };
+              collected.push(result);
+              onResult?.(result);
+            }
+          };
+          workerRef.current.postMessage({ directoryHandle: dirHandle, query: trimmed });
+        });
+
+      if (hasWorker && typeof window !== 'undefined' && typeof Worker === 'function') {
+        try {
+          return await runWithWorker();
+        } catch {
+          return await runWithoutWorker();
+        }
+      }
+      return await runWithoutWorker();
+    },
+    [dirHandle, hasWorker]
+  );
+
+  const runSearch = useCallback(() => {
+    setResults([]);
+    runDirectorySearch(query, {
+      onResult: (result) => {
+        setResults((prev) => [...prev, result]);
+      },
+    });
+  }, [query, runDirectorySearch]);
+
+  const refreshSavedSearch = useCallback(
+    async (search) => {
+      if (!search) return [];
+      const matches = await runDirectorySearch(search.query);
+      const enriched = {
+        ...search,
+        lastRun: Date.now(),
+        lastResultCount: matches.length,
+        updatedAt: Date.now(),
+      };
+      savedSearchesRef.current = savedSearchesRef.current.map((s) => (s.id === search.id ? enriched : s));
+      setSavedSearches(savedSearchesRef.current);
+      setSavedSearchResults((prev) => ({ ...prev, [search.id]: matches }));
+      await putSavedSearch(enriched);
+      return matches;
+    },
+    [runDirectorySearch]
+  );
+
+  const refreshAllSavedSearches = useCallback(async () => {
+    const searches = [...savedSearchesRef.current];
+    for (const search of searches) {
+      await refreshSavedSearch(search);
     }
-  };
+  }, [refreshSavedSearch]);
+
+  const createSavedSearch = useCallback(async () => {
+    const trimmed = (query || '').trim();
+    if (!trimmed) return;
+    const defaultName = trimmed;
+    const response = typeof window !== 'undefined' ? window.prompt('Name this search', defaultName) : defaultName;
+    if (response === null) return;
+    const name = (response || '').trim();
+    if (!name) return;
+    const now = Date.now();
+    const id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `search-${now}-${Math.random().toString(16).slice(2)}`;
+    const search = {
+      id,
+      name,
+      query: trimmed,
+      createdAt: now,
+      updatedAt: now,
+      lastRun: null,
+      lastResultCount: 0,
+    };
+    savedSearchesRef.current = [...savedSearchesRef.current, search];
+    setSavedSearches(savedSearchesRef.current);
+    setSavedSearchResults((prev) => ({ ...prev, [search.id]: [] }));
+    await putSavedSearch(search);
+    setActiveSavedSearchId(search.id);
+    setCurrentFile(null);
+    await refreshSavedSearch(search);
+  }, [query, refreshSavedSearch]);
+
+  const renameSavedSearch = useCallback(async (search) => {
+    if (!search) return;
+    const response = typeof window !== 'undefined' ? window.prompt('Rename search', search.name) : search.name;
+    if (response === null) return;
+    const nextName = (response || '').trim();
+    if (!nextName || nextName === search.name) return;
+    const updated = { ...search, name: nextName, updatedAt: Date.now() };
+    savedSearchesRef.current = savedSearchesRef.current.map((s) => (s.id === search.id ? updated : s));
+    setSavedSearches(savedSearchesRef.current);
+    await putSavedSearch(updated);
+  }, []);
+
+  const removeSavedSearch = useCallback(
+    async (search) => {
+      if (!search) return;
+      savedSearchesRef.current = savedSearchesRef.current.filter((s) => s.id !== search.id);
+      setSavedSearches(savedSearchesRef.current);
+      setSavedSearchResults((prev) => {
+        const next = { ...prev };
+        delete next[search.id];
+        return next;
+      });
+      if (activeSavedSearchId === search.id) {
+        setActiveSavedSearchId(null);
+        setResults([]);
+      }
+      await deleteSavedSearch(search.id);
+    },
+    [activeSavedSearchId]
+  );
+
+  const openSavedSearch = useCallback(
+    (search) => {
+      if (!search) return;
+      setActiveSavedSearchId(search.id);
+      setCurrentFile(null);
+      setQuery(search.query);
+      refreshSavedSearch(search);
+    },
+    [refreshSavedSearch]
+  );
+
+  useEffect(() => {
+    refreshAllSavedSearchesRef.current = refreshAllSavedSearches;
+  }, [refreshAllSavedSearches]);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
+
+  useEffect(() => {
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    if (!dirHandle || savedSearchesRef.current.length === 0) return;
+
+    const tick = async () => {
+      if (isRefreshingRef.current) return;
+      isRefreshingRef.current = true;
+      try {
+        await refreshAllSavedSearchesRef.current?.();
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    };
+
+    const id = setInterval(tick, SEARCH_REFRESH_INTERVAL);
+    refreshTimerRef.current = id;
+    return () => {
+      clearInterval(id);
+      refreshTimerRef.current = null;
+    };
+  }, [dirHandle, savedSearches.length]);
+
+  const activeSavedSearch = activeSavedSearchId
+    ? savedSearches.find((search) => search.id === activeSavedSearchId) || null
+    : null;
+  const activeResults = activeSavedSearch
+    ? savedSearchResults[activeSavedSearch.id] || []
+    : results;
 
   if (!supported) {
     return (
@@ -393,6 +668,64 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               {d.name}
             </div>
           ))}
+          <div className="p-2 font-bold">Saved Searches</div>
+          {savedSearches.length === 0 && (
+            <div className="px-2 text-xs text-gray-300">No saved searches yet</div>
+          )}
+          {savedSearches.map((search) => {
+            const isActive = activeSavedSearchId === search.id;
+            const matchCount = savedSearchResults[search.id]?.length ?? search.lastResultCount ?? 0;
+            return (
+              <div
+                key={search.id}
+                className={`px-2 py-1 space-y-1 ${
+                  isActive ? 'bg-black bg-opacity-40' : 'hover:bg-black hover:bg-opacity-30'
+                }`}
+              >
+                <div className="flex items-center justify-between space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => openSavedSearch(search)}
+                    className="text-left flex-1 truncate"
+                  >
+                    {search.name}
+                  </button>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      type="button"
+                      className="text-xs px-1 py-0.5 bg-black bg-opacity-40 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        renameSavedSearch(search);
+                      }}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs px-1 py-0.5 bg-black bg-opacity-40 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeSavedSearch(search);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-300">
+                  Matches: {matchCount}
+                  {search.lastRun && (
+                    <>
+                      {' '}
+                      • Last run:{' '}
+                      {new Date(search.lastRun).toLocaleTimeString()}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
             <div
@@ -418,12 +751,27 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
+            <button
+              onClick={createSavedSearch}
+              className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded"
+              disabled={!query.trim()}
+            >
+              Save Search
+            </button>
+            {activeSavedSearch && (
+              <div className="mt-2 text-xs text-gray-200">
+                Viewing saved search: <strong>{activeSavedSearch.name}</strong>
+              </div>
+            )}
             <div className="max-h-40 overflow-auto mt-2">
-              {results.map((r, i) => (
+              {activeResults.map((r, i) => (
                 <div key={i}>
                   <span className="font-bold">{r.file}:{r.line}</span> {r.text}
                 </div>
               ))}
+              {activeResults.length === 0 && (
+                <div className="text-xs text-gray-300">No matches found</div>
+              )}
             </div>
           </div>
         </div>
