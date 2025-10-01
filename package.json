@@ -128,6 +128,7 @@
     "@types/react-transition-group": "^4",
     "@types/seedrandom": "^3",
     "@types/three": "^0.179.0",
+    "@types/trusted-types": "^2.0.7",
     "@types/web-bluetooth": "^0.0.21",
     "@types/wicg-file-system-access": "^2023.10.6",
     "eslint": "^9.13.0",

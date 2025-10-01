@@ -17,6 +17,9 @@ const stopwatchControls = document.getElementById('stopwatchControls');
 const minutesInput = document.getElementById('minutes');
 const secondsInput = document.getElementById('seconds');
 const lapsList = document.getElementById('laps');
+const setHTML = window.__appSetTrustedHTML || ((element, value) => {
+  element.innerHTML = value;
+});
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -107,7 +110,7 @@ function resetWatch() {
   stopwatchElapsed = 0;
   lapNumber = 1;
   updateStopwatchDisplay();
-  lapsList.innerHTML = '';
+  setHTML(lapsList, '');
 }
 
 function lapWatch() {

@@ -86,7 +86,10 @@ export default function PluginManager() {
         finalize();
       }, 10);
     } else {
-      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none';"></head><body><script>${manifest.code}<\/script></body></html>`;
+      const scriptBlob = new Blob([manifest.code], { type: 'text/javascript' });
+      const scriptUrl = URL.createObjectURL(scriptBlob);
+      const iframeNonce = crypto.randomUUID();
+      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${iframeNonce}' blob:; connect-src 'none';"></head><body><script nonce="${iframeNonce}" src="${scriptUrl}" defer></script></body></html>`;
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const iframe = document.createElement('iframe');
@@ -103,6 +106,7 @@ export default function PluginManager() {
         window.removeEventListener('message', listener);
         document.body.removeChild(iframe);
         URL.revokeObjectURL(url);
+        URL.revokeObjectURL(scriptUrl);
         finalize();
       }, 10);
     }

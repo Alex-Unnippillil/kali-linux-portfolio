@@ -533,7 +533,10 @@ function showLeaderboard(type){
     html += `<li>${type==='sprint'?v.toFixed(2)+'s':v}</li>`;
   }
   html += '</ol>';
-  leaderboardDiv.innerHTML = html;
+  const setHTML = window.__appSetTrustedHTML || ((element, value) => {
+    element.innerHTML = value;
+  });
+  setHTML(leaderboardDiv, html);
 }
 
 document.getElementById('mode-sprint').addEventListener('click', ()=>{mode=null;showLeaderboard('sprint');startSprint();});

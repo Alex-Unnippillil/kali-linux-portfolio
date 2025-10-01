@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { createTrustedHTML } from '../utils/csp';
 
 interface HelpPanelProps {
   appId: string;
@@ -12,6 +13,7 @@ interface HelpPanelProps {
 export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
   const [open, setOpen] = useState(false);
   const [html, setHtml] = useState("<p>Loading...</p>");
+  const trustedHtml = useMemo(() => createTrustedHTML(html), [html]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +70,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
             className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div dangerouslySetInnerHTML={{ __html: html }} />
+            <div dangerouslySetInnerHTML={{ __html: trustedHtml as string }} />
           </div>
         </div>
       )}

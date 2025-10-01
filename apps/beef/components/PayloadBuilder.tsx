@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 interface Payload {
   name: string;
@@ -20,7 +20,18 @@ export default function PayloadBuilder() {
   const [selected, setSelected] = useState<Payload>(payloads[0]);
   const [copied, setCopied] = useState(false);
 
-  const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Payload</title></head><body><script>${selected.code}</script></body></html>`;
+  const nonce = useMemo(() => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return Math.random().toString(36).slice(2);
+  }, [selected]);
+
+  const page = useMemo(
+    () =>
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; connect-src 'none';"/><title>Payload</title></head><body><script nonce="${nonce}">${selected.code}</script></body></html>`,
+    [nonce, selected],
+  );
 
   const copyPage = async () => {
     try {

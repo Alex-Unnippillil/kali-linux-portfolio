@@ -1,6 +1,6 @@
 import React from 'react'
 import Head from 'next/head';
-import { getCspNonce } from '../../utils/csp';
+import { createTrustedHTML, getCspNonce } from '../../utils/csp';
 
 export default function Meta() {
     const nonce = getCspNonce();
@@ -54,12 +54,12 @@ export default function Meta() {
                 type="application/ld+json"
                 nonce={nonce}
                 dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
+                    __html: createTrustedHTML(JSON.stringify({
                         "@context": "https://schema.org",
                         "@type": "Person",
                         name: "Alex Unnippillil",
                         url: "https://unnippillil.com/",
-                    }),
+                    })),
                 }}
             />
         </Head>

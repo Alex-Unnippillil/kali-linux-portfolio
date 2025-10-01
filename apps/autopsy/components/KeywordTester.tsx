@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import events from '../events.json';
+import { createTrustedHTML } from '../../../utils/csp';
 
 const escapeHtml = (str: string = '') =>
   str
@@ -29,7 +30,7 @@ function KeywordTester() {
     reader.readAsText(file);
   };
 
-  const highlight = (text: string = '') => {
+  const highlight = (text: string = ''): string => {
     let safe = escapeHtml(text);
     if (keywords.length === 0) return safe;
     keywords.forEach((k) => {
@@ -73,20 +74,20 @@ function KeywordTester() {
             >
               <div
                 className="font-bold"
-                dangerouslySetInnerHTML={{ __html: highlight(artifact.name) }}
+                dangerouslySetInnerHTML={{ __html: createTrustedHTML(highlight(artifact.name)) }}
               />
               <div className="text-gray-400">{artifact.type}</div>
               {'user' in artifact && (
                 <div
                   className="text-xs"
                   dangerouslySetInnerHTML={{
-                    __html: `User: ${highlight(artifact.user)}`,
+                    __html: createTrustedHTML(`User: ${highlight(artifact.user)}`),
                   }}
                 />
               )}
               <div
                 className="text-xs"
-                dangerouslySetInnerHTML={{ __html: highlight(artifact.description) }}
+                dangerouslySetInnerHTML={{ __html: createTrustedHTML(highlight(artifact.description)) }}
               />
             </div>
           );
