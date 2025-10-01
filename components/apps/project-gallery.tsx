@@ -1,6 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
+import {
+  getLastTab,
+  setLastActiveTab,
+  WorkspaceTab,
+} from '../../utils/workspaces/store';
 
 interface Project {
   id: number;
@@ -19,6 +24,12 @@ interface Project {
 
 interface Props {
   openApp?: (id: string) => void;
+  projectId?: number;
+  tab?: WorkspaceTab;
+  context?: {
+    projectId?: number;
+    tab?: WorkspaceTab;
+  };
 }
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
@@ -26,7 +37,17 @@ const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
 
-const ProjectGallery: React.FC<Props> = ({ openApp }) => {
+const WORKSPACE_TABS: WorkspaceTab[] = ['overview', 'code', 'links'];
+
+const isWorkspaceTabValue = (value: unknown): value is WorkspaceTab =>
+  value === 'overview' || value === 'code' || value === 'links';
+
+const ProjectGallery: React.FC<Props> = ({
+  openApp,
+  projectId: projectIdProp,
+  tab: tabProp,
+  context,
+}) => {
   const projects: Project[] = projectsData as Project[];
   const [search, setSearch] = useState('');
   const [stack, setStack] = useState('');
@@ -35,6 +56,59 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+
+  const resolvedProjectId =
+    typeof projectIdProp === 'number'
+      ? projectIdProp
+      : typeof context?.projectId === 'number'
+      ? context.projectId
+      : null;
+
+  const resolvedTab = isWorkspaceTabValue(tabProp)
+    ? tabProp
+    : isWorkspaceTabValue(context?.tab)
+    ? context?.tab
+    : undefined;
+
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(
+    resolvedProjectId
+  );
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(
+    resolvedTab ?? (typeof resolvedProjectId === 'number' ? getLastTab(resolvedProjectId) : 'overview')
+  );
+
+  useEffect(() => {
+    if (typeof resolvedProjectId === 'number') {
+      setActiveProjectId(resolvedProjectId);
+      setActiveTab(resolvedTab ?? getLastTab(resolvedProjectId));
+    } else if (resolvedProjectId === null) {
+      setActiveProjectId(null);
+    }
+  }, [resolvedProjectId, resolvedTab]);
+
+  useEffect(() => {
+    if (typeof activeProjectId === 'number') {
+      setLastActiveTab(activeProjectId, activeTab);
+    }
+  }, [activeProjectId, activeTab]);
+
+  const activeProject = useMemo(
+    () =>
+      typeof activeProjectId === 'number'
+        ? projects.find((p) => p.id === activeProjectId) ?? null
+        : null,
+    [projects, activeProjectId]
+  );
+
+  const handleOpenWorkspace = useCallback((projectId: number) => {
+    setActiveProjectId(projectId);
+    setActiveTab(getLastTab(projectId));
+  }, []);
+
+  const handleClearWorkspace = useCallback(() => {
+    setActiveProjectId(null);
+    setActiveTab('overview');
+  }, []);
 
   const readFilters = async () => {
     try {
@@ -223,6 +297,110 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </label>
         ))}
       </div>
+      {activeProject && (
+        <section className="mb-6 rounded-lg border border-white/10 bg-black/40 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">{activeProject.title}</h2>
+              <p className="text-sm text-white/70">{activeProject.description}</p>
+              <p className="text-xs text-white/50">
+                {activeProject.year} • {activeProject.type}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleClearWorkspace}
+              className="rounded-md border border-white/20 px-3 py-1 text-xs text-white/70 transition hover:border-white/40 hover:text-white"
+            >
+              Clear workspace
+            </button>
+          </div>
+          <div
+            className="mt-4 flex flex-wrap gap-2"
+            role="tablist"
+            aria-label="Workspace views"
+          >
+            {WORKSPACE_TABS.map((tab) => {
+              const label = tab === 'overview' ? 'Overview' : tab === 'code' ? 'Code' : 'Links';
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                    isActive
+                      ? 'bg-[var(--kali-blue)] text-white'
+                      : 'bg-white/10 text-white/70 hover:bg-white/20'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4"
+            role="tabpanel"
+            aria-live="polite"
+          >
+            {activeTab === 'overview' && (
+              <div className="space-y-3 text-sm text-white/80">
+                <div>
+                  <h3 className="text-xs uppercase text-white/50">Stack</h3>
+                  <p>{activeProject.stack.join(', ') || '—'}</p>
+                </div>
+                <div>
+                  <h3 className="text-xs uppercase text-white/50">Tags</h3>
+                  <p>{activeProject.tags.join(', ') || '—'}</p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'code' && (
+              <Editor
+                height="240px"
+                theme="vs-dark"
+                language={activeProject.language}
+                value={activeProject.snippet}
+                options={{ readOnly: true, minimap: { enabled: false } }}
+              />
+            )}
+            {activeTab === 'links' && (
+              <div className="flex flex-wrap gap-3 text-sm">
+                <a
+                  href={activeProject.repo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:underline"
+                >
+                  Repo
+                </a>
+                {activeProject.demo && (
+                  <>
+                    <a
+                      href={activeProject.demo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                    >
+                      Live Demo
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => openInFirefox(activeProject.demo)}
+                      className="text-blue-400 underline-offset-2 hover:underline"
+                    >
+                      Open in Firefox
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
       {selected.length === 2 && (
         <div className="mb-4 overflow-auto">
           <table className="w-full text-sm text-left" role="table">
@@ -252,11 +430,17 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         </div>
       )}
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
-          <div
-            key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
-          >
+        {filtered.map((project) => {
+          const isCurrent = activeProjectId === project.id;
+          return (
+            <div
+              key={project.id}
+              className={`mb-4 break-inside-avoid rounded shadow overflow-hidden ${
+                isCurrent
+                  ? 'bg-gray-900 ring-2 ring-[var(--kali-blue)]'
+                  : 'bg-gray-800'
+              }`}
+            >
             <div className="flex flex-col md:flex-row h-48">
               <img
                 src={project.thumbnail}
@@ -277,6 +461,13 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
             <div className="p-4 space-y-2">
               <h3 className="text-lg font-semibold">{project.title}</h3>
               <p className="text-sm">{project.description}</p>
+              <button
+                type="button"
+                onClick={() => handleOpenWorkspace(project.id)}
+                className="bg-[var(--kali-blue)] text-xs px-2 py-1 rounded-full text-white transition hover:bg-[var(--kali-blue)]/80"
+              >
+                Open workspace
+              </button>
               <button
                 onClick={() => toggleSelect(project)}
                 aria-label={`Select ${project.title} for comparison`}

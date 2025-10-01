@@ -23,6 +23,7 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import WorkspaceSwitcherModal from '../workspaces/WorkspaceSwitcher';
 import {
     clampWindowTopPosition,
     getSafeAreaInsets,
@@ -853,6 +854,7 @@ export class Desktop extends Component {
         window.addEventListener('resize', this.handleViewportResize);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('workspace-open', this.handleWorkspaceOpen);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
     }
@@ -874,6 +876,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('workspace-open', this.handleWorkspaceOpen);
         window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
         if (typeof window !== 'undefined') {
@@ -1487,6 +1490,17 @@ export class Desktop extends Component {
         }
     }
 
+    handleWorkspaceOpen = (event) => {
+        const detail = event?.detail || {};
+        const projectId = detail.projectId;
+        if (typeof projectId !== 'number') return;
+        const context = { projectId };
+        if (typeof detail.tab === 'string') {
+            context.tab = detail.tab;
+        }
+        this.openApp('project-gallery', context);
+    }
+
     openApp = (objId, params) => {
         if (!this.validAppIds.has(objId)) {
             console.warn(`Attempted to open unknown app: ${objId}`);
@@ -1912,6 +1926,8 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <WorkspaceSwitcherModal />
 
             </main>
         );
