@@ -1,10 +1,13 @@
+import { stripDangerousText } from './sanitizeText';
+
 export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
+    const safeText = stripDangerousText(text);
     if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(safeText);
     } else {
       const textarea = document.createElement('textarea');
-      textarea.value = text;
+      textarea.value = safeText;
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
