@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import copyToClipboard from "../../utils/clipboard";
+import { useFormatter } from "../../utils/format";
 
 type Rates = Record<string, number>;
 const initialRates = {
@@ -18,21 +19,6 @@ const icons: Record<Domain, string> = {
 };
 
 type Notation = "fixed" | "engineering" | "scientific";
-
-const formatNumber = (
-  val: string,
-  notation: Notation,
-  trailingZeros: boolean,
-) => {
-  const n = parseFloat(val);
-  if (isNaN(n)) return "";
-  const opts: Intl.NumberFormatOptions = {
-    notation: notation === "fixed" ? "standard" : notation,
-    maximumFractionDigits: 10,
-  };
-  if (trailingZeros) opts.minimumFractionDigits = 10;
-  return n.toLocaleString(undefined, opts);
-};
 
 function CopyButton({ value }: { value: string }) {
   return (
@@ -65,6 +51,20 @@ export default function Converter() {
   const [history, setHistory] = useState<
     { fromValue: string; fromUnit: string; toValue: string; toUnit: string }[]
   >([]);
+  const { formatNumber: formatWithLocale } = useFormatter();
+  const formatValue = useCallback(
+    (val: string) => {
+      const n = parseFloat(val);
+      if (Number.isNaN(n)) return "";
+      const opts: Intl.NumberFormatOptions = {
+        notation: notation === "fixed" ? "standard" : notation,
+        maximumFractionDigits: 10,
+      };
+      if (trailingZeros) opts.minimumFractionDigits = 10;
+      return formatWithLocale(n, opts);
+    },
+    [formatWithLocale, notation, trailingZeros],
+  );
 
   useEffect(() => {
     const saved = localStorage.getItem(HISTORY_KEY);
@@ -210,7 +210,7 @@ export default function Converter() {
                 aria-label="from value"
               />
               <span className="h-4 text-xs text-gray-400 font-mono">
-                {formatNumber(fromValue, notation, trailingZeros)}
+                {formatValue(fromValue)}
               </span>
             </div>
             <select
@@ -229,7 +229,7 @@ export default function Converter() {
             </select>
             <CopyButton
               value={
-                formatNumber(fromValue, notation, trailingZeros) || fromValue
+                formatValue(fromValue) || fromValue
               }
             />
           </div>
@@ -254,7 +254,7 @@ export default function Converter() {
                 aria-label="to value"
               />
               <span className="h-4 text-xs text-gray-400 font-mono">
-                {formatNumber(toValue, notation, trailingZeros)}
+                {formatValue(toValue)}
               </span>
             </div>
             <select
@@ -272,7 +272,7 @@ export default function Converter() {
               ))}
             </select>
             <CopyButton
-              value={formatNumber(toValue, notation, trailingZeros) || toValue}
+              value={formatValue(toValue) || toValue}
             />
           </div>
         </div>
@@ -283,9 +283,9 @@ export default function Converter() {
                 key={i}
                 className="flex items-center justify-between bg-gray-800 px-2 py-1 rounded"
               >
-                <span>{`${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`}</span>
+                <span>{`${formatValue(h.fromValue)} ${h.fromUnit} = ${formatValue(h.toValue)} ${h.toUnit}`}</span>
                 <CopyButton
-                  value={`${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`}
+                  value={`${formatValue(h.fromValue)} ${h.fromUnit} = ${formatValue(h.toValue)} ${h.toUnit}`}
                 />
               </div>
             ))}

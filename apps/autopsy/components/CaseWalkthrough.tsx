@@ -2,6 +2,7 @@
 
 import React from 'react';
 import caseData from '../data/case.json';
+import { useFormatter } from '../../../utils/format';
 
 interface TimelineEntry {
   timestamp: string;
@@ -49,6 +50,8 @@ const CaseWalkthrough: React.FC = () => {
     fileTree: FileNode;
   };
 
+  const { formatDateTime } = useFormatter();
+
   return (
     <div className="space-y-6">
       <section>
@@ -58,7 +61,17 @@ const CaseWalkthrough: React.FC = () => {
             <li key={idx} className="flex items-center text-sm">
               <img src={item.thumbnail} alt="" className="w-6 h-6 mr-2" />
               <span>
-                {new Date(item.timestamp).toLocaleString()} – {item.event}
+                {(() => {
+                  const parsed = new Date(item.timestamp);
+                  if (Number.isNaN(parsed.getTime())) {
+                    return `Unknown time – ${item.event}`;
+                  }
+                  const formatted = formatDateTime(parsed, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  });
+                  return `${formatted || parsed.toLocaleString()} – ${item.event}`;
+                })()}
               </span>
             </li>
           ))}

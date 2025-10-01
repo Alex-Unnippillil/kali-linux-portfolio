@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
+import { useFormatter } from '../../utils/format';
 
 interface Preset {
   value: string;
@@ -33,6 +34,7 @@ const Hashcat: React.FC = () => {
   const [mask, setMask] = useState('');
   const appendMask = (token: string) => setMask((m) => m + token);
   const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
+  const { formatNumber } = useFormatter();
 
   const [hashInput, setHashInput] = useState('');
   const [showHash, setShowHash] = useState(false);
@@ -218,7 +220,7 @@ const Hashcat: React.FC = () => {
           </div>
           {mask && (
             <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
+              <p>Candidate space: {formatNumber(maskStats.count)}</p>
               <p className="text-sm">
                 Estimated @1M/s: {formatTime(maskStats.time)}
               </p>

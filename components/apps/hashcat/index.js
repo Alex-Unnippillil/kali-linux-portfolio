@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import { useFormatter } from '../../../utils/format';
 
 export const hashTypes = [
   {
@@ -179,6 +180,7 @@ function HashcatApp() {
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
+  const { formatNumber } = useFormatter();
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
@@ -417,7 +419,7 @@ function HashcatApp() {
           </div>
           {mask && (
             <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
+              <p>Candidate space: {formatNumber(maskStats.count)}</p>
               <p className="text-sm">
                 Estimated @1M/s: {formatTime(maskStats.time)}
               </p>

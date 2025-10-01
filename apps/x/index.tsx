@@ -14,6 +14,7 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import { useFormatter } from '../../utils/format';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -109,6 +110,16 @@ export default function XTimeline() {
   const timeoutsRef = useRef<Record<string, number>>({});
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
+  const { formatDateTime } = useFormatter();
+  const getTimestampLabel = (value: number) => {
+    const formatted = formatDateTime(value, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    if (formatted) return formatted;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? 'Unknown time' : parsed.toLocaleString();
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -358,7 +369,7 @@ export default function XTimeline() {
                   className="flex justify-between items-center p-2 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                 >
                   <span>
-                    {t.text} - {new Date(t.time).toLocaleString()}
+                    {t.text} - {getTimestampLabel(t.time)}
                   </span>
                   <button
                     type="button"

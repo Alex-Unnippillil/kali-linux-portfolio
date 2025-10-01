@@ -5,6 +5,7 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import { useFormatter } from '../../../utils/format';
 
 const escapeFilename = (str = '') =>
   str
@@ -28,6 +29,7 @@ function Timeline({ events, onSelect }) {
   const [zoomAnnouncement, setZoomAnnouncement] = useState('');
   const [sliderIndex, setSliderIndex] = useState(0);
   const [hoverIndex, setHoverIndex] = useState(null);
+  const { formatDateTime } = useFormatter();
   const dayMarkers = useMemo(() => {
     const days = [];
     const seen = new Set();
@@ -137,14 +139,18 @@ function Timeline({ events, onSelect }) {
         const date = new Date(t);
         let label;
         if (tickMinutes >= 1440) {
-          label = date.toLocaleDateString();
+          label = formatDateTime(date, { dateStyle: 'medium' }) || date.toLocaleDateString();
         } else if (tickMinutes >= 60) {
-          label = date.toLocaleTimeString([], { hour: '2-digit' });
+          label =
+            formatDateTime(date, { hour: '2-digit' }) ||
+            date.toLocaleTimeString([], { hour: '2-digit' });
         } else {
-          label = date.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+          label =
+            formatDateTime(date, { hour: '2-digit', minute: '2-digit' }) ||
+            date.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
         }
         ctx.fillText(label, x + 2, height / 2 + 25);
       }
@@ -193,7 +199,7 @@ function Timeline({ events, onSelect }) {
     } else {
       requestAnimationFrame(render);
     }
-  }, [sorted, zoom]);
+  }, [formatDateTime, sorted, zoom]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -286,7 +292,10 @@ function Timeline({ events, onSelect }) {
               <option
                 key={m.day}
                 value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
+                label={
+                  formatDateTime(m.day, { dateStyle: 'medium' }) ||
+                  new Date(m.day).toLocaleDateString()
+                }
               />
             ))}
           </datalist>
@@ -303,7 +312,15 @@ function Timeline({ events, onSelect }) {
               }}
             >
               <div>
-                {new Date(sorted[hoverIndex].timestamp).toLocaleString()}
+                {(() => {
+                  const formatted = formatDateTime(sorted[hoverIndex].timestamp, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  });
+                  if (formatted) return formatted;
+                  const parsed = new Date(sorted[hoverIndex].timestamp);
+                  return parsed.toLocaleString();
+                })()}
               </div>
               <div>{sorted[hoverIndex].name}</div>
               {sorted[hoverIndex].description && (
@@ -359,6 +376,7 @@ function Autopsy({ initialArtifacts = null }) {
     demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
   );
   const parseWorkerRef = useRef(null);
+  const { formatDateTime } = useFormatter();
 
   useEffect(() => {
     fetch('/plugin-marketplace.json')
@@ -579,11 +597,16 @@ function Autopsy({ initialArtifacts = null }) {
   useEffect(() => {
     if (artifacts.length > 0) {
       const a = artifacts[artifacts.length - 1];
+      const formatted = formatDateTime(a.timestamp, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+      const timestamp = formatted || new Date(a.timestamp).toLocaleString();
       setAnnouncement(
-        `${escapeFilename(a.name)} analyzed at ${new Date(a.timestamp).toLocaleString()}`
+        `${escapeFilename(a.name)} analyzed at ${timestamp}`
       );
     }
-  }, [artifacts]);
+  }, [artifacts, formatDateTime]);
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4">
@@ -800,7 +823,15 @@ function Autopsy({ initialArtifacts = null }) {
           />
           <div className="text-gray-400">{selectedArtifact.type}</div>
           <div className="text-xs">
-            {new Date(selectedArtifact.timestamp).toLocaleString()}
+            {(() => {
+              const formatted = formatDateTime(selectedArtifact.timestamp, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              });
+              if (formatted) return formatted;
+              const parsed = new Date(selectedArtifact.timestamp);
+              return parsed.toLocaleString();
+            })()}
           </div>
           <div className="text-xs">{selectedArtifact.description}</div>
           <div className="text-xs">Plugin: {selectedArtifact.plugin}</div>
