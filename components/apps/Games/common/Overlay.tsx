@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Toast from '../../../ui/Toast';
+import ToastStack from '../../../ui/ToastStack';
+import useToastQueue from '../../../../hooks/useToastQueue';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -21,8 +22,10 @@ export default function Overlay({
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
-  const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+  const disconnectToastId = useRef<string | null>(null);
+  const { toasts, enqueueToast, dismissToast, invokeToastAction, liveAnnouncement } =
+    useToastQueue();
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -65,14 +68,21 @@ export default function Overlay({
   useEffect(() => {
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
-      setToast('Controller disconnected. Reconnect to resume.');
+      disconnectToastId.current = enqueueToast({
+        message: 'Controller disconnected. Reconnect to resume.',
+        duration: 1000000,
+        groupKey: 'controller-disconnect',
+      });
       setPaused(true);
       onPause?.();
     };
     const handleConnect = () => {
       if (pausedByDisconnect.current) {
         pausedByDisconnect.current = false;
-        setToast('');
+        if (disconnectToastId.current) {
+          dismissToast(disconnectToastId.current);
+          disconnectToastId.current = null;
+        }
         setPaused(false);
         onResume?.();
       }
@@ -83,7 +93,7 @@ export default function Overlay({
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
       window.removeEventListener('gamepadconnected', handleConnect);
     };
-  }, [onPause, onResume]);
+  }, [dismissToast, enqueueToast, onPause, onResume]);
 
   return (
     <>
@@ -96,13 +106,16 @@ export default function Overlay({
         </button>
         <span className="fps">{fps} FPS</span>
       </div>
-      {toast && (
-        <Toast
-          message={toast}
-          onClose={() => setToast('')}
-          duration={1000000}
-        />
+      {liveAnnouncement && (
+        <span aria-live="assertive" className="sr-only">
+          {liveAnnouncement}
+        </span>
       )}
+      <ToastStack
+        toasts={toasts}
+        onClose={dismissToast}
+        onAction={invokeToastAction}
+      />
     </>
   );
 }

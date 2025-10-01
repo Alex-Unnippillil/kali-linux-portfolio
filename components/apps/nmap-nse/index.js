@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Toast from '../../ui/Toast';
+import ToastStack from '../../ui/ToastStack';
+import useToastQueue from '../../../hooks/useToastQueue';
 import DiscoveryMap from './DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
@@ -84,7 +85,8 @@ const NmapNSEApp = () => {
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
-  const [toast, setToast] = useState('');
+  const { toasts, enqueueToast, dismissToast, invokeToastAction, liveAnnouncement } =
+    useToastQueue();
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -134,7 +136,7 @@ const NmapNSEApp = () => {
     if (typeof window !== 'undefined') {
       try {
         await navigator.clipboard.writeText(command);
-        setToast('Command copied');
+        enqueueToast({ message: 'Command copied' });
       } catch (e) {
         // ignore
       }
@@ -148,7 +150,7 @@ const NmapNSEApp = () => {
     if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Output copied');
+      enqueueToast({ message: 'Output copied' });
     } catch (e) {
       // ignore
     }
@@ -162,7 +164,7 @@ const NmapNSEApp = () => {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    setToast('Output selected');
+    enqueueToast({ message: 'Output selected' });
   };
 
   const handleOutputKey = (e) => {
@@ -204,6 +206,7 @@ const NmapNSEApp = () => {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-label="Scan target"
           />
         </div>
         <div className="mb-4">
@@ -216,42 +219,52 @@ const NmapNSEApp = () => {
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-label="Search scripts"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
-                <p className="text-xs mb-1">{s.description}</p>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {s.tags.map((t) => (
-                    <span key={t} className="px-1 text-xs bg-gray-200 rounded">
-                      {t}
-                    </span>
-                  ))}
+            {filteredScripts.map((s) => {
+              const checkboxId = `script-${s.name}`;
+              const labelId = `${checkboxId}-label`;
+              return (
+                <div key={s.name} className="bg-white text-black p-2 rounded">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id={checkboxId}
+                      aria-labelledby={labelId}
+                      type="checkbox"
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                    />
+                    <label className="font-mono" htmlFor={checkboxId} id={labelId}>
+                      {s.name}
+                    </label>
+                  </div>
+                  <p className="text-xs mb-1">{s.description}</p>
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {s.tags.map((t) => (
+                      <span key={t} className="px-1 text-xs bg-gray-200 rounded">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      className="w-full p-1 border rounded text-black"
+                      aria-label={`Arguments for ${s.name}`}
+                    />
+                  )}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
             {filteredScripts.length === 0 && (
               <p className="text-sm">No scripts found.</p>
             )}
@@ -435,7 +448,16 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
+      {liveAnnouncement && (
+        <span aria-live="assertive" className="sr-only">
+          {liveAnnouncement}
+        </span>
+      )}
+      <ToastStack
+        toasts={toasts}
+        onClose={dismissToast}
+        onAction={invokeToastAction}
+      />
     </div>
   );
 };
