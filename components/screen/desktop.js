@@ -28,11 +28,12 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import DesktopSkeleton from './desktop-skeleton';
 
 
 export class Desktop extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
@@ -72,6 +73,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            isReady: Boolean(props?.appReady),
         }
 
         this.desktopRef = React.createRef();
@@ -95,6 +97,12 @@ export class Desktop extends Component {
         this.validAppIds = new Set(apps.map((app) => app.id));
 
     }
+
+    markDesktopReady = () => {
+        if (!this.state.isReady) {
+            this.setState({ isReady: true });
+        }
+    };
 
     createEmptyWorkspaceState = () => ({
         focused_windows: {},
@@ -843,6 +851,7 @@ export class Desktop extends Component {
             } else {
                 this.openApp('about');
             }
+            this.markDesktopReady();
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -857,7 +866,10 @@ export class Desktop extends Component {
         this.setupGestureListeners();
     }
 
-    componentDidUpdate(_prevProps, prevState) {
+    componentDidUpdate(prevProps, prevState) {
+        if (!prevProps?.appReady && this.props.appReady && !this.state.isReady) {
+            this.setState({ isReady: true });
+        }
         if (
             prevState.activeWorkspace !== this.state.activeWorkspace ||
             prevState.closed_windows !== this.state.closed_windows ||
@@ -1826,6 +1838,10 @@ export class Desktop extends Component {
     };
 
     render() {
+        const isDesktopReady = this.state.isReady || Boolean(this.props.appReady);
+        if (!isDesktopReady) {
+            return <DesktopSkeleton />;
+        }
         return (
             <main
                 id="desktop"
