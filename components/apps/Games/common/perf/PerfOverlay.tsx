@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { publish } from '../../../../../utils/pubsub';
+import {
+  publishEvent,
+  SystemEventChannel,
+} from '../../../../../utils/pubsub';
 import { hasOffscreenCanvas } from '../../../../../utils/feature';
 
 interface PerfSample {
@@ -53,7 +56,10 @@ const PerfOverlay: React.FC = () => {
       const loop = (now: number) => {
         if (lastRef.current) {
           const dt = now - lastRef.current;
-          publish('fps', 1000 / dt);
+          publishEvent(SystemEventChannel.PerformanceMetrics, {
+            fps: 1000 / dt,
+            frameTime: dt,
+          });
           worker.postMessage({ type: 'frame', dt });
         }
         lastRef.current = now;
@@ -84,7 +90,10 @@ const PerfOverlay: React.FC = () => {
         const samples = samplesRef.current;
         samples.push({ t: now, dt });
         if (samples.length > MAX_SAMPLES) samples.shift();
-        publish('fps', 1000 / dt);
+        publishEvent(SystemEventChannel.PerformanceMetrics, {
+          fps: 1000 / dt,
+          frameTime: dt,
+        });
         if (ctx) {
           const w = canvas.width;
           const h = canvas.height;

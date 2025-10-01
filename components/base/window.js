@@ -14,6 +14,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { publishEvent, SystemEventChannel, WindowLifecycleEventType } from '../../utils/pubsub';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -77,7 +78,30 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._hasEmittedClosedEvent = false;
     }
+
+    emitWindowEvent = (type, metadata) => {
+        if (!this.id) return;
+        if (type === WindowLifecycleEventType.Closed && this._hasEmittedClosedEvent) {
+            return;
+        }
+        if (type === WindowLifecycleEventType.Closed) {
+            this._hasEmittedClosedEvent = true;
+        }
+        publishEvent(SystemEventChannel.WindowState, {
+            windowId: this.id,
+            type,
+            snapshot: {
+                width: this.state.width,
+                height: this.state.height,
+                maximized: this.state.maximized,
+                snapped: this.state.snapped ?? null,
+            },
+            timestamp: Date.now(),
+            metadata,
+        });
+    };
 
     componentDidMount() {
         this.id = this.props.id;
@@ -85,6 +109,8 @@ export class Window extends Component {
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
+
+        this.emitWindowEvent(WindowLifecycleEventType.Opened);
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
@@ -99,6 +125,7 @@ export class Window extends Component {
     }
 
     componentWillUnmount() {
+        this.emitWindowEvent(WindowLifecycleEventType.Closed);
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
@@ -296,10 +323,15 @@ export class Window extends Component {
         if (this.props.onPositionChange) {
             this.props.onPositionChange(snappedX, absoluteY);
         }
+
+        this.emitWindowEvent(WindowLifecycleEventType.PositionChanged, {
+            position: { x: snappedX, y: absoluteY },
+        });
     }
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
+        const previousSnap = this.state.snapped;
         const node = this.getWindowNode();
         if (node) {
             const x = node.style.getPropertyValue('--window-transform-x');
@@ -313,9 +345,19 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.emitWindowEvent(WindowLifecycleEventType.Unsnapped, {
+                    snapPosition: previousSnap,
+                });
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.emitWindowEvent(WindowLifecycleEventType.Unsnapped, {
+                    snapPosition: previousSnap,
+                });
+            });
         }
     }
 
@@ -342,7 +384,12 @@ export class Window extends Component {
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.emitWindowEvent(WindowLifecycleEventType.Snapped, {
+                snapPosition: position,
+            });
+        });
     }
 
     setInertBackground = () => {
@@ -440,11 +487,13 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        this.emitWindowEvent(WindowLifecycleEventType.Focused);
     }
 
     minimizeWindow = () => {
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
+        this.emitWindowEvent(WindowLifecycleEventType.Minimized);
     }
 
     restoreWindow = () => {
@@ -459,7 +508,9 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false }, () => {
+                this.emitWindowEvent(WindowLifecycleEventType.Restored);
+            });
             return;
         }
 
@@ -470,7 +521,9 @@ export class Window extends Component {
         );
         animation.onfinish = () => {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false }, () => {
+                this.emitWindowEvent(WindowLifecycleEventType.Restored);
+            });
         };
     }
 
@@ -493,7 +546,10 @@ export class Window extends Component {
             if (node) {
                 node.style.transform = `translate(-1pt, 0px)`;
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
+            this.setState({ maximized: true, height: heightPercent, width: 100.2 }, () => {
+                this.resizeBoundries();
+                this.emitWindowEvent(WindowLifecycleEventType.Maximized);
+            });
         }
     }
 
@@ -501,6 +557,7 @@ export class Window extends Component {
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
+            this.emitWindowEvent(WindowLifecycleEventType.Closed);
             setTimeout(() => {
                 this.props.closed(this.id)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
