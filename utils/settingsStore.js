@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  performanceMode: 'auto',
 };
 
 export async function getAccent() {
@@ -114,6 +115,21 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+const PERFORMANCE_OPTIONS = ['auto', 'battery-saver', 'high-performance'];
+
+export async function getPerformanceMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.performanceMode;
+  const stored = window.localStorage.getItem('performance-mode');
+  return PERFORMANCE_OPTIONS.includes(stored) ? stored : DEFAULT_SETTINGS.performanceMode;
+}
+
+export async function setPerformanceMode(mode) {
+  if (typeof window === 'undefined') return;
+  const next = PERFORMANCE_OPTIONS.includes(mode) ? mode : DEFAULT_SETTINGS.performanceMode;
+  window.localStorage.setItem('performance-mode', next);
+  window.dispatchEvent(new CustomEvent('performance-mode-change', { detail: { mode: next } }));
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +166,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('performance-mode');
 }
 
 export async function exportSettings() {
@@ -165,6 +182,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    performanceMode,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +195,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getPerformanceMode(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +211,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    performanceMode,
   });
 }
 
@@ -217,6 +237,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    performanceMode,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +251,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (performanceMode !== undefined) await setPerformanceMode(performanceMode);
 }
 
 export const defaults = DEFAULT_SETTINGS;

@@ -1,4 +1,5 @@
 import ReactGA from 'react-ga4';
+import { recordInputLatencyMetric } from './capabilities';
 
 interface WebVitalMetric {
   id: string;
@@ -36,6 +37,10 @@ export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
     if (typeof console !== 'undefined') {
       console.warn(`Web Vitals alert: ${name} ${rounded}`);
     }
+  }
+
+  if (name === 'INP') {
+    recordInputLatencyMetric(value);
   }
 };
 
