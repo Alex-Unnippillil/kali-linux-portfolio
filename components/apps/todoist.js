@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
+import { useImportFuse } from '../../hooks/useImportFuse';
 
 const STORAGE_KEY = 'portfolio-tasks';
 
@@ -51,6 +52,7 @@ export default function Todoist() {
   const liveRef = useRef(null);
   const workerRef = useRef(null);
   const quickRef = useRef(null);
+  const { evaluateImport } = useImportFuse();
   const prefersReducedMotion = useRef(
     typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -423,9 +425,17 @@ export default function Todoist() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        const parsed = JSON.parse(reader.result);
+        const text = typeof reader.result === 'string' ? reader.result : '';
+        const decision = await evaluateImport({
+          fileName: file.name,
+          size: file.size,
+          text,
+          source: 'Todoist JSON import',
+        });
+        if (!decision.approved) return;
+        const parsed = JSON.parse(text);
         const newGroups = { ...initialGroups, ...parsed };
         setGroups(newGroups);
         if (typeof window !== 'undefined') {
@@ -503,9 +513,16 @@ export default function Todoist() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const text = String(reader.result || '');
+        const decision = await evaluateImport({
+          fileName: file.name,
+          size: file.size,
+          text,
+          source: 'Todoist CSV import',
+        });
+        if (!decision.approved) return;
         const lines = text
           .split(/\r?\n/)
           .map((l) => l.trim())
@@ -639,6 +656,7 @@ export default function Todoist() {
               onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
               className="mt-1.5 w-full border p-1.5"
               autoFocus
+              aria-label="Edit task title"
             />
           )}
         </div>
@@ -826,47 +844,52 @@ export default function Todoist() {
               ref={quickRef}
               value={quick}
               onChange={(e) => setQuick(e.target.value)}
-            placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
-            className="border p-1 flex-1"
-          />
-          <button
-            type="submit"
-            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Add
-          </button>
-        </form>
-        <form onSubmit={handleAdd} className="flex flex-wrap gap-2">
-          <input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
-            placeholder="Task"
-            className="border p-1"
-            required
-          />
-          <input
-            type="date"
-            name="due"
-            value={form.due}
-            onChange={handleChange}
-            className="border p-1"
-          />
-          <input
-            name="section"
-            value={form.section}
-            onChange={handleChange}
-            placeholder="Section"
-            className="border p-1"
-          />
-          <input
-            name="recurring"
-            value={form.recurring}
-            onChange={handleChange}
-            placeholder="Recurring (e.g., every mon)"
-            className="border p-1"
-          />
+              placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
+              className="border p-1 flex-1"
+              aria-label="Quick add task"
+            />
+            <button
+              type="submit"
+              className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Add
+            </button>
+          </form>
+          <form onSubmit={handleAdd} className="flex flex-wrap gap-2">
+            <input
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
+              placeholder="Task"
+              className="border p-1"
+              required
+              aria-label="Task title"
+            />
+            <input
+              type="date"
+              name="due"
+              value={form.due}
+              onChange={handleChange}
+              className="border p-1"
+              aria-label="Due date"
+            />
+            <input
+              name="section"
+              value={form.section}
+              onChange={handleChange}
+              placeholder="Section"
+              className="border p-1"
+              aria-label="Section name"
+            />
+            <input
+              name="recurring"
+              value={form.recurring}
+              onChange={handleChange}
+              placeholder="Recurring (e.g., every mon)"
+              className="border p-1"
+              aria-label="Recurring schedule"
+            />
           {recurringPreview.length > 0 && (
             <div className="text-xs text-gray-500">
               Next: {recurringPreview
@@ -874,12 +897,13 @@ export default function Todoist() {
                 .join(', ')}
             </div>
           )}
-          <select
-            name="priority"
-            value={form.priority}
-            onChange={handleChange}
-            className="border p-1"
-          >
+            <select
+              name="priority"
+              value={form.priority}
+              onChange={handleChange}
+              className="border p-1"
+              aria-label="Priority"
+            >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
@@ -891,27 +915,30 @@ export default function Todoist() {
             Add
           </button>
         </form>
-        <div className="flex flex-wrap gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search"
-            className="border p-1 flex-1"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="border p-1"
-          >
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              className="border p-1 flex-1"
+              aria-label="Search tasks"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border p-1"
+              aria-label="Status filter"
+            >
             <option value="all">All</option>
             <option value="active">Active</option>
             <option value="completed">Completed</option>
           </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="border p-1"
-          >
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="border p-1"
+              aria-label="Priority filter"
+            >
             <option value="all">All priorities</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
@@ -927,11 +954,25 @@ export default function Todoist() {
           <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>Export CSV</button>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import
-            <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
+            <input
+              type="file"
+              accept="application/json"
+              onChange={handleImport}
+              className="sr-only"
+              aria-label="Import tasks JSON"
+              aria-hidden="true"
+            />
           </label>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import CSV
-            <input type="file" accept="text/csv" onChange={handleImportCsv} className="sr-only" />
+            <input
+              type="file"
+              accept="text/csv"
+              onChange={handleImportCsv}
+              className="sr-only"
+              aria-label="Import tasks CSV"
+              aria-hidden="true"
+            />
           </label>
         </div>
         <div className="flex flex-1">

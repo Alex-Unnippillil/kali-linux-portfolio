@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import { useImportFuse } from '../../../hooks/useImportFuse';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -79,6 +80,7 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const { evaluateImport } = useImportFuse();
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -189,12 +191,20 @@ const HydraApp = () => {
       window.removeEventListener('hydra-protocols-changed', update);
   }, []);
 
-  const addWordList = (file, listsSetter, lists) => {
+  const addWordList = (file, listsSetter, listType) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const newLists = [...lists, { name: file.name, content: e.target.result }];
-      listsSetter(newLists);
+    reader.onload = async (e) => {
+      const text = typeof e.target?.result === 'string' ? e.target.result : '';
+      const decision = await evaluateImport({
+        fileName: file.name,
+        size: file.size,
+        text,
+        source: 'Hydra wordlist import',
+        metadata: { listType },
+      });
+      if (!decision.approved) return;
+      listsSetter((prev) => [...prev, { name: file.name, content: text }]);
     };
     reader.readAsText(file);
   };
@@ -456,21 +466,25 @@ const HydraApp = () => {
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target-input">Target</label>
           <input
+            id="hydra-target-input"
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Target host"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service-select">Service</label>
           <select
+            id="hydra-service-select"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Service protocol"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
@@ -480,11 +494,13 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">User List</label>
           <select
+            id="hydra-user-list"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="User wordlist selection"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -497,9 +513,10 @@ const HydraApp = () => {
             type="file"
             accept="text/plain"
             onChange={(e) =>
-              addWordList(e.target.files[0], setUserLists, userLists)
+              addWordList(e.target.files[0], setUserLists, 'user')
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload user wordlist"
           />
           <ul>
             {userLists.map((l) => (
@@ -516,11 +533,13 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-password-list">Password List</label>
           <select
+            id="hydra-password-list"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Password wordlist selection"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -533,9 +552,10 @@ const HydraApp = () => {
             type="file"
             accept="text/plain"
             onChange={(e) =>
-              addWordList(e.target.files[0], setPassLists, passLists)
+              addWordList(e.target.files[0], setPassLists, 'password')
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password wordlist"
           />
           <ul>
             {passLists.map((l) => (
@@ -552,23 +572,27 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset-input">Charset</label>
           <input
+            id="hydra-charset-input"
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Charset characters"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule-input">Rule (min:max length)</label>
           <input
+            id="hydra-rule-input"
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Rule length range"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -578,6 +602,8 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            role="img"
+            aria-label="Hydra progress distribution"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import levelPack from './sokoban_levels.json';
+import { useImportFuse } from '../../hooks/useImportFuse';
 
 const TILE = 32;
 
@@ -83,6 +84,7 @@ const initialState = parseLevel(initialLevels[0]);
 const historyRef = useRef([initialState]);
   const sliderRaf = useRef();
   const liveRef = useRef();
+  const { evaluateImport } = useImportFuse();
   const prefersReducedMotion = useRef(false);
 
 const [levels, setLevels] = useState(initialLevels);
@@ -280,9 +282,16 @@ const move = ({ x, y }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const text = ev.target.result;
+        const decision = await evaluateImport({
+          fileName: file.name,
+          size: file.size,
+          text,
+          source: 'Sokoban level import',
+        });
+        if (!decision.approved) return;
         let parsed;
         if (file.name.endsWith('.json')) {
           const data = JSON.parse(text);
@@ -313,8 +322,13 @@ const move = ({ x, y }) => {
   };
 
   return (
-    <GameLayout stage={levelIndex + 1}>
-      <canvas ref={canvasRef} className="mx-auto bg-gray-700" />
+      <GameLayout stage={levelIndex + 1}>
+        <canvas
+          ref={canvasRef}
+          className="mx-auto bg-gray-700"
+          role="img"
+          aria-label="Sokoban board"
+        />
       <div className="mt-2 flex flex-wrap items-center justify-center space-x-2">
         <select value={levelIndex} onChange={(e) => setLevelIndex(Number(e.target.value))}>
           {levels.map((_, i) => (
@@ -339,7 +353,12 @@ const move = ({ x, y }) => {
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={exportLevels}>
           Export
         </button>
-        <input type="file" accept=".txt,.json" onChange={handleFile} />
+        <input
+          type="file"
+          accept=".txt,.json"
+          onChange={handleFile}
+          aria-label="Import custom levels"
+        />
         <input
           type="range"
           min="0"

@@ -8,6 +8,7 @@ import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
 import { parsePcap } from '../../../utils/pcap';
+import { useImportFuse } from '../../../hooks/useImportFuse';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>
@@ -55,6 +56,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const pausedRef = useRef(false);
   const prefersReducedMotion = useRef(false);
   const VISIBLE = 100;
+  const { evaluateImport } = useImportFuse();
 
   const interfaces = [
     { name: 'eth0', type: 'wired' },
@@ -121,7 +123,17 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = () => setTlsKeys(reader.result);
+      reader.onload = async () => {
+        const text = typeof reader.result === 'string' ? reader.result : '';
+        const decision = await evaluateImport({
+          fileName: file.name,
+          size: file.size,
+          text,
+          source: 'Wireshark TLS key import',
+        });
+        if (!decision.approved) return;
+        setTlsKeys(text);
+      };
       reader.readAsText(file);
     }
   };
@@ -129,6 +141,13 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const handleFile = async (file) => {
     try {
       const buffer = await file.arrayBuffer();
+      const decision = await evaluateImport({
+        fileName: file.name,
+        size: file.size,
+        arrayBuffer: buffer,
+        source: 'Wireshark PCAP import',
+      });
+      if (!decision.approved) return;
       const parsed = parsePcap(buffer);
       setPackets(parsed);
       setTimeline(parsed);
@@ -301,13 +320,13 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           aria-label="BPF filter"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
-        <datalist id="bpf-suggestions">
-          <option value="tcp" />
-          <option value="udp" />
-          <option value="icmp" />
-          <option value="port 80" />
-          <option value="host 10.0.0.1" />
-        </datalist>
+          <datalist id="bpf-suggestions">
+            <option value="tcp" label="tcp" aria-label="tcp" />
+            <option value="udp" label="udp" aria-label="udp" />
+            <option value="icmp" label="icmp" aria-label="icmp" />
+            <option value="port 80" label="port 80" aria-label="port 80" />
+            <option value="host 10.0.0.1" label="host 10.0.0.1" aria-label="host 10.0.0.1" />
+          </datalist>
         <a
           href="https://www.wireshark.org/docs/dfref/"
           target="_blank"

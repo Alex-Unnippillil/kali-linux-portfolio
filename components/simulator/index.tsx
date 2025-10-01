@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { useImportFuse } from '../../hooks/useImportFuse';
 import type {
   SimulatorParserRequest,
   SimulatorParserResponse,
@@ -14,7 +15,7 @@ const samples: Record<string,string> = {
   sample2: 'error:failed\ncode:42\nstatus:bad',
 };
 
-const Simulator: React.FC = () => {
+const Simulator = () => {
   const [labMode, setLabMode] = usePersistentState('simulator:labMode', false);
   const [prefs, setPrefs] = usePersistentState('desktop:simulator:prefs', { scenario: '', inputs: '', columns: [] as string[] });
   const [command, setCommand] = usePersistentState('simulator:lastCommand', '');
@@ -27,6 +28,7 @@ const Simulator: React.FC = () => {
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
+  const { evaluateImport } = useImportFuse();
 
   useEffect(() => {
     const worker = new Worker(
@@ -70,10 +72,17 @@ const Simulator: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const text = typeof reader.result === 'string' ? reader.result : '';
+      const decision = await evaluateImport({
+        fileName: file.name,
+        size: file.size,
+        text,
+        source: 'Simulator fixture import',
+      });
+      if (!decision.approved) return;
       parseText(text);
-      setPrefs({ ...prefs, scenario: file.name });
+      setPrefs((prev) => ({ ...prev, scenario: file.name }));
     };
     reader.readAsText(file);
   };
@@ -159,10 +168,10 @@ const Simulator: React.FC = () => {
 
   return (
     <div className="space-y-4" aria-label="Simulator">
-      <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
-        <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
-      </div>
+        <div className="flex items-center space-x-2">
+          <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} aria-label="Toggle lab mode" />
+          <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
+        </div>
       {!labMode && (
         <div className="bg-yellow-100 text-yellow-800 p-2" role="alert">
           {LAB_BANNER}

@@ -14,6 +14,16 @@ const config = [
     },
   },
   {
+    files: ['**/*.jsx'],
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+  },
+  {
     files: ['utils/qrStorage.ts', 'utils/safeStorage.ts', 'utils/sync.ts'],
     rules: {
       'no-restricted-globals': ['error', 'window', 'document'],
