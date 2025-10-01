@@ -17,9 +17,9 @@ export default function Taskbar(props) {
 
     return (
 
-        <div
+        <nav
             className="absolute bottom-0 left-0 z-40 flex w-full items-center justify-start bg-black bg-opacity-50 backdrop-blur-sm"
-            role="toolbar"
+            aria-label="Taskbar"
             style={{
                 minHeight: 'calc(var(--shell-taskbar-height, 2.5rem) + var(--safe-area-bottom, 0px))',
                 paddingTop: '0.35rem',
@@ -30,6 +30,8 @@ export default function Taskbar(props) {
         >
             <div
                 className="flex items-center overflow-x-auto"
+                role="toolbar"
+                aria-label="Running applications"
                 style={{ gap: 'var(--shell-taskbar-gap, 0.5rem)' }}
             >
                 {runningApps.map(app => {
@@ -89,6 +91,6 @@ export default function Taskbar(props) {
                     );
                 })}
             </div>
-        </div>
+        </nav>
     );
 }

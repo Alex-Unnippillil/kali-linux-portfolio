@@ -1759,9 +1759,9 @@ export class Desktop extends Component {
     render() {
         return (
             <main
-                id="desktop"
-                role="main"
+                id="main-content"
                 ref={this.desktopRef}
+                tabIndex={-1}
                 className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={{ paddingTop: DESKTOP_TOP_PADDING }}
             >
@@ -1769,7 +1769,6 @@ export class Desktop extends Component {
                 {/* Window Area */}
                 <div
                     id="window-area"
-                    role="main"
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >

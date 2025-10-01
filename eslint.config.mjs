@@ -14,6 +14,9 @@ const config = [
     },
   },
   {
+    files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
+  },
+  {
     files: ['utils/qrStorage.ts', 'utils/safeStorage.ts', 'utils/sync.ts'],
     rules: {
       'no-restricted-globals': ['error', 'window', 'document'],
@@ -27,6 +30,12 @@ const config = [
       'jsx-a11y/control-has-associated-label': 'error',
     },
   }),
+  {
+    files: ['pages/_app.jsx'],
+    rules: {
+      '@next/next/no-before-interactive-script-outside-document': 'off',
+    },
+  },
 ];
 
 export default config;

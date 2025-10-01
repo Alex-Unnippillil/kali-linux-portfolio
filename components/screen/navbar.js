@@ -78,8 +78,9 @@ export default class Navbar extends PureComponent {
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
-                                <div
+                                <header
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                        role="banner"
                                         style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                                 paddingTop: `calc(var(--safe-area-top, 0px) + 0.5rem)`,
@@ -88,7 +89,7 @@ export default class Navbar extends PureComponent {
                                                 paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
                                         }}
                                 >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <nav aria-label="Primary" className="flex items-center gap-2 text-xs md:text-sm">
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
@@ -98,7 +99,7 @@ export default class Navbar extends PureComponent {
                                                         />
                                                 )}
                                                 <PerformanceGraph />
-                                        </div>
+                                        </nav>
                                         <div
                                                 className={
                                                         'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
@@ -118,9 +119,9 @@ export default class Navbar extends PureComponent {
                                                 <Status />
                                                 <QuickSettings open={this.state.status_card} />
                                         </button>
-				</div>
-			);
-		}
+                                </header>
+                        );
+                }
 
 
 }
