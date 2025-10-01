@@ -1,38 +1,45 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import ScriptLibrary from './ScriptLibrary';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
   {
     name: 'http-title',
     description: 'Fetches page titles from HTTP services.',
-    tags: ['discovery', 'http']
+    tags: ['discovery', 'http'],
+    categories: ['discovery', 'http'],
   },
   {
     name: 'ssl-cert',
     description: 'Retrieves TLS certificate information.',
-    tags: ['ssl', 'discovery']
+    tags: ['ssl', 'discovery'],
+    categories: ['discovery', 'ssl'],
   },
   {
     name: 'smb-os-discovery',
     description: 'Discovers remote OS information via SMB.',
-    tags: ['smb', 'discovery']
+    tags: ['smb', 'discovery'],
+    categories: ['discovery', 'smb'],
   },
   {
     name: 'ftp-anon',
     description: 'Checks for anonymous FTP access.',
-    tags: ['ftp', 'auth']
+    tags: ['ftp', 'auth'],
+    categories: ['auth', 'ftp'],
   },
   {
     name: 'http-enum',
     description: 'Enumerates directories on web servers.',
-    tags: ['http', 'vuln']
+    tags: ['http', 'vuln'],
+    categories: ['vulnerability', 'http'],
   },
   {
     name: 'dns-brute',
     description: 'Performs DNS subdomain brute force enumeration.',
-    tags: ['dns', 'brute']
+    tags: ['dns', 'brute'],
+    categories: ['discovery', 'dns'],
   }
 ];
 
@@ -77,7 +84,6 @@ const cvssColor = (score) => {
 const NmapNSEApp = () => {
   const [target, setTarget] = useState('example.com');
   const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
-  const [scriptQuery, setScriptQuery] = useState('');
   const [portFlag, setPortFlag] = useState('');
   const [examples, setExamples] = useState({});
   const [results, setResults] = useState({ hosts: [] });
@@ -115,10 +121,6 @@ const NmapNSEApp = () => {
       setPhaseStep(0);
     }
   }, [selectedScripts, activeScript]);
-
-  const filteredScripts = scripts.filter((s) =>
-    s.name.toLowerCase().includes(scriptQuery.toLowerCase())
-  );
 
   const argsString = selectedScripts
     .map((s) => scriptOptions[s])
@@ -207,55 +209,23 @@ const NmapNSEApp = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">
-            Scripts
-          </label>
-          <input
-            id="scripts"
-            value={scriptQuery}
-            onChange={(e) => setScriptQuery(e.target.value)}
-            placeholder="Search scripts"
-            className="w-full p-2 text-black mb-2"
+          <ScriptLibrary
+            scripts={scripts}
+            selectedScripts={selectedScripts}
+            onToggleScript={toggleScript}
+            activeScript={activeScript || null}
+            onActiveScriptChange={(name) => {
+              setPhaseStep(0);
+              setActiveScript(name || '');
+            }}
+            scriptOptions={scriptOptions}
+            onScriptOptionChange={(name, value) =>
+              setScriptOptions((prev) => ({
+                ...prev,
+                [name]: value,
+              }))
+            }
           />
-          <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
-                <p className="text-xs mb-1">{s.description}</p>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {s.tags.map((t) => (
-                    <span key={t} className="px-1 text-xs bg-gray-200 rounded">
-                      {t}
-                    </span>
-                  ))}
-                </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
-              </div>
-            ))}
-            {filteredScripts.length === 0 && (
-              <p className="text-sm">No scripts found.</p>
-            )}
-          </div>
         </div>
         <div className="mb-4">
           <p className="block text-sm mb-1">Port presets</p>
