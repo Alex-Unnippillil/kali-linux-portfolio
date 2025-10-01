@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import HydraApp from '../components/apps/hydra';
 
 describe('Hydra wordlists', () => {
@@ -141,5 +142,39 @@ describe('Hydra session restore', () => {
     await act(async () => {
       runResolve();
     });
+  });
+});
+
+describe('Hydra templates', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('loads template data with preview confirmation', async () => {
+    const user = userEvent.setup();
+    render(<HydraApp />);
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: /load template ssh admin sweep/i,
+      })
+    );
+
+    const targetToggle = await screen.findByLabelText(
+      'Apply template value for Target'
+    );
+    expect(targetToggle).toBeChecked();
+
+    await user.click(
+      await screen.findByRole('button', { name: /apply selected fields/i })
+    );
+
+    expect(
+      screen.getByPlaceholderText('192.168.0.1')
+    ).toHaveValue('10.20.30.40:22');
+    expect(screen.getAllByText('vpn-admins.txt').length).toBeGreaterThan(0);
+    expect(
+      screen.queryByLabelText(/Preview changes for SSH Admin Sweep/i)
+    ).not.toBeInTheDocument();
   });
 });

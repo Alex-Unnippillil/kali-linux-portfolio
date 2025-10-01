@@ -1,0 +1,57 @@
+[
+  {
+    "id": "nmap-web-enum",
+    "name": "Web Application Recon",
+    "description": "Focus on HTTP and TLS enumeration against a staging web host.",
+    "tags": ["web", "http", "recon"],
+    "metadata": {
+      "difficulty": "Beginner",
+      "scenario": "Perimeter review"
+    },
+    "fields": {
+      "target": "dev.intra.example",
+      "portFlag": "-p 80,443,8080",
+      "selectedScripts": ["http-title", "http-enum", "ssl-cert"],
+      "scriptOptions": {
+        "http-enum": "path=/admin",
+        "ssl-cert": "showvalid=true"
+      }
+    }
+  },
+  {
+    "id": "nmap-smb-health",
+    "name": "Internal SMB Health Check",
+    "description": "Audit SMB services with OS discovery and anonymous login checks.",
+    "tags": ["internal", "smb", "discovery"],
+    "metadata": {
+      "difficulty": "Intermediate",
+      "scenario": "Lateral movement hunt"
+    },
+    "fields": {
+      "target": "fileserver.corp.lan",
+      "portFlag": "-p 445 --reason",
+      "selectedScripts": ["smb-os-discovery", "ftp-anon"],
+      "scriptOptions": {
+        "ftp-anon": "maxlist=10"
+      }
+    }
+  },
+  {
+    "id": "nmap-dns-brute",
+    "name": "Subdomain Discovery",
+    "description": "Brute-force DNS subdomains while profiling exposed HTTP services.",
+    "tags": ["dns", "brute", "recon"],
+    "metadata": {
+      "difficulty": "Advanced",
+      "scenario": "Attack surface mapping"
+    },
+    "fields": {
+      "target": "corp.example",
+      "portFlag": "-p 80,443 -T4",
+      "selectedScripts": ["dns-brute", "http-title"],
+      "scriptOptions": {
+        "dns-brute": "threads=8,filestore=./dns-results"
+      }
+    }
+  }
+]

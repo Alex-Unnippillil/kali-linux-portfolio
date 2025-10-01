@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, fireEvent, waitFor, act, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import HashcatApp, { detectHashType } from '../components/apps/hashcat';
 import progressInfo from '../components/apps/hashcat/progress.json';
 
@@ -126,5 +127,30 @@ describe('HashcatApp', () => {
     expect(
       getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
     ).toBeInTheDocument();
+  });
+
+  it('applies template configuration after preview', async () => {
+    const user = userEvent.setup();
+    localStorage.clear();
+    render(<HashcatApp />);
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: /load template md5 wordlist audit/i,
+      })
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /apply selected fields/i })
+    );
+
+    expect(await screen.findByLabelText('Hash value')).toHaveValue(
+      '5f4dcc3b5aa765d61d8327deb882cf99'
+    );
+    expect(screen.getByLabelText('Attack Mode:')).toHaveValue('0');
+    expect(screen.getByLabelText('Wordlist:')).toHaveValue('rockyou');
+    expect(
+      screen.queryByLabelText(/Preview changes for MD5 Wordlist Audit/i)
+    ).not.toBeInTheDocument();
   });
 });

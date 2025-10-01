@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import TemplatePicker from '../../common/TemplatePicker';
+import TemplateDiffPreview from '../../common/TemplateDiffPreview';
+import nmapTemplates from '../../../data/templates/nmap.json';
+import {
+  computeTemplateDiff,
+  updateDiffSelection,
+} from '../../../utils/templateUtils';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -85,8 +92,66 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [pendingTemplate, setPendingTemplate] = useState(null);
+  const [templateDiffs, setTemplateDiffs] = useState([]);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
+
+  const handleTemplateSelect = (template) => {
+    const currentValues = {
+      target,
+      portFlag,
+      selectedScripts,
+      scriptOptions,
+    };
+    const diffs = computeTemplateDiff(template.fields || {}, currentValues);
+    setPendingTemplate(template);
+    setTemplateDiffs(diffs);
+  };
+
+  const handleTemplateToggle = (field, apply) => {
+    setTemplateDiffs((prev) => updateDiffSelection(prev, field, apply));
+  };
+
+  const applyTemplate = () => {
+    if (!pendingTemplate) return;
+    const applicable = templateDiffs.filter((diff) => diff.changed && diff.apply);
+    if (applicable.length === 0) {
+      setPendingTemplate(null);
+      setTemplateDiffs([]);
+      return;
+    }
+
+    const templateFields = pendingTemplate.fields || {};
+
+    applicable.forEach((diff) => {
+      const value = templateFields[diff.key];
+      switch (diff.key) {
+        case 'target':
+          setTarget(value || '');
+          break;
+        case 'portFlag':
+          setPortFlag(value || '');
+          break;
+        case 'selectedScripts':
+          setSelectedScripts(Array.isArray(value) ? value : []);
+          setActiveScript(Array.isArray(value) && value.length ? value[0] : '');
+          setPhaseStep(0);
+          break;
+        case 'scriptOptions':
+          setScriptOptions((prev) => ({
+            ...prev,
+            ...(value && typeof value === 'object' ? value : {}),
+          }));
+          break;
+        default:
+          break;
+      }
+    });
+
+    setPendingTemplate(null);
+    setTemplateDiffs([]);
+  };
 
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
@@ -192,6 +257,29 @@ const NmapNSEApp = () => {
     <div className="flex flex-col md:flex-row h-full w-full text-white">
       <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
         <h1 className="text-lg mb-4">Nmap NSE Demo</h1>
+        <TemplatePicker
+          tool="nmap"
+          templates={nmapTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        {pendingTemplate && (
+          <TemplateDiffPreview
+            template={pendingTemplate}
+            diffs={templateDiffs}
+            onToggle={handleTemplateToggle}
+            onApply={applyTemplate}
+            onCancel={() => {
+              setPendingTemplate(null);
+              setTemplateDiffs([]);
+            }}
+            fieldLabels={{
+              target: 'Target',
+              portFlag: 'Port options',
+              selectedScripts: 'Scripts',
+              scriptOptions: 'Script arguments',
+            }}
+          />
+        )}
         <div className="mb-4 p-2 bg-yellow-900 text-yellow-200 border-l-4 border-yellow-500 rounded">
           <p className="text-sm font-bold">
             Educational use only. Do not scan systems without permission.
