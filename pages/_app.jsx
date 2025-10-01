@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -17,6 +17,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Toast from '../components/ui/Toast';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -29,6 +30,68 @@ const ubuntu = Ubuntu({
 function MyApp(props) {
   const { Component, pageProps } = props;
 
+  const [showUpdateToast, setShowUpdateToast] = useState(false);
+  const serviceWorkerRegistrationRef = useRef(null);
+  const UPDATE_DEFER_KEY = 'pwa-update-deferred';
+
+  const shouldSuppressUpdateToast = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+
+    try {
+      const storage = window.sessionStorage;
+      const storedValue = storage?.getItem(UPDATE_DEFER_KEY);
+      if (storedValue === 'true') {
+        return true;
+      }
+    } catch (error) {
+      console.warn('Unable to read update deferral preference', error);
+    }
+
+    return false;
+  }, [UPDATE_DEFER_KEY]);
+
+  const handleWaitingServiceWorker = useCallback(
+    (registration) => {
+      if (
+        typeof window === 'undefined' ||
+        !registration ||
+        !registration.waiting ||
+        shouldSuppressUpdateToast()
+      ) {
+        return;
+      }
+
+      serviceWorkerRegistrationRef.current = registration;
+      setShowUpdateToast(true);
+    },
+    [shouldSuppressUpdateToast],
+  );
+
+  const handleUpdateLater = useCallback(() => {
+    setShowUpdateToast(false);
+    if (typeof window === 'undefined') return;
+    try {
+      window.sessionStorage?.setItem(UPDATE_DEFER_KEY, 'true');
+    } catch (error) {
+      console.warn('Unable to persist update deferral', error);
+    }
+  }, [UPDATE_DEFER_KEY]);
+
+  const handleUpdateNow = useCallback(() => {
+    const registration = serviceWorkerRegistrationRef.current;
+
+    if (!registration || !registration.waiting) {
+      return;
+    }
+
+    try {
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } catch (error) {
+      console.error('Failed to request service worker activation', error);
+    }
+
+    setShowUpdateToast(false);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
@@ -52,6 +115,22 @@ function MyApp(props) {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
           window.manualRefresh = () => registration.update();
+          serviceWorkerRegistrationRef.current = registration;
+
+          if (registration.waiting) {
+            handleWaitingServiceWorker(registration);
+          }
+
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+
+            newWorker.addEventListener('statechange', () => {
+              if (registration.waiting) {
+                handleWaitingServiceWorker(registration);
+              }
+            });
+          });
 
           if ('periodicSync' in registration) {
             try {
@@ -79,7 +158,59 @@ function MyApp(props) {
         console.error('Service worker setup failed', err);
       });
     }
+  }, [handleWaitingServiceWorker]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return undefined;
+    }
+
+    let refreshing = false;
+    const handleControllerChange = () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+    };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if (process.env.NODE_ENV !== 'production') return undefined;
+
+    const workbox = window.workbox;
+    if (!workbox || typeof workbox.addEventListener !== 'function') {
+      return undefined;
+    }
+
+    const handleWorkboxWaiting = async () => {
+      if (serviceWorkerRegistrationRef.current?.waiting) {
+        handleWaitingServiceWorker(serviceWorkerRegistrationRef.current);
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+        if (registration) {
+          serviceWorkerRegistrationRef.current = registration;
+          handleWaitingServiceWorker(registration);
+        }
+      } catch (error) {
+        console.error('Failed to read service worker registration', error);
+      }
+    };
+
+    workbox.addEventListener('waiting', handleWorkboxWaiting);
+
+    return () => {
+      workbox.removeEventListener('waiting', handleWorkboxWaiting);
+    };
+  }, [handleWaitingServiceWorker]);
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
@@ -149,6 +280,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -173,6 +305,17 @@ function MyApp(props) {
               />
 
               {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              {showUpdateToast && (
+                <Toast
+                  message="New version available"
+                  actionLabel="Reload now"
+                  onAction={handleUpdateNow}
+                  secondaryActionLabel="Later"
+                  onSecondaryAction={handleUpdateLater}
+                  onClose={handleUpdateLater}
+                  duration={null}
+                />
+              )}
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>
