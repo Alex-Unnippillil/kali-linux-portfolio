@@ -379,9 +379,15 @@ interface NetworkIndicatorProps {
   className?: string;
   allowNetwork: boolean;
   online: boolean;
+  simulationHint?: string;
 }
 
-const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online }) => {
+const NetworkIndicator: FC<NetworkIndicatorProps> = ({
+  className = "",
+  allowNetwork,
+  online,
+  simulationHint,
+}) => {
 
   const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
     "status-wifi-enabled",
@@ -555,15 +561,17 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     }
   }, [appendShareLog, shareTarget]);
 
+  const tooltip = simulationHint ? `${summary.tooltip} • ${simulationHint}` : summary.tooltip;
+
   return (
     <div ref={rootRef} className={classNames("relative flex items-center", className)}>
       <button
         type="button"
         className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
-        aria-label={summary.tooltip}
+        aria-label={tooltip}
         aria-haspopup="true"
         aria-expanded={open}
-        title={summary.tooltip}
+        title={tooltip}
         onClick={handleToggle}
         onPointerDown={(event) => event.stopPropagation()}
       >

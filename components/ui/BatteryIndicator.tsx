@@ -104,17 +104,31 @@ export const estimateBatteryTime = (level: number, charging: boolean) => {
 
 interface BatteryIndicatorProps {
   className?: string;
+  level?: number;
+  charging?: boolean;
+  isSimulated?: boolean;
+  simulationHint?: string;
+  onLevelChange?: (level: number) => void;
+  onChargingChange?: (charging: boolean) => void;
 }
 
 
-const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
+const BatteryIndicator: FC<BatteryIndicatorProps> = ({
+  className = "",
+  level: levelProp,
+  charging: chargingProp,
+  isSimulated = false,
+  simulationHint,
+  onLevelChange,
+  onChargingChange,
+}) => {
   const [open, setOpen] = useState(false);
-  const [level, setLevel] = usePersistentState<number>(
+  const [storedLevel, setStoredLevel] = usePersistentState<number>(
     "status-battery-level",
     () => 0.76,
     isValidLevel,
   );
-  const [charging, setCharging] = usePersistentState<boolean>(
+  const [storedCharging, setStoredCharging] = usePersistentState<boolean>(
     "status-battery-charging",
     true,
     (value): value is boolean => typeof value === "boolean",
@@ -167,13 +181,39 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
     setOpen((prev) => !prev);
   };
 
+  const isLevelControlled = typeof levelProp === "number" && Number.isFinite(levelProp);
+  const isChargingControlled = typeof chargingProp === "boolean";
+
+  const level = isLevelControlled ? clampLevel(levelProp) : storedLevel;
+  const charging = isChargingControlled ? chargingProp : storedCharging;
+
   const formattedLevel = useMemo(() => `${Math.round(clampLevel(level) * 100)}%`, [level]);
 
   const tooltipParts = [formattedLevel, charging ? "Charging" : "On battery"];
   if (batterySaver) {
     tooltipParts.push("Saver on");
   }
+  if (simulationHint) {
+    tooltipParts.push(simulationHint);
+  } else if (isSimulated) {
+    tooltipParts.push("Simulated");
+  }
   const tooltip = tooltipParts.join(" • ");
+
+  const updateLevel = (nextLevel: number) => {
+    const normalized = clampLevel(nextLevel);
+    if (!isLevelControlled) {
+      setStoredLevel(normalized);
+    }
+    onLevelChange?.(normalized);
+  };
+
+  const updateCharging = (nextCharging: boolean) => {
+    if (!isChargingControlled) {
+      setStoredCharging(nextCharging);
+    }
+    onChargingChange?.(nextCharging);
+  };
 
   return (
     <div ref={rootRef} className={`relative flex items-center ${className}`.trim()}>
@@ -218,7 +258,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
             className="mb-3 h-1 w-full cursor-pointer accent-ubt-blue"
             aria-label="Simulated battery level"
             onChange={(event: ChangeEvent<HTMLInputElement>) =>
-              setLevel(clampLevel(Number(event.target.value) / 100))
+              updateLevel(Number(event.target.value) / 100)
             }
           />
           <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
@@ -226,7 +266,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
             <input
               type="checkbox"
               checked={charging}
-              onChange={() => setCharging((prev) => !prev)}
+              onChange={() => updateCharging(!charging)}
               aria-label={charging ? "Stop charging" : "Start charging"}
             />
           </label>
