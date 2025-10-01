@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
+import StarterWizard from '../components/workspaces/StarterWizard';
 
 interface ModuleOption {
   name: string;
@@ -113,6 +114,7 @@ const ModuleWorkspace: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
+      <StarterWizard />
       <section className="space-y-2">
         <h1 className="text-xl font-semibold">Workspaces</h1>
           <div className="flex gap-2">
@@ -213,6 +215,7 @@ const ModuleWorkspace: React.FC = () => {
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <button
                       onClick={runCommand}
+                      aria-label="Run"
                       className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-black transition hover:bg-green-500"
                     >
                       Run Command

@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "recon-kickoff",
+      "name": "Recon Kickoff",
+      "description": "Launch reconnaissance with terminal commands, observation notes, and a network visualizer ready to populate.",
+      "tags": ["offensive", "recon", "network"],
+      "badges": ["popular", "recommended"],
+      "workspace": {
+        "tabs": [
+          {
+            "id": "terminal-seed",
+            "title": "Terminal",
+            "type": "terminal",
+            "pinned": true,
+            "data": {
+              "command": "nmap -A target.local"
+            }
+          },
+          {
+            "id": "notes-seed",
+            "title": "Recon Notes",
+            "type": "notes",
+            "data": {
+              "body": "Document scope, discovered hosts, and open services."
+            }
+          },
+          {
+            "id": "graph-seed",
+            "title": "Topology",
+            "type": "visualizer",
+            "data": {
+              "dataSource": "network-map"
+            }
+          }
+        ],
+        "settings": {
+          "layout": "grid",
+          "theme": "terminal",
+          "showTelemetry": false,
+          "pinnedTools": ["terminal", "notes"],
+          "notebookVisibility": "expanded"
+        }
+      }
+    },
+    {
+      "id": "blue-team-monitor",
+      "name": "Blue Team Monitor",
+      "description": "Review SIEM timelines, recent alerts, and draft remediation notes in a single workspace.",
+      "tags": ["defensive", "monitoring"],
+      "workspace": {
+        "tabs": [
+          {
+            "id": "timeline-seed",
+            "title": "Event Timeline",
+            "type": "visualizer",
+            "pinned": true,
+            "data": {
+              "dataSource": "siem-timeline"
+            }
+          },
+          {
+            "id": "alerts-seed",
+            "title": "Active Alerts",
+            "type": "report",
+            "data": {
+              "body": "Review endpoint alerts, triage priority, and mark containment status."
+            }
+          },
+          {
+            "id": "notes-remediation",
+            "title": "Remediation Notes",
+            "type": "notes"
+          }
+        ],
+        "settings": {
+          "layout": "focus",
+          "theme": "midnight",
+          "showTelemetry": true,
+          "pinnedTools": ["timeline", "reports"],
+          "notebookVisibility": "collapsed"
+        }
+      }
+    },
+    {
+      "id": "web-app-audit",
+      "name": "Web App Audit",
+      "description": "Organize findings, HTTP captures, and checklist tasks for web assessment workflows.",
+      "tags": ["offensive", "web"],
+      "workspace": {
+        "tabs": [
+          {
+            "id": "findings-seed",
+            "title": "Findings Log",
+            "type": "report",
+            "data": {
+              "body": "Catalog confirmed issues with reproduction steps and severity ratings."
+            }
+          },
+          {
+            "id": "captures-seed",
+            "title": "HTTP Captures",
+            "type": "visualizer",
+            "data": {
+              "dataSource": "burp-history"
+            }
+          },
+          {
+            "id": "checklist-seed",
+            "title": "Checklist",
+            "type": "notes",
+            "pinned": true,
+            "data": {
+              "body": "- [ ] Session management\n- [ ] Input validation\n- [ ] Access control"
+            }
+          }
+        ],
+        "settings": {
+          "layout": "column",
+          "theme": "blueprint",
+          "showTelemetry": false,
+          "pinnedTools": ["notes", "reports", "captures"],
+          "notebookVisibility": "expanded"
+        }
+      }
+    }
+  ]
+}
