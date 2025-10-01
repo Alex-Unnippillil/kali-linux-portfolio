@@ -188,6 +188,14 @@ function configureWebpack(config, { isServer }) {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
   };
+  config.module = config.module || {};
+  config.module.rules = [
+    ...(config.module.rules || []),
+    {
+      test: /\.md$/i,
+      type: 'asset/source',
+    },
+  ];
   if (isProd) {
     config.optimization = {
       ...(config.optimization || {}),
