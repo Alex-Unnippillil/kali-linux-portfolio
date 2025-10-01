@@ -1,0 +1,115 @@
+:root {
+  --font-family-sans: var(--font-family-base, 'Ubuntu', sans-serif);
+  --font-family-display: var(--font-family-sans);
+  --font-family-mono: 'Fira Code', 'Source Code Pro', 'Ubuntu Mono', ui-monospace,
+    SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-family-code: var(--font-family-mono);
+
+  --type-base-size: clamp(15px, calc(15px + 0.35vw), 18px);
+  --type-ratio: 1.25;
+  --type-factor: var(--font-multiplier, 1);
+
+  --font-size-body: 1rem;
+  --font-size-small: calc(var(--font-size-body) / var(--type-ratio));
+  --font-size-xs: calc(var(--font-size-small) / var(--type-ratio));
+  --font-size-h6: calc(var(--font-size-body) * var(--type-ratio));
+  --font-size-h5: calc(var(--font-size-h6) * var(--type-ratio));
+  --font-size-h4: calc(var(--font-size-h5) * var(--type-ratio));
+  --font-size-h3: calc(var(--font-size-h4) * var(--type-ratio));
+  --font-size-h2: calc(var(--font-size-h3) * var(--type-ratio));
+  --font-size-h1: calc(var(--font-size-h2) * var(--type-ratio));
+  --font-size-display: calc(var(--font-size-h1) * var(--type-ratio));
+  --font-size-code: calc(var(--font-size-body) / 1.05);
+
+  --line-height-body: 1.6;
+  --line-height-heading: 1.2;
+  --line-height-code: 1.45;
+  --font-weight-heading: 700;
+}
+
+html {
+  font-size: calc(var(--type-base-size) * var(--type-factor));
+}
+
+body {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+p,
+li,
+dd {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+small,
+.caption,
+figcaption {
+  font-size: var(--font-size-small);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-family-display);
+  line-height: var(--line-height-heading);
+  font-weight: var(--font-weight-heading);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+}
+
+h3 {
+  font-size: var(--font-size-h3);
+}
+
+h4 {
+  font-size: var(--font-size-h4);
+}
+
+h5 {
+  font-size: var(--font-size-h5);
+}
+
+h6 {
+  font-size: var(--font-size-h6);
+}
+
+.display-title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-heading);
+  line-height: calc(var(--line-height-heading) * 0.95);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-code);
+  line-height: var(--line-height-code);
+}
+
+pre {
+  overflow-x: auto;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --type-base-size: clamp(14px, calc(14px + 0.5vw), 16px);
+  }
+}

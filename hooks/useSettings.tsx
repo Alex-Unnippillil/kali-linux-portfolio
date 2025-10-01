@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -36,6 +44,23 @@ export const ACCENT_OPTIONS = [
   '#805ad5', // purple
   '#ed64a6', // pink
 ];
+
+export const TYPE_SCALE_RANGE = {
+  min: 0.85,
+  max: 1.3,
+  step: 0.05,
+} as const;
+
+const clampFontScaleValue = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return defaults.fontScale;
+  }
+
+  const clamped = Math.min(TYPE_SCALE_RANGE.max, Math.max(TYPE_SCALE_RANGE.min, value));
+  const stepped = Math.round(clamped / TYPE_SCALE_RANGE.step) * TYPE_SCALE_RANGE.step;
+
+  return Number(stepped.toFixed(2));
+};
 
 // Utility to lighten or darken a hex color by a percentage
 const shadeColor = (color: string, percent: number): string => {
@@ -115,7 +140,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
+  const [fontScale, setFontScaleState] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
@@ -123,6 +148,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+
+  const setFontScale = useCallback(
+    (value: number) => {
+      setFontScaleState(clampFontScaleValue(value));
+    },
+    [setFontScaleState],
+  );
 
   useEffect(() => {
     (async () => {
@@ -139,7 +171,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
-  }, []);
+  }, [setFontScale]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -202,8 +234,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
+    const normalized = clampFontScaleValue(fontScale);
+    if (normalized !== fontScale) {
+      setFontScaleState(normalized);
+      return;
+    }
+
+    const factor = normalized.toString();
+    document.documentElement.style.setProperty('--font-multiplier', factor);
+    document.documentElement.style.setProperty('--type-factor', factor);
+    saveFontScale(normalized);
   }, [fontScale]);
 
   useEffect(() => {
