@@ -18,5 +18,8 @@ jobs:
       - run: |
           yarn dev &
           npx wait-on http://localhost:3000
-      - run: npx pa11y-ci --config pa11yci.json
+      - name: Run automated accessibility scan
+        run: yarn a11y
+        env:
+          BASE_URL: http://localhost:3000
       - run: npx playwright test playwright/a11y.spec.ts

@@ -1,25 +1,39 @@
 {
   "defaults": {
+    "baseUrl": "http://localhost:3000",
     "chromeLaunchConfig": {
       "args": ["--no-sandbox"]
     },
     "runners": ["axe", "htmlcs"],
     "standard": "WCAG2AA",
+    "wait": 750,
+    "timeout": 60000,
     "axe": {
       "rules": {
         "color-contrast": { "enabled": true }
       }
     }
   },
-  "urls": [
-    "http://localhost:3000",
-    "http://localhost:3000/apps"
+  "routes": [
+    "/",
+    "/apps",
+    "/apps/settings",
+    "/apps/project-gallery",
+    "/apps/nmap-nse"
   ],
   "scenarios": [
     {},
     {
       "label": "high-contrast",
       "beforeScript": "scripts/a11y-high-contrast.js"
+    },
+    {
+      "label": "notifications-open",
+      "actions": [
+        "wait for element button[aria-haspopup='dialog'] to be visible",
+        "click element button[aria-haspopup='dialog']",
+        "wait for element [role='dialog'] to be visible"
+      ]
     }
   ]
 }

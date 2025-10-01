@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 const SAMPLE_INTERVAL = 1000;
 const MAX_POINTS = 32;
@@ -107,32 +107,56 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
     };
   }, [prefersReducedMotion]);
 
-  const path = useMemo(() => {
+  const descriptionId = useId();
+
+  const graphMetrics = useMemo(() => {
     if (points.length === 0) {
-      return '';
+      return { path: '', samples: 0, latest: 0, average: 0 };
     }
 
     const visiblePoints = points.slice(-MAX_POINTS);
-    const step = visiblePoints.length > 1 ? GRAPH_WIDTH / (visiblePoints.length - 1) : GRAPH_WIDTH;
+    const step =
+      visiblePoints.length > 1 ? GRAPH_WIDTH / (visiblePoints.length - 1) : GRAPH_WIDTH;
 
-    return visiblePoints
-      .map((value, index) => {
-        const clamped = Math.max(0, Math.min(1, value));
-        const x = Number((index * step).toFixed(2));
-        const y = Number(((1 - clamped) * GRAPH_HEIGHT).toFixed(2));
-        return `${index === 0 ? 'M' : 'L'}${x} ${y}`;
-      })
-      .join(' ');
+    const commands: string[] = [];
+    let sum = 0;
+    visiblePoints.forEach((value, index) => {
+      const clamped = Math.max(0, Math.min(1, value));
+      const x = Number((index * step).toFixed(2));
+      const y = Number(((1 - clamped) * GRAPH_HEIGHT).toFixed(2));
+      commands.push(`${index === 0 ? 'M' : 'L'}${x} ${y}`);
+      sum += clamped;
+    });
+
+    const latest = Math.max(0, Math.min(1, visiblePoints[visiblePoints.length - 1] ?? 0));
+    const average = visiblePoints.length > 0 ? sum / visiblePoints.length : 0;
+
+    return {
+      path: commands.join(' '),
+      samples: visiblePoints.length,
+      latest,
+      average,
+    };
   }, [points]);
+
+  const { path, samples, latest, average } = graphMetrics;
+  const latestPercent = Math.round(latest * 100);
+  const averagePercent = Math.round(average * 100);
 
   return (
     <div
       className={
         'hidden items-center pr-2 text-ubt-grey/70 sm:flex md:pr-3 lg:pr-4' + (className ? ` ${className}` : '')
       }
-      aria-hidden="true"
+      role="img"
+      aria-labelledby={descriptionId}
       data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}
     >
+      <p id={descriptionId} className="sr-only">
+        {samples > 0
+          ? `Performance graph showing average frame pacing at ${averagePercent} percent of the sampling budget over ${samples} samples. Latest frame at ${latestPercent} percent.`
+          : 'Performance graph with no samples recorded yet.'}
+      </p>
       <svg
         width={GRAPH_WIDTH}
         height={GRAPH_HEIGHT}
@@ -140,6 +164,7 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
         className="opacity-90"
         role="presentation"
         focusable="false"
+        aria-hidden="true"
       >
         <defs>
           <linearGradient id="kaliSpark" x1="0%" y1="0%" x2="0%" y2="100%">
