@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { withDeepLinkBoundary } from '../../utils/deeplink';
 
 const WeatherWidget = dynamic(() => import('../../apps/weather_widget'), {
   ssr: false,
@@ -7,7 +8,7 @@ const WeatherWidget = dynamic(() => import('../../apps/weather_widget'), {
 });
 
 // Display stored unit preference and the browser's location consent status.
-export default function WeatherWidgetPage() {
+function WeatherWidgetPage() {
   const [unit, setUnit] = useState('metric');
   const [locationConsent, setLocationConsent] = useState('unknown');
 
@@ -47,3 +48,4 @@ export default function WeatherWidgetPage() {
   );
 }
 
+export default withDeepLinkBoundary('weather_widget', WeatherWidgetPage);
