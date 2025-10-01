@@ -9,6 +9,8 @@ import useWeatherState, {
 } from './state';
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
+import { useUnitPreferences } from '../../hooks/useSettings';
+import { formatTemperature } from '../../utils/unitFormat';
 
 interface ReadingUpdate {
   temp: number;
@@ -17,11 +19,16 @@ interface ReadingUpdate {
 }
 
 function CityTile({ city }: { city: City }) {
+  const { measurementSystem } = useUnitPreferences();
+  const formattedTemp = city.lastReading
+    ? formatTemperature(city.lastReading.temp, measurementSystem)
+    : null;
+
   return (
     <div>
       <div className="font-bold mb-1.5">{city.name}</div>
-      {city.lastReading ? (
-        <div className="mb-1.5">{Math.round(city.lastReading.temp)}°C</div>
+      {formattedTemp ? (
+        <div className="mb-1.5">{formattedTemp}</div>
       ) : (
         <div className="opacity-70 mb-1.5">No data</div>
       )}

@@ -9,15 +9,15 @@ import {
 } from '../../../lib/fetchProxy';
 import { exportMetrics } from '../export';
 import RequestChart from './RequestChart';
+import { useUnitPreferences } from '../../../hooks/useSettings';
+import { formatDataSize } from '../../../utils/unitFormat';
 
 const HISTORY_KEY = 'network-insights-history';
-
-const formatBytes = (bytes?: number) =>
-  typeof bytes === 'number' ? `${(bytes / 1024).toFixed(1)} kB` : '—';
 
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
   const [history, setHistory] = usePersistentState<FetchEntry[]>(HISTORY_KEY, []);
+  const { measurementSystem } = useUnitPreferences();
 
   useEffect(() => {
     const unsubStart = onFetchProxy('start', () => setActive(getActiveFetches()));
@@ -67,7 +67,7 @@ export default function NetworkInsights() {
               )}
             </div>
             <div className="text-gray-400">
-              {f.duration ? `${f.duration.toFixed(0)}ms` : ''} · req {formatBytes(f.requestSize)} · res {formatBytes(f.responseSize)}
+              {f.duration ? `${f.duration.toFixed(0)}ms` : ''} · req {formatDataSize(f.requestSize, measurementSystem)} · res {formatDataSize(f.responseSize, measurementSystem)}
             </div>
           </li>
         ))}

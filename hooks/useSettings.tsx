@@ -22,9 +22,15 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getMeasurementSystem as loadMeasurementSystem,
+  setMeasurementSystem as saveMeasurementSystem,
+  getTimeFormat as loadTimeFormat,
+  setTimeFormat as saveTimeFormat,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import type { MeasurementSystem, TimeFormat } from '../types/preferences';
+import { normalizeMeasurementSystem, normalizeTimeFormat } from '../types/preferences';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -67,6 +73,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  measurementSystem: MeasurementSystem;
+  timeFormat: TimeFormat;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +87,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setMeasurementSystem: (value: MeasurementSystem) => void;
+  setTimeFormat: (value: TimeFormat) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +105,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  measurementSystem: normalizeMeasurementSystem(defaults.measurementSystem),
+  timeFormat: normalizeTimeFormat(defaults.timeFormat),
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +119,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setMeasurementSystem: () => {},
+  setTimeFormat: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,7 +136,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [measurementSystem, setMeasurementSystemState] = useState<MeasurementSystem>(
+    normalizeMeasurementSystem(defaults.measurementSystem),
+  );
+  const [timeFormat, setTimeFormatState] = useState<TimeFormat>(
+    normalizeTimeFormat(defaults.timeFormat),
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
+  const measurementRef = useRef<MeasurementSystem>(normalizeMeasurementSystem(defaults.measurementSystem));
+  const timeFormatRef = useRef<TimeFormat>(normalizeTimeFormat(defaults.timeFormat));
 
   useEffect(() => {
     (async () => {
@@ -138,12 +160,46 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setMeasurementSystemState(normalizeMeasurementSystem(await loadMeasurementSystem()));
+      setTimeFormatState(normalizeTimeFormat(await loadTimeFormat()));
     })();
   }, []);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    measurementRef.current = measurementSystem;
+  }, [measurementSystem]);
+
+  useEffect(() => {
+    timeFormatRef.current = timeFormat;
+  }, [timeFormat]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleMeasurement = (event: Event) => {
+      const detail = (event as CustomEvent<MeasurementSystem>).detail;
+      const next = normalizeMeasurementSystem(detail);
+      if (next !== measurementRef.current) {
+        setMeasurementSystemState(next);
+      }
+    };
+    const handleTimeFormat = (event: Event) => {
+      const detail = (event as CustomEvent<TimeFormat>).detail;
+      const next = normalizeTimeFormat(detail);
+      if (next !== timeFormatRef.current) {
+        setTimeFormatState(next);
+      }
+    };
+    window.addEventListener('settings:measurementSystem', handleMeasurement as EventListener);
+    window.addEventListener('settings:timeFormat', handleTimeFormat as EventListener);
+    return () => {
+      window.removeEventListener('settings:measurementSystem', handleMeasurement as EventListener);
+      window.removeEventListener('settings:timeFormat', handleTimeFormat as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -250,7 +306,40 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveMeasurementSystem(measurementSystem);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent<MeasurementSystem>('settings:measurementSystem', {
+          detail: measurementSystem,
+        }),
+      );
+    }
+  }, [measurementSystem]);
+
+  useEffect(() => {
+    saveTimeFormat(timeFormat);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.timeFormat = timeFormat;
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent<TimeFormat>('settings:timeFormat', {
+          detail: timeFormat,
+        }),
+      );
+    }
+  }, [timeFormat]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+
+  const updateMeasurementSystem = (value: MeasurementSystem) => {
+    setMeasurementSystemState(normalizeMeasurementSystem(value));
+  };
+
+  const updateTimeFormat = (value: TimeFormat) => {
+    setTimeFormatState(normalizeTimeFormat(value));
+  };
 
   return (
     <SettingsContext.Provider
@@ -268,6 +357,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        measurementSystem,
+        timeFormat,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +371,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setMeasurementSystem: updateMeasurementSystem,
+        setTimeFormat: updateTimeFormat,
       }}
     >
       {children}
@@ -288,4 +381,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 }
 
 export const useSettings = () => useContext(SettingsContext);
+
+export const useUnitPreferences = () => {
+  const {
+    measurementSystem,
+    setMeasurementSystem,
+    timeFormat,
+    setTimeFormat,
+  } = useSettings();
+  return {
+    measurementSystem,
+    setMeasurementSystem,
+    timeFormat,
+    setTimeFormat,
+  };
+};
 

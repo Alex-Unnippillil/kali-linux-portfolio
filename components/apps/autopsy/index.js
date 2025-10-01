@@ -5,6 +5,8 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import { useUnitPreferences } from '../../../hooks/useSettings';
+import { formatTimelineTick } from '../../../utils/unitFormat';
 
 const escapeFilename = (str = '') =>
   str
@@ -28,6 +30,7 @@ function Timeline({ events, onSelect }) {
   const [zoomAnnouncement, setZoomAnnouncement] = useState('');
   const [sliderIndex, setSliderIndex] = useState(0);
   const [hoverIndex, setHoverIndex] = useState(null);
+  const { timeFormat } = useUnitPreferences();
   const dayMarkers = useMemo(() => {
     const days = [];
     const seen = new Set();
@@ -135,17 +138,7 @@ function Timeline({ events, onSelect }) {
         const x = ((t - min) / 60000) * zoom;
         ctx.fillRect(x, height / 2 + 10, 1, 10);
         const date = new Date(t);
-        let label;
-        if (tickMinutes >= 1440) {
-          label = date.toLocaleDateString();
-        } else if (tickMinutes >= 60) {
-          label = date.toLocaleTimeString([], { hour: '2-digit' });
-        } else {
-          label = date.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
-        }
+        const label = formatTimelineTick(date, tickMinutes, timeFormat);
         ctx.fillText(label, x + 2, height / 2 + 25);
       }
 
@@ -193,7 +186,7 @@ function Timeline({ events, onSelect }) {
     } else {
       requestAnimationFrame(render);
     }
-  }, [sorted, zoom]);
+  }, [sorted, zoom, timeFormat]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

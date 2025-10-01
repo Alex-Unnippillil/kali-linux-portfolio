@@ -1,7 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { City } from '../state';
+import { useUnitPreferences } from '../../../hooks/useSettings';
+import {
+  convertTemperatureSeries,
+  formatTemperature,
+  getTemperatureUnit,
+} from '../../../utils/unitFormat';
 
 interface Props {
   city: City;
@@ -9,9 +15,10 @@ interface Props {
 }
 
 export default function CityDetail({ city, onClose }: Props) {
-  const [unit, setUnit] = useState<'C' | 'F'>('C');
   const [hourly, setHourly] = useState<number[]>([]);
   const [precip, setPrecip] = useState<number | null>(null);
+  const { measurementSystem } = useUnitPreferences();
+  const unit = getTemperatureUnit(measurementSystem);
 
   useEffect(() => {
     fetch(
@@ -25,14 +32,19 @@ export default function CityDetail({ city, onClose }: Props) {
       .catch(() => {});
   }, [city]);
 
-  const temps = unit === 'C' ? hourly : hourly.map((t) => t * 1.8 + 32);
+  const temps = useMemo(
+    () => convertTemperatureSeries(hourly, measurementSystem),
+    [hourly, measurementSystem],
+  );
   const slice = temps.slice(0, 24);
-  const min = Math.min(...slice);
-  const max = Math.max(...slice);
-  const range = max - min || 1;
+  const hasData = slice.length > 0;
+  const min = hasData ? Math.min(...slice) : 0;
+  const max = hasData ? Math.max(...slice) : 0;
+  const range = hasData && max - min !== 0 ? max - min : 1;
 
   const step = 6;
   const height = 100;
+  const viewWidth = step * Math.max(slice.length - 1, 1);
   const points = slice
     .map(
       (t, i) => `${i * step},${height - ((t - min) / range) * height}`,
@@ -46,23 +58,12 @@ export default function CityDetail({ city, onClose }: Props) {
           <div className="font-bold">{city.name}</div>
           <button onClick={onClose} className="px-1.5">Close</button>
         </div>
-        <div className="flex gap-1.5 mb-4">
-          <button
-            className={`px-1.5 rounded ${unit === 'C' ? 'bg-blue-600' : 'bg-white/20'}`}
-            onClick={() => setUnit('C')}
-          >
-            °C
-          </button>
-          <button
-            className={`px-1.5 rounded ${unit === 'F' ? 'bg-blue-600' : 'bg-white/20'}`}
-            onClick={() => setUnit('F')}
-          >
-            °F
-          </button>
+        <div className="mb-2 text-sm text-white/70">
+          Showing {unit} (change this in Settings → Units).
         </div>
         <div className="h-24 relative">
           <svg
-            viewBox={`0 0 ${step * (slice.length - 1)} ${height}`}
+            viewBox={`0 0 ${viewWidth} ${height}`}
             className="absolute inset-0 w-full h-full"
           >
             <polyline
@@ -82,6 +83,13 @@ export default function CityDetail({ city, onClose }: Props) {
             ))}
           </svg>
         </div>
+        {hasData ? (
+          <div className="mt-2 text-sm text-white/80">
+            Current: {formatTemperature(hourly[0], measurementSystem)}
+          </div>
+        ) : (
+          <div className="mt-2 text-sm text-white/60">No recent temperature data.</div>
+        )}
         {precip !== null && (
           <div className="mt-4 precip-text">Precipitation: {precip}%</div>
         )}

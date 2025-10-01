@@ -1,6 +1,12 @@
 import demoCity from './demoCity.json';
 import { isBrowser } from '../../utils/env';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+  convertTemperatureValue,
+  getTemperatureUnit,
+  normalizeMeasurementSystem,
+  normalizeTimeFormat,
+} from '../../utils/unitFormat';
 
 if (isBrowser) {
 const widget = document.getElementById('weather');
@@ -22,8 +28,12 @@ const errorMessageEl = document.getElementById('error-message');
 let apiKey = safeLocalStorage?.getItem('weatherApiKey') || '';
 if (apiKey) apiKeyInput.value = apiKey;
 
-let unit = safeLocalStorage?.getItem('weatherUnit') || unitToggle.value;
+let unit = normalizeMeasurementSystem(
+  safeLocalStorage?.getItem('measurement-system') || safeLocalStorage?.getItem('weatherUnit') || unitToggle.value,
+);
 unitToggle.value = unit;
+
+let timeFormat = normalizeTimeFormat(safeLocalStorage?.getItem('time-format'));
 
 let savedCities = JSON.parse(safeLocalStorage?.getItem('savedCities') || '[]');
 
@@ -47,14 +57,11 @@ function updatePinButton() {
 
 updateDatalist();
 
-function convertTemp(celsius) {
-  return unit === 'metric' ? celsius : (celsius * 9) / 5 + 32;
-}
-
 function formatTime(timestamp) {
   return new Date(timestamp * 1000).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: timeFormat === '12h',
   });
 }
 
@@ -65,10 +72,11 @@ function renderWeather(data) {
     'animationend',
     function handler() {
       widget.classList.remove('fade-out');
-      const temp = convertTemp(data.tempC);
-      tempEl.textContent = `${Math.round(temp)}°${unit === 'metric' ? 'C' : 'F'}`;
-      const feels = convertTemp(data.feelsLikeC ?? data.tempC);
-      feelsEl.textContent = `Feels like ${Math.round(feels)}°${unit === 'metric' ? 'C' : 'F'}`;
+      const symbol = getTemperatureUnit(unit);
+      const temp = convertTemperatureValue(data.tempC, unit);
+      tempEl.textContent = `${Math.round(temp)}${symbol}`;
+      const feels = convertTemperatureValue(data.feelsLikeC ?? data.tempC, unit);
+      feelsEl.textContent = `Feels like ${Math.round(feels)}${symbol}`;
       if (data.icon) {
         iconEl.src = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
         iconEl.alt = data.condition;
@@ -80,8 +88,8 @@ function renderWeather(data) {
           .map(
             (d) =>
               `<div class="day"><img class="forecast-icon animated-icon" src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.condition}"><div>${d.day} ${Math.round(
-                convertTemp(d.tempC)
-              )}°${unit === 'metric' ? 'C' : 'F'}</div></div>`
+                convertTemperatureValue(d.tempC, unit)
+              )}${symbol}</div></div>`
           )
           .join('');
       }
@@ -176,9 +184,13 @@ citySearch.addEventListener('input', () => {
 });
 
 unitToggle.addEventListener('change', () => {
-  unit = unitToggle.value;
+  unit = normalizeMeasurementSystem(unitToggle.value);
   try {
     safeLocalStorage?.setItem('weatherUnit', unit);
+    safeLocalStorage?.setItem('measurement-system', unit);
+    window.dispatchEvent(
+      new CustomEvent('settings:measurementSystem', { detail: unit })
+    );
   } catch {
     // ignore storage errors
   }
@@ -218,4 +230,21 @@ updatePinButton();
 updateWeather();
 
 setInterval(updateWeather, 10 * 60 * 1000);
+
+window.addEventListener('settings:measurementSystem', (event) => {
+  const next = normalizeMeasurementSystem(event.detail);
+  if (next !== unit) {
+    unit = next;
+    unitToggle.value = unit;
+    updateWeather();
+  }
+});
+
+window.addEventListener('settings:timeFormat', (event) => {
+  const next = normalizeTimeFormat(event.detail);
+  if (next !== timeFormat) {
+    timeFormat = next;
+    updateWeather();
+  }
+});
 }

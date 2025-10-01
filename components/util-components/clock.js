@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useUnitPreferences } from '../../hooks/useSettings'
 
 const MONTHS = [
     "Jan",
@@ -119,7 +120,7 @@ const formatDisplayTime = ({ currentTime, onlyDay, onlyTime, timeFormatter }) =>
     return `${dayString} ${timeString}`
 }
 
-const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12 = true }) => {
+const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12 }) => {
     const [currentTime, setCurrentTime] = useState(null)
     const [isOpen, setIsOpen] = useState(false)
     const [viewDate, setViewDate] = useState(() => new Date())
@@ -133,6 +134,8 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
     const popoverId = `${headingId}-popover`
     const [canUsePortal, setCanUsePortal] = useState(false)
     const [popoverStyles, setPopoverStyles] = useState({})
+    const { timeFormat } = useUnitPreferences()
+    const resolvedHour12 = typeof hour12 === 'boolean' ? hour12 : timeFormat === '12h'
 
     useEffect(() => {
         const update = () => setCurrentTime(new Date())
@@ -294,9 +297,9 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
             new Intl.DateTimeFormat(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12
+                hour12: resolvedHour12
             }),
-        [hour12]
+        [resolvedHour12]
     )
 
     const timeFormatter = useMemo(
@@ -304,9 +307,9 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
             new Intl.DateTimeFormat(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12
+                hour12: resolvedHour12
             }),
-        [hour12]
+        [resolvedHour12]
     )
 
     const handleToggle = useCallback(() => {

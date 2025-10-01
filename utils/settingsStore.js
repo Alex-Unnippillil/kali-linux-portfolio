@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  measurementSystem: 'metric',
+  timeFormat: '24h',
 };
 
 export async function getAccent() {
@@ -135,6 +137,30 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getMeasurementSystem() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.measurementSystem;
+  const stored = window.localStorage.getItem('measurement-system');
+  return stored === 'imperial' ? 'imperial' : DEFAULT_SETTINGS.measurementSystem;
+}
+
+export async function setMeasurementSystem(value) {
+  if (typeof window === 'undefined') return;
+  const normalized = value === 'imperial' ? 'imperial' : 'metric';
+  window.localStorage.setItem('measurement-system', normalized);
+}
+
+export async function getTimeFormat() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.timeFormat;
+  const stored = window.localStorage.getItem('time-format');
+  return stored === '12h' ? '12h' : DEFAULT_SETTINGS.timeFormat;
+}
+
+export async function setTimeFormat(value) {
+  if (typeof window === 'undefined') return;
+  const normalized = value === '12h' ? '12h' : '24h';
+  window.localStorage.setItem('time-format', normalized);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +176,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('measurement-system');
+  window.localStorage.removeItem('time-format');
 }
 
 export async function exportSettings() {
@@ -165,6 +193,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    measurementSystem,
+    timeFormat,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +207,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getMeasurementSystem(),
+    getTimeFormat(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +224,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    measurementSystem,
+    timeFormat,
   });
 }
 
@@ -217,6 +251,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    measurementSystem,
+    timeFormat,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +266,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (measurementSystem !== undefined) await setMeasurementSystem(measurementSystem);
+  if (timeFormat !== undefined) await setTimeFormat(timeFormat);
 }
 
 export const defaults = DEFAULT_SETTINGS;

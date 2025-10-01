@@ -104,7 +104,7 @@ export default class Navbar extends PureComponent {
                                                         'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
                                                 }
                                         >
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                                <Clock onlyTime={true} showCalendar={true} />
                                         </div>
                                         <button
                                                 type="button"
