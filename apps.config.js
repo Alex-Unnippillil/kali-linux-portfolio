@@ -274,8 +274,6 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
-
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
   defaultWidth: 50,
@@ -597,7 +595,168 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+const categoryAssignments = new Map();
+
+const addCategory = (category, ids) => {
+  ids.forEach((id) => {
+    const existing = categoryAssignments.get(id);
+    if (existing) {
+      existing.add(category);
+    } else {
+      categoryAssignments.set(id, new Set([category]));
+    }
+  });
+};
+
+addCategory(
+  'Utility',
+  utilityList.map((app) => app.id),
+);
+
+addCategory(
+  'Games',
+  gameList.map((game) => game.id),
+);
+
+const DEV_APP_IDS = [
+  'terminal',
+  'vscode',
+  'ssh',
+  'http',
+  'html-rewriter',
+  'plugin-manager',
+  'input-lab',
+  'subnet-calculator',
+  'serial-terminal',
+  'figlet',
+  'ascii-art',
+  'radare2',
+  'ghidra',
+];
+
+const MEDIA_APP_IDS = [
+  'firefox',
+  'spotify',
+  'youtube',
+  'x',
+  'about',
+  'screen-recorder',
+  'weather',
+  'weather-widget',
+  'project-gallery',
+];
+
+const SYSTEM_APP_IDS = [
+  'firefox',
+  'calculator',
+  'terminal',
+  'settings',
+  'files',
+  'resource-monitor',
+  'screen-recorder',
+  'trash',
+  'serial-terminal',
+];
+
+const OFFICE_APP_IDS = [
+  'todoist',
+  'sticky_notes',
+  'gedit',
+  'contact',
+  'clipboard-manager',
+  'quote',
+  'project-gallery',
+];
+
+const SECURITY_APP_IDS = [
+  'beef',
+  'ettercap',
+  'ble-sensor',
+  'metasploit',
+  'wireshark',
+  'kismet',
+  'nikto',
+  'autopsy',
+  'reaver',
+  'nessus',
+  'ghidra',
+  'mimikatz',
+  'mimikatz/offline',
+  'hydra',
+  'nmap-nse',
+  'radare2',
+  'volatility',
+  'hashcat',
+  'msf-post',
+  'evidence-vault',
+  'dsniff',
+  'john',
+  'openvas',
+  'recon-ng',
+  'security-tools',
+];
+
+const UTILITY_APP_IDS = [
+  'calculator',
+  'converter',
+  'qr',
+  'ascii-art',
+  'clipboard-manager',
+  'figlet',
+  'input-lab',
+  'subnet-calculator',
+  'weather',
+  'weather-widget',
+  'screen-recorder',
+];
+
+addCategory('Dev', DEV_APP_IDS);
+addCategory('Media', MEDIA_APP_IDS);
+addCategory('System', SYSTEM_APP_IDS);
+addCategory('Office', OFFICE_APP_IDS);
+addCategory('Security', SECURITY_APP_IDS);
+addCategory('Utility', UTILITY_APP_IDS);
+
+export const APP_CATEGORY_ORDER = [
+  'Dev',
+  'Media',
+  'System',
+  'Office',
+  'Security',
+  'Utility',
+  'Games',
+];
+
+const sortCategories = (list) =>
+  list.sort((a, b) => {
+    const indexA = APP_CATEGORY_ORDER.indexOf(a);
+    const indexB = APP_CATEGORY_ORDER.indexOf(b);
+    if (indexA === -1 && indexB === -1) {
+      return a.localeCompare(b);
+    }
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    if (indexA === indexB) {
+      return a.localeCompare(b);
+    }
+    return indexA - indexB;
+  });
+
+const applyCategories = (app) => {
+  const categories = categoryAssignments.get(app.id);
+  const list = categories ? sortCategories(Array.from(categories)) : ['System'];
+  return {
+    ...app,
+    categories: list,
+  };
+};
+
+const utilitiesWithCategories = utilityList.map((app) => applyCategories(app));
+export const utilities = utilitiesWithCategories;
+
+const gamesWithDefaults = gameList.map((game) => ({ ...gameDefaults, ...game }));
+const gamesWithCategories = gamesWithDefaults.map((game) => applyCategories(game));
+export const games = gamesWithCategories;
 
 const apps = [
   {
@@ -1065,4 +1224,6 @@ const apps = [
   ...games,
 ];
 
-export default apps;
+const appsWithCategories = apps.map((app) => applyCategories(app));
+
+export default appsWithCategories;

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
-import apps from '../../apps.config';
+import apps, { APP_CATEGORY_ORDER } from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
 import DelayedTooltip from '../ui/DelayedTooltip';
@@ -8,6 +8,28 @@ import AppTooltipContent from '../ui/AppTooltipContent';
 import { createRegistryMap, buildAppMetadata } from '../../lib/appRegistry';
 
 const registryMetadata = createRegistryMap(apps);
+
+const getCategoryOrderIndex = (category) => {
+  const index = APP_CATEGORY_ORDER.indexOf(category);
+  return index === -1 ? APP_CATEGORY_ORDER.length : index;
+};
+
+const ALL_CATEGORIES = (() => {
+  const unique = new Set();
+  apps.forEach((app) => {
+    (app.categories ?? []).forEach((category) => {
+      unique.add(category);
+    });
+  });
+  return Array.from(unique).sort((a, b) => {
+    const indexA = getCategoryOrderIndex(a);
+    const indexB = getCategoryOrderIndex(b);
+    if (indexA === indexB) {
+      return a.localeCompare(b);
+    }
+    return indexA - indexB;
+  });
+})();
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -27,19 +49,69 @@ function fuzzyHighlight(text, query) {
 
 export default function AppGrid({ openApp }) {
   const [query, setQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(
+    () => new Set(ALL_CATEGORIES),
+  );
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
 
-  const filtered = useMemo(() => {
-    if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
+  const queryMatches = useMemo(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return apps.map((app) => ({ ...app, nodes: app.title }));
+    }
     return apps
       .map((app) => {
-        const { matched, nodes } = fuzzyHighlight(app.title, query);
+        const { matched, nodes } = fuzzyHighlight(app.title, trimmed);
         return matched ? { ...app, nodes } : null;
       })
       .filter(Boolean);
   }, [query]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map();
+    ALL_CATEGORIES.forEach((category) => counts.set(category, 0));
+    queryMatches.forEach((app) => {
+      (app.categories ?? []).forEach((category) => {
+        if (counts.has(category)) {
+          counts.set(category, (counts.get(category) ?? 0) + 1);
+        }
+      });
+    });
+    return counts;
+  }, [queryMatches]);
+
+  const filtered = useMemo(() => {
+    if (selectedCategories.size === ALL_CATEGORIES.length) {
+      return queryMatches;
+    }
+    return queryMatches.filter((app) =>
+      (app.categories ?? []).some((category) => selectedCategories.has(category)),
+    );
+  }, [queryMatches, selectedCategories]);
+
+  const toggleCategory = useCallback((category) => {
+    setSelectedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAllCategories = useCallback(() => {
+    setSelectedCategories(new Set(ALL_CATEGORIES));
+  }, []);
+
+  const isAllSelected = selectedCategories.size === ALL_CATEGORIES.length;
+  const totalMatches = queryMatches.length;
+  const chipBaseClass =
+    'flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-ubt-blue focus-visible:ring-offset-black/60';
+  const countBadgeClass = 'rounded-full bg-black/50 px-2 py-0.5 text-xs font-semibold';
 
   useEffect(() => {
     if (focusedIndex >= filtered.length) {
@@ -127,6 +199,7 @@ export default function AppGrid({ openApp }) {
   const handleKeyDown = useCallback(
     (e) => {
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      if (filtered.length === 0) return;
       e.preventDefault();
       const colCount = columnCountRef.current;
       let idx = focusedIndex;
@@ -184,45 +257,90 @@ export default function AppGrid({ openApp }) {
 
   return (
     <div className="flex flex-col items-center h-full">
-      <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
-        placeholder="Search"
-        aria-label="Search apps"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
-        <AutoSizer>
-          {({ height, width }) => {
-            const layout = getColumnCount(width);
-            columnCountRef.current = layout.columnCount;
-            const rowCount = Math.ceil(filtered.length / layout.columnCount);
+      <div className="mt-4 w-full max-w-5xl px-4">
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={selectAllCategories}
+            aria-pressed={isAllSelected}
+            className={`${chipBaseClass} ${
+              isAllSelected
+                ? 'bg-ubt-blue/90 border-ubt-blue/80 text-white shadow-sm'
+                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
+            }`}
+          >
+            <span>All</span>
+            <span className={countBadgeClass}>{totalMatches}</span>
+          </button>
+          {ALL_CATEGORIES.map((category) => {
+            const isActive = selectedCategories.has(category);
+            const count = categoryCounts.get(category) ?? 0;
             return (
-              <Grid
-                gridRef={gridRef}
-                columnCount={layout.columnCount}
-                columnWidth={layout.columnWidth}
-                height={height}
-                rowCount={rowCount}
-                rowHeight={layout.rowHeight}
-                width={width}
-                className="scroll-smooth"
+              <button
+                key={category}
+                type="button"
+                onClick={() => toggleCategory(category)}
+                aria-pressed={isActive}
+                className={`${chipBaseClass} ${
+                  isActive
+                    ? 'bg-ubt-blue/90 border-ubt-blue/80 text-white shadow-sm'
+                    : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
+                }`}
               >
-                {(props) => (
-                  <Cell
-                    {...props}
-                    data={{
-                      items: filtered,
-                      columnCount: layout.columnCount,
-                      metadata: registryMetadata,
-                      layout,
-                    }}
-                  />
-                )}
-              </Grid>
+                <span>{category}</span>
+                <span className={countBadgeClass}>{count}</span>
+              </button>
             );
-          }}
-        </AutoSizer>
+          })}
+        </div>
+        <div className="mt-4 flex justify-center">
+          <input
+            className="w-full max-w-md rounded bg-black bg-opacity-20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-ubt-blue"
+            placeholder="Search"
+            aria-label="Search apps"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="mt-4 w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+        {filtered.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-white/60">
+            No apps match your filters.
+          </div>
+        ) : (
+          <AutoSizer>
+            {({ height, width }) => {
+              const layout = getColumnCount(width);
+              columnCountRef.current = layout.columnCount;
+              const rowCount = Math.ceil(filtered.length / layout.columnCount);
+              return (
+                <Grid
+                  gridRef={gridRef}
+                  columnCount={layout.columnCount}
+                  columnWidth={layout.columnWidth}
+                  height={height}
+                  rowCount={rowCount}
+                  rowHeight={layout.rowHeight}
+                  width={width}
+                  className="scroll-smooth"
+                >
+                  {(props) => (
+                    <Cell
+                      {...props}
+                      data={{
+                        items: filtered,
+                        columnCount: layout.columnCount,
+                        metadata: registryMetadata,
+                        layout,
+                      }}
+                    />
+                  )}
+                </Grid>
+              );
+            }}
+          </AutoSizer>
+        )}
       </div>
     </div>
   );
