@@ -14,6 +14,9 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import Skeleton from '@/components/ui/Skeleton';
+import Spinner from '@/components/ui/Spinner';
+import { announce } from '@/utils/liveAnnouncer';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -191,10 +194,12 @@ export default function XTimeline() {
       .then(() => {
         setTimelineLoaded(true);
         setLoading(false);
+        announce(`Timeline loaded for ${feed}`);
       })
       .catch(() => {
         setScriptError(true);
         setLoading(false);
+        announce('Timeline failed to load');
       });
   };
 
@@ -456,6 +461,11 @@ export default function XTimeline() {
           </button>
         ) : (
           <>
+            <Spinner
+              className="sr-only"
+              label="Loading timeline"
+              active={loading && !timelineLoaded && !scriptError}
+            />
             {loading && !timelineLoaded && !scriptError && (
               <ul className="tweet-feed space-y-1.5" aria-hidden="true">
                 {Array.from({ length: 3 }).map((_, i) => (
@@ -464,13 +474,13 @@ export default function XTimeline() {
                     className="flex gap-1.5 p-1.5 rounded-md border"
                   >
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-muted)] animate-pulse" />
+                      <Skeleton className="w-12 h-12 rounded-full bg-[var(--color-muted)]" />
                       <IconBadge className="w-3 h-3 absolute bottom-0 right-0 text-[var(--color-muted)]" />
                     </div>
                     <div className="flex-1 space-y-1.5">
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-3/4" />
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-1/2" />
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-full" />
+                      <Skeleton className="h-3 w-3/4 rounded bg-[var(--color-muted)]" />
+                      <Skeleton className="h-3 w-1/2 rounded bg-[var(--color-muted)]" />
+                      <Skeleton className="h-3 w-full rounded bg-[var(--color-muted)]" />
                     </div>
                     <IconShare className="w-5 h-5 text-[var(--color-muted)]" />
                   </li>

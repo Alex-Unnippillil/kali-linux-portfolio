@@ -5,6 +5,9 @@ import type { TouchEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import Skeleton from '@/components/ui/Skeleton';
+import Spinner from '@/components/ui/Spinner';
+import { announce } from '@/utils/liveAnnouncer';
 
 const TagIcon = () => (
   <svg
@@ -323,6 +326,13 @@ export default function ProjectGalleryPage() {
   const [demoOnly, setDemoOnly] = usePersistentState<boolean>('pg-demo', false);
   const [compareSelection, setCompareSelection] = useState<Project[]>([]);
   const [activeSwipe, setActiveSwipe] = useState<number | null>(null);
+  const projectCount = projects.length;
+
+  useEffect(() => {
+    if (!loading) {
+      announce(`Project gallery loaded ${projectCount} projects`);
+    }
+  }, [loading, projectCount]);
 
   useEffect(() => {
     setLoading(true);
@@ -492,14 +502,15 @@ export default function ProjectGalleryPage() {
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {loading && <Spinner className="sr-only" label="Loading projects" />}
         {loading
           ? Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="space-y-3 rounded-lg border p-4">
-                <div className="aspect-video w-full rounded-md bg-gray-200" />
+                <Skeleton className="aspect-video w-full bg-gray-200/60" />
                 <div className="space-y-2">
-                  <div className="h-4 w-3/4 rounded bg-gray-200" />
-                  <div className="h-3 w-2/3 rounded bg-gray-200" />
-                  <div className="h-3 w-1/2 rounded bg-gray-200" />
+                  <Skeleton className="h-4 w-3/4 bg-gray-200/60" />
+                  <Skeleton className="h-3 w-2/3 bg-gray-200/60" />
+                  <Skeleton className="h-3 w-1/2 bg-gray-200/60" />
                 </div>
               </div>
             ))

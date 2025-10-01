@@ -17,6 +17,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { ANNOUNCER_EVENT } from '../utils/liveAnnouncer';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -95,10 +96,17 @@ function MyApp(props) {
     const handleCopy = () => update('Copied to clipboard');
     const handleCut = () => update('Cut to clipboard');
     const handlePaste = () => update('Pasted from clipboard');
+    const handleAnnounce = (event) => {
+      const message = event?.detail?.message;
+      if (typeof message === 'string' && message.trim().length > 0) {
+        update(message);
+      }
+    };
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
     window.addEventListener('paste', handlePaste);
+    window.addEventListener(ANNOUNCER_EVENT, handleAnnounce);
 
     const { clipboard } = navigator;
     const originalWrite = clipboard?.writeText?.bind(clipboard);
@@ -137,6 +145,7 @@ function MyApp(props) {
       window.removeEventListener('copy', handleCopy);
       window.removeEventListener('cut', handleCut);
       window.removeEventListener('paste', handlePaste);
+      window.removeEventListener(ANNOUNCER_EVENT, handleAnnounce);
       if (clipboard) {
         if (originalWrite) clipboard.writeText = originalWrite;
         if (originalRead) clipboard.readText = originalRead;
