@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import data from './data.json';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
+import { useSafeMode } from '../../common/SafeMode';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -38,6 +39,7 @@ const EttercapApp = () => {
   const animationRef = useRef(null);
   const logIntervalRef = useRef(null);
   const prefersReduced = useRef(false);
+  const { guardSensitiveAction } = useSafeMode();
   const [lines, setLines] = useState({
     l1: { x1: 0, y1: 0, x2: 0, y2: 0 },
     l2: { x1: 0, y1: 0, x2: 0, y2: 0 },
@@ -448,23 +450,32 @@ const EttercapApp = () => {
     };
   }, [running, target1, target2]);
 
-const startSpoof = () => {
-  if (!target1 || !target2) return;
-  setMac1(randomMac());
-  setMac2(randomMac());
-  setStatus(`Simulating spoofed ARP replies to ${target1} and ${target2}`);
-  setLogs([]);
-  setRunning(true);
-  logIntervalRef.current = setInterval(() => {
-    setLogs((prev) => {
-      const entries = [
-        `Simulated ARP reply ${target1} is-at ${attackerMac}`,
-        `Simulated ARP reply ${target2} is-at ${attackerMac}`,
-      ];
-      return [...prev, ...entries].slice(-50);
+  const startSpoof = () => {
+    if (!target1 || !target2) return;
+    const allowed = guardSensitiveAction({
+      action: 'ettercap:arp-spoof',
+      appId: 'ettercap',
+      summary: 'ARP spoofing simulation is locked while Safe Mode is on.',
+      details:
+        'Disable Safe Mode from Quick Settings after acknowledging the responsible use notice to run this lab.',
+      openDialogOnBlock: true,
     });
-  }, 1000);
-};
+    if (!allowed) return;
+    setMac1(randomMac());
+    setMac2(randomMac());
+    setStatus(`Simulating spoofed ARP replies to ${target1} and ${target2}`);
+    setLogs([]);
+    setRunning(true);
+    logIntervalRef.current = setInterval(() => {
+      setLogs((prev) => {
+        const entries = [
+          `Simulated ARP reply ${target1} is-at ${attackerMac}`,
+          `Simulated ARP reply ${target2} is-at ${attackerMac}`,
+        ];
+        return [...prev, ...entries].slice(-50);
+      });
+    }, 1000);
+  };
 
 const stopSpoof = () => {
   cancelAnimationFrame(animationRef.current);
