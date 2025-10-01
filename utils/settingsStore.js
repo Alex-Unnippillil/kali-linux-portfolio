@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  periodicSyncEnabled: true,
 };
 
 export async function getAccent() {
@@ -114,6 +115,17 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getPeriodicSyncEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.periodicSyncEnabled;
+  const value = window.localStorage.getItem('periodic-sync-enabled');
+  return value === null ? DEFAULT_SETTINGS.periodicSyncEnabled : value === 'true';
+}
+
+export async function setPeriodicSyncEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('periodic-sync-enabled', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +162,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('periodic-sync-enabled');
 }
 
 export async function exportSettings() {
@@ -165,6 +178,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    periodicSyncEnabled,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +191,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getPeriodicSyncEnabled(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +207,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    periodicSyncEnabled,
   });
 }
 
@@ -217,6 +233,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    periodicSyncEnabled,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +247,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (periodicSyncEnabled !== undefined) await setPeriodicSyncEnabled(periodicSyncEnabled);
 }
 
 export const defaults = DEFAULT_SETTINGS;
