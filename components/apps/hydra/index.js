@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import ThrottlePanel, { defaultThrottleConfig } from './ThrottlePanel';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -79,9 +80,14 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const [throttleConfig, setThrottleConfig] = useState(defaultThrottleConfig);
+  const effectiveThrottleConfig = useMemo(
+    () => ({ ...defaultThrottleConfig, ...throttleConfig }),
+    [throttleConfig]
+  );
 
-  const LOCKOUT_THRESHOLD = 10;
-  const BACKOFF_THRESHOLD = 5;
+  const LOCKOUT_THRESHOLD = effectiveThrottleConfig.lockoutAfter || 10;
+  const BACKOFF_THRESHOLD = effectiveThrottleConfig.throttleAfter || 5;
 
   const isTargetValid = useMemo(() => {
     const trimmed = target.trim();
@@ -102,6 +108,12 @@ const HydraApp = () => {
       setService(cfg.service || 'ssh');
       setSelectedUser(cfg.selectedUser || '');
       setSelectedPass(cfg.selectedPass || '');
+      if (cfg.throttleConfig) {
+        setThrottleConfig({
+          ...defaultThrottleConfig,
+          ...cfg.throttleConfig,
+        });
+      }
     }
   }, []);
 
@@ -117,6 +129,13 @@ const HydraApp = () => {
     const user = userLists.find((l) => l.name === session.selectedUser);
     const pass = passLists.find((l) => l.name === session.selectedPass);
     if (!user || !pass) return;
+
+    if (session.throttleConfig) {
+      setThrottleConfig({
+        ...defaultThrottleConfig,
+        ...session.throttleConfig,
+      });
+    }
 
     setRunning(true);
     setPaused(false);
@@ -292,6 +311,7 @@ const HydraApp = () => {
           selectedPass,
           attempt,
           timeline: newTimeline,
+          throttleConfig: effectiveThrottleConfig,
         });
         return newTimeline;
       });
@@ -325,6 +345,7 @@ const HydraApp = () => {
       selectedPass,
       attempt: 0,
       timeline: [],
+      throttleConfig: effectiveThrottleConfig,
     });
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
@@ -366,6 +387,8 @@ const HydraApp = () => {
       `Service: ${service}`,
       `Users: ${userCount}`,
       `Passwords: ${passCount}`,
+      `Throttle curve: ${effectiveThrottleConfig.curve} (throttle @ ${BACKOFF_THRESHOLD}, lockout @ ${LOCKOUT_THRESHOLD})`,
+      `Delays: base ${(effectiveThrottleConfig.baseDelayMs / 1000).toFixed(2)}s, max ${(effectiveThrottleConfig.maxDelayMs / 1000).toFixed(2)}s, jitter ${(effectiveThrottleConfig.jitterRatio * 100).toFixed(0)}%`,
       `Charset: ${charset} (${charset.length})`,
       `Rule: ${rule}`,
       `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
@@ -376,7 +399,13 @@ const HydraApp = () => {
   };
 
   const handleSaveConfig = () => {
-    saveConfigStorage({ target, service, selectedUser, selectedPass });
+    saveConfigStorage({
+      target,
+      service,
+      selectedUser,
+      selectedPass,
+      throttleConfig: effectiveThrottleConfig,
+    });
     setShowSaved(true);
     setTimeout(() => setShowSaved(false), 1500);
   };
@@ -384,7 +413,17 @@ const HydraApp = () => {
   const handleCopyConfig = async () => {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ target, service, selectedUser, selectedPass }, null, 2)
+        JSON.stringify(
+          {
+            target,
+            service,
+            selectedUser,
+            selectedPass,
+            throttleConfig: effectiveThrottleConfig,
+          },
+          null,
+          2
+        )
       );
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 1500);
@@ -642,6 +681,7 @@ const HydraApp = () => {
         totalAttempts={totalAttempts}
         backoffThreshold={BACKOFF_THRESHOLD}
         lockoutThreshold={LOCKOUT_THRESHOLD}
+        throttleConfig={effectiveThrottleConfig}
         runId={runId}
         initialAttempt={initialAttempt}
         onAttemptChange={handleAttempt}
@@ -664,6 +704,11 @@ const HydraApp = () => {
         throttling and stops at {LOCKOUT_THRESHOLD} attempts to illustrate
         account lockout.
       </p>
+      <ThrottlePanel
+        config={effectiveThrottleConfig}
+        onConfigChange={setThrottleConfig}
+        recordedAttempts={timeline}
+      />
       <AttemptTimeline attempts={timeline} />
       {timeline.length > 0 && (
         <table className="mt-4 w-full text-sm">
