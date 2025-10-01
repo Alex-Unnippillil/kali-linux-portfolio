@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import { useToastNotifications } from '../../../hooks/useToastNotifications';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -84,9 +85,12 @@ const NmapNSEApp = () => {
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
-  const [toast, setToast] = useState('');
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
+  const { toast, showToast, dismissToast } = useToastNotifications({
+    appId: 'nmap-nse',
+    notificationTitle: 'Nmap NSE',
+  });
 
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
@@ -134,7 +138,7 @@ const NmapNSEApp = () => {
     if (typeof window !== 'undefined') {
       try {
         await navigator.clipboard.writeText(command);
-        setToast('Command copied');
+        showToast('Command copied', { notificationTitle: 'Command copied' });
       } catch (e) {
         // ignore
       }
@@ -148,7 +152,7 @@ const NmapNSEApp = () => {
     if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Output copied');
+      showToast('Output copied', { notificationTitle: 'Output copied' });
     } catch (e) {
       // ignore
     }
@@ -162,7 +166,7 @@ const NmapNSEApp = () => {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    setToast('Output selected');
+    showToast('Output selected', { notificationTitle: 'Output selected' });
   };
 
   const handleOutputKey = (e) => {
@@ -197,37 +201,42 @@ const NmapNSEApp = () => {
             Educational use only. Do not scan systems without permission.
           </p>
         </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
-          <input
-            id="target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            className="w-full p-2 text-black"
-          />
-        </div>
+          <div className="mb-4">
+            <label className="block text-sm mb-1" htmlFor="target">Target</label>
+            <input
+              id="target"
+              type="text"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              className="w-full p-2 text-black"
+              aria-label="Target host or network"
+            />
+          </div>
         <div className="mb-4">
           <label className="block text-sm mb-1" htmlFor="scripts">
             Scripts
           </label>
-          <input
-            id="scripts"
-            value={scriptQuery}
-            onChange={(e) => setScriptQuery(e.target.value)}
-            placeholder="Search scripts"
-            className="w-full p-2 text-black mb-2"
-          />
+            <input
+              id="scripts"
+              type="text"
+              value={scriptQuery}
+              onChange={(e) => setScriptQuery(e.target.value)}
+              placeholder="Search scripts"
+              className="w-full p-2 text-black mb-2"
+              aria-label="Search scripts"
+            />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
+                <div key={s.name} className="bg-white text-black p-2 rounded">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                      aria-label={`Toggle ${s.name}`}
+                    />
+                    <span className="font-mono">{s.name}</span>
+                  </label>
                 <p className="text-xs mb-1">{s.description}</p>
                 <div className="flex flex-wrap gap-1 mb-1">
                   {s.tags.map((t) => (
@@ -236,20 +245,21 @@ const NmapNSEApp = () => {
                     </span>
                   ))}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      aria-label={`Arguments for ${s.name}`}
+                      className="w-full p-1 border rounded text-black"
+                    />
+                  )}
               </div>
             ))}
             {filteredScripts.length === 0 && (
@@ -435,7 +445,15 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
+          duration={toast.duration}
+          onClose={dismissToast}
+        />
+      )}
     </div>
   );
 };

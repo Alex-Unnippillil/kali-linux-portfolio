@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 import {
   ClassificationResult,
   NotificationHints,
@@ -30,6 +31,14 @@ export interface AppNotification {
   classification: ClassificationResult;
 }
 
+export interface QuietHoursConfig {
+  enabled: boolean;
+  start: string;
+  end: string;
+}
+
+export type NotificationMutingReason = 'do-not-disturb' | 'quiet-hours' | 'both' | null;
+
 export interface PushNotificationInput {
   appId: string;
   title: string;
@@ -47,6 +56,13 @@ interface NotificationsContextValue {
   dismissNotification: (appId: string, id: string) => void;
   clearNotifications: (appId?: string) => void;
   markAllRead: (appId?: string) => void;
+  doNotDisturb: boolean;
+  setDoNotDisturb: React.Dispatch<React.SetStateAction<boolean>>;
+  quietHours: QuietHoursConfig;
+  setQuietHours: React.Dispatch<React.SetStateAction<QuietHoursConfig>>;
+  quietHoursActive: boolean;
+  notificationsMuted: boolean;
+  mutingReason: NotificationMutingReason;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -60,10 +76,87 @@ const PRIORITY_WEIGHT: Record<NotificationPriority, number> = {
   low: 3,
 };
 
+const defaultQuietHours: QuietHoursConfig = {
+  enabled: false,
+  start: '22:00',
+  end: '07:00',
+};
+
+const isValidTime = (value: unknown): value is string =>
+  typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
+
+const quietHoursValidator = (value: unknown): value is QuietHoursConfig => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.enabled === 'boolean' &&
+    isValidTime(candidate.start) &&
+    isValidTime(candidate.end)
+  );
+};
+
+const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0;
+  return hours * 60 + minutes;
+};
+
+const isQuietHoursActive = (config: QuietHoursConfig, reference: Date): boolean => {
+  if (!config.enabled) return false;
+  if (config.start === config.end) return false;
+  const currentMinutes = reference.getHours() * 60 + reference.getMinutes();
+  const startMinutes = timeToMinutes(config.start);
+  const endMinutes = timeToMinutes(config.end);
+
+  if (Number.isNaN(startMinutes) || Number.isNaN(endMinutes)) return false;
+
+  if (startMinutes < endMinutes) {
+    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  }
+
+  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+};
+
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+  const [doNotDisturb, setDoNotDisturb] = usePersistentState<boolean>(
+    'notifications/dnd',
+    false,
+    (value): value is boolean => typeof value === 'boolean',
+  );
+  const [quietHours, setQuietHours] = usePersistentState<QuietHoursConfig>(
+    'notifications/quiet-hours',
+    defaultQuietHours,
+    quietHoursValidator,
+  );
+  const [now, setNow] = useState<number>(() => Date.now());
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const updateNow = () => setNow(Date.now());
+    const interval = window.setInterval(updateNow, 30_000);
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const referenceTime = useMemo(() => new Date(now), [now]);
+  const quietHoursActive = useMemo(
+    () => isQuietHoursActive(quietHours, referenceTime),
+    [quietHours, referenceTime],
+  );
+
+  const notificationsMuted = doNotDisturb || quietHoursActive;
+
+  const mutingReason = useMemo<NotificationMutingReason>(() => {
+    if (!notificationsMuted) return null;
+    if (doNotDisturb && quietHoursActive) return 'both';
+    if (doNotDisturb) return 'do-not-disturb';
+    if (quietHoursActive) return 'quiet-hours';
+    return null;
+  }, [doNotDisturb, notificationsMuted, quietHoursActive]);
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
@@ -184,6 +277,13 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         dismissNotification,
         clearNotifications,
         markAllRead,
+        doNotDisturb,
+        setDoNotDisturb,
+        quietHours,
+        setQuietHours,
+        quietHoursActive,
+        notificationsMuted,
+        mutingReason,
       }}
     >
       {children}

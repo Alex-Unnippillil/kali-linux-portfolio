@@ -8,6 +8,7 @@ import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import { useToastNotifications } from "../../hooks/useToastNotifications";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -29,11 +30,14 @@ const ContactApp: React.FC = () => {
   const [message, setMessage] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const { toast, showToast, dismissToast } = useToastNotifications({
+    appId: "contact",
+    notificationTitle: "Contact message",
+  });
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -101,7 +105,7 @@ const ContactApp: React.FC = () => {
         recaptchaToken,
       });
       if (result.success) {
-        setToast("Message sent");
+        showToast("Message sent", { notificationTitle: "Contact message sent" });
         setName("");
         setEmail("");
         setMessage("");
@@ -274,7 +278,15 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
+          duration={toast.duration}
+          onClose={dismissToast}
+        />
+      )}
     </div>
   );
 };
