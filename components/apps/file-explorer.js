@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ArchiveManager from './file-explorer/Archive';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -426,6 +427,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               ))}
             </div>
           </div>
+          <ArchiveManager
+            directory={dirHandle}
+            onAfterWrite={async () => {
+              if (dirHandle) await readDir(dirHandle);
+            }}
+          />
         </div>
       </div>
     </div>
