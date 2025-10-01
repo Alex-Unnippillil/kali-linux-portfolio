@@ -5,6 +5,11 @@ import type {
   SimulatorParserResponse,
   ParsedLine,
 } from '../../workers/simulatorParser.worker';
+import {
+  decodeCacheValue,
+  isCacheRecord,
+  type CacheRecord,
+} from '../../utils/cacheCompression';
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
@@ -39,9 +44,21 @@ const Simulator: React.FC = () => {
         setProgress(data.progress);
         setEta(data.eta);
       } else if (data.type === 'done') {
-        setParsed(data.parsed);
-        setProgress(1);
-        setEta(0);
+        const apply = async () => {
+          if (isCacheRecord(data.payload)) {
+            const rows = await decodeCacheValue<ParsedLine[]>(
+              data.payload as CacheRecord,
+            );
+            setParsed(rows ?? []);
+          } else if (Array.isArray((data as any).parsed)) {
+            setParsed((data as any).parsed as ParsedLine[]);
+          } else {
+            setParsed([]);
+          }
+          setProgress(1);
+          setEta(0);
+        };
+        void apply();
       }
     };
     return () => worker.terminate();

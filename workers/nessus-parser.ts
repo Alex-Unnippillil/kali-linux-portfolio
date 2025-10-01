@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { encodeCacheValue, type CacheRecord } from '../utils/cacheCompression';
 
 export interface Finding {
   host: string;
@@ -44,10 +45,11 @@ export const parseNessus = (data: string): Finding[] => {
   return findings;
 };
 
-self.onmessage = ({ data }: MessageEvent<string>) => {
+self.onmessage = async ({ data }: MessageEvent<string>) => {
   try {
     const findings = parseNessus(data);
-    self.postMessage({ findings });
+    const payload = (await encodeCacheValue(findings)) as CacheRecord;
+    self.postMessage({ payload });
   } catch (err: any) {
     self.postMessage({ error: err?.message || 'Parse failed' });
   }
