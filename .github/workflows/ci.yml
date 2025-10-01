@@ -85,3 +85,75 @@ jobs:
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  export-diff:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Build head export
+        run: |
+          rm -rf artifact-diff
+          yarn export
+          mkdir -p artifact-diff/head
+          cp -r .next/export artifact-diff/head/
+          cp .next/export-detail.json artifact-diff/head/export-detail.json
+      - name: Build base export
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git worktree add ../base-worktree "$BASE_SHA"
+          pushd ../base-worktree
+          yarn install --immutable --immutable-cache
+          yarn export
+          mkdir -p ../kali-linux-portfolio/artifact-diff/base
+          cp -r .next/export ../kali-linux-portfolio/artifact-diff/base/
+          cp .next/export-detail.json ../kali-linux-portfolio/artifact-diff/base/export-detail.json
+          popd
+          rm -rf ../base-worktree
+          git worktree prune
+      - name: Compare exports
+        run: |
+          node scripts/artifact-diff.mjs \
+            --base-dir artifact-diff/base/export \
+            --head-dir artifact-diff/head/export \
+            --base-schema artifact-diff/base/export-detail.json \
+            --head-schema artifact-diff/head/export-detail.json \
+            --output-json artifact-diff/diff.json \
+            --output-md artifact-diff/diff.md
+      - name: Upload export diff
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-diff
+          path: artifact-diff
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const core = require('@actions/core');
+            const fs = require('fs');
+            const path = require('path');
+            const summaryPath = path.join(process.cwd(), 'artifact-diff', 'diff.md');
+            if (!fs.existsSync(summaryPath)) {
+              core.warning('No diff summary generated.');
+              return;
+            }
+            const body = fs.readFileSync(summaryPath, 'utf8');
+            if (!body.trim()) {
+              core.info('Diff summary is empty, skipping comment.');
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
