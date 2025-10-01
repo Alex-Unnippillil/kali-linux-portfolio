@@ -15,6 +15,7 @@
     "dedupe:check": "yarn dedupe --check",
     "test:watch": "jest --watch",
     "lint": "node scripts/lint-changed.mjs",
+    "icons:lint": "node scripts/validate-icons.mjs",
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "a11y": "node scripts/a11y.mjs",

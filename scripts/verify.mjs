@@ -73,6 +73,9 @@ const runStage = async (label, fn) => {
       runYarnScript('dedupe:check', { fallbackArgs: ['dedupe', '--check'] }),
     );
     await runStage('Lint', () => runYarnScript('lint'));
+    await runStage('Icon audit', () =>
+      runYarnScript(['icons:lint', 'lint:icons', 'validate:icons']),
+    );
     await runStage('Typecheck', () => runYarnScript('typecheck', { fallbackArgs: ['tsc', '--noEmit'] }));
     await runStage('Unit tests', () => runYarnScript('test', { env: { CI: '1' } }));
     await runStage('Build', () => runYarnScript('build'));

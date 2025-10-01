@@ -1,0 +1,47 @@
+{
+  "sizes": [48, 64, 128],
+  "icons": [
+    {
+      "name": "audit",
+      "label": "Audit Checklist",
+      "description": "Checklist clipboard used across compliance and reporting flows.",
+      "keywords": ["compliance", "tasks", "checklist"],
+      "status": "refreshed-2025-02"
+    },
+    {
+      "name": "network",
+      "label": "Network Graph",
+      "description": "Tri-node network diagram for connectivity features.",
+      "keywords": ["graph", "links", "infrastructure"],
+      "status": "refreshed-2025-02"
+    },
+    {
+      "name": "radar",
+      "label": "Radar Sweep",
+      "description": "Range radar for discovery, scanning, or situational awareness tools.",
+      "keywords": ["discovery", "scan", "monitoring"],
+      "status": "refreshed-2025-02"
+    },
+    {
+      "name": "report",
+      "label": "Report Dashboard",
+      "description": "Document and chart icon for analytics and reporting surfaces.",
+      "keywords": ["analytics", "report", "document"],
+      "status": "refreshed-2025-02"
+    },
+    {
+      "name": "shield",
+      "label": "Defender Shield",
+      "description": "Protective shield with checkmark for mitigations and secure defaults.",
+      "keywords": ["defense", "mitigation", "secure"],
+      "status": "refreshed-2025-02"
+    },
+    {
+      "name": "terminal",
+      "label": "Terminal Window",
+      "description": "Command prompt window for shells and automation tasks.",
+      "keywords": ["cli", "shell", "automation"],
+      "status": "refreshed-2025-02"
+    }
+  ]
+}
