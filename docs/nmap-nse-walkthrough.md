@@ -30,3 +30,22 @@ This output is a canned sample; the simulation never contacts a real host.
 - Monitor logs for repeated scans or NSE script fingerprints.
 - Patch exposed services so known vulnerabilities are not present.
 
+## Batch simulator usage
+
+The **Batch simulator** built into the desktop app lets you rehearse how multiple
+parameter sets would be orchestrated without touching any production network.
+
+- Queue the current target and script selection, then start the batch to replay
+  curated results.
+- Concurrency is capped to four simulated workers to keep the UI responsive and
+  highlight real-world scheduling concerns.
+- Each task retries up to two times. Failures include clear explanations— for
+  example, the DNS brute-force sample intentionally times out on the first pass
+  to demonstrate throttling requirements.
+- Cancelling stops the in-browser worker immediately and marks queued entries as
+  never executed.
+
+> Safety note: the simulator never emits network traffic. All output is
+> pre-recorded for education and should only be used to explain Nmap workflows
+> in authorized lab settings.
+
