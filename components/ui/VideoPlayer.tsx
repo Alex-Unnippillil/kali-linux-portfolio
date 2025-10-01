@@ -21,6 +21,35 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [isPip, setIsPip] = useState(false);
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
+    const videoLink = document.createElement("link");
+    videoLink.rel = "preload";
+    videoLink.href = src;
+    videoLink.setAttribute("fetchpriority", "high");
+    videoLink.setAttribute("importance", "high");
+    videoLink.setAttribute("as", "video");
+    document.head.appendChild(videoLink);
+
+    return () => {
+      document.head.removeChild(videoLink);
+    };
+  }, [src]);
+
+  useEffect(() => {
+    if (!poster || typeof document === "undefined") return;
+    const posterLink = document.createElement("link");
+    posterLink.rel = "preload";
+    posterLink.href = poster;
+    posterLink.setAttribute("fetchpriority", "high");
+    posterLink.setAttribute("as", "image");
+    document.head.appendChild(posterLink);
+
+    return () => {
+      document.head.removeChild(posterLink);
+    };
+  }, [poster]);
+
+  useEffect(() => {
     const video = videoRef.current;
     setPipSupported(
       typeof document !== "undefined" &&
@@ -114,6 +143,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
             max={1}
             step={0.05}
             value={vol}
+            aria-label="Adjust volume"
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               setVol(v);
@@ -129,7 +159,15 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        preload="metadata"
+        aria-label="Video player"
+        className="w-full h-auto"
+      />
       {pipSupported && (
         <button
           type="button"

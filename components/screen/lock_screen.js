@@ -2,6 +2,7 @@ import React from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import SmartImage from '../ui/SmartImage';
 
 export default function LockScreen(props) {
 
@@ -23,10 +24,14 @@ export default function LockScreen(props) {
                     className={`absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
                 />
             ) : (
-                <img
+                <SmartImage
                     src={`/wallpapers/${bgImageName}.webp`}
                     alt=""
-                    className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                    className={`absolute top-0 left-0 h-full w-full transform object-cover z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                    width={1920}
+                    height={1080}
+                    importance="critical"
+                    lcp
                 />
             )}
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
