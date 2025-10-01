@@ -822,6 +822,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('window-switcher-open', this.handleWindowSwitcherRequest);
             this.broadcastWorkspaceState();
         }
 
@@ -880,6 +881,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('window-switcher-open', this.handleWindowSwitcherRequest);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -1095,6 +1097,12 @@ export class Desktop extends Component {
             .filter(Boolean);
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+        }
+    }
+
+    handleWindowSwitcherRequest = () => {
+        if (!this.state.showWindowSwitcher) {
+            this.openWindowSwitcher();
         }
     }
 
