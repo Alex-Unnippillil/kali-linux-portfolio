@@ -95,6 +95,7 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set(apps.map((app) => app.id));
 
+        this.desktopReadySent = false;
     }
 
     createEmptyWorkspaceState = () => ({
@@ -1214,8 +1215,17 @@ export class Desktop extends Component {
         }, () => {
             this.ensureIconPositions(desktop_apps);
             if (typeof callback === 'function') callback();
+            this.notifyReady();
         });
         this.initFavourite = { ...favourite_apps };
+    }
+
+    notifyReady = () => {
+        if (this.desktopReadySent) return;
+        this.desktopReadySent = true;
+        if (typeof this.props.onReady === 'function') {
+            this.props.onReady();
+        }
     }
 
     updateAppsData = () => {

@@ -10,60 +10,91 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+                this.minimumBootDuration = 2000;
+                this.bootScreenStart = Date.now();
+                this.bootReleaseTimer = null;
+                this.isBootSequenceActive = true;
+        }
 
-	setTimeOutBootScreen = () => {
-		setTimeout(() => {
-			this.setState({ booting_screen: false });
-		}, 2000);
-	};
+        componentDidMount() {
+                this.getLocalData();
+        }
 
-	getLocalData = () => {
-		// Get Previously selected Background Image
+        componentWillUnmount() {
+                if (this.bootReleaseTimer) {
+                        clearTimeout(this.bootReleaseTimer);
+                        this.bootReleaseTimer = null;
+                }
+        }
+
+        getLocalData = () => {
+                // Get Previously selected Background Image
                 let bg_image_name = safeLocalStorage?.getItem('bg-image');
-		if (bg_image_name !== null && bg_image_name !== undefined) {
-			this.setState({ bg_image_name });
-		}
+                if (bg_image_name !== null && bg_image_name !== undefined) {
+                        this.setState({ bg_image_name });
+                }
 
-                let booting_screen = safeLocalStorage?.getItem('booting_screen');
-		if (booting_screen !== null && booting_screen !== undefined) {
-			// user has visited site before
-			this.setState({ booting_screen: false });
-		} else {
-			// user is visiting site for the first time
-                        safeLocalStorage?.setItem('booting_screen', false);
-			this.setTimeOutBootScreen();
-		}
+                safeLocalStorage?.removeItem('booting_screen');
 
-		// get shutdown state
+                // get shutdown state
                 let shut_down = safeLocalStorage?.getItem('shut-down');
-		if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
-		else {
+                if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
+                else {
 			// Get previous lock screen state
                         let screen_locked = safeLocalStorage?.getItem('screen-locked');
 			if (screen_locked !== null && screen_locked !== undefined) {
 				this.setState({ screen_locked: screen_locked === 'true' ? true : false });
-			}
-		}
-	};
+                        }
+                }
+        };
 
-	lockScreen = () => {
-		// google analytics
-		ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
-		ReactGA.event({
-			category: `Screen Change`,
+        startBootSequence = () => {
+                if (this.bootReleaseTimer) {
+                        clearTimeout(this.bootReleaseTimer);
+                        this.bootReleaseTimer = null;
+                }
+
+                this.bootScreenStart = Date.now();
+                this.isBootSequenceActive = true;
+                this.setState({ booting_screen: true });
+        };
+
+        handleBootReady = () => {
+                if (!this.isBootSequenceActive) return;
+
+                if (this.bootReleaseTimer) {
+                        clearTimeout(this.bootReleaseTimer);
+                        this.bootReleaseTimer = null;
+                }
+
+                const now = Date.now();
+                const elapsed = now - this.bootScreenStart;
+                const remaining = Math.max(this.minimumBootDuration - elapsed, 0);
+
+                const finalizeBoot = () => {
+                        this.setState({ booting_screen: false });
+                        this.isBootSequenceActive = false;
+                        this.bootReleaseTimer = null;
+                };
+
+                if (remaining <= 0) finalizeBoot();
+                else this.bootReleaseTimer = setTimeout(finalizeBoot, remaining);
+        };
+
+        lockScreen = () => {
+                // google analytics
+                ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
+                ReactGA.event({
+                        category: `Screen Change`,
 			action: `Set Screen to Locked`
 		});
 
@@ -106,15 +137,17 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', true);
 	};
 
-	turnOn = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        turnOn = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		this.setState({ shutDownScreen: false, booting_screen: true });
-		this.setTimeOutBootScreen();
+                this.startBootSequence();
+                this.setState({ shutDownScreen: false }, () => {
+                        this.handleBootReady();
+                });
                 safeLocalStorage?.setItem('shut-down', false);
-	};
+        };
 
-	render() {
+        render() {
         return (
                 <Layout id="monitor-screen">
                                 <LockScreen
@@ -128,8 +161,12 @@ export default class Ubuntu extends Component {
 					turnOn={this.turnOn}
 				/>
                                 <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <Desktop
+                                        bg_image_name={this.state.bg_image_name}
+                                        changeBackgroundImage={this.changeBackgroundImage}
+                                        onReady={this.handleBootReady}
+                                />
                 </Layout>
         );
-	}
+        }
 }
