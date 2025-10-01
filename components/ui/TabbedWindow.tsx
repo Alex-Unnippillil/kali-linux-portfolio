@@ -31,13 +31,25 @@ interface TabbedWindowProps {
   className?: string;
 }
 
+type RequestTabOptions = {
+  activate?: boolean;
+};
+
 interface TabContextValue {
   id: string;
   active: boolean;
   close: () => void;
+  setTitle: (title: string) => void;
+  requestTab: (tab: TabDefinition, options?: RequestTabOptions) => void;
 }
 
-const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
+const TabContext = createContext<TabContextValue>({
+  id: '',
+  active: false,
+  close: () => {},
+  setTitle: () => {},
+  requestTab: () => {},
+});
 export const useTab = () => useContext(TabContext);
 
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
@@ -98,6 +110,13 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     [],
   );
 
+  const setTabTitle = useCallback(
+    (id: string, title: string) => {
+      updateTabs((prev) => prev.map((tab) => (tab.id === id ? { ...tab, title } : tab)));
+    },
+    [updateTabs],
+  );
+
   const closeTab = useCallback(
     (id: string) => {
       updateTabs((prev) => {
@@ -118,6 +137,26 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       });
     },
     [activeId, focusTab, onNewTab, updateTabs],
+  );
+
+  const requestTab = useCallback(
+    (tab: TabDefinition, options: RequestTabOptions = {}) => {
+      const { activate = true } = options;
+      updateTabs((prev) => {
+        const existingIndex = prev.findIndex((t) => t.id === tab.id);
+        if (existingIndex >= 0) {
+          const next = [...prev];
+          next[existingIndex] = tab;
+          return next;
+        }
+        return [...prev, tab];
+      });
+      if (activate) {
+        setActiveId(tab.id);
+        requestAnimationFrame(() => focusTab(tab.id, { force: true }));
+      }
+    },
+    [focusTab, updateTabs],
   );
 
   const addTab = useCallback(() => {
@@ -429,7 +468,13 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {tabs.map((t) => (
           <TabContext.Provider
             key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
+            value={{
+              id: t.id,
+              active: t.id === activeId,
+              close: () => closeTab(t.id),
+              setTitle: (title: string) => setTabTitle(t.id, title),
+              requestTab,
+            }}
           >
             <div
               className={`absolute inset-0 w-full h-full ${

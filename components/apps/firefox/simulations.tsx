@@ -528,7 +528,18 @@ export const SIMULATIONS = Object.fromEntries([
   }),
 ]) as Record<string, FirefoxSimulation>;
 
-export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> = ({ simulation }) => (
+interface FirefoxSimulationViewProps {
+  simulation: FirefoxSimulation;
+  onOpenLinkInNewTab?: (url: string, options: { activate: boolean }) => void;
+}
+
+const resolveActivation = (shiftKey: boolean, defaultActivate: boolean) =>
+  shiftKey ? !defaultActivate : defaultActivate;
+
+export const FirefoxSimulationView: React.FC<FirefoxSimulationViewProps> = ({
+  simulation,
+  onOpenLinkInNewTab,
+}) => (
   <div className="flex h-full flex-col overflow-hidden bg-gray-950 text-gray-100">
     <header className="border-b border-gray-800 px-6 py-5">
       <h1 className="text-2xl font-semibold text-white">{simulation.heading}</h1>
@@ -538,6 +549,20 @@ export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> 
         target="_blank"
         rel="noreferrer"
         className="mt-4 inline-flex items-center gap-2 rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+        onClick={(event) => {
+          if (event.metaKey || event.ctrlKey) {
+            onOpenLinkInNewTab?.(simulation.externalUrl, {
+              activate: resolveActivation(event.shiftKey, true),
+            });
+          }
+        }}
+        onAuxClick={(event) => {
+          if (event.button === 1) {
+            onOpenLinkInNewTab?.(simulation.externalUrl, {
+              activate: resolveActivation(event.shiftKey, false),
+            });
+          }
+        }}
       >
         {simulation.ctaLabel ?? 'Open official site'}
         <span aria-hidden="true" className="text-xs">↗</span>
@@ -558,6 +583,21 @@ export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> 
                       target="_blank"
                       rel="noreferrer"
                       className="font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                      onClick={(event) => {
+                        if (event.metaKey || event.ctrlKey) {
+                          onOpenLinkInNewTab?.(link.href, {
+                            activate: resolveActivation(event.shiftKey, true),
+                          });
+                        }
+                      }}
+                      onAuxClick={(event) => {
+                        if (event.button === 1) {
+                          event.preventDefault();
+                          onOpenLinkInNewTab?.(link.href, {
+                            activate: resolveActivation(event.shiftKey, false),
+                          });
+                        }
+                      }}
                     >
                       {link.label}
                     </a>
