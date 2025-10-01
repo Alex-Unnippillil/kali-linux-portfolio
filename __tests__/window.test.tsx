@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
+import { DEFAULT_WINDOW_TOP_OFFSET } from '../utils/windowLayout';
 
 const computeSnappedHeightPercent = () => {
   const availableHeight = window.innerHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET;
@@ -470,7 +471,7 @@ describe('Edge resistance', () => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
 
-    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    expect(winEl.style.transform).toBe(`translate(0px, ${DEFAULT_WINDOW_TOP_OFFSET}px)`);
   });
 });
 

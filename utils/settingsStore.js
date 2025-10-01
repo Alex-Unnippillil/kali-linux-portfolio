@@ -1,6 +1,7 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import { safeLocalStorage } from './safeStorage';
 import { getTheme, setTheme } from './theme';
 
 const DEFAULT_SETTINGS = {
@@ -15,6 +16,34 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+};
+
+const getLocalItem = (key) => {
+  if (!safeLocalStorage) return null;
+  try {
+    return safeLocalStorage.getItem(key);
+  } catch (error) {
+    console.warn('Failed to read setting from storage', { key, error });
+    return null;
+  }
+};
+
+const setLocalItem = (key, value) => {
+  if (!safeLocalStorage) return;
+  try {
+    safeLocalStorage.setItem(key, value);
+  } catch (error) {
+    console.warn('Failed to persist setting to storage', { key, error });
+  }
+};
+
+const removeLocalItem = (key) => {
+  if (!safeLocalStorage) return;
+  try {
+    safeLocalStorage.removeItem(key);
+  } catch (error) {
+    console.warn('Failed to remove setting from storage', { key, error });
+  }
 };
 
 export async function getAccent() {
@@ -39,28 +68,28 @@ export async function setWallpaper(wallpaper) {
 
 export async function getUseKaliWallpaper() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.useKaliWallpaper;
-  const stored = window.localStorage.getItem('use-kali-wallpaper');
+  const stored = getLocalItem('use-kali-wallpaper');
   return stored === null ? DEFAULT_SETTINGS.useKaliWallpaper : stored === 'true';
 }
 
 export async function setUseKaliWallpaper(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('use-kali-wallpaper', value ? 'true' : 'false');
+  setLocalItem('use-kali-wallpaper', value ? 'true' : 'false');
 }
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  return getLocalItem('density') || DEFAULT_SETTINGS.density;
 }
 
 export async function setDensity(density) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  setLocalItem('density', density);
 }
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
+  const stored = getLocalItem('reduced-motion');
   if (stored !== null) {
     return stored === 'true';
   }
@@ -69,70 +98,70 @@ export async function getReducedMotion() {
 
 export async function setReducedMotion(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+  setLocalItem('reduced-motion', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
+  const stored = getLocalItem('font-scale');
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  setLocalItem('font-scale', String(scale));
 }
 
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  return getLocalItem('high-contrast') === 'true';
 }
 
 export async function setHighContrast(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  setLocalItem('high-contrast', value ? 'true' : 'false');
 }
 
 export async function getLargeHitAreas() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  return getLocalItem('large-hit-areas') === 'true';
 }
 
 export async function setLargeHitAreas(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+  setLocalItem('large-hit-areas', value ? 'true' : 'false');
 }
 
 export async function getHaptics() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
+  const val = getLocalItem('haptics');
   return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
 export async function setHaptics(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('haptics', value ? 'true' : 'false');
+  setLocalItem('haptics', value ? 'true' : 'false');
 }
 
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
+  const val = getLocalItem('pong-spin');
   return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
 export async function setPongSpin(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
+  setLocalItem('pong-spin', value ? 'true' : 'false');
 }
 
 export async function getAllowNetwork() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  return getLocalItem('allow-network') === 'true';
 }
 
 export async function setAllowNetwork(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  setLocalItem('allow-network', value ? 'true' : 'false');
 }
 
 export async function resetSettings() {
@@ -141,15 +170,15 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
-  window.localStorage.removeItem('use-kali-wallpaper');
+  removeLocalItem('density');
+  removeLocalItem('reduced-motion');
+  removeLocalItem('font-scale');
+  removeLocalItem('high-contrast');
+  removeLocalItem('large-hit-areas');
+  removeLocalItem('pong-spin');
+  removeLocalItem('allow-network');
+  removeLocalItem('haptics');
+  removeLocalItem('use-kali-wallpaper');
 }
 
 export async function exportSettings() {

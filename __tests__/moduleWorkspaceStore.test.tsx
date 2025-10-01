@@ -18,7 +18,7 @@ describe('ModuleWorkspace key-value store', () => {
     fireEvent.change(screen.getByLabelText(/TARGET/), {
       target: { value: 'host' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run Command' }));
 
     const stored = getValue('port-scan');
     expect(stored).toBeDefined();
