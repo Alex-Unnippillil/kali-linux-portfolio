@@ -32,6 +32,13 @@ export default function LabMode({ children }: Props) {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('lab-mode:change', { detail: { enabled } }),
+    );
+  }, [enabled]);
+
   const toggle = () => {
     const next = !enabled;
     setEnabled(next);

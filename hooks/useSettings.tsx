@@ -1,4 +1,14 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+  Dispatch,
+  SetStateAction,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -22,9 +32,18 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getStatusBarLayout as loadStatusBarLayout,
+  setStatusBarLayout as saveStatusBarLayout,
+  getStatusBarVisibility as loadStatusBarVisibility,
+  setStatusBarVisibility as saveStatusBarVisibility,
+  getPinnedStatusBarTip as loadPinnedStatusBarTip,
+  setPinnedStatusBarTip as savePinnedStatusBarTip,
+  getDismissedStatusBarTips as loadDismissedStatusBarTips,
+  setDismissedStatusBarTips as saveDismissedStatusBarTips,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import type { StatusBarLayout, StatusBarVisibility } from '../types/statusBar';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -67,6 +86,10 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  statusBarLayout: StatusBarLayout;
+  statusBarVisibility: StatusBarVisibility;
+  pinnedStatusBarTip: string | null;
+  dismissedStatusBarTips: string[];
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +102,10 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setStatusBarLayout: Dispatch<SetStateAction<StatusBarLayout>>;
+  setStatusBarVisibility: Dispatch<SetStateAction<StatusBarVisibility>>;
+  setPinnedStatusBarTip: (value: string | null) => void;
+  setDismissedStatusBarTips: Dispatch<SetStateAction<string[]>>;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +122,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  statusBarLayout: defaults.statusBarLayout as StatusBarLayout,
+  statusBarVisibility: defaults.statusBarVisibility as StatusBarVisibility,
+  pinnedStatusBarTip: defaults.statusBarPinnedTip,
+  dismissedStatusBarTips: defaults.statusBarDismissedTips,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +138,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setStatusBarLayout: () => {},
+  setStatusBarVisibility: () => {},
+  setPinnedStatusBarTip: () => {},
+  setDismissedStatusBarTips: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,7 +157,65 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [statusBarLayout, setStatusBarLayoutState] = useState<StatusBarLayout>(
+    defaults.statusBarLayout as StatusBarLayout,
+  );
+  const [statusBarVisibility, setStatusBarVisibilityState] = useState<StatusBarVisibility>(
+    defaults.statusBarVisibility as StatusBarVisibility,
+  );
+  const [pinnedStatusBarTip, setPinnedStatusBarTipState] = useState<string | null>(
+    defaults.statusBarPinnedTip,
+  );
+  const [dismissedStatusBarTips, setDismissedStatusBarTipsState] = useState<string[]>(
+    defaults.statusBarDismissedTips,
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
+
+  const updateStatusBarLayout = useCallback<Dispatch<SetStateAction<StatusBarLayout>>>(
+    (value) => {
+      setStatusBarLayoutState((prev) => {
+        const next = typeof value === 'function' ? value(prev) : value;
+        void saveStatusBarLayout(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const updateStatusBarVisibility = useCallback<Dispatch<SetStateAction<StatusBarVisibility>>>(
+    (value) => {
+      setStatusBarVisibilityState((prev) => {
+        const next = typeof value === 'function' ? value(prev) : value;
+        void saveStatusBarVisibility(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const updatePinnedStatusBarTip = useCallback(
+    (tip: string | null) => {
+      setPinnedStatusBarTipState(tip);
+      if (!tip) {
+        void savePinnedStatusBarTip(null);
+      } else {
+        void savePinnedStatusBarTip(tip);
+      }
+    },
+    [],
+  );
+
+  const updateDismissedStatusBarTips = useCallback<Dispatch<SetStateAction<string[]>>>(
+    (value) => {
+      setDismissedStatusBarTipsState((prev) => {
+        const next = typeof value === 'function' ? value(prev) : value;
+        const unique = Array.from(new Set(next));
+        void saveDismissedStatusBarTips(unique);
+        return unique;
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     (async () => {
@@ -138,6 +231,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setStatusBarLayoutState(await loadStatusBarLayout());
+      setStatusBarVisibilityState(await loadStatusBarVisibility());
+      setPinnedStatusBarTipState(await loadPinnedStatusBarTip());
+      setDismissedStatusBarTipsState(await loadDismissedStatusBarTips());
     })();
   }, []);
 
@@ -263,25 +360,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         reducedMotion,
         fontScale,
         highContrast,
-        largeHitAreas,
-        pongSpin,
-        allowNetwork,
-        haptics,
-        theme,
-        setAccent,
-        setWallpaper,
-        setUseKaliWallpaper,
-        setDensity,
-        setReducedMotion,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+      statusBarLayout,
+      statusBarVisibility,
+      pinnedStatusBarTip,
+      dismissedStatusBarTips,
+      setAccent,
+      setWallpaper,
+      setUseKaliWallpaper,
+      setDensity,
+      setReducedMotion,
         setFontScale,
         setHighContrast,
         setLargeHitAreas,
-        setPongSpin,
-        setAllowNetwork,
-        setHaptics,
-        setTheme,
-      }}
-    >
+      setPongSpin,
+      setAllowNetwork,
+      setHaptics,
+      setTheme,
+      setStatusBarLayout: updateStatusBarLayout,
+      setStatusBarVisibility: updateStatusBarVisibility,
+      setPinnedStatusBarTip: updatePinnedStatusBarTip,
+      setDismissedStatusBarTips: updateDismissedStatusBarTips,
+    }}
+  >
       {children}
     </SettingsContext.Provider>
   );
