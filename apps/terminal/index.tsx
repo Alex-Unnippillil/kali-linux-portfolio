@@ -12,6 +12,19 @@ import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
+const LINE_ENDING_OPTIONS = ['CR', 'LF', 'CRLF'] as const;
+type LineEnding = (typeof LINE_ENDING_OPTIONS)[number];
+const LINE_ENDING_MAP: Record<LineEnding, string> = {
+  CR: '\r',
+  LF: '\n',
+  CRLF: '\r\n',
+};
+const LINE_ENDING_DESCRIPTIONS: Record<LineEnding, string> = {
+  CR: 'Carriage Return (\\r)',
+  LF: 'Line Feed (\\n)',
+  CRLF: 'Carriage Return + Line Feed (\\r\\n)',
+};
+
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
@@ -88,6 +101,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const historyIndexRef = useRef(0);
+  const draftRef = useRef('');
+  const pendingNewlineRef = useRef(false);
+  const [lineEnding, setLineEnding] = useState<LineEnding>('LF');
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -105,6 +122,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const withLineEnding = useCallback(
+    (value: string) => {
+      const ending = LINE_ENDING_MAP[lineEnding];
+      if (!ending) return value;
+      return value.endsWith(ending) ? value : `${value}${ending}`;
+    },
+    [lineEnding],
+  );
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -183,12 +208,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         };
         worker.postMessage({
           action: 'run',
-          command,
+          command: withLineEnding(command),
           files: filesRef.current,
         });
       });
     },
-    [writeLine],
+    [withLineEnding, writeLine],
   );
 
   contextRef.current.runWorker = runWorker;
@@ -237,14 +262,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
     const runCommand = useCallback(
       async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
+        const trimmed = cmd.trim();
+        if (!trimmed) return;
+        const [name, ...rest] = trimmed.split(/\s+/);
         const expanded =
           aliasesRef.current[name]
             ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
+            : trimmed;
         const [cmdName, ...cmdRest] = expanded.split(/\s+/);
         const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
+        historyRef.current.push(trimmed);
+        contextRef.current.history = historyRef.current;
+        historyIndexRef.current = historyRef.current.length;
+        draftRef.current = '';
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
         else if (cmdName) await runWorker(expanded);
       },
@@ -266,22 +296,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       }
     }, [prompt, writeLine]);
 
+    const showHistoryEntry = useCallback(
+      (value: string) => {
+        if (!termRef.current) return;
+        termRef.current.write('\u001b[2K\r');
+        prompt();
+        if (value) termRef.current.write(value);
+        commandRef.current = value;
+      },
+      [prompt],
+    );
+
     const handleInput = useCallback(
       (data: string) => {
         for (const ch of data) {
           if (ch === '\r') {
-            termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
-            commandRef.current = '';
-            prompt();
+            if (pendingNewlineRef.current) {
+              pendingNewlineRef.current = false;
+              termRef.current?.write('\r\n');
+              commandRef.current += '\n';
+            } else {
+              termRef.current?.writeln('');
+              runCommand(commandRef.current);
+              commandRef.current = '';
+              prompt();
+            }
           } else if (ch === '\u007F') {
             if (commandRef.current.length > 0) {
               termRef.current?.write('\b \b');
               commandRef.current = commandRef.current.slice(0, -1);
+              historyIndexRef.current = historyRef.current.length;
+              draftRef.current = commandRef.current;
             }
           } else {
             commandRef.current += ch;
             termRef.current?.write(ch);
+            historyIndexRef.current = historyRef.current.length;
+            draftRef.current = commandRef.current;
           }
         }
       },
@@ -348,6 +399,37 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
           autocomplete();
+        } else if (domEvent.key === 'Enter' && domEvent.shiftKey) {
+          domEvent.preventDefault();
+          pendingNewlineRef.current = true;
+          handleInput('\r');
+        } else if (domEvent.key === 'ArrowUp') {
+          domEvent.preventDefault();
+          if (!historyRef.current.length) return;
+          if (historyIndexRef.current === historyRef.current.length) {
+            draftRef.current = commandRef.current;
+          }
+          if (historyIndexRef.current > 0) historyIndexRef.current -= 1;
+          else if (historyIndexRef.current === historyRef.current.length)
+            historyIndexRef.current = historyRef.current.length - 1;
+          const index = Math.max(0, Math.min(historyIndexRef.current, historyRef.current.length - 1));
+          showHistoryEntry(historyRef.current[index]);
+        } else if (domEvent.key === 'ArrowDown') {
+          domEvent.preventDefault();
+          if (!historyRef.current.length) {
+            showHistoryEntry(draftRef.current);
+            historyIndexRef.current = historyRef.current.length;
+            return;
+          }
+          if (historyIndexRef.current < historyRef.current.length) {
+            historyIndexRef.current += 1;
+          }
+          if (historyIndexRef.current >= historyRef.current.length) {
+            historyIndexRef.current = historyRef.current.length;
+            showHistoryEntry(draftRef.current);
+            return;
+          }
+          showHistoryEntry(historyRef.current[historyIndexRef.current]);
         } else if (domEvent.ctrlKey && domEvent.key === 'f') {
           domEvent.preventDefault();
           const q = window.prompt('Search');
@@ -378,7 +460,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, showHistoryEntry, updateOverflow]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -430,7 +512,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                   setPaletteOpen(false);
                   termRef.current?.focus();
                 }
-              }}
+                }}
+              aria-label="Command palette input"
             />
             <ul className="max-h-40 overflow-y-auto">
               {Object.keys(registryRef.current)
@@ -491,6 +574,26 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
             <SettingsIcon />
           </button>
+          <div className="ml-auto flex flex-wrap items-center gap-1 text-xs uppercase tracking-wide text-gray-300">
+            <span>Line Ending</span>
+            {LINE_ENDING_OPTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setLineEnding(option)}
+                className={`rounded px-2 py-1 text-sm transition-colors ${
+                  lineEnding === option
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                }`}
+                aria-pressed={lineEnding === option}
+                aria-label={LINE_ENDING_DESCRIPTIONS[option]}
+                title={LINE_ENDING_DESCRIPTIONS[option]}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="relative flex-1 min-h-0">
           <TerminalContainer
