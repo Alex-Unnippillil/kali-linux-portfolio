@@ -145,8 +145,7 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
         )}
       </div>
       <ul className="space-y-1">
-        {Object.keys(scripts).map((n) => {
-          const entry = scripts[n];
+        {Object.entries(scripts).map(([n, entry]) => {
           const data: ScriptEntry =
             typeof entry === 'string' ? { code: entry } : entry;
           const presets = data.presets || {};
