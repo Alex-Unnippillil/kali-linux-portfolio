@@ -35,6 +35,11 @@ export const getReplays = async (): Promise<Replay[]> =>
     ? []
     : (await get<Replay[]>(REPLAYS_KEY)) || []);
 
+export const setReplays = async (replays: Replay[]): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  await set(REPLAYS_KEY, replays);
+};
+
 export const saveReplay = async (replay: Replay): Promise<void> => {
   if (typeof window === 'undefined') return;
   await update<Replay[]>(REPLAYS_KEY, (replays = []) => [...replays, replay]);
@@ -51,6 +56,7 @@ const storage = {
   getKeybinds,
   setKeybinds,
   getReplays,
+  setReplays,
   saveReplay,
   clearReplays,
 };
