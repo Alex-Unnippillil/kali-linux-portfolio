@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { scheduleTask, TaskPriority } from '../../utils/scheduler';
+
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
 
@@ -13,6 +15,7 @@ const ResourceMonitor = () => {
   const dataRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
   const displayRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
   const animRef = useRef();
+  const drawTaskRef = useRef(null);
   const lastDrawRef = useRef(0);
   const THROTTLE_MS = 1000;
 
@@ -25,6 +28,8 @@ const ResourceMonitor = () => {
   const containerRef = useRef(null);
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
+  useEffect(() => () => drawTaskRef.current?.cancel?.(), []);
 
   // Spawn worker for network speed tests
   useEffect(() => {
@@ -164,10 +169,23 @@ const ResourceMonitor = () => {
 
   const scheduleDraw = useCallback(() => {
     const now = performance.now();
-    if (now - lastDrawRef.current >= THROTTLE_MS) {
-      lastDrawRef.current = now;
-      animateCharts();
-    }
+    if (now - lastDrawRef.current < THROTTLE_MS) return;
+    lastDrawRef.current = now;
+    drawTaskRef.current?.cancel?.();
+    drawTaskRef.current = scheduleTask(
+      async (controls) => {
+        try {
+          animateCharts();
+          if (controls.shouldYield()) {
+            await controls.yield();
+          }
+        } finally {
+          drawTaskRef.current = null;
+        }
+      },
+      TaskPriority.Background,
+      { label: 'resource-monitor:draw' },
+    );
   }, [animateCharts]);
 
   const togglePause = () => setPaused((p) => !p);
