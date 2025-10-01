@@ -1,0 +1,147 @@
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+   ▲ Next.js 15.5.2
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ (pwa) Compiling for server...
+ ✓ (pwa) Compiling for server...
+ ✓ (pwa) Compiling for client (static)...
+ ○ (pwa) Service worker: /workspace/kali-linux-portfolio/public/sw.js
+ ○ (pwa)   URL: /sw.js
+ ○ (pwa)   Scope: /
+ ○ (pwa) Custom runtimeCaching array found, using it instead of the default one.
+Error parsing bundle asset "/workspace/kali-linux-portfolio/.next/server/chunks/2919.js": Cannot read properties of undefined (reading 'arguments')
+Error parsing bundle asset "/workspace/kali-linux-portfolio/.next/server/chunks/1565.js": Cannot read properties of undefined (reading 'arguments')
+[1mWebpack Bundle Analyzer[22m saved report to [1m/workspace/kali-linux-portfolio/.next/analyze/nodejs.html[22m
+[1mWebpack Bundle Analyzer[22m saved report to [1m/workspace/kali-linux-portfolio/.next/analyze/edge.html[22m
+[1mWebpack Bundle Analyzer[22m saved report to [1m/workspace/kali-linux-portfolio/.next/analyze/client.html[22m
+ ✓ Compiled successfully in 107s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/79) ...
+   Generating static pages (19/79) 
+   Generating static pages (39/79) 
+   Generating static pages (59/79) 
+ ✓ Generating static pages (79/79)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                   Size  First Load JS
+┌ ƒ /api/log-client-error                      0 B         110 kB
+└ ○ /icon.svg                                  0 B            0 B
++ First Load JS shared by all               110 kB
+  ├ chunks/1457-14b333531562c96a.js        46.6 kB
+  ├ chunks/4bd1b696-182b6b13bdad92e3.js    54.2 kB
+  └ other shared chunks (total)             9.3 kB
+
+Route (pages)                                 Size  First Load JS
+┌ ○ /                                      1.34 kB         252 kB
+├   /_app                                      0 B         251 kB
+├ ○ /404                                     184 B         251 kB
+├ ○ /admin/messages (406 ms)                 640 B         252 kB
+├ ƒ /api/admin/messages                        0 B         251 kB
+├ ƒ /api/contact                               0 B         251 kB
+├ ƒ /api/dummy                                 0 B         251 kB
+├ ƒ /api/figlet/fonts                          0 B         251 kB
+├ ƒ /api/hydra                                 0 B         251 kB
+├ ƒ /api/john                                  0 B         251 kB
+├ ƒ /api/leaderboard/submit                    0 B         251 kB
+├ ƒ /api/leaderboard/top                       0 B         251 kB
+├ ƒ /api/metasploit                            0 B         251 kB
+├ ƒ /api/mimikatz                              0 B         251 kB
+├ ƒ /api/modules/update                        0 B         251 kB
+├ ƒ /api/nse/update                            0 B         251 kB
+├ ƒ /api/pacman/leaderboard                    0 B         251 kB
+├ ƒ /api/plugins                               0 B         251 kB
+├ ƒ /api/plugins/[name]                        0 B         251 kB
+├ ƒ /api/quote                                 0 B         251 kB
+├ ƒ /api/radare2                               0 B         251 kB
+├ ƒ /api/share                                 0 B         251 kB
+├ ƒ /api/track                                 0 B         251 kB
+├ ƒ /api/wallpapers                            0 B         251 kB
+├ ○ /apps                                  4.12 kB         259 kB
+├ ○ /apps/2048 (402 ms)                      335 B         251 kB
+├ ○ /apps/ascii-art (401 ms)                 368 B         251 kB
+├ ○ /apps/autopsy (401 ms)                   352 B         251 kB
+├ ○ /apps/beef (400 ms)                      367 B         251 kB
+├ ○ /apps/blackjack                          372 B         251 kB
+├ ○ /apps/calculator (401 ms)              13.2 kB         264 kB
+├ ○ /apps/checkers (400 ms)                  378 B         251 kB
+├ ○ /apps/connect-four (399 ms)              365 B         251 kB
+├ ○ /apps/contact                            373 B         251 kB
+├ ○ /apps/converter                          354 B         251 kB
+├ ○ /apps/figlet                             355 B         251 kB
+├ ○ /apps/firefox                            358 B         251 kB
+├ ○ /apps/http                               352 B         251 kB
+├ ○ /apps/input-lab                          346 B         251 kB
+├ ○ /apps/john                               352 B         251 kB
+├ ○ /apps/kismet                             351 B         251 kB
+├ ○ /apps/metasploit                         376 B         251 kB
+├ ○ /apps/metasploit-post                    359 B         251 kB
+├ ○ /apps/mimikatz/offline (578 ms)          362 B         251 kB
+├ ○ /apps/minesweeper (570 ms)               379 B         251 kB
+├ ○ /apps/nmap-nse (570 ms)                  355 B         251 kB
+├ ○ /apps/password_generator (588 ms)      1.95 kB         253 kB
+├ ○ /apps/phaser_matter                    1.96 kB         253 kB
+├ ○ /apps/pinball (569 ms)                   353 B         251 kB
+├ ○ /apps/project-gallery (568 ms)           343 B         251 kB
+├ ○ /apps/qr (569 ms)                        367 B         251 kB
+├ ○ /apps/settings (568 ms)                  339 B         251 kB
+├ ○ /apps/simon                              378 B         251 kB
+├ ○ /apps/sokoban                          1.95 kB         253 kB
+├ ○ /apps/solitaire                          361 B         251 kB
+├ ○ /apps/spotify                            338 B         251 kB
+├ ○ /apps/ssh                                350 B         251 kB
+├ ○ /apps/sticky_notes                       358 B         251 kB
+├ ○ /apps/subnet-calculator                  359 B         251 kB
+├ ○ /apps/timer_stopwatch                    358 B         251 kB
+├ ○ /apps/tower-defense                      365 B         251 kB
+├ ○ /apps/volatility                         356 B         251 kB
+├ ○ /apps/vscode                             369 B         251 kB
+├ ○ /apps/weather (465 ms)                   380 B         251 kB
+├ ○ /apps/weather_widget (454 ms)            648 B         252 kB
+├ ○ /apps/wireshark (453 ms)                 355 B         251 kB
+├ ○ /apps/word_search (474 ms)             1.99 kB         253 kB
+├ ○ /apps/x (453 ms)                         350 B         251 kB
+├ ○ /daily-quote (1053 ms)                 25.1 kB         276 kB
+├ ○ /dummy-form (452 ms)                    1.3 kB         252 kB
+├ ○ /gamepad-calibration                   1.94 kB         253 kB
+├ ○ /games/blackjack (451 ms)                373 B         251 kB
+├ ○ /games/blackjack/trainer (451 ms)        362 B         251 kB
+├ ○ /games/breakout/editor                   361 B         251 kB
+├ ○ /hook-flow                               640 B         256 kB
+├ ○ /hydra-preview                         1.15 kB         252 kB
+├ ○ /input-hub                             2.17 kB         253 kB
+├ ○ /keyboard-reference                      614 B         252 kB
+├ ○ /module-workspace                       2.3 kB         253 kB
+├ ○ /nessus-dashboard                        723 B         272 kB
+├ ○ /nessus-report                         2.52 kB         254 kB
+├ ○ /network-topology                      1.76 kB         253 kB
+├ ○ /nikto-report                          1.74 kB         253 kB
+├ ○ /notes (1071 ms)                       32.7 kB         284 kB
+├ ○ /popular-modules                         445 B         251 kB
+├ ○ /post_exploitation (1054 ms)             15 kB         266 kB
+├ ○ /profile (1053 ms)                       492 B         252 kB
+├ ○ /qr                                     122 kB         386 kB
+├ ○ /qr/vcard (1051 ms)                    1.15 kB         265 kB
+├ ○ /recon/graph (1053 ms)                   910 B         252 kB
+├ ○ /security-education (1052 ms)          1.19 kB         272 kB
+├ ○ /sekurlsa_logonpasswords (1052 ms)      1.8 kB         253 kB
+├ ○ /share-target                            599 B         252 kB
+├ ○ /spoofing                              1.78 kB         253 kB
+├ ○ /ui/settings/theme                     1.56 kB         253 kB
+├ ○ /video-gallery                         1.18 kB         256 kB
+└ ○ /wps-attack                            2.38 kB         253 kB
++ First Load JS shared by all               274 kB
+  ├ chunks/framework-d3e1aac7d8557155.js   58.1 kB
+  ├ chunks/main-0306abbfb22788a7.js        39.2 kB
+  ├ chunks/pages/_app-fa3514d8f0db35de.js   145 kB
+  ├ css/78b8cc0a69f8d04d.css               22.9 kB
+  └ other shared chunks (total)            9.03 kB
+
+ƒ Middleware                               34.2 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

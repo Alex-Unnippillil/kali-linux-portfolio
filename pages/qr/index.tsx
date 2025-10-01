@@ -4,9 +4,21 @@ import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
-import Tabs from '../../components/Tabs';
+import dynamic from 'next/dynamic';
 import FormError from '../../components/ui/FormError';
 import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
+
+const Tabs = dynamic(
+  () =>
+    import('../../components/Tabs').catch((err) => {
+      console.error('Failed to load Tabs component', err);
+      throw err;
+    }),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 const tabs = [
   { id: 'text', label: 'Text' },
@@ -193,7 +205,7 @@ const QRPage: React.FC = () => {
         <Tabs
           tabs={tabs}
           active={active}
-          onChange={setActive}
+          onChange={(id) => setActive(id as TabId)}
           className="mb-4 justify-center"
         />
         {active === 'text' && (
@@ -206,6 +218,7 @@ const QRPage: React.FC = () => {
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
+              aria-label="Text to encode"
               className="w-full rounded border p-2"
             />
             <button
@@ -226,6 +239,7 @@ const QRPage: React.FC = () => {
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              aria-label="URL to encode"
               className="w-full rounded border p-2"
             />
             <button
@@ -238,36 +252,42 @@ const QRPage: React.FC = () => {
         )}
         {active === 'wifi' && (
           <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm">
+            <label className="block text-sm" htmlFor="wifi-ssid">
               SSID
-              <input
-                type="text"
-                value={ssid}
-                onChange={(e) => setSsid(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="wifi-ssid"
+              type="text"
+              value={ssid}
+              onChange={(e) => setSsid(e.target.value)}
+              aria-label="Wi-Fi SSID"
+              className="mt-1 w-full rounded border p-2"
+            />
+            <label className="block text-sm" htmlFor="wifi-password">
               Password
-              <input
-                type="text"
-                value={wifiPassword}
-                onChange={(e) => setWifiPassword(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="wifi-password"
+              type="text"
+              value={wifiPassword}
+              onChange={(e) => setWifiPassword(e.target.value)}
+              aria-label="Wi-Fi password"
+              className="mt-1 w-full rounded border p-2"
+            />
+            <label className="block text-sm" htmlFor="wifi-encryption">
               Encryption
-              <select
-                value={wifiType}
-                onChange={(e) => setWifiType(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              >
-                <option value="WPA">WPA/WPA2</option>
-                <option value="WEP">WEP</option>
-                <option value="nopass">None</option>
-              </select>
             </label>
+            <select
+              id="wifi-encryption"
+              value={wifiType}
+              onChange={(e) => setWifiType(e.target.value)}
+              aria-label="Wi-Fi encryption"
+              className="mt-1 w-full rounded border p-2"
+            >
+              <option value="WPA">WPA/WPA2</option>
+              <option value="WEP">WEP</option>
+              <option value="nopass">None</option>
+            </select>
             <button
               type="submit"
               className="w-full rounded bg-blue-600 p-2 text-white"
@@ -278,42 +298,50 @@ const QRPage: React.FC = () => {
         )}
         {active === 'vcard' && (
           <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm">
+            <label className="block text-sm" htmlFor="vcard-name">
               Full Name
-              <input
-                type="text"
-                value={vName}
-                onChange={(e) => setVName(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="vcard-name"
+              type="text"
+              value={vName}
+              onChange={(e) => setVName(e.target.value)}
+              aria-label="Full name"
+              className="mt-1 w-full rounded border p-2"
+            />
+            <label className="block text-sm" htmlFor="vcard-org">
               Organization
-              <input
-                type="text"
-                value={vOrg}
-                onChange={(e) => setVOrg(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="vcard-org"
+              type="text"
+              value={vOrg}
+              onChange={(e) => setVOrg(e.target.value)}
+              aria-label="Organization"
+              className="mt-1 w-full rounded border p-2"
+            />
+            <label className="block text-sm" htmlFor="vcard-phone">
               Phone
-              <input
-                type="tel"
-                value={vPhone}
-                onChange={(e) => setVPhone(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
-            <label className="block text-sm">
+            <input
+              id="vcard-phone"
+              type="tel"
+              value={vPhone}
+              onChange={(e) => setVPhone(e.target.value)}
+              aria-label="Phone number"
+              className="mt-1 w-full rounded border p-2"
+            />
+            <label className="block text-sm" htmlFor="vcard-email">
               Email
-              <input
-                type="email"
-                value={vEmail}
-                onChange={(e) => setVEmail(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
             </label>
+            <input
+              id="vcard-email"
+              type="email"
+              value={vEmail}
+              onChange={(e) => setVEmail(e.target.value)}
+              aria-label="Email address"
+              className="mt-1 w-full rounded border p-2"
+            />
             <button
               type="submit"
               className="w-full rounded bg-blue-600 p-2 text-white"
@@ -351,7 +379,11 @@ const QRPage: React.FC = () => {
         )}
       </div>
       <div className="w-full max-w-md">
-        <video ref={videoRef} className="h-48 w-full rounded border" />
+        <video
+          ref={videoRef}
+          className="h-48 w-full rounded border"
+          aria-label="QR scanner preview"
+        />
         {scanResult && (
           <p className="mt-2 text-center text-sm">Decoded: {scanResult}</p>
         )}

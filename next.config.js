@@ -100,6 +100,59 @@ const normalizedBasePath = (() => {
   return prefixed.endsWith('/') && prefixed !== '/' ? prefixed.slice(0, -1) : prefixed;
 })();
 
+const basePathPrefix = normalizedBasePath === '/' ? '' : normalizedBasePath;
+
+const routePrefetchHints = {
+  '/': [
+    { href: '/apps', rel: 'prefetch', as: 'document' },
+    { href: '/profile', rel: 'prefetch', as: 'document' },
+    { href: '/security-education', rel: 'prefetch', as: 'document' },
+  ],
+  '/apps': [
+    { href: '/apps/terminal', rel: 'prefetch', as: 'document' },
+    { href: '/apps/weather', rel: 'prefetch', as: 'document' },
+    { href: '/apps/checkers', rel: 'prefetch', as: 'document' },
+  ],
+  '/apps/terminal': [
+    { href: '/apps/settings', rel: 'prefetch', as: 'document' },
+    { href: '/apps/ssh', rel: 'prefetch', as: 'document' },
+  ],
+  '/apps/weather': [
+    { href: '/apps/weather_widget', rel: 'prefetch', as: 'document' },
+    { href: '/apps/input-lab', rel: 'prefetch', as: 'document' },
+  ],
+  '/profile': [
+    { href: '/apps', rel: 'prefetch', as: 'document' },
+    { href: '/security-education', rel: 'prefetch', as: 'document' },
+  ],
+  '/security-education': [
+    { href: '/post_exploitation', rel: 'prefetch', as: 'document' },
+    { href: '/network-topology', rel: 'prefetch', as: 'document' },
+  ],
+};
+
+const applyBasePath = (path) => {
+  if (typeof path !== 'string' || !path.startsWith('/')) return path;
+  if (!basePathPrefix) return path;
+  if (path === '/') {
+    return basePathPrefix || '/';
+  }
+  return `${basePathPrefix}${path}`;
+};
+
+const buildLinkHeaderValue = (hints = []) =>
+  hints
+    .map(({ href, rel = 'prefetch', as = 'document', crossOrigin }) => {
+      if (!href) return null;
+      const resolvedHref = applyBasePath(href);
+      const parts = [`<${resolvedHref}>`, `rel=${rel}`];
+      if (as) parts.push(`as=${as}`);
+      if (crossOrigin) parts.push('crossorigin');
+      return parts.join('; ');
+    })
+    .filter(Boolean)
+    .join(', ');
+
 const startUrlRuntimeCaching = {
   urlPattern: ({ sameOrigin, url }) => {
     if (!sameOrigin) return false;
@@ -207,6 +260,10 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    publicRuntimeConfig: {
+      routePrefetchHints,
+      basePath: basePathPrefix || '',
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
@@ -234,7 +291,7 @@ module.exports = withBundleAnalyzer(
       ? {}
       : {
           async headers() {
-            return [
+            const baseHeaders = [
               {
                 source: '/(.*)',
                 headers: securityHeaders,
@@ -258,6 +315,26 @@ module.exports = withBundleAnalyzer(
                 ],
               },
             ];
+
+            const hintHeaders = Object.entries(routePrefetchHints)
+              .map(([route, hints]) => {
+                const value = buildLinkHeaderValue(hints);
+                if (!value) return null;
+                const source = route === '/' ? applyBasePath('/') : applyBasePath(route);
+                if (!source) return null;
+                return {
+                  source,
+                  headers: [
+                    {
+                      key: 'Link',
+                      value,
+                    },
+                  ],
+                };
+              })
+              .filter(Boolean);
+
+            return [...baseHeaders, ...hintHeaders];
           },
         }),
   })

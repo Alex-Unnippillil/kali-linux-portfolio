@@ -1,14 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { loadFalsePositives, loadJobDefinitions } from '../components/apps/nessus/index';
 import { WindowMainScreen } from '../components/base/window';
 
 const NessusDashboard: React.FC = () => {
   const [totals, setTotals] = useState({ jobs: 0, falsePositives: 0 });
 
   useEffect(() => {
-    const jobs = loadJobDefinitions();
-    const fps = loadFalsePositives();
-    setTotals({ jobs: jobs.length, falsePositives: fps.length });
+    let isMounted = true;
+    const loadData = async () => {
+      try {
+        const mod = await import('../components/apps/nessus/index');
+        if (!isMounted) return;
+        const jobs = mod.loadJobDefinitions();
+        const fps = mod.loadFalsePositives();
+        setTotals({ jobs: jobs.length, falsePositives: fps.length });
+      } catch (err) {
+        console.error('Failed to load Nessus fixtures', err);
+      }
+    };
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const max = Math.max(totals.jobs, totals.falsePositives, 1);

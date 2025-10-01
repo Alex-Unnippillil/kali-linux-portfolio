@@ -1,17 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
-
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
-import { displayFirefox } from './components/apps/firefox';
-import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayWeather } from './components/apps/weather';
-import { displayClipboardManager } from './components/apps/ClipboardManager';
-import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayScreenRecorder } from './components/apps/screen-recorder';
-import { displayNikto } from './components/apps/nikto';
+import { createLazyDisplay } from './utils/createLazyDisplay';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
@@ -59,6 +47,64 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+
+const displayX = createLazyDisplay(
+  () => import('./components/apps/x'),
+  { exportName: 'displayX', loadingTitle: 'X' }
+);
+const displaySpotify = createLazyDisplay(
+  () => import('./components/apps/spotify'),
+  { exportName: 'displaySpotify', loadingTitle: 'Spotify' }
+);
+const displaySettings = createLazyDisplay(
+  () => import('./components/apps/settings'),
+  { exportName: 'displaySettings', loadingTitle: 'Settings' }
+);
+const displayFirefox = createLazyDisplay(
+  () => import('./components/apps/firefox'),
+  { exportName: 'displayFirefox', loadingTitle: 'Firefox' }
+);
+const displayGedit = createLazyDisplay(
+  () => import('./components/apps/gedit'),
+  { exportName: 'displayGedit', loadingTitle: 'Gedit' }
+);
+const displayTodoist = createLazyDisplay(
+  () => import('./components/apps/todoist'),
+  { exportName: 'displayTodoist', loadingTitle: 'Todoist' }
+);
+const displayWeather = createLazyDisplay(
+  () => import('./components/apps/weather'),
+  { exportName: 'displayWeather', loadingTitle: 'Weather' }
+);
+const displayClipboardManager = createLazyDisplay(
+  () => import('./components/apps/ClipboardManager'),
+  {
+    exportName: 'displayClipboardManager',
+    loadingTitle: 'Clipboard Manager',
+  }
+);
+const displayFiglet = createLazyDisplay(
+  () => import('./components/apps/figlet'),
+  { exportName: 'displayFiglet', loadingTitle: 'Figlet' }
+);
+const displayResourceMonitor = createLazyDisplay(
+  () => import('./components/apps/resource_monitor'),
+  {
+    exportName: 'displayResourceMonitor',
+    loadingTitle: 'Resource Monitor',
+  }
+);
+const displayScreenRecorder = createLazyDisplay(
+  () => import('./components/apps/screen-recorder'),
+  {
+    exportName: 'displayScreenRecorder',
+    loadingTitle: 'Screen Recorder',
+  }
+);
+const displayNikto = createLazyDisplay(
+  () => import('./components/apps/nikto'),
+  { exportName: 'displayNikto', loadingTitle: 'Nikto' }
+);
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
