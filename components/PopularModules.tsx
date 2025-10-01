@@ -1,6 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import {
+  finalizeNormalized,
+  matchesSearchQuery,
+  normalizeForSearch,
+  transliterateBulk,
+} from '../utils/search/transliterate';
 
 interface Module {
   id: string;
@@ -22,19 +28,65 @@ const PopularModules: React.FC = () => {
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
   const [filter, setFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
+  const [normalizedLookup, setNormalizedLookup] = useState<
+    Record<string, { name: string; description: string }>
+  >({});
   const [selected, setSelected] = useState<Module | null>(null);
   const [options, setOptions] = useState<Record<string, string>>({});
   const [logFilter, setLogFilter] = useState<string>('');
 
-  const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
-  let listed = filter ? modules.filter((m) => m.tags.includes(filter)) : modules;
-  listed = search
-    ? listed.filter(
-        (m) =>
-          m.name.toLowerCase().includes(search.toLowerCase()) ||
-          m.description.toLowerCase().includes(search.toLowerCase())
-      )
-    : listed;
+  const tags = useMemo(
+    () => Array.from(new Set(modules.flatMap(m => m.tags))),
+    [modules],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const names = modules.map(module => module.name);
+    const descriptions = modules.map(module => module.description);
+    Promise.all([transliterateBulk(names), transliterateBulk(descriptions)])
+      .then(([nameResults, descriptionResults]) => {
+        if (cancelled) return;
+        const next: Record<string, { name: string; description: string }> = {};
+        modules.forEach((module, index) => {
+          const nameResult = nameResults[index];
+          const descriptionResult = descriptionResults[index];
+          next[module.id] = {
+            name: nameResult
+              ? finalizeNormalized(nameResult)
+              : normalizeForSearch(module.name),
+            description: descriptionResult
+              ? finalizeNormalized(descriptionResult)
+              : normalizeForSearch(module.description),
+          };
+        });
+        setNormalizedLookup(next);
+      })
+      .catch(() => {
+        const fallback: Record<string, { name: string; description: string }> = {};
+        modules.forEach(module => {
+          fallback[module.id] = {
+            name: normalizeForSearch(module.name),
+            description: normalizeForSearch(module.description),
+          };
+        });
+        setNormalizedLookup(fallback);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [modules]);
+
+  const listed = useMemo(() => {
+    const filteredByTag = filter ? modules.filter(m => m.tags.includes(filter)) : modules;
+    if (!search) {
+      return filteredByTag;
+    }
+    return filteredByTag.filter(module =>
+      matchesSearchQuery(search, module.name, normalizedLookup[module.id]?.name) ||
+      matchesSearchQuery(search, module.description, normalizedLookup[module.id]?.description),
+    );
+  }, [filter, modules, normalizedLookup, search]);
 
   const handleSelect = (m: Module) => {
     setSelected(m);
@@ -203,6 +255,7 @@ const PopularModules: React.FC = () => {
         placeholder="Search modules"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        aria-label="Search modules"
         className="w-full p-2 text-black rounded"
       />
       <div className="flex flex-wrap gap-2">
@@ -289,6 +342,7 @@ const PopularModules: React.FC = () => {
                 type="text"
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
+                aria-label="Filter logs"
                 className="w-full p-1 mt-1 text-black rounded"
               />
             </label>
