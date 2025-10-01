@@ -30,6 +30,11 @@ import {
 } from '../../utils/windowLayout';
 
 
+const WINDOW_MINIMIZE_ANIMATION_MS = 180;
+const WINDOW_RESTORE_ANIMATION_MS = 220;
+const WINDOW_ANIMATION_TIMEOUT_BUFFER_MS = 50;
+
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -72,6 +77,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            window_animation_states: {},
         }
 
         this.desktopRef = React.createRef();
@@ -417,6 +423,115 @@ export class Desktop extends Component {
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
             }));
+    };
+
+    prefersReducedMotion = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return false;
+        }
+        try {
+            return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        } catch (error) {
+            return false;
+        }
+    };
+
+    getWindowNodeById = (objId) => {
+        if (typeof document === 'undefined') {
+            return null;
+        }
+        return document.getElementById(objId);
+    };
+
+    clearWindowAnimationState = (objId) => {
+        this.setState((prev) => {
+            const current = prev.window_animation_states || {};
+            if (!current[objId]) {
+                return null;
+            }
+            const next = { ...current };
+            delete next[objId];
+            return { window_animation_states: next };
+        });
+    };
+
+    parseTimeValue = (value) => {
+        if (!value) return 0;
+        const trimmed = value.trim();
+        if (!trimmed) return 0;
+        if (trimmed.endsWith('ms')) {
+            const parsed = parseFloat(trimmed.slice(0, -2));
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+        if (trimmed.endsWith('s')) {
+            const parsed = parseFloat(trimmed.slice(0, -1));
+            return Number.isFinite(parsed) ? parsed * 1000 : 0;
+        }
+        const parsed = parseFloat(trimmed);
+        return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    getAnimationTotalDuration = (node, fallback) => {
+        if (!node || typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') {
+            return fallback;
+        }
+        const styles = window.getComputedStyle(node);
+        const durations = styles.animationDuration ? styles.animationDuration.split(',') : [];
+        const delays = styles.animationDelay ? styles.animationDelay.split(',') : [];
+        const totals = durations.map((duration, index) => {
+            const parsedDuration = this.parseTimeValue(duration);
+            const parsedDelay = this.parseTimeValue(delays[index] || '0s');
+            return parsedDuration + parsedDelay;
+        });
+        const maxDuration = totals.reduce((acc, value) => Math.max(acc, value), 0);
+        return maxDuration || fallback;
+    };
+
+    playWindowAnimation = (objId, fallbackDuration, finalize) => {
+        const node = this.getWindowNodeById(objId);
+        if (!node) {
+            finalize();
+            return;
+        }
+
+        const start = () => {
+            const totalDuration = this.getAnimationTotalDuration(node, fallbackDuration);
+            if (totalDuration <= 0) {
+                finalize();
+                return;
+            }
+
+            let resolved = false;
+            let timeoutId;
+            const cleanup = () => {
+                if (resolved) return;
+                resolved = true;
+                node.removeEventListener('animationend', handle);
+                node.removeEventListener('animationcancel', handle);
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+                finalize();
+            };
+            const handle = () => cleanup();
+            node.addEventListener('animationend', handle);
+            node.addEventListener('animationcancel', handle);
+            timeoutId = setTimeout(cleanup, totalDuration + WINDOW_ANIMATION_TIMEOUT_BUFFER_MS);
+        };
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(start);
+        } else {
+            setTimeout(start, 0);
+        }
+    };
+
+    syncWindowTransform = (objId) => {
+        const node = this.getWindowNodeById(objId);
+        if (!node) return;
+        const x = node.style.getPropertyValue('--window-transform-x') || '0px';
+        const y = node.style.getPropertyValue('--window-transform-y') || '0px';
+        node.style.transform = `translate(${x},${y}) scale(1)`;
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -1399,6 +1514,7 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    animationState: this.state.window_animation_states[app.id],
                 }
 
                 windowsJsx.push(
@@ -1439,16 +1555,63 @@ export class Desktop extends Component {
         this.props.setSession(nextSession);
     }
 
+    restoreMinimizedWindow = (objId) => {
+        this.focus(objId);
+
+        const finalize = () => {
+            this.syncWindowTransform(objId);
+            this.setWorkspaceState((prev) => {
+                const minimized_windows = { ...prev.minimized_windows, [objId]: false };
+                return { minimized_windows };
+            }, () => {
+                this.clearWindowAnimationState(objId);
+                this.saveSession();
+            });
+        };
+
+        if (this.prefersReducedMotion()) {
+            finalize();
+            return;
+        }
+
+        this.syncWindowTransform(objId);
+
+        this.setState((prev) => ({
+            window_animation_states: {
+                ...(prev.window_animation_states || {}),
+                [objId]: 'restoring',
+            },
+        }), () => {
+            this.playWindowAnimation(objId, WINDOW_RESTORE_ANIMATION_MS, finalize);
+        });
+    };
+
     hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
+        const finalize = () => {
+            this.syncWindowTransform(objId);
+            this.setWorkspaceState((prev) => {
+                const minimized_windows = { ...prev.minimized_windows, [objId]: true };
+                const focused_windows = { ...prev.focused_windows, [objId]: false };
+                return { minimized_windows, focused_windows };
+            }, () => {
+                this.clearWindowAnimationState(objId);
+                this.giveFocusToLastApp();
+            });
+        };
 
-        // remove focus and minimise this window
-        minimized_windows[objId] = true;
-        focused_windows[objId] = false;
-        this.setWorkspaceState({ minimized_windows, focused_windows });
+        if (this.prefersReducedMotion()) {
+            finalize();
+            return;
+        }
 
-        this.giveFocusToLastApp();
+        this.setState((prev) => ({
+            window_animation_states: {
+                ...(prev.window_animation_states || {}),
+                [objId]: 'minimizing',
+            },
+        }), () => {
+            this.playWindowAnimation(objId, WINDOW_MINIMIZE_ANIMATION_MS, finalize);
+        });
     }
 
     giveFocusToLastApp = () => {
@@ -1514,26 +1677,9 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setWorkspaceState({ minimized_windows }, this.saveSession);
-
-            }
-
             const reopen = () => {
-                // if it's minimised, restore its last position
                 if (this.state.minimized_windows[objId]) {
-                    this.focus(objId);
-                    var r = document.querySelector("#" + objId);
-                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
-                    minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                    this.restoreMinimizedWindow(objId);
                 } else {
                     this.focus(objId);
                     this.saveSession();
