@@ -7,6 +7,16 @@ import {
   saveBookmarks,
   loadBookmarks,
   extractStrings,
+  loadAnnotations,
+  persistAnnotations,
+  loadAnnotationSnapshot,
+  snapshotToAnnotations,
+  createHistory,
+  pushHistory,
+  undoHistory,
+  redoHistory,
+  createAnnotationExport,
+  annotationsEqual,
 } from '../components/apps/radare2/utils';
 
 describe('Radare2 utilities', () => {
@@ -58,5 +68,73 @@ describe('Radare2 utilities', () => {
       { addr: '0x1000', text: 'test' },
       { addr: '0x1005', text: 'hi' },
     ]);
+  });
+
+  test('persists annotations and snapshots independently per file', () => {
+    const disasm = [
+      { addr: '0x10', text: 'mov eax, ebx' },
+      { addr: '0x12', text: 'ret' },
+    ];
+    persistAnnotations('demo.bin', disasm, {
+      '0x10': { label: 'entry', comment: 'setup' },
+    });
+    expect(loadAnnotations('demo.bin')).toEqual({
+      '0x10': { label: 'entry', comment: 'setup' },
+    });
+    const snapshot = loadAnnotationSnapshot('demo.bin');
+    expect(snapshot.file).toBe('demo.bin');
+    expect(snapshot.annotations).toEqual([
+      {
+        addr: '0x10',
+        label: 'entry',
+        comment: 'setup',
+        text: 'mov eax, ebx',
+      },
+    ]);
+    expect(snapshotToAnnotations(snapshot)).toEqual({
+      '0x10': { label: 'entry', comment: 'setup' },
+    });
+  });
+
+  test('manages undo and redo history', () => {
+    const history = createHistory({});
+    const withFirst = pushHistory(history, { '0x1': { label: 'start' } }, {
+      type: 'update',
+    });
+    const withSecond = pushHistory(
+      withFirst,
+      { '0x1': { label: 'start' }, '0x2': { comment: 'exit' } },
+      { type: 'update' },
+    );
+    const undone = undoHistory(withSecond);
+    expect(annotationsEqual(undone.present, { '0x1': { label: 'start' } })).toBe(true);
+    const redone = redoHistory(undone);
+    expect(annotationsEqual(redone.present, withSecond.present)).toBe(true);
+  });
+
+  test('creates deterministic annotation export payload', () => {
+    const disasm = [
+      { addr: '0x2', text: 'ret' },
+      { addr: '0x1', text: 'push rbp' },
+    ];
+    const exportPayload = createAnnotationExport('demo.bin', disasm, {
+      '0x1': { label: 'prologue' },
+      '0x2': { comment: 'exit' },
+    });
+    expect(exportPayload.annotations).toEqual([
+      {
+        addr: '0x1',
+        label: 'prologue',
+        comment: null,
+        text: 'push rbp',
+      },
+      {
+        addr: '0x2',
+        label: null,
+        comment: 'exit',
+        text: 'ret',
+      },
+    ]);
+    expect(exportPayload.disassembly).toEqual(disasm);
   });
 });
