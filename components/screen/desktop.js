@@ -20,6 +20,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { pinApp as pinTaskbarApp, unpinApp as unpinTaskbarApp, isPinned as isTaskbarPinned } from '../../utils/taskbar';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
@@ -1870,6 +1871,17 @@ export class Desktop extends Component {
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
                     minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    pinned={isTaskbarPinned(this.state.context_app)}
+                    onPin={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        pinTaskbarApp(id);
+                    }}
+                    onUnpin={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        unpinTaskbarApp(id);
+                    }}
                     onMinimize={() => {
                         const id = this.state.context_app;
                         if (!id) return;
