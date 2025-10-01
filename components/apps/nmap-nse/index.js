@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
 
@@ -80,12 +80,17 @@ const NmapNSEApp = () => {
   const [scriptQuery, setScriptQuery] = useState('');
   const [portFlag, setPortFlag] = useState('');
   const [examples, setExamples] = useState({});
-  const [results, setResults] = useState({ hosts: [] });
+  const [rawResults, setRawResults] = useState('');
+  const [parsedResults, setParsedResults] = useState({ hosts: [] });
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
   const outputRef = useRef(null);
+  const rawRef = useRef(null);
+  const [view, setView] = useState('tree');
+  const [selectedHost, setSelectedHost] = useState('');
+  const [selectedService, setSelectedService] = useState('');
   const phases = ['prerule', 'hostrule', 'portrule'];
 
   useEffect(() => {
@@ -95,9 +100,25 @@ const NmapNSEApp = () => {
       .catch(() => setExamples({}));
     fetch('/demo/nmap-results.json')
       .then((r) => r.json())
-      .then(setResults)
-      .catch(() => setResults({ hosts: [] }));
+      .then((data) => {
+        setParsedResults(data);
+        setRawResults(JSON.stringify(data, null, 2));
+      })
+      .catch(() => {
+        setParsedResults({ hosts: [] });
+        setRawResults('');
+      });
   }, []);
+
+  useEffect(() => {
+    if (!parsedResults.hosts?.length) return;
+    setSelectedHost((current) => {
+      if (!current || !parsedResults.hosts.some((h) => h.ip === current)) {
+        return parsedResults.hosts[0].ip;
+      }
+      return current;
+    });
+  }, [parsedResults]);
 
   const toggleScript = (name) => {
     setSelectedScripts((prev) => {
@@ -188,6 +209,65 @@ const NmapNSEApp = () => {
     });
   };
 
+  const copyRawResults = async () => {
+    if (!rawResults.trim()) return;
+    if (typeof window === 'undefined') return;
+    try {
+      await navigator.clipboard.writeText(rawResults);
+      setToast('Raw JSON copied');
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const selectRawResults = () => {
+    const el = rawRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    setToast('Raw JSON selected');
+  };
+
+  const serviceNames = useMemo(() => {
+    const names = new Set();
+    (parsedResults.hosts || []).forEach((host) => {
+      (host.ports || []).forEach((port) => {
+        names.add(port.service || 'unknown');
+      });
+    });
+    return Array.from(names).sort();
+  }, [parsedResults]);
+
+  const pivotRows = useMemo(
+    () =>
+      (parsedResults.hosts || []).map((host) => {
+        const counts = new Map();
+        (host.ports || []).forEach((port) => {
+          const name = port.service || 'unknown';
+          counts.set(name, (counts.get(name) || 0) + 1);
+        });
+        return { host: host.ip, counts };
+      }),
+    [parsedResults]
+  );
+
+  const selectHost = (hostIp) => {
+    setSelectedHost(hostIp);
+    setSelectedService((current) =>
+      current && parsedResults.hosts.some((h) => h.ip === hostIp)
+        ? current
+        : ''
+    );
+  };
+
+  const selectServiceForHost = (hostIp, serviceName) => {
+    setSelectedHost(hostIp);
+    setSelectedService(serviceName);
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-full w-full text-white">
       <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
@@ -198,16 +278,27 @@ const NmapNSEApp = () => {
           </p>
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
+          <label
+            className="block text-sm mb-1"
+            htmlFor="target"
+            id="nmap-target-label"
+          >
+            Target
+          </label>
           <input
             id="target"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-labelledby="nmap-target-label"
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">
+          <label
+            className="block text-sm mb-1"
+            htmlFor="scripts"
+            id="nmap-scripts-label"
+          >
             Scripts
           </label>
           <input
@@ -216,18 +307,25 @@ const NmapNSEApp = () => {
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-labelledby="nmap-scripts-label"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
+              {filteredScripts.map((s) => (
+                <div key={s.name} className="bg-white text-black p-2 rounded">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                      aria-labelledby={`script-option-${s.name}`}
+                    />
+                    <span
+                      className="font-mono"
+                      id={`script-option-${s.name}`}
+                    >
+                      {s.name}
+                    </span>
+                  </label>
                 <p className="text-xs mb-1">{s.description}</p>
                 <div className="flex flex-wrap gap-1 mb-1">
                   {s.tags.map((t) => (
@@ -248,6 +346,7 @@ const NmapNSEApp = () => {
                     }
                     placeholder="arg=value"
                     className="w-full p-1 border rounded text-black"
+                    aria-label={`Arguments for ${s.name}`}
                   />
                 )}
               </div>
@@ -346,63 +445,223 @@ const NmapNSEApp = () => {
           <p className="text-sm mb-4">Select a script to view phases.</p>
         )}
         <h2 className="text-lg mb-2">Topology</h2>
-        <DiscoveryMap hosts={results.hosts} />
-        <h2 className="text-lg mb-2">Parsed output</h2>
-        <ul className="mb-4 space-y-2">
-          {results.hosts.map((host) => (
-            <li key={host.ip}>
-              <div className="text-blue-400 font-mono">{host.ip}</div>
-              <ul className="ml-4 space-y-1">
-                {host.ports.map((p) => (
-                  <li key={p.port}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono">
-                        {p.port}/tcp {p.service}
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-xs ${cvssColor(p.cvss)}`}
-                        aria-label={`CVSS score ${p.cvss}`}
-                      >
-                        CVSS {p.cvss}
-                      </span>
-                    </div>
-                    {p.scripts?.length > 0 && (
-                      <ul className="ml-4 mt-1 space-y-1">
-                        {p.scripts.map((sc) => {
-                          const meta = scripts.find((s) => s.name === sc.name);
-                          return (
-                            <li key={sc.name}>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-mono">{sc.name}</span>
-                                {meta && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {meta.tags.map((t) => (
-                                      <span
-                                        key={t}
-                                        className="px-1.5 py-0.5 rounded text-xs bg-gray-700"
-                                      >
-                                        {t}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              {sc.output && (
-                                <pre className="ml-4 text-green-400 whitespace-pre-wrap">
-                                  {sc.output}
-                                </pre>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </li>
+        <DiscoveryMap hosts={parsedResults.hosts} />
+        <h2 className="text-lg mb-2">Results</h2>
+        <div
+          role="tablist"
+          aria-label="Result views"
+          className="mb-3 flex flex-wrap gap-2"
+        >
+          {[
+            { key: 'raw', label: 'Raw JSON' },
+            { key: 'tree', label: 'Parsed Tree' },
+            { key: 'pivot', label: 'Hosts/Services pivot table' },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={view === key}
+              onClick={() => setView(key)}
+              className={`rounded px-2 py-1 text-sm ${
+                view === key
+                  ? 'bg-ub-yellow text-black'
+                  : 'bg-gray-700 text-white'
+              }`}
+            >
+              {label}
+            </button>
           ))}
-        </ul>
+        </div>
+        {view === 'raw' && (
+          <div className="mb-4 space-y-2">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={copyRawResults}
+                className="rounded bg-ub-grey px-2 py-1 text-black"
+              >
+                Copy JSON
+              </button>
+              <button
+                type="button"
+                onClick={selectRawResults}
+                className="rounded bg-ub-grey px-2 py-1 text-black"
+              >
+                Select JSON
+              </button>
+            </div>
+            <pre
+              ref={rawRef}
+              className="max-h-64 overflow-auto bg-black p-2 text-left text-green-400"
+            >
+              {rawResults || 'No data loaded.'}
+            </pre>
+          </div>
+        )}
+        {view === 'tree' && (
+          <ul className="mb-4 space-y-2">
+            {(parsedResults.hosts || []).map((host) => {
+              const isHostSelected = selectedHost === host.ip;
+              return (
+                <li key={host.ip}>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => selectHost(host.ip)}
+                      aria-pressed={isHostSelected}
+                      className={`rounded px-1.5 py-0.5 font-mono ${
+                        isHostSelected
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800 text-blue-200'
+                      }`}
+                    >
+                      {host.ip}
+                    </button>
+                  </div>
+                  <ul className="ml-4 space-y-1">
+                    {(host.ports || []).map((p) => {
+                      const serviceName = p.service || 'unknown';
+                      const isServiceSelected =
+                        isHostSelected && selectedService === serviceName;
+                      return (
+                        <li key={`${host.ip}-${p.port}`}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                selectServiceForHost(host.ip, serviceName)
+                              }
+                              aria-pressed={isServiceSelected}
+                              aria-label={`${serviceName} on ${host.ip}`}
+                              className={`rounded px-1.5 py-0.5 font-mono ${
+                                isServiceSelected
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-700 text-white'
+                              }`}
+                            >
+                              {p.port}/tcp {serviceName}
+                            </button>
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-xs ${cvssColor(
+                                p.cvss
+                              )}`}
+                              aria-label={`CVSS score ${p.cvss}`}
+                            >
+                              CVSS {p.cvss}
+                            </span>
+                          </div>
+                          {p.scripts?.length > 0 && (
+                            <ul className="ml-4 mt-1 space-y-1">
+                              {p.scripts.map((sc) => {
+                                const meta = scripts.find(
+                                  (s) => s.name === sc.name
+                                );
+                                return (
+                                  <li key={sc.name}>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="font-mono">{sc.name}</span>
+                                      {meta && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {meta.tags.map((t) => (
+                                            <span
+                                              key={t}
+                                              className="px-1.5 py-0.5 rounded text-xs bg-gray-700"
+                                            >
+                                              {t}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {sc.output && (
+                                      <pre className="ml-4 text-green-400 whitespace-pre-wrap">
+                                        {sc.output}
+                                      </pre>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {view === 'pivot' && (
+          <div className="mb-4 overflow-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">Host</th>
+                  {serviceNames.map((name) => (
+                    <th key={name} className="border px-2 py-1">
+                      {name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pivotRows.map((row) => {
+                  const isRowSelected = selectedHost === row.host;
+                  return (
+                    <tr
+                      key={row.host}
+                      className={isRowSelected ? 'bg-gray-800' : undefined}
+                    >
+                      <td className="border px-2 py-1">
+                        <button
+                          type="button"
+                          onClick={() => selectHost(row.host)}
+                          aria-pressed={isRowSelected}
+                          className={`rounded px-1.5 py-0.5 font-mono ${
+                            isRowSelected
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-700 text-white'
+                          }`}
+                        >
+                          {row.host}
+                        </button>
+                      </td>
+                      {serviceNames.map((name) => {
+                        const count = row.counts.get(name) || 0;
+                        const isSelected =
+                          isRowSelected && selectedService === name;
+                        return (
+                          <td key={name} className="border px-2 py-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                count > 0 && selectServiceForHost(row.host, name)
+                              }
+                              aria-pressed={isSelected}
+                              disabled={count === 0}
+                              aria-label={`${name} on ${row.host}`}
+                              className={`w-full rounded px-2 py-1 text-xs ${
+                                count === 0
+                                  ? 'cursor-not-allowed bg-gray-700 text-gray-400'
+                                  : isSelected
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-800 text-white hover:bg-blue-500'
+                              }`}
+                            >
+                              {count}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
         <h2 className="text-lg mb-2">Example output</h2>
         <div
           ref={outputRef}
