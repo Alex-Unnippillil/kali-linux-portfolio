@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import useFormFSM from '../../../hooks/useFormFSM';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
@@ -65,7 +66,8 @@ const HydraApp = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedPass, setSelectedPass] = useState('');
   const [output, setOutput] = useState('');
-  const [running, setRunning] = useState(false);
+  const form = useFormFSM();
+  const running = form.status === 'Running';
   const [paused, setPaused] = useState(false);
   const [runId, setRunId] = useState(0);
   const [announce, setAnnounce] = useState('');
@@ -77,11 +79,46 @@ const HydraApp = () => {
   const [rule, setRule] = useState('1:3');
   const [candidateStats, setCandidateStats] = useState([]);
   const canvasRef = useRef(null);
+  const runAbortRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
+
+  const markDirty = () => {
+    form.change();
+  };
+
+  const handleTargetChange = (value) => {
+    markDirty();
+    setTarget(value);
+  };
+
+  const handleServiceChange = (value) => {
+    markDirty();
+    setService(value);
+  };
+
+  const handleSelectedUserChange = (value) => {
+    markDirty();
+    setSelectedUser(value);
+  };
+
+  const handleSelectedPassChange = (value) => {
+    markDirty();
+    setSelectedPass(value);
+  };
+
+  const handleCharsetChange = (value) => {
+    markDirty();
+    setCharset(value);
+  };
+
+  const handleRuleChange = (value) => {
+    markDirty();
+    setRule(value);
+  };
 
   const isTargetValid = useMemo(() => {
     const trimmed = target.trim();
@@ -113,43 +150,56 @@ const HydraApp = () => {
     saveWordlists('hydraPassLists', passLists);
   }, [passLists]);
 
-  const resumeAttack = async (session) => {
+  const ensureHydraReady = (mode, overrides = {}) => {
+    const userList = overrides.userList ?? selectedUserList;
+    const passList = overrides.passList ?? selectedPassList;
+
+    if (mode !== 'dry-run') {
+      if (!isTargetValid) {
+        const message = 'Please provide a valid target, user list and password list';
+        form.invalidate(message);
+        setOutput(message);
+        setAnnounce('Hydra validation failed');
+        return null;
+      }
+      if (!userList || !passList) {
+        const message = 'Please provide a valid target, user list and password list';
+        form.invalidate(message);
+        setOutput(message);
+        setAnnounce('Hydra validation failed');
+        return null;
+      }
+    }
+
+    form.validate();
+    return { userList, passList };
+  };
+
+  const resumeAttack = (session) => {
     const user = userLists.find((l) => l.name === session.selectedUser);
     const pass = passLists.find((l) => l.name === session.selectedPass);
     if (!user || !pass) return;
 
-    setRunning(true);
+    const lists = ensureHydraReady('resume', { userList: user, passList: pass });
+    if (!lists) return;
+
     setPaused(false);
     setRunId((id) => id + 1);
     setAnnounce('Hydra resumed');
     announceRef.current = Date.now();
-    try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            target: session.target,
-            service: session.service,
-            userList: user.content,
-            passList: pass.content,
-            resume: true,
-          }),
-        });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
-      } else {
-        setOutput('Hydra demo output: feature disabled in static export');
-        setAnnounce('Hydra finished (demo)');
-      }
-    } catch (err) {
-      setOutput(err.message);
-      setAnnounce('Hydra failed');
-    } finally {
-      setRunning(false);
-      clearSession();
-    }
+    setTimeline(session.timeline || []);
+    setInitialAttempt(session.attempt || 0);
+    const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
+    startRef.current = Date.now() - lastTime * 1000;
+
+    form.submit({
+      mode: 'resume',
+      target: session.target,
+      service: session.service,
+      userList: lists.userList?.content,
+      passList: lists.passList?.content,
+      session,
+    });
   };
 
   useEffect(() => {
@@ -195,12 +245,14 @@ const HydraApp = () => {
     reader.onload = (e) => {
       const newLists = [...lists, { name: file.name, content: e.target.result }];
       listsSetter(newLists);
+      markDirty();
     };
     reader.readAsText(file);
   };
 
   const removeWordList = (name, listsSetter, lists) => {
     listsSetter(lists.filter((l) => l.name !== name));
+    markDirty();
   };
 
   const selectedUserList = userLists.find((l) => l.name === selectedUser);
@@ -303,15 +355,10 @@ const HydraApp = () => {
     }
   };
 
-  const runHydra = async () => {
-    const user = selectedUserList;
-    const pass = selectedPassList;
-    if (!isTargetValid || !user || !pass) {
-      setOutput('Please provide a valid target, user list and password list');
-      return;
-    }
+  const runHydra = () => {
+    const lists = ensureHydraReady('run');
+    if (!lists) return;
 
-    setRunning(true);
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
@@ -328,51 +375,27 @@ const HydraApp = () => {
     });
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
-    try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            target,
-            service,
-            userList: user.content,
-            passList: pass.content,
-          }),
-        });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
-      } else {
-        setOutput('Hydra demo output: feature disabled in static export');
-        setAnnounce('Hydra finished (demo)');
-      }
-    } catch (err) {
-      setOutput(err.message);
-      setAnnounce('Hydra failed');
-    } finally {
-      setRunning(false);
-      clearSession();
-    }
+    form.submit({
+      mode: 'run',
+      target,
+      service,
+      userList: lists.userList?.content,
+      passList: lists.passList?.content,
+    });
   };
 
   const dryRunHydra = () => {
-    const user = selectedUserList;
-    const pass = selectedPassList;
-    const userCount = user?.content.split('\n').filter(Boolean).length || 0;
-    const passCount = pass?.content.split('\n').filter(Boolean).length || 0;
-    const report = [
-      `Target: ${target || 'N/A'}`,
-      `Service: ${service}`,
-      `Users: ${userCount}`,
-      `Passwords: ${passCount}`,
-      `Charset: ${charset} (${charset.length})`,
-      `Rule: ${rule}`,
-      `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
-      'Dry run only - no network requests made.',
-    ].join('\n');
-    setOutput(report);
-    setAnnounce('Dry run complete');
+    form.validate();
+    form.submit({
+      mode: 'dry-run',
+      target,
+      service,
+      userList: selectedUserList?.content || '',
+      passList: selectedPassList?.content || '',
+      charset,
+      rule,
+      candidateSpace,
+    });
   };
 
   const handleSaveConfig = () => {
@@ -418,12 +441,16 @@ const HydraApp = () => {
   };
 
   const cancelHydra = async () => {
-    setRunning(false);
+    form.cancel();
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
     setTimeline([]);
     startRef.current = null;
+    if (runAbortRef.current) {
+      runAbortRef.current.abort();
+      runAbortRef.current = null;
+    }
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/hydra', {
         method: 'POST',
@@ -435,6 +462,104 @@ const HydraApp = () => {
     clearSession();
   };
 
+  form.useSubmitEffect((current) => {
+    const submission = current.payload || {};
+    const mode = submission.mode;
+
+    if (!mode) {
+      form.resolve();
+      return undefined;
+    }
+
+    if (mode === 'dry-run') {
+      const userCount = (submission.userList || '')
+        .split('\n')
+        .filter(Boolean).length;
+      const passCount = (submission.passList || '')
+        .split('\n')
+        .filter(Boolean).length;
+      const report = [
+        `Target: ${submission.target || target || 'N/A'}`,
+        `Service: ${submission.service || service}`,
+        `Users: ${userCount}`,
+        `Passwords: ${passCount}`,
+        `Charset: ${submission.charset || charset} (${(submission.charset || charset).length})`,
+        `Rule: ${submission.rule || rule}`,
+        `Estimated candidate space: ${(
+          submission.candidateSpace ?? candidateSpace
+        ).toLocaleString()}`,
+        'Dry run only - no network requests made.',
+      ].join('\n');
+      setOutput(report);
+      setAnnounce('Dry run complete');
+      form.resolve(report);
+      return undefined;
+    }
+
+    if (mode !== 'run' && mode !== 'resume') {
+      form.resolve();
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    runAbortRef.current = controller;
+    let cancelled = false;
+
+    const execute = async () => {
+      try {
+        if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+          const res = await fetch('/api/hydra', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              target: submission.target,
+              service: submission.service,
+              userList: submission.userList,
+              passList: submission.passList,
+              resume: mode === 'resume',
+            }),
+            signal: controller.signal,
+          });
+          const data = await res.json();
+          if (cancelled) {
+            return;
+          }
+          setOutput(data.output || data.error || 'No output');
+          setAnnounce('Hydra finished');
+          form.resolve(data);
+        } else {
+          if (cancelled) {
+            return;
+          }
+          const message = 'Hydra demo output: feature disabled in static export';
+          setOutput(message);
+          setAnnounce('Hydra finished (demo)');
+          form.resolve({ output: message });
+        }
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        const message = err?.message || 'Hydra failed';
+        setOutput(message);
+        setAnnounce('Hydra failed');
+        form.reject(message);
+      } finally {
+        if (!cancelled) {
+          runAbortRef.current = null;
+          clearSession();
+        }
+      }
+    };
+
+    execute();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  });
+
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="grid grid-cols-2 gap-1.5">
@@ -445,7 +570,7 @@ const HydraApp = () => {
           ].map((m) => (
             <div
               key={m.value}
-              onClick={() => setService(m.value)}
+              onClick={() => handleServiceChange(m.value)}
               className={`flex items-center p-2 rounded border cursor-pointer text-sm ${
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
@@ -460,7 +585,7 @@ const HydraApp = () => {
           <input
             type="text"
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            onChange={(e) => handleTargetChange(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
           />
@@ -469,7 +594,7 @@ const HydraApp = () => {
           <label className="block mb-1">Service</label>
           <select
             value={service}
-            onChange={(e) => setService(e.target.value)}
+            onChange={(e) => handleServiceChange(e.target.value)}
             className="w-full p-2 rounded text-black"
           >
             {availableServices.map((s) => (
@@ -483,7 +608,7 @@ const HydraApp = () => {
           <label className="block mb-1">User List</label>
           <select
             value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
+            onChange={(e) => handleSelectedUserChange(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
           >
             {userLists.map((l) => (
@@ -519,7 +644,7 @@ const HydraApp = () => {
           <label className="block mb-1">Password List</label>
           <select
             value={selectedPass}
-            onChange={(e) => setSelectedPass(e.target.value)}
+            onChange={(e) => handleSelectedPassChange(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
           >
             {passLists.map((l) => (
@@ -556,7 +681,7 @@ const HydraApp = () => {
           <input
             type="text"
             value={charset}
-            onChange={(e) => setCharset(e.target.value)}
+            onChange={(e) => handleCharsetChange(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
           />
@@ -566,7 +691,7 @@ const HydraApp = () => {
           <input
             type="text"
             value={rule}
-            onChange={(e) => setRule(e.target.value)}
+            onChange={(e) => handleRuleChange(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
           />
