@@ -1,12 +1,32 @@
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import DelayedTooltip from '../../components/ui/DelayedTooltip';
-import AppTooltipContent from '../../components/ui/AppTooltipContent';
+import dynamic from 'next/dynamic';
 import {
   buildAppMetadata,
   loadAppRegistry,
 } from '../../lib/appRegistry';
+
+const DelayedTooltip = dynamic(
+  () =>
+    import('../../components/ui/DelayedTooltip').catch((err) => {
+      console.error('Failed to load DelayedTooltip', err);
+      throw err;
+    }),
+  {
+    loading: () => null,
+  }
+);
+const AppTooltipContent = dynamic(
+  () =>
+    import('../../components/ui/AppTooltipContent').catch((err) => {
+      console.error('Failed to load AppTooltipContent', err);
+      throw err;
+    }),
+  {
+    loading: () => null,
+  }
+);
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -38,17 +58,18 @@ const AppsPage = () => {
 
   return (
     <div className="p-4">
-      <label htmlFor="app-search" className="sr-only">
-        Search apps
-      </label>
-      <input
-        id="app-search"
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search apps"
-        className="mb-4 w-full rounded border p-2"
-      />
+        <label htmlFor="app-search" className="sr-only">
+          Search apps
+        </label>
+        <input
+          id="app-search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search apps"
+          aria-label="Search applications"
+          className="mb-4 w-full rounded border p-2"
+        />
       <div
         id="app-grid"
         tabIndex="-1"

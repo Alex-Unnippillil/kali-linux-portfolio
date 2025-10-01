@@ -10,15 +10,49 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
+import dynamic from 'next/dynamic';
 import { SettingsProvider } from '../hooks/useSettings';
-import ShortcutOverlay from '../components/common/ShortcutOverlay';
-import NotificationCenter from '../components/common/NotificationCenter';
-import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
+
+const ShortcutOverlay = dynamic(
+  () =>
+    import('../components/common/ShortcutOverlay').catch((err) => {
+      console.error('Failed to load ShortcutOverlay', err);
+      throw err;
+    }),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
+const NotificationCenter = dynamic(
+  () =>
+    import('../components/common/NotificationCenter').catch((err) => {
+      console.error('Failed to load NotificationCenter', err);
+      throw err;
+    }),
+  {
+    ssr: true,
+    loading: () => null,
+  }
+);
+
+const PipPortalProvider = dynamic(
+  () =>
+    import('../components/common/PipPortal').catch((err) => {
+      console.error('Failed to load PipPortalProvider', err);
+      throw err;
+    }),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
@@ -149,7 +183,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
-      <Script src="/a2hs.js" strategy="beforeInteractive" />
+      <Script src="/a2hs.js" strategy="afterInteractive" />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"

@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
-import data from '../components/apps/nessus/sample-report.json';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const severityColors: Record<string, string> = {
   Critical: '#991b1b',
@@ -28,7 +27,30 @@ const NessusReport: React.FC = () => {
   const [severity, setSeverity] = useState<string>('All');
   const [host, setHost] = useState<string>('All');
   const [family, setFamily] = useState<string>('All');
-  const [findings, setFindings] = useState<Finding[]>(data as Finding[]);
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const mod = await import('../components/apps/nessus/sample-report.json');
+        if (!active) return;
+        const payload = (mod.default ?? mod) as Finding[];
+        setFindings(payload);
+      } catch (err) {
+        console.error('Failed to load Nessus sample report', err);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const hosts = useMemo(
     () => Array.from(new Set(findings.map((f) => f.host))).sort(),
@@ -110,7 +132,7 @@ const NessusReport: React.FC = () => {
   };
 
   const segments = useMemo(() => {
-    const total = findings.length;
+    const total = findings.length || 1;
     let offset = 0;
     return Object.entries(counts).map(([sev, count]) => {
       const dash = (count / total) * circumference;
@@ -136,6 +158,9 @@ const NessusReport: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-2xl mb-4">Sample Nessus Report</h1>
+      {isLoading && findings.length === 0 && (
+        <p className="mb-4 text-sm text-gray-300">Loading canned report…</p>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         {['Critical', 'High', 'Medium', 'Low'].map((sev) => (
           <div
@@ -163,6 +188,7 @@ const NessusReport: React.FC = () => {
           accept=".json"
           className="text-black p-1 rounded"
           onChange={handleFile}
+          aria-label="Import Nessus report"
         />
         <label htmlFor="severity-filter" className="text-sm">
           Filter severity
@@ -172,6 +198,7 @@ const NessusReport: React.FC = () => {
           className="text-black p-1 rounded"
           value={severity}
           onChange={(e) => setSeverity(e.target.value)}
+          aria-label="Filter findings by severity"
         >
           {['All', 'Critical', 'High', 'Medium', 'Low'].map((s) => (
             <option key={s} value={s}>
@@ -187,6 +214,7 @@ const NessusReport: React.FC = () => {
           className="text-black p-1 rounded"
           value={host}
           onChange={(e) => setHost(e.target.value)}
+          aria-label="Filter findings by host"
         >
           {['All', ...hosts].map((h) => (
             <option key={h} value={h}>
@@ -202,6 +230,7 @@ const NessusReport: React.FC = () => {
           className="text-black p-1 rounded"
           value={family}
           onChange={(e) => setFamily(e.target.value)}
+          aria-label="Filter findings by plugin family"
         >
           {['All', ...families].map((f) => (
             <option key={f} value={f}>

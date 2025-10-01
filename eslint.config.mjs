@@ -14,6 +14,13 @@ const config = [
     },
   },
   {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
+    },
+  },
+  {
     files: ['utils/qrStorage.ts', 'utils/safeStorage.ts', 'utils/sync.ts'],
     rules: {
       'no-restricted-globals': ['error', 'window', 'document'],

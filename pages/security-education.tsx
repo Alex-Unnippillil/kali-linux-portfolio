@@ -1,6 +1,17 @@
 import React from 'react';
-import WorkflowCard from '../components/WorkflowCard';
+import dynamic from 'next/dynamic';
 import { WindowMainScreen } from '../components/base/window';
+
+const WorkflowCard = dynamic(
+  () =>
+    import('../components/WorkflowCard').catch((err) => {
+      console.error('Failed to load WorkflowCard', err);
+      throw err;
+    }),
+  {
+    loading: () => null,
+  }
+);
 
 interface FrameProps {
   title: string;
