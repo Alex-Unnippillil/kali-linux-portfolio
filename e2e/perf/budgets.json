@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "scenarios": {
+    "desktop-load": {
+      "description": "Initial Kali-style desktop boot with pinned applications rendered.",
+      "metrics": {
+        "lcp": { "baseline": 2800, "maxRegression": 400, "unit": "ms" },
+        "inp": { "baseline": 180, "maxRegression": 120, "unit": "ms" },
+        "cls": { "baseline": 0.08, "maxRegression": 0.04, "unit": "score" },
+        "memory": { "baseline": 190000000, "maxRegression": 60000000, "unit": "bytes" }
+      }
+    },
+    "apps-catalog-heavy": {
+      "description": "Search catalogue and open a complex security simulation window.",
+      "metrics": {
+        "lcp": { "baseline": 3200, "maxRegression": 600, "unit": "ms" },
+        "inp": { "baseline": 220, "maxRegression": 130, "unit": "ms" },
+        "cls": { "baseline": 0.1, "maxRegression": 0.05, "unit": "score" },
+        "memory": { "baseline": 210000000, "maxRegression": 70000000, "unit": "bytes" }
+      }
+    }
+  }
+}
