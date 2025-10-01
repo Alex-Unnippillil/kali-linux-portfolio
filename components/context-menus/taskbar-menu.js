@@ -30,27 +30,32 @@ function TaskbarMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
+            className={(props.active ? ' block ' : ' hidden ') + ' absolute z-50 w-44 cursor-default rounded-lg border border-gray-900 p-2 text-left text-sm text-white shadow-xl context-menu-bg'}
         >
-            <button
-                type="button"
+            <MenuButton
                 onClick={handleMinimize}
-                role="menuitem"
-                aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                ariaLabel={props.minimized ? 'Restore Window' : 'Minimize Window'}
             >
-                <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
-            </button>
-            <button
-                type="button"
-                onClick={handleClose}
-                role="menuitem"
-                aria-label="Close Window"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
-            >
-                <span className="ml-5">Close</span>
-            </button>
+                {props.minimized ? 'Restore' : 'Minimize'}
+            </MenuButton>
+            <MenuButton onClick={handleClose} ariaLabel="Close Window">
+                Close
+            </MenuButton>
         </div>
+    );
+}
+
+function MenuButton({ onClick, ariaLabel, children }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            role="menuitem"
+            aria-label={ariaLabel}
+            className="w-full rounded px-4 py-1.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 hover:bg-gray-700/70"
+        >
+            {children}
+        </button>
     );
 }
 

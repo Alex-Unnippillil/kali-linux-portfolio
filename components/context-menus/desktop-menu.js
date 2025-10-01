@@ -48,96 +48,94 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? " block " : " hidden ") + " absolute z-50 w-56 cursor-default rounded-lg border border-gray-900 p-2 text-left text-sm text-white shadow-xl context-menu-bg"}
         >
-            <button
-                onClick={props.addNewFolder}
-                type="button"
-                role="menuitem"
-                aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">New Folder</span>
-            </button>
-            <button
-                onClick={props.openShortcutSelector}
-                type="button"
-                role="menuitem"
-                aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Create Shortcut...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
-            </div>
-            <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
-            </div>
-            <button
-                onClick={openTerminal}
-                type="button"
-                role="menuitem"
-                aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Open in Terminal</span>
-            </button>
-            <Devider />
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Change Background...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Settings</span>
-            </button>
-            <Devider />
-            <button
-                onClick={goFullScreen}
-                type="button"
-                role="menuitem"
-                aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
-            </button>
-            <Devider />
-            <button
-                onClick={props.clearSession}
-                type="button"
-                role="menuitem"
-                aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Clear Session</span>
-            </button>
+            <MenuSection label="Desktop">
+                <MenuButton
+                    onClick={props.addNewFolder}
+                    ariaLabel="New Folder"
+                >
+                    New Folder
+                </MenuButton>
+                <MenuButton
+                    onClick={props.openShortcutSelector}
+                    ariaLabel="Create Shortcut"
+                >
+                    Create Shortcut...
+                </MenuButton>
+            </MenuSection>
+            <Separator />
+            <MenuSection label="Clipboard">
+                <MenuButton ariaLabel="Paste" disabled>
+                    Paste
+                </MenuButton>
+            </MenuSection>
+            <Separator />
+            <MenuSection label="Navigation">
+                <MenuButton ariaLabel="Show Desktop in Files" disabled>
+                    Show Desktop in Files
+                </MenuButton>
+                <MenuButton onClick={openTerminal} ariaLabel="Open in Terminal">
+                    Open in Terminal
+                </MenuButton>
+            </MenuSection>
+            <Separator />
+            <MenuSection label="Personalize">
+                <MenuButton onClick={openSettings} ariaLabel="Change Background">
+                    Change Background...
+                </MenuButton>
+                <MenuButton ariaLabel="Display Settings" disabled>
+                    Display Settings
+                </MenuButton>
+                <MenuButton onClick={openSettings} ariaLabel="Settings">
+                    Settings
+                </MenuButton>
+            </MenuSection>
+            <Separator />
+            <MenuSection label="Session">
+                <MenuButton
+                    onClick={goFullScreen}
+                    ariaLabel={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
+                >
+                    {isFullScreen ? "Exit" : "Enter"} Full Screen
+                </MenuButton>
+                <MenuButton onClick={props.clearSession} ariaLabel="Clear Session">
+                    Clear Session
+                </MenuButton>
+            </MenuSection>
         </div>
     )
 }
 
-function Devider() {
+function MenuSection({ label, children }) {
     return (
-        <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+        <div role="none" className="py-1">
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-ubt-grey">{label}</p>
+            <div className="space-y-0.5">
+                {children}
+            </div>
         </div>
-    );
+    )
+}
+
+function MenuButton({ onClick, children, ariaLabel, disabled }) {
+    return (
+        <button
+            onClick={onClick}
+            type="button"
+            role="menuitem"
+            aria-label={ariaLabel}
+            disabled={disabled}
+            aria-disabled={disabled}
+            className={`w-full rounded px-4 py-1.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${disabled ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/70'}`}
+        >
+            {children}
+        </button>
+    )
+}
+
+function Separator() {
+    return <div role="separator" className="mx-2 my-2 border-t border-white/10" />
 }
 
 
