@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useAnnounce from '../../hooks/useAnnounce';
 
 interface ToastProps {
   message: string;
@@ -16,22 +17,24 @@ const Toast: React.FC<ToastProps> = ({
   duration = 6000,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { announceToast } = useAnnounce();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     setVisible(true);
+    if (message) {
+      announceToast(message);
+    }
     timeoutRef.current = setTimeout(() => {
       onClose && onClose();
     }, duration);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [duration, onClose]);
+  }, [announceToast, message, duration, onClose]);
 
   return (
     <div
-      role="status"
-      aria-live="polite"
       className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
     >
       <span>{message}</span>
