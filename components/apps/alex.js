@@ -13,7 +13,7 @@ export class AboutAlex extends Component {
         super();
         this.screens = {};
         this.state = {
-            screen: () => { },
+            screen: <About />,
             active_screen: "about", // by default 'about' screen is active
             navbar: false,
         }
@@ -21,7 +21,7 @@ export class AboutAlex extends Component {
 
     componentDidMount() {
         this.screens = {
-            "about": <About />,
+            "about": <About />, 
             "education": <Education />,
             "skills": <Skills skills={data.skills} />,
             "certs": <Certs />,
@@ -30,27 +30,29 @@ export class AboutAlex extends Component {
         }
 
         let lastVisitedScreen = localStorage.getItem("about-section");
-        if (lastVisitedScreen === null || lastVisitedScreen === undefined) {
+        if (!lastVisitedScreen || !this.screens[lastVisitedScreen]) {
             lastVisitedScreen = "about";
         }
 
-        // focus last visited screen
-        this.changeScreen(document.getElementById(lastVisitedScreen));
+        this.changeScreen(lastVisitedScreen);
     }
 
     changeScreen = (e) => {
-        const screen = e.id || e.target.id;
+        const screenId = typeof e === 'string' ? e : e?.id || e?.target?.id;
+        if (!screenId || !this.screens[screenId]) {
+            return;
+        }
 
         // store this state
-        localStorage.setItem("about-section", screen);
+        localStorage.setItem("about-section", screenId);
 
         // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${screen}`, title: "Custom Title" });
+        ReactGA.send({ hitType: "pageview", page: `/${screenId}`, title: "Custom Title" });
 
 
         this.setState({
-            screen: this.screens[screen],
-            active_screen: screen
+            screen: this.screens[screenId],
+            active_screen: screenId
         });
     }
 
@@ -306,6 +308,7 @@ const SkillSection = ({ title, badges }) => {
         placeholder="Filter..."
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
+        aria-label="Filter skills"
         onChange={(e) => setFilter(e.target.value)}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">

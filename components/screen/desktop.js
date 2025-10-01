@@ -92,6 +92,8 @@ export class Desktop extends Component {
 
         this.currentPointerIsCoarse = false;
 
+        this.validAppIds = new Set(apps.map((app) => app.id));
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -820,7 +822,7 @@ export class Desktop extends Component {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
-                this.openApp('about-alex');
+                this.openApp('about');
             }
         });
         this.setContextListeners();
@@ -1249,7 +1251,9 @@ export class Desktop extends Component {
     hasVisibleWindows = () => {
         const closed = this.state.closed_windows || {};
         const minimized = this.state.minimized_windows || {};
-        return Object.keys(closed).some((id) => closed[id] === false && !minimized[id]);
+        return Object.keys(closed).some(
+            (id) => this.validAppIds.has(id) && closed[id] === false && !minimized[id],
+        );
     };
 
     renderDesktopApps = () => {
@@ -1258,7 +1262,8 @@ export class Desktop extends Component {
 
         const hasOpenWindows = this.hasVisibleWindows();
         const blockIcons = hasOpenWindows && !draggingIconId;
-        const iconBaseZIndex = blockIcons ? 1 : 15;
+        const iconBaseZIndex = 15;
+        const containerZIndex = blockIcons ? 5 : 15;
         const icons = desktopApps.map((appId, index) => {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
@@ -1305,8 +1310,8 @@ export class Desktop extends Component {
                 className="absolute inset-0"
                 aria-hidden={blockIcons ? 'true' : 'false'}
                 style={{
-                    pointerEvents: blockIcons ? 'none' : 'auto',
-                    zIndex: iconBaseZIndex,
+                    pointerEvents: 'auto',
+                    zIndex: containerZIndex,
                 }}
             >
                 {icons}
@@ -1431,6 +1436,10 @@ export class Desktop extends Component {
     }
 
     openApp = (objId, params) => {
+        if (!this.validAppIds.has(objId)) {
+            console.warn(`Attempted to open unknown app: ${objId}`);
+            return;
+        }
         const context = params && typeof params === 'object'
             ? {
                 ...params,

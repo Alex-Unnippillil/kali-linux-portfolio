@@ -75,6 +75,13 @@ export default class Navbar extends PureComponent {
                 this.setState((state) => ({ status_card: !state.status_card }));
         };
 
+        handleStatusKeyDown = (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        this.handleStatusToggle();
+                }
+        };
+
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
@@ -106,18 +113,21 @@ export default class Navbar extends PureComponent {
                                         >
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} />
                                         </div>
-                                        <button
-                                                type="button"
+                                        <div
                                                 id="status-bar"
+                                                role="button"
+                                                tabIndex={0}
                                                 aria-label="System status"
+                                                aria-expanded={this.state.status_card}
                                                 onClick={this.handleStatusToggle}
+                                                onKeyDown={this.handleStatusKeyDown}
                                                 className={
                                                         'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                 }
                                         >
                                                 <Status />
                                                 <QuickSettings open={this.state.status_card} />
-                                        </button>
+                                        </div>
 				</div>
 			);
 		}
