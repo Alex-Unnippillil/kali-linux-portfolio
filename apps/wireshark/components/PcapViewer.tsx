@@ -5,6 +5,7 @@ import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import useStableInput from '../../../hooks/useStableInput';
 
 
 interface PcapViewerProps {
@@ -236,7 +237,13 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
 
 const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const [packets, setPackets] = useState<Packet[]>([]);
-  const [filter, setFilter] = useState('');
+  const {
+    value: filter,
+    inputValue: filterInput,
+    onChange: handleFilterChange,
+    setInputValue: setFilterInput,
+    flush: flushFilter,
+  } = useStableInput({ defaultValue: '' });
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
     'Time',
@@ -261,8 +268,11 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const f = params.get('filter');
-    if (f) setFilter(f);
-  }, []);
+    if (f) {
+      setFilterInput(f);
+      flushFilter();
+    }
+  }, [flushFilter, setFilterInput]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -308,6 +318,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Load capture file"
         />
         <select
           onChange={(e) => {
@@ -315,6 +326,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             e.target.value = '';
           }}
           className="text-sm bg-gray-700 text-white rounded"
+          aria-label="Open sample capture"
         >
           <option value="">Open sample</option>
           {samples.map(({ label, path }) => (
@@ -335,7 +347,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       {packets.length > 0 && (
         <>
           <div className="flex items-center space-x-2">
-            <FilterHelper value={filter} onChange={setFilter} />
+            <FilterHelper value={filterInput} onChange={handleFilterChange} />
             <button
               onClick={() => navigator.clipboard.writeText(filter)}
               className="px-2 py-1 bg-gray-700 rounded text-xs"
@@ -349,12 +361,16 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             {presets.map(({ label, expression }) => (
               <button
                 key={expression}
-                onClick={() => setFilter(expression)}
+                onClick={() => {
+                  setFilterInput(expression);
+                  flushFilter();
+                }}
                 className={`w-4 h-4 rounded ${
                   protocolColors[label.toUpperCase()] || 'bg-gray-500'
                 }`}
                 title={label}
                 type="button"
+                aria-label={`Apply ${label} filter`}
               />
             ))}
           </div>

@@ -7,6 +7,7 @@ import PlaylistBuilder from './components/PlaylistBuilder';
 import share, { canShare } from '../../utils/share';
 import Posterizer from './components/Posterizer';
 import copyToClipboard from '../../utils/clipboard';
+import useStableInput from '../../hooks/useStableInput';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -74,8 +75,16 @@ export default function QuoteApp() {
   const [current, setCurrent] = useState<Quote | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [category, setCategory] = useState('');
-  const [search, setSearch] = useState('');
-  const [authorFilter, setAuthorFilter] = useState('');
+  const {
+    value: search,
+    inputValue: searchInput,
+    onChange: handleSearchChange,
+  } = useStableInput({ defaultValue: '' });
+  const {
+    value: authorFilter,
+    inputValue: authorInput,
+    onChange: handleAuthorChange,
+  } = useStableInput({ defaultValue: '' });
   const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const [posterize, setPosterize] = useState(false);
@@ -404,34 +413,42 @@ export default function QuoteApp() {
           >
             {posterize ? 'Close Posterizer' : 'Posterize'}
           </button>
-          {canShare() && (
-            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareQuote}>
-              Share
-            </button>
-          )}
-          <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
-            Import
-            <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
-          </label>
+            {canShare() && (
+              <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareQuote}>
+                Share
+              </button>
+            )}
+            <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
+              Import
+              <input
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={importQuotes}
+                aria-label="Import custom quotes"
+              />
+            </label>
         </div>
         {posterize && (
           <div className="mt-4 w-full">
             <Posterizer quote={current} />
           </div>
         )}
-        <div className="mt-4 flex flex-col w-full gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search"
-            className="px-2 py-1 rounded text-black"
-          />
-          <input
-            value={authorFilter}
-            onChange={(e) => setAuthorFilter(e.target.value)}
-            placeholder="Author"
-            className="px-2 py-1 rounded text-black"
-          />
+          <div className="mt-4 flex flex-col w-full gap-2">
+            <input
+              value={searchInput}
+              onChange={handleSearchChange}
+              placeholder="Search"
+              className="px-2 py-1 rounded text-black"
+              aria-label="Search quotes"
+            />
+            <input
+              value={authorInput}
+              onChange={handleAuthorChange}
+              placeholder="Author"
+              className="px-2 py-1 rounded text-black"
+              aria-label="Filter by author"
+            />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -461,22 +478,24 @@ export default function QuoteApp() {
           >
             Stop
           </button>
-          <label className="flex items-center space-x-1">
-            <input
-              type="checkbox"
-              checked={loop}
-              onChange={(e) => setLoop(e.target.checked)}
-            />
-            <span>Loop</span>
-          </label>
-          <label className="flex items-center space-x-1">
-            <input
-              type="checkbox"
-              checked={shuffle}
-              onChange={(e) => setShuffle(e.target.checked)}
-            />
-            <span>Shuffle</span>
-          </label>
+            <label className="flex items-center space-x-1">
+              <input
+                type="checkbox"
+                checked={loop}
+                onChange={(e) => setLoop(e.target.checked)}
+                aria-label="Loop playlist"
+              />
+              <span>Loop</span>
+            </label>
+            <label className="flex items-center space-x-1">
+              <input
+                type="checkbox"
+                checked={shuffle}
+                onChange={(e) => setShuffle(e.target.checked)}
+                aria-label="Shuffle playlist"
+              />
+              <span>Shuffle</span>
+            </label>
         </div>
       </div>
       <style jsx>{`

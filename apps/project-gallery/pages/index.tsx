@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import type { TouchEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
+import useStableInput from '../../../hooks/useStableInput';
 import FilterChip from '../components/FilterChip';
 
 const TagIcon = () => (
@@ -320,6 +321,11 @@ export default function ProjectGalleryPage() {
   const [type, setType] = usePersistentState<string>('pg-type', '');
   const [tags, setTags] = usePersistentState<string[]>('pg-tags', []);
   const [search, setSearch] = usePersistentState<string>('pg-search', '');
+  const {
+    value: debouncedSearch,
+    inputValue: searchInput,
+    onChange: handleSearchChange,
+  } = useStableInput({ value: search, defaultValue: '', onCommit: setSearch });
   const [demoOnly, setDemoOnly] = usePersistentState<boolean>('pg-demo', false);
   const [compareSelection, setCompareSelection] = useState<Project[]>([]);
   const [activeSwipe, setActiveSwipe] = useState<number | null>(null);
@@ -366,10 +372,10 @@ export default function ProjectGalleryPage() {
     if (year) query.year = year;
     if (type) query.type = type;
     if (tags.length) query.tags = tags.join(',');
-    if (search) query.q = search;
+    if (debouncedSearch) query.q = debouncedSearch;
     if (demoOnly) query.demo = '1';
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
-  }, [router, tech, year, type, tags, search, demoOnly]);
+  }, [router, tech, year, type, tags, debouncedSearch, demoOnly]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
@@ -396,12 +402,12 @@ export default function ProjectGalleryPage() {
           (!year || String(p.year) === year) &&
           (!type || p.type === type) &&
           (!tags.length || tags.every((t) => p.tags.includes(t))) &&
-          (!search ||
-            p.title.toLowerCase().includes(search.toLowerCase()) ||
-            p.description.toLowerCase().includes(search.toLowerCase())) &&
+          (!debouncedSearch ||
+            p.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            p.description.toLowerCase().includes(debouncedSearch.toLowerCase())) &&
           (!demoOnly || Boolean(p.demo))
       ),
-    [projects, tech, year, type, tags, search, demoOnly]
+    [projects, tech, year, type, tags, debouncedSearch, demoOnly]
   );
 
   const handleOpen = (project: Project) => {
@@ -431,8 +437,8 @@ export default function ProjectGalleryPage() {
         <input
           type="text"
           placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={handleSearchChange}
           aria-label="Search projects"
           className="px-2 py-1 border rounded"
         />

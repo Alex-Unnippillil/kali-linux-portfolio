@@ -1,5 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
+import useStableInput from '../../../hooks/useStableInput';
 
 interface Quote {
   content: string;
@@ -14,7 +15,11 @@ interface PlaylistBuilderProps {
 }
 
 export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: PlaylistBuilderProps) {
-  const [search, setSearch] = useState('');
+  const {
+    value: search,
+    inputValue: searchInput,
+    onChange: handleSearchChange,
+  } = useStableInput({ defaultValue: '' });
   const [playlistName, setPlaylistName] = useState('');
   const [saved, setSaved] = useState<Record<string, number[]>>({});
 
@@ -86,10 +91,11 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
     <div className="w-full mt-4">
       <h2 className="text-lg mb-2">Playlist Builder</h2>
       <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        value={searchInput}
+        onChange={handleSearchChange}
         placeholder="Search quotes"
         className="px-2 py-1 mb-2 w-full rounded text-black"
+        aria-label="Search quotes"
       />
       <ul className="max-h-40 overflow-auto border border-gray-700 rounded mb-2">
         {items.map(({ q, i }) => (
@@ -115,6 +121,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
           onChange={(e) => setPlaylistName(e.target.value)}
           placeholder="Playlist name"
           className="px-2 py-1 w-full rounded text-black"
+          aria-label="Playlist name"
         />
         <button
           onClick={saveCurrent}
