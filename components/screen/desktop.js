@@ -65,7 +65,7 @@ export class Desktop extends Component {
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
-            switcherWindows: [],
+            switcherState: null,
             activeWorkspace: 0,
             workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
                 id: index,
@@ -775,7 +775,7 @@ export class Desktop extends Component {
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
             showWindowSwitcher: false,
-            switcherWindows: [],
+            switcherState: null,
         }, () => {
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
@@ -1032,10 +1032,6 @@ export class Desktop extends Component {
             e.preventDefault();
             this.openApp('clipboard-manager');
         }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
@@ -1088,22 +1084,84 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
+    resolveAppMeta = (id) => {
+        const baseId = typeof id === 'string' ? id.split('#')[0] : id;
+        return apps.find((app) => app.id === id) || apps.find((app) => app.id === baseId) || null;
+    }
+
+    buildSwitcherWindowSummary = (id) => {
+        const meta = this.resolveAppMeta(id);
+        const baseId = id.split('#')[0];
+        const instanceSuffix = id.includes('#') ? ` #${id.split('#')[1]}` : '';
+        const appTitle = meta?.title ?? baseId;
+        const icon = meta?.icon;
+        const title = `${appTitle}${instanceSuffix}`;
+        const minimizedMap = this.state.minimized_windows || {};
+        const focusedMap = this.state.focused_windows || {};
+        return {
+            id,
+            appId: baseId,
+            title,
+            appTitle,
+            icon,
+            isMinimized: minimizedMap[id] ?? minimizedMap[baseId] ?? false,
+            isFocused: focusedMap[id] ?? focusedMap[baseId] ?? false,
+        };
+    }
+
     openWindowSwitcher = () => {
-        const windows = this.getActiveStack()
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
-        }
+        const stack = this.getActiveStack();
+        if (!stack.length) return;
+        const openIds = stack.filter((id) => this.state.closed_windows[id] === false);
+        if (!openIds.length) return;
+
+        const windows = [];
+        const mruOrder = [];
+        const groupedMap = new Map();
+
+        openIds.forEach((id) => {
+            const summary = this.buildSwitcherWindowSummary(id);
+            if (!summary) return;
+            windows.push(summary);
+            mruOrder.push(summary.id);
+            if (!groupedMap.has(summary.appId)) {
+                groupedMap.set(summary.appId, {
+                    appId: summary.appId,
+                    title: summary.appTitle,
+                    icon: summary.icon,
+                    ids: [],
+                });
+            }
+            groupedMap.get(summary.appId).ids.push(summary.id);
+        });
+
+        if (!windows.length) return;
+
+        const groupedOrder = Array.from(groupedMap.values());
+        const focusedId = this.getFocusedWindowId();
+        const originWindowId = focusedId && mruOrder.includes(focusedId)
+            ? focusedId
+            : mruOrder[0];
+        const activeWindowId = mruOrder.length > 1 ? mruOrder[1] : mruOrder[0];
+
+        this.setState({
+            showWindowSwitcher: true,
+            switcherState: {
+                windows,
+                mruOrder,
+                groupedOrder,
+                activeWindowId,
+                originWindowId,
+            },
+        });
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.setState({ showWindowSwitcher: false, switcherState: null });
     }
 
     selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
+        this.setState({ showWindowSwitcher: false, switcherState: null }, () => {
             this.openApp(id);
         });
     }
@@ -1589,7 +1647,11 @@ export class Desktop extends Component {
                     });
                     const stack = this.getActiveStack();
                     if (!stack.includes(objId)) {
-                        stack.push(objId);
+                        stack.unshift(objId);
+                    } else {
+                        const currentIndex = stack.indexOf(objId);
+                        stack.splice(currentIndex, 1);
+                        stack.unshift(objId);
                     }
                 });
             }, 200);
@@ -1679,17 +1741,20 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
-            }
+        const focused_windows = { ...this.state.focused_windows };
+        Object.keys(focused_windows).forEach((key) => {
+            focused_windows[key] = key === objId;
+        });
+
+        const stack = this.getActiveStack();
+        const existingIndex = stack.indexOf(objId);
+        if (existingIndex !== -1) {
+            stack.splice(existingIndex, 1);
         }
+        stack.unshift(objId);
+
         this.setWorkspaceState({ focused_windows });
     }
 
@@ -1909,7 +1974,7 @@ export class Desktop extends Component {
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
-                        windows={this.state.switcherWindows}
+                        state={this.state.switcherState}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
 
