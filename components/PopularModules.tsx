@@ -1,4 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { Info } from '@phosphor-icons/react/dist/ssr/Info';
+import { Warning } from '@phosphor-icons/react/dist/ssr/Warning';
+import { XCircle } from '@phosphor-icons/react/dist/ssr/XCircle';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
 
@@ -101,82 +105,10 @@ const PopularModules: React.FC = () => {
   };
 
   const levelIcon: Record<string, React.ReactElement> = {
-    info: (
-      <svg
-        className="w-6 h-6 text-blue-300"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-        />
-      </svg>
-    ),
-    success: (
-      <svg
-        className="w-6 h-6 text-green-400"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5 13l4 4L19 7"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-        />
-      </svg>
-    ),
-    warning: (
-      <svg
-        className="w-6 h-6 text-yellow-300"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 8v4m0 4h.01M4.93 19h14.14c1.2 0 1.94-1.3 1.34-2.33L13.34 4.67c-.6-1.04-2.08-1.04-2.68 0L3.59 16.67c-.6 1.03-.15 2.33 1.34 2.33z"
-        />
-      </svg>
-    ),
-    error: (
-      <svg
-        className="w-6 h-6 text-red-400"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 2a10 10 0 100 20 10 10 0 000-20z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 9l-6 6m0-6l6 6"
-        />
-      </svg>
-    ),
+    info: <Info aria-hidden="true" className="h-6 w-6 text-blue-300" weight="bold" />,
+    success: <CheckCircle aria-hidden="true" className="h-6 w-6 text-green-400" weight="bold" />,
+    warning: <Warning aria-hidden="true" className="h-6 w-6 text-yellow-300" weight="bold" />,
+    error: <XCircle aria-hidden="true" className="h-6 w-6 text-red-400" weight="bold" />,
   };
 
   return (
@@ -198,13 +130,14 @@ const PopularModules: React.FC = () => {
         )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
-      <input
-        type="text"
-        placeholder="Search modules"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-2 text-black rounded"
-      />
+        <input
+          type="text"
+          placeholder="Search modules"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full p-2 text-black rounded"
+          aria-label="Search modules"
+        />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
@@ -284,13 +217,14 @@ const PopularModules: React.FC = () => {
           <div className="space-y-1">
             <label className="block text-sm">
               Filter logs
-              <input
-                placeholder="Filter logs"
-                type="text"
-                value={logFilter}
-                onChange={(e) => setLogFilter(e.target.value)}
-                className="w-full p-1 mt-1 text-black rounded"
-              />
+                <input
+                  placeholder="Filter logs"
+                  type="text"
+                  value={logFilter}
+                  onChange={(e) => setLogFilter(e.target.value)}
+                  className="w-full p-1 mt-1 text-black rounded"
+                  aria-label="Filter log entries"
+                />
             </label>
             <button
               type="button"
