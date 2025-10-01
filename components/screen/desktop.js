@@ -648,8 +648,10 @@ export class Desktop extends Component {
         });
     };
 
-    handleIconPointerDown = (event, appId) => {
+    handleIconPointerDown = (event) => {
         if (event.button !== 0) return;
+        const appId = event.currentTarget.dataset.appId;
+        if (!appId) return;
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
@@ -1292,7 +1294,8 @@ export class Desktop extends Component {
                 <div
                     key={app.id}
                     style={wrapperStyle}
-                    onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
+                    data-app-id={app.id}
+                    onPointerDown={this.handleIconPointerDown}
                     onPointerMove={this.handleIconPointerMove}
                     onPointerUp={this.handleIconPointerUp}
                     onPointerCancel={this.handleIconPointerCancel}
