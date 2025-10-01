@@ -28,6 +28,10 @@ export default function Settings() {
     setReducedMotion,
     fontScale,
     setFontScale,
+    dyslexiaFont,
+    setDyslexiaFont,
+    spacingMultiplier,
+    setSpacingMultiplier,
     highContrast,
     setHighContrast,
     haptics,
@@ -81,6 +85,9 @@ export default function Settings() {
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
+      if (parsed.dyslexiaFont !== undefined) setDyslexiaFont(parsed.dyslexiaFont);
+      if (parsed.spacingMultiplier !== undefined)
+        setSpacingMultiplier(parsed.spacingMultiplier);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
@@ -103,6 +110,8 @@ export default function Settings() {
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
+    setDyslexiaFont(defaults.dyslexiaFont);
+    setSpacingMultiplier(defaults.spacingMultiplier);
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
@@ -245,6 +254,34 @@ export default function Settings() {
               onChange={(e) => setFontScale(parseFloat(e.target.value))}
               className="ubuntu-slider"
               aria-label="Icon size"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Dyslexia-friendly font:</span>
+            <ToggleSwitch
+              checked={dyslexiaFont}
+              onChange={setDyslexiaFont}
+              ariaLabel="Dyslexia-friendly font"
+            />
+          </div>
+          <div className="flex flex-col items-center my-4 text-ubt-grey">
+            <label htmlFor="spacing-multiplier" className="mb-2">
+              Reading spacing: {spacingMultiplier.toFixed(2)}x
+            </label>
+            <input
+              id="spacing-multiplier"
+              type="range"
+              min="1"
+              max="1.6"
+              step="0.05"
+              value={spacingMultiplier}
+              onChange={(e) => setSpacingMultiplier(parseFloat(e.target.value))}
+              className="ubuntu-slider w-48"
+              aria-label="Reading spacing"
+              aria-valuemin={1}
+              aria-valuemax={1.6}
+              aria-valuenow={Number(spacingMultiplier.toFixed(2))}
+              aria-valuetext={`${spacingMultiplier.toFixed(2)} times default spacing`}
             />
           </div>
           <div className="flex justify-center my-4">

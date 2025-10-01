@@ -11,6 +11,25 @@ body{
     color: var(--color-text);
 }
 
+body,
+input,
+textarea,
+select,
+button,
+[contenteditable="true"],
+.ProseMirror,
+.ProseMirror *,
+.CodeMirror,
+.CodeMirror *,
+.cm-editor,
+.cm-editor *,
+.monaco-editor,
+.monaco-editor * {
+    line-height: var(--reading-line-height);
+    letter-spacing: var(--reading-letter-spacing);
+    word-spacing: var(--reading-word-spacing);
+}
+
 :root {
     /* Stack utility defaults */
     --stack-space-0-5: 0.125rem;

@@ -10,6 +10,8 @@ const DEFAULT_SETTINGS = {
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
+  dyslexiaFont: false,
+  spacingMultiplier: 1,
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
@@ -83,6 +85,30 @@ export async function setFontScale(scale) {
   window.localStorage.setItem('font-scale', String(scale));
 }
 
+export async function getDyslexiaFont() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.dyslexiaFont;
+  const stored = window.localStorage.getItem('dyslexia-font');
+  return stored === null ? DEFAULT_SETTINGS.dyslexiaFont : stored === 'true';
+}
+
+export async function setDyslexiaFont(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('dyslexia-font', value ? 'true' : 'false');
+}
+
+export async function getSpacingMultiplier() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.spacingMultiplier;
+  const stored = window.localStorage.getItem('spacing-multiplier');
+  if (!stored) return DEFAULT_SETTINGS.spacingMultiplier;
+  const parsed = parseFloat(stored);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SETTINGS.spacingMultiplier;
+}
+
+export async function setSpacingMultiplier(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('spacing-multiplier', String(value));
+}
+
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
   return window.localStorage.getItem('high-contrast') === 'true';
@@ -144,6 +170,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
+  window.localStorage.removeItem('dyslexia-font');
+  window.localStorage.removeItem('spacing-multiplier');
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
@@ -160,6 +188,8 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    dyslexiaFont,
+    spacingMultiplier,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -172,6 +202,8 @@ export async function exportSettings() {
     getDensity(),
     getReducedMotion(),
     getFontScale(),
+    getDyslexiaFont(),
+    getSpacingMultiplier(),
     getHighContrast(),
     getLargeHitAreas(),
     getPongSpin(),
@@ -185,6 +217,8 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    dyslexiaFont,
+    spacingMultiplier,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -211,6 +245,8 @@ export async function importSettings(json) {
     density,
     reducedMotion,
     fontScale,
+    dyslexiaFont,
+    spacingMultiplier,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -224,6 +260,8 @@ export async function importSettings(json) {
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
+  if (dyslexiaFont !== undefined) await setDyslexiaFont(dyslexiaFont);
+  if (spacingMultiplier !== undefined) await setSpacingMultiplier(spacingMultiplier);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
