@@ -52,14 +52,15 @@ const BadgeList = ({ badges, className = '' }) => {
       <label htmlFor="badge-filter" className="mb-1">
         Filter skills
       </label>
-      <input
-        id="badge-filter"
-        type="text"
-        placeholder="Filter skills"
-        className="mb-2 px-2 py-1 rounded text-black font-normal"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <input
+          id="badge-filter"
+          type="text"
+          placeholder="Filter skills"
+          className="mb-2 px-2 py-1 rounded text-black font-normal"
+          aria-label="Filter skills"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
       <div ref={listRef} className="flex flex-wrap justify-center items-start w-full">
         {listVisible &&
           filteredBadges.map((badge) => (
@@ -90,7 +91,7 @@ const BadgeList = ({ badges, className = '' }) => {
         >
           <div
             ref={modalRef}
-            className="bg-white text-black p-4 rounded shadow max-w-sm"
+            className="bg-white text-black p-4 rounded shadow max-w-sm contain-layout-paint cis-panel"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="font-bold mb-2">{selected.label}</div>

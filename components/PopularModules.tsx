@@ -198,13 +198,14 @@ const PopularModules: React.FC = () => {
         )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
-      <input
-        type="text"
-        placeholder="Search modules"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-2 text-black rounded"
-      />
+        <input
+          type="text"
+          placeholder="Search modules"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full p-2 text-black rounded"
+          aria-label="Search modules"
+        />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
@@ -231,7 +232,7 @@ const PopularModules: React.FC = () => {
           <button
             key={m.id}
             onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 contain-layout-paint cis-card"
           >
             <h3 className="font-semibold">{m.name}</h3>
             <p className="text-sm text-gray-300">{m.description}</p>
@@ -282,16 +283,18 @@ const PopularModules: React.FC = () => {
             </button>
           </div>
           <div className="space-y-1">
-            <label className="block text-sm">
-              Filter logs
+              <label className="block text-sm" htmlFor="module-log-filter">
+                Filter logs
+              </label>
               <input
+                id="module-log-filter"
                 placeholder="Filter logs"
                 type="text"
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
                 className="w-full p-1 mt-1 text-black rounded"
+                aria-label="Filter module logs"
               />
-            </label>
             <button
               type="button"
               onClick={copyLogs}
