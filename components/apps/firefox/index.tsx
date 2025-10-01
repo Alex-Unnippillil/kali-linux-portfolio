@@ -1,4 +1,5 @@
 import React, { FormEvent, useMemo, useState } from 'react';
+import ExportHAR from './ExportHAR';
 import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
 
 const DEFAULT_URL = 'https://www.kali.org/docs/';
@@ -121,6 +122,7 @@ const Firefox: React.FC = () => {
           </button>
         ))}
       </nav>
+      <ExportHAR currentUrl={address} simulationHeading={simulation?.heading ?? null} />
       <div className="flex-1 bg-black">
         {simulation ? (
           <FirefoxSimulationView simulation={simulation} />

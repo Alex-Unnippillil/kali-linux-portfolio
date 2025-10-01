@@ -18,6 +18,8 @@ describe('Firefox app', () => {
       'href',
       'https://www.kali.org/docs/'
     );
+    expect(screen.getByRole('button', { name: 'Export HAR' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('navigates to entered urls', async () => {
