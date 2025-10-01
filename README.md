@@ -234,6 +234,22 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 - `X-Frame-Options: SAMEORIGIN`
 
+### Sandboxed embeds
+
+- External or user-provided documents (Firefox simulator, VSCode/StackBlitz, Spotify, YouTube fallbacks, React docs, Nikto
+  previews) now render inside sandboxed iframes with the minimum capabilities needed for interaction. Examples:
+  - Firefox browser: `allow-forms allow-popups allow-scripts allow-top-navigation-by-user-activation`.
+  - StackBlitz/VScode wrapper: `allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation` with
+    clipboard access only.
+  - Spotify embeds: `allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation` plus a feature `allow`
+    list limited to playback controls.
+- Each sandbox sets `referrerPolicy="no-referrer"` to avoid leaking workspace URLs and strips unnecessary `allow` permissions
+  (camera/microphone/etc.).
+- Parent ↔ iframe messaging validates origins (`https://open.spotify.com` for embeds, `origin === 'null'` for generated plugin
+  sandboxes) before acting, preventing hostile frames from invoking privileged UI flows.
+- Because of the sandbox, cross-origin scripts cannot access the main window or cookies. Some embeds may lose features that require
+  elevated permissions (e.g., persistent logins).
+
 ### CSP External Domains
 
 These external domains are whitelisted in the default CSP. Update this list whenever `next.config.js` changes.

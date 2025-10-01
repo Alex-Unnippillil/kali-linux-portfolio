@@ -288,6 +288,8 @@ const NiktoApp = () => {
         <iframe
           title="Nikto HTML Report"
           srcDoc={htmlReport}
+          sandbox=""
+          referrerPolicy="no-referrer"
           className="w-full h-64 bg-white"
         />
       </div>

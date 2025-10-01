@@ -91,9 +91,13 @@ export default function PluginManager() {
       const url = URL.createObjectURL(blob);
       const iframe = document.createElement('iframe');
       iframe.sandbox.add('allow-scripts');
+      iframe.referrerPolicy = 'no-referrer';
       const listener = (e: MessageEvent) => {
-        if (e.source === iframe.contentWindow) {
-          output.push(String(e.data));
+        if (e.origin !== 'null' || e.source !== iframe.contentWindow) {
+          return;
+        }
+        if (typeof e.data === 'string') {
+          output.push(e.data);
         }
       };
       window.addEventListener('message', listener);

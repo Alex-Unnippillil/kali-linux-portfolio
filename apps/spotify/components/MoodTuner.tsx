@@ -5,6 +5,8 @@ interface Playlists {
   [mood: string]: string;
 }
 
+const SPOTIFY_ORIGIN = "https://open.spotify.com";
+
 const MoodTuner = () => {
   const [playlists, setPlaylists] = useState<Playlists>({});
   const [mood, setMood] = usePersistentState<string>("spotify-mood", "");
@@ -35,7 +37,9 @@ const MoodTuner = () => {
   }, [playlists, mood, setMood]);
 
   const post = useCallback((cmd: string) => {
-    iframeRef.current?.contentWindow?.postMessage({ command: cmd }, "*");
+    const targetWindow = iframeRef.current?.contentWindow;
+    if (!targetWindow) return;
+    targetWindow.postMessage({ command: cmd }, SPOTIFY_ORIGIN);
   }, []);
 
   const togglePlay = useCallback(() => {
@@ -51,7 +55,7 @@ const MoodTuner = () => {
   // Update play state from Spotify messages
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
-      if (!e.origin.includes("spotify")) return;
+      if (e.origin !== SPOTIFY_ORIGIN) return;
       const data = e.data;
       if (Array.isArray(data) && data[0] === "playback_update") {
         setIsPlaying(!data[1]?.is_paused);
@@ -102,7 +106,9 @@ const MoodTuner = () => {
             width="100%"
             height="152"
             frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            sandbox="allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            referrerPolicy="no-referrer"
             loading="lazy"
           />
           <div className="flex justify-center space-x-4 p-2 bg-black bg-opacity-30">

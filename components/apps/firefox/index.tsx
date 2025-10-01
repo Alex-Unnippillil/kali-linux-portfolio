@@ -130,8 +130,8 @@ const Firefox: React.FC = () => {
             title="Firefox"
             src={address}
             className="h-full w-full border-0"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            sandbox="allow-forms allow-popups allow-scripts allow-top-navigation-by-user-activation"
+            referrerPolicy="no-referrer"
           />
         )}
       </div>
