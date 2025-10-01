@@ -1,4 +1,5 @@
 import React from 'react';
+import FirefoxConsole from './Console';
 
 export type SimulationLink = {
   label: string;
@@ -569,6 +570,21 @@ export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> 
           </section>
         ))}
       </div>
+      <section className="mt-6 rounded-lg border border-gray-800 bg-gray-900/70 p-6 shadow-inner">
+        <div className="mb-4 max-w-3xl space-y-2 text-sm text-gray-300">
+          <h2 className="text-lg font-semibold text-white">Practice the Firefox Developer Console</h2>
+          <p>
+            Explore a simulated console that streams browser, network, extension, and security events. Use the
+            filters to triage incidents, rehearse clipboard-friendly reporting, and observe how VirtualList keeps
+            10,000+ entries navigable without jank.
+          </p>
+          <p>
+            This practice space is safe to experiment with log triage strategies before stepping into a live
+            engagement.
+          </p>
+        </div>
+        <FirefoxConsole />
+      </section>
     </div>
   </div>
 );
