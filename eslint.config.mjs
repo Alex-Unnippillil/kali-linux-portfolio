@@ -19,6 +19,20 @@ const config = [
       'no-restricted-globals': ['error', 'window', 'document'],
     },
   },
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "JSXAttribute[name.name='style'] ObjectExpression > Property[key.name='boxShadow'] > Literal[value=/^(?!var\\(--elevation-).+/]",
+          message:
+            'Use the shared elevation tokens from styles/elevation.css instead of hard-coded box-shadow values.',
+        },
+      ],
+    },
+  },
   ...compat.config({
     extends: ['next/core-web-vitals'],
     rules: {

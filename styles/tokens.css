@@ -67,8 +67,8 @@
   --radius-6: 12px;
   --radius-round: 9999px;
 
-  /* Elevation */
-  --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+  /* Legacy elevation alias */
+  --shadow-2: var(--elevation-shadow-4);
 
   /* Window chrome */
   --color-window-border: #0d1a2a;

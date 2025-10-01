@@ -2,9 +2,10 @@
   position: relative;
   border: 1px solid var(--color-window-border);
   border-radius: var(--radius-6);
-  box-shadow: var(--shadow-2);
+  background-color: var(--elevation-surface-2);
+  box-shadow: var(--elevation-shadow-5);
   overflow: hidden;
-  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  transition: var(--elevation-transition);
 }
 
 .windowFrame::before {
