@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { setOverlayActive } from '../../utils/overlayState';
 
 interface ModalProps {
     isOpen: boolean;
@@ -32,6 +33,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
     const inertRootRef = useRef<HTMLElement | null>(null);
+    const overlayTokenRef = useRef(`modal-${Math.random().toString(36).slice(2)}`);
 
     if (!portalRef.current && typeof document !== 'undefined') {
         const el = document.createElement('div');
@@ -76,6 +78,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
         document.addEventListener('keydown', handleKey);
         return () => document.removeEventListener('keydown', handleKey);
     }, [isOpen, onClose]);
+
+    useEffect(() => {
+        const token = overlayTokenRef.current;
+        setOverlayActive(token, isOpen);
+        return () => {
+            setOverlayActive(token, false);
+        };
+    }, [isOpen]);
 
     useEffect(() => {
         return () => {
