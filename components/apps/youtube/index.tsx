@@ -1,6 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import InlineExamples, {
+  InlineExample,
+  InlineExampleSet,
+} from '../../common/InlineExamples';
+import { useFieldHighlights } from '../../../hooks/useFieldHighlights';
 
 interface Playlist {
   id: string;
@@ -54,6 +59,73 @@ const SORT_OPTIONS = [
 
 type SortId = (typeof SORT_OPTIONS)[number]['id'];
 type LayoutId = 'grid' | 'channel-groups';
+
+const SEARCH_EXAMPLE_SETS: InlineExampleSet[] = [
+  {
+    id: 'discoverability',
+    title: 'Explore discovery angles',
+    description:
+      'Try a curated search with layout and sorting tuned for quick scanning across channels.',
+    examples: [
+      {
+        id: 'incident-playbooks',
+        label: 'Incident response playbooks',
+        description:
+          'Great when you want playlists that walk through blue team drills and tabletop exercises.',
+        metadata: 'Sort: Recently updated · Layout: Channel groups',
+        values: {
+          query: 'incident response tabletop playlist',
+          sortId: 'updated-desc',
+          layout: 'channel-groups',
+          selectedChannel: 'all',
+        },
+      },
+      {
+        id: 'purple-team',
+        label: 'Purple team labs',
+        description:
+          'Highlights deep dives that blend offensive perspective with defensive instrumentation.',
+        metadata: 'Sort: Largest first',
+        values: {
+          query: 'purple team simulation walkthrough',
+          sortId: 'size-desc',
+          layout: 'grid',
+          selectedChannel: 'all',
+        },
+      },
+    ],
+  },
+  {
+    id: 'learning-tracks',
+    title: 'Skill tracks',
+    description:
+      'Jump straight into playlists that help you level up in a specific focus area.',
+    examples: [
+      {
+        id: 'malware-analyst',
+        label: 'Malware analyst starter set',
+        metadata: 'Sort: Title A → Z',
+        values: {
+          query: 'malware analysis lab playlist',
+          sortId: 'title-asc',
+          layout: 'grid',
+          selectedChannel: 'all',
+        },
+      },
+      {
+        id: 'cloud-detection',
+        label: 'Cloud detection engineering',
+        description: 'Focus on AWS and Azure attack detection workflows.',
+        metadata: 'Layout: Channel groups',
+        values: {
+          query: 'cloud detection engineering workshop',
+          layout: 'channel-groups',
+          selectedChannel: 'all',
+        },
+      },
+    ],
+  },
+];
 
 type FetchResult = {
   items: Playlist[];
@@ -316,6 +388,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<string>('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const { isHighlighted: isSearchHighlighted, triggerHighlight } = useFieldHighlights();
 
   useEffect(() => {
     setPlaylists(normalizedInitial);
@@ -442,6 +515,31 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     void handleSearch(true, nextPageToken);
   }, [handleSearch, nextPageToken]);
 
+  const handleApplySearchExample = useCallback(
+    (example: InlineExample) => {
+      const values = example.values;
+      const changed: string[] = [];
+      if (typeof values.query === 'string' && values.query !== query) {
+        setQuery(values.query);
+        setError(null);
+        changed.push('query');
+      }
+      if (typeof values.sortId === 'string' && values.sortId !== sortId) {
+        setSortId(values.sortId as SortId);
+      }
+      if (typeof values.layout === 'string' && values.layout !== layout) {
+        setLayout(values.layout as LayoutId);
+      }
+      if (typeof values.selectedChannel === 'string') {
+        setSelectedChannel(values.selectedChannel);
+      }
+      if (changed.length) {
+        triggerHighlight(changed);
+      }
+    },
+    [layout, query, sortId, triggerHighlight],
+  );
+
   return (
     <div className="flex h-full flex-col bg-gradient-to-br from-[#10151c] via-[#0f1f2d] to-[#111827] text-white">
       <header className="border-b border-white/10 bg-black/20 px-6 py-5 shadow-sm">
@@ -463,7 +561,11 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 if (error) setError(null);
               }}
               placeholder="Search for playlists by topic, creator, or mood…"
-              className="w-full rounded-md border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-ubt-grey focus:border-ubt-green focus:outline-none focus:ring-2 focus:ring-ubt-green/40"
+              className={`w-full rounded-md border bg-black/40 px-4 py-3 text-sm text-white placeholder:text-ubt-grey transition-shadow focus:border-ubt-green focus:outline-none focus:ring-2 focus:ring-ubt-green/40 ${
+                isSearchHighlighted('query')
+                  ? 'border-ubt-green/80 ring-2 ring-ubt-green/60 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]'
+                  : 'border-white/10'
+              }`}
             />
           </div>
           <button
@@ -480,6 +582,14 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
             Tip: Add a <code className="rounded bg-black/50 px-1">NEXT_PUBLIC_YOUTUBE_API_KEY</code> environment variable for richer metadata and pagination.
           </p>
         )}
+        <div className="mt-6">
+          <InlineExamples
+            sets={SEARCH_EXAMPLE_SETS}
+            onApply={handleApplySearchExample}
+            storageKeyPrefix="youtube:inline-examples"
+            defaultCollapsed
+          />
+        </div>
         <div className="mt-4 flex flex-wrap gap-2 sm:hidden">
           <button
             type="button"
