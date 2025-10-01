@@ -1,8 +1,13 @@
 import ReactGA from 'react-ga4';
 import { reportWebVitals } from '../utils/reportWebVitals';
+import { recordInputLatencyMetric } from '../utils/capabilities';
 
 jest.mock('react-ga4', () => ({
   event: jest.fn(),
+}));
+
+jest.mock('../utils/capabilities', () => ({
+  recordInputLatencyMetric: jest.fn(),
 }));
 
 describe('reportWebVitals', () => {
@@ -35,6 +40,7 @@ describe('reportWebVitals', () => {
       expect.objectContaining({ action: 'LCP' })
     );
     expect(warnSpy).not.toHaveBeenCalled();
+    expect(recordInputLatencyMetric).not.toHaveBeenCalled();
   });
 
   it('alerts when INP exceeds threshold', () => {
@@ -46,5 +52,6 @@ describe('reportWebVitals', () => {
       expect.objectContaining({ action: 'INP degraded' })
     );
     expect(warnSpy).toHaveBeenCalled();
+    expect(recordInputLatencyMetric).toHaveBeenCalledWith(300);
   });
 });

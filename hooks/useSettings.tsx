@@ -22,9 +22,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getPerformanceMode as loadPerformanceMode,
+  setPerformanceMode as savePerformanceMode,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import type { PerformanceMode } from '../utils/capabilities';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -66,6 +69,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  performanceMode: PerformanceMode;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +82,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setPerformanceMode: (value: PerformanceMode) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +99,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  performanceMode: defaults.performanceMode as PerformanceMode,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +112,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setPerformanceMode: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +128,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>(
+    defaults.performanceMode as PerformanceMode,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +147,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setPerformanceMode((await loadPerformanceMode()) as PerformanceMode);
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +261,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    savePerformanceMode(performanceMode);
+  }, [performanceMode]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +282,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        performanceMode,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +295,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setPerformanceMode,
         setTheme,
       }}
     >
