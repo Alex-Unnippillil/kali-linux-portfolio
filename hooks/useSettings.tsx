@@ -24,6 +24,12 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
+import {
+  KILL_SWITCH_DEFAULTS,
+  KillSwitchState,
+  getKillSwitches,
+  subscribeToKillSwitches,
+} from '../flags';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
@@ -65,6 +71,7 @@ interface SettingsContextValue {
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
+  networkKillSwitchActive: boolean;
   haptics: boolean;
   theme: string;
   setAccent: (accent: string) => void;
@@ -93,6 +100,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  networkKillSwitchActive: KILL_SWITCH_DEFAULTS.networkAccess,
   haptics: defaults.haptics,
   theme: 'default',
   setAccent: () => {},
@@ -119,9 +127,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [allowNetworkState, setAllowNetworkState] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [killSwitches, setKillSwitchesState] = useState<KillSwitchState>(KILL_SWITCH_DEFAULTS);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -135,10 +144,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
+      setAllowNetworkState(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const flags = await getKillSwitches();
+      if (mounted) setKillSwitchesState(flags);
+    })();
+    const unsubscribe = subscribeToKillSwitches((flags) => {
+      if (mounted) setKillSwitchesState(flags);
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -221,9 +245,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [pongSpin]);
 
   useEffect(() => {
-    saveAllowNetwork(allowNetwork);
+    saveAllowNetwork(allowNetworkState);
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
+    const allowNetwork = killSwitches.networkAccess ? false : allowNetworkState;
     if (!allowNetwork) {
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
         const url =
@@ -244,11 +269,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       window.fetch = fetchRef.current!;
     }
-  }, [allowNetwork]);
+  }, [allowNetworkState, killSwitches.networkAccess]);
 
   useEffect(() => {
     saveHaptics(haptics);
   }, [haptics]);
+
+  const allowNetwork = killSwitches.networkAccess ? false : allowNetworkState;
+  const setAllowNetwork = (value: boolean) => {
+    setAllowNetworkState(value);
+  };
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
@@ -266,6 +296,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        networkKillSwitchActive: killSwitches.networkAccess,
         haptics,
         theme,
         setAccent,

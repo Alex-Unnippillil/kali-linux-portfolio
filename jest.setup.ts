@@ -5,6 +5,54 @@ if (typeof global.structuredClone !== 'function') {
   // @ts-ignore
   global.structuredClone = (val) => (val === undefined ? val : JSON.parse(JSON.stringify(val)));
 }
+const globalScope: any = typeof globalThis !== 'undefined' ? globalThis : {};
+
+if (typeof (global as any).BroadcastChannel === 'undefined') {
+  const channels = new Map<string, Set<BroadcastChannelMock>>();
+
+  class BroadcastChannelMock {
+    name: string;
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    private listeners: Set<(event: MessageEvent) => void> = new Set();
+
+    constructor(name: string) {
+      this.name = name;
+      if (!channels.has(name)) channels.set(name, new Set());
+      channels.get(name)!.add(this);
+    }
+
+    postMessage(data: unknown) {
+      const payload = typeof structuredClone === 'function' ? structuredClone(data) : JSON.parse(JSON.stringify(data));
+      const event = { data: payload } as MessageEvent;
+      const peers = channels.get(this.name);
+      if (!peers) return;
+      peers.forEach((peer) => {
+        if (peer === this) return;
+        peer.onmessage?.(event);
+        peer.listeners.forEach((listener) => listener(event));
+      });
+    }
+
+    addEventListener(type: string, listener: (event: MessageEvent) => void) {
+      if (type === 'message') this.listeners.add(listener);
+    }
+
+    removeEventListener(type: string, listener: (event: MessageEvent) => void) {
+      if (type === 'message') this.listeners.delete(listener);
+    }
+
+    close() {
+      const peers = channels.get(this.name);
+      peers?.delete(this);
+    }
+  }
+
+  Object.defineProperty(global, 'BroadcastChannel', {
+    value: BroadcastChannelMock,
+    configurable: true,
+  });
+}
+
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
 
@@ -29,6 +77,33 @@ if (typeof global.structuredClone === 'undefined') {
 if (!global.fetch) {
   // @ts-ignore
   global.fetch = () => Promise.reject(new Error('fetch not implemented'));
+}
+
+if (typeof navigator !== 'undefined' && !('serviceWorker' in navigator)) {
+  const listeners = new Set<(event: MessageEvent) => void>();
+  const controller = {
+    postMessage(message: unknown) {
+      const event = { data: message } as MessageEvent;
+      listeners.forEach((listener) => listener(event));
+    },
+  } as any;
+
+  const serviceWorkerMock = {
+    controller,
+    addEventListener(type: string, listener: (event: MessageEvent) => void) {
+      if (type === 'message') listeners.add(listener);
+    },
+    removeEventListener(type: string, listener: (event: MessageEvent) => void) {
+      if (type === 'message') listeners.delete(listener);
+    },
+    ready: Promise.resolve({} as ServiceWorkerRegistration),
+    register: async () => ({} as ServiceWorkerRegistration),
+  } as any;
+
+  Object.defineProperty(navigator, 'serviceWorker', {
+    value: serviceWorkerMock,
+    configurable: true,
+  });
 }
 
 // jsdom does not provide a global Image constructor which is used by
@@ -81,9 +156,9 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 }
 
 // Basic matchMedia mock for libraries that expect it
-if (typeof window !== 'undefined' && !window.matchMedia) {
+if (!globalScope.matchMedia) {
   // @ts-ignore
-  window.matchMedia = () => ({
+  globalScope.matchMedia = () => ({
     matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -93,7 +168,7 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 }
 
 // Minimal IntersectionObserver mock so components relying on it don't crash in tests
-if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+if (!('IntersectionObserver' in globalScope)) {
   class IntersectionObserverMock {
     constructor() {}
     observe() {}
@@ -102,16 +177,16 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
     takeRecords() { return []; }
   }
   // @ts-ignore
-  window.IntersectionObserver = IntersectionObserverMock;
+  globalScope.IntersectionObserver = IntersectionObserverMock;
   // @ts-ignore
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
 // Simple localStorage mock for environments without it
-if (typeof window !== 'undefined' && !window.localStorage) {
+if (!globalScope.localStorage) {
   const store: Record<string, string> = {};
   // @ts-ignore
-  window.localStorage = {
+  globalScope.localStorage = {
     getItem: (key: string) => (key in store ? store[key] : null),
     setItem: (key: string, value: string) => {
       store[key] = String(value);
