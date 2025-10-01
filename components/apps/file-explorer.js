@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import BulkRename from './file-explorer/BulkRename';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -105,6 +106,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const [selectedNames, setSelectedNames] = useState([]);
+  const [bulkRenameOpen, setBulkRenameOpen] = useState(false);
+  const [renameHistory, setRenameHistory] = useState({ past: [], future: [] });
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -116,6 +120,20 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const selectedItems = useMemo(() => {
+    const lookup = new Map(files.map((file) => [file.name, file]));
+    return selectedNames.map((name) => lookup.get(name)).filter(Boolean);
+  }, [files, selectedNames]);
+
+  useEffect(() => {
+    setSelectedNames((prev) => prev.filter((name) => files.some((file) => file.name === name)));
+  }, [files]);
+
+  useEffect(() => {
+    if (bulkRenameOpen && selectedItems.length === 0) {
+      setBulkRenameOpen(false);
+    }
+  }, [bulkRenameOpen, selectedItems.length]);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -131,20 +149,29 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
-  const saveBuffer = async (name, data) => {
-    if (unsavedDir) await opfsWrite(name, data, unsavedDir);
-  };
+  const saveBuffer = useCallback(
+    async (name, data) => {
+      if (unsavedDir) await opfsWrite(name, data, unsavedDir);
+    },
+    [unsavedDir, opfsWrite],
+  );
 
-  const loadBuffer = async (name) => {
-    if (!unsavedDir) return null;
-    return await opfsRead(name, unsavedDir);
-  };
+  const loadBuffer = useCallback(
+    async (name) => {
+      if (!unsavedDir) return null;
+      return await opfsRead(name, unsavedDir);
+    },
+    [unsavedDir, opfsRead],
+  );
 
-  const removeBuffer = async (name) => {
-    if (unsavedDir) await opfsDelete(name, unsavedDir);
-  };
+  const removeBuffer = useCallback(
+    async (name) => {
+      if (unsavedDir) await opfsDelete(name, unsavedDir);
+    },
+    [unsavedDir, opfsDelete],
+  );
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -163,6 +190,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: handle.name || '/', handle }]);
       await readDir(handle);
       setLocationError(null);
+      setSelectedNames([]);
     } catch {}
   };
 
@@ -174,11 +202,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: entry.name, handle: entry.handle }]);
       await readDir(entry.handle);
       setLocationError(null);
+      setSelectedNames([]);
     } catch {}
   };
 
   const openFile = async (file) => {
     setCurrentFile(file);
+    setSelectedNames([file.name]);
     let text = '';
     if (opfsSupported) {
       const unsaved = await loadBuffer(file.name);
@@ -235,7 +265,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         setDirHandle(current);
         setPath(crumbs);
         await readDir(current);
-        if (active) setLocationError(null);
+        if (active) {
+          setLocationError(null);
+          setSelectedNames([]);
+        }
       } catch {
         if (active) setLocationError(`Unable to open ${requested}`);
       }
@@ -252,6 +285,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
     await readDir(dir.handle);
     setLocationError(null);
+    setSelectedNames([]);
   };
 
   const navigateTo = async (index) => {
@@ -261,6 +295,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setPath(path.slice(0, index + 1));
     await readDir(target.handle);
     setLocationError(null);
+    setSelectedNames([]);
   };
 
   const goBack = async () => {
@@ -272,8 +307,243 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setDirHandle(prev.handle);
       await readDir(prev.handle);
       setLocationError(null);
+      setSelectedNames([]);
     }
   };
+
+  const toggleFileSelection = useCallback((file, extend = false) => {
+    setSelectedNames((prev) => {
+      const exists = prev.includes(file.name);
+      if (extend) {
+        if (exists) return prev.filter((name) => name !== file.name);
+        return [...prev, file.name];
+      }
+      if (exists && prev.length === 1) return [];
+      return [file.name];
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedNames([]);
+  }, []);
+
+  const performRename = useCallback(
+    async (plan, options = {}) => {
+      const dryRun = !!(options && options.dryRun);
+      const recordHistory =
+        options && Object.prototype.hasOwnProperty.call(options, 'recordHistory')
+          ? options.recordHistory
+          : !dryRun;
+
+      if (!Array.isArray(plan) || plan.length === 0) return [];
+
+      if (!dirHandle) {
+        return plan.map((entry) => ({
+          originalName: entry?.item?.name || '',
+          newName: entry?.nextName || '',
+          success: false,
+          error: 'No directory selected',
+        }));
+      }
+
+      const duplicates = new Map();
+      for (const entry of plan) {
+        if (!entry?.nextName) continue;
+        duplicates.set(entry.nextName, (duplicates.get(entry.nextName) || 0) + 1);
+      }
+
+      const results = [];
+      const successful = [];
+
+      for (const entry of plan) {
+        if (!entry || !entry.item) {
+          results.push({
+            originalName: '',
+            newName: entry?.nextName || '',
+            success: false,
+            error: 'Invalid rename entry',
+          });
+          continue;
+        }
+
+        const originalName = entry.item.name;
+        const nextName = (entry.nextName || '').trim();
+
+        if (!nextName) {
+          results.push({
+            originalName,
+            newName: nextName,
+            success: false,
+            error: 'Resulting name cannot be empty',
+          });
+          continue;
+        }
+
+        if ((duplicates.get(nextName) || 0) > 1) {
+          results.push({
+            originalName,
+            newName: nextName,
+            success: false,
+            error: 'Duplicate target name',
+          });
+          continue;
+        }
+
+        if (nextName === originalName) {
+          results.push({ originalName, newName: nextName, success: true });
+          continue;
+        }
+
+        const targetExists = async () => {
+          try {
+            await dirHandle.getFileHandle(nextName);
+            if (nextName !== originalName) return true;
+          } catch {}
+          try {
+            await dirHandle.getDirectoryHandle(nextName);
+            if (nextName !== originalName) return true;
+          } catch {}
+          return false;
+        };
+
+        if (dryRun) {
+          const conflict = await targetExists();
+          results.push({
+            originalName,
+            newName: nextName,
+            success: !conflict,
+            error: conflict ? 'An item with this name already exists' : undefined,
+          });
+          continue;
+        }
+
+        if (await targetExists()) {
+          results.push({
+            originalName,
+            newName: nextName,
+            success: false,
+            error: 'An item with this name already exists',
+          });
+          continue;
+        }
+
+        try {
+          const file = await entry.item.handle.getFile();
+          const newHandle = await dirHandle.getFileHandle(nextName, { create: true });
+          const writable = await newHandle.createWritable();
+          await writable.write(await file.arrayBuffer());
+          await writable.close();
+          await dirHandle.removeEntry(originalName);
+          if (opfsSupported) {
+            const unsaved = await loadBuffer(originalName);
+            if (unsaved !== null) {
+              await saveBuffer(nextName, unsaved);
+              await removeBuffer(originalName);
+            }
+          }
+          if (currentFile?.name === originalName) {
+            setCurrentFile({ name: nextName, handle: newHandle });
+          }
+          successful.push({ from: originalName, to: nextName });
+          results.push({
+            originalName,
+            newName: nextName,
+            success: true,
+            handle: newHandle,
+          });
+        } catch (error) {
+          try {
+            await dirHandle.removeEntry(nextName);
+          } catch {}
+          results.push({
+            originalName,
+            newName: nextName,
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to rename item',
+          });
+        }
+      }
+
+      if (!dryRun && successful.length) {
+        if (recordHistory) {
+          setRenameHistory((history) => ({
+            past: [...history.past, successful.map((op) => ({ from: op.from, to: op.to }))],
+            future: [],
+          }));
+        }
+        await readDir(dirHandle);
+        if (recordHistory) {
+          setSelectedNames(successful.map((op) => op.to));
+        }
+      }
+
+      return results;
+    },
+    [
+      dirHandle,
+      opfsSupported,
+      loadBuffer,
+      saveBuffer,
+      removeBuffer,
+      currentFile,
+      readDir,
+    ],
+  );
+
+  const buildPlanFromOperations = useCallback(
+    async (ops, reverse = false) => {
+      if (!dirHandle) return null;
+      const ordered = reverse ? [...ops].reverse() : [...ops];
+      const plan = [];
+      for (const op of ordered) {
+        const sourceName = reverse ? op.to : op.from;
+        const targetName = reverse ? op.from : op.to;
+        try {
+          const handle = await dirHandle.getFileHandle(sourceName);
+          plan.push({ item: { name: sourceName, handle }, nextName: targetName });
+        } catch {
+          return null;
+        }
+      }
+      return plan;
+    },
+    [dirHandle],
+  );
+
+  const undoRename = useCallback(async () => {
+    if (!renameHistory.past.length) return;
+    const lastOps = renameHistory.past[renameHistory.past.length - 1];
+    const plan = await buildPlanFromOperations(lastOps, true);
+    if (!plan) return;
+    const results = await performRename(plan, { dryRun: false, recordHistory: false });
+    if (results.every((result) => result.success || result.newName === result.originalName)) {
+      setRenameHistory((history) => ({
+        past: history.past.slice(0, -1),
+        future: [lastOps, ...history.future],
+      }));
+      setSelectedNames(lastOps.map((op) => op.from));
+    }
+  }, [buildPlanFromOperations, performRename, renameHistory]);
+
+  const redoRename = useCallback(async () => {
+    if (!renameHistory.future.length) return;
+    const [nextOps, ...rest] = renameHistory.future;
+    const plan = await buildPlanFromOperations(nextOps);
+    if (!plan) return;
+    const results = await performRename(plan, { dryRun: false, recordHistory: false });
+    if (results.every((result) => result.success || result.newName === result.originalName)) {
+      setRenameHistory((history) => ({
+        past: [...history.past, nextOps],
+        future: rest,
+      }));
+      setSelectedNames(nextOps.map((op) => op.to));
+    }
+  }, [buildPlanFromOperations, performRename, renameHistory]);
+
+  const openRenameDialog = useCallback(() => {
+    if (!selectedItems.length) return;
+    setBulkRenameOpen(true);
+  }, [selectedItems.length]);
 
   const saveFile = async () => {
     if (!currentFile) return;
@@ -312,10 +582,38 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        if (selectedItems.length) setBulkRenameOpen(true);
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redoRename();
+        } else {
+          undoRename();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItems.length, undoRename, redoRename]);
+
+  const hasSelection = selectedItems.length > 0;
+  const hasUndo = renameHistory.past.length > 0;
+  const hasRedo = renameHistory.future.length > 0;
+
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Open file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +628,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -350,10 +649,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
-        </button>
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-ub-warm-grey bg-opacity-40">
+          <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Open Folder
+          </button>
         {path.length > 1 && (
           <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Back
@@ -370,9 +669,47 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Save
           </button>
         )}
+        <button
+          onClick={openRenameDialog}
+          disabled={!hasSelection}
+          className={`px-2 py-1 rounded ${
+            hasSelection
+              ? 'bg-black bg-opacity-50 hover:bg-opacity-60'
+              : 'bg-black bg-opacity-20 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          Bulk Rename (Ctrl+Shift+R)
+        </button>
+        <button
+          onClick={undoRename}
+          disabled={!hasUndo}
+          className={`px-2 py-1 rounded ${
+            hasUndo
+              ? 'bg-black bg-opacity-50 hover:bg-opacity-60'
+              : 'bg-black bg-opacity-20 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          Undo
+        </button>
+        <button
+          onClick={redoRename}
+          disabled={!hasRedo}
+          className={`px-2 py-1 rounded ${
+            hasRedo
+              ? 'bg-black bg-opacity-50 hover:bg-opacity-60'
+              : 'bg-black bg-opacity-20 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          Redo
+        </button>
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
+        <div
+          className="w-56 overflow-auto border-r border-gray-600"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) clearSelection();
+          }}
+        >
           <div className="p-2 font-bold">Recent</div>
           {recent.map((r, i) => (
             <div
@@ -394,26 +731,53 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+          {files.map((f) => {
+            const selected = selectedNames.includes(f.name);
+            return (
+              <div
+                key={f.name}
+                className={`flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-black hover:bg-opacity-30 ${
+                  selected ? 'bg-black bg-opacity-50' : ''
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFileSelection(f, e.ctrlKey || e.metaKey);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  openFile(f);
+                }}
+              >
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${f.name}`}
+                  checked={selected}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    toggleFileSelection(f, true);
+                  }}
+                />
+                <span className="truncate">{f.name}</span>
+              </div>
+            );
+          })}
         </div>
         <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
+            {currentFile && (
+              <textarea
+                className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File viewer"
+              />
+            )}
           <div className="p-2 border-t border-gray-600">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
@@ -428,6 +792,20 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         </div>
       </div>
+      {bulkRenameOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4"
+          onClick={() => setBulkRenameOpen(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <BulkRename
+              items={selectedItems}
+              onClose={() => setBulkRenameOpen(false)}
+              onSubmit={performRename}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
