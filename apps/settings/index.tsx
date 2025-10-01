@@ -13,6 +13,12 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import {
+  TELEMETRY_CATEGORY_INFO,
+  TelemetryCategory,
+  buildSampleTelemetryPayload,
+  recordFeatureUsage,
+} from "../../utils/telemetry";
 
 export default function Settings() {
   const {
@@ -32,6 +38,12 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    telemetryPerformance,
+    setTelemetryPerformance,
+    telemetryErrors,
+    setTelemetryErrors,
+    telemetryFeatures,
+    setTelemetryFeatures,
     theme,
     setTheme,
   } = useSettings();
@@ -68,6 +80,7 @@ export default function Settings() {
     a.download = "settings.json";
     a.click();
     URL.revokeObjectURL(url);
+    recordFeatureUsage("settings.export", { format: "json" });
   };
 
   const handleImport = async (file: File) => {
@@ -84,9 +97,16 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.telemetry?.performance !== undefined)
+        setTelemetryPerformance(Boolean(parsed.telemetry.performance));
+      if (parsed.telemetry?.errors !== undefined)
+        setTelemetryErrors(Boolean(parsed.telemetry.errors));
+      if (parsed.telemetry?.features !== undefined)
+        setTelemetryFeatures(Boolean(parsed.telemetry.features));
     } catch (err) {
       console.error("Invalid settings", err);
     }
+    recordFeatureUsage("settings.import", { format: file.type || "json" });
   };
 
   const handleReset = async () => {
@@ -104,10 +124,35 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setTelemetryPerformance(defaults.telemetry.performance);
+    setTelemetryErrors(defaults.telemetry.errors);
+    setTelemetryFeatures(defaults.telemetry.features);
     setTheme("default");
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+
+  const telemetryStates: Record<TelemetryCategory, boolean> = {
+    performance: telemetryPerformance,
+    errors: telemetryErrors,
+    features: telemetryFeatures,
+  };
+
+  const handleTelemetryToggle = (category: TelemetryCategory, value: boolean) => {
+    switch (category) {
+      case "performance":
+        setTelemetryPerformance(value);
+        break;
+      case "errors":
+        setTelemetryErrors(value);
+        break;
+      case "features":
+        setTelemetryFeatures(value);
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -157,12 +202,17 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
+            <label
+              htmlFor="kali-gradient-toggle"
+              className="mr-2 text-ubt-grey flex items-center"
+            >
               <input
+                id="kali-gradient-toggle"
                 type="checkbox"
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Toggle Kali gradient wallpaper"
               />
               Kali Gradient Wallpaper
             </label>
@@ -294,6 +344,52 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          <div className="px-6 py-4 space-y-6">
+            <p className="text-ubt-grey text-sm">
+              Telemetry is optional and off by default. Review what a redacted sample
+              looks like before opting in.
+            </p>
+            {(Object.keys(TELEMETRY_CATEGORY_INFO) as TelemetryCategory[]).map(
+              (category) => {
+                const info = TELEMETRY_CATEGORY_INFO[category];
+                const preview = buildSampleTelemetryPayload(category);
+                return (
+                  <section
+                    key={category}
+                    className="rounded-lg border border-gray-800 bg-ub-gedit-dark px-4 py-3 shadow-inner"
+                  >
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h3 className="text-base font-semibold text-white">
+                          {info.title}
+                        </h3>
+                        <p className="text-xs text-ubt-grey/80 md:max-w-xl">
+                          {info.description}
+                        </p>
+                      </div>
+                      <ToggleSwitch
+                        checked={telemetryStates[category]}
+                        onChange={(checked) => handleTelemetryToggle(category, checked)}
+                        ariaLabel={`Toggle ${info.title}`}
+                      />
+                    </div>
+                    <div className="mt-3 rounded border border-gray-700 bg-black/60">
+                      <div className="border-b border-gray-800 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
+                        Sample payload
+                      </div>
+                      <pre className="max-h-48 overflow-auto px-3 py-2 text-[11px] leading-relaxed text-ubt-grey">
+                        {JSON.stringify(preview, null, 2)}
+                      </pre>
+                    </div>
+                  </section>
+                );
+              }
+            )}
+            <p className="text-[11px] uppercase tracking-wide text-ubt-grey/60">
+              Sensitive identifiers such as session IDs and emails are replaced with “[redacted]” before
+              anything leaves your device.
+            </p>
+          </div>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}

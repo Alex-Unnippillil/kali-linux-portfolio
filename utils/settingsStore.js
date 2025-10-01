@@ -3,6 +3,12 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+const DEFAULT_TELEMETRY = {
+  performance: false,
+  errors: false,
+  features: false,
+};
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
@@ -15,7 +21,10 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  telemetry: DEFAULT_TELEMETRY,
 };
+
+const TELEMETRY_STORAGE_KEY = 'telemetry-preferences';
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -135,6 +144,37 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTelemetryPreferences() {
+  if (typeof window === 'undefined') return { ...DEFAULT_TELEMETRY };
+  const stored = window.localStorage.getItem(TELEMETRY_STORAGE_KEY);
+  if (!stored) {
+    return { ...DEFAULT_TELEMETRY };
+  }
+  try {
+    const parsed = JSON.parse(stored);
+    return {
+      performance: Boolean(parsed.performance),
+      errors: Boolean(parsed.errors),
+      features: Boolean(parsed.features),
+    };
+  } catch {
+    return { ...DEFAULT_TELEMETRY };
+  }
+}
+
+export async function setTelemetryPreferences(preferences) {
+  if (typeof window === 'undefined') return;
+  const safePreferences = {
+    performance: Boolean(preferences?.performance),
+    errors: Boolean(preferences?.errors),
+    features: Boolean(preferences?.features),
+  };
+  window.localStorage.setItem(
+    TELEMETRY_STORAGE_KEY,
+    JSON.stringify(safePreferences),
+  );
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +190,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem(TELEMETRY_STORAGE_KEY);
 }
 
 export async function exportSettings() {
@@ -165,6 +206,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    telemetry,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +219,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTelemetryPreferences(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +235,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    telemetry,
   });
 }
 
@@ -217,6 +261,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    telemetry,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +275,12 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (telemetry !== undefined) await setTelemetryPreferences(telemetry);
 }
 
-export const defaults = DEFAULT_SETTINGS;
+export const defaults = {
+  ...DEFAULT_SETTINGS,
+  telemetry: { ...DEFAULT_TELEMETRY },
+};
+
+export const defaultTelemetry = { ...DEFAULT_TELEMETRY };
