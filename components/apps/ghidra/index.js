@@ -308,11 +308,16 @@ export default function GhidraApp() {
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
           <div className="p-2">
+            <label htmlFor="ghidra-symbol-search" className="sr-only">
+              Search symbols
+            </label>
             <input
               type="text"
+              id="ghidra-symbol-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
+              aria-label="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
             />
           </div>
@@ -379,6 +384,7 @@ export default function GhidraApp() {
                     })
                   }
                   placeholder="note"
+                  aria-label={`Note for line ${idx + 1}`}
                   className="ml-2 w-24 text-xs text-black rounded"
                 />
               </div>
@@ -413,27 +419,37 @@ export default function GhidraApp() {
           func={currentFunc}
           callers={xrefs[selected] || []}
           onSelect={setSelected}
+          funcMap={funcMap}
+          xrefs={xrefs}
+          prefersReducedMotion={prefersReducedMotion}
         />
       </div>
       <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
+        <label className="block text-sm mb-1" htmlFor="ghidra-function-notes">
           Notes for {selected || 'function'}
         </label>
         <textarea
+          id="ghidra-function-notes"
           value={funcNotes[selected] || ''}
           onChange={(e) =>
             setFuncNotes({ ...funcNotes, [selected]: e.target.value })
           }
+          aria-label={`Notes for ${selected || 'function'}`}
           className="w-full h-16 p-1 rounded text-black"
         />
       </div>
       <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
         <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
+          <label htmlFor="ghidra-strings-search" className="sr-only">
+            Search strings
+          </label>
           <input
             type="text"
+            id="ghidra-strings-search"
             value={stringQuery}
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
+            aria-label="Search strings"
             className="w-full mb-2 p-1 rounded text-black"
           />
           <ul className="text-sm space-y-1">
@@ -452,12 +468,16 @@ export default function GhidraApp() {
           </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
+          <label
+            className="block text-sm mb-1"
+            htmlFor="ghidra-string-notes"
+          >
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
             }
           </label>
           <textarea
+            id="ghidra-string-notes"
             value={stringNotes[selectedString] || ''}
             onChange={(e) =>
               setStringNotes({
@@ -466,6 +486,9 @@ export default function GhidraApp() {
               })
             }
             className="w-full h-full p-1 rounded text-black"
+            aria-label={`Notes for ${
+              strings.find((s) => s.id === selectedString)?.value || 'string'
+            }`}
           />
         </div>
       </div>
