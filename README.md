@@ -100,6 +100,10 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Architecture Decision Records
+
+Key architectural choices are documented as ADRs. Review the [ADR index](docs/adr/README.md) for accepted decisions and the workflow for proposing new records.
+
 ---
 
 ## Speed Insights
