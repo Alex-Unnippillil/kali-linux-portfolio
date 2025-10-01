@@ -75,6 +75,12 @@ const runStage = async (label, fn) => {
     await runStage('Lint', () => runYarnScript('lint'));
     await runStage('Typecheck', () => runYarnScript('typecheck', { fallbackArgs: ['tsc', '--noEmit'] }));
     await runStage('Unit tests', () => runYarnScript('test', { env: { CI: '1' } }));
+    await runStage('Focus trap diagnostics', () =>
+      runYarnScript('focus:check', {
+        env: { CI: '1' },
+        fallbackArgs: ['test', '--runTestsByPath', '__tests__/focusTrapDiagnostics.test.tsx'],
+      }),
+    );
     await runStage('Build', () => runYarnScript('build'));
 
     const port = Number(process.env.VERIFY_PORT ?? 3000);

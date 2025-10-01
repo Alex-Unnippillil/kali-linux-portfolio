@@ -12,6 +12,7 @@
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
+    "focus:check": "jest --runTestsByPath __tests__/focusTrapDiagnostics.test.tsx",
     "dedupe:check": "yarn dedupe --check",
     "test:watch": "jest --watch",
     "lint": "node scripts/lint-changed.mjs",
