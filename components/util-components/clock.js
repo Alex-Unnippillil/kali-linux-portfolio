@@ -1,21 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-const MONTHS = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
-]
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const startOfDay = (date) => {
     const result = new Date(date)
@@ -99,18 +85,15 @@ const usePrefersReducedMotion = () => {
     return prefersReducedMotion
 }
 
-const formatDisplayTime = ({ currentTime, onlyDay, onlyTime, timeFormatter }) => {
+const formatDisplayTime = ({ currentTime, onlyDay, onlyTime, timeFormatter, dateFormatter }) => {
     if (!currentTime) return ''
-    const day = DAYS[currentTime.getDay()]
-    const month = MONTHS[currentTime.getMonth()]
-    const date = currentTime.getDate()
     const timeString = timeFormatter.format(currentTime)
 
     if (onlyTime) {
         return timeString
     }
 
-    const dayString = `${day} ${month} ${date}`
+    const dayString = dateFormatter.format(currentTime)
 
     if (onlyDay) {
         return dayString
@@ -124,7 +107,9 @@ const Clock = ({
     onlyTime = false,
     showCalendar = false,
     hour12 = true,
-    variant = 'default'
+    variant = 'default',
+    timeZone,
+    locale
 }) => {
     const [currentTime, setCurrentTime] = useState(null)
     const [isOpen, setIsOpen] = useState(false)
@@ -274,45 +259,60 @@ const Clock = ({
 
     const headingFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
+            new Intl.DateTimeFormat(locale, {
                 month: 'long',
-                year: 'numeric'
+                year: 'numeric',
+                timeZone
             }),
-        []
+        [locale, timeZone]
     )
 
     const headingLabel = useMemo(() => headingFormatter.format(viewDate), [headingFormatter, viewDate])
 
     const weeks = useMemo(() => (isOpen ? buildCalendar(viewDate) : []), [isOpen, viewDate])
 
+    const displayDateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(locale, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                timeZone
+            }),
+        [locale, timeZone]
+    )
+
     const friendlyDateFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
+            new Intl.DateTimeFormat(locale, {
                 weekday: 'long',
                 month: 'long',
-                day: 'numeric'
+                day: 'numeric',
+                timeZone
             }),
-        []
+        [locale, timeZone]
     )
 
     const friendlyTimeFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
+            new Intl.DateTimeFormat(locale, {
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12
+                hour12,
+                timeZone
             }),
-        [hour12]
+        [hour12, locale, timeZone]
     )
 
     const timeFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
+            new Intl.DateTimeFormat(locale, {
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12
+                hour12,
+                timeZone
             }),
-        [hour12]
+        [hour12, locale, timeZone]
     )
 
     const handleToggle = useCallback(() => {
@@ -393,14 +393,23 @@ const Clock = ({
                 currentTime,
                 onlyDay,
                 onlyTime,
-                timeFormatter
+                timeFormatter,
+                dateFormatter: displayDateFormatter
             }),
-        [currentTime, onlyDay, onlyTime, timeFormatter]
+        [currentTime, displayDateFormatter, onlyDay, onlyTime, timeFormatter]
     )
 
     const friendlyDateLabel = useMemo(() => (currentTime ? friendlyDateFormatter.format(currentTime) : ''), [currentTime, friendlyDateFormatter])
 
     const friendlyTimeLabel = useMemo(() => (currentTime ? friendlyTimeFormatter.format(currentTime) : ''), [currentTime, friendlyTimeFormatter])
+
+    const tooltipLabel = useMemo(() => {
+        if (!currentTime) return ''
+        const date = friendlyDateFormatter.format(currentTime)
+        const time = friendlyTimeFormatter.format(currentTime)
+        const zone = timeZone ? ` (${timeZone})` : ''
+        return `${date} • ${time}${zone}`
+    }, [currentTime, friendlyDateFormatter, friendlyTimeFormatter, timeZone])
 
     const popoverStyle = isOpen
         ? {
@@ -528,7 +537,11 @@ const Clock = ({
     const shouldRenderButton = showCalendar || (!onlyDay && !onlyTime)
 
     if (!shouldRenderButton) {
-        return <span suppressHydrationWarning>{displayTime}</span>
+        return (
+            <span suppressHydrationWarning title={tooltipLabel} aria-label={tooltipLabel}>
+                {displayTime}
+            </span>
+        )
     }
 
     const isMinimal = variant === 'minimal'
@@ -551,8 +564,9 @@ const Clock = ({
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 aria-controls={popoverId}
+                title={tooltipLabel}
             >
-                <span className={textClassName} aria-live="polite">
+                <span className={textClassName} aria-live="polite" aria-label={tooltipLabel}>
                     {displayTime}
                 </span>
                 {showCalendar && !isMinimal ? (

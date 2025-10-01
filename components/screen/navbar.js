@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import Image from 'next/image';
-import Clock from '../util-components/clock';
+import ClockPreferencesButton from '../util-components/clock-preferences-button';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
@@ -205,7 +205,7 @@ export default class Navbar extends PureComponent {
                                                 <PerformanceGraph />
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                                <ClockPreferencesButton />
                                                 <div
                                                         id="status-bar"
                                                         role="button"
