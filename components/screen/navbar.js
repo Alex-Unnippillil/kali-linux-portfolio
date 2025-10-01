@@ -4,6 +4,7 @@ import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
+import TasksDrawer from '../common/TasksDrawer';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
@@ -98,6 +99,7 @@ export default class Navbar extends PureComponent {
                                                         />
                                                 )}
                                                 <PerformanceGraph />
+                                                <TasksDrawer />
                                         </div>
                                         <div
                                                 className={

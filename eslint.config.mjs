@@ -5,6 +5,7 @@ const compat = new FlatCompat();
 
 const config = [
   { ignores: ['components/apps/Chrome/index.tsx'] },
+  { files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'] },
   {
     plugins: {
       'no-top-level-window': noTopLevelWindow,
