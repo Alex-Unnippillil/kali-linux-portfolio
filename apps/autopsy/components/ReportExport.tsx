@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import copyToClipboard from '../../../utils/clipboard';
+import RedactionPreview from '../../../components/common/RedactionPreview';
 
 interface Artifact {
   name: string;
@@ -34,8 +35,14 @@ const ReportExport: React.FC<ReportExportProps> = ({ caseName = 'case', artifact
     return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${escapeHtml(caseName)} Report</title></head><body><h1>${escapeHtml(caseName)}</h1><table border="1"><tr><th>Name</th><th>Type</th><th>Description</th><th>Size</th><th>Plugin</th><th>Timestamp</th></tr>${rows}</table></body></html>`;
   }, [artifacts, caseName]);
 
+  const [redactedHtml, setRedactedHtml] = useState(htmlReport);
+
+  useEffect(() => {
+    setRedactedHtml(htmlReport);
+  }, [htmlReport]);
+
   const exportReport = () => {
-    const blob = new Blob([htmlReport], { type: 'text/html' });
+    const blob = new Blob([redactedHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -47,23 +54,30 @@ const ReportExport: React.FC<ReportExportProps> = ({ caseName = 'case', artifact
   };
 
   const copyReport = () => {
-    copyToClipboard(htmlReport);
+    copyToClipboard(redactedHtml);
   };
 
   return (
-    <div className="flex gap-2">
-      <button
-        onClick={copyReport}
-        className="bg-ub-gray px-3 py-1 rounded text-sm text-black"
-      >
-        Copy HTML Report
-      </button>
-      <button
-        onClick={exportReport}
-        className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
-      >
-        Download HTML Report
-      </button>
+    <div className="space-y-3">
+      <RedactionPreview
+        content={htmlReport}
+        context="autopsy-report-export"
+        onChange={(value) => setRedactedHtml(value)}
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={copyReport}
+          className="bg-ub-gray px-3 py-1 rounded text-sm text-black"
+        >
+          Copy HTML Report
+        </button>
+        <button
+          onClick={exportReport}
+          className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
+        >
+          Download HTML Report
+        </button>
+      </div>
     </div>
   );
 };

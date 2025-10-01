@@ -27,10 +27,13 @@ describe('ReportExport', () => {
         ]}
       />
     );
+    await screen.findByLabelText('Redaction preview');
     fireEvent.click(screen.getByText('Copy HTML Report'));
     await waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalled()
     );
-    expect((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]).toContain('<!DOCTYPE html>');
+    const payload = (navigator.clipboard.writeText as jest.Mock).mock.calls[0][0];
+    expect(payload).toContain('<!DOCTYPE html>');
+    expect(payload).toContain('demo Report');
   });
 });
