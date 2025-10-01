@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import WordlistEditorModal from './WordlistEditorModal';
+import { normalizeWordlist } from '../../../utils/wordlist';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -79,6 +81,7 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const [editorState, setEditorState] = useState(null);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -189,18 +192,73 @@ const HydraApp = () => {
       window.removeEventListener('hydra-protocols-changed', update);
   }, []);
 
-  const addWordList = (file, listsSetter, lists) => {
+  const addWordList = (file, listsSetter, lists, onSelect) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-      const newLists = [...lists, { name: file.name, content: e.target.result }];
+      const text = typeof e.target?.result === 'string' ? e.target.result : '';
+      const summary = normalizeWordlist(text);
+      const sanitized = summary.entries.join('\n');
+      const existingIndex = lists.findIndex((l) => l.name === file.name);
+      const newEntry = { name: file.name, content: sanitized };
+      const newLists =
+        existingIndex >= 0
+          ? lists.map((l, idx) => (idx === existingIndex ? newEntry : l))
+          : [...lists, newEntry];
       listsSetter(newLists);
+      if (onSelect) {
+        onSelect(file.name);
+      }
     };
     reader.readAsText(file);
   };
 
-  const removeWordList = (name, listsSetter, lists) => {
-    listsSetter(lists.filter((l) => l.name !== name));
+  const removeWordList = (name, listsSetter, lists, type) => {
+    const filtered = lists.filter((l) => l.name !== name);
+    listsSetter(filtered);
+    if (type === 'user') {
+      if (selectedUser === name) {
+        setSelectedUser(filtered[0]?.name || '');
+      }
+    } else if (selectedPass === name) {
+      setSelectedPass(filtered[0]?.name || '');
+    }
+  };
+
+  const openEditor = useCallback((type, list) => {
+    setEditorState({
+      type,
+      name: list?.name || '',
+      content: list?.content || '',
+    });
+  }, []);
+
+  const closeEditor = useCallback(() => setEditorState(null), []);
+
+  const handleEditorSave = (name, content) => {
+    if (!editorState) return;
+    const isUser = editorState.type === 'user';
+    const lists = isUser ? userLists : passLists;
+    const setter = isUser ? setUserLists : setPassLists;
+    const previousName = editorState.name;
+    const sanitizedName = name;
+    let workingLists = lists;
+    if (previousName && previousName !== sanitizedName) {
+      workingLists = workingLists.filter((l) => l.name !== previousName);
+    }
+    const existingIndex = workingLists.findIndex((l) => l.name === sanitizedName);
+    const updated = { name, content };
+    const nextLists =
+      existingIndex >= 0
+        ? workingLists.map((l, idx) => (idx === existingIndex ? updated : l))
+        : [...workingLists, updated];
+    setter(nextLists);
+    if (isUser) {
+      setSelectedUser(sanitizedName);
+    } else {
+      setSelectedPass(sanitizedName);
+    }
+    closeEditor();
   };
 
   const selectedUserList = userLists.find((l) => l.name === selectedUser);
@@ -435,6 +493,12 @@ const HydraApp = () => {
     clearSession();
   };
 
+  const activeEditorLists = editorState
+    ? editorState.type === 'user'
+      ? userLists
+      : passLists
+    : [];
+
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="grid grid-cols-2 gap-1.5">
@@ -456,18 +520,25 @@ const HydraApp = () => {
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">
+            Target
+          </label>
           <input
+            id="hydra-target"
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Hydra target"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">
+            Service
+          </label>
           <select
+            id="hydra-service"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
@@ -480,11 +551,14 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-select">
+            User List
+          </label>
           <select
+            id="hydra-user-select"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
-            className="w-full p-2 rounded text-black mb-1"
+            className="mb-1 w-full rounded p-2 text-black"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -492,35 +566,76 @@ const HydraApp = () => {
               </option>
             ))}
           </select>
+          {selectedUserList && (
+            <p className="mb-2 text-xs text-gray-300">
+              Entries: {
+                selectedUserList.content
+                  .split('\n')
+                  .filter((line) => line.trim()).length
+              }
+            </p>
+          )}
+          <div className="mb-2 flex flex-wrap gap-2 text-xs">
+            <button
+              onClick={() => openEditor('user', selectedUserList)}
+              className="rounded bg-gray-800 px-2 py-1 text-blue-200 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!selectedUserList}
+            >
+              Edit selected
+            </button>
+            <button
+              onClick={() => openEditor('user', null)}
+              className="rounded bg-gray-800 px-2 py-1 text-green-200 hover:bg-gray-700"
+            >
+              New list
+            </button>
+          </div>
           <input
             data-testid="user-file-input"
             type="file"
             accept="text/plain"
             onChange={(e) =>
-              addWordList(e.target.files[0], setUserLists, userLists)
+              addWordList(e.target.files[0], setUserLists, userLists, setSelectedUser)
             }
-            className="w-full p-2 rounded text-black mb-1"
+            className="mb-2 w-full rounded p-2 text-black"
+            aria-label="Upload user wordlist"
           />
-          <ul>
+          <ul className="space-y-1 text-sm">
             {userLists.map((l) => (
-              <li key={l.name} className="flex justify-between">
-                {l.name}
-                <button
-                  onClick={() => removeWordList(l.name, setUserLists, userLists)}
-                  className="text-red-500"
-                >
-                  Remove
-                </button>
+              <li
+                key={l.name}
+                className="flex items-center justify-between rounded bg-gray-800/60 px-2 py-1"
+              >
+                <span className="truncate pr-2">{l.name}</span>
+                <div className="flex gap-2 text-xs">
+                  <button
+                    onClick={() => openEditor('user', l)}
+                    className="text-blue-300 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() =>
+                      removeWordList(l.name, setUserLists, userLists, 'user')
+                    }
+                    className="text-red-400 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-select">
+            Password List
+          </label>
           <select
+            id="hydra-pass-select"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
-            className="w-full p-2 rounded text-black mb-1"
+            className="mb-1 w-full rounded p-2 text-black"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -528,47 +643,93 @@ const HydraApp = () => {
               </option>
             ))}
           </select>
+          {selectedPassList && (
+            <p className="mb-2 text-xs text-gray-300">
+              Entries: {
+                selectedPassList.content
+                  .split('\n')
+                  .filter((line) => line.trim()).length
+              }
+            </p>
+          )}
+          <div className="mb-2 flex flex-wrap gap-2 text-xs">
+            <button
+              onClick={() => openEditor('pass', selectedPassList)}
+              className="rounded bg-gray-800 px-2 py-1 text-blue-200 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!selectedPassList}
+            >
+              Edit selected
+            </button>
+            <button
+              onClick={() => openEditor('pass', null)}
+              className="rounded bg-gray-800 px-2 py-1 text-green-200 hover:bg-gray-700"
+            >
+              New list
+            </button>
+          </div>
           <input
             data-testid="pass-file-input"
             type="file"
             accept="text/plain"
             onChange={(e) =>
-              addWordList(e.target.files[0], setPassLists, passLists)
+              addWordList(e.target.files[0], setPassLists, passLists, setSelectedPass)
             }
-            className="w-full p-2 rounded text-black mb-1"
+            className="mb-2 w-full rounded p-2 text-black"
+            aria-label="Upload password wordlist"
           />
-          <ul>
+          <ul className="space-y-1 text-sm">
             {passLists.map((l) => (
-              <li key={l.name} className="flex justify-between">
-                {l.name}
-                <button
-                  onClick={() => removeWordList(l.name, setPassLists, passLists)}
-                  className="text-red-500"
-                >
-                  Remove
-                </button>
+              <li
+                key={l.name}
+                className="flex items-center justify-between rounded bg-gray-800/60 px-2 py-1"
+              >
+                <span className="truncate pr-2">{l.name}</span>
+                <div className="flex gap-2 text-xs">
+                  <button
+                    onClick={() => openEditor('pass', l)}
+                    className="text-blue-300 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() =>
+                      removeWordList(l.name, setPassLists, passLists, 'pass')
+                    }
+                    className="text-red-400 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset">
+            Charset
+          </label>
           <input
+            id="hydra-charset"
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Candidate charset"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule">
+            Rule (min:max length)
+          </label>
           <input
+            id="hydra-rule"
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Length rule"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -578,6 +739,7 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            aria-label="Candidate length distribution"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
@@ -705,6 +867,14 @@ const HydraApp = () => {
           Saved
         </div>
       )}
+      <WordlistEditorModal
+        isOpen={!!editorState}
+        onClose={closeEditor}
+        initialName={editorState?.name || ''}
+        initialContent={editorState?.content || ''}
+        onSave={handleEditorSave}
+        existingNames={activeEditorLists.map((l) => l.name)}
+      />
     </div>
   );
 };
