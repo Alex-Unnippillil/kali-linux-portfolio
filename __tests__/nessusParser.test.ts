@@ -1,7 +1,12 @@
+import { TransformStream } from 'stream/web';
 import { parseNessus } from '../workers/nessus-parser';
 
+if (typeof (globalThis as any).TransformStream === 'undefined') {
+  (globalThis as any).TransformStream = TransformStream;
+}
+
 describe('nessus parser worker', () => {
-  test('extracts findings with description and solution', () => {
+  test('extracts findings with description and solution', async () => {
     const sample = `<?xml version="1.0"?>
 <NessusClientData_v2>
   <Report name="Sample">
@@ -18,7 +23,7 @@ describe('nessus parser worker', () => {
     </ReportHost>
   </Report>
 </NessusClientData_v2>`;
-    const findings = parseNessus(sample);
+    const findings = await parseNessus(sample);
     expect(findings).toEqual([
       {
         host: '192.168.0.1',

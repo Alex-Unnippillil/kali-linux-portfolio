@@ -5,6 +5,13 @@ import type {
   SimulatorParserResponse,
   ParsedLine,
 } from '../../workers/simulatorParser.worker';
+
+const encodeFrame = (chunk: Uint8Array): Uint8Array => {
+  const framed = new Uint8Array(4 + chunk.byteLength);
+  new DataView(framed.buffer).setUint32(0, chunk.byteLength);
+  framed.set(chunk, 4);
+  return framed;
+};
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
@@ -23,7 +30,7 @@ const Simulator: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [progress, setProgress] = useState(0);
   const [eta, setEta] = useState(0);
-  const workerRef = useRef<Worker|null>(null);
+  const workerRef = useRef<Worker | null>(null);
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
@@ -42,18 +49,45 @@ const Simulator: React.FC = () => {
         setParsed(data.parsed);
         setProgress(1);
         setEta(0);
+      } else if (data.type === 'cancelled') {
+        setProgress(0);
+        setEta(0);
       }
     };
     return () => worker.terminate();
   }, []);
 
-  const parseText = useCallback((text: string) => {
-    setFixtureText(text);
-    setParsed([]);
-    setProgress(0);
-    setEta(0);
-    workerRef.current?.postMessage({ action: 'parse', text } as SimulatorParserRequest);
-  }, []);
+  const sendStreamToWorker = useCallback(
+    async (stream: ReadableStream<Uint8Array>, totalBytes?: number) => {
+      const worker = workerRef.current;
+      if (!worker) return;
+      setParsed([]);
+      setProgress(0);
+      setEta(0);
+      worker.postMessage({ action: 'start', totalBytes } as SimulatorParserRequest);
+      const reader = stream.getReader();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+          const framed = encodeFrame(chunk);
+          worker.postMessage({ action: 'chunk', chunk: framed.buffer } as SimulatorParserRequest, [framed.buffer]);
+        }
+      }
+      worker.postMessage({ action: 'end' } as SimulatorParserRequest);
+    },
+    [],
+  );
+
+  const parseText = useCallback(
+    (text: string) => {
+      setFixtureText(text);
+      const stream = new Blob([text]).stream();
+      void sendStreamToWorker(stream, text.length);
+    },
+    [sendStreamToWorker],
+  );
 
   const cancelParse = () =>
     workerRef.current?.postMessage({ action: 'cancel' } as SimulatorParserRequest);
@@ -69,13 +103,25 @@ const Simulator: React.FC = () => {
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = typeof reader.result === 'string' ? reader.result : '';
-      parseText(text);
-      setPrefs({ ...prefs, scenario: file.name });
+    const [workerStream, mirrorStream] = file.stream().tee();
+    setPrefs({ ...prefs, scenario: file.name });
+    void sendStreamToWorker(workerStream, file.size);
+    const reader = mirrorStream.getReader();
+    const decoder = new TextDecoder();
+    const collect = async () => {
+      let text = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+          text += decoder.decode(chunk, { stream: true });
+        }
+      }
+      text += decoder.decode();
+      setFixtureText(text);
     };
-    reader.readAsText(file);
+    void collect();
   };
 
   const copyCommand = async () => {
