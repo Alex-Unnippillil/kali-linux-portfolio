@@ -28,6 +28,7 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { performanceBudgetManager } from '../../utils/performanceBudgetManager';
 
 
 export class Desktop extends Component {
@@ -1452,16 +1453,15 @@ export class Desktop extends Component {
     }
 
     giveFocusToLastApp = () => {
-        // if there is atleast one app opened, give it focus
-        if (!this.checkAllMinimised()) {
-            const stack = this.getActiveStack();
-            for (let index = 0; index < stack.length; index++) {
-                if (!this.state.minimized_windows[stack[index]]) {
-                    this.focus(stack[index]);
-                    break;
-                }
+        const stack = this.getActiveStack();
+        for (let index = 0; index < stack.length; index++) {
+            const appId = stack[index];
+            if (!this.state.closed_windows[appId] && !this.state.minimized_windows[appId]) {
+                this.focus(appId);
+                return;
             }
         }
+        performanceBudgetManager.setActiveApp(null);
     }
 
     checkAllMinimised = () => {
@@ -1634,6 +1634,7 @@ export class Desktop extends Component {
             stack.splice(index, 1);
         }
 
+        performanceBudgetManager.clearActiveApp(objId);
         this.giveFocusToLastApp();
 
         // close window
@@ -1679,7 +1680,7 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -1691,6 +1692,7 @@ export class Desktop extends Component {
             }
         }
         this.setWorkspaceState({ focused_windows });
+        performanceBudgetManager.setActiveApp(objId);
     }
 
     addNewFolder = () => {
