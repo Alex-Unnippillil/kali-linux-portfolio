@@ -2,13 +2,86 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
-const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
+const baseServices = [
+  {
+    id: 'ssh',
+    label: 'SSH',
+    type: 'Secure Shell remote login',
+    defaultPort: 22,
+  },
+  {
+    id: 'ftp',
+    label: 'FTP',
+    type: 'File Transfer Protocol',
+    defaultPort: 21,
+  },
+  {
+    id: 'http-get',
+    label: 'HTTP GET',
+    type: 'Web service (GET)',
+    defaultPort: 80,
+  },
+  {
+    id: 'http-post-form',
+    label: 'HTTP POST Form',
+    type: 'Web form submission',
+    defaultPort: 80,
+  },
+  {
+    id: 'smtp',
+    label: 'SMTP',
+    type: 'Mail delivery service',
+    defaultPort: 25,
+  },
+];
 const pluginServices = [];
 
+const normalizeProtocol = (protocol) => {
+  if (typeof protocol === 'string') {
+    return {
+      id: protocol,
+      label: protocol,
+      type: 'Plugin protocol',
+      defaultPort: undefined,
+    };
+  }
+
+  if (!protocol || !protocol.id) {
+    throw new Error('Hydra plugins must provide an id');
+  }
+
+  return {
+    id: protocol.id,
+    label: protocol.label || protocol.id,
+    type: protocol.type || 'Plugin protocol',
+    defaultPort: protocol.defaultPort,
+  };
+};
+
 export const registerHydraProtocol = (protocol) => {
-  if (!pluginServices.includes(protocol)) {
-    pluginServices.push(protocol);
-    window.dispatchEvent(new Event('hydra-protocols-changed'));
+  const normalized = normalizeProtocol(protocol);
+  const existingIndex = pluginServices.findIndex(
+    (item) => item.id === normalized.id
+  );
+
+  if (existingIndex >= 0) {
+    pluginServices[existingIndex] = normalized;
+  } else {
+    pluginServices.push(normalized);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hydra-protocols-changed'));
+  }
+  return normalized.id;
+};
+
+export const getRegisteredHydraProtocols = () => [...pluginServices];
+
+export const __resetHydraProtocolsForTests = () => {
+  pluginServices.splice(0, pluginServices.length);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hydra-protocols-changed'));
   }
 };
 
@@ -52,13 +125,25 @@ const saveConfigStorage = (config) => {
   localStorage.setItem('hydra/config', JSON.stringify(config));
 };
 
+const loadPluginState = () => {
+  try {
+    return JSON.parse(localStorage.getItem('hydra/plugins') || '{}');
+  } catch {
+    return {};
+  }
+};
+
+const savePluginState = (state) => {
+  localStorage.setItem('hydra/plugins', JSON.stringify(state));
+};
+
 const HydraApp = () => {
   const [target, setTarget] = useState('');
   const [service, setService] = useState('ssh');
-  const [availableServices, setAvailableServices] = useState([
-    ...baseServices,
-    ...pluginServices,
-  ]);
+  const [availableServices, setAvailableServices] = useState([...baseServices]);
+  const [plugins, setPlugins] = useState([]);
+  const [pluginState, setPluginState] = useState({});
+  const [pluginStateLoaded, setPluginStateLoaded] = useState(false);
 
   const [userLists, setUserLists] = useState([]);
   const [passLists, setPassLists] = useState([]);
@@ -79,6 +164,7 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const PROTOCOL_PANEL_ID = 'hydra-protocol-panel';
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -182,12 +268,70 @@ const HydraApp = () => {
   }, [passLists, selectedPass]);
 
   useEffect(() => {
-    const update = () =>
-      setAvailableServices([...baseServices, ...pluginServices]);
-    window.addEventListener('hydra-protocols-changed', update);
-    return () =>
-      window.removeEventListener('hydra-protocols-changed', update);
-  }, []);
+    if (!pluginStateLoaded) {
+      setPluginState(loadPluginState());
+      setPluginStateLoaded(true);
+    }
+  }, [pluginStateLoaded]);
+
+  useEffect(() => {
+    if (!pluginStateLoaded) return;
+    savePluginState(pluginState);
+  }, [pluginState, pluginStateLoaded]);
+
+  useEffect(() => {
+    const syncPlugins = () => {
+      const registered = getRegisteredHydraProtocols();
+      setPlugins(registered);
+      setPluginState((prev) => {
+        const normalized = registered.reduce((acc, plugin) => {
+          acc[plugin.id] =
+            Object.prototype.hasOwnProperty.call(prev, plugin.id) && prev[plugin.id] !== undefined
+              ? prev[plugin.id]
+              : true;
+          return acc;
+        }, {});
+        const prevKeys = Object.keys(prev);
+        const normalizedKeys = Object.keys(normalized);
+        const changed =
+          prevKeys.length !== normalizedKeys.length ||
+          normalizedKeys.some((key) => prev[key] !== normalized[key]);
+        return changed ? normalized : prev;
+      });
+    };
+
+    syncPlugins();
+
+    window.addEventListener('hydra-protocols-changed', syncPlugins);
+    return () => {
+      window.removeEventListener('hydra-protocols-changed', syncPlugins);
+    };
+  }, [pluginStateLoaded]);
+
+  useEffect(() => {
+    const enabledPlugins = plugins.filter(
+      (plugin) => pluginState[plugin.id] !== false
+    );
+    setAvailableServices([...baseServices, ...enabledPlugins]);
+  }, [plugins, pluginState]);
+
+  useEffect(() => {
+    if (!availableServices.some((s) => s.id === service) && availableServices.length) {
+      setService(availableServices[0].id);
+    }
+  }, [availableServices, service]);
+
+  const handlePluginToggle = (id, enabled) => {
+    setPluginState((prev) => ({ ...prev, [id]: enabled }));
+  };
+
+  const describeProtocol = (protocol) => {
+    const port = protocol.defaultPort ?? 'custom';
+    return `${protocol.type} · default port ${port}`;
+  };
+
+  const formatServiceOption = (protocol) =>
+    `${protocol.label} — ${describeProtocol(protocol)}`;
 
   const addWordList = (file, listsSetter, lists) => {
     if (!file) return;
@@ -455,36 +599,133 @@ const HydraApp = () => {
             </div>
           ))}
         </div>
+        <div
+          className="col-span-2 bg-gray-800 rounded border border-gray-700 p-3"
+          aria-labelledby={PROTOCOL_PANEL_ID}
+        >
+          <h2
+            id={PROTOCOL_PANEL_ID}
+            className="text-sm font-semibold uppercase tracking-wide text-gray-200"
+          >
+            Protocol catalog
+          </h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-gray-400">
+                Built-in protocols
+              </h3>
+              <ul className="mt-2 space-y-2" aria-label="Built-in Hydra protocols">
+                {baseServices.map((protocol) => (
+                  <li key={protocol.id} className="text-sm leading-snug">
+                    <span className="font-medium text-white">{protocol.label}</span>
+                    <span className="block text-gray-300 text-xs">
+                      {describeProtocol(protocol)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-gray-400">
+                Plugin protocols
+              </h3>
+              {plugins.length ? (
+                <ul
+                  className="mt-2 space-y-3"
+                  aria-label="Hydra plugin protocols"
+                >
+                  {plugins.map((protocol) => {
+                    const enabled = pluginState[protocol.id] !== false;
+                    const descriptionId = `hydra-plugin-desc-${protocol.id}`;
+                    return (
+                      <li
+                        key={protocol.id}
+                        className="flex items-start justify-between gap-3"
+                      >
+                        <div>
+                          <p className="font-medium text-white">{protocol.label}</p>
+                          <p
+                            id={descriptionId}
+                            className="text-xs text-gray-300"
+                          >
+                            {describeProtocol(protocol)}
+                          </p>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            role="switch"
+                            aria-label={`Enable ${protocol.label}`}
+                            aria-describedby={descriptionId}
+                            checked={enabled}
+                            onChange={(e) =>
+                              handlePluginToggle(protocol.id, e.target.checked)
+                            }
+                            className="h-4 w-4 text-blue-500 focus:ring-blue-400"
+                          />
+                          <span className="text-gray-200">
+                            {enabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-gray-400">
+                  No plugin protocols registered yet. Use registerHydraProtocol()
+                  to extend Hydra.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">
+            Target
+          </label>
           <input
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            id="hydra-target"
+            aria-label="Target host"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">
+            Service
+          </label>
           <select
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            id="hydra-service"
+            aria-label="Hydra service"
           >
-            {availableServices.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {availableServices.map((protocol) => (
+              <option
+                key={protocol.id}
+                value={protocol.id}
+                aria-label={formatServiceOption(protocol)}
+                title={formatServiceOption(protocol)}
+              >
+                {formatServiceOption(protocol)}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">
+            User List
+          </label>
           <select
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            id="hydra-user-list"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -500,6 +741,8 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            id="hydra-user-file"
+            aria-label="Upload user list"
           />
           <ul>
             {userLists.map((l) => (
@@ -516,11 +759,14 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-list">
+            Password List
+          </label>
           <select
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            id="hydra-pass-list"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -536,6 +782,8 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            id="hydra-pass-file"
+            aria-label="Upload password list"
           />
           <ul>
             {passLists.map((l) => (
@@ -552,23 +800,31 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset">
+            Charset
+          </label>
           <input
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            id="hydra-charset"
+            aria-label="Character set"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule">
+            Rule (min:max length)
+          </label>
           <input
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            id="hydra-rule"
+            aria-label="Rule minimum and maximum length"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -578,6 +834,8 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            role="img"
+            aria-label="Password candidate space visualization"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">

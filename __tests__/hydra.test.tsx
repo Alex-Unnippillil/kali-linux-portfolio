@@ -1,6 +1,13 @@
 import React from 'react';
-import { render, fireEvent, screen, act } from '@testing-library/react';
-import HydraApp from '../components/apps/hydra';
+import { render, fireEvent, screen, act, waitFor } from '@testing-library/react';
+import HydraApp, {
+  registerHydraProtocol,
+  __resetHydraProtocolsForTests,
+} from '../components/apps/hydra';
+
+beforeEach(() => {
+  __resetHydraProtocolsForTests();
+});
 
 describe('Hydra wordlists', () => {
   beforeEach(() => {
@@ -47,6 +54,7 @@ describe('Hydra target validation', () => {
 
 describe('Hydra pause and resume', () => {
   beforeEach(() => {
+    localStorage.clear();
     localStorage.setItem(
       'hydraUserLists',
       JSON.stringify([{ name: 'u', content: 'a' }])
@@ -97,6 +105,7 @@ describe('Hydra pause and resume', () => {
 
 describe('Hydra session restore', () => {
   beforeEach(() => {
+    localStorage.clear();
     localStorage.setItem(
       'hydraUserLists',
       JSON.stringify([{ name: 'u', content: 'a' }])
@@ -141,5 +150,73 @@ describe('Hydra session restore', () => {
     await act(async () => {
       runResolve();
     });
+  });
+});
+
+describe('Hydra plugin protocols', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('toggles plugin availability and updates the service list', async () => {
+    registerHydraProtocol({
+      id: 'rdp',
+      label: 'RDP',
+      type: 'Remote Desktop',
+      defaultPort: 3389,
+    });
+
+    render(<HydraApp />);
+
+    await screen.findByRole('option', { name: /RDP/ });
+
+    const toggle = screen.getByRole('switch', { name: /Enable RDP/i });
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('option', { name: /RDP/ })
+      ).not.toBeInTheDocument();
+    });
+
+    expect(localStorage.getItem('hydra/plugins')).toContain('"rdp":false');
+
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /RDP/ })).toBeInTheDocument();
+    });
+    expect(localStorage.getItem('hydra/plugins')).toContain('"rdp":true');
+  });
+
+  it('restores plugin state from localStorage on next render', async () => {
+    registerHydraProtocol({
+      id: 'vnc',
+      label: 'VNC',
+      type: 'Remote control',
+      defaultPort: 5900,
+    });
+
+    const { unmount } = render(<HydraApp />);
+    const toggle = screen.getByRole('switch', { name: /Enable VNC/i });
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('option', { name: /VNC/ })
+      ).not.toBeInTheDocument();
+    });
+
+    unmount();
+
+    render(<HydraApp />);
+
+    await waitFor(() => {
+      const restoredToggle = screen.getByRole('switch', { name: /Enable VNC/i });
+      expect((restoredToggle as HTMLInputElement).checked).toBe(false);
+    });
+    expect(
+      screen.queryByRole('option', { name: /VNC/ })
+    ).not.toBeInTheDocument();
   });
 });
