@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`deterministicStringify produces identical output for equivalent permutations 1`] = `"{"a":1,"z":{"x":{"a":null,"c":true},"y":[3,2,1]}}"`;

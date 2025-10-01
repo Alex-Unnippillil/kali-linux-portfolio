@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
 import { hasOffscreenCanvas } from '../../utils/feature';
+import { deterministicEquals } from '../../utils/serdes';
 
 // Canvas dimensions
 const WIDTH = 300;
@@ -269,7 +270,7 @@ const CarRacer = () => {
         const diff = {};
         const lastState = lastRenderRef.current;
         Object.keys(state).forEach((k) => {
-          if (JSON.stringify(state[k]) !== JSON.stringify(lastState[k])) {
+          if (!deterministicEquals(state[k], lastState[k])) {
             diff[k] = state[k];
           }
         });

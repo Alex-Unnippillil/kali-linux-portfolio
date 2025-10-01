@@ -294,6 +294,7 @@ Use these step‑by‑step guides to avoid breaking conventions.
 * [ ] Screenshots or short clip added for UI changes
 * [ ] Docs updated if you added a flag or app
 * [ ] PR reviewed on both serverful and static builds if the feature touches `/api/*`
+* [ ] Snapshot-sensitive caches or diffs use the deterministic serializer from `utils/serdes.ts`
 
 ```
 
