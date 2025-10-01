@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
 import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
+import { useWorkerPool } from '../../../hooks/useWorkerPool';
+import { workerPool } from '../../../workers/pool/WorkerPool';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -40,6 +42,15 @@ export const recordFalsePositive = (findingId, reason) => {
   return updated;
 };
 
+if (typeof globalThis !== 'undefined' && typeof globalThis.Worker !== 'undefined') {
+  workerPool.registerWorker({
+    name: 'nessus-parser',
+    create: () =>
+      new Worker(new URL('../../../workers/nessus-parser.ts', import.meta.url)),
+    maxConcurrency: 2,
+  });
+}
+
 const Nessus = () => {
   const [url, setUrl] = useState('https://localhost:8834');
   const [username, setUsername] = useState('');
@@ -55,7 +66,10 @@ const Nessus = () => {
   const [findings, setFindings] = useState([]);
   const [parseError, setParseError] = useState('');
   const [selected, setSelected] = useState(null);
-  const parserWorkerRef = useRef(null);
+  const { enqueueJob, cancelJob } = useWorkerPool(
+    'nessus-parser',
+  );
+  const [parserJobId, setParserJobId] = useState(null);
 
   const hostData = useMemo(
     () =>
@@ -72,28 +86,42 @@ const Nessus = () => {
   useEffect(() => {
     setJobs(loadJobDefinitions());
     setFalsePositives(loadFalsePositives());
-    parserWorkerRef.current = new Worker(
-      new URL('../../../workers/nessus-parser.ts', import.meta.url)
-    );
-      parserWorkerRef.current.onmessage = (e) => {
-      const { findings: parsed = [], error: err } = e.data || {};
-      if (err) {
-        setParseError(err);
-        setFindings([]);
-      } else {
-        setFindings(parsed);
-        setParseError('');
-      }
-    };
-    return () => parserWorkerRef.current?.terminate();
   }, []);
+
+  useEffect(
+    () => () => {
+      if (parserJobId) {
+        cancelJob(parserJobId);
+      }
+    },
+    [cancelJob, parserJobId],
+  );
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
-      parserWorkerRef.current.postMessage(text);
+      if (parserJobId) {
+        cancelJob(parserJobId);
+      }
+      setParseError('');
+      const job = enqueueJob({
+        payload: { xml: text },
+      });
+      setParserJobId(job.jobId);
+      job.promise
+        .then(({ findings: parsed = [] }) => {
+          setFindings(parsed);
+          setParseError('');
+        })
+        .catch((err) => {
+          if (err?.name !== 'AbortError') {
+            setParseError(err?.message || 'Parse failed');
+            setFindings([]);
+          }
+        })
+        .finally(() => setParserJobId(null));
     } catch (err) {
       setParseError('Failed to read file');
     }
@@ -193,6 +221,7 @@ const Nessus = () => {
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
             placeholder="https://nessus:8834"
+            aria-label="Nessus URL"
           />
           <label htmlFor="nessus-username" className="block text-sm">
             Username
@@ -204,6 +233,7 @@ const Nessus = () => {
             onChange={(e) => setUsername(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Username"
           />
           <label htmlFor="nessus-password" className="block text-sm">
             Password
@@ -216,6 +246,7 @@ const Nessus = () => {
             onChange={(e) => setPassword(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Password"
           />
           <button type="submit" className="w-full bg-blue-600 py-2 rounded">
             Login
@@ -244,6 +275,7 @@ const Nessus = () => {
           accept=".nessus,.xml"
           onChange={handleFile}
           className="text-black mb-2"
+          aria-label="Upload Nessus XML"
         />
         {parseError && <FormError>{parseError}</FormError>}
         {findings.length > 0 && (
@@ -286,6 +318,7 @@ const Nessus = () => {
                               value={feedbackText}
                               onChange={(e) => setFeedbackText(e.target.value)}
                               placeholder="Reason"
+                              aria-label="False positive reason"
                             />
                             <div className="flex space-x-2">
                               <button
@@ -331,12 +364,14 @@ const Nessus = () => {
           placeholder="Scan ID"
           value={newJob.scanId}
           onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
+          aria-label="Scan ID"
         />
         <input
           className="p-1 rounded text-black"
           placeholder="Schedule"
           value={newJob.schedule}
           onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
+          aria-label="Schedule"
         />
         <button type="submit" className="bg-blue-600 px-2 py-1 rounded">
           Add Job
@@ -375,6 +410,7 @@ const Nessus = () => {
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="Reason"
+                  aria-label="False positive reason"
                 />
                 <div className="flex space-x-2">
                   <button

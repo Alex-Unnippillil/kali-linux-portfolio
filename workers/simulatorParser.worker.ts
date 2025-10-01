@@ -1,13 +1,8 @@
-export interface ParseMessage {
-  action: 'parse';
+import { registerWorkerHandler } from './pool/messages';
+
+export interface SimulatorParserRequest {
   text: string;
 }
-
-export interface CancelMessage {
-  action: 'cancel';
-}
-
-export type SimulatorParserRequest = ParseMessage | CancelMessage;
 
 export interface ParsedLine {
   line: number;
@@ -16,39 +11,25 @@ export interface ParsedLine {
   raw: string;
 }
 
-export interface ProgressMessage {
-  type: 'progress';
+export interface SimulatorParserProgress {
   progress: number;
   eta: number;
 }
 
-export interface DoneMessage {
-  type: 'done';
+export interface SimulatorParserResult {
   parsed: ParsedLine[];
 }
 
-export interface CancelledMessage {
-  type: 'cancelled';
-}
-
-export type SimulatorParserResponse =
-  | ProgressMessage
-  | DoneMessage
-  | CancelledMessage;
-
-let cancelled = false;
-
-self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
-  if (data.action === 'parse') {
-    cancelled = false;
-    const lines = data.text.split(/\r?\n/);
-    const total = lines.length;
+registerWorkerHandler<SimulatorParserRequest, SimulatorParserResult, SimulatorParserProgress>(
+  async ({ text }, context) => {
+    const lines = text.split(/\r?\n/);
+    const total = lines.length || 1;
     const start = Date.now();
     const parsed: ParsedLine[] = [];
+
     for (let i = 0; i < lines.length; i++) {
-      if (cancelled) {
-        self.postMessage({ type: 'cancelled' } as SimulatorParserResponse);
-        return;
+      if (context.isCancelled()) {
+        throw new DOMException('cancelled', 'AbortError');
       }
       const line = lines[i];
       const [key, ...rest] = line.split(':');
@@ -62,16 +43,10 @@ self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
         const progress = (i + 1) / total;
         const elapsed = Date.now() - start;
         const eta = progress > 0 ? (elapsed * (1 - progress)) / progress : 0;
-        self.postMessage(
-          { type: 'progress', progress, eta } as SimulatorParserResponse,
-        );
+        context.reportProgress({ progress, eta });
       }
     }
-    self.postMessage({ type: 'done', parsed } as SimulatorParserResponse);
-  } else if (data.action === 'cancel') {
-    cancelled = true;
-  }
-};
 
-export {};
-
+    return { parsed };
+  },
+);

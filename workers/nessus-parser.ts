@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { registerWorkerHandler } from './pool/messages';
 
 export interface Finding {
   host: string;
@@ -10,7 +11,15 @@ export interface Finding {
   solution: string;
 }
 
-export const parseNessus = (data: string): Finding[] => {
+export interface NessusParserRequest {
+  xml: string;
+}
+
+export interface NessusParserResult {
+  findings: Finding[];
+}
+
+const parseNessus = (data: string): Finding[] => {
   const parser = new XMLParser({ ignoreAttributes: false });
   const json = parser.parse(data);
   const reportHosts = json?.NessusClientData_v2?.Report?.ReportHost;
@@ -20,9 +29,7 @@ export const parseNessus = (data: string): Finding[] => {
     if (!host) return;
     const hostName =
       host['@_name'] ||
-      host?.HostProperties?.tag?.find(
-        (t: any) => t['@_name'] === 'host-ip'
-      )?.['#text'] ||
+      host?.HostProperties?.tag?.find((t: any) => t['@_name'] === 'host-ip')?.['#text'] ||
       'unknown';
     const items = Array.isArray(host.ReportItem)
       ? host.ReportItem
@@ -44,13 +51,9 @@ export const parseNessus = (data: string): Finding[] => {
   return findings;
 };
 
-self.onmessage = ({ data }: MessageEvent<string>) => {
-  try {
-    const findings = parseNessus(data);
-    self.postMessage({ findings });
-  } catch (err: any) {
-    self.postMessage({ error: err?.message || 'Parse failed' });
-  }
-};
-
-export {};
+registerWorkerHandler<NessusParserRequest, NessusParserResult, never>(
+  async ({ xml }) => {
+    const findings = parseNessus(xml);
+    return { findings };
+  },
+);
