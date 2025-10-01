@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "jest", "@storybook/react"],
+    "allowJs": true
+  },
+  "include": ["../stories/**/*", "./**/*"]
+}
