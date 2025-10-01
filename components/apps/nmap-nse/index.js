@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import Grouping from './Grouping';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -85,6 +86,7 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [groupAssignments, setGroupAssignments] = useState({});
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -204,6 +206,7 @@ const NmapNSEApp = () => {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-label="Target host or network"
           />
         </div>
         <div className="mb-4">
@@ -216,6 +219,7 @@ const NmapNSEApp = () => {
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-label="Search Nmap NSE scripts"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
@@ -225,6 +229,7 @@ const NmapNSEApp = () => {
                     type="checkbox"
                     checked={selectedScripts.includes(s.name)}
                     onChange={() => toggleScript(s.name)}
+                    aria-label={`Toggle script ${s.name}`}
                   />
                   <span className="font-mono">{s.name}</span>
                 </label>
@@ -248,6 +253,7 @@ const NmapNSEApp = () => {
                     }
                     placeholder="arg=value"
                     className="w-full p-1 border rounded text-black"
+                    aria-label={`Script arguments for ${s.name}`}
                   />
                 )}
               </div>
@@ -345,13 +351,29 @@ const NmapNSEApp = () => {
         ) : (
           <p className="text-sm mb-4">Select a script to view phases.</p>
         )}
+        <Grouping hosts={results.hosts} onAssignmentsChange={setGroupAssignments} />
         <h2 className="text-lg mb-2">Topology</h2>
         <DiscoveryMap hosts={results.hosts} />
         <h2 className="text-lg mb-2">Parsed output</h2>
         <ul className="mb-4 space-y-2">
           {results.hosts.map((host) => (
             <li key={host.ip}>
-              <div className="text-blue-400 font-mono">{host.ip}</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-blue-400 font-mono">{host.ip}</div>
+                <span className="rounded bg-purple-900/40 px-1.5 py-0.5 text-xs">
+                  {groupAssignments[host.ip]?.group || 'Unassigned'}
+                </span>
+                {groupAssignments[host.ip]?.asn && (
+                  <span className="rounded bg-purple-900/40 px-1.5 py-0.5 text-xs text-purple-200">
+                    ASN {groupAssignments[host.ip].asn}
+                  </span>
+                )}
+                {groupAssignments[host.ip]?.country && (
+                  <span className="rounded bg-blue-900/40 px-1.5 py-0.5 text-xs text-blue-200">
+                    {groupAssignments[host.ip].country}
+                  </span>
+                )}
+              </div>
               <ul className="ml-4 space-y-1">
                 {host.ports.map((p) => (
                   <li key={p.port}>
