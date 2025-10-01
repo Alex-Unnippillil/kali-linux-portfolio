@@ -6,8 +6,7 @@ import { Grid } from 'react-window';
 import DelayedTooltip from '../ui/DelayedTooltip';
 import AppTooltipContent from '../ui/AppTooltipContent';
 import { createRegistryMap, buildAppMetadata } from '../../lib/appRegistry';
-
-const registryMetadata = createRegistryMap(apps);
+import useTranslator from '../../hooks/useTranslator';
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -30,6 +29,7 @@ export default function AppGrid({ openApp }) {
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const { locale, t } = useTranslator();
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -40,6 +40,11 @@ export default function AppGrid({ openApp }) {
       })
       .filter(Boolean);
   }, [query]);
+
+  const registryMetadata = useMemo(() => {
+    void locale;
+    return createRegistryMap(apps);
+  }, [locale]);
 
   useEffect(() => {
     if (focusedIndex >= filtered.length) {
@@ -186,8 +191,8 @@ export default function AppGrid({ openApp }) {
     <div className="flex flex-col items-center h-full">
       <input
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
-        placeholder="Search"
-        aria-label="Search apps"
+        placeholder={t('Search')}
+        aria-label={t('Search apps')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />

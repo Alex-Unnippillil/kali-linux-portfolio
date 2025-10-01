@@ -1,3 +1,5 @@
+import { translateList, translateText } from './i18n/store';
+
 export type AppMetadata = {
   title: string;
   description: string;
@@ -75,12 +77,14 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
 export const buildAppMetadata = (app: AppEntry): AppMetadata => {
   const override = metadataOverrides[app.id] ?? {};
   return {
-    title: app.title,
+    title: translateText(app.title),
     icon: app.icon,
     description:
-      override.description ?? `Launch the ${app.title} demo environment.`,
+      translateText(override.description ?? `Launch the ${app.title} demo environment.`),
     path: override.path ?? `/apps/${app.id}`,
-    keyboard: override.keyboard ?? DEFAULT_KEYBOARD_HINTS,
+    keyboard: override.keyboard
+      ? translateList(override.keyboard)
+      : translateList(DEFAULT_KEYBOARD_HINTS),
   };
 };
 
