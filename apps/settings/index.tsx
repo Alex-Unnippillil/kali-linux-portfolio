@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import { useState, useRef, useId } from "react";
+import { useSettings, ACCENT_OPTIONS, TYPE_SCALE_RANGE } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -36,6 +36,8 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wallpaperToggleId = useId();
+  const typeScaleSliderId = useId();
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -156,14 +158,20 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex justify-center my-4 items-center">
+            <input
+              id={wallpaperToggleId}
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-labelledby={`${wallpaperToggleId}-label`}
+            />
+            <label
+              id={`${wallpaperToggleId}-label`}
+              htmlFor={wallpaperToggleId}
+              className="text-ubt-grey"
+            >
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -233,19 +241,26 @@ export default function Settings() {
       )}
       {activeTab === "accessibility" && (
         <>
-          <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
+          <div className="flex flex-col items-center my-4">
+            <label htmlFor={typeScaleSliderId} className="mb-2 text-ubt-grey">
+              Type scale
+            </label>
             <input
-              id="font-scale"
+              id={typeScaleSliderId}
               type="range"
-              min="0.75"
-              max="1.5"
-              step="0.05"
+              min={TYPE_SCALE_RANGE.min}
+              max={TYPE_SCALE_RANGE.max}
+              step={TYPE_SCALE_RANGE.step}
               value={fontScale}
               onChange={(e) => setFontScale(parseFloat(e.target.value))}
               className="ubuntu-slider"
-              aria-label="Icon size"
+              aria-label="Type scale"
             />
+            <div className="mt-2 flex w-full max-w-xs justify-between text-xs text-ubt-grey">
+              <span>{Math.round(TYPE_SCALE_RANGE.min * 100)}%</span>
+              <span aria-live="polite">{Math.round(fontScale * 100)}%</span>
+              <span>{Math.round(TYPE_SCALE_RANGE.max * 100)}%</span>
+            </div>
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Density:</label>

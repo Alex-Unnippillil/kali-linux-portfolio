@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
-import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS, TYPE_SCALE_RANGE } from '../hooks/useSettings';
 
 interface Props {
   highScore?: number;
@@ -9,7 +9,10 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, fontScale, setFontScale } = useSettings();
+  const typeScaleId = useId();
+  const typeScaleLabelId = useId();
+  const typeScaleDescriptionId = useId();
 
   return (
     <div>
@@ -52,6 +55,37 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               ))}
             </div>
           </label>
+          <div className="mt-4">
+            <label id={typeScaleLabelId} htmlFor={typeScaleId} className="block">
+              Type scale
+            </label>
+            <input
+              id={typeScaleId}
+              type="range"
+              min={TYPE_SCALE_RANGE.min}
+              max={TYPE_SCALE_RANGE.max}
+              step={TYPE_SCALE_RANGE.step}
+              value={fontScale}
+              onChange={(event) => setFontScale(parseFloat(event.target.value))}
+              className="ubuntu-slider mt-2 w-full"
+              aria-describedby={typeScaleDescriptionId}
+              aria-labelledby={typeScaleLabelId}
+              aria-valuetext={`${Math.round(fontScale * 100)} percent`}
+            />
+            <div
+              id={typeScaleDescriptionId}
+              className="mt-2 flex w-full justify-between text-xs text-gray-300"
+            >
+              <span>{Math.round(TYPE_SCALE_RANGE.min * 100)}%</span>
+              <span aria-live="polite">
+                {Math.round(fontScale * 100)}%
+              </span>
+              <span>{Math.round(TYPE_SCALE_RANGE.max * 100)}%</span>
+            </div>
+            <p className="mt-2 text-xs text-gray-400" aria-live="polite" aria-atomic="true">
+              Preview text grows and shrinks based on this scale factor.
+            </p>
+          </div>
         </div>
       )}
     </div>
