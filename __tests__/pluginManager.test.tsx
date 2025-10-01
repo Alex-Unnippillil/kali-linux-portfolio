@@ -28,6 +28,7 @@ describe('PluginManager', () => {
       }
       if (url === '/api/plugins/demo.json') {
         return Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve({
               id: 'demo',

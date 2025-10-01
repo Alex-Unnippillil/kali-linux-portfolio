@@ -1,0 +1,53 @@
+{
+  "id": "hello-world",
+  "name": "Hello World Dev Example",
+  "version": "0.1.0",
+  "description": "Sample extension demonstrating commands, panels, settings, and permissions in Dev Mode.",
+  "sandbox": "iframe",
+  "entry": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "id": "hello.sayHello",
+        "title": "Hello World: Say Hello",
+        "description": "Posts the configured greeting message back to the host log."
+      },
+      {
+        "id": "hello.toggleTimestamp",
+        "title": "Hello World: Toggle Timestamp",
+        "description": "Flips the timestamp visibility inside the panel UI."
+      }
+    ],
+    "panels": [
+      {
+        "id": "hello.panel",
+        "title": "Hello World Panel",
+        "source": "./panel.html",
+        "description": "Lightweight UI that renders the greeting and timestamp based on current settings."
+      }
+    ],
+    "settings": [
+      {
+        "id": "hello.greeting",
+        "type": "string",
+        "default": "Hello from Dev Mode!",
+        "description": "Greeting text displayed in the panel and command output."
+      },
+      {
+        "id": "hello.showTimestamp",
+        "type": "boolean",
+        "default": true,
+        "description": "Show the current time inside the panel UI."
+      }
+    ]
+  },
+  "permissions": {
+    "clipboardRead": true,
+    "storage": ["local"],
+    "network": {
+      "allow": ["https://example.com/api/*"]
+    }
+  },
+  "keywords": ["example", "dev-mode", "hello-world"],
+  "devOnly": true
+}

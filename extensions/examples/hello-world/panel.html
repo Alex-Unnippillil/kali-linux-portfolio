@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hello World Panel</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b0e11;
+        color: #f8fafc;
+      }
+      .hw-panel {
+        padding: 1.5rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+      .hw-heading {
+        margin: 0;
+        font-size: 1.45rem;
+      }
+      .hw-description {
+        margin: 0;
+        opacity: 0.8;
+      }
+      .hw-timestamp {
+        margin: 0;
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+        letter-spacing: 0.03em;
+      }
+      .hw-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .hw-actions button {
+        background: #1793d1;
+        border: none;
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        color: #02121c;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 120ms ease;
+      }
+      .hw-actions button:hover,
+      .hw-actions button:focus-visible {
+        background: #1aa0e4;
+      }
+      .hw-settings {
+        margin: 0;
+        padding: 0.75rem;
+        background: rgba(15, 19, 23, 0.75);
+        border-radius: 6px;
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+        font-size: 0.8rem;
+        line-height: 1.35;
+        overflow: auto;
+        max-height: 12rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="hw-panel" data-root>
+      <h1 class="hw-heading" data-greeting>Hello from Dev Mode!</h1>
+      <p class="hw-description">
+        This markup is bundled with the extension and rendered inside the sandbox iframe. Buttons trigger
+        command contributions, and the settings preview updates when commands run or the host pushes new
+        configuration.
+      </p>
+      <p class="hw-timestamp" data-timestamp></p>
+      <div class="hw-actions">
+        <button data-command="hello.sayHello">Run hello.sayHello</button>
+        <button data-command="hello.toggleTimestamp">Toggle Timestamp</button>
+      </div>
+      <pre class="hw-settings" data-settings></pre>
+    </main>
+  </body>
+</html>
