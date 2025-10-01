@@ -8,6 +8,14 @@ import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
+import {
+  getSecureItem,
+  setSecureItem,
+  hasSecureItem,
+  rotateSecureItem,
+  SecureStoreError,
+  isSecureStoreUsingWebCrypto,
+} from '../../../utils/secureStore';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -143,7 +151,14 @@ const ReconNG = () => {
   const [marketplace, setMarketplace] = useState([]);
   const [scriptTags, setScriptTags] = usePersistentState('reconng-script-tags', {});
   const [tagInputs, setTagInputs] = useState({});
-  const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
+  const [apiKeys, setApiKeys] = useState({});
+  const [apiKeysUnlocked, setApiKeysUnlocked] = useState(false);
+  const [apiKeyPassphrase, setApiKeyPassphrase] = useState('');
+  const [newApiKeyPassphrase, setNewApiKeyPassphrase] = useState('');
+  const [apiKeyError, setApiKeyError] = useState('');
+  const [apiKeyStatus, setApiKeyStatus] = useState('');
+  const [hasStoredApiKeys, setHasStoredApiKeys] = useState(false);
+  const [usesWebCrypto, setUsesWebCrypto] = useState(false);
   const [showApiKeys, setShowApiKeys] = useState({});
   const [workspaces, setWorkspaces] = useState([createWorkspace(0)]);
   const [activeWs, setActiveWs] = useState(0);
@@ -151,9 +166,17 @@ const ReconNG = () => {
   const [focusedNodeIndex, setFocusedNodeIndex] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [chainData, setChainData] = useState(null);
+  const passphraseRef = useRef('');
+  const lastSavedKeysRef = useRef('');
   const cyRef = useRef(null);
 
   const currentWorkspace = workspaces[activeWs];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setHasStoredApiKeys(hasSecureItem('reconng-api-keys'));
+    setUsesWebCrypto(isSecureStoreUsingWebCrypto());
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -197,6 +220,115 @@ const ReconNG = () => {
     }
     return undefined;
   }, []);
+
+  useEffect(() => {
+    passphraseRef.current = apiKeyPassphrase;
+  }, [apiKeyPassphrase]);
+
+  useEffect(() => {
+    if (!apiKeysUnlocked) return;
+    const trimmed = passphraseRef.current.trim();
+    if (!trimmed) return;
+    const serialized = JSON.stringify(apiKeys);
+    if (serialized === lastSavedKeysRef.current) return;
+    (async () => {
+      try {
+        await setSecureItem('reconng-api-keys', apiKeys, trimmed);
+        lastSavedKeysRef.current = serialized;
+        setApiKeyStatus('API keys updated.');
+        setApiKeyError('');
+        setHasStoredApiKeys(Object.keys(apiKeys).length > 0);
+      } catch (error) {
+        setApiKeyStatus('');
+        if (error instanceof SecureStoreError) {
+          setApiKeyError(error.message);
+        } else {
+          setApiKeyError('Unable to save API keys.');
+        }
+      }
+    })();
+  }, [apiKeys, apiKeysUnlocked, passphraseRef]);
+
+  const handleUnlockApiKeys = async () => {
+    const trimmed = apiKeyPassphrase.trim();
+    if (!trimmed) {
+      setApiKeyError('Enter a passphrase to unlock API keys.');
+      setApiKeyStatus('');
+      return;
+    }
+    try {
+      const stored = hasStoredApiKeys
+        ? await getSecureItem('reconng-api-keys', trimmed)
+        : {};
+      const normalized = stored || {};
+      lastSavedKeysRef.current = JSON.stringify(normalized);
+      setApiKeys(normalized);
+      setHasStoredApiKeys(Object.keys(normalized).length > 0);
+      setApiKeysUnlocked(true);
+      setApiKeyStatus('Secure storage unlocked.');
+      setApiKeyError('');
+    } catch (error) {
+      setApiKeysUnlocked(false);
+      setApiKeyStatus('');
+      if (error instanceof SecureStoreError) {
+        setApiKeyError(error.message);
+      } else {
+        setApiKeyError('Unable to unlock secure storage.');
+      }
+    }
+  };
+
+  const handleRotateApiKeyPassphrase = async () => {
+    const current = apiKeyPassphrase.trim();
+    const next = newApiKeyPassphrase.trim();
+    if (!apiKeysUnlocked) {
+      setApiKeyError('Unlock your API keys before rotating the passphrase.');
+      setApiKeyStatus('');
+      return;
+    }
+    if (!hasStoredApiKeys) {
+      setApiKeyError('No stored API keys to rotate yet. Save a key first.');
+      setApiKeyStatus('');
+      return;
+    }
+    if (!next) {
+      setApiKeyError('Enter a new passphrase.');
+      setApiKeyStatus('');
+      return;
+    }
+    if (current === next) {
+      setApiKeyError('Choose a different passphrase.');
+      setApiKeyStatus('');
+      return;
+    }
+    try {
+      await rotateSecureItem('reconng-api-keys', current, next);
+      setApiKeyPassphrase(next);
+      setNewApiKeyPassphrase('');
+      setApiKeyStatus('Passphrase rotated successfully.');
+      setApiKeyError('');
+    } catch (error) {
+      setApiKeyStatus('');
+      if (error instanceof SecureStoreError) {
+        setApiKeyError(error.message);
+      } else {
+        setApiKeyError('Unable to rotate passphrase.');
+      }
+    }
+  };
+
+  const updateApiKeyValue = (moduleName, value) => {
+    setApiKeys((prev) => {
+      const next = { ...prev };
+      if (value) {
+        next[moduleName] = value;
+      } else {
+        delete next[moduleName];
+      }
+      return next;
+    });
+    setApiKeyStatus('');
+  };
 
   useEffect(() => {
     if (cyRef.current) {
@@ -500,6 +632,7 @@ const ReconNG = () => {
               value={selectedModule}
               onChange={(e) => setSelectedModule(e.target.value)}
               className="bg-gray-800 px-2 py-1"
+              aria-label="Recon module selector"
             >
               {allModules.map((m) => (
                 <option key={m} value={m}>
@@ -513,12 +646,14 @@ const ReconNG = () => {
               onChange={(e) => setTarget(e.target.value)}
               placeholder="Target"
               className="flex-1 bg-gray-800 px-2 py-1"
+              aria-label="Recon target"
             />
             <label className="flex items-center gap-1 text-xs">
               <input
                 type="checkbox"
                 checked={useLiveData}
                 onChange={(e) => setUseLiveData(e.target.checked)}
+                aria-label="Enable live fetch"
               />
               Live fetch
             </label>
@@ -600,6 +735,79 @@ const ReconNG = () => {
       {view === 'reports' && <ReportTemplates />}
       {view === 'settings' && (
         <div className="flex-1 overflow-auto">
+          <div className="mb-4 rounded border border-gray-700 bg-gray-900 p-3">
+            <h3 className="font-semibold">Secure API Key Storage</h3>
+            <p className="mt-1 text-xs text-gray-300">
+              {usesWebCrypto
+                ? 'API keys are encrypted with AES-GCM using your passphrase. Keep it safe—keys cannot be recovered without it.'
+                : 'WebCrypto is unavailable in this browser. Keys are still protected by your passphrase, but encryption falls back to a compatibility mode.'}
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <input
+                type="password"
+                value={apiKeyPassphrase}
+                onChange={(e) => {
+                  setApiKeyPassphrase(e.target.value);
+                  setApiKeyError('');
+                  setApiKeyStatus('');
+                }}
+                className="flex-1 bg-gray-800 px-2 py-1"
+                placeholder="Passphrase"
+                aria-label="API key passphrase"
+                disabled={apiKeysUnlocked}
+              />
+              <button
+                type="button"
+                onClick={handleUnlockApiKeys}
+                className={`px-2 py-1 ${
+                  apiKeysUnlocked
+                    ? 'bg-green-700 cursor-default'
+                    : 'bg-blue-600 hover:bg-blue-500'
+                }`}
+                disabled={apiKeysUnlocked}
+              >
+                {apiKeysUnlocked
+                  ? 'Unlocked'
+                  : hasStoredApiKeys
+                  ? 'Unlock'
+                  : 'Create Passphrase'}
+              </button>
+            </div>
+              {apiKeysUnlocked && (
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="password"
+                    value={newApiKeyPassphrase}
+                    onChange={(e) => setNewApiKeyPassphrase(e.target.value)}
+                    className="flex-1 bg-gray-800 px-2 py-1"
+                    placeholder="New passphrase"
+                    aria-label="New API key passphrase"
+                  />
+                <button
+                  type="button"
+                  onClick={handleRotateApiKeyPassphrase}
+                  className="px-2 py-1 bg-purple-700 hover:bg-purple-600"
+                >
+                  Rotate Passphrase
+                </button>
+              </div>
+            )}
+            {apiKeyStatus && (
+              <p className="mt-2 text-xs text-green-400" role="status">
+                {apiKeyStatus}
+              </p>
+            )}
+            {apiKeyError && (
+              <p className="mt-2 text-xs text-red-400" role="alert">
+                {apiKeyError}
+              </p>
+            )}
+          </div>
+          {!apiKeysUnlocked && (
+            <p className="mb-3 text-xs text-gray-400">
+              Unlock secure storage to view or edit saved API keys.
+            </p>
+          )}
           {allModules.map((m) => (
             <div key={m} className="mb-2">
               <label className="block mb-1">{`${m} API Key`}</label>
@@ -607,9 +815,11 @@ const ReconNG = () => {
                 <input
                   type={showApiKeys[m] ? 'text' : 'password'}
                   value={apiKeys[m] || ''}
-                  onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
+                  onChange={(e) => updateApiKeyValue(m, e.target.value)}
                   className="flex-1 bg-gray-800 px-2 py-1"
                   placeholder={`${m} API Key`}
+                  aria-label={`${m} API Key`}
+                  disabled={!apiKeysUnlocked}
                 />
                 <button
                   type="button"
@@ -617,6 +827,7 @@ const ReconNG = () => {
                     setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
                   }
                   className="ml-2 px-2 py-1 bg-gray-700"
+                  disabled={!apiKeysUnlocked}
                 >
                   {showApiKeys[m] ? 'Hide' : 'Show'}
                 </button>

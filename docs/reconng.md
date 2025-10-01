@@ -24,7 +24,7 @@ Checking the **Live fetch** box sends a limited request to the schema's `fetchUr
 
 ## Data Storage
 
- - Per-module API keys are persisted in `localStorage` under the key `reconng-api-keys` and inputs are masked by default.
+ - Per-module API keys are encrypted via `utils/secureStore` (key: `reconng-api-keys`). Users unlock the store with a passphrase, can rotate it in the UI, and see a compatibility warning when WebCrypto is unavailable.
 - Workspace graphs and entity sets exist only in memory but can be exported as CSV or JSON.
 - Static marketplace and chain data live in the `public/` directory.
 
