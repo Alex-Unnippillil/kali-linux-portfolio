@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import logger from '../../utils/logger'
+import MenuRow from './MenuRow'
+import useKeymap from '../../apps/settings/keymapRegistry'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const { shortcuts } = useKeymap()
+    const openSettingsShortcut = shortcuts.find((s) => s.description === 'Open settings')?.keys || null
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -57,7 +61,7 @@ function DesktopMenu(props) {
                 aria-label="New Folder"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">New Folder</span>
+                <MenuRow label="New Folder" />
             </button>
             <button
                 onClick={props.openShortcutSelector}
@@ -66,15 +70,15 @@ function DesktopMenu(props) {
                 aria-label="Create Shortcut"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Create Shortcut...</span>
+                <MenuRow label="Create Shortcut..." />
             </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
+                <MenuRow label="Paste" />
             </div>
             <Devider />
             <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
+                <MenuRow label="Show Desktop in Files" />
             </div>
             <button
                 onClick={openTerminal}
@@ -83,7 +87,7 @@ function DesktopMenu(props) {
                 aria-label="Open in Terminal"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Open in Terminal</span>
+                <MenuRow label="Open in Terminal" />
             </button>
             <Devider />
             <button
@@ -93,11 +97,11 @@ function DesktopMenu(props) {
                 aria-label="Change Background"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Change Background...</span>
+                <MenuRow label="Change Background..." />
             </button>
             <Devider />
             <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
+                <MenuRow label="Display Settings" />
             </div>
             <button
                 onClick={openSettings}
@@ -106,7 +110,7 @@ function DesktopMenu(props) {
                 aria-label="Settings"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Settings</span>
+                <MenuRow label="Settings" accel={openSettingsShortcut} />
             </button>
             <Devider />
             <button
@@ -116,7 +120,7 @@ function DesktopMenu(props) {
                 aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
+                <MenuRow label={`${isFullScreen ? "Exit" : "Enter"} Full Screen`} />
             </button>
             <Devider />
             <button
@@ -126,7 +130,7 @@ function DesktopMenu(props) {
                 aria-label="Clear Session"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Clear Session</span>
+                <MenuRow label="Clear Session" />
             </button>
         </div>
     )
