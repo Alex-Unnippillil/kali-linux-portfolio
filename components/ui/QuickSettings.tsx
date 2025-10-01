@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import ProTips from '../common/ProTips';
 
 interface Props {
   open: boolean;
@@ -27,7 +28,11 @@ const QuickSettings = ({ open }: Props) => {
         open ? '' : 'hidden'
       }`}
     >
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-3">
+        <ProTips rotationIntervalMs={12000} />
+      </div>
+      <div className="h-px w-full bg-white/10" />
+      <div className="px-4 pt-3 pb-2">
         <button
           className="w-full flex justify-between"
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
