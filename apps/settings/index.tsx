@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import QuickActionsPanel from "./components/QuickActionsPanel";
 import {
   resetSettings,
   defaults,
@@ -41,6 +42,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "quick-actions", label: "Quick Actions" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -157,12 +159,14 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
+            <label htmlFor="toggle-kali-wallpaper" className="mr-2 text-ubt-grey flex items-center">
               <input
+                id="toggle-kali-wallpaper"
                 type="checkbox"
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Kali Gradient Wallpaper"
               />
               Kali Gradient Wallpaper
             </label>
@@ -231,6 +235,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "quick-actions" && <QuickActionsPanel />}
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">

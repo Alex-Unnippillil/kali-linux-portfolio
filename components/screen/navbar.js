@@ -5,6 +5,7 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import QuickActions from '../layout/QuickActions';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
 const areWorkspacesEqual = (next, prev) => {
@@ -88,7 +89,7 @@ export default class Navbar extends PureComponent {
                                                 paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
                                         }}
                                 >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <div className="flex flex-1 items-center gap-2 text-xs md:text-sm">
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
@@ -99,12 +100,16 @@ export default class Navbar extends PureComponent {
                                                 )}
                                                 <PerformanceGraph />
                                         </div>
-                                        <div
-                                                className={
-                                                        'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10'
-                                                }
-                                        >
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                        <div className="hidden items-center gap-4 md:flex">
+                                                <QuickActions
+                                                        handlers={{ 'lock-screen': this.props.lockScreen }}
+                                                        className="text-sm"
+                                                />
+                                                <div
+                                                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10"
+                                                >
+                                                        <Clock onlyTime={true} showCalendar={true} hour12={false} />
+                                                </div>
                                         </div>
                                         <button
                                                 type="button"
