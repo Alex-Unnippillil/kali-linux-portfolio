@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { readRecentAppIds, RECENT_STORAGE_EVENT } from '../../utils/recentStorage';
 
 type AppMeta = {
   id: string;
@@ -26,7 +27,6 @@ type CategoryDefinitionBase = {
 } & CategorySource;
 
 const TRANSITION_DURATION = 180;
-const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
 const CATEGORY_DEFINITIONS = [
@@ -122,23 +122,6 @@ const isCategoryId = (
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
 
-const readRecentAppIds = (): string[] => {
-  try {
-    const stored = safeLocalStorage?.getItem(RECENT_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter((value): value is string => typeof value === 'string');
-  } catch {
-    return [];
-  }
-};
-
-
 const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -166,6 +149,16 @@ const WhiskerMenu: React.FC = () => {
     if (!isOpen) return;
     setRecentIds(readRecentAppIds());
   }, [isOpen]);
+
+  useEffect(() => {
+    const handler = () => {
+      setRecentIds(readRecentAppIds());
+    };
+    window.addEventListener(RECENT_STORAGE_EVENT, handler);
+    return () => {
+      window.removeEventListener(RECENT_STORAGE_EVENT, handler);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
