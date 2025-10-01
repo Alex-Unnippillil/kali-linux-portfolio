@@ -89,6 +89,7 @@ export function Settings() {
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Use Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -135,6 +136,7 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Adjust font size"
                 />
             </div>
             <div className="flex justify-center my-4">
@@ -144,6 +146,7 @@ export function Settings() {
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable reduced motion"
                     />
                     Reduced Motion
                 </label>
@@ -155,6 +158,7 @@ export function Settings() {
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable large hit areas"
                     />
                     Large Hit Areas
                 </label>
@@ -166,6 +170,7 @@ export function Settings() {
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable high contrast"
                     />
                     High Contrast
                 </label>
@@ -177,6 +182,7 @@ export function Settings() {
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Allow network requests"
                     />
                     Allow Network Requests
                 </label>
@@ -188,6 +194,7 @@ export function Settings() {
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable haptics"
                     />
                     Haptics
                 </label>
@@ -199,6 +206,7 @@ export function Settings() {
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable pong spin"
                     />
                     Pong Spin
                 </label>
@@ -288,23 +296,26 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
                     const text = await file.text();
-                    await importSettingsData(text);
-                    try {
-                        const parsed = JSON.parse(text);
-                        if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-                        if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
-                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
-                        if (parsed.theme !== undefined) { setTheme(parsed.theme); }
-                    } catch (err) {
-                        console.error('Invalid settings', err);
+                    const result = await importSettingsData(text);
+                    if (!result?.success) {
+                        console.error(result?.error || 'Invalid settings file');
+                        e.target.value = '';
+                        return;
                     }
+                    const preferences = result.data?.preferences || {};
+                    if (preferences.accent !== undefined) setAccent(preferences.accent);
+                    if (preferences.wallpaper !== undefined) setWallpaper(preferences.wallpaper);
+                    if (preferences.density !== undefined) setDensity(preferences.density);
+                    if (preferences.reducedMotion !== undefined) setReducedMotion(preferences.reducedMotion);
+                    if (preferences.largeHitAreas !== undefined) setLargeHitAreas(preferences.largeHitAreas);
+                    if (preferences.highContrast !== undefined) setHighContrast(preferences.highContrast);
+                    if (preferences.theme !== undefined) { setTheme(preferences.theme); }
+                    if (preferences.useKaliWallpaper !== undefined) setUseKaliWallpaper(preferences.useKaliWallpaper);
                     e.target.value = '';
                 }}
                 className="hidden"

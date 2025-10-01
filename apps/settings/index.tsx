@@ -72,21 +72,24 @@ export default function Settings() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    await importSettingsData(text);
-    try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
-    } catch (err) {
-      console.error("Invalid settings", err);
+    const result = await importSettingsData(text);
+    if (!result?.success) {
+      console.error(result?.error || "Invalid settings file");
+      return;
     }
+    const preferences = result.data?.preferences ?? {};
+    if (preferences.accent !== undefined) setAccent(preferences.accent);
+    if (preferences.wallpaper !== undefined) setWallpaper(preferences.wallpaper);
+    if (preferences.density !== undefined) setDensity(preferences.density as any);
+    if (preferences.reducedMotion !== undefined)
+      setReducedMotion(preferences.reducedMotion);
+    if (preferences.fontScale !== undefined) setFontScale(preferences.fontScale);
+    if (preferences.highContrast !== undefined)
+      setHighContrast(preferences.highContrast);
+    if (preferences.theme !== undefined) setTheme(preferences.theme);
+    if (preferences.useKaliWallpaper !== undefined)
+      setUseKaliWallpaper(preferences.useKaliWallpaper);
+    if (preferences.haptics !== undefined) setHaptics(preferences.haptics);
   };
 
   const handleReset = async () => {
@@ -163,6 +166,7 @@ export default function Settings() {
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-label="Use Kali gradient wallpaper"
               />
               Kali Gradient Wallpaper
             </label>

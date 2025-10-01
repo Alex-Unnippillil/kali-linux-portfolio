@@ -37,3 +37,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 
 - Development middleware now appends `'unsafe-eval'` to `script-src` when `NODE_ENV !== 'production'` so the Next.js dev bundle can run inside headless browsers (e.g., Playwright) and capture screenshots.
 - Removed the manual note that explained screenshots were unavailable due to the stricter dev CSP; the automation workaround is no longer needed.
+## Settings import/export QA (2025-09-30)
+
+- `yarn lint`
+- `yarn test __tests__/settingsStore.test.ts --runInBand`
+
+Both commands completed without new errors. Full `yarn test` continues to fail due to existing unrelated suites.
