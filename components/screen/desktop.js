@@ -94,6 +94,9 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set(apps.map((app) => app.id));
 
+        this.windowPreviewCache = new Map();
+        this.previewCaptureInFlight = new Map();
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -417,6 +420,53 @@ export class Desktop extends Component {
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
             }));
+    };
+
+    dispatchTaskbarPreview = (windowId, image) => {
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(
+            new CustomEvent('taskbar-preview-response', {
+                detail: { windowId, image: image || null, timestamp: Date.now() },
+            })
+        );
+    };
+
+    handleTaskbarPreviewRequest = (event) => {
+        const windowId = event?.detail?.windowId;
+        if (!windowId) return;
+
+        const isOpen = this.state.closed_windows[windowId] === false;
+        const isMinimized = Boolean(this.state.minimized_windows[windowId]);
+        const cachedImage = this.windowPreviewCache.get(windowId) || null;
+
+        if (!isOpen || isMinimized) {
+            this.dispatchTaskbarPreview(windowId, cachedImage);
+            return;
+        }
+
+        if (this.previewCaptureInFlight.get(windowId)) {
+            this.dispatchTaskbarPreview(windowId, cachedImage);
+            return;
+        }
+
+        this.captureWindowPreview(windowId, cachedImage);
+    };
+
+    captureWindowPreview = async (windowId, fallback) => {
+        this.previewCaptureInFlight.set(windowId, true);
+        let image = fallback || null;
+        try {
+            const node = typeof document !== 'undefined' ? document.getElementById(windowId) : null;
+            if (node) {
+                image = await toPng(node);
+                this.windowPreviewCache.set(windowId, image);
+            }
+        } catch (e) {
+            // ignore snapshot errors
+        } finally {
+            this.previewCaptureInFlight.delete(windowId);
+            this.dispatchTaskbarPreview(windowId, image);
+        }
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -822,6 +872,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('taskbar-preview-request', this.handleTaskbarPreviewRequest);
             this.broadcastWorkspaceState();
         }
 
@@ -880,6 +931,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('taskbar-preview-request', this.handleTaskbarPreviewRequest);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -1648,6 +1700,9 @@ export class Desktop extends Component {
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
         this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+
+        this.windowPreviewCache.delete(objId);
+        this.previewCaptureInFlight.delete(objId);
     }
 
     pinApp = (id) => {
