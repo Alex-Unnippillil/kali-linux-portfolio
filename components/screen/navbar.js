@@ -104,6 +104,23 @@ export default class Navbar extends PureComponent {
                 }
         };
 
+        handleAppButtonAuxClick = (event, app) => {
+                if (!app || event.button !== 1) {
+                        return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (!app.allowMulti) {
+                        return;
+                }
+
+                if (typeof window === 'undefined') return;
+
+                window.dispatchEvent(new CustomEvent('open-app', { detail: app.id }));
+        };
+
         renderRunningApps = () => {
                 const { runningApps } = this.state;
                 if (!runningApps.length) return null;
@@ -137,6 +154,7 @@ export default class Navbar extends PureComponent {
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
+                                onAuxClick={(event) => this.handleAppButtonAuxClick(event, app)}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
