@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import BackpressureNotice from '../../system/BackpressureNotice';
+import { enqueueJob } from '../../../utils/backpressure';
+import useBackpressureJob from '../../../hooks/useBackpressureJob';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
@@ -202,8 +205,12 @@ const OpenVASApp = () => {
   const [selected, setSelected] = useState(null);
   const [activeHost, setActiveHost] = useState(null);
   const workerRef = useRef(null);
+  const abortRef = useRef(null);
   const reduceMotion = useRef(false);
   const sessionRef = useRef({});
+  const scanJobIdRef = useRef(null);
+  const [scanJobId, setScanJobId] = useState(null);
+  const scanJob = useBackpressureJob(scanJobId);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -245,39 +252,81 @@ const OpenVASApp = () => {
     setSummaryUrl(URL.createObjectURL(blob));
   };
 
-  const runScan = async (
+  const runScan = (
     t = target,
     g = group,
     p = profile,
   ) => {
     if (!t) return;
-    sessionRef.current = { target: t, group: g, profile: p };
-    saveSession({ ...sessionRef.current, progress: 0 });
-    setTarget(t);
-    setGroup(g);
-    setProfile(p);
-    setLoading(true);
-    setProgress(0);
-    setOutput('');
-    setSummaryUrl(null);
-    try {
-      const res = await fetch(
-        `/api/openvas?target=${encodeURIComponent(t)}&group=${encodeURIComponent(g)}&profile=${encodeURIComponent(p)}`
-      );
-      if (!res.ok) throw new Error(`Request failed with ${res.status}`);
-      const data = await res.text();
-      setOutput(data);
-      workerRef.current?.postMessage({ text: data });
-      generateSummary(data);
-      notify('OpenVAS Scan Complete', `Target ${t} finished`);
-    } catch (e) {
-      setOutput(e.message);
-      notify('OpenVAS Scan Failed', e.message);
-    } finally {
-      setLoading(false);
-      clearSession();
-      sessionRef.current = {};
-    }
+    const id = `openvas:${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    const handle = enqueueJob(
+      'openvas:scan',
+      {
+        run: async () => {
+          sessionRef.current = { target: t, group: g, profile: p };
+          saveSession({ ...sessionRef.current, progress: 0 });
+          setTarget(t);
+          setGroup(g);
+          setProfile(p);
+          setProgress(0);
+          setOutput('');
+          setSummaryUrl(null);
+          setLoading(true);
+          const controller = new AbortController();
+          abortRef.current = controller;
+          try {
+            const res = await fetch(
+              `/api/openvas?target=${encodeURIComponent(t)}&group=${encodeURIComponent(g)}&profile=${encodeURIComponent(p)}`,
+              { signal: controller.signal },
+            );
+            if (!res.ok) throw new Error(`Request failed with ${res.status}`);
+            const data = await res.text();
+            setOutput(data);
+            workerRef.current?.postMessage({ text: data });
+            generateSummary(data);
+            notify('OpenVAS Scan Complete', `Target ${t} finished`);
+          } catch (e) {
+            if (e instanceof Error && e.name === 'AbortError') {
+              setOutput('Scan cancelled');
+            } else if (e instanceof Error) {
+              setOutput(e.message);
+              notify('OpenVAS Scan Failed', e.message);
+            } else {
+              setOutput('Scan failed');
+            }
+          } finally {
+            setLoading(false);
+            abortRef.current = null;
+            clearSession();
+            sessionRef.current = {};
+          }
+        },
+        cancel: () => {
+          abortRef.current?.abort();
+          setLoading(false);
+          setProgress(0);
+          clearSession();
+          sessionRef.current = {};
+        },
+      },
+      {
+        id,
+        label: `OpenVAS scan for ${t}`,
+        metadata: { target: t, group: g, profile: p },
+      },
+    );
+
+    scanJobIdRef.current = id;
+    setScanJobId(id);
+    handle.done.finally(() => {
+      if (scanJobIdRef.current === id) {
+        scanJobIdRef.current = null;
+        setScanJobId(null);
+      }
+    });
   };
 
   const handleCellClick = (likelihood, impact) => {
@@ -404,12 +453,24 @@ const OpenVASApp = () => {
         <button
           type="button"
           onClick={() => runScan()}
-          disabled={loading}
+          disabled={loading || !!scanJob}
           className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
-          {loading ? 'Scanning...' : 'Scan'}
+          {scanJob?.status === 'queued'
+            ? 'Queued…'
+            : loading
+            ? 'Scanning...'
+            : 'Scan'}
         </button>
       </div>
+      {scanJob && (
+        <div className="mb-4">
+          <BackpressureNotice
+            jobId={scanJobId}
+            description="OpenVAS scan queued behind other heavy jobs"
+          />
+        </div>
+      )}
       {loading && (
         <div className="w-full bg-gray-700 h-2 mb-4">
           <div
