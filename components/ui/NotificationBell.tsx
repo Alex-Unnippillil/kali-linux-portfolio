@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import DOMPurify, { Config as DOMPurifyConfig } from 'dompurify';
 import {
   useNotifications,
   AppNotification,
@@ -71,6 +72,191 @@ interface NotificationGroup {
   metadata: PriorityMetadata;
   notifications: FormattedNotification[];
 }
+
+const MAX_COLLAPSED_HEIGHT = 160;
+
+const ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/[&<>"']/g, char => ESCAPE_MAP[char] || char)
+    .replace(/\n/g, '<br />');
+
+const SANITIZE_CONFIG: DOMPurifyConfig = {
+  ALLOWED_TAGS: [
+    'a',
+    'strong',
+    'em',
+    'p',
+    'span',
+    'br',
+    'ul',
+    'ol',
+    'li',
+    'code',
+    'pre',
+    'kbd',
+    'blockquote',
+    'img',
+    's',
+    'u',
+    'small',
+  ],
+  ALLOWED_ATTR: [
+    'href',
+    'title',
+    'target',
+    'rel',
+    'src',
+    'alt',
+    'width',
+    'height',
+    'aria-label',
+    'role',
+    'loading',
+    'decoding',
+    'referrerpolicy',
+  ],
+  FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick'],
+  KEEP_CONTENT: true,
+  USE_PROFILES: { html: true },
+};
+
+const sanitizeNotificationBody = (input: string): string => {
+  if (!input) return '';
+
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return escapeHtml(input);
+  }
+
+  try {
+    const fragment = DOMPurify.sanitize(input, {
+      ...SANITIZE_CONFIG,
+      RETURN_DOM_FRAGMENT: true,
+    }) as unknown as DocumentFragment;
+
+    const container = document.createElement('div');
+    container.append(fragment);
+
+    container.querySelectorAll('a').forEach(anchor => {
+      const href = anchor.getAttribute('href') ?? '';
+      const isExternal = /^https?:\/\//i.test(href);
+      if (!isExternal) return;
+
+      if (!anchor.getAttribute('target')) {
+        anchor.setAttribute('target', '_blank');
+      }
+      const relTokens = new Set(
+        (anchor.getAttribute('rel') ?? '')
+          .split(/\s+/)
+          .map(token => token.trim())
+          .filter(Boolean),
+      );
+      relTokens.add('noopener');
+      relTokens.add('noreferrer');
+      anchor.setAttribute('rel', Array.from(relTokens).join(' '));
+    });
+
+    container.querySelectorAll('img').forEach(img => {
+      img.setAttribute('loading', 'lazy');
+      img.setAttribute('decoding', 'async');
+      img.setAttribute('referrerpolicy', 'no-referrer');
+      img.classList.add('notification-inline-image');
+
+      const widthAttr = parseInt(img.getAttribute('width') ?? '', 10);
+      const heightAttr = parseInt(img.getAttribute('height') ?? '', 10);
+
+      if (Number.isFinite(widthAttr) && Number.isFinite(heightAttr) && widthAttr > 0 && heightAttr > 0) {
+        img.style.width = '100%';
+        img.style.maxWidth = `${widthAttr}px`;
+        img.style.height = 'auto';
+        img.style.aspectRatio = `${widthAttr} / ${heightAttr}`;
+      } else {
+        img.setAttribute('width', '320');
+        img.setAttribute('height', '180');
+        img.dataset.notificationPlaceholder = 'true';
+        img.style.width = '100%';
+        img.style.height = 'auto';
+      }
+    });
+
+    const html = container.innerHTML.trim();
+    return html || escapeHtml(input);
+  } catch (error) {
+    return escapeHtml(input);
+  }
+};
+
+const NotificationBody: React.FC<{ body: string }> = ({ body }) => {
+  const sanitized = useMemo(() => sanitizeNotificationBody(body), [body]);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [sanitized]);
+
+  useEffect(() => {
+    const element = contentRef.current;
+    if (!element) return;
+
+    const updateOverflow = () => {
+      if (!element) return;
+      const isOverflowing = element.scrollHeight > MAX_COLLAPSED_HEIGHT + 8;
+      setOverflowing(isOverflowing);
+    };
+
+    updateOverflow();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => updateOverflow());
+      observer.observe(element);
+      return () => observer.disconnect();
+    }
+
+    const handleResize = () => updateOverflow();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sanitized]);
+
+  if (!sanitized) return null;
+
+  return (
+    <div className="relative mt-1 text-xs text-ubt-grey text-opacity-80">
+      <div
+        ref={contentRef}
+        className={`whitespace-pre-wrap leading-relaxed transition-[max-height] duration-200 ease-in-out [&_a]:text-sky-300 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-sky-200 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mt-1 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_pre]:overflow-auto [&_pre]:rounded [&_pre]:bg-black/50 [&_pre]:p-3 [&_.notification-inline-image]:mx-auto [&_.notification-inline-image]:my-2 [&_.notification-inline-image]:max-w-full [&_.notification-inline-image]:rounded-md [&_.notification-inline-image]:border [&_.notification-inline-image]:border-white/10 [&_.notification-inline-image]:bg-white/5 [&_.notification-inline-image[data-notification-placeholder='true']]:min-h-[8rem] ${
+          expanded ? 'max-h-none' : 'max-h-40 overflow-hidden'
+        }`}
+        style={!expanded ? { maxHeight: `${MAX_COLLAPSED_HEIGHT}px` } : undefined}
+        dangerouslySetInnerHTML={{ __html: sanitized }}
+        suppressHydrationWarning
+      />
+      {!expanded && overflowing && (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent"
+          aria-hidden="true"
+        />
+      )}
+      {overflowing && (
+        <button
+          type="button"
+          onClick={() => setExpanded(prev => !prev)}
+          className="mt-2 text-[0.65rem] font-semibold uppercase tracking-wide text-sky-300 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+};
 
 const NotificationBell: React.FC = () => {
   const {
@@ -349,11 +535,7 @@ const NotificationBell: React.FC = () => {
                                   {notification.metadata.label}
                                 </span>
                               </div>
-                              {notification.body && (
-                                <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
-                                  {notification.body}
-                                </p>
-                              )}
+                              {notification.body && <NotificationBody body={notification.body} />}
                               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
                                 <span>{notification.appId}</span>
                                 <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
