@@ -6,7 +6,6 @@ import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
-import { trackEvent } from "@/lib/analytics-client";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -73,16 +72,16 @@ const ContactApp: React.FC = () => {
         setMessage("");
         setHoneypot("");
         localStorage.removeItem(DRAFT_KEY);
-        trackEvent("contact_submit", { method: "form" });
+        // analytics removed
       } else {
         setError(result.error || "Submission failed");
         setToast("Failed to send");
-        trackEvent("contact_submit_error", { method: "form" });
+        // analytics removed
       }
     } catch {
       setError("Submission failed");
       setToast("Failed to send");
-      trackEvent("contact_submit_error", { method: "form" });
+      // analytics removed
     }
   };
 
