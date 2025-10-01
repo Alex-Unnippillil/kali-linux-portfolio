@@ -17,6 +17,7 @@ import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+const PAGE_JUMP = 5;
 
 const PRIORITY_METADATA: Record<
   NotificationPriority,
@@ -95,6 +96,8 @@ const NotificationBell: React.FC = () => {
         {} as Record<NotificationPriority, boolean>,
       ),
   );
+  const notificationRefs = useRef(new Map<string, HTMLLIElement>());
+  const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
 
   const closePanel = useCallback(() => {
     setIsOpen(false);
@@ -220,6 +223,17 @@ const NotificationBell: React.FC = () => {
     [formattedNotifications],
   );
 
+  const visibleNotificationIds = useMemo(
+    () =>
+      groupedNotifications.flatMap(group => {
+        const collapsed =
+          collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
+        if (collapsed) return [];
+        return group.notifications.map(notification => notification.id);
+      }),
+    [collapsedGroups, groupedNotifications],
+  );
+
   const toggleGroup = useCallback((priority: NotificationPriority) => {
     setCollapsedGroups(prev => ({
       ...prev,
@@ -232,6 +246,113 @@ const NotificationBell: React.FC = () => {
     clearNotifications();
     closePanel();
   }, [clearNotifications, closePanel, notifications.length]);
+
+  const registerNotificationRef = useCallback(
+    (id: string, node: HTMLLIElement | null) => {
+      if (!node) {
+        notificationRefs.current.delete(id);
+        return;
+      }
+      notificationRefs.current.set(id, node);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveNotificationId(null);
+      return;
+    }
+    if (visibleNotificationIds.length === 0) {
+      setActiveNotificationId(null);
+      return;
+    }
+    setActiveNotificationId(prev => {
+      if (prev && visibleNotificationIds.includes(prev)) {
+        return prev;
+      }
+      return visibleNotificationIds[0];
+    });
+  }, [isOpen, visibleNotificationIds]);
+
+  useEffect(() => {
+    if (!isOpen || !activeNotificationId) return;
+    const node = notificationRefs.current.get(activeNotificationId);
+    node?.focus({ preventScroll: true });
+  }, [activeNotificationId, isOpen]);
+
+  const handleNotificationKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLLIElement>, notificationId: string) => {
+      if (visibleNotificationIds.length === 0) return;
+      const currentIndex = visibleNotificationIds.indexOf(notificationId);
+      if (currentIndex === -1) return;
+
+      const lastIndex = visibleNotificationIds.length - 1;
+      let targetIndex = currentIndex;
+
+      switch (event.key) {
+        case 'ArrowDown':
+          targetIndex = Math.min(lastIndex, currentIndex + 1);
+          break;
+        case 'ArrowUp':
+          targetIndex = Math.max(0, currentIndex - 1);
+          break;
+        case 'Home':
+          targetIndex = 0;
+          break;
+        case 'End':
+          targetIndex = lastIndex;
+          break;
+        case 'PageDown':
+          targetIndex = Math.min(lastIndex, currentIndex + PAGE_JUMP);
+          break;
+        case 'PageUp':
+          targetIndex = Math.max(0, currentIndex - PAGE_JUMP);
+          break;
+        default:
+          return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (targetIndex === currentIndex) return;
+      const targetId = visibleNotificationIds[targetIndex];
+      if (targetId) {
+        setActiveNotificationId(targetId);
+      }
+    },
+    [visibleNotificationIds],
+  );
+
+  const handleActionKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const actions = Array.from(
+        panel.querySelectorAll<HTMLElement>('[data-notification-action]'),
+      ).filter(element => !element.hasAttribute('disabled'));
+
+      if (actions.length < 2) return;
+
+      const currentIndex = actions.indexOf(event.currentTarget as HTMLElement);
+      if (currentIndex === -1) return;
+
+      let targetIndex = currentIndex;
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+        targetIndex = (currentIndex + 1) % actions.length;
+      } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        targetIndex = (currentIndex - 1 + actions.length) % actions.length;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      actions[targetIndex]?.focus({ preventScroll: true });
+    },
+    [],
+  );
 
   return (
     <div className="relative">
@@ -279,6 +400,8 @@ const NotificationBell: React.FC = () => {
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
+              data-notification-action
+              onKeyDown={handleActionKeyDown}
               className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
             >
               Dismiss all
@@ -302,6 +425,8 @@ const NotificationBell: React.FC = () => {
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
+                        data-notification-action
+                        onKeyDown={handleActionKeyDown}
                         className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
                       >
                         <span className="flex items-center gap-2">
@@ -334,7 +459,16 @@ const NotificationBell: React.FC = () => {
                           {group.notifications.map(notification => (
                             <li
                               key={notification.id}
+                              ref={node => registerNotificationRef(notification.id, node)}
                               className={`border-l-2 px-4 py-3 text-sm text-white ${notification.metadata.accentClass}`}
+                              tabIndex={
+                                activeNotificationId === notification.id ? 0 : -1
+                              }
+                              data-priority={notification.priority}
+                              onFocus={() => setActiveNotificationId(notification.id)}
+                              onKeyDown={event =>
+                                handleNotificationKeyDown(event, notification.id)
+                              }
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-medium">{notification.title}</p>

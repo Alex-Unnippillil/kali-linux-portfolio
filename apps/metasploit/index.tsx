@@ -223,7 +223,13 @@ const MetasploitPage: React.FC = () => {
           </div>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
+      {toast && (
+        <Toast
+          message={toast}
+          onClose={() => setToast('')}
+          priority="normal"
+        />
+      )}
     </div>
   );
 };

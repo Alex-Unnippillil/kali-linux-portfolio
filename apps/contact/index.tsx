@@ -274,7 +274,13 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
+      {toast && (
+        <Toast
+          message={toast}
+          onClose={() => setToast("")}
+          priority="normal"
+        />
+      )}
     </div>
   );
 };
