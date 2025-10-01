@@ -32,13 +32,15 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      aria-atomic="true"
+      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out motion-reduce:transform-none motion-reduce:transition-none ${visible ? 'translate-y-0' : '-translate-y-full'}`}
     >
-      <span>{message}</span>
+      <span className="text-sm font-medium">{message}</span>
       {onAction && actionLabel && (
         <button
+          type="button"
           onClick={onAction}
-          className="ml-4 underline focus:outline-none"
+          className="ml-4 rounded px-2 py-1 text-sm font-semibold underline underline-offset-2 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           {actionLabel}
         </button>

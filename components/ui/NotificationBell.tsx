@@ -85,6 +85,8 @@ const NotificationBell: React.FC = () => {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const headingId = useId();
   const panelId = `${headingId}-panel`;
+  const summaryId = `${panelId}-description`;
+  const unreadStatusId = `${panelId}-unread-status`;
   const [collapsedGroups, setCollapsedGroups] = useState<Record<NotificationPriority, boolean>>(
     () =>
       PRIORITY_ORDER.reduce(
@@ -233,17 +235,23 @@ const NotificationBell: React.FC = () => {
     closePanel();
   }, [clearNotifications, closePanel, notifications.length]);
 
+  const unreadLabel = unreadCount > 99 ? '99+ unread notifications' : `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`;
+  const buttonLabel = isOpen
+    ? `Close notifications${unreadCount > 0 ? ` (${unreadLabel})` : ''}`
+    : `Open notifications${unreadCount > 0 ? ` (${unreadLabel})` : ' (no unread notifications)'}`;
+
   return (
     <div className="relative">
       <button
         type="button"
         ref={buttonRef}
-        aria-label="Open notifications"
+        aria-label={buttonLabel}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={panelId}
+        aria-describedby={unreadStatusId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubb-orange hover:bg-white hover:bg-opacity-10"
       >
         <svg
           aria-hidden="true"
@@ -256,18 +264,25 @@ const NotificationBell: React.FC = () => {
           <path d="M7 12a3 3 0 006 0H7z" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
+          <span
+            className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white"
+            aria-hidden="true"
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
+      <div id={unreadStatusId} role="status" aria-live="polite" className="sr-only">
+        {unreadCount > 0 ? unreadLabel : 'No unread notifications'}
+      </div>
       {isOpen && (
         <div
           ref={panelRef}
           id={panelId}
           role="dialog"
-          aria-modal="false"
+          aria-modal="true"
           aria-labelledby={headingId}
+          aria-describedby={summaryId}
           tabIndex={-1}
           className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
         >
@@ -279,11 +294,14 @@ const NotificationBell: React.FC = () => {
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className="text-xs font-medium text-ubb-orange transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubb-orange disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
             >
               Dismiss all
             </button>
           </div>
+          <p id={summaryId} className="sr-only">
+            Notifications are grouped by priority. Use the group toggles to expand or collapse their contents.
+          </p>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
@@ -295,6 +313,7 @@ const NotificationBell: React.FC = () => {
                   const collapsed =
                     collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
                   const contentId = `${panelId}-${group.priority}-group`;
+                  const toggleId = `${contentId}-toggle`;
                   return (
                     <section key={group.priority} className="border-b border-white/10 last:border-b-0">
                       <button
@@ -302,13 +321,15 @@ const NotificationBell: React.FC = () => {
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                        id={toggleId}
+                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubb-orange"
                       >
                         <span className="flex items-center gap-2">
                           {group.metadata.label}
                           <span
                             className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClass}`}
                             title={group.metadata.description}
+                            aria-hidden="true"
                           >
                             {group.notifications.length}
                           </span>
@@ -326,6 +347,7 @@ const NotificationBell: React.FC = () => {
                       <div
                         id={contentId}
                         role="region"
+                        aria-labelledby={toggleId}
                         aria-hidden={collapsed}
                         hidden={collapsed}
                         className="bg-transparent"

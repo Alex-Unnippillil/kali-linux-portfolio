@@ -1,24 +1,29 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 
 interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
+  ariaLabel?: string;
 }
 
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
   poster,
   className = "",
+  ariaLabel = "Video player",
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { open, close } = usePipPortal();
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+  const statusId = useId();
+  const docPipId = useId();
+  const [statusMessage, setStatusMessage] = useState("Picture-in-picture inactive");
 
   useEffect(() => {
     const video = videoRef.current;
@@ -33,9 +38,16 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         !!(window as any).documentPictureInPicture
     );
 
-    const handleLeave = () => setIsPip(false);
+    const handleLeave = () => {
+      setIsPip(false);
+      setStatusMessage("Picture-in-picture closed");
+    };
     video?.addEventListener("leavepictureinpicture", handleLeave);
-    const handleEnd = () => close();
+    const handleEnd = () => {
+      close();
+      setIsPip(false);
+      setStatusMessage("Picture-in-picture closed");
+    };
     video?.addEventListener("ended", handleEnd);
 
     return () => {
@@ -51,12 +63,15 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
       if (!document.pictureInPictureElement) {
         await video.requestPictureInPicture();
         setIsPip(true);
+        setStatusMessage("Picture-in-picture activated");
       } else {
         await document.exitPictureInPicture();
         setIsPip(false);
+        setStatusMessage("Picture-in-picture closed");
       }
     } catch {
       setIsPip(false);
+      setStatusMessage("Picture-in-picture unavailable");
     }
   };
 
@@ -114,6 +129,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
             max={1}
             step={0.05}
             value={vol}
+            aria-label="Volume"
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               setVol(v);
@@ -125,28 +141,49 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     };
 
     await open(<DocPipControls initialVolume={initialVolume} />);
+    setStatusMessage("Document picture-in-picture controls opened in a new window");
   };
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        aria-label={ariaLabel}
+        className="w-full h-auto"
+      />
       {pipSupported && (
         <button
           type="button"
           onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-pressed={isPip}
+          aria-describedby={statusId}
+          aria-label={isPip ? "Exit picture-in-picture" : "Enter picture-in-picture"}
+          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-60 px-2 py-1 text-xs font-semibold text-white transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white hover:bg-opacity-80 motion-reduce:transition-none"
         >
-          {isPip ? "Exit PiP" : "PiP"}
+          <span aria-hidden="true">{isPip ? "Exit PiP" : "PiP"}</span>
         </button>
       )}
       {docPipSupported && (
         <button
           type="button"
           onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-describedby={docPipId}
+          aria-label="Open document picture-in-picture controls in a new window"
+          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-60 px-2 py-1 text-xs font-semibold text-white transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white hover:bg-opacity-80 motion-reduce:transition-none"
         >
-          Doc-PiP
+          <span aria-hidden="true">Doc-PiP</span>
         </button>
+      )}
+      <div id={statusId} role="status" aria-live="polite" className="sr-only">
+        {statusMessage}
+      </div>
+      {docPipSupported && (
+        <p id={docPipId} className="sr-only">
+          Opens remote controls for the current video in a separate window.
+        </p>
       )}
     </div>
   );
