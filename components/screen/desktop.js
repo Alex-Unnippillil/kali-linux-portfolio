@@ -73,6 +73,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            taskbarBadges: {},
         }
 
         this.desktopRef = React.createRef();
@@ -135,6 +136,40 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    setTaskbarBadge = (appId, badge) => {
+        if (!appId) return;
+        this.setState((prev) => {
+            const next = { ...(prev.taskbarBadges || {}) };
+            if (!badge) {
+                delete next[appId];
+                return { taskbarBadges: next };
+            }
+            const normalized = {};
+            if (typeof badge.text === 'string' && badge.text.trim()) {
+                normalized.text = badge.text;
+            }
+            if (typeof badge.progress === 'number' && Number.isFinite(badge.progress)) {
+                normalized.progress = Math.min(1, Math.max(0, badge.progress));
+            }
+            if (!normalized.text && normalized.progress === undefined) {
+                delete next[appId];
+            } else {
+                next[appId] = normalized;
+            }
+            return { taskbarBadges: next };
+        });
+    };
+
+    clearTaskbarBadge = (appId) => {
+        if (!appId) return;
+        this.setState((prev) => {
+            if (!prev.taskbarBadges || !prev.taskbarBadges[appId]) return null;
+            const next = { ...prev.taskbarBadges };
+            delete next[appId];
+            return { taskbarBadges: next };
+        });
     };
 
     setupPointerMediaWatcher = () => {
@@ -1326,6 +1361,12 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const contextPayload = this.state.window_context[app.id] || {};
+                const shell = {
+                    setBadge: (badge) => this.setTaskbarBadge(app.id, badge),
+                    clearBadge: () => this.clearTaskbarBadge(app.id),
+                };
+                const mergedContext = { ...contextPayload, shell };
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -1346,7 +1387,7 @@ export class Desktop extends Component {
 
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
-                    context: this.state.window_context[app.id],
+                    context: mergedContext,
                 }
 
                 windowsJsx.push(
@@ -1595,6 +1636,7 @@ export class Desktop extends Component {
 
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
+        this.clearTaskbarBadge(objId);
         this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
     }
 
@@ -1796,6 +1838,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    badges={this.state.taskbarBadges}
                 />
 
                 {/* Desktop Apps */}

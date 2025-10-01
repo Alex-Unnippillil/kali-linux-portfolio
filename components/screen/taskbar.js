@@ -3,6 +3,7 @@ import Image from 'next/image';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const badges = props.badges || {};
 
     const handleClick = (app) => {
         const id = app.id;
@@ -36,12 +37,20 @@ export default function Taskbar(props) {
                     const isMinimized = Boolean(props.minimized_windows[app.id]);
                     const isFocused = Boolean(props.focused_windows[app.id]);
                     const isActive = !isMinimized;
+                    const badge = badges[app.id] || null;
+                    const hasText = badge && typeof badge.text === 'string' && badge.text.trim();
+                    const progressValue = typeof badge?.progress === 'number' && Number.isFinite(badge.progress)
+                        ? Math.min(1, Math.max(0, badge.progress))
+                        : null;
+                    const badgeText = hasText ? badge.text.trim() : null;
+                    const badgeLabel = badgeText || (progressValue !== null ? `${Math.round(progressValue * 100)}%` : null);
+                    const ariaLabel = badgeLabel ? `${app.title} (${badgeLabel})` : app.title;
 
                     return (
                         <button
                             key={app.id}
                             type="button"
-                            aria-label={app.title}
+                            aria-label={ariaLabel}
                             data-context="taskbar"
                             data-app-id={app.id}
                             data-active={isActive ? 'true' : 'false'}
@@ -73,17 +82,37 @@ export default function Taskbar(props) {
                             >
                                 {app.title}
                             </span>
-                            {isActive && (
+                            {badgeLabel && (
                                 <span
                                     aria-hidden="true"
-                                    data-testid="running-indicator"
-                                    className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded"
-                                    style={{
-                                        width: '0.5rem',
-                                        height: '0.25rem',
-                                        background: 'currentColor',
-                                    }}
-                                />
+                                    className="absolute -top-1 -right-1 rounded-full bg-ub-orange px-1 py-0.5 text-[0.6rem] font-semibold text-black"
+                                >
+                                    {badgeLabel}
+                                </span>
+                            )}
+                            {progressValue !== null ? (
+                                <span
+                                    aria-hidden="true"
+                                    className="absolute left-2 right-2 bottom-1 h-1 rounded bg-white/20 overflow-hidden"
+                                >
+                                    <span
+                                        className="block h-full bg-ub-orange"
+                                        style={{ width: `${Math.max(0, Math.min(100, progressValue * 100))}%` }}
+                                    />
+                                </span>
+                            ) : (
+                                isActive && (
+                                    <span
+                                        aria-hidden="true"
+                                        data-testid="running-indicator"
+                                        className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded"
+                                        style={{
+                                            width: '0.5rem',
+                                            height: '0.25rem',
+                                            background: 'currentColor',
+                                        }}
+                                    />
+                                )
                             )}
                         </button>
                     );
