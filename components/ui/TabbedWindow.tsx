@@ -386,7 +386,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <button
               type="button"
               ref={moreButtonRef}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              className="inline-flex min-h-[44px] items-center justify-center rounded bg-gray-800 px-3 py-2 text-sm font-medium hover:bg-gray-700 focus:outline-none"
               onClick={() => setMoreMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={moreMenuOpen}
@@ -404,7 +404,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     key={tab.id}
                     type="button"
                     role="menuitem"
-                    className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700"
+                    className="flex w-full items-center justify-between rounded px-3 py-2 text-left hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
                     onClick={() => handleMoreSelect(tab.id)}
                   >
                     <span className="truncate">{tab.title}</span>
@@ -417,7 +417,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         )}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-gray-800 px-3 py-2 text-sm font-medium hover:bg-gray-700"
             onClick={addTab}
             aria-label="New Tab"
           >

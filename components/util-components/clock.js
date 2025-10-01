@@ -423,7 +423,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                     <button
                         type="button"
                         onClick={() => handleMonthChange(-1)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                         aria-label="Previous month"
                     >
                         ‹
@@ -431,7 +431,7 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                     <button
                         type="button"
                         onClick={() => handleMonthChange(1)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-900/60 text-lg text-white/80 transition-colors hover:border-white/30 hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                         aria-label="Next month"
                     >
                         ›
@@ -469,13 +469,13 @@ const Clock = ({ onlyDay = false, onlyTime = false, showCalendar = false, hour12
                                         key={date.toISOString()}
                                         role="gridcell"
                                         aria-selected={isFocused}
-                                        className="p-1"
+                                        className="p-1.5"
                                     >
                                         <button
                                             type="button"
                                             onClick={handleDayClick}
                                             onKeyDown={(event) => handleDayKeyDown(event, date)}
-                                            className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                                            className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                                                 inCurrentMonth ? 'text-white' : 'text-white/35'
                                             } ${
                                                 isToday

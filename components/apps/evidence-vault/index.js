@@ -37,7 +37,7 @@ const TagTreeNode = ({ name, node, onSelect }) => {
           {node.items.length > 0 && (
             <button
               onClick={() => onSelect(node)}
-              className="ml-2 text-xs text-blue-400 hover:underline"
+              className="ml-2 inline-flex min-h-[44px] items-center rounded px-3 py-2 text-xs text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
             >
               View items
             </button>
@@ -105,23 +105,23 @@ const EvidenceVaultApp = () => {
       <div className="w-1/3 border-r border-gray-700 pr-2 overflow-auto">
         <button
           onClick={() => setSelectedNode(null)}
-          className="text-sm text-blue-400 hover:underline mb-2"
+          className="mb-2 inline-flex min-h-[44px] items-center rounded px-4 py-2 text-sm text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
           All Items
         </button>
         <TagTree data={treeData} onSelect={setSelectedNode} />
       </div>
       <div className="flex-1 pl-4 flex flex-col">
-        <div className="mb-2 space-x-2">
+        <div className="mb-2 flex flex-wrap gap-2">
           <button
             onClick={addNote}
-            className="px-2 py-1 bg-blue-600 rounded"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-blue-600 px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
           >
             Add Note
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="px-2 py-1 bg-blue-600 rounded"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-blue-600 px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
           >
             Add File
           </button>
@@ -129,12 +129,14 @@ const EvidenceVaultApp = () => {
             ref={fileInputRef}
             type="file"
             className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
             onChange={handleFileChange}
           />
         </div>
         <ul className="flex-1 overflow-auto space-y-2">
           {displayItems.map((item) => (
-            <li key={item.id} className="p-2 bg-gray-800 rounded">
+            <li key={item.id} className="rounded bg-gray-800 p-2">
               {item.type === 'note' ? (
                 <div>
                   <h4 className="font-semibold">{item.title}</h4>
