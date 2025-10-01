@@ -252,14 +252,15 @@ const ReaverPanel: React.FC = () => {
             <label htmlFor="rate" className="text-sm">
               Attempts/sec
             </label>
-            <input
-              id="rate"
-              type="number"
-              min="1"
-              value={rate}
-              onChange={(e) => setRate(Number(e.target.value) || 1)}
-              className="w-20 p-1 bg-gray-800 rounded text-white"
-            />
+              <input
+                id="rate"
+                type="number"
+                min="1"
+                value={rate}
+                onChange={(e) => setRate(Number(e.target.value) || 1)}
+                className="w-20 p-1 bg-gray-800 rounded text-white"
+                aria-label="Attempts per second"
+              />
             <button
               type="button"
               onClick={running ? stop : start}
@@ -367,6 +368,7 @@ const ReaverPage: React.FC = () => {
       className="min-h-screen bg-gray-900 text-white"
       initialTabs={[createTab()]}
       onNewTab={createTab}
+      sessionId="reaver-tabs"
     />
   );
 };
