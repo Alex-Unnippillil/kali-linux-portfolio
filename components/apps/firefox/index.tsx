@@ -1,4 +1,17 @@
 import React, { FormEvent, useMemo, useState } from 'react';
+import NetworkPanel from './NetworkPanel';
+import {
+  CUSTOM_PROFILE_ID,
+  DEFAULT_CUSTOM_SETTINGS,
+  DEFAULT_PROFILE,
+  NETWORK_PRESETS,
+  CustomNetworkSettings,
+  NetworkProfile,
+  RequestTimelineEntry,
+  computeTimeline,
+  createRequestsForUrl,
+  describeProfile,
+} from './network';
 import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
 
 const DEFAULT_URL = 'https://www.kali.org/docs/';
@@ -69,6 +82,14 @@ const Firefox: React.FC = () => {
   const [inputValue, setInputValue] = useState(initialUrl);
   const [simulation, setSimulation] = useState(() => getSimulation(initialUrl));
 
+  const requests = useMemo(() => createRequestsForUrl(address), [address]);
+  const [networkProfile, setNetworkProfile] = useState<NetworkProfile>(DEFAULT_PROFILE);
+  const [customSettings, setCustomSettings] = useState<CustomNetworkSettings>(DEFAULT_CUSTOM_SETTINGS);
+  const timeline = useMemo<RequestTimelineEntry[]>(
+    () => computeTimeline(networkProfile, requests),
+    [networkProfile, requests],
+  );
+
   const updateAddress = (value: string) => {
     const url = normaliseUrl(value);
     setAddress(url);
@@ -86,6 +107,44 @@ const Firefox: React.FC = () => {
     updateAddress(inputValue);
   };
 
+  const handleSelectPreset = (presetId: string) => {
+    const preset = NETWORK_PRESETS.find((candidate) => candidate.id === presetId);
+    if (!preset) {
+      return;
+    }
+
+    setNetworkProfile({ ...preset, offline: false, custom: false });
+    setCustomSettings({
+      latency: preset.latency,
+      downloadKbps: preset.downloadKbps,
+      uploadKbps: preset.uploadKbps,
+    });
+  };
+
+  const handleApplyCustom = (settings: CustomNetworkSettings) => {
+    setCustomSettings(settings);
+    setNetworkProfile({
+      id: CUSTOM_PROFILE_ID,
+      label: 'Custom',
+      latency: settings.latency,
+      downloadKbps: settings.downloadKbps,
+      uploadKbps: settings.uploadKbps,
+      offline: false,
+      custom: true,
+    });
+  };
+
+  const handleToggleOffline = (offline: boolean) => {
+    setNetworkProfile((current) => ({ ...current, offline }));
+  };
+
+  const handleResetNetwork = () => {
+    setNetworkProfile(DEFAULT_PROFILE);
+    setCustomSettings(DEFAULT_CUSTOM_SETTINGS);
+  };
+
+  const profileLabel = describeProfile(networkProfile);
+
   return (
     <div className="flex h-full flex-col bg-ub-cool-grey text-gray-100">
       <form
@@ -95,13 +154,14 @@ const Firefox: React.FC = () => {
         <label htmlFor="firefox-address" className="sr-only">
           Address
         </label>
-        <input
-          id="firefox-address"
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder="Enter a URL"
-          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-        />
+          <input
+            id="firefox-address"
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            placeholder="Enter a URL"
+            aria-label="Firefox address bar"
+            className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+          />
         <button
           type="submit"
           className="rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
@@ -121,7 +181,11 @@ const Firefox: React.FC = () => {
           </button>
         ))}
       </nav>
-      <div className="flex-1 bg-black">
+      <div className="flex items-center justify-between border-b border-gray-900 bg-gray-950/80 px-3 py-2 text-xs text-gray-300">
+        <span className="font-medium text-gray-100">Active network profile</span>
+        <span className={networkProfile.offline ? 'text-red-300' : 'text-gray-200'}>{profileLabel}</span>
+      </div>
+      <div className="relative flex-1 bg-black">
         {simulation ? (
           <FirefoxSimulationView simulation={simulation} />
         ) : (
@@ -134,7 +198,28 @@ const Firefox: React.FC = () => {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           />
         )}
+        {networkProfile.offline ? (
+          <div className="pointer-events-auto absolute inset-0 flex flex-col items-center justify-center bg-black/80 px-6 text-center">
+            <div className="rounded-full border border-red-500/60 bg-red-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-200">
+              Offline mode
+            </div>
+            <p className="mt-3 max-w-md text-sm text-gray-200">
+              Requests are blocked by the simulated network profile. Disable offline mode or reset throttling to resume loading c
+ontent.
+            </p>
+          </div>
+        ) : null}
       </div>
+      <NetworkPanel
+        activeProfile={networkProfile}
+        presets={NETWORK_PRESETS}
+        customSettings={customSettings}
+        timeline={timeline}
+        onSelectPreset={handleSelectPreset}
+        onApplyCustom={handleApplyCustom}
+        onToggleOffline={handleToggleOffline}
+        onReset={handleResetNetwork}
+      />
     </div>
   );
 };
