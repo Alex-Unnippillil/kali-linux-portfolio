@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
+import { deterministicStringify } from '../../utils/serdes';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
   Board,
@@ -32,6 +33,14 @@ const getAllMovesNoForce = (board: Board, color: 'red' | 'black'): Move[] => {
     }
   }
   return result;
+};
+
+const serializeBoard = (state: Board): string => {
+  const serialized = deterministicStringify(state);
+  if (serialized === undefined) {
+    throw new Error('Unable to serialize checkers board state deterministically');
+  }
+  return serialized;
 };
 
 export default function CheckersPage() {
@@ -89,7 +98,7 @@ export default function CheckersPage() {
       const next = turn === 'red' ? 'black' : 'red';
       const newNo = capture || king ? 0 : noCapture + 1;
       setNoCapture(newNo);
-      const key = JSON.stringify(newBoard);
+      const key = serializeBoard(newBoard);
       const count = positionCounts.current.get(key) || 0;
       positionCounts.current.set(key, count + 1);
       if (isDraw(newNo, positionCounts.current)) {
@@ -149,7 +158,7 @@ export default function CheckersPage() {
   }, [makeMove]);
 
   useEffect(() => {
-    positionCounts.current.set(JSON.stringify(board), 1);
+    positionCounts.current.set(serializeBoard(board), 1);
   }, [board]);
 
   const selectPiece = (r: number, c: number) => {
@@ -177,7 +186,7 @@ export default function CheckersPage() {
     setNoCapture(0);
     setHistory([]);
     moveRef.current = false;
-    positionCounts.current = new Map([[JSON.stringify(initial), 1]]);
+    positionCounts.current = new Map([[serializeBoard(initial), 1]]);
     setCrowned(null);
     setHint(null);
     hintRequest.current = false;
@@ -188,7 +197,7 @@ export default function CheckersPage() {
 
   const undo = () => {
     if (!history.length) return;
-    const currentKey = JSON.stringify(board);
+    const currentKey = serializeBoard(board);
     const count = positionCounts.current.get(currentKey) || 0;
     if (count <= 1) positionCounts.current.delete(currentKey);
     else positionCounts.current.set(currentKey, count - 1);

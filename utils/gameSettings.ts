@@ -1,3 +1,5 @@
+import { deterministicStringify } from './serdes';
+
 export function exportGameSettings(game: string): string {
   if (typeof window === 'undefined') return '{}';
   const data: Record<string, unknown> = {};
@@ -12,7 +14,7 @@ export function exportGameSettings(game: string): string {
       }
     }
   }
-  return JSON.stringify(data);
+  return deterministicStringify(data) ?? '{}';
 }
 
 export function importGameSettings(game: string, json: string): void {
