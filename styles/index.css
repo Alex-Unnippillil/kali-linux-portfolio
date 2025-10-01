@@ -228,6 +228,13 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .xterm .xterm-cursor {
     animation: cursor-pulse 1s steps(2) infinite;
+    border-left: var(--text-caret-width) solid var(--text-caret-color);
+    transition: border-color var(--text-caret-transition), border-width var(--text-caret-transition);
+}
+
+.xterm .xterm-cursor-block,
+.xterm .xterm-cursor.xterm-cursor-block {
+    background-color: color-mix(in srgb, var(--text-caret-color) 85%, transparent);
 }
 
 dialog {

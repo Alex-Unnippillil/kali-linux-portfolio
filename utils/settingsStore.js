@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   fontScale: 1,
   highContrast: false,
   largeHitAreas: false,
+  cursorThickness: 'regular',
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
@@ -103,6 +104,16 @@ export async function setLargeHitAreas(value) {
   window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
 }
 
+export async function getCursorThickness() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.cursorThickness;
+  return window.localStorage.getItem('cursor-thickness') || DEFAULT_SETTINGS.cursorThickness;
+}
+
+export async function setCursorThickness(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('cursor-thickness', value);
+}
+
 export async function getHaptics() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
   const val = window.localStorage.getItem('haptics');
@@ -146,6 +157,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
+  window.localStorage.removeItem('cursor-thickness');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
@@ -162,6 +174,7 @@ export async function exportSettings() {
     fontScale,
     highContrast,
     largeHitAreas,
+    cursorThickness,
     pongSpin,
     allowNetwork,
     haptics,
@@ -174,6 +187,7 @@ export async function exportSettings() {
     getFontScale(),
     getHighContrast(),
     getLargeHitAreas(),
+    getCursorThickness(),
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
@@ -187,6 +201,7 @@ export async function exportSettings() {
     fontScale,
     highContrast,
     largeHitAreas,
+    cursorThickness,
     pongSpin,
     allowNetwork,
     haptics,
@@ -213,6 +228,7 @@ export async function importSettings(json) {
     fontScale,
     highContrast,
     largeHitAreas,
+    cursorThickness,
     pongSpin,
     allowNetwork,
     haptics,
@@ -226,6 +242,7 @@ export async function importSettings(json) {
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
+  if (cursorThickness !== undefined) await setCursorThickness(cursorThickness);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
