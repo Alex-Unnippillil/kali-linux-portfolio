@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import React, {
   useCallback,
   useEffect,
@@ -14,6 +15,11 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import {
+  getAppBadgeCount,
+  getAppDisplayName,
+  getAppIcon,
+} from '../common/appRegistry';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -64,6 +70,9 @@ interface FormattedNotification extends AppNotification {
   formattedTime: string;
   readableTime: string;
   metadata: PriorityMetadata;
+  appName: string;
+  appIcon: string;
+  unreadForApp: number;
 }
 
 interface NotificationGroup {
@@ -75,6 +84,7 @@ interface NotificationGroup {
 const NotificationBell: React.FC = () => {
   const {
     notifications,
+    notificationsByApp,
     unreadCount,
     clearNotifications,
     markAllRead,
@@ -199,13 +209,23 @@ const NotificationBell: React.FC = () => {
 
   const formattedNotifications = useMemo(
     () =>
-      notifications.map<FormattedNotification>(notification => ({
-        ...notification,
-        formattedTime: new Date(notification.timestamp).toISOString(),
-        readableTime: timeFormatter.format(new Date(notification.timestamp)),
-        metadata: PRIORITY_METADATA[notification.priority],
-      })),
-    [notifications, timeFormatter],
+      notifications.map<FormattedNotification>(notification => {
+        const formattedTime = new Date(notification.timestamp).toISOString();
+        const readableTime = timeFormatter.format(new Date(notification.timestamp));
+        const appName = getAppDisplayName(notification.appId);
+        const appIcon = getAppIcon(notification.appId);
+        const unreadForApp = getAppBadgeCount(notification.appId, notificationsByApp);
+        return {
+          ...notification,
+          formattedTime,
+          readableTime,
+          metadata: PRIORITY_METADATA[notification.priority],
+          appName,
+          appIcon,
+          unreadForApp,
+        };
+      }),
+    [notifications, notificationsByApp, timeFormatter],
   );
 
   const groupedNotifications = useMemo<NotificationGroup[]>(
@@ -336,8 +356,27 @@ const NotificationBell: React.FC = () => {
                               key={notification.id}
                               className={`border-l-2 px-4 py-3 text-sm text-white ${notification.metadata.accentClass}`}
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-medium">{notification.title}</p>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-3">
+                                  <Image
+                                    src={notification.appIcon}
+                                    alt=""
+                                    width={32}
+                                    height={32}
+                                    className="mt-0.5 h-6 w-6"
+                                  />
+                                  <div className="space-y-1">
+                                    <p className="font-medium">{notification.title}</p>
+                                    <div className="flex items-center gap-2 text-xs text-ubt-grey text-opacity-80">
+                                      <span className="truncate">{notification.appName}</span>
+                                      {notification.unreadForApp > 1 && (
+                                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-white/80">
+                                          {notification.unreadForApp}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                                 <span
                                   className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClass}`}
                                   title={
@@ -354,8 +393,7 @@ const NotificationBell: React.FC = () => {
                                   {notification.body}
                                 </p>
                               )}
-                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
-                                <span>{notification.appId}</span>
+                              <div className="mt-2 flex justify-end text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
                                 <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
                               </div>
                             </li>

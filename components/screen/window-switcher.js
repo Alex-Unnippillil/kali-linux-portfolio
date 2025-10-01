@@ -1,11 +1,28 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import { getAppDisplayName, getAppIcon } from '../common/appRegistry';
 
 export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef(null);
 
-  const filtered = windows.filter((w) =>
+  const windowEntries = useMemo(
+    () =>
+      windows
+        .map((id) => ({
+          id,
+          title: getAppDisplayName(id),
+          icon: getAppIcon(id),
+        }))
+        .filter((entry, index, array) => {
+          const firstIndex = array.findIndex((item) => item.id === entry.id);
+          return firstIndex === index;
+        }),
+    [windows],
+  );
+
+  const filtered = windowEntries.filter((w) =>
     w.title.toLowerCase().includes(query.toLowerCase())
   );
 
@@ -64,6 +81,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          aria-label="Search windows"
           className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
           placeholder="Search windows"
         />
@@ -73,7 +91,16 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
               key={w.id}
               className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
             >
-              {w.title}
+              <span className="flex items-center gap-2">
+                <Image
+                  src={w.icon}
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="h-6 w-6"
+                />
+                <span className="truncate">{w.title}</span>
+              </span>
             </li>
           ))}
         </ul>
