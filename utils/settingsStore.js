@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  pseudoLocale: process.env.NEXT_PUBLIC_PSEUDO_LOCALE === 'true',
 };
 
 export async function getAccent() {
@@ -135,6 +136,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getPseudoLocale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.pseudoLocale;
+  const stored = window.localStorage.getItem('pseudo-locale');
+  return stored === null ? DEFAULT_SETTINGS.pseudoLocale : stored === 'true';
+}
+
+export async function setPseudoLocale(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('pseudo-locale', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +162,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('pseudo-locale');
 }
 
 export async function exportSettings() {
@@ -191,6 +204,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    pseudoLocale,
     theme,
   });
 }
@@ -216,6 +230,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    pseudoLocale,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -229,6 +244,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (pseudoLocale !== undefined) await setPseudoLocale(pseudoLocale);
   if (theme !== undefined) setTheme(theme);
 }
 

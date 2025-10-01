@@ -7,11 +7,13 @@ import {
   buildAppMetadata,
   loadAppRegistry,
 } from '../../lib/appRegistry';
+import useTranslator from '../../hooks/useTranslator';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
   const [query, setQuery] = useState('');
   const [metadata, setMetadata] = useState({});
+  const { t } = useTranslator();
 
   useEffect(() => {
     let isMounted = true;
@@ -39,14 +41,15 @@ const AppsPage = () => {
   return (
     <div className="p-4">
       <label htmlFor="app-search" className="sr-only">
-        Search apps
+        {t('Search apps')}
       </label>
       <input
         id="app-search"
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search apps"
+        placeholder={t('Search apps')}
+        aria-label={t('Search apps')}
         className="mb-4 w-full rounded border p-2"
       />
       <div
@@ -55,7 +58,13 @@ const AppsPage = () => {
         className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
       >
         {filteredApps.map((app) => {
-          const meta = metadata[app.id] ?? buildAppMetadata(app);
+          const baseMeta = metadata[app.id] ?? buildAppMetadata(app);
+          const meta = {
+            ...baseMeta,
+            title: t(baseMeta.title),
+            description: t(baseMeta.description),
+            keyboard: baseMeta.keyboard.map((hint) => t(hint)),
+          };
           return (
             <DelayedTooltip
               key={app.id}

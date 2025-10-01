@@ -17,6 +17,8 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import PseudoLocalizationManager from '../components/common/PseudoLocalizationManager';
+import PseudoLocalizationBanner from '../components/common/PseudoLocalizationBanner';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -149,6 +151,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -158,11 +161,13 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
+          <PseudoLocalizationManager />
           <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
+              <PseudoLocalizationBanner />
               <Analytics
                 beforeSend={(e) => {
                   if (e.url.includes('/admin') || e.url.includes('/private')) return null;

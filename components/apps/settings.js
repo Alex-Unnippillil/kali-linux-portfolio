@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, pseudoLocale, setPseudoLocale, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -70,8 +70,9 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="desktop-theme-select">Theme:</label>
                 <select
+                    id="desktop-theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -83,12 +84,14 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-kali-wallpaper">
                     <input
+                        id="toggle-kali-wallpaper"
                         type="checkbox"
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Kali Gradient Wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -115,8 +118,9 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="desktop-density-select">Density:</label>
                 <select
+                    id="desktop-density-select"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -126,8 +130,9 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="desktop-font-scale">Font Size:</label>
                 <input
+                    id="desktop-font-scale"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -135,70 +140,101 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Font size"
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-reduced-motion">
                     <input
+                        id="toggle-reduced-motion"
                         type="checkbox"
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Reduced Motion"
                     />
                     Reduced Motion
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-large-hit-areas">
                     <input
+                        id="toggle-large-hit-areas"
                         type="checkbox"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Large Hit Areas"
                     />
                     Large Hit Areas
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-high-contrast">
                     <input
+                        id="toggle-high-contrast"
                         type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="High Contrast"
                     />
                     High Contrast
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-allow-network">
                     <input
+                        id="toggle-allow-network"
                         type="checkbox"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Allow Network Requests"
                     />
                     Allow Network Requests
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-pseudo-locale">
                     <input
+                        id="toggle-pseudo-locale"
+                        type="checkbox"
+                        checked={pseudoLocale}
+                        onChange={(e) => setPseudoLocale(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Pseudo Localization"
+                    />
+                    Pseudo Localization (dev)
+                </label>
+            </div>
+            {pseudoLocale && (
+                <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                    UI strings expand by roughly 30% with accent markers and brackets to surface layout regressions.
+                </p>
+            )}
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-haptics">
+                    <input
+                        id="toggle-haptics"
                         type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Haptics"
                     />
                     Haptics
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="toggle-pong-spin">
                     <input
+                        id="toggle-pong-spin"
                         type="checkbox"
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Pong Spin"
                     />
                     Pong Spin
                 </label>
@@ -277,6 +313,7 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setPseudoLocale(defaults.pseudoLocale);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -288,6 +325,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useTranslator from '../../hooks/useTranslator';
 
 type AppMeta = {
   id: string;
@@ -29,7 +30,7 @@ const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
-const CATEGORY_DEFINITIONS = [
+const RAW_CATEGORY_DEFINITIONS = [
   {
     id: 'all',
     label: 'All Applications',
@@ -111,13 +112,17 @@ const CATEGORY_DEFINITIONS = [
     type: 'ids',
     appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
   },
- ] as const satisfies readonly CategoryDefinitionBase[];
+] as const satisfies readonly CategoryDefinitionBase[];
 
-type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
+type CategoryDefinition = CategoryDefinitionBase;
+
+const CATEGORY_IDS = new Set(
+  RAW_CATEGORY_DEFINITIONS.map(cat => cat.id),
+);
+
 const isCategoryId = (
   value: string,
-): value is CategoryDefinition['id'] =>
-  CATEGORY_DEFINITIONS.some(cat => cat.id === value);
+): value is CategoryDefinition['id'] => CATEGORY_IDS.has(value);
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
@@ -157,6 +162,16 @@ const WhiskerMenu: React.FC = () => {
 
 
   const allApps: AppMeta[] = apps as any;
+  const { t } = useTranslator();
+
+  const categoryDefinitions = useMemo(
+    () =>
+      RAW_CATEGORY_DEFINITIONS.map((definition) => ({
+        ...definition,
+        label: t(definition.label),
+      })),
+    [t],
+  );
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
@@ -200,7 +215,7 @@ const WhiskerMenu: React.FC = () => {
   const categoryConfigs = useMemo<CategoryConfig[]>(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
 
-    return CATEGORY_DEFINITIONS.map((definition) => {
+    return categoryDefinitions.map((definition) => {
       let appsForCategory: AppMeta[] = [];
       switch (definition.type) {
         case 'all':
@@ -225,7 +240,7 @@ const WhiskerMenu: React.FC = () => {
         apps: appsForCategory,
       } as CategoryConfig;
     });
-  }, [allApps, favoriteApps, recentApps]);
+  }, [allApps, favoriteApps, recentApps, categoryDefinitions]);
 
   const currentCategory = useMemo(() => {
     const found = categoryConfigs.find(cat => cat.id === category);
@@ -495,8 +510,8 @@ const WhiskerMenu: React.FC = () => {
                   type="search"
                   inputMode="search"
                   enterKeyHint="search"
-                  placeholder="Search applications"
-                  aria-label="Search applications"
+                  placeholder={t('Search applications')}
+                  aria-label={t('Search applications')}
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                 />
