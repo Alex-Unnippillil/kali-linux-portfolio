@@ -82,7 +82,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });
@@ -130,6 +130,55 @@ describe('NmapNSEApp', () => {
     expect(
       within(scriptNode.parentElement as HTMLElement).getByText('discovery')
     ).toBeInTheDocument();
+
+    mockFetch.mockRestore();
+  });
+
+  it('applies templates after diff preview confirmation', async () => {
+    const mockFetch = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation((url: RequestInfo | URL) =>
+        Promise.resolve({
+          json: () =>
+            Promise.resolve(
+              typeof url === 'string' && url.includes('nmap-results')
+                ? { hosts: [] }
+                : {}
+            ),
+        })
+      );
+
+    const user = userEvent.setup();
+    localStorage.clear();
+    render(<NmapNSEApp />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: /load template web application recon/i,
+      })
+    );
+
+    const targetToggle = await screen.findByLabelText(
+      'Apply template value for Target'
+    );
+    expect(targetToggle).not.toBeChecked();
+    const portToggle = await screen.findByLabelText(
+      'Apply template value for Port options'
+    );
+    expect(portToggle).toBeChecked();
+
+    await user.click(targetToggle);
+    await user.click(
+      await screen.findByRole('button', { name: /apply selected fields/i })
+    );
+
+    expect(await screen.findByLabelText('Target')).toHaveValue(
+      'dev.intra.example'
+    );
+    expect(
+      screen.queryByLabelText(/Preview changes for Web Application Recon/i)
+    ).not.toBeInTheDocument();
 
     mockFetch.mockRestore();
   });

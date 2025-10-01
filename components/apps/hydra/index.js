@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import TemplatePicker from '../../common/TemplatePicker';
+import TemplateDiffPreview from '../../common/TemplateDiffPreview';
+import hydraTemplates from '../../../data/templates/hydra.json';
+import {
+  computeTemplateDiff,
+  updateDiffSelection,
+} from '../../../utils/templateUtils';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -79,9 +86,95 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState(null);
+  const [templateDiffs, setTemplateDiffs] = useState([]);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
+
+  const mergeNamedLists = (existing = [], incoming = []) => {
+    const map = new Map();
+    existing.forEach((entry) => {
+      if (entry?.name) {
+        map.set(entry.name, entry);
+      }
+    });
+    incoming.forEach((entry) => {
+      if (entry?.name) {
+        map.set(entry.name, entry);
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  const handleTemplateSelect = (template) => {
+    const currentValues = {
+      target,
+      service,
+      charset,
+      rule,
+      userLists,
+      passLists,
+      selectedUser,
+      selectedPass,
+    };
+    const diffs = computeTemplateDiff(template.fields || {}, currentValues);
+    setPendingTemplate(template);
+    setTemplateDiffs(diffs);
+  };
+
+  const handleTemplateToggle = (field, apply) => {
+    setTemplateDiffs((prev) => updateDiffSelection(prev, field, apply));
+  };
+
+  const applyTemplate = () => {
+    if (!pendingTemplate) return;
+    const applicable = templateDiffs.filter((diff) => diff.changed && diff.apply);
+    if (applicable.length === 0) {
+      setPendingTemplate(null);
+      setTemplateDiffs([]);
+      return;
+    }
+
+    const templateFields = pendingTemplate.fields || {};
+
+    applicable.forEach((diff) => {
+      const value = templateFields[diff.key];
+      switch (diff.key) {
+        case 'target':
+          setTarget(value || '');
+          break;
+        case 'service':
+          if (value) {
+            setService(value);
+          }
+          break;
+        case 'charset':
+          setCharset(value || '');
+          break;
+        case 'rule':
+          setRule(value || '');
+          break;
+        case 'userLists':
+          setUserLists((prev) => mergeNamedLists(prev, Array.isArray(value) ? value : []));
+          break;
+        case 'passLists':
+          setPassLists((prev) => mergeNamedLists(prev, Array.isArray(value) ? value : []));
+          break;
+        case 'selectedUser':
+          setSelectedUser(value || '');
+          break;
+        case 'selectedPass':
+          setSelectedPass(value || '');
+          break;
+        default:
+          break;
+      }
+    });
+
+    setPendingTemplate(null);
+    setTemplateDiffs([]);
+  };
 
   const isTargetValid = useMemo(() => {
     const trimmed = target.trim();
@@ -437,6 +530,33 @@ const HydraApp = () => {
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+      <TemplatePicker
+        tool="hydra"
+        templates={hydraTemplates}
+        onSelect={handleTemplateSelect}
+      />
+      {pendingTemplate && (
+        <TemplateDiffPreview
+          template={pendingTemplate}
+          diffs={templateDiffs}
+          onToggle={handleTemplateToggle}
+          onApply={applyTemplate}
+          onCancel={() => {
+            setPendingTemplate(null);
+            setTemplateDiffs([]);
+          }}
+          fieldLabels={{
+            target: 'Target',
+            service: 'Service',
+            charset: 'Charset',
+            rule: 'Rule window',
+            userLists: 'User wordlists',
+            passLists: 'Password wordlists',
+            selectedUser: 'Selected user list',
+            selectedPass: 'Selected password list',
+          }}
+        />
+      )}
       <div className="grid grid-cols-2 gap-1.5">
         <div className="col-span-2 flex gap-1.5">
           {[

@@ -1,0 +1,55 @@
+[
+  {
+    "id": "hashcat-md5-wordlist",
+    "name": "MD5 Wordlist Audit",
+    "description": "Crack legacy MD5 hashes with a trusted corporate wordlist.",
+    "tags": ["wordlist", "md5", "audit"],
+    "metadata": {
+      "difficulty": "Beginner",
+      "attack": "Straight"
+    },
+    "fields": {
+      "hashType": "0",
+      "hashInput": "5f4dcc3b5aa765d61d8327deb882cf99",
+      "attackMode": "0",
+      "wordlist": "rockyou",
+      "ruleSet": "best64"
+    }
+  },
+  {
+    "id": "hashcat-mask-spearfish",
+    "name": "Spearphish Brute Force",
+    "description": "Combine hybrid attack with a targeted suffix mask.",
+    "tags": ["mask", "hybrid", "sha1"],
+    "metadata": {
+      "difficulty": "Intermediate",
+      "attack": "Hybrid mask"
+    },
+    "fields": {
+      "hashType": "100",
+      "hashInput": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+      "attackMode": "6",
+      "mask": "?l?l?l?d!",
+      "wordlist": "executive-names",
+      "ruleSet": "quick"
+    }
+  },
+  {
+    "id": "hashcat-benchmark",
+    "name": "Benchmark Session",
+    "description": "Preload hashcat with demo data to highlight GPU utilisation.",
+    "tags": ["benchmark", "demo", "training"],
+    "metadata": {
+      "difficulty": "Beginner",
+      "attack": "Brute-force"
+    },
+    "fields": {
+      "hashType": "3200",
+      "hashInput": "$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "attackMode": "3",
+      "mask": "?a?a?a?a",
+      "wordlist": "",
+      "ruleSet": "none"
+    }
+  }
+]

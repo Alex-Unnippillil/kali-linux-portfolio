@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import TemplatePicker from '../../common/TemplatePicker';
+import TemplateDiffPreview from '../../common/TemplateDiffPreview';
+import hashcatTemplates from '../../../data/templates/hashcat.json';
+import {
+  computeTemplateDiff,
+  updateDiffSelection,
+} from '../../../utils/templateUtils';
 
 export const hashTypes = [
   {
@@ -179,6 +186,8 @@ function HashcatApp() {
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
+  const [pendingTemplate, setPendingTemplate] = useState(null);
+  const [templateDiffs, setTemplateDiffs] = useState([]);
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
@@ -324,8 +333,94 @@ function HashcatApp() {
     setWordlistUrl(url);
   };
 
+  const handleTemplateSelect = (template) => {
+    const currentValues = {
+      hashType,
+      hashInput,
+      attackMode,
+      mask,
+      wordlist,
+      ruleSet,
+    };
+    const diffs = computeTemplateDiff(template.fields || {}, currentValues);
+    setPendingTemplate(template);
+    setTemplateDiffs(diffs);
+  };
+
+  const handleTemplateToggle = (field, apply) => {
+    setTemplateDiffs((prev) => updateDiffSelection(prev, field, apply));
+  };
+
+  const applyTemplate = () => {
+    if (!pendingTemplate) return;
+    const applicable = templateDiffs.filter((diff) => diff.changed && diff.apply);
+    if (!applicable.length) {
+      setPendingTemplate(null);
+      setTemplateDiffs([]);
+      return;
+    }
+
+    const templateFields = pendingTemplate.fields || {};
+
+    applicable.forEach((diff) => {
+      const value = templateFields[diff.key];
+      switch (diff.key) {
+        case 'hashType':
+          setHashType(value || hashTypes[0].id);
+          break;
+        case 'hashInput':
+          setHashInput(value || '');
+          break;
+        case 'attackMode':
+          setAttackMode(value || '0');
+          break;
+        case 'mask':
+          setMask(value || '');
+          break;
+        case 'wordlist':
+          setWordlist(value || '');
+          break;
+        case 'ruleSet':
+          setRuleSet(value || 'none');
+          break;
+        default:
+          break;
+      }
+    });
+
+    setPendingTemplate(null);
+    setTemplateDiffs([]);
+  };
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-ub-cool-grey text-white">
+      <div className="w-full max-w-4xl">
+        <TemplatePicker
+          tool="hashcat"
+          templates={hashcatTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        {pendingTemplate && (
+          <TemplateDiffPreview
+            template={pendingTemplate}
+            diffs={templateDiffs}
+            onToggle={handleTemplateToggle}
+            onApply={applyTemplate}
+            onCancel={() => {
+              setPendingTemplate(null);
+              setTemplateDiffs([]);
+            }}
+            fieldLabels={{
+              hashType: 'Hash type',
+              hashInput: 'Hash value',
+              attackMode: 'Attack mode',
+              mask: 'Mask',
+              wordlist: 'Wordlist alias',
+              ruleSet: 'Rule set',
+            }}
+          />
+        )}
+      </div>
       <div>
         <label className="mr-2" htmlFor="hash-input">
           Hash:
