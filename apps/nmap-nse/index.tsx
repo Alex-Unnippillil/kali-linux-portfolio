@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
+import useFormFSM from '../../hooks/useFormFSM';
 
 interface Script {
   name: string;
@@ -25,6 +26,8 @@ const NmapNSE: React.FC = () => {
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
   );
+  const form = useFormFSM();
+  const running = form.status === 'Running';
 
   // load static script metadata
   useEffect(() => {
@@ -58,8 +61,12 @@ const NmapNSE: React.FC = () => {
   );
 
   const run = () => {
-    if (!selected) return;
-    setResult({ script: selected.name, output: selected.example });
+    if (!selected) {
+      form.invalidate('Select a script to run');
+      return;
+    }
+    form.validate();
+    form.submit({ script: selected.name, output: selected.example });
   };
 
   const download = () => {
@@ -90,6 +97,24 @@ const NmapNSE: React.FC = () => {
         return 'border-blue-500';
     }
   };
+
+  const selectScript = (script: Script) => {
+    form.change();
+    setSelected(script);
+  };
+
+  form.useSubmitEffect((current) => {
+    const payload = current.payload as
+      | { script: string; output: string }
+      | undefined;
+    if (!payload) {
+      form.resolve();
+      return;
+    }
+    const nextResult = { script: payload.script, output: payload.output };
+    setResult(nextResult);
+    form.resolve(nextResult);
+  });
 
   const CollapsibleSection: React.FC<{
     title: string;
@@ -152,16 +177,19 @@ const NmapNSE: React.FC = () => {
             <button
               className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50"
               onClick={run}
-              disabled={!selected}
+              disabled={!selected || running}
             >
-              Run
+              {running ? 'Running…' : 'Run'}
             </button>
+            {form.error && (
+              <span className="text-xs text-red-400 ml-2">{form.error}</span>
+            )}
           </div>
           <div className="overflow-y-auto flex-1 p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {scripts.map((s) => (
               <button
                 key={s.name}
-                onClick={() => setSelected(s)}
+                onClick={() => selectScript(s)}
                 className={`w-full text-left px-2 py-1 rounded font-mono text-sm hover:bg-gray-800 ${
                   selected?.name === s.name ? 'bg-gray-800' : 'bg-gray-700'
                 }`}
