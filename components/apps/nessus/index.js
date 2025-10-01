@@ -76,11 +76,12 @@ const Nessus = () => {
       new URL('../../../workers/nessus-parser.ts', import.meta.url)
     );
       parserWorkerRef.current.onmessage = (e) => {
-      const { findings: parsed = [], error: err } = e.data || {};
+      const { findings: parsed = [], error: err, type } = e.data || {};
+      if (type === 'progress') return;
       if (err) {
         setParseError(err);
         setFindings([]);
-      } else {
+      } else if (Array.isArray(parsed)) {
         setFindings(parsed);
         setParseError('');
       }
@@ -90,10 +91,38 @@ const Nessus = () => {
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !parserWorkerRef.current) return;
+    setParseError('');
+    if (!file.stream) {
+      try {
+        const text = await file.text();
+        parserWorkerRef.current.postMessage({ type: 'start', totalBytes: text.length });
+        const chunk = new TextEncoder().encode(text);
+        const framed = encodeFrame(chunk);
+        parserWorkerRef.current.postMessage(
+          { type: 'chunk', chunk: framed.buffer },
+          [framed.buffer],
+        );
+        parserWorkerRef.current.postMessage({ type: 'end' });
+      } catch (err) {
+        setParseError('Failed to read file');
+      }
+      return;
+    }
     try {
-      const text = await file.text();
-      parserWorkerRef.current.postMessage(text);
+      const worker = parserWorkerRef.current;
+      worker.postMessage({ type: 'start', totalBytes: file.size });
+      const reader = file.stream().getReader();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+          const framed = encodeFrame(chunk);
+          worker.postMessage({ type: 'chunk', chunk: framed.buffer }, [framed.buffer]);
+        }
+      }
+      worker.postMessage({ type: 'end' });
     } catch (err) {
       setParseError('Failed to read file');
     }
@@ -428,3 +457,9 @@ export const displayNessus = () => {
   return <Nessus />;
 };
 
+const encodeFrame = (chunk) => {
+  const framed = new Uint8Array(4 + chunk.byteLength);
+  new DataView(framed.buffer).setUint32(0, chunk.byteLength);
+  framed.set(chunk, 4);
+  return framed;
+};

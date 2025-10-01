@@ -1,13 +1,29 @@
-export interface ParseMessage {
-  action: 'parse';
-  text: string;
+import { createFrameDecoderStream } from '../utils/streams/frameDecoder';
+import { createLineSplitterStream } from '../utils/streams/lineSplitter';
+
+export interface StartMessage {
+  action: 'start';
+  totalBytes?: number;
+}
+
+export interface ChunkMessage {
+  action: 'chunk';
+  chunk: ArrayBuffer;
+}
+
+export interface EndMessage {
+  action: 'end';
 }
 
 export interface CancelMessage {
   action: 'cancel';
 }
 
-export type SimulatorParserRequest = ParseMessage | CancelMessage;
+export type SimulatorParserRequest =
+  | StartMessage
+  | ChunkMessage
+  | EndMessage
+  | CancelMessage;
 
 export interface ParsedLine {
   line: number;
@@ -36,42 +52,101 @@ export type SimulatorParserResponse =
   | DoneMessage
   | CancelledMessage;
 
+let writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
+let reader: ReadableStreamDefaultReader<string> | null = null;
+let readerPromise: Promise<void> | null = null;
 let cancelled = false;
+let processedBytes = 0;
+let totalBytes = 0;
+let lines: ParsedLine[] = [];
+let startTime = 0;
+let lineCounter = 0;
 
-self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
-  if (data.action === 'parse') {
-    cancelled = false;
-    const lines = data.text.split(/\r?\n/);
-    const total = lines.length;
-    const start = Date.now();
-    const parsed: ParsedLine[] = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (cancelled) {
-        self.postMessage({ type: 'cancelled' } as SimulatorParserResponse);
-        return;
-      }
-      const line = lines[i];
-      const [key, ...rest] = line.split(':');
-      parsed.push({
-        line: i + 1,
+const dispose = async () => {
+  await writer?.abort().catch(() => undefined);
+  await reader?.cancel().catch(() => undefined);
+  writer = null;
+  reader = null;
+  readerPromise = null;
+};
+
+const setupPipeline = () => {
+  const frameDecoder = createFrameDecoderStream();
+  const lineSplitter = createLineSplitterStream();
+
+  const pipeline = frameDecoder.readable.pipeThrough(lineSplitter);
+  writer = frameDecoder.writable.getWriter();
+  reader = pipeline.getReader();
+  readerPromise = (async () => {
+    while (true) {
+      const { value, done } = await reader!.read();
+      if (done) break;
+      if (typeof value !== 'string' || cancelled) continue;
+      lineCounter += 1;
+      const [key, ...rest] = value.split(':');
+      lines.push({
+        line: lineCounter,
         key: key.trim(),
         value: rest.join(':').trim(),
-        raw: line,
+        raw: value,
       });
-      if (i % 100 === 0) {
-        const progress = (i + 1) / total;
-        const elapsed = Date.now() - start;
-        const eta = progress > 0 ? (elapsed * (1 - progress)) / progress : 0;
-        self.postMessage(
-          { type: 'progress', progress, eta } as SimulatorParserResponse,
-        );
+      if (lineCounter % 100 === 0) {
+        reportProgress();
       }
     }
-    self.postMessage({ type: 'done', parsed } as SimulatorParserResponse);
-  } else if (data.action === 'cancel') {
+  })();
+};
+
+const reset = async () => {
+  cancelled = false;
+  processedBytes = 0;
+  totalBytes = 0;
+  lines = [];
+  startTime = Date.now();
+  lineCounter = 0;
+  await dispose();
+  setupPipeline();
+};
+
+const reportProgress = () => {
+  if (!totalBytes) return;
+  const progress = processedBytes / totalBytes;
+  const elapsed = Date.now() - startTime;
+  const eta = progress > 0 ? (elapsed * (1 - progress)) / progress : 0;
+  (self as any).postMessage({ type: 'progress', progress, eta });
+};
+
+self.onmessage = async ({ data }: MessageEvent<SimulatorParserRequest>) => {
+  if (data.action === 'cancel') {
     cancelled = true;
+    await dispose();
+    (self as any).postMessage({ type: 'cancelled' } as SimulatorParserResponse);
+    return;
+  }
+  if (data.action === 'start') {
+    await reset();
+    totalBytes = data.totalBytes ?? 0;
+    return;
+  }
+  if (data.action === 'chunk') {
+    if (!writer) {
+      await reset();
+      totalBytes = data.chunk.byteLength;
+    }
+    const chunk = new Uint8Array(data.chunk);
+    processedBytes += chunk.byteLength;
+    await writer!.write(chunk);
+    reportProgress();
+    return;
+  }
+  if (data.action === 'end') {
+    await writer?.close();
+    await readerPromise;
+    await dispose();
+    if (!cancelled) {
+      (self as any).postMessage({ type: 'done', parsed: lines } as SimulatorParserResponse);
+    }
   }
 };
 
 export {};
-
