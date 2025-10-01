@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
+import { useImportFuse } from "../../hooks/useImportFuse";
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -322,6 +323,7 @@ const ChessGame = () => {
   const [analysisDepth, setAnalysisDepth] = useState(2);
   const pgnInputRef = useRef(null);
   const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
+  const { evaluateImport } = useImportFuse();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -783,7 +785,17 @@ const ChessGame = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => loadPGNString(reader.result);
+    reader.onload = async () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      const decision = await evaluateImport({
+        fileName: file.name,
+        size: file.size,
+        text,
+        source: "Chess PGN import",
+      });
+      if (!decision.approved) return;
+      loadPGNString(text);
+    };
     reader.readAsText(file);
     e.target.value = "";
   };
@@ -826,6 +838,8 @@ const ChessGame = () => {
             onChange={handlePGNImport}
             className="hidden"
             aria-label="PGN file input"
+            aria-hidden="true"
+            tabIndex={-1}
           />
           <div className="mt-2 flex flex-wrap gap-2 justify-center">
             <button className="px-2 py-1 bg-gray-700" onClick={reset}>
@@ -880,6 +894,7 @@ const ChessGame = () => {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={evalPercent.toFixed(0)}
+              aria-label="Evaluation advantage"
             >
               <div
                 className={`h-full ${displayEval >= 0 ? "bg-green-600" : "bg-red-600"}`}

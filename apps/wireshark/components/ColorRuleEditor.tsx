@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { colorDefinitions } from '../../../components/apps/wireshark/colorDefs';
+import { useImportFuse } from '../../../hooks/useImportFuse';
 
 interface Rule {
   expression: string;
@@ -13,6 +14,7 @@ interface Props {
 
 const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
   const fileRef = useRef<HTMLInputElement>(null);
+  const { evaluateImport } = useImportFuse();
 
   const handleRuleChange = (
     index: number,
@@ -54,9 +56,17 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         try {
-          const parsed = JSON.parse(reader.result as string);
+          const text = reader.result as string;
+          const decision = await evaluateImport({
+            fileName: file.name,
+            size: file.size,
+            text,
+            source: 'Wireshark color rules',
+          });
+          if (!decision.approved) return;
+          const parsed = JSON.parse(text);
           if (Array.isArray(parsed)) {
             onChange(parsed);
           }
@@ -69,8 +79,6 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
     }
   };
 
-  const triggerImport = () => fileRef.current?.click();
-
   return (
     <div className="flex flex-col space-y-1">
       {rules.map((rule, i) => (
@@ -79,6 +87,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
             value={rule.expression}
             onChange={(e) => handleRuleChange(i, 'expression', e.target.value)}
             placeholder="Filter expression"
+            aria-label={`Rule ${i + 1} filter expression`}
             className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
           />
           <select
@@ -113,7 +122,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
           Add rule
         </button>
         <button
-          onClick={triggerImport}
+          onClick={() => fileRef.current?.click()}
           type="button"
           className="px-1 py-0.5 bg-gray-700 rounded text-xs"
         >
@@ -127,13 +136,18 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
           Export JSON
         </button>
       </div>
+      <label id="color-rules-file-input-label" htmlFor="color-rules-file-input" className="sr-only">
+        Import color rules JSON file
+      </label>
       <input
+        id="color-rules-file-input"
         type="file"
         accept="application/json"
         ref={fileRef}
         onChange={handleImport}
-        aria-label="Color rules JSON file"
-        className="hidden"
+        className="sr-only"
+        tabIndex={-1}
+        aria-labelledby="color-rules-file-input-label"
       />
     </div>
   );

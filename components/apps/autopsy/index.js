@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useImportFuse } from '../../../hooks/useImportFuse';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
@@ -282,13 +283,17 @@ function Timeline({ events, onSelect }) {
             aria-label="Timeline scrub bar"
           />
           <datalist id="timeline-day-markers">
-            {dayMarkers.map((m) => (
-              <option
-                key={m.day}
-                value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
-              />
-            ))}
+              {dayMarkers.map((m) => {
+                const label = new Date(m.day).toLocaleDateString();
+                return (
+                  <option
+                    key={m.day}
+                    value={m.idx}
+                    label={label}
+                    aria-label={`Scrub to ${label}`}
+                  />
+                );
+              })}
           </datalist>
           {hoverIndex !== null && sorted[hoverIndex] && (
             <div
@@ -359,6 +364,7 @@ function Autopsy({ initialArtifacts = null }) {
     demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
   );
   const parseWorkerRef = useRef(null);
+  const { evaluateImport } = useImportFuse();
 
   useEffect(() => {
     fetch('/plugin-marketplace.json')
@@ -461,8 +467,15 @@ function Autopsy({ initialArtifacts = null }) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const buffer = event.target.result;
+      const decision = await evaluateImport({
+        fileName: file.name,
+        size: file.size,
+        arrayBuffer: buffer,
+        source: 'Autopsy file analyser',
+      });
+      if (!decision.approved) return;
       const bytes = new Uint8Array(buffer).slice(0, 20);
       const hex = bufferToHex(bytes);
       const safeName = escapeFilename(file.name);
@@ -599,6 +612,7 @@ function Autopsy({ initialArtifacts = null }) {
           onChange={(e) => setCaseName(e.target.value)}
           placeholder="Case name"
           className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+          aria-label="Case name"
         />
         <button
           onClick={createCase}
@@ -640,13 +654,14 @@ function Autopsy({ initialArtifacts = null }) {
           </div>
         </div>
       )}
-      {analysis && (
-        <textarea
-          readOnly
-          value={analysis}
-          className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
-        />
-      )}
+        {analysis && (
+          <textarea
+            readOnly
+            value={analysis}
+            className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
+            aria-label="File analysis summary"
+          />
+        )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
