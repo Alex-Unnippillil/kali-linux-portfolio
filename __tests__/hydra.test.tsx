@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen, act } from '@testing-library/react';
+import { render, fireEvent, screen, act, waitFor } from '@testing-library/react';
 import HydraApp from '../components/apps/hydra';
 
 describe('Hydra wordlists', () => {
@@ -92,6 +92,53 @@ describe('Hydra pause and resume', () => {
     await act(async () => {
       runResolve();
     });
+  });
+});
+
+describe('Hydra CLI preview', () => {
+  beforeEach(() => {
+    localStorage.setItem(
+      'hydraUserLists',
+      JSON.stringify([{ name: 'users.txt', content: 'admin' }])
+    );
+    localStorage.setItem(
+      'hydraPassLists',
+      JSON.stringify([{ name: 'passes.txt', content: 'password' }])
+    );
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('updates the CLI command when target changes', async () => {
+    render(<HydraApp />);
+    fireEvent.change(screen.getByPlaceholderText('192.168.0.1'), {
+      target: { value: '10.0.0.5:2222' },
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('hydra-cli-command').textContent || ''
+      ).toContain('-s 2222')
+    );
+    expect(screen.getByTestId('hydra-cli-command').textContent || '').toContain(
+      'ssh://10.0.0.5'
+    );
+  });
+
+  it('copies the Hydra CLI command', async () => {
+    const originalClipboard = navigator.clipboard;
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    // @ts-ignore
+    navigator.clipboard = { writeText };
+
+    render(<HydraApp />);
+    fireEvent.click(screen.getByRole('button', { name: /copy cli command/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+
+    // @ts-ignore
+    navigator.clipboard = originalClipboard;
   });
 });
 

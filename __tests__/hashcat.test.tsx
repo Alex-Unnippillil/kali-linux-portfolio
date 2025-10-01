@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, fireEvent, waitFor, act, screen } from '@testing-library/react';
 import HashcatApp, { detectHashType } from '../components/apps/hashcat';
 import progressInfo from '../components/apps/hashcat/progress.json';
 
@@ -61,20 +61,20 @@ describe('HashcatApp', () => {
     ).toBeInTheDocument();
   });
 
-  it('generates demo command and shows sample output', () => {
-    const { getByLabelText, getByTestId, getByText } = render(
-      <HashcatApp />
-    );
-    fireEvent.change(getByLabelText('Hash:'), {
+  it('generates demo command and shows sample output', async () => {
+    render(<HashcatApp />);
+    fireEvent.change(screen.getByLabelText('Hash:'), {
       target: { value: '5f4dcc3b5aa765d61d8327deb882cf99' },
     });
-    fireEvent.change(getByLabelText('Wordlist:'), {
+    fireEvent.change(screen.getByLabelText('Wordlist:'), {
       target: { value: 'rockyou' },
     });
-    expect(getByTestId('demo-command').textContent).toContain(
-      'hashcat -m 0 -a 0 5f4dcc3b5aa765d61d8327deb882cf99 rockyou.txt'
+    await waitFor(() =>
+      expect(screen.getByTestId('hashcat-cli-command').textContent).toContain(
+        'hashcat -m 0 -a 0 5f4dcc3b5aa765d61d8327deb882cf99 rockyou.txt'
+      )
     );
-    expect(getByText('Sample Output:')).toBeInTheDocument();
+    expect(screen.getByText('Sample Output:')).toBeInTheDocument();
   });
 
   it('shows descriptions for hash modes', () => {
@@ -126,5 +126,19 @@ describe('HashcatApp', () => {
     expect(
       getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
     ).toBeInTheDocument();
+  });
+
+  it('copies CLI command with current options', async () => {
+    const originalClipboard = navigator.clipboard;
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    // @ts-ignore
+    navigator.clipboard = { writeText };
+
+    render(<HashcatApp />);
+    fireEvent.click(screen.getByRole('button', { name: /copy cli command/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+
+    // @ts-ignore
+    navigator.clipboard = originalClipboard;
   });
 });
