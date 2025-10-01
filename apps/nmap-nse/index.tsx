@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import useStableInput from '../../hooks/useStableInput';
 import share, { canShare } from '../../utils/share';
 
 interface Script {
@@ -20,7 +21,11 @@ type ScriptData = Record<string, Omit<Script, 'tag'>[]>;
 const NmapNSE: React.FC = () => {
   const [data, setData] = useState<Script[]>([]);
   const [activeTag, setActiveTag] = useState('');
-  const [search, setSearch] = useState('');
+  const {
+    value: search,
+    inputValue: searchInput,
+    onChange: handleSearchChange,
+  } = useStableInput({ defaultValue: '' });
   const [selected, setSelected] = useState<Script | null>(null);
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
@@ -143,8 +148,8 @@ const NmapNSE: React.FC = () => {
               <input
                 id="nmap-nse-search"
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={handleSearchChange}
                 placeholder="Search"
                 className="h-6 px-2 rounded text-black font-mono flex-1"
                 aria-labelledby="nmap-nse-search-label"

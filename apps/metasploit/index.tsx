@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
 import Toast from '../../components/ui/Toast';
+import useStableInput from '../../hooks/useStableInput';
 
 interface Module {
   name: string;
@@ -48,7 +49,11 @@ const MetasploitPage: React.FC = () => {
   const splitRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const [toast, setToast] = useState('');
-  const [query, setQuery] = useState('');
+  const {
+    value: query,
+    inputValue: queryInput,
+    onChange: handleQueryChange,
+  } = useStableInput({ defaultValue: '' });
   const [tag, setTag] = useState('');
 
   const allTags = useMemo(
@@ -141,8 +146,8 @@ const MetasploitPage: React.FC = () => {
             id="metasploit-search"
             type="text"
             placeholder="Search modules"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={queryInput}
+            onChange={handleQueryChange}
             className="w-full p-1 mb-2 border rounded"
             aria-labelledby="metasploit-search-label"
           />
