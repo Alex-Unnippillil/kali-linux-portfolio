@@ -16,16 +16,38 @@ export default function WeatherWidget() {
           id="city-search"
           placeholder="Search city"
           list="saved-cities"
+          aria-label="Search city"
         />
-        <datalist id="saved-cities"></datalist>
-        <select id="unit-toggle">
+        <datalist id="saved-cities" aria-label="Saved city suggestions"></datalist>
+        <select id="unit-toggle" aria-label="Temperature units">
           <option value="metric">°C</option>
           <option value="imperial">°F</option>
         </select>
-        <input type="text" id="api-key-input" placeholder="API Key (optional)" />
+        <input
+          type="password"
+          id="api-passphrase"
+          placeholder="Passphrase"
+          aria-label="Encryption passphrase"
+        />
+        <button id="unlock-api-key">Unlock</button>
+        <input
+          type="password"
+          id="new-api-passphrase"
+          placeholder="New passphrase"
+          aria-label="New encryption passphrase"
+        />
+        <button id="rotate-api-passphrase">Rotate</button>
+        <input
+          type="text"
+          id="api-key-input"
+          placeholder="API Key (optional)"
+          aria-label="OpenWeather API key"
+        />
         <button id="save-api-key">Save</button>
         <button id="pin-city">Pin</button>
       </div>
+      <p id="secure-store-info" className="secure-note info"></p>
+      <p id="secure-store-status" className="secure-note info"></p>
       <div id="error-message"></div>
       <div id="weather" className="weather">
         <div className="temp">--°C</div>

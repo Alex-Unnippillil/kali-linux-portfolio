@@ -18,21 +18,38 @@ describe('ReconNG app', () => {
     global.fetch = realFetch;
   });
 
-  it('stores API keys in localStorage', async () => {
+  it('stores API keys securely', async () => {
     render(<ReconNG />);
     await userEvent.click(screen.getByText('Settings'));
+    const passphraseInput = screen.getByPlaceholderText('Passphrase');
+    await userEvent.type(passphraseInput, 'secret');
+    const unlockButton = screen.getByRole('button', { name: /create passphrase/i });
+    await userEvent.click(unlockButton);
+    await waitFor(() => expect(unlockButton).toBeDisabled());
     const input = screen.getByPlaceholderText('DNS Enumeration API Key');
+    await waitFor(() => expect(input).not.toBeDisabled());
     await userEvent.type(input, 'abc123');
     await waitFor(() => {
-      const stored = JSON.parse(localStorage.getItem('reconng-api-keys') || '{}');
-      expect(stored['DNS Enumeration']).toBe('abc123');
+      const raw = localStorage.getItem('reconng-api-keys');
+      expect(raw).toBeTruthy();
+      if (!raw) throw new Error('No stored data');
+      const envelope = JSON.parse(raw);
+      expect(envelope.algorithm).toBeDefined();
+      expect(envelope.ciphertext).toBeDefined();
+      expect(raw).not.toContain('abc123');
     });
   });
 
   it('hides API keys by default', async () => {
     render(<ReconNG />);
     await userEvent.click(screen.getByText('Settings'));
+    const passphraseInput = screen.getByPlaceholderText('Passphrase');
+    await userEvent.type(passphraseInput, 'secret');
+    const unlockButton = screen.getByRole('button', { name: /create passphrase/i });
+    await userEvent.click(unlockButton);
+    await waitFor(() => expect(unlockButton).toBeDisabled());
     const input = screen.getByPlaceholderText('DNS Enumeration API Key');
+    await waitFor(() => expect(input).not.toBeDisabled());
     expect(input).toHaveAttribute('type', 'password');
   });
 

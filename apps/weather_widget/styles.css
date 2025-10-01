@@ -28,6 +28,29 @@ body {
   justify-content: center;
 }
 
+.secure-note {
+  width: 100%;
+  text-align: center;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.secure-note.info {
+  color: #cbd5f5;
+}
+
+.secure-note.success {
+  color: #4ade80;
+}
+
+.secure-note.error {
+  color: #f87171;
+}
+
+.secure-note.warning {
+  color: #fbbf24;
+}
+
 .weather {
   text-align: center;
 }
