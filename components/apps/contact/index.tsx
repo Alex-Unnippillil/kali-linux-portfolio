@@ -9,6 +9,9 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import InlineExamples, { InlineExample } from '../../common/InlineExamples';
+import { useFieldHighlights } from '../../../hooks/useFieldHighlights';
+import contactExampleSets from './examples';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -28,6 +31,7 @@ const errorMap: Record<string, string> = {
     'Captcha service is not configured. Please use the options above.',
 
 };
+
 
 export const processContactForm = async (
   data: {
@@ -154,6 +158,7 @@ const ContactApp: React.FC = () => {
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const { isHighlighted, triggerHighlight } = useFieldHighlights();
 
   useEffect(() => {
     (async () => {
@@ -175,6 +180,31 @@ const ContactApp: React.FC = () => {
   useEffect(() => {
     void writeDraft({ name, email, message });
   }, [name, email, message]);
+
+  const handleApplyExample = (example: InlineExample) => {
+    const changed: string[] = [];
+    const values = example.values;
+    if (typeof values.name === 'string' && values.name !== name) {
+      setName(values.name);
+      changed.push('name');
+    }
+    if (typeof values.email === 'string' && values.email !== email) {
+      setEmail(values.email);
+      changed.push('email');
+    }
+    if (typeof values.message === 'string' && values.message !== message) {
+      setMessage(values.message);
+      changed.push('message');
+    }
+    if (!changed.length) {
+      return;
+    }
+    setBanner(null);
+    setError('');
+    setEmailError('');
+    setMessageError('');
+    triggerHighlight(changed);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,11 +328,20 @@ const ContactApp: React.FC = () => {
           </button>
         </p>
       )}
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+      <InlineExamples
+        sets={contactExampleSets}
+        onApply={handleApplyExample}
+        storageKeyPrefix="contact:inline-examples"
+      />
+      <form onSubmit={handleSubmit} className="mt-6 space-y-6 max-w-md">
         <div className="relative">
           <input
             id="contact-name"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className={`peer w-full rounded border bg-gray-800 px-3 py-3 text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
+              isHighlighted('name')
+                ? 'border-ubt-green/80 ring-2 ring-ubt-green/70 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]'
+                : 'border-gray-700'
+            }`}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -319,9 +358,16 @@ const ContactApp: React.FC = () => {
           <input
             id="contact-email"
             type="email"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className={`peer w-full rounded border bg-gray-800 px-3 py-3 text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
+              isHighlighted('email')
+                ? 'border-ubt-green/80 ring-2 ring-ubt-green/70 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]'
+                : 'border-gray-700'
+            }`}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setEmailError('');
+            }}
             required
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
@@ -342,10 +388,17 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <textarea
             id="contact-message"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className={`peer w-full rounded border bg-gray-800 px-3 py-3 text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
+              isHighlighted('message')
+                ? 'border-ubt-green/80 ring-2 ring-ubt-green/70 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]'
+                : 'border-gray-700'
+            }`}
             rows={4}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              setMessageError('');
+            }}
             required
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}

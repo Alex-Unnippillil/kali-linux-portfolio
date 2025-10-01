@@ -3,7 +3,10 @@
 import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
+import InlineExamples, { InlineExample } from "../../components/common/InlineExamples";
 import { processContactForm } from "../../components/apps/contact";
+import contactExampleSets from "../../components/apps/contact/examples";
+import { useFieldHighlights } from "../../hooks/useFieldHighlights";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
@@ -34,6 +37,7 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const { isHighlighted, triggerHighlight } = useFieldHighlights();
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -55,6 +59,30 @@ const ContactApp: React.FC = () => {
     const draft = { name, email, message };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [name, email, message]);
+
+  const handleApplyExample = (example: InlineExample) => {
+    const changed: string[] = [];
+    const values = example.values;
+    if (typeof values.name === "string" && values.name !== name) {
+      setName(values.name);
+      changed.push("name");
+    }
+    if (typeof values.email === "string" && values.email !== email) {
+      setEmail(values.email);
+      changed.push("email");
+    }
+    if (typeof values.message === "string" && values.message !== message) {
+      setMessage(values.message);
+      changed.push("message");
+    }
+    if (!changed.length) {
+      return;
+    }
+    setError("");
+    setEmailError("");
+    setMessageError("");
+    triggerHighlight(changed);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,7 +167,12 @@ const ContactApp: React.FC = () => {
           Open email app
         </button>
       </p>
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+      <InlineExamples
+        sets={contactExampleSets}
+        onApply={handleApplyExample}
+        storageKeyPrefix="contact-page:inline-examples"
+      />
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4 max-w-md">
         <div>
           <label
             htmlFor="contact-name"
@@ -151,7 +184,11 @@ const ContactApp: React.FC = () => {
           <div className="relative">
             <input
               id="contact-name"
-              className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
+              className={`h-11 w-full rounded border bg-gray-800 pl-10 pr-3 text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-ubt-green/40 focus:border-ubt-green ${
+                isHighlighted("name")
+                  ? "border-ubt-green/80 ring-2 ring-ubt-green/60 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]"
+                  : "border-gray-700"
+              }`}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -185,9 +222,16 @@ const ContactApp: React.FC = () => {
             <input
               id="contact-email"
               type="email"
-              className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
+              className={`h-11 w-full rounded border bg-gray-800 pl-10 pr-3 text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-ubt-green/40 focus:border-ubt-green ${
+                isHighlighted("email")
+                  ? "border-ubt-green/80 ring-2 ring-ubt-green/60 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]"
+                  : "border-gray-700"
+              }`}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailError("");
+              }}
               required
               aria-invalid={!!emailError}
               aria-describedby={emailError ? "contact-email-error" : undefined}
@@ -225,10 +269,17 @@ const ContactApp: React.FC = () => {
           <div className="relative">
             <textarea
               id="contact-message"
-              className="w-full rounded border border-gray-700 bg-gray-800 p-2 pl-10 text-white"
+              className={`w-full rounded border bg-gray-800 p-2 pl-10 text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-ubt-green/40 focus:border-ubt-green ${
+                isHighlighted("message")
+                  ? "border-ubt-green/80 ring-2 ring-ubt-green/60 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]"
+                  : "border-gray-700"
+              }`}
               rows={4}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                setMessageError("");
+              }}
               required
               aria-invalid={!!messageError}
               aria-describedby={messageError ? "contact-message-error" : undefined}
