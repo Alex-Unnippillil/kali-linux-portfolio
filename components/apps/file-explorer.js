@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import MountManager from '../../fs/providers/mount-manager';
+import { ZipFileSystemProvider } from '../../fs/providers/zip';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -28,7 +30,7 @@ export async function openFileDialog(options = {}) {
         file && {
           name: file.name,
           getFile: async () => file,
-        }
+        },
       );
     };
     input.click();
@@ -91,6 +93,27 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+const isZipFile = (name) => /\.zip$/i.test(name || '');
+
+const decodeMountContent = (value) => {
+  if (value === null || value === undefined) return '[Unable to read file]';
+  if (typeof value === 'string') return value;
+  try {
+    return new TextDecoder().decode(value);
+  } catch {
+    return '[Binary data]';
+  }
+};
+
+const createNativeEntry = (name, handle) => ({ type: 'native', name, handle });
+
+const createMountEntry = (record, path = '/') => ({
+  type: 'mount',
+  name: record.provider.label,
+  providerId: record.id,
+  path,
+});
+
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -105,6 +128,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
+  const [mountedProviders, setMountedProviders] = useState([]);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -117,21 +141,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
 
-  useEffect(() => {
-    const ok = !!window.showDirectoryPicker;
-    setSupported(ok);
-    if (ok) getRecentDirs().then(setRecent);
-  }, []);
+  const mountManagerRef = useRef(null);
+  if (!mountManagerRef.current) {
+    mountManagerRef.current = new MountManager();
+  }
 
-  useEffect(() => {
-    if (!opfsSupported || !root) return;
-    (async () => {
-      setUnsavedDir(await getDir('unsaved'));
-      setDirHandle(root);
-      setPath([{ name: root.name || '/', handle: root }]);
-      await readDir(root);
-    })();
-  }, [opfsSupported, root, getDir]);
+  const refreshMounted = useCallback(() => {
+    setMountedProviders(mountManagerRef.current.list());
+  }, []);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -146,61 +163,93 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
 
-  const openFallback = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const text = await file.text();
-    setCurrentFile({ name: file.name });
-    setContent(text);
-  };
-
-  const openFolder = async () => {
-    try {
-      const handle = await window.showDirectoryPicker();
-      setDirHandle(handle);
-      addRecentDir(handle);
-      setRecent(await getRecentDirs());
-      setPath([{ name: handle.name || '/', handle }]);
-      await readDir(handle);
-      setLocationError(null);
-    } catch {}
-  };
-
-  const openRecent = async (entry) => {
-    try {
-      const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') return;
-      setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
-      setLocationError(null);
-    } catch {}
-  };
-
-  const openFile = async (file) => {
-    setCurrentFile(file);
-    let text = '';
-    if (opfsSupported) {
-      const unsaved = await loadBuffer(file.name);
-      if (unsaved !== null) text = unsaved;
-    }
-    if (!text) {
-      const f = await file.handle.getFile();
-      text = await f.text();
-    }
-    setContent(text);
-  };
-
-  const readDir = useCallback(async (handle) => {
+  const readNativeDirectory = useCallback(async (handle) => {
+    if (!handle) return;
     const ds = [];
     const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
-    }
+    try {
+      for await (const [name, h] of handle.entries()) {
+        if (h.kind === 'file') {
+          fs.push({ type: 'native', name, handle: h, isArchive: isZipFile(name) });
+        } else if (h.kind === 'directory') {
+          ds.push({ type: 'native', name, handle: h });
+        }
+      }
+    } catch {}
+    ds.sort((a, b) => a.name.localeCompare(b.name));
+    fs.sort((a, b) => a.name.localeCompare(b.name));
     setDirs(ds);
     setFiles(fs);
   }, []);
+
+  const readMountedDirectory = useCallback(async (providerId, targetPath = '/') => {
+    const record = mountManagerRef.current.get(providerId);
+    if (!record) return;
+    try {
+      const entries = await record.provider.list(targetPath || '/');
+      const ds = entries
+        .filter((entry) => entry.kind === 'directory')
+        .map((entry) => ({
+          type: 'mount',
+          name: entry.name,
+          providerId: record.id,
+          path: entry.path || '/',
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const fsEntries = entries
+        .filter((entry) => entry.kind === 'file')
+        .map((entry) => ({
+          type: 'mount',
+          name: entry.name,
+          providerId: record.id,
+          path: entry.path || '/',
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setDirs(ds);
+      setFiles(fsEntries);
+    } catch {
+      setLocationError(`Unable to read ${targetPath}`);
+    }
+  }, []);
+
+  const readEntry = useCallback(
+    async (entry) => {
+      if (!entry) return;
+      setLocationError(null);
+      if (entry.type === 'native') {
+        setDirHandle(entry.handle);
+        await readNativeDirectory(entry.handle);
+      } else {
+        await readMountedDirectory(entry.providerId, entry.path || '/');
+        setDirHandle(null);
+      }
+    },
+    [readMountedDirectory, readNativeDirectory],
+  );
+
+  useEffect(() => {
+    const ok = !!window.showDirectoryPicker;
+    setSupported(ok);
+    if (ok) getRecentDirs().then(setRecent);
+  }, []);
+
+  useEffect(() => {
+    if (!opfsSupported || !root) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const dir = await getDir('unsaved');
+        if (!cancelled) setUnsavedDir(dir);
+      } catch {}
+      if (cancelled) return;
+      const rootEntry = createNativeEntry(root.name || '/', root);
+      setPath([rootEntry]);
+      await readEntry(rootEntry);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [opfsSupported, root, getDir, readEntry]);
 
   useEffect(() => {
     const requested =
@@ -215,26 +264,25 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       try {
         if (!sanitized) {
           if (!active) return;
-          setDirHandle(root);
-          setPath([{ name: root.name || '/', handle: root }]);
-          await readDir(root);
+          const rootEntry = createNativeEntry(root.name || '/', root);
+          setPath([rootEntry]);
+          await readEntry(rootEntry);
           if (active) setLocationError(null);
           return;
         }
         let current = root;
-        const crumbs = [{ name: root.name || '/', handle: root }];
+        const crumbs = [createNativeEntry(root.name || '/', root)];
         const segments = sanitized
           .split('/')
           .map((segment) => segment.trim())
           .filter(Boolean);
         for (const segment of segments) {
           current = await current.getDirectoryHandle(segment, { create: true });
-          crumbs.push({ name: segment, handle: current });
+          crumbs.push(createNativeEntry(segment, current));
         }
         if (!active) return;
-        setDirHandle(current);
         setPath(crumbs);
-        await readDir(current);
+        await readEntry(crumbs[crumbs.length - 1]);
         if (active) setLocationError(null);
       } catch {
         if (active) setLocationError(`Unable to open ${requested}`);
@@ -245,38 +293,169 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     return () => {
       active = false;
     };
-  }, [context, initialPath, pathProp, opfsSupported, root, readDir]);
+  }, [context, initialPath, pathProp, opfsSupported, root, readEntry]);
 
-  const openDir = async (dir) => {
-    setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
-    setLocationError(null);
-  };
+  const openDir = useCallback(
+    async (dir) => {
+      if (!dir) return;
+      const entry =
+        dir.type === 'native'
+          ? createNativeEntry(dir.name, dir.handle)
+          : { type: 'mount', name: dir.name, providerId: dir.providerId, path: dir.path };
+      setPath((p) => [...p, entry]);
+      await readEntry(entry);
+      setLocationError(null);
+    },
+    [readEntry],
+  );
 
-  const navigateTo = async (index) => {
-    const target = path[index];
-    if (!target || !target.handle) return;
-    setDirHandle(target.handle);
-    setPath(path.slice(0, index + 1));
-    await readDir(target.handle);
-    setLocationError(null);
-  };
+  const navigateTo = useCallback(
+    async (index) => {
+      const target = path[index];
+      if (!target) return;
+      setPath(path.slice(0, index + 1));
+      await readEntry(target);
+      setLocationError(null);
+    },
+    [path, readEntry],
+  );
 
-  const goBack = async () => {
+  const goBack = useCallback(async () => {
     if (path.length <= 1) return;
     const newPath = path.slice(0, -1);
     const prev = newPath[newPath.length - 1];
     setPath(newPath);
-    if (prev?.handle) {
-      setDirHandle(prev.handle);
-      await readDir(prev.handle);
+    if (prev) {
+      await readEntry(prev);
       setLocationError(null);
+    }
+  }, [path, readEntry]);
+
+  const openFolder = async () => {
+    try {
+      const handle = await window.showDirectoryPicker();
+      const entry = createNativeEntry(handle.name || '/', handle);
+      setDirHandle(handle);
+      addRecentDir(handle);
+      setRecent(await getRecentDirs());
+      setPath([entry]);
+      await readEntry(entry);
+      setLocationError(null);
+    } catch {}
+  };
+
+  const openRecent = async (entry) => {
+    try {
+      const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') return;
+      const rootEntry = createNativeEntry(entry.name, entry.handle);
+      setDirHandle(entry.handle);
+      setPath([rootEntry]);
+      await readEntry(rootEntry);
+      setLocationError(null);
+    } catch {}
+  };
+
+  const mountArchive = useCallback(
+    async (file) => {
+      if (!file?.handle) return;
+      try {
+        const existing = mountManagerRef.current
+          .list()
+          .find((record) => record.source?.handle === file.handle);
+        if (existing) {
+          const entry = createMountEntry(existing, '/');
+          setPath((prev) => [...prev, entry]);
+          await readEntry(entry);
+          return;
+        }
+        const blob = await file.handle.getFile();
+        const provider = await ZipFileSystemProvider.fromBlob(file.name, blob);
+        const record = mountManagerRef.current.mount(provider, { type: 'zip', handle: file.handle });
+        refreshMounted();
+        const entry = createMountEntry(record, '/');
+        setPath((prev) => [...prev, entry]);
+        await readEntry(entry);
+        setLocationError(null);
+      } catch {
+        setLocationError(`Unable to mount archive ${file?.name || ''}`);
+      }
+    },
+    [readEntry, refreshMounted],
+  );
+
+  const openMountedRoot = useCallback(
+    async (record) => {
+      const entry = createMountEntry(record, '/');
+      setPath((prev) => {
+        const nativeSegments = prev.filter((seg) => seg.type === 'native');
+        return [...nativeSegments, entry];
+      });
+      await readEntry(entry);
+      setLocationError(null);
+    },
+    [readEntry],
+  );
+
+  const unmountProvider = useCallback(
+    async (id) => {
+      mountManagerRef.current.unmount(id);
+      refreshMounted();
+      let targetAfterUnmount = null;
+      setPath((prev) => {
+        const index = prev.findIndex((seg) => seg.type === 'mount' && seg.providerId === id);
+        if (index === -1) return prev;
+        const updated = prev.slice(0, index);
+        targetAfterUnmount = updated[updated.length - 1] || null;
+        return updated;
+      });
+      if (currentFile?.type === 'mount' && currentFile.providerId === id) {
+        setCurrentFile(null);
+        setContent('');
+      }
+      if (targetAfterUnmount) {
+        await readEntry(targetAfterUnmount);
+      } else if (root) {
+        const rootEntry = createNativeEntry(root.name || '/', root);
+        setPath([rootEntry]);
+        await readEntry(rootEntry);
+      } else {
+        setDirs([]);
+        setFiles([]);
+      }
+    },
+    [currentFile, readEntry, refreshMounted, root],
+  );
+
+  const openFile = async (file) => {
+    if (!file) return;
+    if (file.type === 'native') {
+      if (file.isArchive) {
+        await mountArchive(file);
+        return;
+      }
+      setCurrentFile({ ...file, type: 'native', readOnly: false });
+      let text = '';
+      if (opfsSupported) {
+        const unsaved = await loadBuffer(file.name);
+        if (unsaved !== null && unsaved !== undefined) text = unsaved;
+      }
+      if (!text) {
+        const f = await file.handle.getFile();
+        text = await f.text();
+      }
+      setContent(text);
+    } else {
+      const record = mountManagerRef.current.get(file.providerId);
+      if (!record) return;
+      setCurrentFile({ ...file, type: 'mount', readOnly: true });
+      const data = await record.provider.readFile(file.path, { as: 'text' });
+      setContent(decodeMountContent(data));
     }
   };
 
   const saveFile = async () => {
-    if (!currentFile) return;
+    if (!currentFile || currentFile.type === 'mount' || !currentFile.handle) return;
     try {
       const writable = await currentFile.handle.createWritable();
       await writable.write(content);
@@ -288,7 +467,15 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const onChange = (e) => {
     const text = e.target.value;
     setContent(text);
-    if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
+    if (
+      opfsSupported &&
+      currentFile &&
+      currentFile.type === 'native' &&
+      !currentFile.readOnly &&
+      currentFile.name
+    ) {
+      saveBuffer(currentFile.name, text);
+    }
   };
 
   const runSearch = () => {
@@ -311,6 +498,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   };
 
   useEffect(() => () => workerRef.current?.terminate(), []);
+
+  const openFallback = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    setCurrentFile({ name: file.name, fallback: true });
+    setContent(text);
+  };
 
   if (!supported) {
     return (
@@ -365,14 +560,17 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             {locationError}
           </div>
         )}
-        {currentFile && (
+        {currentFile?.handle && currentFile.type === 'native' && !currentFile.readOnly && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
           </button>
         )}
+        {currentFile?.readOnly && (
+          <span className="text-xs text-ubt-blue">Read-only</span>
+        )}
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
+        <div className="w-48 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
           {recent.map((r, i) => (
             <div
@@ -383,10 +581,35 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               {r.name}
             </div>
           ))}
+          <div className="p-2 font-bold">Mounted</div>
+          {mountedProviders.length === 0 && (
+            <div className="px-2 text-xs text-gray-300">No virtual mounts</div>
+          )}
+          {mountedProviders.map((record) => (
+            <div
+              key={record.id}
+              className="px-2 py-1 hover:bg-black hover:bg-opacity-30 flex items-center justify-between"
+            >
+              <button
+                type="button"
+                onClick={() => openMountedRoot(record)}
+                className="hover:underline"
+              >
+                {record.provider.label}
+              </button>
+              <button
+                type="button"
+                onClick={() => unmountProvider(record.id)}
+                className="text-xs text-red-300 hover:underline"
+              >
+                Unmount
+              </button>
+            </div>
+          ))}
           <div className="p-2 font-bold">Directories</div>
           {dirs.map((d, i) => (
             <div
-              key={i}
+              key={`${d.type}-${d.name}-${i}`}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
               onClick={() => openDir(d)}
             >
@@ -396,17 +619,23 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
             <div
-              key={i}
+              key={`${f.type}-${f.name}-${i}`}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
               onClick={() => openFile(f)}
             >
               {f.name}
+              {f.isArchive && <span className="text-xs text-ubt-blue ml-1">(archive)</span>}
             </div>
           ))}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              readOnly={currentFile.type === 'mount' || currentFile.readOnly}
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
