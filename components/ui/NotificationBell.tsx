@@ -103,6 +103,10 @@ const NotificationBell: React.FC = () => {
     }, 0);
   }, []);
 
+  const openPanel = useCallback(() => {
+    setIsOpen(true);
+  }, []);
+
   const togglePanel = useCallback(() => {
     setIsOpen(prev => {
       if (prev) {
@@ -113,6 +117,25 @@ const NotificationBell: React.FC = () => {
       return !prev;
     });
   }, []);
+
+  useEffect(() => {
+    const handlePanelCommand = (event: Event) => {
+      const detail = (event as CustomEvent<{ action?: 'open' | 'close' | 'toggle' }>).detail ?? {};
+      const action = detail.action ?? 'toggle';
+      if (action === 'open') {
+        openPanel();
+      } else if (action === 'close') {
+        closePanel();
+      } else {
+        togglePanel();
+      }
+    };
+
+    window.addEventListener('notifications-panel', handlePanelCommand as EventListener);
+    return () => {
+      window.removeEventListener('notifications-panel', handlePanelCommand as EventListener);
+    };
+  }, [closePanel, openPanel, togglePanel]);
 
   useEffect(() => {
     if (!isOpen) return;
