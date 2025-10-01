@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { useWorkerPool } from '../../hooks/useWorkerPool';
+import { workerPool } from '../../workers/pool/WorkerPool';
 import type {
-  SimulatorParserRequest,
-  SimulatorParserResponse,
   ParsedLine,
+  SimulatorParserProgress,
+  SimulatorParserRequest,
+  SimulatorParserResult,
 } from '../../workers/simulatorParser.worker';
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
@@ -14,6 +17,19 @@ const samples: Record<string,string> = {
   sample2: 'error:failed\ncode:42\nstatus:bad',
 };
 
+if (typeof globalThis !== 'undefined' && typeof globalThis.Worker !== 'undefined') {
+  workerPool.registerWorker<
+    SimulatorParserRequest,
+    SimulatorParserResult,
+    SimulatorParserProgress
+  >({
+    name: 'simulator-parser',
+    create: () =>
+      new Worker(new URL('../../workers/simulatorParser.worker.ts', import.meta.url)),
+    maxConcurrency: 2,
+  });
+}
+
 const Simulator: React.FC = () => {
   const [labMode, setLabMode] = usePersistentState('simulator:labMode', false);
   const [prefs, setPrefs] = usePersistentState('desktop:simulator:prefs', { scenario: '', inputs: '', columns: [] as string[] });
@@ -23,40 +39,69 @@ const Simulator: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [progress, setProgress] = useState(0);
   const [eta, setEta] = useState(0);
-  const workerRef = useRef<Worker|null>(null);
+  const { enqueueJob, cancelJob } = useWorkerPool<
+    SimulatorParserRequest,
+    SimulatorParserResult,
+    SimulatorParserProgress
+  >('simulator-parser');
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
 
-  useEffect(() => {
-    const worker = new Worker(
-      new URL('../../workers/simulatorParser.worker.ts', import.meta.url),
-    );
-    workerRef.current = worker;
-    worker.onmessage = (e: MessageEvent<SimulatorParserResponse>) => {
-      const data = e.data;
-      if (data.type === 'progress') {
-        setProgress(data.progress);
-        setEta(data.eta);
-      } else if (data.type === 'done') {
-        setParsed(data.parsed);
-        setProgress(1);
-        setEta(0);
+  useEffect(
+    () => () => {
+      if (currentJobId) {
+        cancelJob(currentJobId);
       }
-    };
-    return () => worker.terminate();
-  }, []);
+    },
+    [cancelJob, currentJobId],
+  );
 
-  const parseText = useCallback((text: string) => {
-    setFixtureText(text);
-    setParsed([]);
-    setProgress(0);
-    setEta(0);
-    workerRef.current?.postMessage({ action: 'parse', text } as SimulatorParserRequest);
-  }, []);
+  const parseText = useCallback(
+    (text: string) => {
+      setFixtureText(text);
+      setParsed([]);
+      setProgress(0);
+      setEta(0);
+      if (!text) return;
+      if (currentJobId) {
+        cancelJob(currentJobId);
+      }
+      const job = enqueueJob({
+        payload: { text },
+        onProgress: ({ progress: pct, eta: estimate }) => {
+          setProgress(pct);
+          setEta(estimate);
+        },
+      });
+      setCurrentJobId(job.jobId);
+      job.promise
+        .then(({ parsed: result }) => {
+          setParsed(result);
+          setProgress(1);
+          setEta(0);
+        })
+        .catch((err) => {
+          if ((err as any)?.name !== 'AbortError') {
+            console.error(err);
+          }
+        })
+        .finally(() => {
+          setCurrentJobId(null);
+        });
+    },
+    [cancelJob, currentJobId, enqueueJob],
+  );
 
-  const cancelParse = () =>
-    workerRef.current?.postMessage({ action: 'cancel' } as SimulatorParserRequest);
+  const cancelParse = useCallback(() => {
+    if (currentJobId) {
+      cancelJob(currentJobId);
+      setCurrentJobId(null);
+      setProgress(0);
+      setEta(0);
+    }
+  }, [cancelJob, currentJobId]);
 
   const onSampleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
@@ -82,11 +127,11 @@ const Simulator: React.FC = () => {
     try { await navigator.clipboard.writeText(command); } catch {}
   };
 
-  const filtered = useCallback(() => {
+  const filtered = useMemo(() => {
     const rows = filter
-      ? parsed.filter(p => p.raw.toLowerCase().includes(filter.toLowerCase()))
+      ? parsed.filter((p) => p.raw.toLowerCase().includes(filter.toLowerCase()))
       : [...parsed];
-    return rows.sort((a,b) => {
+    return rows.sort((a, b) => {
       const va = a[sortCol];
       const vb = b[sortCol];
       if (va < vb) return sortDir === 'asc' ? -1 : 1;
@@ -102,7 +147,7 @@ const Simulator: React.FC = () => {
 
   const exportCSV = () => {
     const rows = ['line,key,value'];
-    filtered().forEach(p => rows.push(`${p.line},${p.key},${p.value}`));
+    filtered.forEach(p => rows.push(`${p.line},${p.key},${p.value}`));
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -140,7 +185,7 @@ const Simulator: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered().map(p => (
+                {filtered.map(p => (
                   <tr key={p.line} className="odd:bg-gray-100">
                     <td>{p.line}</td>
                     <td>{p.key}</td>
@@ -160,7 +205,13 @@ const Simulator: React.FC = () => {
   return (
     <div className="space-y-4" aria-label="Simulator">
       <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
+        <input
+          id="labmode"
+          type="checkbox"
+          checked={labMode}
+          onChange={e=>setLabMode(e.target.checked)}
+          aria-label="Toggle lab mode"
+        />
         <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
       </div>
       {!labMode && (

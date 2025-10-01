@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useWorkerPool } from '../../../hooks/useWorkerPool';
+import { workerPool } from '../../../workers/pool/WorkerPool';
 
 const algorithms = [
   'MD5',
@@ -12,51 +14,94 @@ const algorithms = [
   'CRC32',
 ];
 
+if (typeof globalThis !== 'undefined' && typeof globalThis.Worker !== 'undefined') {
+  workerPool.registerWorker({
+    name: 'hash-worker',
+    create: () =>
+      new Worker(new URL('../../../workers/hash-worker.ts', import.meta.url)),
+    maxConcurrency: 2,
+  });
+}
+
 const HashConverter = () => {
-  const workerRef = useRef(null);
+  const { enqueueJob, cancelJob } = useWorkerPool('hash-worker');
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState({});
   const [fileName, setFileName] = useState('');
+  const [currentJobId, setCurrentJobId] = useState(null);
 
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('../../../workers/hash-worker.ts', import.meta.url),
-    );
-
-    workerRef.current.onmessage = (e) => {
-      const { type, loaded, total, results: res } = e.data;
-      if (type === 'progress') {
-        setProgress(total ? loaded / total : 0);
-      } else if (type === 'result') {
-        setResults(res);
-        setProgress(1);
+  useEffect(
+    () => () => {
+      if (currentJobId) {
+        cancelJob(currentJobId);
       }
-    };
+    },
+    [cancelJob, currentJobId],
+  );
 
-    return () => workerRef.current?.terminate();
-  }, []);
+  const handleFiles = useCallback(
+    (files) => {
+      const file = files?.[0];
+      if (!file) return;
+      if (currentJobId) {
+        cancelJob(currentJobId);
+      }
+      setFileName(file.name);
+      setResults({});
+      setProgress(0);
+      const job = enqueueJob({
+        payload: { file, algorithms },
+        onProgress: ({ loaded, total }) => {
+          setProgress(total ? loaded / total : 0);
+        },
+      });
+      setCurrentJobId(job.jobId);
+      job.promise
+        .then(({ results: res }) => {
+          setResults(res);
+          setProgress(1);
+        })
+        .catch((err) => {
+          if (err?.name !== 'AbortError') {
+            console.error(err);
+          }
+        })
+        .finally(() => {
+          setCurrentJobId(null);
+        });
+    },
+    [cancelJob, currentJobId, enqueueJob],
+  );
 
-  const handleFiles = (files) => {
-    const file = files?.[0];
-    if (!file || !workerRef.current) return;
-    setFileName(file.name);
-    setResults({});
-    setProgress(0);
-    workerRef.current.postMessage({ file, algorithms });
-  };
+  const onDrop = useCallback(
+    (e) => {
+      e.preventDefault();
+      handleFiles(e.dataTransfer.files);
+    },
+    [handleFiles],
+  );
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    handleFiles(e.dataTransfer.files);
-  };
+  const onChange = useCallback(
+    (e) => {
+      handleFiles(e.target.files);
+    },
+    [handleFiles],
+  );
 
-  const onChange = (e) => {
-    handleFiles(e.target.files);
-  };
+  const preventDefault = useCallback((e) => e.preventDefault(), []);
 
-  const preventDefault = (e) => e.preventDefault();
+  const copy = useCallback((val) => navigator.clipboard?.writeText(val), []);
 
-  const copy = (val) => navigator.clipboard?.writeText(val);
+  const sortedResults = useMemo(
+    () =>
+      algorithms.reduce((acc, alg) => {
+        if (results[alg]) {
+          acc.push({ alg, value: results[alg] });
+        }
+        return acc;
+      }, []),
+    [results],
+  );
 
   return (
     <div className="bg-gray-700 text-white p-4 rounded flex flex-col gap-2">
@@ -71,6 +116,7 @@ const HashConverter = () => {
           type="file"
           className="hidden"
           onChange={onChange}
+          aria-label="Select file for hashing"
         />
         <label htmlFor="hash-file-input" className="cursor-pointer block">
           {fileName ? `File: ${fileName}` : 'Drag & drop a file or click to select'}
@@ -79,27 +125,25 @@ const HashConverter = () => {
       {progress > 0 && progress < 1 && (
         <progress className="w-full" value={progress} max="1" />
       )}
-      {Object.keys(results).length > 0 && (
+      {sortedResults.length > 0 && (
         <div className="flex flex-col gap-2">
-          {algorithms.map(
-            (alg) =>
-              results[alg] && (
-                <div key={alg} className="flex items-center gap-2">
-                  <span className="w-24 shrink-0">{alg}</span>
-                  <input
-                    className="text-black flex-1 p-1 rounded"
-                    value={results[alg]}
-                    readOnly
-                  />
-                  <button
-                    className="bg-gray-600 px-2 py-1 rounded"
-                    onClick={() => copy(results[alg])}
-                  >
-                    Copy
-                  </button>
-                </div>
-              ),
-          )}
+          {sortedResults.map(({ alg, value }) => (
+            <div key={alg} className="flex items-center gap-2">
+              <span className="w-24 shrink-0">{alg}</span>
+              <input
+                className="text-black flex-1 p-1 rounded"
+                value={value}
+                readOnly
+                aria-label={`${alg} hash value`}
+              />
+              <button
+                className="bg-gray-600 px-2 py-1 rounded"
+                onClick={() => copy(value)}
+              >
+                Copy
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -107,4 +151,3 @@ const HashConverter = () => {
 };
 
 export default HashConverter;
-

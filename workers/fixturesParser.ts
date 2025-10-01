@@ -1,18 +1,27 @@
-let cancelled = false;
+import { registerWorkerHandler } from './pool/messages';
 
-self.onmessage = (e: MessageEvent) => {
-  const { type, text } = e.data as { type: string; text?: string };
-  if (type === 'cancel') {
-    cancelled = true;
-    return;
-  }
-  if (type === 'parse' && text) {
-    cancelled = false;
+export interface FixturesParserRequest {
+  text: string;
+}
+
+export interface FixturesParserProgress {
+  percent: number;
+}
+
+export interface FixturesParserResult {
+  rows: any[];
+}
+
+registerWorkerHandler<FixturesParserRequest, FixturesParserResult, FixturesParserProgress>(
+  async ({ text }, context) => {
     const lines = text.split(/\n/);
-    const total = lines.length;
+    const total = lines.length || 1;
     const result: any[] = [];
+
     for (let i = 0; i < lines.length; i++) {
-      if (cancelled) return;
+      if (context.isCancelled()) {
+        throw new DOMException('cancelled', 'AbortError');
+      }
       const line = lines[i].trim();
       if (!line) continue;
       try {
@@ -21,12 +30,12 @@ self.onmessage = (e: MessageEvent) => {
         result.push({ line });
       }
       if (i % 100 === 0) {
-        (self as any).postMessage({ type: 'progress', payload: Math.round((i / total) * 100) });
+        const percent = Math.round((i / total) * 100);
+        context.reportProgress({ percent });
       }
     }
-    (self as any).postMessage({ type: 'progress', payload: 100 });
-    (self as any).postMessage({ type: 'result', payload: result });
-  }
-};
 
-export {}; // ensure module scope
+    context.reportProgress({ percent: 100 });
+    return { rows: result };
+  },
+);
