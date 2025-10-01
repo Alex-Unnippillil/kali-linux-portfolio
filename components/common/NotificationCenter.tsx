@@ -11,6 +11,7 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 export type {
   ClassificationResult,
@@ -39,6 +40,21 @@ export interface PushNotificationInput {
   hints?: NotificationHints;
 }
 
+export interface QuietHoursSettings {
+  enabled: boolean;
+  start: string;
+  end: string;
+}
+
+type SetQuietHours = (
+  update: QuietHoursSettings | ((prev: QuietHoursSettings) => QuietHoursSettings),
+) => void;
+
+interface PendingNotification extends PushNotificationInput {
+  id: string;
+  timestamp: number;
+}
+
 interface NotificationsContextValue {
   notificationsByApp: Record<string, AppNotification[]>;
   notifications: AppNotification[];
@@ -47,6 +63,11 @@ interface NotificationsContextValue {
   dismissNotification: (appId: string, id: string) => void;
   clearNotifications: (appId?: string) => void;
   markAllRead: (appId?: string) => void;
+  quietHours: QuietHoursSettings;
+  setQuietHours: SetQuietHours;
+  doNotDisturb: boolean;
+  setDoNotDisturb: (value: boolean) => void;
+  quietModeActive: boolean;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -60,43 +81,199 @@ const PRIORITY_WEIGHT: Record<NotificationPriority, number> = {
   low: 3,
 };
 
+const QUIET_HOURS_STORAGE_KEY = 'notifications:quiet-hours';
+const DND_STORAGE_KEY = 'notifications:dnd';
+
+const DEFAULT_QUIET_HOURS: QuietHoursSettings = {
+  enabled: false,
+  start: '22:00',
+  end: '07:00',
+};
+
+const parseTimeToMinutes = (value: string): number | null => {
+  if (typeof value !== 'string') return null;
+  const [hourString, minuteString] = value.split(':');
+  const hours = Number(hourString);
+  const minutes = Number(minuteString);
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+  return hours * 60 + minutes;
+};
+
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
 
-  const pushNotification = useCallback((input: PushNotificationInput) => {
-    const id = createId();
-    const timestamp = input.timestamp ?? Date.now();
-    const classification = classifyNotification({
-      appId: input.appId,
-      title: input.title,
-      body: input.body,
-      priority: input.priority,
-      hints: input.hints,
-    });
-    setNotificationsByApp(prev => {
-      const list = prev[input.appId] ?? [];
-      const nextNotification: AppNotification = {
+  const [, setQueuedNotifications] = useState<PendingNotification[]>([]);
+
+  const [quietHoursState, setQuietHoursState] = useState<QuietHoursSettings>(() => {
+    if (!safeLocalStorage) return DEFAULT_QUIET_HOURS;
+    try {
+      const stored = safeLocalStorage.getItem(QUIET_HOURS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Partial<QuietHoursSettings> | null;
+        if (
+          parsed &&
+          typeof parsed.start === 'string' &&
+          typeof parsed.end === 'string'
+        ) {
+          return {
+            enabled: Boolean(parsed.enabled),
+            start: parsed.start,
+            end: parsed.end,
+          };
+        }
+      }
+    } catch {
+      // Ignore storage read errors
+    }
+    return DEFAULT_QUIET_HOURS;
+  });
+
+  const [doNotDisturbState, setDoNotDisturbState] = useState<boolean>(() => {
+    if (!safeLocalStorage) return false;
+    try {
+      const stored = safeLocalStorage.getItem(DND_STORAGE_KEY);
+      if (stored != null) {
+        return JSON.parse(stored) === true;
+      }
+    } catch {
+      // Ignore storage read errors
+    }
+    return false;
+  });
+
+  const quietHours = quietHoursState;
+  const doNotDisturb = doNotDisturbState;
+
+  const shouldDeferNotification = useCallback(
+    (nowMs: number = Date.now()) => {
+      if (doNotDisturb) return true;
+      if (!quietHours.enabled) return false;
+      const startMinutes = parseTimeToMinutes(quietHours.start);
+      const endMinutes = parseTimeToMinutes(quietHours.end);
+      if (startMinutes === null || endMinutes === null) return false;
+      if (startMinutes === endMinutes) return false;
+
+      const currentDate = new Date(nowMs);
+      const currentMinutes = currentDate.getHours() * 60 + currentDate.getMinutes();
+
+      if (startMinutes < endMinutes) {
+        return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+      }
+
+      return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    },
+    [doNotDisturb, quietHours],
+  );
+
+  const [isQuietMode, setIsQuietMode] = useState<boolean>(() => shouldDeferNotification());
+
+  const deliverNotification = useCallback(
+    (pending: PendingNotification) => {
+      const classification = classifyNotification({
+        appId: pending.appId,
+        title: pending.title,
+        body: pending.body,
+        priority: pending.priority,
+        hints: pending.hints,
+      });
+
+      setNotificationsByApp(prev => {
+        const list = prev[pending.appId] ?? [];
+        const nextNotification: AppNotification = {
+          id: pending.id,
+          appId: pending.appId,
+          title: pending.title,
+          body: pending.body,
+          timestamp: pending.timestamp,
+          read: false,
+          priority: classification.priority,
+          hints: pending.hints,
+          classification,
+        };
+
+        return {
+          ...prev,
+          [pending.appId]: [nextNotification, ...list],
+        };
+      });
+    },
+    [setNotificationsByApp],
+  );
+
+  const pushNotification = useCallback(
+    (input: PushNotificationInput) => {
+      const id = createId();
+      const timestamp = input.timestamp ?? Date.now();
+      const pending: PendingNotification = {
+        ...input,
         id,
-        appId: input.appId,
-        title: input.title,
-        body: input.body,
         timestamp,
-        read: false,
-        priority: classification.priority,
-        hints: input.hints,
-        classification,
       };
 
-      return {
-        ...prev,
-        [input.appId]: [nextNotification, ...list],
-      };
+      if (shouldDeferNotification(timestamp)) {
+        setQueuedNotifications(prev => [...prev, pending]);
+      } else {
+        deliverNotification(pending);
+      }
+
+      return id;
+    },
+    [deliverNotification, shouldDeferNotification],
+  );
+
+  const releaseQueuedNotifications = useCallback(() => {
+    setQueuedNotifications(prev => {
+      if (prev.length === 0) return prev;
+      if (shouldDeferNotification()) return prev;
+
+      prev.forEach(deliverNotification);
+      return [];
     });
+  }, [deliverNotification, shouldDeferNotification]);
 
-    return id;
-  }, []);
+  const setQuietHours = useCallback<SetQuietHours>(
+    update => {
+      setQuietHoursState(prev => {
+        const next = typeof update === 'function' ? update(prev) : update;
+        if (
+          next.enabled === prev.enabled &&
+          next.start === prev.start &&
+          next.end === prev.end
+        ) {
+          return prev;
+        }
+        if (safeLocalStorage) {
+          safeLocalStorage.setItem(QUIET_HOURS_STORAGE_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const setDoNotDisturb = useCallback(
+    (value: boolean) => {
+      setDoNotDisturbState(prev => {
+        if (prev === value) return prev;
+        if (safeLocalStorage) {
+          safeLocalStorage.setItem(DND_STORAGE_KEY, JSON.stringify(value));
+        }
+        return value;
+      });
+    },
+    [],
+  );
 
   const dismissNotification = useCallback((appId: string, id: string) => {
     setNotificationsByApp(prev => {
@@ -167,6 +344,28 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   );
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      setIsQuietMode(shouldDeferNotification());
+      if (!shouldDeferNotification()) {
+        releaseQueuedNotifications();
+      }
+      return;
+    }
+
+    const tick = () => {
+      const quiet = shouldDeferNotification();
+      setIsQuietMode(quiet);
+      if (!quiet) {
+        releaseQueuedNotifications();
+      }
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(interval);
+  }, [releaseQueuedNotifications, shouldDeferNotification]);
+
+  useEffect(() => {
     const nav: any = navigator;
     if (nav && nav.setAppBadge) {
       if (unreadCount > 0) nav.setAppBadge(unreadCount).catch(() => {});
@@ -184,6 +383,11 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         dismissNotification,
         clearNotifications,
         markAllRead,
+        quietHours,
+        setQuietHours,
+        doNotDisturb,
+        setDoNotDisturb,
+        quietModeActive: isQuietMode,
       }}
     >
       {children}
