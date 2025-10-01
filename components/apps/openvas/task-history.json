@@ -1,8 +1,8 @@
 [
-  { "time": "08:00", "status": "Queued" },
-  { "time": "08:05", "status": "Running" },
-  { "time": "08:45", "status": "Completed" },
-  { "time": "09:00", "status": "Queued" },
-  { "time": "09:05", "status": "Running" },
-  { "time": "09:30", "status": "Completed" }
+  { "time": "2024-06-01T08:00:00Z", "status": "success", "latency": 320 },
+  { "time": "2024-06-01T08:05:00Z", "status": "success", "latency": 450 },
+  { "time": "2024-06-01T08:15:00Z", "status": "fail", "latency": 1180 },
+  { "time": "2024-06-01T08:20:00Z", "status": "success", "latency": 380 },
+  { "time": "2024-06-01T08:25:00Z", "status": "success", "latency": 290 },
+  { "time": "2024-06-01T08:30:00Z", "status": "fail", "latency": 1560 }
 ]
