@@ -714,7 +714,11 @@ export class Desktop extends Component {
             this.preventNextIconClick = true;
             this.updateIconPosition(dragState.id, position.x, position.y, true);
         } else {
-            this.setState({ draggingIconId: null });
+            event.preventDefault();
+            event.stopPropagation();
+            this.setState({ draggingIconId: null }, () => {
+                this.openApp(dragState.id);
+            });
         }
     };
 
