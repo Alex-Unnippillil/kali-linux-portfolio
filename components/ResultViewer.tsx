@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import preheater from '../utils/preheat';
 
 interface ViewerProps {
   data: any[];
@@ -10,6 +11,14 @@ export default function ResultViewer({ data }: ViewerProps) {
   const [tab, setTab] = useState<'raw' | 'parsed' | 'chart'>('raw');
   const [sortKey, setSortKey] = useState('');
   const [filter, setFilter] = useState('');
+  const cachesRef = useRef({
+    raw: '',
+    searchIndex: [] as string[],
+    sortedIndices: new Map<string, number[]>(),
+    stats: { hits: 0, misses: 0 },
+  });
+  const needsSyncRef = useRef(false);
+  const [cacheStats, setCacheStats] = useState({ hits: 0, misses: 0 });
 
   useEffect(() => {
     try {
@@ -28,15 +37,129 @@ export default function ResultViewer({ data }: ViewerProps) {
     }
   }, [sortKey]);
 
-  const keys = data[0] ? Object.keys(data[0]) : [];
-  const filtered = useMemo(() => {
+  useEffect(() => {
+    if (needsSyncRef.current) {
+      needsSyncRef.current = false;
+      setCacheStats({ ...cachesRef.current.stats });
+    }
+  });
+
+  const recordHit = () => {
+    cachesRef.current.stats.hits += 1;
+    needsSyncRef.current = true;
+  };
+
+  const recordMiss = () => {
+    cachesRef.current.stats.misses += 1;
+    needsSyncRef.current = true;
+  };
+
+  const keys = useMemo(() => (data[0] ? Object.keys(data[0]) : []), [data]);
+  const keySignature = useMemo(() => keys.join('|'), [keys]);
+
+  useEffect(() => {
+    const caches = cachesRef.current;
+    caches.raw = '';
+    caches.searchIndex = [];
+    caches.sortedIndices = new Map();
+    caches.stats = { hits: 0, misses: 0 };
+    needsSyncRef.current = true;
+
+    if (!data.length) return undefined;
+
+    const tasks: Array<() => void> = [
+      () => {
+        caches.raw = JSON.stringify(data, null, 2);
+      },
+      () => {
+        caches.searchIndex = data.map((row) => JSON.stringify(row).toLowerCase());
+      },
+    ];
+
+    keys.forEach((key) => {
+      tasks.push(() => {
+        const indices = data.map((_, idx) => idx);
+        indices.sort((a, b) => {
+          const aValue = data[a]?.[key];
+          const bValue = data[b]?.[key];
+          if (aValue === bValue) return 0;
+          return aValue > bValue ? 1 : -1;
+        });
+        caches.sortedIndices.set(key, indices);
+      });
+    });
+
+    const cancellations = tasks.map((task, index) =>
+      preheater.schedule(task, {
+        id: `result-viewer-${index}`,
+        priority: index === 0 ? 'high' : 'normal',
+        budget: 6,
+      }),
+    );
+
+    return () => {
+      cancellations.forEach((cancelTask) => cancelTask());
+    };
+  }, [data, keySignature]);
+
+  const rawContent = useMemo(() => {
+    const caches = cachesRef.current;
+    if (caches.raw) {
+      recordHit();
+      return caches.raw;
+    }
+    recordMiss();
+    const computed = JSON.stringify(data, null, 2);
+    caches.raw = computed;
+    return computed;
+  }, [data]);
+
+  const matchingIndices = useMemo(() => {
+    if (!filter) return null;
+    const caches = cachesRef.current;
     const lower = filter.toLowerCase();
-    return data.filter((row) => JSON.stringify(row).toLowerCase().includes(lower));
+    if (caches.searchIndex.length === data.length && caches.searchIndex.length > 0) {
+      recordHit();
+      return caches.searchIndex.reduce<number[]>((acc, entry, idx) => {
+        if (entry.includes(lower)) acc.push(idx);
+        return acc;
+      }, []);
+    }
+    recordMiss();
+    return data.reduce<number[]>((acc, row, idx) => {
+      const serialized = JSON.stringify(row).toLowerCase();
+      if (serialized.includes(lower)) acc.push(idx);
+      return acc;
+    }, []);
   }, [data, filter]);
-  const sorted = useMemo(() => {
-    if (!sortKey) return filtered;
-    return [...filtered].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : -1));
-  }, [filtered, sortKey]);
+
+  const matchingSet = useMemo(() => (matchingIndices ? new Set(matchingIndices) : null), [matchingIndices]);
+
+  const sortedRows = useMemo(() => {
+    if (!sortKey) {
+      if (!matchingIndices) return data;
+      return matchingIndices.map((idx) => data[idx]);
+    }
+    const caches = cachesRef.current;
+    const cachedIndices = caches.sortedIndices.get(sortKey);
+    let baseIndices: number[];
+    if (cachedIndices) {
+      recordHit();
+      baseIndices = cachedIndices;
+    } else {
+      recordMiss();
+      baseIndices = data.map((_, idx) => idx);
+      baseIndices.sort((a, b) => {
+        const aValue = data[a]?.[sortKey];
+        const bValue = data[b]?.[sortKey];
+        if (aValue === bValue) return 0;
+        return aValue > bValue ? 1 : -1;
+      });
+      caches.sortedIndices.set(sortKey, baseIndices);
+    }
+    const source = matchingSet ? baseIndices.filter((idx) => matchingSet.has(idx)) : baseIndices;
+    return source.map((idx) => data[idx]);
+  }, [data, sortKey, matchingIndices, matchingSet]);
 
   const exportCsv = () => {
     const csv = [keys.join(','), ...data.map((row) => keys.map((k) => JSON.stringify(row[k] ?? '')).join(','))].join('\n');
@@ -49,8 +172,21 @@ export default function ResultViewer({ data }: ViewerProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleInteraction = useCallback(() => {
+    preheater.notifyInteraction();
+  }, []);
+
   return (
-    <div className="text-xs" aria-label="result viewer">
+    <div
+      className="text-xs"
+      aria-label="result viewer"
+      onPointerDown={handleInteraction}
+      onTouchStart={handleInteraction}
+      onKeyDownCapture={handleInteraction}
+      onFocusCapture={handleInteraction}
+      data-cache-hits={cacheStats.hits}
+      data-cache-misses={cacheStats.misses}
+    >
       <div role="tablist" className="mb-2 flex flex-wrap gap-2">
         <button role="tab" aria-selected={tab === 'raw'} onClick={() => setTab('raw')} className="rounded bg-ub-cool-grey px-2 py-1 text-white" type="button">
           Raw
@@ -62,7 +198,7 @@ export default function ResultViewer({ data }: ViewerProps) {
           Chart
         </button>
       </div>
-      {tab === 'raw' && <pre className="bg-black text-white p-1 h-40 overflow-auto">{JSON.stringify(data, null, 2)}</pre>}
+      {tab === 'raw' && <pre className="bg-black text-white p-1 h-40 overflow-auto">{rawContent}</pre>}
       {tab === 'parsed' && (
         <div>
           <details className="mb-2 space-y-2 rounded border border-black/30 bg-black/10 p-2">
@@ -110,7 +246,7 @@ export default function ResultViewer({ data }: ViewerProps) {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((row, i) => (
+                {sortedRows.map((row, i) => (
                   <tr key={i}>
                     {keys.map((k) => (
                       <td key={k} className="border px-1">
