@@ -1,21 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-interface PluginInfo { id: string; file: string; }
+import type { ExtensionManifest } from '@/extensions/types';
 
-interface PluginManifest {
-  id: string;
-  sandbox: 'worker' | 'iframe';
-  code: string;
-}
+interface PluginInfo { id: string; file: string; }
 
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
-  const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
+  const [installed, setInstalled] = useState<Record<string, ExtensionManifest>>(
     () => {
       if (typeof window !== 'undefined') {
         try {
-          return JSON.parse(localStorage.getItem('installedPlugins') || '{}');
+          return JSON.parse(
+            localStorage.getItem('installedPlugins') || '{}'
+          ) as Record<string, ExtensionManifest>;
         } catch {
           return {};
         }
@@ -23,6 +21,8 @@ export default function PluginManager() {
       return {};
     }
   );
+  const [installWarnings, setInstallWarnings] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   interface LastRun {
     id: string;
@@ -48,11 +48,43 @@ export default function PluginManager() {
   }, []);
 
   const install = async (plugin: PluginInfo) => {
-    const res = await fetch(`/api/plugins/${plugin.file}`);
-    const manifest: PluginManifest = await res.json();
-    const updated = { ...installed, [plugin.id]: manifest };
-    setInstalled(updated);
-    localStorage.setItem('installedPlugins', JSON.stringify(updated));
+    setError(null);
+    setInstallWarnings([]);
+    try {
+      const res = await fetch(`/api/plugins/${plugin.file}`);
+
+      if (!res.ok) {
+        let message = `Failed to install ${plugin.id}.`;
+        try {
+          const payload = (await res.json()) as { message?: string } | undefined;
+          if (payload?.message) {
+            message = payload.message;
+          }
+        } catch {
+          // ignore malformed responses
+        }
+        setError(message);
+        return;
+      }
+
+      const manifestWithWarnings = (await res.json()) as ExtensionManifest & {
+        warnings?: string[];
+      };
+      const { warnings = [], ...manifest } = manifestWithWarnings as ExtensionManifest & {
+        warnings?: string[];
+      };
+      const cleanedManifest = manifest as ExtensionManifest;
+      const updated = { ...installed, [plugin.id]: cleanedManifest };
+      setInstalled(updated);
+      try {
+        localStorage.setItem('installedPlugins', JSON.stringify(updated));
+      } catch {
+        /* ignore */
+      }
+      setInstallWarnings(warnings);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to install ${plugin.id}.`);
+    }
   };
 
   const run = (plugin: PluginInfo) => {
@@ -123,6 +155,27 @@ export default function PluginManager() {
   return (
     <div className="p-4 text-white">
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 rounded border border-red-500 bg-red-900 px-3 py-2 text-sm"
+        >
+          {error}
+        </div>
+      )}
+      {installWarnings.length > 0 && (
+        <div
+          role="status"
+          className="mb-4 rounded border border-ub-orange bg-gray-900 px-3 py-2 text-sm"
+        >
+          <p className="font-semibold text-ub-orange">Compatibility warnings</p>
+          <ul className="list-disc pl-5 text-ub-orange">
+            {installWarnings.map((warning, index) => (
+              <li key={index}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <ul>
         {plugins.map((p) => (
           <li key={p.id} className="flex items-center mb-2">

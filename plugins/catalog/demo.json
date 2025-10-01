@@ -1,5 +1,8 @@
 {
   "id": "demo",
   "sandbox": "worker",
-  "code": "self.postMessage('content');"
+  "code": "self.postMessage('content');",
+  "requires": {
+    "core": "^1.0.0"
+  }
 }
