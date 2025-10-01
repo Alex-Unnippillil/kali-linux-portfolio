@@ -77,6 +77,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._suppressNextDragStart = false;
+        this._suppressDragTimeout = null;
     }
 
     componentDidMount() {
@@ -108,6 +110,10 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._suppressDragTimeout) {
+            clearTimeout(this._suppressDragTimeout);
+            this._suppressDragTimeout = null;
         }
     }
 
@@ -428,6 +434,18 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
+    handleDragStart = (e, data) => {
+        if (this._suppressNextDragStart) {
+            this._suppressNextDragStart = false;
+            if (this._suppressDragTimeout) {
+                clearTimeout(this._suppressDragTimeout);
+                this._suppressDragTimeout = null;
+            }
+            return false;
+        }
+        this.changeCursorToMove();
+    }
+
     handleStop = () => {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
@@ -495,6 +513,28 @@ export class Window extends Component {
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2 });
         }
+    }
+
+    handleTitleBarDoubleClick = (event) => {
+        if (this.props.allowMaximize === false) return;
+        const selection = typeof window !== 'undefined' && typeof window.getSelection === 'function'
+            ? window.getSelection()
+            : null;
+        if (selection && !selection.isCollapsed) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.focusWindow();
+        this._suppressNextDragStart = true;
+        if (this._suppressDragTimeout) {
+            clearTimeout(this._suppressDragTimeout);
+        }
+        this._suppressDragTimeout = setTimeout(() => {
+            this._suppressNextDragStart = false;
+            this._suppressDragTimeout = null;
+        }, 250);
+        this.maximizeWindow();
     }
 
     closeWindow = () => {
@@ -637,7 +677,7 @@ export class Window extends Component {
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
@@ -681,6 +721,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -707,7 +748,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -717,6 +758,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
