@@ -1,5 +1,6 @@
-import React, { FormEvent, useMemo, useState } from 'react';
+import React, { FormEvent, useMemo, useRef, useState } from 'react';
 import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
+import Recorder from './Recorder';
 
 const DEFAULT_URL = 'https://www.kali.org/docs/';
 const STORAGE_KEY = 'firefox:last-url';
@@ -86,29 +87,33 @@ const Firefox: React.FC = () => {
     updateAddress(inputValue);
   };
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   return (
-    <div className="flex h-full flex-col bg-ub-cool-grey text-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="flex items-center gap-2 border-b border-gray-700 bg-gray-900 px-3 py-2"
-      >
-        <label htmlFor="firefox-address" className="sr-only">
-          Address
-        </label>
-        <input
-          id="firefox-address"
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder="Enter a URL"
-          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+    <div className="relative h-full">
+      <div ref={containerRef} className="flex h-full flex-col bg-ub-cool-grey text-gray-100">
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 border-b border-gray-700 bg-gray-900 px-3 py-2"
         >
-          Go
-        </button>
-      </form>
+          <label htmlFor="firefox-address" className="sr-only">
+            Address
+          </label>
+          <input
+            id="firefox-address"
+            aria-label="Address"
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            placeholder="Enter a URL"
+            className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            Go
+          </button>
+        </form>
       <nav className="flex flex-wrap gap-1 border-b border-gray-800 bg-gray-900 px-3 py-2 text-xs">
         {BOOKMARKS.map((bookmark) => (
           <button
@@ -121,20 +126,22 @@ const Firefox: React.FC = () => {
           </button>
         ))}
       </nav>
-      <div className="flex-1 bg-black">
-        {simulation ? (
-          <FirefoxSimulationView simulation={simulation} />
-        ) : (
-          <iframe
-            key={address}
-            title="Firefox"
-            src={address}
-            className="h-full w-full border-0"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          />
-        )}
+        <div className="flex-1 bg-black">
+          {simulation ? (
+            <FirefoxSimulationView simulation={simulation} />
+          ) : (
+            <iframe
+              key={address}
+              title="Firefox"
+              src={address}
+              className="h-full w-full border-0"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
+          )}
+        </div>
       </div>
+      <Recorder targetRef={containerRef} />
     </div>
   );
 };
