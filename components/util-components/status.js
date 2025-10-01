@@ -4,6 +4,7 @@ import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
 import NetworkIndicator from '../ui/NetworkIndicator';
 import BatteryIndicator from '../ui/BatteryIndicator';
+import { ChecklistStatusBadge } from '../common/Checklist';
 
 export default function Status() {
   const { allowNetwork } = useSettings();
@@ -47,6 +48,7 @@ export default function Status() {
       />
       <VolumeControl className="mx-1.5" />
       <BatteryIndicator className="mx-1.5" />
+      <ChecklistStatusBadge />
       <span className="mx-1">
         <SmallArrow angle="down" className=" status-symbol" />
       </span>
