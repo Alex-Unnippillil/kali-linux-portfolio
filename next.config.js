@@ -206,6 +206,18 @@ try {
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
+    ...(isStaticExport
+      ? {
+          async exportPathMap(defaultPathMap) {
+            return {
+              ...defaultPathMap,
+              '/apps': { page: '/apps' },
+              '/nessus-dashboard': { page: '/nessus-dashboard' },
+              '/nessus-report': { page: '/nessus-report' },
+            };
+          },
+        }
+      : {}),
     webpack: configureWebpack,
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
