@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import BackpressureNotice from '../../system/BackpressureNotice';
+import { enqueueJob } from '../../../utils/backpressure';
+import useBackpressureJob from '../../../hooks/useBackpressureJob';
 
 const algorithms = [
   'MD5',
@@ -14,35 +17,83 @@ const algorithms = [
 
 const HashConverter = () => {
   const workerRef = useRef(null);
+  const jobIdRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState({});
   const [fileName, setFileName] = useState('');
+  const [jobId, setJobId] = useState(null);
+  const job = useBackpressureJob(jobId);
 
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('../../../workers/hash-worker.ts', import.meta.url),
-    );
-
-    workerRef.current.onmessage = (e) => {
-      const { type, loaded, total, results: res } = e.data;
-      if (type === 'progress') {
-        setProgress(total ? loaded / total : 0);
-      } else if (type === 'result') {
-        setResults(res);
-        setProgress(1);
-      }
-    };
-
-    return () => workerRef.current?.terminate();
-  }, []);
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate();
+    },
+    [],
+  );
 
   const handleFiles = (files) => {
     const file = files?.[0];
-    if (!file || !workerRef.current) return;
+    if (!file) return;
     setFileName(file.name);
     setResults({});
     setProgress(0);
-    workerRef.current.postMessage({ file, algorithms });
+
+    const jobIdentifier = `hash:${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    const handle = enqueueJob(
+      'hash:compute',
+      {
+        run: () =>
+          new Promise((resolve, reject) => {
+            const worker = new Worker(
+              new URL('../../../workers/hash-worker.ts', import.meta.url),
+            );
+            workerRef.current = worker;
+            const cleanup = () => {
+              workerRef.current?.terminate();
+              workerRef.current = null;
+            };
+            worker.onerror = (err) => {
+              cleanup();
+              reject(err?.message || 'Failed to compute hash');
+            };
+            worker.onmessage = (e) => {
+              if (jobIdRef.current !== jobIdentifier) return;
+              const { type, loaded, total, results: res } = e.data;
+              if (type === 'progress') {
+                setProgress(total ? loaded / total : 0);
+              } else if (type === 'result') {
+                setResults(res);
+                setProgress(1);
+                cleanup();
+                resolve();
+              }
+            };
+            worker.postMessage({ file, algorithms });
+          }),
+        cancel: () => {
+          workerRef.current?.terminate();
+          workerRef.current = null;
+          setProgress(0);
+        },
+      },
+      {
+        id: jobIdentifier,
+        label: `Hashing ${file.name}`,
+        metadata: { fileName: file.name },
+      },
+    );
+
+    jobIdRef.current = jobIdentifier;
+    setJobId(jobIdentifier);
+    handle.done.finally(() => {
+      if (jobIdRef.current === jobIdentifier) {
+        jobIdRef.current = null;
+        setJobId(null);
+      }
+    });
   };
 
   const onDrop = (e) => {
@@ -76,6 +127,7 @@ const HashConverter = () => {
           {fileName ? `File: ${fileName}` : 'Drag & drop a file or click to select'}
         </label>
       </div>
+      {job && <BackpressureNotice jobId={jobId} className="mt-2" description="Hash computation queued" />}
       {progress > 0 && progress < 1 && (
         <progress className="w-full" value={progress} max="1" />
       )}
