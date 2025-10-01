@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
+import EmptyState from '../common/EmptyState';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
 
 const STORAGE_KEY = 'portfolio-tasks';
@@ -55,6 +56,11 @@ export default function Todoist() {
     typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
+  const focusQuickAdd = useCallback(() => {
+    if (quickRef.current && typeof quickRef.current.focus === 'function') {
+      quickRef.current.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -671,10 +677,13 @@ export default function Todoist() {
           {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
         </h2>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center text-gray-500 mt-3">
-            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
-            <span className="text-sm">No tasks</span>
-          </div>
+          <EmptyState
+            className="mt-3 bg-transparent text-gray-200"
+            featureId="todoist-board"
+            variant="no-data"
+            illustration={{ src: '/empty-tasks.svg', alt: '', className: 'mb-1.5' }}
+            primaryAction={{ onClick: focusQuickAdd }}
+          />
         ) : (
           Object.keys(bySection).map((sec) => (
             <div key={sec} className="mb-4">

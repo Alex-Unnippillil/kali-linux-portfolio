@@ -5,6 +5,7 @@ import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
+import EmptyState from "../common/EmptyState";
 
 type NetworkType = "wired" | "wifi";
 type SignalStrength = "excellent" | "good" | "fair" | "weak";
@@ -446,6 +447,12 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     [allowNetwork, online, wifiEnabled, connectedNetwork],
   );
 
+  const openSettingsApp = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("open-app", { detail: "settings" }));
+    }
+  }, []);
+
   const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setOpen((prev) => !prev);
@@ -591,10 +598,41 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
             <p className="mt-1 text-[11px] text-gray-300">{summary.description}</p>
             {summary.meta && <p className="mt-1 text-[11px] text-gray-400">{summary.meta}</p>}
           </div>
-          {summary.notice && (
-            <div className="mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-[11px] text-red-200">
-              {summary.notice}
-            </div>
+          {!allowNetwork ? (
+            <EmptyState
+              className="mb-3 border border-red-500/40 bg-red-900/30"
+              featureId="network-permissions"
+              variant="no-permission"
+              illustration={{
+                kind: "node",
+                className:
+                  "flex h-10 w-10 items-center justify-center rounded-full bg-red-900/60 text-red-200",
+                element: (
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 2 3 6v6c0 5 3.6 9.4 9 10 5.4-.6 9-5 9-10V6z" />
+                    <line x1="12" y1="8" x2="12" y2="13" />
+                    <circle cx="12" cy="16.5" r="1" />
+                  </svg>
+                ),
+              }}
+              primaryAction={{ onClick: openSettingsApp }}
+            />
+          ) : (
+            summary.notice && (
+              <div className="mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-[11px] text-red-200">
+                {summary.notice}
+              </div>
+            )
           )}
           <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
             <span className="text-white normal-case">Wi-Fi</span>
@@ -666,7 +704,11 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
           {showLogs && (
             <div className="mt-2 max-h-32 overflow-y-auto rounded border border-white/10 bg-black/30 p-2 text-[11px] text-gray-200">
               {shareLogs.length === 0 ? (
-                <p>No share activity recorded yet.</p>
+                <EmptyState
+                  className="bg-transparent"
+                  featureId="network-share-logs"
+                  variant="no-data"
+                />
               ) : (
                 <ul className="space-y-1">
                   {shareLogs
