@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../../utils/urlPolicy';
 
 interface Playlist {
   id: string;
@@ -286,14 +287,27 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
         )}
         <div className="mt-auto flex items-center justify-between text-xs text-ubt-grey">
           <span>Updated {formatDate(playlist.updatedAt)}</span>
-          <a
-            href={`https://www.youtube.com/playlist?list=${playlist.id}`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full bg-ubt-green/10 px-3 py-1 font-semibold text-ubt-green transition hover:bg-ubt-green/20"
-          >
-            Open playlist
-          </a>
+          {(() => {
+            const playlistUrl = `https://www.youtube.com/playlist?list=${playlist.id}`;
+            const safeLink = sanitizeUrl(playlistUrl);
+            if (!safeLink) {
+              return (
+                <span className="rounded-full bg-ubt-green/10 px-3 py-1 font-semibold text-ubt-grey">
+                  {LINK_UNAVAILABLE_COPY}
+                </span>
+              );
+            }
+            return (
+              <a
+                href={safeLink.href}
+                target="_blank"
+                rel={computeRelAttribute(safeLink.isExternal, 'noreferrer')}
+                className="rounded-full bg-ubt-green/10 px-3 py-1 font-semibold text-ubt-green transition hover:bg-ubt-green/20"
+              >
+                Open playlist
+              </a>
+            );
+          })()}
         </div>
       </div>
     </article>

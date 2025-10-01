@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../../utils/urlPolicy';
 
 interface LogEntry {
   step: string;
@@ -35,16 +36,26 @@ const BlueTeamPanel: React.FC<Props> = ({ logs }) => {
               <p className="mb-1">
                 <span className="font-semibold">Mitigation:</span> {entry.mitigation}
               </p>
-              {entry.resource && (
-                <a
-                  href={entry.resource}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline text-blue-200"
-                >
-                  Learn more
-                </a>
-              )}
+              {entry.resource && (() => {
+                const safeLink = sanitizeUrl(entry.resource);
+                if (!safeLink) {
+                  return (
+                    <span className="underline text-blue-100 italic">
+                      Learn more ({LINK_UNAVAILABLE_COPY})
+                    </span>
+                  );
+                }
+                return (
+                  <a
+                    href={safeLink.href}
+                    target="_blank"
+                    rel={computeRelAttribute(safeLink.isExternal, 'noopener noreferrer')}
+                    className="underline text-blue-200"
+                  >
+                    Learn more
+                  </a>
+                );
+              })()}
             </div>
           )}
         </div>

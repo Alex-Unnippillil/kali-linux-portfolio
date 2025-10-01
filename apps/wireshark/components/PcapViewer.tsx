@@ -5,6 +5,7 @@ import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../../utils/urlPolicy';
 
 
 interface PcapViewerProps {
@@ -308,6 +309,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Upload capture file"
         />
         <select
           onChange={(e) => {
@@ -315,6 +317,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             e.target.value = '';
           }}
           className="text-sm bg-gray-700 text-white rounded"
+          aria-label="Open sample capture"
         >
           <option value="">Open sample</option>
           {samples.map(({ label, path }) => (
@@ -323,14 +326,26 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             </option>
           ))}
         </select>
-        <a
-          href="https://wiki.wireshark.org/SampleCaptures"
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs underline"
-        >
-          Sample sources
-        </a>
+        {(() => {
+          const safeLink = sanitizeUrl('https://wiki.wireshark.org/SampleCaptures');
+          if (!safeLink) {
+            return (
+              <span className="text-xs underline italic">
+                Sample sources ({LINK_UNAVAILABLE_COPY})
+              </span>
+            );
+          }
+          return (
+            <a
+              href={safeLink.href}
+              target="_blank"
+              rel={computeRelAttribute(safeLink.isExternal, 'noreferrer')}
+              className="text-xs underline"
+            >
+              Sample sources
+            </a>
+          );
+        })()}
       </div>
       {packets.length > 0 && (
         <>
@@ -346,17 +361,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             </button>
           </div>
           <div className="flex space-x-1">
-            {presets.map(({ label, expression }) => (
-              <button
-                key={expression}
-                onClick={() => setFilter(expression)}
-                className={`w-4 h-4 rounded ${
-                  protocolColors[label.toUpperCase()] || 'bg-gray-500'
-                }`}
-                title={label}
-                type="button"
-              />
-            ))}
+              {presets.map(({ label, expression }) => (
+                <button
+                  key={expression}
+                  onClick={() => setFilter(expression)}
+                  className={`w-4 h-4 rounded ${
+                    protocolColors[label.toUpperCase()] || 'bg-gray-500'
+                  }`}
+                  title={label}
+                  type="button"
+                  aria-label={`Filter by ${label}`}
+                />
+              ))}
           </div>
 
           {showLegend && (

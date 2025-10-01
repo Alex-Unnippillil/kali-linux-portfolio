@@ -1,3 +1,5 @@
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../utils/urlPolicy';
+
 interface Resource {
   label: string;
   url: string;
@@ -24,14 +26,26 @@ export default function ExplainerPane({ lines, resources }: Props) {
       <ul className="list-disc list-inside">
         {resources.map((r, i) => (
           <li key={i}>
-            <a
-              href={r.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              {r.label}
-            </a>
+            {(() => {
+              const safeResource = sanitizeUrl(r.url);
+              if (!safeResource) {
+                return (
+                  <span className="italic text-ubt-grey">
+                    {r.label} ({LINK_UNAVAILABLE_COPY})
+                  </span>
+                );
+              }
+              return (
+                <a
+                  href={safeResource.href}
+                  target="_blank"
+                  rel={computeRelAttribute(safeResource.isExternal)}
+                  className="underline"
+                >
+                  {r.label}
+                </a>
+              );
+            })()}
           </li>
         ))}
       </ul>

@@ -1,5 +1,6 @@
 import React from 'react';
 import Meta from '../components/SEO/Meta';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../utils/urlPolicy';
 
 interface TileProps {
   title: string;
@@ -7,18 +8,30 @@ interface TileProps {
   children: React.ReactNode;
 }
 
-const ToolTile = ({ title, link, children }: TileProps) => (
-  <a
-    href={link}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="block p-4 bg-ub-grey text-white rounded shadow hover:bg-black focus:outline-none focus:ring"
-  >
-    <h2 className="text-xl mb-2">{title}</h2>
-    {children}
-    <p className="mt-2 underline text-sm">Documentation</p>
-  </a>
-);
+const ToolTile = ({ title, link, children }: TileProps) => {
+  const safeLink = sanitizeUrl(link);
+  if (!safeLink) {
+    return (
+      <div className="block p-4 bg-ub-grey text-white rounded shadow">
+        <h2 className="text-xl mb-2">{title}</h2>
+        {children}
+        <p className="mt-2 text-sm italic text-ubt-grey">{LINK_UNAVAILABLE_COPY}</p>
+      </div>
+    );
+  }
+  return (
+    <a
+      href={safeLink.href}
+      target="_blank"
+      rel={computeRelAttribute(safeLink.isExternal, 'noopener noreferrer')}
+      className="block p-4 bg-ub-grey text-white rounded shadow hover:bg-black focus:outline-none focus:ring"
+    >
+      <h2 className="text-xl mb-2">{title}</h2>
+      {children}
+      <p className="mt-2 underline text-sm">Documentation</p>
+    </a>
+  );
+};
 
 const ArpDiagram = () => (
   <svg viewBox="0 0 300 120" className="w-full h-32">

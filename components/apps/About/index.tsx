@@ -9,6 +9,7 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import { computeRelAttribute, LINK_UNAVAILABLE_COPY, sanitizeUrl } from '../../../utils/urlPolicy';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -195,23 +196,21 @@ function About() {
         <li className="list-pc">
           I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
           evolving world of tech. I completed four years of a{' '}
-          <a
-            className=" underline cursor-pointer"
+          <SafeExternalLink
+            className="underline cursor-pointer"
             href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
-            target="_blank"
             rel="noopener noreferrer"
           >
             Nuclear Engineering
-          </a>{' '}
+          </SafeExternalLink>{' '}
           degree at Ontario Tech University before deciding to change my career goals and pursue my passion for{' '}
-          <a
-            className=" underline cursor-pointer"
+          <SafeExternalLink
+            className="underline cursor-pointer"
             href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
-            target="_blank"
             rel="noopener noreferrer"
           >
             Networking and I.T. Security
-          </a>
+          </SafeExternalLink>
           .
         </li>
         <li className="mt-3 list-building">
@@ -223,23 +222,21 @@ function About() {
         </li>
         <li className="mt-3 list-time">
           When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{' '}
-          <a
-            className=" underline cursor-pointer"
+          <SafeExternalLink
+            className="underline cursor-pointer"
             href="https://www.youtube.com/@Alex-Unnippillil/playlists"
-            target="_blank"
             rel="noopener noreferrer"
           >
             YouTube videos
-          </a>{' '}
+          </SafeExternalLink>{' '}
           and{' '}
-            <a
-              className=" underline cursor-pointer"
+            <SafeExternalLink
+              className="underline cursor-pointer"
               href="https://myanimelist.net/animelist/alex_u"
-              target="_blank"
               rel="noopener noreferrer"
             >
               anime
-            </a>
+            </SafeExternalLink>
           .
         </li>
         <li className="mt-3 list-star">I also have interests in deep learning, software development, and animation.</li>
@@ -258,6 +255,49 @@ const workerApps = [
   { id: 'mimikatz', label: 'Mimikatz' },
   { id: 'radare2', label: 'Radare2' },
 ];
+
+type SafeExternalLinkProps = Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> & {
+  href: string;
+  fallback?: React.ReactNode;
+};
+
+const SafeExternalLink: React.FC<SafeExternalLinkProps> = ({
+  href,
+  children,
+  className,
+  rel,
+  target = '_blank',
+  fallback,
+  ...rest
+}) => {
+  const safeLink = sanitizeUrl(href);
+  if (!safeLink) {
+    const fallbackClassName = [className, 'cursor-not-allowed italic text-ubt-grey']
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <span className={fallbackClassName}>
+        {fallback ?? (
+          <>
+            {children} ({LINK_UNAVAILABLE_COPY})
+          </>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={safeLink.href}
+      target={target}
+      rel={computeRelAttribute(safeLink.isExternal, rel)}
+      className={className}
+      {...rest}
+    >
+      {children}
+    </a>
+  );
+};
 
 function WorkerStatus() {
   const [status, setStatus] = React.useState<Record<string, string>>({});
@@ -349,13 +389,14 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   return (
     <div className="px-2 w-full">
       <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <input
+          type="text"
+          placeholder="Filter..."
+          className="mt-2 w-full px-2 py-1 rounded text-black"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          aria-label={`${title} filter`}
+        />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
           <img
@@ -449,9 +490,13 @@ function Projects({ projects }: { projects: any[] }) {
             <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
               <div className="flex flex-wrap justify-between items-center">
                 <div className="flex justify-center items-center">
-                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">
+                  <SafeExternalLink
+                    href={project.link}
+                    rel="noopener noreferrer"
+                    className="text-base md:text-lg mr-2"
+                  >
                     {project.name.toLowerCase()}
-                  </a>
+                  </SafeExternalLink>
                   <GitHubStars user="alex-unnippillil" repo={projectName} />
                 </div>
                 <div className="text-gray-300 font-light text-sm">{project.date}</div>
@@ -469,15 +514,14 @@ function Projects({ projects }: { projects: any[] }) {
                       const borderColorClass = `border-${tag_colors[domain]}`;
                       const textColorClass = `text-${tag_colors[domain]}`;
                       return (
-                        <a
+                        <SafeExternalLink
                           key={domain}
                           href={project.link}
-                          target="_blank"
                           rel="noopener noreferrer"
                           className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}
                         >
                           {domain}
-                        </a>
+                        </SafeExternalLink>
                       );
                     })
                   : null}
@@ -532,15 +576,14 @@ function Resume() {
       <object className="h-full w-full flex-1" data="/assets/Alex-Unnippillil-Resume.pdf" type="application/pdf">
         <p className="p-4 text-center">
           Unable to display PDF.&nbsp;
-          <a
+          <SafeExternalLink
             href="/assets/Alex-Unnippillil-Resume.pdf"
-            target="_blank"
             rel="noopener noreferrer"
             className="underline text-ubt-blue"
             onClick={handleDownload}
           >
             Download the resume
-          </a>
+          </SafeExternalLink>
         </p>
       </object>
     </div>
