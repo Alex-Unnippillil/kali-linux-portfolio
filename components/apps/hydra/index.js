@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import Hygiene from './Hygiene';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -79,6 +80,7 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const [redactionFields, setRedactionFields] = useState([]);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -236,6 +238,39 @@ const HydraApp = () => {
     0
   );
 
+  const handleHygieneFix = (fix) => {
+    if (!fix) return;
+    switch (fix.action) {
+      case 'set-target':
+        setTarget(fix.payload);
+        break;
+      case 'set-rule':
+        setRule(fix.payload);
+        break;
+      case 'set-charset':
+        setCharset(fix.payload);
+        break;
+      case 'replace-user-list':
+        if (!selectedUser) return;
+        setUserLists((lists) =>
+          lists.map((list) =>
+            list.name === selectedUser ? { ...list, content: fix.payload } : list
+          )
+        );
+        break;
+      case 'replace-pass-list':
+        if (!selectedPass) return;
+        setPassLists((lists) =>
+          lists.map((list) =>
+            list.name === selectedPass ? { ...list, content: fix.payload } : list
+          )
+        );
+        break;
+      default:
+        break;
+    }
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -375,6 +410,13 @@ const HydraApp = () => {
     setAnnounce('Dry run complete');
   };
 
+  const buildExportConfig = () => ({
+    target: redactionFields.includes('target') ? '<redacted>' : target,
+    service,
+    selectedUser: redactionFields.includes('userList') ? '<redacted>' : selectedUser,
+    selectedPass: redactionFields.includes('passList') ? '<redacted>' : selectedPass,
+  });
+
   const handleSaveConfig = () => {
     saveConfigStorage({ target, service, selectedUser, selectedPass });
     setShowSaved(true);
@@ -384,7 +426,7 @@ const HydraApp = () => {
   const handleCopyConfig = async () => {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ target, service, selectedUser, selectedPass }, null, 2)
+        JSON.stringify(buildExportConfig(), null, 2)
       );
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 1500);
@@ -550,6 +592,17 @@ const HydraApp = () => {
               </li>
             ))}
           </ul>
+        </div>
+        <div className="col-span-2">
+          <Hygiene
+            target={target}
+            rule={rule}
+            charset={charset}
+            selectedUserList={selectedUserList}
+            selectedPassList={selectedPassList}
+            onFix={handleHygieneFix}
+            onRedactionChange={setRedactionFields}
+          />
         </div>
         <div>
           <label className="block mb-1">Charset</label>
