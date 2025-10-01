@@ -17,9 +17,13 @@ describe('validateServerEnv', () => {
     expect(() => validateServerEnv(baseEnv)).not.toThrow();
   });
 
-  it('throws when required vars are missing', () => {
+  it('warns when required vars are missing', () => {
     const { RATE_LIMIT_SECRET, RECAPTCHA_SECRET, ...env } = baseEnv;
-    expect(() => validateServerEnv(env)).toThrow(/RATE_LIMIT_SECRET/);
-    expect(() => validateServerEnv(env)).toThrow(/RECAPTCHA_SECRET/);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    validateServerEnv(env);
+    expect(warn).toHaveBeenCalledWith(
+      'Missing environment variables: RATE_LIMIT_SECRET, RECAPTCHA_SECRET'
+    );
+    warn.mockRestore();
   });
 });

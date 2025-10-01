@@ -45,7 +45,8 @@ export default function Calculator() {
           document.body.appendChild(script);
         });
       }
-      const mod = await import('./main');
+      // main.js is a CommonJS module, so cast to any to access its exports
+      const mod: any = await import('./main');
       evaluate = mod.evaluate;
       memoryAdd = mod.memoryAdd;
       memorySubtract = mod.memorySubtract;

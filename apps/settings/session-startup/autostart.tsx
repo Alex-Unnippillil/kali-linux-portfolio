@@ -36,12 +36,14 @@ export default function AutostartSettings() {
         const res = await fetch('/fixtures/autostart-user.json');
         user = await res.json();
       }
-      user = user.map((e) => ({ trigger: 'login', ...e }));
+      // Spread existing entry first, then override the trigger to avoid
+      // duplicate key warnings in TypeScript.
+      user = user.map((e) => ({ ...e, trigger: 'login' }));
       setUserEntries(user);
       setInitialUser(JSON.parse(JSON.stringify(user)));
 
       const sysRes = await fetch('/fixtures/autostart-system.json');
-      const sys = (await sysRes.json()).map((e: Entry) => ({ trigger: 'login', ...e }));
+      const sys = (await sysRes.json()).map((e: Entry) => ({ ...e, trigger: 'login' }));
       setSystemEntries(sys);
     }
     load();

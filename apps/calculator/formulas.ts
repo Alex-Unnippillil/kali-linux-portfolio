@@ -1,5 +1,8 @@
 import usePersistentState from '../../hooks/usePersistentState';
-import { evaluate } from './main';
+// main.js uses CommonJS exports, so pull in evaluate via require to avoid
+// TypeScript complaining about missing named exports.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { evaluate } = require('./main');
 
 export interface Formula {
   name: string;

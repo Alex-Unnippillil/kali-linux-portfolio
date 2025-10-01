@@ -418,13 +418,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       container?.addEventListener('contextmenu', handleLinkContext);
       const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
       const bg = hexToRgba(preset.background, opacity);
-      term.setOption?.('theme', {
-        background: bg,
-        foreground: preset.foreground,
-        cursor: preset.foreground,
-      });
-      container.style.backgroundColor = bg;
-      container.style.color = preset.foreground;
+      term.options = {
+        ...term.options,
+        theme: {
+          background: bg,
+          foreground: preset.foreground,
+          cursor: preset.foreground,
+        },
+      };
+      container!.style.backgroundColor = bg;
+      container!.style.color = preset.foreground;
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
