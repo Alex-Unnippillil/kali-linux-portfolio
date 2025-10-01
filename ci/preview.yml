@@ -1,0 +1,130 @@
+name: Preview Deployments
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    name: Build and deploy preview
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NODE_ENV: production
+      NEXT_PUBLIC_ENABLE_ANALYTICS: 'false'
+      FEATURE_TOOL_APIS: disabled
+      NEXT_PUBLIC_BASE_PATH: ''
+      NEXT_PUBLIC_SUPABASE_URL: ''
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+      SUPABASE_URL: ''
+      SUPABASE_SERVICE_ROLE_KEY: ''
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        id: next-cache
+        with:
+          path: |
+            .next/cache
+            .vercel/output
+          key: preview-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-${{ github.ref }}
+          restore-keys: |
+            preview-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-
+            preview-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Pull Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          yarn dlx vercel@latest pull --yes --environment=preview --token "$VERCEL_TOKEN"
+
+      - name: Build preview (with bundle analysis)
+        env:
+          ANALYZE: 'true'
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          yarn dlx vercel@latest build --token "$VERCEL_TOKEN"
+
+      - name: Upload bundle report
+        id: upload-report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-report-${{ github.run_id }}
+          path: |
+            .next/analyze
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Deploy preview
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          preview_url=$(yarn dlx vercel@latest deploy --prebuilt --token "$VERCEL_TOKEN" \
+            | grep -Eo 'https://[^ ]+' \
+            | tail -n1 \
+            | tr -d '\n')
+          if [ -z "$preview_url" ]; then
+            echo "Preview URL not detected" >&2
+            exit 1
+          fi
+          echo "url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Publish preview comment
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          identifier: preview-ci
+          body: |
+            ### 🚀 Preview build ready
+            - Preview URL: [${{ steps.deploy.outputs.url }}](${{ steps.deploy.outputs.url }})
+            - Bundle report: [Download artifact](${{ steps.upload-report.outputs.artifact-url }})
+            - Build cache restored: `${{ steps.next-cache.outputs.cache-hit }}`
+
+            _Previews run with analytics disabled and sensitive integrations in demo mode._
+
+      - name: Publish failure notice
+        if: failure() && github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          identifier: preview-ci-failure
+          body: |
+            ### ⚠️ Preview deployment failed
+            The automated preview could not be published. Please review the workflow logs and fall back to the local production build:
+            ```bash
+            yarn install
+            yarn build
+            yarn start
+            ```
+            Bundle reports (if any) remain available under the workflow run's artifacts.
