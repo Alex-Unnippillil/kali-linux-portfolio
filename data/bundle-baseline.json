@@ -1,0 +1,230 @@
+{
+  "generatedAt": "2025-10-01T02:43:06.901Z",
+  "routes": {
+    "/": {
+      "size": 349698
+    },
+    "/admin/messages": {
+      "size": 342593
+    },
+    "/apps": {
+      "size": 364284
+    },
+    "/apps/2048": {
+      "size": 346049
+    },
+    "/apps/ascii-art": {
+      "size": 346106
+    },
+    "/apps/autopsy": {
+      "size": 346091
+    },
+    "/apps/beef": {
+      "size": 346112
+    },
+    "/apps/blackjack": {
+      "size": 346122
+    },
+    "/apps/calculator": {
+      "size": 378509
+    },
+    "/apps/checkers": {
+      "size": 346134
+    },
+    "/apps/connect-four": {
+      "size": 346097
+    },
+    "/apps/contact": {
+      "size": 346130
+    },
+    "/apps/converter": {
+      "size": 346097
+    },
+    "/apps/figlet": {
+      "size": 346083
+    },
+    "/apps/firefox": {
+      "size": 346082
+    },
+    "/apps/http": {
+      "size": 346092
+    },
+    "/apps/input-lab": {
+      "size": 346071
+    },
+    "/apps/john": {
+      "size": 346092
+    },
+    "/apps/kismet": {
+      "size": 346089
+    },
+    "/apps/metasploit": {
+      "size": 346133
+    },
+    "/apps/metasploit-post": {
+      "size": 346103
+    },
+    "/apps/mimikatz/offline": {
+      "size": 346104
+    },
+    "/apps/minesweeper": {
+      "size": 346142
+    },
+    "/apps/nmap-nse": {
+      "size": 346096
+    },
+    "/apps/password_generator": {
+      "size": 350402
+    },
+    "/apps/phaser_matter": {
+      "size": 350417
+    },
+    "/apps/pinball": {
+      "size": 346084
+    },
+    "/apps/project-gallery": {
+      "size": 346063
+    },
+    "/apps/qr": {
+      "size": 346115
+    },
+    "/apps/settings": {
+      "size": 346067
+    },
+    "/apps/simon": {
+      "size": 346136
+    },
+    "/apps/sokoban": {
+      "size": 350377
+    },
+    "/apps/solitaire": {
+      "size": 346086
+    },
+    "/apps/spotify": {
+      "size": 346059
+    },
+    "/apps/ssh": {
+      "size": 346091
+    },
+    "/apps/sticky_notes": {
+      "size": 346100
+    },
+    "/apps/subnet-calculator": {
+      "size": 346103
+    },
+    "/apps/timer_stopwatch": {
+      "size": 346101
+    },
+    "/apps/tower-defense": {
+      "size": 346097
+    },
+    "/apps/volatility": {
+      "size": 346098
+    },
+    "/apps/vscode": {
+      "size": 346119
+    },
+    "/apps/weather": {
+      "size": 346125
+    },
+    "/apps/weather_widget": {
+      "size": 346686
+    },
+    "/apps/wireshark": {
+      "size": 346097
+    },
+    "/apps/word_search": {
+      "size": 350446
+    },
+    "/apps/x": {
+      "size": 346076
+    },
+    "/daily-quote": {
+      "size": 412736
+    },
+    "/dummy-form": {
+      "size": 344526
+    },
+    "/gamepad-calibration": {
+      "size": 346333
+    },
+    "/games/blackjack": {
+      "size": 346122
+    },
+    "/games/blackjack/trainer": {
+      "size": 346104
+    },
+    "/games/breakout/editor": {
+      "size": 346104
+    },
+    "/hook-flow": {
+      "size": 353303
+    },
+    "/hydra-preview": {
+      "size": 344283
+    },
+    "/input-hub": {
+      "size": 346431
+    },
+    "/keyboard-reference": {
+      "size": 343414
+    },
+    "/module-workspace": {
+      "size": 347309
+    },
+    "/nessus-dashboard": {
+      "size": 422703
+    },
+    "/nessus-report": {
+      "size": 348654
+    },
+    "/network-topology": {
+      "size": 347482
+    },
+    "/nikto-report": {
+      "size": 346319
+    },
+    "/notes": {
+      "size": 462793
+    },
+    "/popular-modules": {
+      "size": 350890
+    },
+    "/post_exploitation": {
+      "size": 396345
+    },
+    "/profile": {
+      "size": 345773
+    },
+    "/qr": {
+      "size": 826393
+    },
+    "/qr/vcard": {
+      "size": 378687
+    },
+    "/recon/graph": {
+      "size": 347173
+    },
+    "/security-education": {
+      "size": 406301
+    },
+    "/sekurlsa_logonpasswords": {
+      "size": 347262
+    },
+    "/share-target": {
+      "size": 342460
+    },
+    "/spoofing": {
+      "size": 348004
+    },
+    "/ui/settings/theme": {
+      "size": 345050
+    },
+    "/video-gallery": {
+      "size": 354397
+    },
+    "/wps-attack": {
+      "size": 348104
+    }
+  }
+}
