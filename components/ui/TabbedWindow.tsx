@@ -7,6 +7,8 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import DelayedTooltip from './DelayedTooltip';
+import AppTooltipContent from './AppTooltipContent';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -48,6 +50,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
+  const [focusedTabId, setFocusedTabId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -58,6 +61,21 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const closedTabsRef = useRef<{ tab: TabDefinition; index: number }[]>([]);
+  const invokerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      invokerRef.current = activeElement;
+    }
+    return () => {
+      const invoker = invokerRef.current;
+      if (invoker && typeof invoker.focus === 'function' && document.contains(invoker)) {
+        invoker.focus();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -80,22 +98,28 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     [onTabsChange],
   );
 
-  const focusTab = useCallback((id: string, { force = false } = {}) => {
-    const el = tabRefs.current.get(id);
-    if (!el) return;
-    if (!force) {
-      const container = scrollContainerRef.current;
-      if (!container) return;
-      if (!container.contains(document.activeElement)) return;
-    }
-    el.focus({ preventScroll: true });
-  }, []);
+  const focusTab = useCallback(
+    (id: string, { force = false }: { force?: boolean } = {}) => {
+      const el = tabRefs.current.get(id);
+      if (!el) return;
+      if (!force) {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        if (!container.contains(document.activeElement)) return;
+      }
+      setFocusedTabId(id);
+      el.focus({ preventScroll: true });
+    },
+    [],
+  );
 
   const setActive = useCallback(
     (id: string) => {
       setActiveId(id);
+      setFocusedTabId(id);
+      requestAnimationFrame(() => focusTab(id, { force: true }));
     },
-    [],
+    [focusTab],
   );
 
   const closeTab = useCallback(
@@ -104,15 +128,23 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         const idx = prev.findIndex((t) => t.id === id);
         const removed = prev[idx];
         const next = prev.filter((t) => t.id !== id);
-        if (removed && removed.onClose) removed.onClose();
+        if (removed) {
+          closedTabsRef.current.push({ tab: removed, index: idx });
+          if (closedTabsRef.current.length > 10) {
+            closedTabsRef.current.shift();
+          }
+          if (removed.onClose) removed.onClose();
+        }
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
           setActiveId(fallback.id);
+          setFocusedTabId(fallback.id);
           requestAnimationFrame(() => focusTab(fallback.id, { force: true }));
         } else if (next.length === 0 && onNewTab) {
           const tab = onNewTab();
           next.push(tab);
           setActiveId(tab.id);
+          setFocusedTabId(tab.id);
         }
         return next;
       });
@@ -125,7 +157,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     const tab = onNewTab();
     updateTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
-  }, [onNewTab, updateTabs]);
+    setFocusedTabId(tab.id);
+    requestAnimationFrame(() => focusTab(tab.id, { force: true }));
+  }, [focusTab, onNewTab, updateTabs]);
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
@@ -149,10 +183,32 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     });
   };
 
+  const restoreClosedTab = useCallback(() => {
+    const last = closedTabsRef.current.pop();
+    if (!last) return;
+    updateTabs((prev) => {
+      const next = [...prev];
+      const insertIndex = Math.min(last.index, next.length);
+      next.splice(insertIndex, 0, last.tab);
+      return next;
+    });
+    setActiveId(last.tab.id);
+    setFocusedTabId(last.tab.id);
+    requestAnimationFrame(() => focusTab(last.tab.id, { force: true }));
+  }, [focusTab, updateTabs]);
+
   const onKeyDown = (e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    const isTab = target?.getAttribute('role') === 'tab';
+
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
       e.preventDefault();
       closeTab(activeId);
+      return;
+    }
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      restoreClosedTab();
       return;
     }
     if (e.ctrlKey && e.key.toLowerCase() === 't') {
@@ -170,27 +226,41 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
           : (idx + 1) % prev.length;
         const nextTab = prev[nextIdx];
         setActiveId(nextTab.id);
+        setFocusedTabId(nextTab.id);
         requestAnimationFrame(() => focusTab(nextTab.id));
         return prev;
       });
       return;
     }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    if (isTab && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx =
-          e.key === 'ArrowLeft'
-            ? (idx - 1 + prev.length) % prev.length
-            : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        requestAnimationFrame(() => focusTab(nextTab.id));
-        return prev;
-      });
+      const currentId = focusedTabId || activeId;
+      const idx = tabs.findIndex((t) => t.id === currentId);
+      if (idx === -1) return;
+      const nextIdx =
+        e.key === 'ArrowLeft'
+          ? (idx - 1 + tabs.length) % tabs.length
+          : (idx + 1) % tabs.length;
+      const nextTab = tabs[nextIdx];
+      setFocusedTabId(nextTab.id);
+      requestAnimationFrame(() => focusTab(nextTab.id, { force: true }));
+      return;
+    }
+    if (isTab && (e.key === 'Home' || e.key === 'End')) {
+      e.preventDefault();
+      const targetTab = e.key === 'Home' ? tabs[0] : tabs[tabs.length - 1];
+      if (!targetTab) return;
+      setFocusedTabId(targetTab.id);
+      requestAnimationFrame(() => focusTab(targetTab.id, { force: true }));
     }
   };
+
+  useEffect(() => {
+    if (focusedTabId && !tabs.some((tab) => tab.id === focusedTabId)) {
+      const fallback = tabs[0]?.id || '';
+      setFocusedTabId(fallback);
+    }
+  }, [focusedTabId, tabs]);
 
   const updateOverflow = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -326,49 +396,74 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             aria-orientation="horizontal"
             className="flex overflow-x-auto scrollbar-thin scroll-smooth"
           >
-            {tabs.map((t, i) => (
-              <div
-                key={t.id}
-                role="tab"
-                aria-selected={t.id === activeId}
-                tabIndex={t.id === activeId ? 0 : -1}
-                ref={(node) => {
-                  if (node) {
-                    tabRefs.current.set(t.id, node);
-                  } else {
-                    tabRefs.current.delete(t.id);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
-                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-                }`}
-                draggable
-                onDragStart={handleDragStart(i)}
-                onDragOver={handleDragOver(i)}
-                onDrop={handleDrop(i)}
-                onClick={() => setActive(t.id)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setActive(t.id);
-                  }
-                }}
-              >
-                <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-                {t.closable !== false && tabs.length > 1 && (
-                  <button
-                    className="p-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(t.id);
-                    }}
-                    aria-label="Close Tab"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
+            {tabs.map((t, i) => {
+              const tabDomId = `tab-${t.id}`;
+              const panelDomId = `panel-${t.id}`;
+              const isActive = t.id === activeId;
+              const isFocused = t.id === focusedTabId;
+
+              return (
+                <div
+                  key={t.id}
+                  role="tab"
+                  id={tabDomId}
+                  aria-selected={isActive}
+                  aria-controls={panelDomId}
+                  tabIndex={isFocused ? 0 : -1}
+                  ref={(node) => {
+                    if (node) {
+                      tabRefs.current.set(t.id, node);
+                    } else {
+                      tabRefs.current.delete(t.id);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 transition-colors ${
+                    isActive ? 'bg-gray-700' : 'bg-gray-800'
+                  } focus-visible:outline focus-visible:outline-[var(--focus-outline-width)] focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]`}
+                  draggable
+                  onDragStart={handleDragStart(i)}
+                  onDragOver={handleDragOver(i)}
+                  onDrop={handleDrop(i)}
+                  onClick={() => setActive(t.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setActive(t.id);
+                    }
+                  }}
+                  onFocus={() => setFocusedTabId(t.id)}
+                >
+                  <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+                  {t.closable !== false && tabs.length > 1 && (
+                    <DelayedTooltip
+                      key={`${t.id}-close-tooltip`}
+                      content={<AppTooltipContent meta={{ title: 'Close tab', keyboard: ['Ctrl+W'] }} />}
+                    >
+                      {({ ref, onBlur, onFocus, onMouseEnter, onMouseLeave }) => (
+                        <button
+                          ref={(node) => {
+                            ref(node);
+                          }}
+                          type="button"
+                          className="p-0.5 text-sm focus-visible:outline focus-visible:outline-[var(--focus-outline-width)] focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeTab(t.id);
+                          }}
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
+                          onFocus={onFocus}
+                          onBlur={onBlur}
+                          aria-label="Close Tab"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </DelayedTooltip>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
         {canScrollRight && (
@@ -416,30 +511,58 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
           </div>
         )}
         {onNewTab && (
-          <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
-            onClick={addTab}
-            aria-label="New Tab"
+          <DelayedTooltip
+            content={
+              <AppTooltipContent
+                meta={{
+                  title: 'New tab',
+                  keyboard: ['Ctrl+T', 'Ctrl+Shift+T (reopen)'],
+                }}
+              />
+            }
           >
-            +
-          </button>
+            {({ ref, onBlur, onFocus, onMouseEnter, onMouseLeave }) => (
+              <button
+                ref={(node) => {
+                  ref(node);
+                }}
+                type="button"
+                className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus-visible:outline focus-visible:outline-[var(--focus-outline-width)] focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]"
+                onClick={addTab}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                aria-label="New Tab"
+              >
+                +
+              </button>
+            )}
+          </DelayedTooltip>
         )}
       </div>
       <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
-            <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+        {tabs.map((t) => {
+          const panelDomId = `panel-${t.id}`;
+          const tabDomId = `tab-${t.id}`;
+          return (
+            <TabContext.Provider
+              key={t.id}
+              value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
             >
-              {t.content}
-            </div>
-          </TabContext.Provider>
-        ))}
+              <div
+                id={panelDomId}
+                role="tabpanel"
+                aria-labelledby={tabDomId}
+                className={`absolute inset-0 w-full h-full ${
+                  t.id === activeId ? 'block' : 'hidden'
+                }`}
+              >
+                {t.content}
+              </div>
+            </TabContext.Provider>
+          );
+        })}
       </div>
     </div>
   );
