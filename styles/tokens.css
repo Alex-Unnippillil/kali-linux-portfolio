@@ -82,6 +82,10 @@
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
+  --spacing-multiplier: 1;
+  --reading-line-height: 1.5;
+  --reading-letter-spacing: 0em;
+  --reading-word-spacing: 0em;
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
