@@ -17,13 +17,22 @@ const formatBytes = (bytes?: number) =>
 
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
-  const [history, setHistory] = usePersistentState<FetchEntry[]>(HISTORY_KEY, []);
+  const [history, setHistory] = usePersistentState<(FetchEntry & { recordedAt?: number })[]>(
+    HISTORY_KEY,
+    [],
+  );
 
   useEffect(() => {
     const unsubStart = onFetchProxy('start', () => setActive(getActiveFetches()));
     const unsubEnd = onFetchProxy('end', (e: CustomEvent<FetchEntry>) => {
       setActive(getActiveFetches());
-      setHistory((h) => [...h, e.detail]);
+      setHistory((h) => [
+        ...h,
+        {
+          ...e.detail,
+          recordedAt: Date.now(),
+        },
+      ]);
     });
     return () => {
       unsubStart();

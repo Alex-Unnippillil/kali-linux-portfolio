@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import DataRetentionPanel from "../../components/common/DataRetentionPanel";
 
 export default function Settings() {
   const {
@@ -305,9 +306,10 @@ export default function Settings() {
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
-              Import Settings
+            Import Settings
             </button>
           </div>
+          <DataRetentionPanel />
         </>
       )}
         <input

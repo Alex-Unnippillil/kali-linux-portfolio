@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { parseTrashPurgeSetting } from '../../utils/dataRetention';
 
 export interface TrashItem {
   id: string;
@@ -18,10 +19,10 @@ export default function useTrashState() {
   const [history, setHistory] = usePersistentState<TrashItem[]>(HISTORY_KEY, []);
 
   useEffect(() => {
-    const purgeDays = parseInt(
-      window.localStorage.getItem('trash-purge-days') || '30',
-      10,
+    const purgeDays = parseTrashPurgeSetting(
+      window.localStorage.getItem('trash-purge-days'),
     );
+    if (!Number.isFinite(purgeDays)) return;
     const ms = purgeDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
     setItems(prev => prev.filter(item => now - item.closedAt <= ms));
