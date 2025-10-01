@@ -462,8 +462,19 @@ play/pause and track controls include keyboard hotkeys.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
 - **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper and other preferences with persistence.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
-- **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
+- **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes, bookmarks, and inline annotations with undo/redo and export support.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
+
+## Radare2 annotations
+
+The Radare2 simulation includes an annotation workflow to keep analysis notes alongside the bundled disassembly:
+
+- **Inline editing.** Use the **Rename** and **Comment** controls next to each instruction to assign a symbol or remark. Edits are stored per file and can be undone/redone from the toolbar.
+- **Annotation manager.** Select **Manage Annotations** to review all labels/comments, resolve duplicate labels, or bulk-clear entries without leaving the code pane.
+- **Persistence.** Annotations persist in `localStorage` under `r2-annotations-<file>` and a richer snapshot (`r2-annotation-snapshot-<file>`) that records the annotated instructions plus metadata. The viewer reloads from these snapshots automatically when the file is reopened.
+- **Exports.** The **Export Annotations** action downloads a JSON document (`schemaVersion: 1`) containing the disassembly alongside annotations so the data can be archived or shared.
+
+Snapshots include trimmed text (no empty fields) to keep storage predictable. Removing both the label and comment for an address drops the annotation entirely, ensuring exports and snapshots stay concise.
 
 ---
 
