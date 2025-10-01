@@ -855,6 +855,7 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.syncWindowFocusClasses();
     }
 
     componentDidUpdate(_prevProps, prevState) {
@@ -866,6 +867,15 @@ export class Desktop extends Component {
             prevState.workspaces !== this.state.workspaces
         ) {
             this.broadcastWorkspaceState();
+        }
+        if (
+            prevState.activeWorkspace !== this.state.activeWorkspace ||
+            prevState.closed_windows !== this.state.closed_windows ||
+            prevState.focused_windows !== this.state.focused_windows ||
+            prevState.minimized_windows !== this.state.minimized_windows ||
+            prevState.workspaces !== this.state.workspaces
+        ) {
+            this.syncWindowFocusClasses();
         }
     }
 
@@ -1057,7 +1067,36 @@ export class Desktop extends Component {
             }
         }
         return null;
-    }
+    };
+
+    focusWindowElement = (id) => {
+        if (typeof document === 'undefined' || !id) return;
+        const node = document.getElementById(id);
+        if (node && node !== document.activeElement && typeof node.focus === 'function') {
+            try {
+                node.focus({ preventScroll: true });
+            } catch (error) {
+                node.focus();
+            }
+        }
+    };
+
+    syncWindowFocusClasses = () => {
+        if (typeof document === 'undefined') return;
+        const activeId = this.getFocusedWindowId();
+        const scope = this.desktopRef && this.desktopRef.current
+            ? this.desktopRef.current
+            : document;
+        const windows = scope.querySelectorAll('.opened-window');
+        windows.forEach((node) => {
+            if (!(node instanceof HTMLElement)) return;
+            if (activeId && node.id === activeId) {
+                node.classList.add('is-focused');
+            } else {
+                node.classList.remove('is-focused');
+            }
+        });
+    };
 
     cycleApps = (direction) => {
         const stack = this.getActiveStack();
@@ -1679,19 +1718,38 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
-            }
+        if (!objId) {
+            this.syncWindowFocusClasses();
+            return;
         }
-        this.setWorkspaceState({ focused_windows });
-    }
+
+        const nextFocusState = { ...this.state.focused_windows };
+        let changed = false;
+
+        Object.keys(nextFocusState).forEach((key) => {
+            const shouldFocus = key === objId;
+            if (nextFocusState[key] !== shouldFocus) {
+                nextFocusState[key] = shouldFocus;
+                changed = true;
+            }
+        });
+
+        if (!(objId in nextFocusState)) {
+            nextFocusState[objId] = true;
+            changed = true;
+        }
+
+        const applyFocus = () => {
+            this.syncWindowFocusClasses();
+            this.focusWindowElement(objId);
+        };
+
+        if (changed) {
+            this.setWorkspaceState({ focused_windows: nextFocusState }, applyFocus);
+        } else {
+            applyFocus();
+        }
+    };
 
     addNewFolder = () => {
         this.setState({ showNameBar: true });

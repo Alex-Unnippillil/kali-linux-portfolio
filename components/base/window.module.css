@@ -4,7 +4,7 @@
   border-radius: var(--radius-6);
   box-shadow: var(--shadow-2);
   overflow: hidden;
-  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease, outline var(--motion-fast) ease;
 }
 
 .windowFrame::before {
@@ -59,4 +59,24 @@
 .windowXBorder {
   height: calc(100% + 10px);
   width: calc(100% - 10px);
+}
+
+:global {
+  .opened-window {
+    outline: none;
+  }
+
+  .opened-window.is-focused {
+    outline: none;
+  }
+
+  .opened-window.is-focused:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: -2px;
+  }
+
+  .opened-window.is-focused :focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
 }
