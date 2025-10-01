@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
+import clsx from 'clsx';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useSettings } from '../../hooks/useSettings';
 
 type AppMeta = {
   id: string;
@@ -154,6 +156,7 @@ const WhiskerMenu: React.FC = () => {
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { direction } = useSettings();
 
 
   const allApps: AppMeta[] = apps as any;
@@ -412,9 +415,14 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
-            isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
-          }`}
+          data-testid="whisker-menu-panel"
+          className={clsx(
+            'whisker-menu-panel absolute top-full mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden',
+            direction === 'rtl'
+              ? 'right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0'
+              : 'left-1/2 -translate-x-1/2 sm:left-0 sm:-translate-x-0',
+            isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95',
+          )}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
           onBlur={(e) => {
@@ -443,11 +451,12 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  className={`group flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
                     category === cat.id
                       ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
                       : 'text-gray-300 hover:bg-[#152133] hover:text-white'
                   }`}
+                  style={{ textAlign: 'start' }}
                   role="option"
                   aria-selected={category === cat.id}
                   onClick={() => {
@@ -483,7 +492,10 @@ const WhiskerMenu: React.FC = () => {
           <div className="flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
             <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
               <div className="relative mb-4">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
+                <span
+                  className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-[#4aa8ff]"
+                  style={{ insetInlineStart: '0.75rem' }}
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" />
                     <line x1="20" y1="20" x2="16.65" y2="16.65" />
@@ -491,7 +503,8 @@ const WhiskerMenu: React.FC = () => {
                 </span>
                 <input
                   ref={searchInputRef}
-                  className="h-11 w-full rounded-lg border border-transparent bg-[#101c2d] pl-10 pr-4 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  className="h-11 w-full rounded-lg border border-transparent bg-[#101c2d] text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  style={{ paddingInlineStart: '2.5rem', paddingInlineEnd: '1rem' }}
                   type="search"
                   inputMode="search"
                   enterKeyHint="search"
@@ -550,11 +563,12 @@ const WhiskerMenu: React.FC = () => {
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full min-h-[44px] items-center justify-between gap-4 rounded-xl px-4 py-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        className={`flex w-full min-h-[44px] items-center justify-between gap-4 rounded-xl px-4 py-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
                           idx === highlight
                             ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
                             : 'text-gray-200 hover:bg-[#142132]'
                         } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                        style={{ textAlign: 'start' }}
                         aria-label={app.title}
                         disabled={app.disabled}
                         onClick={() => {
@@ -581,7 +595,7 @@ const WhiskerMenu: React.FC = () => {
                           </div>
                         </div>
                         <svg
-                          className="h-4 w-4 flex-shrink-0 text-[#4aa8ff]"
+                          className="h-4 w-4 flex-shrink-0 text-[#4aa8ff] rtl-flip"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"

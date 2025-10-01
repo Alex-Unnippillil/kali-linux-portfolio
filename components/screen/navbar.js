@@ -82,13 +82,13 @@ export default class Navbar extends PureComponent {
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                         style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.5rem)`,
-                                                paddingBottom: '0.5rem',
-                                                paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                                paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                                paddingBlockStart: `calc(var(--safe-area-top, 0px) + 0.5rem)`,
+                                                paddingBlockEnd: '0.5rem',
+                                                paddingInlineStart: `calc(0.75rem + var(--safe-area-inline-start, var(--safe-area-left, 0px)))`,
+                                                paddingInlineEnd: `calc(0.75rem + var(--safe-area-inline-end, var(--safe-area-right, 0px)))`,
                                         }}
                                 >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <div className="flex items-center gap-2 text-xs md:text-sm rtl-inline-reverse">
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
