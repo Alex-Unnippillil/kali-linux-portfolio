@@ -42,6 +42,8 @@ export class Desktop extends Component {
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'window_zIndices',
+            'nextZIndex',
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -53,6 +55,8 @@ export class Desktop extends Component {
             favourite_apps: {},
             minimized_windows: {},
             window_positions: {},
+            window_zIndices: {},
+            nextZIndex: 1,
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
@@ -101,6 +105,8 @@ export class Desktop extends Component {
         closed_windows: {},
         minimized_windows: {},
         window_positions: {},
+        window_zIndices: {},
+        nextZIndex: 1,
     });
 
     cloneWorkspaceState = (state) => ({
@@ -108,6 +114,8 @@ export class Desktop extends Component {
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
+        window_zIndices: { ...state.window_zIndices },
+        nextZIndex: state.nextZIndex,
     });
 
     commitWorkspacePartial = (partial, index) => {
@@ -390,6 +398,8 @@ export class Desktop extends Component {
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                window_zIndices: this.mergeWorkspaceMaps(existing.window_zIndices, baseState.window_zIndices, validKeys),
+                nextZIndex: Math.max(existing.nextZIndex || 1, baseState.nextZIndex || 1),
             };
         });
     };
@@ -1347,6 +1357,7 @@ export class Desktop extends Component {
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                     context: this.state.window_context[app.id],
+                    zIndex: this.state.window_zIndices?.[app.id] ?? 1,
                 }
 
                 windowsJsx.push(
@@ -1591,11 +1602,14 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
+        const window_zIndices = { ...this.state.window_zIndices };
+        delete window_zIndices[objId];
+
+        this.setWorkspaceState({ closed_windows, favourite_apps, window_zIndices }, this.saveSession);
 
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_context, window_zIndices }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -1627,18 +1641,21 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
+        this.setWorkspaceState((prevState) => {
+            const focused_windows = { ...prevState.focused_windows };
+            const closed_windows = prevState.closed_windows || {};
+            Object.keys(closed_windows).forEach((key) => {
+                if (closed_windows[key] === false) {
+                    focused_windows[key] = key === objId;
                 }
-            }
-        }
-        this.setWorkspaceState({ focused_windows });
+            });
+            focused_windows[objId] = true;
+
+            const nextZIndex = (prevState.nextZIndex || 1) + 1;
+            const window_zIndices = { ...prevState.window_zIndices, [objId]: nextZIndex };
+
+            return { focused_windows, window_zIndices, nextZIndex };
+        });
     }
 
     addNewFolder = () => {

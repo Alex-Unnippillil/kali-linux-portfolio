@@ -49,6 +49,8 @@
 
 .windowControls {
   height: 28px;
+  z-index: 2;
+  pointer-events: auto;
 }
 
 .windowYBorder {

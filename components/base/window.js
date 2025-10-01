@@ -443,6 +443,7 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
+        this.focusWindow();
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
     }
@@ -498,6 +499,7 @@ export class Window extends Component {
     }
 
     closeWindow = () => {
+        this.focusWindow();
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
@@ -614,6 +616,15 @@ export class Window extends Component {
     }
 
     render() {
+        const inlineStyle = {
+            width: `${this.state.width}%`,
+            height: `${this.state.height}%`,
+        };
+
+        if (typeof this.props.zIndex === 'number') {
+            inlineStyle.zIndex = this.props.zIndex;
+        }
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -651,7 +662,7 @@ export class Window extends Component {
                 >
                     <div
                         ref={this.windowRef}
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={inlineStyle}
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
@@ -659,7 +670,6 @@ export class Window extends Component {
                             this.props.minimized ? 'opacity-0 invisible duration-200' : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
-                            this.props.isFocused ? 'z-30' : 'z-20',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
