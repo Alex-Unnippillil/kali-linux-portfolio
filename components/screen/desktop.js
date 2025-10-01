@@ -1032,6 +1032,14 @@ export class Desktop extends Component {
             e.preventDefault();
             this.openApp('clipboard-manager');
         }
+        else if (e.ctrlKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) {
+                const node = document.getElementById(id);
+                node?.dispatchEvent(new CustomEvent('window-find-open', { detail: {} }));
+            }
+        }
         else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             this.cycleApps(e.shiftKey ? -1 : 1);

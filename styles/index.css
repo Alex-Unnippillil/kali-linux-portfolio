@@ -582,6 +582,27 @@ textarea:focus-visible {
     scroll-snap-align: start;
 }
 
+/* Highlighted search results within windows */
+.window-find-highlight {
+    background-color: rgba(217, 119, 6, 0.35);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 0.2rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.window-find-highlight-active {
+    background-color: rgba(234, 179, 8, 0.85);
+    color: #0f1317;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.high-contrast .window-find-highlight,
+.high-contrast .window-find-highlight-active {
+    background-color: #ffff00;
+    color: #000;
+}
+
 /* High contrast overrides */
 .high-contrast .bg-ub-orange {
     color: #000 !important;

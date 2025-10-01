@@ -62,6 +62,10 @@ export class Window extends Component {
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
+            showFindBar: false,
+            findQuery: '',
+            findMatchCount: 0,
+            findActiveMatch: -1,
             parentSize: {
                 height: 100,
                 width: 100
@@ -74,9 +78,11 @@ export class Window extends Component {
             grabbed: false,
         }
         this.windowRef = React.createRef();
+        this.findInputRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.findHighlights = [];
     }
 
     componentDidMount() {
@@ -93,6 +99,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('window-find-open', this.handleFindOpen);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -106,9 +113,11 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('window-find-open', this.handleFindOpen);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.clearHighlights();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -224,6 +233,182 @@ export class Window extends Component {
             return document.getElementById(this.id);
         }
         return null;
+    }
+
+    getSelectionTextWithinWindow = () => {
+        if (typeof window === 'undefined') return '';
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return '';
+        const container = this.getWindowNode()?.querySelector('.windowMainScreen');
+        if (!container) return '';
+        const range = selection.getRangeAt(0);
+        if (!container.contains(range.commonAncestorContainer)) return '';
+        const text = selection.toString();
+        return text && text.trim().length ? text : '';
+    }
+
+    handleFindOpen = (event) => {
+        event?.stopPropagation?.();
+        this.focusWindow();
+        const prefill = typeof event?.detail?.query === 'string' ? event.detail.query : undefined;
+        this.openFindBar(prefill);
+    }
+
+    openFindBar = (prefill) => {
+        const selection = prefill ?? this.getSelectionTextWithinWindow();
+        const nextQuery = typeof selection === 'string' && selection.length
+            ? selection
+            : this.state.findQuery;
+        this.setState({ showFindBar: true, findQuery: nextQuery }, () => {
+            this.updateFindResults(nextQuery);
+            if (typeof window !== 'undefined') {
+                window.requestAnimationFrame(() => {
+                    const input = this.findInputRef.current;
+                    if (input) {
+                        input.focus();
+                        input.select();
+                    }
+                });
+            }
+        });
+    }
+
+    closeFindBar = () => {
+        this.clearHighlights();
+        this.setState({
+            showFindBar: false,
+            findQuery: '',
+            findMatchCount: 0,
+            findActiveMatch: -1,
+        });
+    }
+
+    handleFindInputChange = (e) => {
+        const query = e.target.value;
+        this.setState({ findQuery: query }, () => {
+            this.updateFindResults(query);
+        });
+    }
+
+    handleFindInputKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.jumpToMatch(e.shiftKey ? -1 : 1);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeFindBar();
+        }
+    }
+
+    clearHighlights = () => {
+        const container = this.getWindowNode()?.querySelector('.windowMainScreen');
+        if (!container) {
+            this.findHighlights = [];
+            return;
+        }
+        const highlights = container.querySelectorAll('.window-find-highlight');
+        highlights.forEach((mark) => {
+            const parent = mark.parentNode;
+            if (!parent) return;
+            parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
+            parent.normalize();
+        });
+        container.normalize();
+        this.findHighlights = [];
+    }
+
+    updateFindResults = (rawQuery) => {
+        const query = typeof rawQuery === 'string' ? rawQuery : this.state.findQuery;
+        const container = this.getWindowNode()?.querySelector('.windowMainScreen');
+        this.clearHighlights();
+        if (!container) {
+            this.setState({ findMatchCount: 0, findActiveMatch: -1 });
+            return;
+        }
+        if (!query) {
+            this.setState({ findMatchCount: 0, findActiveMatch: -1 });
+            return;
+        }
+        const lowerQuery = query.toLowerCase();
+        if (!lowerQuery) {
+            this.setState({ findMatchCount: 0, findActiveMatch: -1 });
+            return;
+        }
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+        const highlights = [];
+        const skipTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'SELECT', 'BUTTON']);
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const text = node.nodeValue;
+            if (!text || !text.trim()) continue;
+            const parentElement = node.parentElement;
+            if (!parentElement) continue;
+            if (parentElement.closest('.window-find-highlight')) continue;
+            if (skipTags.has(parentElement.tagName)) continue;
+            if (parentElement.isContentEditable) continue;
+            const lowerText = text.toLowerCase();
+            let lastIndex = 0;
+            let matchIndex = lowerText.indexOf(lowerQuery, lastIndex);
+            if (matchIndex === -1) continue;
+            const fragment = document.createDocumentFragment();
+            while (matchIndex !== -1) {
+                if (matchIndex > lastIndex) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex, matchIndex)));
+                }
+                const mark = document.createElement('mark');
+                mark.className = 'window-find-highlight';
+                mark.textContent = text.slice(matchIndex, matchIndex + query.length);
+                fragment.appendChild(mark);
+                highlights.push(mark);
+                lastIndex = matchIndex + query.length;
+                matchIndex = lowerText.indexOf(lowerQuery, lastIndex);
+            }
+            if (lastIndex < text.length) {
+                fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+            }
+            node.parentNode.replaceChild(fragment, node);
+        }
+        this.findHighlights = highlights;
+        const nextIndex = highlights.length ? 0 : -1;
+        if (nextIndex !== -1) {
+            const highlight = highlights[nextIndex];
+            highlight.classList.add('window-find-highlight-active');
+            try {
+                highlight.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            } catch { /* ignore */ }
+        }
+        this.setState({ findMatchCount: highlights.length, findActiveMatch: nextIndex });
+    }
+
+    updateActiveHighlight = (nextIndex, { scroll = true } = {}) => {
+        const { findActiveMatch } = this.state;
+        if (findActiveMatch !== -1 && this.findHighlights[findActiveMatch]) {
+            this.findHighlights[findActiveMatch].classList.remove('window-find-highlight-active');
+        }
+        if (nextIndex !== -1 && this.findHighlights[nextIndex]) {
+            const highlight = this.findHighlights[nextIndex];
+            highlight.classList.add('window-find-highlight-active');
+            if (scroll) {
+                try {
+                    highlight.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                } catch { /* ignore */ }
+            }
+        }
+        this.setState({ findActiveMatch: nextIndex });
+    }
+
+    jumpToMatch = (direction) => {
+        const count = this.findHighlights.length;
+        if (!count) return;
+        let nextIndex = this.state.findActiveMatch + direction;
+        if (nextIndex < 0) {
+            nextIndex = count - 1;
+        } else if (nextIndex >= count) {
+            nextIndex = 0;
+        }
+        this.updateActiveHighlight(nextIndex);
     }
 
     activateOverlay = () => {
@@ -548,7 +733,15 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
+        if (this.state.showFindBar && e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeFindBar();
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.openFindBar();
+        } else if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
@@ -691,6 +884,34 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
                         />
+                        {this.state.showFindBar && (
+                            <div className="window-find-bar absolute right-3 top-9 z-40 flex items-center gap-2 rounded-md bg-ub-window-title/95 px-3 py-2 shadow-lg text-white">
+                                <input
+                                    ref={this.findInputRef}
+                                    type="search"
+                                    className="h-8 w-44 rounded bg-white/10 px-2 text-sm text-white placeholder-white/60 outline-none focus:bg-white/15 focus:ring-2 focus:ring-white/40"
+                                    placeholder="Find..."
+                                    spellCheck={false}
+                                    value={this.state.findQuery}
+                                    onChange={this.handleFindInputChange}
+                                    onKeyDown={this.handleFindInputKeyDown}
+                                    aria-label="Find in window"
+                                />
+                                <span className="min-w-[3rem] text-xs text-white/80" aria-live="polite">
+                                    {this.state.findMatchCount > 0
+                                        ? `${this.state.findActiveMatch + 1} / ${this.state.findMatchCount}`
+                                        : 'No matches'}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={this.closeFindBar}
+                                    className="h-6 w-6 rounded-full text-lg leading-6 text-white/70 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50"
+                                    aria-label="Close find"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
