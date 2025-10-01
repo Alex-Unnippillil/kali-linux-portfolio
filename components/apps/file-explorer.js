@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { groupRecentEntries, RECENT_GROUPS } from './file-explorer/recents';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -75,7 +76,27 @@ async function getRecentDirs() {
     const dbp = openDB();
     if (!dbp) return [];
     const db = await dbp;
-    return (await db.getAll(STORE_NAME)) || [];
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.store;
+    const [values, keys] = await Promise.all([
+      store.getAll(),
+      store.getAllKeys(),
+    ]);
+    await tx.done;
+    const entries = values.map((value, index) => ({
+      id: keys[index],
+      name: value?.name,
+      handle: value?.handle,
+      pinned: Boolean(value?.pinned),
+      lastAccessed:
+        typeof value?.lastAccessed === 'number' ? value.lastAccessed : 0,
+    }));
+    entries.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return (b.lastAccessed || 0) - (a.lastAccessed || 0);
+    });
+    return entries;
   } catch {
     return [];
   }
@@ -86,8 +107,94 @@ async function addRecentDir(handle) {
     const dbp = openDB();
     if (!dbp) return;
     const db = await dbp;
-    const entry = { name: handle.name, handle };
-    await db.put(STORE_NAME, entry);
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.store;
+    const now = Date.now();
+    let cursor = await store.openCursor();
+    let updated = false;
+    while (cursor) {
+      const value = cursor.value || {};
+      let matches = false;
+      if (value.handle && typeof value.handle.isSameEntry === 'function') {
+        try {
+          matches = await value.handle.isSameEntry(handle);
+        } catch {
+          matches = false;
+        }
+      }
+      if (!matches && value.name === handle.name) {
+        matches = true;
+      }
+      if (matches) {
+        await cursor.update({
+          ...value,
+          name: handle.name,
+          handle,
+          lastAccessed: now,
+        });
+        updated = true;
+        break;
+      }
+      cursor = await cursor.continue();
+    }
+    if (!updated) {
+      await store.add({
+        name: handle.name,
+        handle,
+        pinned: false,
+        lastAccessed: now,
+      });
+    }
+    await tx.done;
+  } catch {}
+}
+
+async function setRecentPinned(id, pinned) {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.store;
+    const existing = await store.get(id);
+    if (existing) {
+      await store.put({
+        ...existing,
+        pinned,
+        lastAccessed:
+          typeof existing.lastAccessed === 'number'
+            ? existing.lastAccessed
+            : Date.now(),
+      }, id);
+    }
+    await tx.done;
+  } catch {}
+}
+
+async function touchRecentDir(id) {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.store;
+    const existing = await store.get(id);
+    if (existing) {
+      await store.put({ ...existing, lastAccessed: Date.now() }, id);
+    }
+    await tx.done;
+  } catch {}
+}
+
+async function deleteRecentDirs(ids) {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.store;
+    await Promise.all(ids.map((id) => store.delete(id).catch(() => {})));
+    await tx.done;
   } catch {}
 }
 
@@ -116,6 +223,42 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const recentItemRefs = useRef([]);
+  const [recentFocusIndex, setRecentFocusIndex] = useState(0);
+  const { pinned, groups } = useMemo(() => groupRecentEntries(recent), [recent]);
+  const orderedGroups = useMemo(
+    () =>
+      RECENT_GROUPS.map((definition) => {
+        const match = groups.find((group) => group.id === definition.id);
+        return match || { ...definition, entries: [] };
+      }),
+    [groups],
+  );
+  const focusableEntries = useMemo(
+    () => [...pinned, ...orderedGroups.flatMap((group) => group.entries)],
+    [pinned, orderedGroups],
+  );
+  const focusIndexMap = useMemo(() => {
+    const map = new Map();
+    focusableEntries.forEach((entry, index) => {
+      map.set(entry, index);
+    });
+    return map;
+  }, [focusableEntries]);
+
+  useEffect(() => {
+    recentItemRefs.current = recentItemRefs.current.slice(0, focusableEntries.length);
+    if (focusableEntries.length === 0) {
+      if (recentFocusIndex !== 0) {
+        setRecentFocusIndex(0);
+      }
+      return;
+    }
+    const maxIndex = focusableEntries.length - 1;
+    if (recentFocusIndex > maxIndex) {
+      setRecentFocusIndex(maxIndex);
+    }
+  }, [focusableEntries.length, recentFocusIndex]);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -131,7 +274,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [getDir, opfsSupported, readDir, root]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -158,7 +301,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     try {
       const handle = await window.showDirectoryPicker();
       setDirHandle(handle);
-      addRecentDir(handle);
+      await addRecentDir(handle);
       setRecent(await getRecentDirs());
       setPath([{ name: handle.name || '/', handle }]);
       await readDir(handle);
@@ -166,16 +309,24 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     } catch {}
   };
 
-  const openRecent = async (entry) => {
-    try {
-      const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') return;
-      setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
-      setLocationError(null);
-    } catch {}
-  };
+  const openRecent = useCallback(
+    async (entry) => {
+      if (!entry?.handle) return;
+      try {
+        const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') return;
+        setDirHandle(entry.handle);
+        setPath([{ name: entry.name, handle: entry.handle }]);
+        await readDir(entry.handle);
+        if (typeof entry.id !== 'undefined') {
+          await touchRecentDir(entry.id);
+        }
+        setRecent(await getRecentDirs());
+        setLocationError(null);
+      } catch {}
+    },
+    [readDir],
+  );
 
   const openFile = async (file) => {
     setCurrentFile(file);
@@ -310,12 +461,147 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
   };
 
+  const handleTogglePin = async (event, entry) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof entry?.id === 'undefined') return;
+    await setRecentPinned(entry.id, !entry.pinned);
+    setRecent(await getRecentDirs());
+  };
+
+  const handleClearGroup = useCallback(
+    async (groupId) => {
+      const group = orderedGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      const ids = group.entries
+        .map((entry) => entry?.id)
+        .filter((id) => typeof id !== 'undefined');
+      if (!ids.length) return;
+      await deleteRecentDirs(ids);
+      setRecent(await getRecentDirs());
+    },
+    [orderedGroups],
+  );
+
+  const handleClearPinned = useCallback(async () => {
+    const ids = pinned
+      .map((entry) => entry?.id)
+      .filter((id) => typeof id !== 'undefined');
+    if (!ids.length) return;
+    await Promise.all(ids.map((id) => setRecentPinned(id, false)));
+    setRecent(await getRecentDirs());
+  }, [pinned]);
+
+  const handleRecentKeyDown = useCallback(
+    (event, index, entry) => {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (!focusableEntries.length) return;
+        const next = (index + 1) % focusableEntries.length;
+        setRecentFocusIndex(next);
+        const node = recentItemRefs.current[next];
+        if (node && typeof node.focus === 'function') {
+          node.focus();
+        }
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!focusableEntries.length) return;
+        const prev = (index - 1 + focusableEntries.length) % focusableEntries.length;
+        setRecentFocusIndex(prev);
+        const node = recentItemRefs.current[prev];
+        if (node && typeof node.focus === 'function') {
+          node.focus();
+        }
+        return;
+      }
+      if (event.key === 'Home') {
+        event.preventDefault();
+        if (!focusableEntries.length) return;
+        setRecentFocusIndex(0);
+        const node = recentItemRefs.current[0];
+        if (node && typeof node.focus === 'function') {
+          node.focus();
+        }
+        return;
+      }
+      if (event.key === 'End') {
+        event.preventDefault();
+        if (!focusableEntries.length) return;
+        const last = focusableEntries.length - 1;
+        setRecentFocusIndex(last);
+        const node = recentItemRefs.current[last];
+        if (node && typeof node.focus === 'function') {
+          node.focus();
+        }
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openRecent(entry);
+      }
+    },
+    [focusableEntries.length, openRecent],
+  );
+
+  const renderRecentEntry = (entry, key) => {
+    const index = focusIndexMap.get(entry);
+    const isActive = typeof index === 'number' && recentFocusIndex === index;
+    const tabIndex = typeof index === 'number' ? (isActive ? 0 : -1) : -1;
+    return (
+      <div
+        key={key}
+        role="option"
+        aria-selected={isActive ? 'true' : 'false'}
+        tabIndex={tabIndex}
+        ref={(node) => {
+          if (typeof index === 'number') {
+            recentItemRefs.current[index] = node;
+          }
+        }}
+        onFocus={() => {
+          if (typeof index === 'number') {
+            setRecentFocusIndex(index);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (typeof index === 'number') {
+            handleRecentKeyDown(event, index, entry);
+          }
+        }}
+        onClick={() => openRecent(entry)}
+        className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer ${
+          isActive ? 'bg-black bg-opacity-40' : 'hover:bg-black hover:bg-opacity-30'
+        }`}
+      >
+        <span className="flex-1 truncate">{entry?.name || 'Unknown'}</span>
+        <button
+          type="button"
+          onClick={(event) => handleTogglePin(event, entry)}
+          className="text-xs px-1 py-0.5 bg-black bg-opacity-30 rounded hover:bg-opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue"
+          aria-pressed={entry?.pinned ? 'true' : 'false'}
+          aria-label={entry?.pinned ? 'Unpin directory' : 'Pin directory'}
+        >
+          {entry?.pinned ? 'Unpin' : 'Pin'}
+        </button>
+      </div>
+    );
+  };
+
   useEffect(() => () => workerRef.current?.terminate(), []);
 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +616,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -372,41 +659,102 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
-          <div className="p-2 font-bold">Recent</div>
-          {recent.map((r, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
-            >
-              {r.name}
+        <div className="w-56 overflow-auto border-r border-gray-600 flex-shrink-0">
+          <div className="py-2 space-y-3">
+            {pinned.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between px-2 py-1 font-bold">
+                  <span>Pinned</span>
+                  <button
+                    type="button"
+                    onClick={handleClearPinned}
+                    className="text-xs text-ubt-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue rounded px-1 py-0.5"
+                    aria-label="Unpin all pinned directories"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div
+                  role="listbox"
+                  aria-label="Pinned directories"
+                  className="flex flex-col gap-1"
+                >
+                  {pinned.map((entry, index) =>
+                    renderRecentEntry(entry, `pinned-${entry?.id ?? index}`)
+                  )}
+                </div>
+              </div>
+            )}
+            {orderedGroups.map((group) => (
+              <div key={group.id}>
+                <div className="flex items-center justify-between px-2 py-1 font-bold">
+                  <span>{group.label}</span>
+                  {group.entries.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearGroup(group.id)}
+                      className="text-xs text-ubt-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue rounded px-1 py-0.5"
+                      aria-label={`Clear ${group.label.toLowerCase()} recents`}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div
+                  role="listbox"
+                  aria-label={`${group.label} recent directories`}
+                  className="flex flex-col gap-1"
+                >
+                  {group.entries.length > 0 ? (
+                    group.entries.map((entry, index) =>
+                      renderRecentEntry(entry, `${group.id}-${entry?.id ?? index}`)
+                    )
+                  ) : (
+                    <div className="px-2 py-1 text-xs text-gray-300">No recents</div>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div>
+              <div className="px-2 py-1 font-bold">Directories</div>
+              <div className="flex flex-col">
+                {dirs.map((d, i) => (
+                  <button
+                    key={`${d.name}-${i}`}
+                    type="button"
+                    onClick={() => openDir(d)}
+                    className="px-2 py-1 text-left rounded hover:bg-black hover:bg-opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue"
+                  >
+                    {d.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
-          <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
+            <div>
+              <div className="px-2 py-1 font-bold">Files</div>
+              <div className="flex flex-col">
+                {files.map((f, i) => (
+                  <button
+                    key={`${f.name}-${i}`}
+                    type="button"
+                    onClick={() => openFile(f)}
+                    className="px-2 py-1 text-left rounded hover:bg-black hover:bg-opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue"
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
-          <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+          </div>
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -414,6 +762,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Find text in files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
