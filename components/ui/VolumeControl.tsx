@@ -32,7 +32,9 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
   );
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const sliderRef = useRef<HTMLInputElement>(null);
+  const wasOpen = useRef(false);
 
   const level: VolumeLevel = useMemo(() => {
     if (volume <= 0.001) return "muted";
@@ -100,6 +102,14 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open && wasOpen.current) {
+      toggleRef.current?.focus({ preventScroll: true });
+    }
+
+    wasOpen.current = open;
+  }, [open]);
+
   return (
     <div
       ref={rootRef}
@@ -107,12 +117,14 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
       onWheel={handleWheel}
     >
       <button
+        ref={toggleRef}
         type="button"
         className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
         aria-label={`Volume ${formatPercent(volume)}`}
         aria-haspopup="true"
         aria-expanded={open}
         title={`Volume ${formatPercent(volume)}`}
+        data-testid="volume-control-toggle"
         onClick={handleToggle}
         onPointerDown={(event) => event.stopPropagation()}
       >
@@ -149,6 +161,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
             aria-valuenow={Math.round(volume * 100)}
             aria-label="Volume level"
             className="h-1 w-full cursor-pointer accent-ubt-blue"
+            data-testid="volume-control-slider"
             onChange={handleRangeChange}
           />
         </div>

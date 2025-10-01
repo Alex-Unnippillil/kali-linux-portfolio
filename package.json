@@ -23,7 +23,10 @@
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
-    "dedupe:fix": "yarn dedupe"
+    "dedupe:fix": "yarn dedupe",
+    "storybook": "cross-env STORYBOOK_DISABLE_TELEMETRY=1 storybook dev -p 6006 --no-open",
+    "build-storybook": "storybook build",
+    "storybook:test": "cross-env STORYBOOK_DISABLE_TELEMETRY=1 start-server-and-test storybook http://127.0.0.1:6006 \"playwright test -c playwright/storybook.config.ts\""
   },
   "engines": {
     "node": "20"
@@ -107,9 +110,17 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
+    "@babel/core": "^7.27.1",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.3",
+    "@babel/preset-typescript": "^7.26.0",
     "@eslint/eslintrc": "^3.3.1",
     "@next/bundle-analyzer": "15.5.2",
     "@playwright/test": "^1.55.0",
+    "@storybook/addon-essentials": "^8.3.6",
+    "@storybook/addon-interactions": "^8.3.6",
+    "@storybook/react-webpack5": "^8.3.6",
+    "@storybook/test": "^8.3.6",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
@@ -130,6 +141,8 @@
     "@types/three": "^0.179.0",
     "@types/web-bluetooth": "^0.0.21",
     "@types/wicg-file-system-access": "^2023.10.6",
+    "babel-loader": "^9.2.1",
+    "cross-env": "^7.0.3",
     "eslint": "^9.13.0",
     "eslint-config-next": "15.5.2",
     "fake-indexeddb": "^6.1.0",
@@ -140,6 +153,8 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "start-server-and-test": "^2.0.3",
+    "storybook": "^8.3.6",
     "test-exclude": "7.0.1",
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
