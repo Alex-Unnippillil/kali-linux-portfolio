@@ -76,6 +76,7 @@ const HTTPPreview: React.FC = () => {
       className="min-h-screen bg-gray-900 text-white"
       initialTabs={[createTab()]}
       onNewTab={createTab}
+      layoutStorageKey="http-request-layout"
     />
   );
 };

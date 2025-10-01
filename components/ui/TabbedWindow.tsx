@@ -4,9 +4,16 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useId,
   createContext,
   useContext,
 } from 'react';
+import {
+  DEFAULT_CASCADE_OFFSETS,
+  DEFAULT_TABBED_LAYOUT,
+  getStoredTabbedLayout,
+  setStoredTabbedLayout,
+} from '../../utils/windowLayout';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -24,11 +31,30 @@ export interface TabDefinition {
   onClose?: () => void;
 }
 
+type LayoutMode = 'tabs' | 'columns' | 'grid' | 'cascade';
+
+interface LayoutPreset {
+  id: LayoutMode;
+  label: string;
+  description: string;
+}
+
+const LAYOUT_PRESETS: LayoutPreset[] = [
+  { id: 'tabs', label: 'Tabs', description: 'Show one tab at a time' },
+  { id: 'columns', label: 'Columns', description: 'Two column layout showing all tabs' },
+  { id: 'grid', label: 'Grid', description: '2×2 grid for up to four tabs' },
+  { id: 'cascade', label: 'Cascade', description: 'Stack tabs with staggered offsets' },
+];
+
+const isLayoutMode = (value: string): value is LayoutMode =>
+  LAYOUT_PRESETS.some((preset) => preset.id === value);
+
 interface TabbedWindowProps {
   initialTabs: TabDefinition[];
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
+  layoutStorageKey?: string;
 }
 
 interface TabContextValue {
@@ -45,9 +71,15 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   onNewTab,
   onTabsChange,
   className = '',
+  layoutStorageKey,
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
+  const [layout, setLayout] = useState<LayoutMode>(() => {
+    if (!layoutStorageKey) return DEFAULT_TABBED_LAYOUT;
+    const stored = getStoredTabbedLayout(layoutStorageKey, DEFAULT_TABBED_LAYOUT);
+    return isLayoutMode(stored) ? stored : DEFAULT_TABBED_LAYOUT;
+  });
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -58,6 +90,20 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const layoutSelectId = useId();
+
+  useEffect(() => {
+    if (!layoutStorageKey) return;
+    const stored = getStoredTabbedLayout(layoutStorageKey, DEFAULT_TABBED_LAYOUT);
+    if (isLayoutMode(stored)) {
+      setLayout(stored);
+    }
+  }, [layoutStorageKey]);
+
+  useEffect(() => {
+    if (!layoutStorageKey) return;
+    setStoredTabbedLayout(layoutStorageKey, layout);
+  }, [layout, layoutStorageKey]);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -271,8 +317,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   }, [moreMenuOpen]);
 
   useEffect(() => {
+    if (layout !== 'tabs') return;
     focusTab(activeId);
-  }, [activeId, focusTab]);
+  }, [activeId, focusTab, layout]);
 
   const overflowTabs = useMemo(() => {
     if (overflowedIds.length === 0) return [] as TabDefinition[];
@@ -300,6 +347,72 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       requestAnimationFrame(() => focusTab(id, { force: true }));
     },
     [focusTab, setActive],
+  );
+
+  const layoutDescription = useMemo(
+    () => LAYOUT_PRESETS.find((preset) => preset.id === layout)?.description || '',
+    [layout],
+  );
+
+  const renderMultiLayoutPanel = useCallback(
+    (
+      tab: TabDefinition,
+      _index: number,
+      style?: React.CSSProperties,
+      extraClassName = '',
+    ) => {
+      const isActive = tab.id === activeId;
+      const close = () => closeTab(tab.id);
+      const className = [
+        'flex flex-col overflow-hidden rounded border bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-ub-orange',
+        isActive ? 'border-ub-orange shadow-lg' : 'border-gray-700',
+        extraClassName,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+      return (
+        <TabContext.Provider
+          key={tab.id}
+          value={{ id: tab.id, active: isActive, close }}
+        >
+          <div
+            data-testid="tabbed-window-panel"
+            className={className}
+            style={style}
+            tabIndex={0}
+            onMouseDown={() => setActive(tab.id)}
+            onFocus={() => setActive(tab.id)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setActive(tab.id);
+              }
+            }}
+          >
+            <div className="flex items-center justify-between bg-gray-800 px-3 py-2 text-sm font-medium">
+              <span className="truncate pr-2">{tab.title}</span>
+              {tab.closable !== false && (
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 text-base leading-none hover:bg-gray-700 focus:outline-none"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    close();
+                  }}
+                  aria-label={`Close ${tab.title}`}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto p-2">{tab.content}</div>
+          </div>
+        </TabContext.Provider>
+      );
+    },
+    [activeId, closeTab, setActive],
   );
 
   return (
@@ -415,6 +528,30 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             )}
           </div>
         )}
+        <div className="flex items-center px-1">
+          <label htmlFor={layoutSelectId} className="sr-only">
+            Layout preset
+          </label>
+          <select
+            id={layoutSelectId}
+            value={layout}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (isLayoutMode(next)) {
+                setLayout(next);
+              }
+            }}
+            aria-label="Layout preset"
+            title={layoutDescription}
+            className="h-8 rounded border border-gray-700 bg-gray-900 px-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-ub-orange"
+          >
+            {LAYOUT_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+        </div>
         {onNewTab && (
           <button
             className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
@@ -425,21 +562,67 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
           </button>
         )}
       </div>
-      <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
-            <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+      <div className="flex-grow relative overflow-hidden" data-testid="tabbed-window-content">
+        {layout === 'tabs' && (
+          tabs.map((t) => (
+            <TabContext.Provider
+              key={t.id}
+              value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
             >
-              {t.content}
-            </div>
-          </TabContext.Provider>
-        ))}
+              <div
+                className={`absolute inset-0 w-full h-full ${
+                  t.id === activeId ? 'block' : 'hidden'
+                }`}
+              >
+                {t.content}
+              </div>
+            </TabContext.Provider>
+          ))
+        )}
+        {layout !== 'tabs' && (
+          <div
+            className="absolute inset-0 overflow-auto p-4"
+            data-testid="tabbed-window-multi-layout"
+            data-layout-mode={layout}
+          >
+            {layout === 'cascade' ? (
+              <div
+                className="relative min-h-full"
+                style={{
+                  paddingBottom: `${DEFAULT_CASCADE_OFFSETS.y * (tabs.length + 1)}px`,
+                  paddingRight: `${DEFAULT_CASCADE_OFFSETS.x * (tabs.length + 1)}px`,
+                }}
+              >
+                {tabs.map((tab, index) => {
+                  const xOffset = Math.max(0, (tabs.length - index - 1) * DEFAULT_CASCADE_OFFSETS.x);
+                  const yOffset = Math.max(0, (tabs.length - index - 1) * DEFAULT_CASCADE_OFFSETS.y);
+                  const style: React.CSSProperties = {
+                    position: 'absolute',
+                    top: `${index * DEFAULT_CASCADE_OFFSETS.y}px`,
+                    left: `${index * DEFAULT_CASCADE_OFFSETS.x}px`,
+                    width: `calc(100% - ${xOffset}px)`,
+                    height: `calc(100% - ${yOffset}px)`,
+                    zIndex: index + 1,
+                  };
+                  return renderMultiLayoutPanel(tab, index, style, 'pointer-events-auto');
+                })}
+              </div>
+            ) : (
+              <div
+                className={`grid h-full gap-4`}
+                style={{
+                  gridTemplateColumns:
+                    layout === 'columns'
+                      ? 'repeat(auto-fit, minmax(280px, 1fr))'
+                      : 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gridAutoRows: layout === 'grid' ? 'minmax(220px, 1fr)' : undefined,
+                }}
+              >
+                {tabs.map((tab, index) => renderMultiLayoutPanel(tab, index))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
