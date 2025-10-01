@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
+import ViewportHydrator from '../../common/ViewportHydrator';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
@@ -529,20 +530,33 @@ function Resume() {
           Share contact
         </button>
       </div>
-      <object className="h-full w-full flex-1" data="/assets/Alex-Unnippillil-Resume.pdf" type="application/pdf">
-        <p className="p-4 text-center">
-          Unable to display PDF.&nbsp;
-          <a
-            href="/assets/Alex-Unnippillil-Resume.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline text-ubt-blue"
-            onClick={handleDownload}
-          >
-            Download the resume
-          </a>
-        </p>
-      </object>
+      <ViewportHydrator
+        className="flex flex-1"
+        fallback={
+          <div className="flex flex-1 items-center justify-center rounded border border-white/20 bg-black/40 p-4 text-sm text-white/70">
+            Preparing resume preview…
+          </div>
+        }
+        metricName="about-resume-pdf"
+        rootMargin="0px 0px 160px 0px"
+      >
+        {() => (
+          <object className="h-full w-full flex-1" data="/assets/Alex-Unnippillil-Resume.pdf" type="application/pdf">
+            <p className="p-4 text-center">
+              Unable to display PDF.&nbsp;
+              <a
+                href="/assets/Alex-Unnippillil-Resume.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-ubt-blue"
+                onClick={handleDownload}
+              >
+                Download the resume
+              </a>
+            </p>
+          </object>
+        )}
+      </ViewportHydrator>
     </div>
   );
 }
