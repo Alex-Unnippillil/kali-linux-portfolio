@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, periodicSyncEnabled, setPeriodicSyncEnabled, periodicSyncStatus } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -56,6 +56,39 @@ export function Settings() {
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
 
+    const formatTimestamp = (timestamp) => {
+        try {
+            return new Intl.DateTimeFormat(undefined, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+            }).format(new Date(timestamp));
+        } catch (error) {
+            return new Date(timestamp).toLocaleString();
+        }
+    };
+
+    const syncStatusText = () => {
+        if (!periodicSyncEnabled) {
+            return 'Periodic sync is disabled.';
+        }
+        if (!periodicSyncStatus) {
+            return 'Periodic sync has not run yet.';
+        }
+        const { status, timestamp, failed = [], message } = periodicSyncStatus;
+        const base = `Last sync ${formatTimestamp(timestamp)}.`;
+        if (status === 'success') {
+            return `${base} Completed successfully.`;
+        }
+        if (status === 'partial') {
+            const missing = failed.length
+                ? ` Missing: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}.`
+                : '';
+            return `${base} Completed with some missing assets.${missing}`;
+        }
+        const errorDetail = message ? ` ${message}` : '';
+        return `${base} Failed.${errorDetail}`;
+    };
+
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
@@ -70,11 +103,13 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="theme-select">Theme:</label>
                 <select
+                    id="theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    aria-label="Theme"
                 >
                     <option value="default">Default</option>
                     <option value="dark">Dark</option>
@@ -83,12 +118,14 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="use-kali-wallpaper">
                     <input
+                        id="use-kali-wallpaper"
                         type="checkbox"
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -99,8 +136,13 @@ export function Settings() {
                 </p>
             )}
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
-                <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+                <label className="mr-2 text-ubt-grey" htmlFor="accent-picker">Accent:</label>
+                <div
+                    id="accent-picker"
+                    aria-label="Accent color picker"
+                    role="radiogroup"
+                    className="flex gap-2"
+                >
                     {ACCENT_OPTIONS.map((c) => (
                         <button
                             key={c}
@@ -115,19 +157,22 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="density-select">Density:</label>
                 <select
+                    id="density-select"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    aria-label="Density"
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="font-scale-control">Font Size:</label>
                 <input
+                    id="font-scale-control"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -135,70 +180,99 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Font size"
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="reduced-motion-toggle">
                     <input
+                        id="reduced-motion-toggle"
                         type="checkbox"
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle reduced motion"
                     />
                     Reduced Motion
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="large-hit-areas-toggle">
                     <input
+                        id="large-hit-areas-toggle"
                         type="checkbox"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle large hit areas"
                     />
                     Large Hit Areas
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="high-contrast-toggle">
                     <input
+                        id="high-contrast-toggle"
                         type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle high contrast"
                     />
                     High Contrast
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="allow-network-toggle">
                     <input
+                        id="allow-network-toggle"
                         type="checkbox"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle network requests"
                     />
                     Allow Network Requests
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+            <div className="flex flex-col items-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="periodic-sync-toggle">
                     <input
+                        id="periodic-sync-toggle"
+                        type="checkbox"
+                        checked={periodicSyncEnabled}
+                        onChange={(e) => setPeriodicSyncEnabled(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Toggle periodic sync"
+                    />
+                    Enable Periodic Sync
+                </label>
+                <p className="text-xs text-ubt-grey/80 mt-2 max-w-sm text-center" data-testid="periodic-sync-status">
+                    {syncStatusText()}
+                </p>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="haptics-toggle">
+                    <input
+                        id="haptics-toggle"
                         type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle haptics"
                     />
                     Haptics
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="pong-spin-toggle">
                     <input
+                        id="pong-spin-toggle"
                         type="checkbox"
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle pong spin"
                     />
                     Pong Spin
                 </label>
@@ -288,6 +362,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;

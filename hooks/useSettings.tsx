@@ -22,6 +22,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getPeriodicSyncEnabled as loadPeriodicSyncEnabled,
+  setPeriodicSyncEnabled as savePeriodicSyncEnabled,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -66,6 +68,8 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  periodicSyncEnabled: boolean;
+  periodicSyncStatus: PeriodicSyncStatus | null;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,7 +82,17 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setPeriodicSyncEnabled: (value: boolean) => void;
+  setPeriodicSyncStatus: (value: PeriodicSyncStatus | null) => void;
   setTheme: (value: string) => void;
+}
+
+export interface PeriodicSyncStatus {
+  status: 'success' | 'partial' | 'error';
+  timestamp: number;
+  failed?: string[];
+  trigger?: string;
+  message?: string;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -94,6 +108,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  periodicSyncEnabled: defaults.periodicSyncEnabled,
+  periodicSyncStatus: null,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +122,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setPeriodicSyncEnabled: () => {},
+  setPeriodicSyncStatus: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +139,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [periodicSyncEnabled, setPeriodicSyncEnabled] = useState<boolean>(
+    defaults.periodicSyncEnabled,
+  );
+  const [periodicSyncStatus, setPeriodicSyncStatus] = useState<PeriodicSyncStatus | null>(null);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +159,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setPeriodicSyncEnabled(await loadPeriodicSyncEnabled());
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +273,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    savePeriodicSyncEnabled(periodicSyncEnabled);
+  }, [periodicSyncEnabled]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +294,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        periodicSyncEnabled,
+        periodicSyncStatus,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +308,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setPeriodicSyncEnabled,
+        setPeriodicSyncStatus,
         setTheme,
       }}
     >
