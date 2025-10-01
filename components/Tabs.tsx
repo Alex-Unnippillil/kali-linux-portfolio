@@ -31,6 +31,7 @@ export default function Tabs<T extends string>({
           className={`px-4 py-2 focus:outline-none ${
             active === t.id ? "bg-ub-orange text-white" : "text-ubt-grey"
           }`}
+          style={{ textAlign: 'start' }}
         >
           {t.label}
         </button>

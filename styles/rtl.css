@@ -1,0 +1,44 @@
+html[dir='ltr'] body {
+  direction: ltr;
+}
+
+html[dir='rtl'] body {
+  direction: rtl;
+}
+
+html[dir='rtl'] .desktop-shell {
+  direction: rtl;
+  --safe-area-inline-start: var(--safe-area-right);
+  --safe-area-inline-end: var(--safe-area-left);
+}
+
+html[dir='ltr'] .desktop-shell {
+  --safe-area-inline-start: var(--safe-area-left);
+  --safe-area-inline-end: var(--safe-area-right);
+}
+
+html[dir='rtl'] .main-navbar-vp {
+  flex-direction: row-reverse;
+}
+
+html[dir='rtl'] .main-navbar-vp > div:first-child {
+  flex-direction: row-reverse;
+}
+
+html[dir='rtl'] .main-navbar-vp > button {
+  order: -1;
+}
+
+html[dir='rtl'] .context-menu-bg {
+  text-align: start;
+}
+
+[dir='rtl'] .rtl-flip,
+[dir='rtl'] .rtl-flip svg,
+[dir='rtl'] .rtl-flip img {
+  transform: scaleX(-1);
+}
+
+[dir='rtl'] .rtl-inline-reverse {
+  flex-direction: row-reverse;
+}

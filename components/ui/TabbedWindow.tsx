@@ -7,6 +7,7 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -58,6 +59,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const { direction } = useSettings();
+  const isRTL = direction === 'rtl';
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -286,12 +289,17 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
   }, [moreMenuOpen, overflowTabs.length]);
 
-  const scrollByAmount = useCallback((direction: 'left' | 'right') => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const amount = container.clientWidth * 0.6;
-    container.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
-  }, []);
+  const scrollByAmount = useCallback(
+    (direction: 'left' | 'right') => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      const amount = container.clientWidth * 0.6;
+      const multiplier = isRTL ? -1 : 1;
+      const delta = direction === 'left' ? -amount : amount;
+      container.scrollBy({ left: multiplier * delta, behavior: 'smooth' });
+    },
+    [isRTL],
+  );
 
   const handleMoreSelect = useCallback(
     (id: string) => {
@@ -301,6 +309,11 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     },
     [focusTab, setActive],
   );
+
+  const prevGlyph = isRTL ? '›' : '‹';
+  const nextGlyph = isRTL ? '‹' : '›';
+  const prevLabel = isRTL ? 'Scroll tabs right' : 'Scroll tabs left';
+  const nextLabel = isRTL ? 'Scroll tabs left' : 'Scroll tabs right';
 
   return (
     <div
@@ -314,9 +327,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             type="button"
             className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
             onClick={() => scrollByAmount('left')}
-            aria-label="Scroll tabs left"
+            aria-label={prevLabel}
           >
-            ‹
+            {prevGlyph}
           </button>
         )}
         <div className="flex-1 overflow-hidden">
@@ -376,9 +389,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             type="button"
             className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
             onClick={() => scrollByAmount('right')}
-            aria-label="Scroll tabs right"
+            aria-label={nextLabel}
           >
-            ›
+            {nextGlyph}
           </button>
         )}
         {overflowTabs.length > 0 && (
@@ -404,7 +417,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     key={tab.id}
                     type="button"
                     role="menuitem"
-                    className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700"
+                    className="flex w-full items-center justify-between px-3 py-1 hover:bg-gray-700"
+                    style={{ textAlign: 'start' }}
                     onClick={() => handleMoreSelect(tab.id)}
                   >
                     <span className="truncate">{tab.title}</span>

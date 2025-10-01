@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import clsx from 'clsx';
 import { ModuleMetadata } from '../modules/metadata';
 
 interface ModuleCardProps {
@@ -33,11 +34,13 @@ export default function ModuleCard({
   return (
     <button
       onClick={() => onSelect(module)}
-      className={`w-full text-left border rounded p-3 flex items-start justify-between hover:bg-gray-50 focus:outline-none ${
-        selected ? 'bg-gray-100' : ''
-      }`}
+      className={clsx(
+        'w-full border rounded p-3 flex items-start justify-between hover:bg-gray-50 focus:outline-none',
+        selected ? 'bg-gray-100' : 'bg-transparent',
+      )}
+      style={{ textAlign: 'start' }}
     >
-      <div className="flex-1 pr-2 font-mono">
+      <div className="flex-1 font-mono" style={{ paddingInlineEnd: '0.5rem' }}>
         <h3 className="font-bold">{highlight(module.name, query)}</h3>
         <p className="text-sm">{highlight(module.description, query)}</p>
       </div>

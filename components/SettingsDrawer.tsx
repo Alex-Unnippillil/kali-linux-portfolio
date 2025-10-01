@@ -9,7 +9,7 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, direction, setDirection } = useSettings();
 
   return (
     <div>
@@ -30,6 +30,17 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                   {t}
                 </option>
               ))}
+            </select>
+          </label>
+          <label>
+            Layout direction
+            <select
+              aria-label="direction-select"
+              value={direction}
+              onChange={(e) => setDirection(e.target.value === 'rtl' ? 'rtl' : 'ltr')}
+            >
+              <option value="ltr">Left-to-right</option>
+              <option value="rtl">Right-to-left</option>
             </select>
           </label>
           <label>
