@@ -185,6 +185,52 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     }
 }
 
+.window-animation-minimize,
+.window-animation-restore {
+    animation-duration: 0ms;
+    animation-fill-mode: forwards;
+    pointer-events: none;
+}
+
+.window-animation-restore {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .window-animation-minimize {
+        animation: window-minimize 180ms ease-in forwards;
+    }
+
+    .window-animation-restore {
+        animation: window-restore 220ms ease-out forwards;
+    }
+
+    @keyframes window-minimize {
+        0% {
+            transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.85);
+            opacity: 0;
+        }
+    }
+
+    @keyframes window-restore {
+        0% {
+            transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.85);
+            opacity: 0;
+        }
+
+        100% {
+            transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(1);
+            opacity: 1;
+        }
+    }
+}
+
 .windowMainScreen {
     container-type: inline-size;
 }
