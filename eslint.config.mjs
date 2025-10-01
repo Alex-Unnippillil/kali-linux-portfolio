@@ -1,5 +1,6 @@
 import { FlatCompat } from '@eslint/eslintrc';
 import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
+import performancePlugin from './eslint-plugin-performance/index.js';
 
 const compat = new FlatCompat();
 
@@ -8,9 +9,13 @@ const config = [
   {
     plugins: {
       'no-top-level-window': noTopLevelWindow,
+      performance: performancePlugin,
     },
     rules: {
       'no-top-level-window/no-top-level-window-or-document': 'error',
+      'performance/no-inline-functions-in-lists': 'warn',
+      'performance/no-heavy-effects': 'warn',
+      'performance/no-unnecessary-renders': 'warn',
     },
   },
   {

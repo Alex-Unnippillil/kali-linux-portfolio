@@ -296,9 +296,36 @@ const SkillSection = ({ title, badges }) => {
   const [filter, setFilter] = React.useState('');
   const [selected, setSelected] = React.useState(null);
 
-  const filteredBadges = badges.filter(b =>
-    b.alt.toLowerCase().includes(filter.toLowerCase())
+  const filteredBadges = React.useMemo(
+    () => badges.filter((badge) => badge.alt.toLowerCase().includes(filter.toLowerCase())),
+    [badges, filter]
   );
+
+  const handleFilterChange = React.useCallback((event) => {
+    setFilter(event.target.value);
+  }, []);
+
+  const handleBadgeClick = React.useCallback(
+    (event) => {
+      const { alt } = event.currentTarget.dataset;
+      if (!alt) {
+        return;
+      }
+      const nextBadge = badges.find((badge) => badge.alt === alt);
+      if (nextBadge) {
+        setSelected(nextBadge);
+      }
+    },
+    [badges]
+  );
+
+  const handleOverlayClose = React.useCallback(() => {
+    setSelected(null);
+  }, []);
+
+  const handleDialogClick = React.useCallback((event) => {
+    event.stopPropagation();
+  }, []);
 
   return (
     <div className="px-2 w-full">
@@ -309,35 +336,30 @@ const SkillSection = ({ title, badges }) => {
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         aria-label="Filter skills"
-        onChange={(e) => setFilter(e.target.value)}
+        onChange={handleFilterChange}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
-        {filteredBadges.map(badge => (
+        {filteredBadges.map((badge) => (
           <img
             key={badge.alt}
             className="m-1 cursor-pointer"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
-            onClick={() => setSelected(badge)}
+            data-alt={badge.alt}
+            onClick={handleBadgeClick}
           />
         ))}
       </div>
       {selected && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-          onClick={() => setSelected(null)}
+          onClick={handleOverlayClose}
         >
-          <div
-            className="bg-ub-cool-grey p-4 rounded max-w-xs"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={handleDialogClick}>
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
-            <button
-              className="mt-2 px-2 py-1 bg-ubt-blue rounded"
-              onClick={() => setSelected(null)}
-            >
+            <button className="mt-2 px-2 py-1 bg-ubt-blue rounded" onClick={handleOverlayClose}>
               Close
             </button>
           </div>
@@ -487,6 +509,11 @@ function Resume({ data: resume }) {
     );
     const experiences = filter === 'all' ? resume.experience : resume.experience.filter((e) => e.tags.includes(filter));
 
+    const handleFilterClick = React.useCallback((event) => {
+        const nextFilter = event.currentTarget.dataset.filter || 'all';
+        setFilter(nextFilter);
+    }, []);
+
     React.useEffect(() => {
         const elements = document.querySelectorAll('.exp-item');
         const observer = new IntersectionObserver((entries) => {
@@ -581,7 +608,8 @@ function Resume({ data: resume }) {
                     <div className="font-bold text-lg">Experience</div>
                     <div className="flex flex-wrap my-2">
                         <button
-                            onClick={() => setFilter('all')}
+                            data-filter="all"
+                            onClick={handleFilterClick}
                             className={(filter === 'all' ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
                         >
                             All
@@ -589,7 +617,8 @@ function Resume({ data: resume }) {
                         {tags.map((tag) => (
                             <button
                                 key={tag}
-                                onClick={() => setFilter(tag)}
+                                data-filter={tag}
+                                onClick={handleFilterClick}
                                 className={(filter === tag ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
                             >
                                 {tag}
