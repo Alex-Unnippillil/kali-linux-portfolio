@@ -5,6 +5,7 @@ import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthr
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
+import { DocsLink } from '../docs/DocsViewer';
 
 // pull demo data for various volatility plugins from the memory fixture
 const pstree = Array.isArray(memoryFixture.pstree)
@@ -296,14 +297,13 @@ const VolatilityApp = () => {
           <aside className="w-64 p-3 border-l border-gray-700 bg-gray-900">
             <h3 className="text-sm font-semibold mb-2">Explain this finding</h3>
             <p className="text-xs mb-2">{finding.description}</p>
-            <a
-              href={finding.link}
-              target="_blank"
-              rel="noopener noreferrer"
+            <DocsLink
+              appId="volatility"
+              docPath={finding.link}
               className="text-xs text-blue-400 underline"
             >
               Learn more
-            </a>
+            </DocsLink>
             <button
               onClick={() => setFinding(null)}
               className="mt-2 text-xs text-red-400"
