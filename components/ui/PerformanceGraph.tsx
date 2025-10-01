@@ -1,9 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useDecimatedSeries } from '../../hooks/useDecimatedSeries';
+import { buildSvgPath } from '../../utils/charting/decimator';
+import type { ChartPoint } from '../../types/chart-decimator';
+
 const SAMPLE_INTERVAL = 1000;
-const MAX_POINTS = 32;
 const GRAPH_HEIGHT = 18;
 const GRAPH_WIDTH = 80;
+const TARGET_POINTS = 96;
+const DECIMATION_THRESHOLD = 160;
+const MAX_HISTORY = 960;
+const INITIAL_SEED = 48;
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -49,12 +56,18 @@ type PerformanceGraphProps = {
 
 const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const [points, setPoints] = useState<number[]>(() =>
-    Array.from({ length: MAX_POINTS }, (_, index) => 0.32 + (index % 3) * 0.04)
-  );
+  const [samples, setSamples] = useState<ChartPoint[]>(() => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    return Array.from({ length: INITIAL_SEED }, (_, index) => ({
+      x: now - (INITIAL_SEED - index) * SAMPLE_INTERVAL,
+      y: 0.32 + (index % 3) * 0.04,
+      sourceIndex: index,
+    }));
+  });
   const timeoutRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastSampleRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
+  const sampleIndexRef = useRef<number>(INITIAL_SEED);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -62,7 +75,7 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
     }
 
     if (prefersReducedMotion) {
-      setPoints(prev => prev.map(() => 0.28));
+      setSamples(prev => prev.map(sample => ({ ...sample, y: 0.28 })));
       if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current);
       }
@@ -74,15 +87,20 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
 
     let cancelled = false;
 
+    lastSampleRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
     const captureSample = (time: number) => {
       if (cancelled) return;
 
       const delta = time - lastSampleRef.current;
       lastSampleRef.current = time;
-      setPoints(prev => {
-        const next = prev.slice(-MAX_POINTS + 1);
-        next.push(normaliseDelta(delta));
-        return next;
+      const value = normaliseDelta(delta);
+      const index = sampleIndexRef.current;
+      sampleIndexRef.current += 1;
+      setSamples(prev => {
+        const trimmed = prev.length >= MAX_HISTORY ? prev.slice(prev.length - MAX_HISTORY + 1) : prev.slice();
+        trimmed.push({ x: time, y: value, sourceIndex: index });
+        return trimmed;
       });
 
       scheduleNext();
@@ -107,23 +125,26 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
     };
   }, [prefersReducedMotion]);
 
+  const displaySamples = useDecimatedSeries(samples, {
+    maxPoints: prefersReducedMotion ? 32 : TARGET_POINTS,
+    highWatermark: prefersReducedMotion ? 64 : DECIMATION_THRESHOLD,
+    strategy: 'lttb',
+  });
+
   const path = useMemo(() => {
-    if (points.length === 0) {
+    if (displaySamples.length === 0) {
       return '';
     }
 
-    const visiblePoints = points.slice(-MAX_POINTS);
-    const step = visiblePoints.length > 1 ? GRAPH_WIDTH / (visiblePoints.length - 1) : GRAPH_WIDTH;
+    const { d } = buildSvgPath(displaySamples, {
+      width: GRAPH_WIDTH,
+      height: GRAPH_HEIGHT,
+      yDomain: [0, 1],
+      clamp: true,
+    });
 
-    return visiblePoints
-      .map((value, index) => {
-        const clamped = Math.max(0, Math.min(1, value));
-        const x = Number((index * step).toFixed(2));
-        const y = Number(((1 - clamped) * GRAPH_HEIGHT).toFixed(2));
-        return `${index === 0 ? 'M' : 'L'}${x} ${y}`;
-      })
-      .join(' ');
-  }, [points]);
+    return d;
+  }, [displaySamples]);
 
   return (
     <div
