@@ -3,6 +3,8 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+import { detectLocale, matchLocale } from './i18nConfig';
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
@@ -15,6 +17,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  locale: 'en',
 };
 
 export async function getAccent() {
@@ -114,6 +117,24 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getLocale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.locale;
+  const stored = window.localStorage.getItem('locale');
+  if (stored) {
+    const normalized = matchLocale(stored);
+    if (normalized) return normalized;
+  }
+  const detected = detectLocale();
+  window.localStorage.setItem('locale', detected);
+  return detected;
+}
+
+export async function setLocale(locale) {
+  if (typeof window === 'undefined') return;
+  const normalized = matchLocale(locale);
+  window.localStorage.setItem('locale', normalized);
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -150,6 +171,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  window.localStorage.removeItem('locale');
 }
 
 export async function exportSettings() {
@@ -165,6 +187,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    locale,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +200,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getLocale(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -192,6 +216,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    locale,
   });
 }
 
@@ -217,6 +242,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    locale,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +256,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (locale !== undefined) await setLocale(locale);
 }
 
 export const defaults = DEFAULT_SETTINGS;
