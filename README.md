@@ -70,6 +70,13 @@ To send text or links directly into the Sticky Notes app:
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
 
+#### Update prompt flow
+
+- `pages/_app.jsx` registers the service worker manually and listens for the `waiting` event emitted by the `next-pwa` runtime (`window.workbox`).
+- When a new worker is waiting, a global toast announces **"New version available"** with **Reload now** and **Later** actions powered by `components/ui/Toast.tsx`.
+- Choosing **Reload now** posts `{ type: 'SKIP_WAITING' }` to the waiting registration and the app reloads once the new worker takes control.
+- Choosing **Later** hides the toast and stores a `pwa-update-deferred` flag in `sessionStorage` so the same update prompt is suppressed until the browser session ends.
+
 ---
 
 ## Environment Variables
