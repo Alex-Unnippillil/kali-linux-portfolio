@@ -11,6 +11,8 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import { recordLog } from '../../utils/dev/reproRecorder';
+import type { SerializedNotification } from '../../utils/dev/reproBundle';
 
 export type {
   ClassificationResult,
@@ -47,6 +49,7 @@ interface NotificationsContextValue {
   dismissNotification: (appId: string, id: string) => void;
   clearNotifications: (appId?: string) => void;
   markAllRead: (appId?: string) => void;
+  hydrateNotifications: (snapshot: Record<string, SerializedNotification[]>) => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -64,6 +67,11 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+
+  const ensurePlainObject = useCallback((value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    return value as Record<string, unknown>;
+  }, []);
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
@@ -85,7 +93,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         timestamp,
         read: false,
         priority: classification.priority,
-        hints: input.hints,
+        hints: input.hints ? ensurePlainObject(input.hints) : undefined,
         classification,
       };
 
@@ -94,9 +102,14 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         [input.appId]: [nextNotification, ...list],
       };
     });
+    recordLog('info', 'notifications:push', {
+      appId: input.appId,
+      title: input.title,
+      priority: input.priority ?? classification.priority,
+    });
 
     return id;
-  }, []);
+  }, [ensurePlainObject]);
 
   const dismissNotification = useCallback((appId: string, id: string) => {
     setNotificationsByApp(prev => {
@@ -110,11 +123,13 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       else delete next[appId];
       return next;
     });
+    recordLog('info', 'notifications:dismiss', { appId, id });
   }, []);
 
   const clearNotifications = useCallback((appId?: string) => {
     if (!appId) {
       setNotificationsByApp({});
+      recordLog('info', 'notifications:clear-all', {});
       return;
     }
 
@@ -124,6 +139,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       delete next[appId];
       return next;
     });
+    recordLog('info', 'notifications:clear', { appId });
   }, []);
 
   const markAllRead = useCallback((appId?: string) => {
@@ -149,7 +165,54 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       });
       return changed ? next : prev;
     });
+    recordLog('info', 'notifications:mark-read', { appId: appId ?? 'all' });
   }, []);
+
+  const hydrateNotifications = useCallback(
+    (snapshot: Record<string, SerializedNotification[]>) => {
+      setNotificationsByApp(() => {
+        const next: Record<string, AppNotification[]> = {};
+        Object.entries(snapshot).forEach(([appId, list]) => {
+          if (!Array.isArray(list)) return;
+          next[appId] = list.map((notification) => {
+            const title = typeof notification.title === 'string' ? notification.title : '';
+            const body = notification.body ? String(notification.body) : undefined;
+            const hints = notification.hints ? ensurePlainObject(notification.hints) : undefined;
+            const base: AppNotification = {
+              id: notification.id ?? createId(),
+              appId,
+              title,
+              body,
+              timestamp:
+                typeof notification.timestamp === 'number' && Number.isFinite(notification.timestamp)
+                  ? notification.timestamp
+                  : Date.now(),
+              read: Boolean(notification.read),
+              priority: notification.priority ?? 'normal',
+              hints,
+              classification: notification.classification
+                ? {
+                    priority: notification.classification.priority,
+                    matchedRuleId: notification.classification.matchedRuleId,
+                    source: notification.classification.source,
+                  }
+                : classifyNotification({
+                    appId,
+                    title,
+                    body,
+                    priority: notification.priority,
+                    hints,
+                  }),
+            };
+            return base;
+          });
+        });
+        return next;
+      });
+      recordLog('info', 'notifications:hydrate', { apps: Object.keys(snapshot).length });
+    },
+    [ensurePlainObject],
+  );
 
   const notifications = useMemo(() =>
     Object.values(notificationsByApp)
@@ -184,6 +247,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         dismissNotification,
         clearNotifications,
         markAllRead,
+        hydrateNotifications,
       }}
     >
       {children}

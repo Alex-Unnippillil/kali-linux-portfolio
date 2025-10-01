@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -25,6 +25,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { recordStep } from '../utils/dev/reproRecorder';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -53,7 +54,7 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
-interface SettingsContextValue {
+export interface SettingsContextValue {
   accent: string;
   wallpaper: string;
   bgImageName: string;
@@ -110,34 +111,89 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
-  const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
-  const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [accent, setAccentState] = useState<string>(defaults.accent);
+  const [wallpaper, setWallpaperState] = useState<string>(defaults.wallpaper);
+  const [useKaliWallpaper, setUseKaliWallpaperState] = useState<boolean>(defaults.useKaliWallpaper);
+  const [density, setDensityState] = useState<Density>(defaults.density as Density);
+  const [reducedMotion, setReducedMotionState] = useState<boolean>(defaults.reducedMotion);
+  const [fontScale, setFontScaleState] = useState<number>(defaults.fontScale);
+  const [highContrast, setHighContrastState] = useState<boolean>(defaults.highContrast);
+  const [largeHitAreas, setLargeHitAreasState] = useState<boolean>(defaults.largeHitAreas);
+  const [pongSpin, setPongSpinState] = useState<boolean>(defaults.pongSpin);
+  const [allowNetwork, setAllowNetworkState] = useState<boolean>(defaults.allowNetwork);
+  const [haptics, setHapticsState] = useState<boolean>(defaults.haptics);
+  const [theme, setThemeState] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+
+  const updateSetting = useCallback(
+    <T,>(
+      setter: (value: T) => void,
+      label: string,
+      value: T,
+    ) => {
+      setter(value);
+      recordStep(`settings:${label}`, { value });
+    },
+    [],
+  );
+
+  const setAccent = useCallback((value: string) => updateSetting(setAccentState, 'accent', value), [updateSetting]);
+  const setWallpaper = useCallback(
+    (value: string) => updateSetting(setWallpaperState, 'wallpaper', value),
+    [updateSetting],
+  );
+  const setUseKaliWallpaper = useCallback(
+    (value: boolean) => updateSetting(setUseKaliWallpaperState, 'use-kali-wallpaper', value),
+    [updateSetting],
+  );
+  const setDensity = useCallback(
+    (value: Density) => updateSetting(setDensityState, 'density', value),
+    [updateSetting],
+  );
+  const setReducedMotion = useCallback(
+    (value: boolean) => updateSetting(setReducedMotionState, 'reduced-motion', value),
+    [updateSetting],
+  );
+  const setFontScale = useCallback(
+    (value: number) => updateSetting(setFontScaleState, 'font-scale', value),
+    [updateSetting],
+  );
+  const setHighContrast = useCallback(
+    (value: boolean) => updateSetting(setHighContrastState, 'high-contrast', value),
+    [updateSetting],
+  );
+  const setLargeHitAreas = useCallback(
+    (value: boolean) => updateSetting(setLargeHitAreasState, 'large-hit-areas', value),
+    [updateSetting],
+  );
+  const setPongSpin = useCallback(
+    (value: boolean) => updateSetting(setPongSpinState, 'pong-spin', value),
+    [updateSetting],
+  );
+  const setAllowNetwork = useCallback(
+    (value: boolean) => updateSetting(setAllowNetworkState, 'allow-network', value),
+    [updateSetting],
+  );
+  const setHaptics = useCallback(
+    (value: boolean) => updateSetting(setHapticsState, 'haptics', value),
+    [updateSetting],
+  );
+  const setTheme = useCallback((value: string) => updateSetting(setThemeState, 'theme', value), [updateSetting]);
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      setAccentState(await loadAccent());
+      setWallpaperState(await loadWallpaper());
+      setUseKaliWallpaperState(await loadUseKaliWallpaper());
+      setDensityState((await loadDensity()) as Density);
+      setReducedMotionState(await loadReducedMotion());
+      setFontScaleState(await loadFontScale());
+      setHighContrastState(await loadHighContrast());
+      setLargeHitAreasState(await loadLargeHitAreas());
+      setPongSpinState(await loadPongSpin());
+      setAllowNetworkState(await loadAllowNetwork());
+      setHapticsState(await loadHaptics());
+      setThemeState(loadTheme());
     })();
   }, []);
 
