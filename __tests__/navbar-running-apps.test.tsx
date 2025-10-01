@@ -23,6 +23,7 @@ const workspaceEventDetail = {
       icon: '/icon.png',
       isFocused: true,
       isMinimized: false,
+      allowMulti: false,
     },
   ],
 };
@@ -75,6 +76,7 @@ describe('Navbar running apps tray', () => {
                 icon: '/icon.png',
                 isFocused: false,
                 isMinimized: true,
+                allowMulti: false,
               },
             ],
           },
@@ -86,5 +88,69 @@ describe('Navbar running apps tray', () => {
     expect(button).toHaveAttribute('aria-pressed', 'false');
     expect(button).toHaveAttribute('data-active', 'false');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
+  });
+
+  it('ignores middle click when app does not allow multiple instances', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    dispatchSpy.mockClear();
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    fireEvent(
+      button,
+      new MouseEvent('auxclick', {
+        bubbles: true,
+        cancelable: true,
+        button: 1,
+      }),
+    );
+
+    const openEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'open-app');
+    expect(openEventCall).toBeUndefined();
+  });
+
+  it('dispatches open-app event on middle click when allowMulti is true', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                id: 'app3',
+                title: 'App Three',
+                icon: '/icon.png',
+                isFocused: false,
+                isMinimized: false,
+                allowMulti: true,
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    dispatchSpy.mockClear();
+
+    const button = screen.getByRole('button', { name: /app three/i });
+    fireEvent(
+      button,
+      new MouseEvent('auxclick', {
+        bubbles: true,
+        cancelable: true,
+        button: 1,
+      }),
+    );
+
+    const openEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'open-app');
+    expect(openEventCall).toBeTruthy();
+    const [event] = openEventCall!;
+    expect(event.detail).toBe('app3');
   });
 });

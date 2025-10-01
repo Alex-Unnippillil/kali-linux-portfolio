@@ -416,6 +416,7 @@ export class Desktop extends Component {
                 icon: app.icon.replace('./', '/'),
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
+                allowMulti: Boolean(app.allowMulti),
             }));
     };
 
