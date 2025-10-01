@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import Banners from './Banners';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -81,6 +82,7 @@ const NmapNSEApp = () => {
   const [portFlag, setPortFlag] = useState('');
   const [examples, setExamples] = useState({});
   const [results, setResults] = useState({ hosts: [] });
+  const [banners, setBanners] = useState([]);
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
@@ -97,6 +99,16 @@ const NmapNSEApp = () => {
       .then((r) => r.json())
       .then(setResults)
       .catch(() => setResults({ hosts: [] }));
+    fetch('/demo/nmap-banners.json')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setBanners(data);
+        } else {
+          setBanners([]);
+        }
+      })
+      .catch(() => setBanners([]));
   }, []);
 
   const toggleScript = (name) => {
@@ -403,6 +415,10 @@ const NmapNSEApp = () => {
             </li>
           ))}
         </ul>
+        <h2 className="text-lg mb-2">Service banners</h2>
+        <div className="mb-4">
+          <Banners banners={banners} onCopy={setToast} />
+        </div>
         <h2 className="text-lg mb-2">Example output</h2>
         <div
           ref={outputRef}
