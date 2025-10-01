@@ -3,6 +3,7 @@ import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
+import DataXrefs from './DataXrefs';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
@@ -468,6 +469,19 @@ export default function GhidraApp() {
             className="w-full h-full p-1 rounded text-black"
           />
         </div>
+      </div>
+      <div className="border-t border-gray-700 h-80">
+        <DataXrefs
+          activeFunction={selected}
+          onNavigate={(ref) => {
+            if (ref?.location?.function) {
+              setSelected(ref.location.function);
+              setLiveMessage(
+                `Focused ${ref.location.function} for reference ${ref.value}`
+              );
+            }
+          }}
+        />
       </div>
       {/* S8: Hidden live region for assistive tech announcements */}
       <div aria-live="polite" role="status" className="sr-only">
