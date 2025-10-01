@@ -1,5 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ExtensionSandboxBridge,
+  type SandboxConsoleEntry,
+} from '@/modules/extensions/bridge';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -40,6 +44,25 @@ export default function PluginManager() {
     return null;
   });
 
+  const bridgeRef = useRef<ExtensionSandboxBridge | null>(null);
+
+  useEffect(() => {
+    return () => {
+      bridgeRef.current?.dispose();
+      bridgeRef.current = null;
+    };
+  }, []);
+
+  const ensureBridge = () => {
+    if (typeof window === 'undefined') {
+      throw new Error('Sandbox bridge is only available in the browser.');
+    }
+    if (!bridgeRef.current) {
+      bridgeRef.current = new ExtensionSandboxBridge();
+    }
+    return bridgeRef.current;
+  };
+
   useEffect(() => {
     fetch('/api/plugins')
       .then((res) => res.json())
@@ -55,7 +78,7 @@ export default function PluginManager() {
     localStorage.setItem('installedPlugins', JSON.stringify(updated));
   };
 
-  const run = (plugin: PluginInfo) => {
+  const run = async (plugin: PluginInfo) => {
     const manifest = installed[plugin.id];
     if (!manifest) return;
     const output: string[] = [];
@@ -69,42 +92,82 @@ export default function PluginManager() {
       }
     };
 
-    if (manifest.sandbox === 'worker') {
-      const blob = new Blob([manifest.code], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      const worker = new Worker(url);
-      worker.onmessage = (e) => {
-        output.push(String(e.data));
-      };
-      worker.onerror = () => {
-        output.push('error');
-      };
-      // collect messages briefly then terminate
-      setTimeout(() => {
-        worker.terminate();
-        URL.revokeObjectURL(url);
-        finalize();
-      }, 10);
-    } else {
-      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none';"></head><body><script>${manifest.code}<\/script></body></html>`;
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const iframe = document.createElement('iframe');
-      iframe.sandbox.add('allow-scripts');
-      const listener = (e: MessageEvent) => {
-        if (e.source === iframe.contentWindow) {
-          output.push(String(e.data));
+    const formatConsoleEntry = (entry: SandboxConsoleEntry) => {
+      const parts = entry.args.map((value) => {
+        if (typeof value === 'string') return value;
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return String(value);
         }
-      };
-      window.addEventListener('message', listener);
-      iframe.src = url;
-      document.body.appendChild(iframe);
-      setTimeout(() => {
-        window.removeEventListener('message', listener);
-        document.body.removeChild(iframe);
-        URL.revokeObjectURL(url);
-        finalize();
-      }, 10);
+      });
+      return `[${entry.level}] ${parts.join(' ')}`.trim();
+    };
+
+    try {
+      if (manifest.sandbox === 'worker') {
+        const runWorker = () =>
+          new Promise<string[]>((resolve) => {
+            const blob = new Blob([manifest.code], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const worker = new Worker(url);
+            const messages: string[] = [];
+            const close = () => {
+              window.clearTimeout(timer);
+              worker.terminate();
+              URL.revokeObjectURL(url);
+              resolve(messages);
+            };
+            let timer = window.setTimeout(close, 25);
+            worker.onmessage = (e) => {
+              messages.push(String(e.data));
+              window.clearTimeout(timer);
+              timer = window.setTimeout(close, 25);
+            };
+            worker.onerror = (e) => {
+              messages.push(`error: ${e.message}`);
+              window.clearTimeout(timer);
+              timer = window.setTimeout(close, 0);
+            };
+            worker.addEventListener('error', () => {
+              window.clearTimeout(timer);
+              close();
+            });
+          });
+
+        const results = await runWorker();
+        output.push(...results);
+      } else {
+        const bridge = ensureBridge();
+        const invocation = bridge.execute(manifest.code, { timeoutMs: 500 });
+        const result = await invocation.result;
+        if (result.logs.length > 0) {
+          output.push(...result.logs);
+        }
+        if (result.console.length > 0) {
+          output.push(...result.console.map(formatConsoleEntry));
+        }
+        if (result.status === 'resolved' && result.value !== undefined && result.value !== null) {
+          try {
+            output.push(`return: ${JSON.stringify(result.value)}`);
+          } catch {
+            output.push(`return: ${String(result.value)}`);
+          }
+        }
+        if (result.status === 'timeout') {
+          output.push('timeout');
+        }
+        if (result.status === 'cancelled') {
+          output.push('cancelled');
+        }
+        if (result.status === 'rejected' && result.error) {
+          output.push(`error: ${result.error.message}`);
+        }
+      }
+    } catch (error) {
+      output.push('error');
+    } finally {
+      finalize();
     }
   };
 

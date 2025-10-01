@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sandbox</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; style-src 'none'; frame-src 'none'; font-src 'none'; media-src 'none';"
+    />
+  </head>
+  <body>
+    <script>
+      (() => {
+        const parentWindow = window.parent;
+        const blocked = ['document', 'window', 'parent', 'top', 'frames', 'navigator', 'location'];
+        for (const key of blocked) {
+          try {
+            Object.defineProperty(window, key, {
+              configurable: false,
+              enumerable: false,
+              get() {
+                throw new Error(key + ' is not available in the sandbox');
+              },
+              set() {
+                throw new Error(key + ' is not available in the sandbox');
+              },
+            });
+          } catch (err) {
+            // Ignore descriptors that cannot be overridden
+          }
+        }
+
+        const serializeError = (error) => ({
+          message: error && typeof error.message === 'string' ? error.message : String(error),
+          stack: error && typeof error.stack === 'string' ? error.stack : undefined,
+          name: error && typeof error.name === 'string' ? error.name : undefined,
+        });
+
+        const activeTasks = new Map();
+
+        const send = (payload) => {
+          try {
+            parentWindow.postMessage(payload, '*');
+          } catch (err) {
+            // If posting fails there is nothing else we can do inside the sandbox.
+          }
+        };
+
+        const createApi = (jobId, cancelToken) => {
+          let cancelled = false;
+          const cancelListeners = new Set();
+
+          const emit = (value) => {
+            send({ type: 'sandbox:emit', id: jobId, value });
+          };
+
+          const makeConsole = (level) => (...args) => {
+            send({ type: 'sandbox:console', id: jobId, level, args });
+          };
+
+          const api = {
+            emit,
+            token: {
+              id: cancelToken,
+              get cancelled() {
+                return cancelled;
+              },
+              throwIfCancelled() {
+                if (cancelled) {
+                  throw new Error('cancelled');
+                }
+              },
+              onCancel(listener) {
+                if (typeof listener !== 'function') {
+                  return () => {};
+                }
+                if (cancelled) {
+                  try {
+                    listener('cancelled');
+                  } catch (err) {
+                    send({
+                      type: 'sandbox:console',
+                      id: jobId,
+                      level: 'error',
+                      args: ['cancel listener error', String(err)],
+                    });
+                  }
+                  return () => {};
+                }
+                cancelListeners.add(listener);
+                return () => cancelListeners.delete(listener);
+              },
+            },
+          };
+
+          const postMessage = (value) => emit(value);
+
+          const sandboxConsole = {
+            log: makeConsole('log'),
+            warn: makeConsole('warn'),
+            error: makeConsole('error'),
+          };
+
+          const cancel = (reason) => {
+            if (cancelled) return;
+            cancelled = true;
+            for (const listener of Array.from(cancelListeners)) {
+              try {
+                listener(reason || 'cancelled');
+              } catch (err) {
+                send({
+                  type: 'sandbox:console',
+                  id: jobId,
+                  level: 'error',
+                  args: ['cancel listener error', String(err)],
+                });
+              }
+            }
+            cancelListeners.clear();
+          };
+
+          return { api, postMessage, sandboxConsole, cancel };
+        };
+
+        const evaluate = async (code, api, postMessage, sandboxConsole) => {
+          const wrapper = new Function(
+            'bridge',
+            'postMessage',
+            'console',
+            '"use strict";\nconst document = undefined;\nconst window = undefined;\nconst navigator = undefined;\nconst parent = undefined;\nconst top = undefined;\nconst frames = undefined;\nconst location = undefined;\nconst self = Object.freeze({ postMessage, cancelToken: bridge.token });\nreturn (async () => {\n' +
+              code +
+              '\n})();'
+          );
+          return wrapper(api, postMessage, sandboxConsole);
+        };
+
+        const finalize = (cancelToken, message) => {
+          const task = activeTasks.get(cancelToken);
+          if (!task) return;
+          activeTasks.delete(cancelToken);
+          clearTimeout(task.timeoutHandle);
+          task.resolve(message);
+        };
+
+        send({ type: 'sandbox:ready', version: 1 });
+
+        window.addEventListener('message', async (event) => {
+          if (event.source !== parentWindow) return;
+          const data = event.data;
+          if (!data || typeof data !== 'object') return;
+
+          if (data.type === 'host:execute') {
+            const { id, code, cancelToken, timeoutMs } = data;
+            if (typeof code !== 'string' || !cancelToken || !id) {
+              return;
+            }
+
+            const { api, postMessage, sandboxConsole, cancel } = createApi(id, cancelToken);
+            const timeoutHandle = typeof timeoutMs === 'number' && timeoutMs > 0
+              ? setTimeout(() => {
+                  cancel('timeout');
+                  send({ type: 'sandbox:timeout', id });
+                }, timeoutMs)
+              : null;
+
+            const entry = {
+              resolve: (message) => {
+                if (timeoutHandle) clearTimeout(timeoutHandle);
+                send(message);
+              },
+              cancel,
+              timeoutHandle,
+            };
+
+            activeTasks.set(cancelToken, entry);
+
+            try {
+              const value = await evaluate(code, api, postMessage, sandboxConsole);
+              finalize(cancelToken, {
+                type: 'sandbox:complete',
+                id,
+                status: api.token.cancelled ? 'cancelled' : 'resolved',
+                value,
+              });
+            } catch (error) {
+              finalize(cancelToken, {
+                type: 'sandbox:complete',
+                id,
+                status: api.token.cancelled ? 'cancelled' : 'rejected',
+                error: serializeError(error),
+              });
+            }
+          } else if (data.type === 'host:cancel' && data.cancelToken) {
+            const task = activeTasks.get(data.cancelToken);
+            if (!task) return;
+            task.cancel(data.reason || 'cancelled');
+            finalize(data.cancelToken, {
+              type: 'sandbox:complete',
+              id: data.id || data.cancelToken,
+              status: 'cancelled',
+              error: { message: data.reason || 'cancelled' },
+            });
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

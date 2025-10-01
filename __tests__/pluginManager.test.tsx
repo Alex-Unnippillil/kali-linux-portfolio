@@ -1,24 +1,36 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PluginManager from '../components/apps/plugin-manager';
 
+const executeMock = jest.fn();
+const disposeMock = jest.fn();
+
+jest.mock('@/modules/extensions/bridge', () => ({
+  ExtensionSandboxBridge: jest.fn().mockImplementation(() => ({
+    execute: executeMock,
+    dispose: disposeMock,
+  })),
+}));
+
 describe('PluginManager', () => {
   beforeEach(() => {
     localStorage.clear();
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:mock');
     (global as any).URL.revokeObjectURL = jest.fn();
 
-    class MockWorker {
-      onmessage: ((e: { data: any }) => void) | null = null;
-      onerror: (() => void) | null = null;
-      constructor(_url: string) {
-        setTimeout(() => {
-          this.onmessage && this.onmessage({ data: 'content' });
-        }, 0);
-      }
-      postMessage() {}
-      terminate() {}
-    }
-    (global as any).Worker = MockWorker;
+    executeMock.mockReset();
+    executeMock.mockImplementation(() => ({
+      cancelToken: 'token',
+      cancel: jest.fn(),
+      result: Promise.resolve({
+        status: 'resolved',
+        value: null,
+        error: null,
+        logs: ['content'],
+        console: [],
+        isolated: true,
+      }),
+    }));
+    disposeMock.mockReset();
 
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
@@ -31,7 +43,7 @@ describe('PluginManager', () => {
           json: () =>
             Promise.resolve({
               id: 'demo',
-              sandbox: 'worker',
+              sandbox: 'iframe',
               code: "self.postMessage('content');",
             }),
         });
@@ -59,10 +71,12 @@ describe('PluginManager', () => {
     );
     const runBtn = await screen.findByText('Run');
     fireEvent.click(runBtn);
+    await waitFor(() => expect(executeMock).toHaveBeenCalled());
     await waitFor(() =>
       expect(localStorage.getItem('lastPluginRun')).toContain('content')
     );
     unmount();
+    expect(disposeMock).toHaveBeenCalled();
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:csv');
     (global as any).URL.revokeObjectURL = jest.fn();
     render(<PluginManager />);
