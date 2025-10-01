@@ -99,3 +99,18 @@ html {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
 }
+
+.bg-ubuntu-img {
+  transition: opacity 240ms ease, filter 240ms ease;
+}
+
+html.wallpaper-dimmed .bg-ubuntu-img {
+  opacity: 0.75;
+  filter: brightness(0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-ubuntu-img {
+    transition: none;
+  }
+}

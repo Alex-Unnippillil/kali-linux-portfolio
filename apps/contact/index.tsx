@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
@@ -8,6 +8,7 @@ import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import { useWallpaperDimmer } from "@/hooks/useWallpaperDimmer";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -34,6 +35,25 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const { dimWallpaper, restoreWallpaper } = useWallpaperDimmer();
+
+  const handleFormFocus = useCallback(() => {
+    dimWallpaper();
+  }, [dimWallpaper]);
+
+  const handleFormBlur = useCallback(
+    (event: React.FocusEvent<HTMLFormElement>) => {
+      const nextTarget = event.relatedTarget as Node | null;
+      if (!event.currentTarget.contains(nextTarget)) {
+        restoreWallpaper();
+      }
+    },
+    [restoreWallpaper],
+  );
+
+  useEffect(() => () => {
+    restoreWallpaper();
+  }, [restoreWallpaper]);
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -139,7 +159,12 @@ const ContactApp: React.FC = () => {
           Open email app
         </button>
       </p>
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 max-w-md"
+        onFocusCapture={handleFormFocus}
+        onBlurCapture={handleFormBlur}
+      >
         <div>
           <label
             htmlFor="contact-name"
